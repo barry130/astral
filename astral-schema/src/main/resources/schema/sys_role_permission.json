@@ -1,0 +1,57 @@
+{
+  "tableName": "sys_role_permission",
+  "tableComment": "角色权限关联表",
+  "moduleName": "system",
+  "className": "RolePermission",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "role_id",
+      "fieldName": "roleId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "角色ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "permission_id",
+      "fieldName": "permissionId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "权限ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_role_permission_role",
+      "columns": ["role_id"]
+    },
+    {
+      "indexName": "idx_role_permission_permission",
+      "columns": ["permission_id"]
+    },
+    {
+      "indexName": "uk_role_permission",
+      "columns": ["role_id", "permission_id"],
+      "isUnique": true
+    }
+  ]
+}

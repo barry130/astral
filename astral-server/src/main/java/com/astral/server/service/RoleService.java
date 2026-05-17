@@ -1,0 +1,11 @@
+package com.astral.server.service;
+
+import com.astral.dao.entity.Role;
+import com.baomidou.mybatisplus.extension.service.IService;
+
+/**
+ * 角色服务接口
+ * <p>继承MyBatis-Plus的IService，提供角色实体的标准CRUD操作</p>
+ */
+public interface RoleService extends IService<Role> {
+}

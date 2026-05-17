@@ -1,0 +1,60 @@
+# Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.vscode/
+.vscode-test/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Log
+logs/
+*.log
+log/
+
+# Temp
+*.tmp
+*.bak
+*.swp
+*~
+
+# Database (H2 file storage)
+data/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# AI Assistant Files
+CLAUDE.md
+AGENTS.md
+.claude/
+.qwen/
+Vibe-Skills/
+
+#react
+astral-front/.next
+astral-front/node_modules

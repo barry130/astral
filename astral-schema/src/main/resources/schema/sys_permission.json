@@ -1,0 +1,127 @@
+{
+  "tableName": "sys_permission",
+  "tableComment": "权限表",
+  "moduleName": "system",
+  "className": "Permission",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "permission_code",
+      "fieldName": "permissionCode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "权限编码",
+      "length": 64,
+      "isRequired": true,
+      "isUnique": true
+    },
+    {
+      "columnName": "permission_name",
+      "fieldName": "permissionName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "权限名称",
+      "length": 128,
+      "isRequired": true
+    },
+    {
+      "columnName": "url",
+      "fieldName": "url",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "请求URL",
+      "length": 256
+    },
+    {
+      "columnName": "method",
+      "fieldName": "method",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "请求方法",
+      "length": 10
+    },
+    {
+      "columnName": "parent_id",
+      "fieldName": "parentId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "父级ID",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "type",
+      "fieldName": "type",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "类型(1-目录 2-菜单 3-按钮)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "icon",
+      "fieldName": "icon",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "图标",
+      "length": 64
+    },
+    {
+      "columnName": "sort",
+      "fieldName": "sort",
+      "fieldType": "Integer",
+      "jdbcType": "INT",
+      "comment": "排序",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "状态(0-禁用 1-启用)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ],
+  "nonDbFields": [
+    {
+      "fieldName": "children",
+      "fieldType": "List<Permission>",
+      "comment": "子权限列表"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sys_permission_code",
+      "columns": ["permission_code"],
+      "isUnique": true
+    },
+    {
+      "indexName": "idx_sys_permission_parent",
+      "columns": ["parent_id"]
+    }
+  ]
+}

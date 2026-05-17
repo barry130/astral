@@ -1,0 +1,132 @@
+{
+  "tableName": "sequence_config",
+  "tableComment": "序列配置表",
+  "moduleName": "sequence",
+  "className": "SequenceConfig",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "biz_key",
+      "fieldName": "bizKey",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "业务键",
+      "length": 64,
+      "isRequired": true,
+      "isUnique": true
+    },
+    {
+      "columnName": "sequence_type",
+      "fieldName": "sequenceType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "序列类型",
+      "length": 32,
+      "isRequired": true
+    },
+    {
+      "columnName": "step",
+      "fieldName": "step",
+      "fieldType": "Integer",
+      "jdbcType": "INT",
+      "comment": "步长",
+      "defaultValue": "100"
+    },
+    {
+      "columnName": "date_format",
+      "fieldName": "dateFormat",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "日期格式",
+      "length": 32
+    },
+    {
+      "columnName": "prefix",
+      "fieldName": "prefix",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "前缀",
+      "length": 32
+    },
+    {
+      "columnName": "suffix",
+      "fieldName": "suffix",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "后缀",
+      "length": 32
+    },
+    {
+      "columnName": "min_value",
+      "fieldName": "minValue",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "最小值",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "enabled",
+      "fieldName": "enabled",
+      "fieldType": "Boolean",
+      "jdbcType": "BOOLEAN",
+      "comment": "是否启用",
+      "defaultValue": "true"
+    },
+    {
+      "columnName": "description",
+      "fieldName": "description",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "描述",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    },
+    {
+      "columnName": "current_value",
+      "fieldName": "currentValue",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "当前值",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "total_generate",
+      "fieldName": "totalGenerate",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "总生成数",
+      "defaultValue": "0"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sequence_config_biz_key",
+      "columns": ["biz_key"],
+      "isUnique": true
+    }
+  ]
+}

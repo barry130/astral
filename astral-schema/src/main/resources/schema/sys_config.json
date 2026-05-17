@@ -1,0 +1,85 @@
+{
+  "tableName": "sys_config",
+  "tableComment": "系统配置表",
+  "moduleName": "system",
+  "className": "SysConfig",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "config_name",
+      "fieldName": "configName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "配置名称",
+      "length": 128,
+      "isRequired": true
+    },
+    {
+      "columnName": "config_key",
+      "fieldName": "configKey",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "配置键",
+      "length": 128,
+      "isRequired": true,
+      "isUnique": true
+    },
+    {
+      "columnName": "config_value",
+      "fieldName": "configValue",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "配置值",
+      "length": 512,
+      "isRequired": true
+    },
+    {
+      "columnName": "config_type",
+      "fieldName": "configType",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "类型(1-内置 2-自定义)",
+      "defaultValue": "2"
+    },
+    {
+      "columnName": "description",
+      "fieldName": "description",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "描述",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sys_config_key",
+      "columns": ["config_key"],
+      "isUnique": true
+    }
+  ]
+}

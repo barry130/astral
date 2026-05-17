@@ -1,0 +1,99 @@
+{
+  "tableName": "sys_dict_type",
+  "tableComment": "字典类型表",
+  "moduleName": "system",
+  "className": "DictType",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "dict_code",
+      "fieldName": "dictCode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "字典编码",
+      "length": 64,
+      "isRequired": true,
+      "isUnique": true
+    },
+    {
+      "columnName": "dict_name",
+      "fieldName": "dictName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "字典名称",
+      "length": 128,
+      "isRequired": true
+    },
+    {
+      "columnName": "data_type",
+      "fieldName": "dataType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "数据类型",
+      "length": 32
+    },
+    {
+      "columnName": "jdbc_type",
+      "fieldName": "jdbcType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "JDBC类型",
+      "length": 32
+    },
+    {
+      "columnName": "data_length",
+      "fieldName": "dataLength",
+      "fieldType": "Integer",
+      "jdbcType": "INT",
+      "comment": "数据长度"
+    },
+    {
+      "columnName": "description",
+      "fieldName": "description",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "描述",
+      "length": 256
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "状态(0-禁用 1-启用)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sys_dict_type_code",
+      "columns": ["dict_code"],
+      "isUnique": true
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "tableName": "sys_role",
+  "tableComment": "角色表",
+  "moduleName": "system",
+  "className": "Role",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "role_code",
+      "fieldName": "roleCode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "角色编码",
+      "length": 64,
+      "isRequired": true,
+      "isUnique": true
+    },
+    {
+      "columnName": "role_name",
+      "fieldName": "roleName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "角色名称",
+      "length": 128,
+      "isRequired": true
+    },
+    {
+      "columnName": "description",
+      "fieldName": "description",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "描述",
+      "length": 256
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "状态(0-禁用 1-启用)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "sort",
+      "fieldName": "sort",
+      "fieldType": "Integer",
+      "jdbcType": "INT",
+      "comment": "排序",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sys_role_code",
+      "columns": ["role_code"],
+      "isUnique": true
+    }
+  ]
+}

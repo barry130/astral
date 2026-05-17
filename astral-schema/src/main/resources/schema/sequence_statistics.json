@@ -1,0 +1,82 @@
+{
+  "tableName": "sequence_statistics",
+  "tableComment": "序列统计表",
+  "moduleName": "sequence",
+  "className": "SequenceStatistics",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "biz_key",
+      "fieldName": "bizKey",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "业务键",
+      "length": 64,
+      "isRequired": true
+    },
+    {
+      "columnName": "current_value",
+      "fieldName": "currentValue",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "当前值",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "total_generate",
+      "fieldName": "totalGenerate",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "总生成数",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "last_generate_time",
+      "fieldName": "lastGenerateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "最后生成时间"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    },
+    {
+      "columnName": "deleted",
+      "fieldName": "deleted",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "逻辑删除(0-未删除 1-已删除)",
+      "defaultValue": "0",
+      "isLogicDelete": true
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sequence_statistics_biz_key",
+      "columns": ["biz_key"],
+      "isUnique": true
+    }
+  ]
+}

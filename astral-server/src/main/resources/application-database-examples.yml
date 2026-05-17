@@ -1,0 +1,137 @@
+# ============================================
+# 多数据库配置示例
+# ============================================
+# 使用说明:
+# 1. 选择需要的数据库类型,取消注释对应配置
+# 2. 修改连接信息为实际的值
+# 3. 其他数据库类型请注释掉
+# ============================================
+
+astral:
+  database:
+    # ============================================
+    # 选项1: MySQL (推荐,生产环境使用)
+    # ============================================
+    type: mysql
+    url: jdbc:mysql://localhost:3306/astral_sequence?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: your_password
+    auto-init: true
+    
+    # ============================================
+    # 选项2: PostgreSQL (推荐,功能强大)
+    # ============================================
+    # type: postgresql
+    # url: jdbc:postgresql://localhost:5432/astral_sequence
+    # username: postgres
+    # password: your_password
+    # auto-init: true
+    
+    # ============================================
+    # 选项3: Oracle (企业级应用)
+    # ============================================
+    # type: oracle
+    # url: jdbc:oracle:thin:@localhost:1521:orcl
+    # username: astral
+    # password: your_password
+    # auto-init: true
+    
+    # ============================================
+    # 选项4: SQL Server (微软技术栈)
+    # ============================================
+    # type: sqlserver
+    # url: jdbc:sqlserver://localhost:1433;databaseName=astral_sequence;encrypt=false
+    # username: sa
+    # password: your_password
+    # auto-init: true
+    
+    # ============================================
+    # 选项5: H2 (开发测试,内嵌数据库)
+    # ============================================
+    # type: h2
+    # url: jdbc:h2:file:./data/astral_sequence;AUTO_SERVER=TRUE;MODE=MySQL
+    # username: sa
+    # password: 
+    # auto-init: true
+    
+    # ============================================
+    # 选项6: SQLite (轻量级,嵌入式)
+    # ============================================
+    # type: sqlite
+    # url: jdbc:sqlite:./data/astral_sequence.db
+    # username: 
+    # password: 
+    # auto-init: true
+    
+    # ============================================
+    # 选项7: MariaDB (MySQL兼容)
+    # ============================================
+    # type: mariadb
+    # url: jdbc:mariadb://localhost:3306/astral_sequence
+    # username: root
+    # password: your_password
+    # auto-init: true
+    
+    # ============================================
+    # 连接池配置
+    # ============================================
+    pool:
+      # 连接池类型: hikari(推荐) / druid
+      pool-type: hikari
+      
+      # 最小空闲连接数
+      minimum-idle: 5
+      
+      # 最大连接池大小
+      maximum-pool-size: 20
+      
+      # 连接超时时间(毫秒)
+      connection-timeout: 30000
+      
+      # 空闲连接超时时间(毫秒)
+      idle-timeout: 600000
+      
+      # 连接最大生命周期(毫秒)
+      max-lifetime: 1800000
+      
+      # 连接测试查询(可选,会自动根据数据库类型设置)
+      # connection-test-query: SELECT 1
+    
+    # ============================================
+    # 高级配置
+    # ============================================
+    advanced:
+      # 是否显示SQL日志(开发环境建议开启,生产环境关闭)
+      show-sql: false
+      
+      # 表名前缀(可选)
+      # table-prefix: astral_
+      
+      # 是否启用逻辑删除
+      logic-delete: false
+      
+      # 逻辑删除字段名
+      logic-delete-field: deleted
+      
+      # 逻辑删除值
+      logic-delete-value: 1
+      
+      # 逻辑未删除值
+      logic-not-delete-value: 0
+      
+      # 自定义JDBC参数(可选)
+      # jdbcParams: characterEncoding=utf8&useSSL=false
+
+# ============================================
+# Spring数据源配置(会被上面的astral.database配置覆盖)
+# 如果你需要自定义数据源,可以使用下面的配置
+# ============================================
+# spring:
+#   datasource:
+#     driver-class-name: com.mysql.cj.jdbc.Driver
+#     url: jdbc:mysql://localhost:3306/astral_sequence
+#     username: root
+#     password: your_password
+#     hikari:
+#       minimum-idle: 5
+#       maximum-pool-size: 20

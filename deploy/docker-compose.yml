@@ -1,0 +1,217 @@
+version: '3.8'
+
+# ============================================
+# 序列生成器集群部署配置
+# ============================================
+# 启动命令: docker-compose up -d
+# 停止命令: docker-compose down
+# 查看日志: docker-compose logs -f
+# ============================================
+
+services:
+  # ==================== Redis ====================
+  redis:
+    image: redis:7-alpine
+    container_name: astral-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass your_redis_password
+    volumes:
+      - redis-data:/data
+    networks:
+      - astral-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "your_redis_password", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ==================== MySQL ====================
+  mysql:
+    image: mysql:8.0
+    container_name: astral-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: astral_sequence
+      MYSQL_USER: astral
+      MYSQL_PASSWORD: astral_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ../sql:/docker-entrypoint-initdb.d
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max_connections=500
+    networks:
+      - astral-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ==================== 序列生成器节点1 ====================
+  sequence-node-1:
+    build:
+      context: ..
+      dockerfile: astral-server/Dockerfile
+    container_name: astral-sequence-node-1
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=cluster
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/astral_sequence?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      - SPRING_DATASOURCE_USERNAME=astral
+      - SPRING_DATASOURCE_PASSWORD=astral_password
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=your_redis_password
+      - astral_CLUSTER_ENABLED=true
+      - astral_CLUSTER_NODE_NAME=sequence-node-1
+      - astral_CLUSTER_NODE_PORT=8080
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - astral-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # ==================== 序列生成器节点2 ====================
+  sequence-node-2:
+    build:
+      context: ..
+      dockerfile: astral-server/Dockerfile
+    container_name: astral-sequence-node-2
+    ports:
+      - "8082:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=cluster
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/astral_sequence?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      - SPRING_DATASOURCE_USERNAME=astral
+      - SPRING_DATASOURCE_PASSWORD=astral_password
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=your_redis_password
+      - astral_CLUSTER_ENABLED=true
+      - astral_CLUSTER_NODE_NAME=sequence-node-2
+      - astral_CLUSTER_NODE_PORT=8080
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - astral-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # ==================== 序列生成器节点3 ====================
+  sequence-node-3:
+    build:
+      context: ..
+      dockerfile: astral-server/Dockerfile
+    container_name: astral-sequence-node-3
+    ports:
+      - "8083:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=cluster
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/astral_sequence?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      - SPRING_DATASOURCE_USERNAME=astral
+      - SPRING_DATASOURCE_PASSWORD=astral_password
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=your_redis_password
+      - astral_CLUSTER_ENABLED=true
+      - astral_CLUSTER_NODE_NAME=sequence-node-3
+      - astral_CLUSTER_NODE_PORT=8080
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - astral-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # ==================== Nginx负载均衡 ====================
+  nginx:
+    image: nginx:alpine
+    container_name: astral-nginx
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - sequence-node-1
+      - sequence-node-2
+      - sequence-node-3
+    networks:
+      - astral-network
+    restart: unless-stopped
+
+  # ==================== Prometheus监控(可选) ====================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: astral-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - astral-network
+    restart: unless-stopped
+
+  # ==================== Grafana可视化(可选) ====================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: astral-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - astral-network
+    restart: unless-stopped
+
+networks:
+  astral-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  mysql-data:
+  prometheus-data:
+  grafana-data:

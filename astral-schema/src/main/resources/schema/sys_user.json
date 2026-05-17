@@ -1,0 +1,133 @@
+{
+  "tableName": "sys_user",
+  "tableComment": "用户表",
+  "moduleName": "system",
+  "className": "User",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "isRequired": false,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "username",
+      "fieldName": "username",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "用户名",
+      "length": 64,
+      "isRequired": true,
+      "isUnique": true
+    },
+    {
+      "columnName": "password",
+      "fieldName": "password",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "密码",
+      "length": 128,
+      "isRequired": true,
+      "isJsonIgnore": true
+    },
+    {
+      "columnName": "nickname",
+      "fieldName": "nickname",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "昵称",
+      "length": 64
+    },
+    {
+      "columnName": "email",
+      "fieldName": "email",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "邮箱",
+      "length": 128
+    },
+    {
+      "columnName": "phone",
+      "fieldName": "phone",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "手机号",
+      "length": 20
+    },
+    {
+      "columnName": "avatar",
+      "fieldName": "avatar",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "头像URL",
+      "length": 256
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "状态(0-禁用 1-启用)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "login_ip",
+      "fieldName": "loginIp",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "最后登录IP",
+      "length": 64
+    },
+    {
+      "columnName": "login_time",
+      "fieldName": "loginTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "最后登录时间"
+    },
+    {
+      "columnName": "pwd_update_time",
+      "fieldName": "pwdUpdateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "密码更新时间"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    },
+    {
+      "columnName": "deleted",
+      "fieldName": "deleted",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "逻辑删除(0-未删除 1-已删除)",
+      "defaultValue": "0",
+      "isLogicDelete": true
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sys_user_username",
+      "columns": ["username"],
+      "isUnique": true
+    }
+  ]
+}

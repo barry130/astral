@@ -1,0 +1,89 @@
+{
+  "tableName": "sys_login_log",
+  "tableComment": "登录日志表",
+  "moduleName": "log",
+  "className": "LoginLog",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "user_id",
+      "fieldName": "userId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "用户ID"
+    },
+    {
+      "columnName": "username",
+      "fieldName": "username",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "用户名",
+      "length": 64
+    },
+    {
+      "columnName": "login_type",
+      "fieldName": "loginType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "登录类型",
+      "length": 32
+    },
+    {
+      "columnName": "ip",
+      "fieldName": "ip",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "IP地址",
+      "length": 64
+    },
+    {
+      "columnName": "location",
+      "fieldName": "location",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "登录地点",
+      "length": 128
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "状态(0-失败 1-成功)"
+    },
+    {
+      "columnName": "msg",
+      "fieldName": "msg",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "消息",
+      "length": 256
+    },
+    {
+      "columnName": "login_time",
+      "fieldName": "loginTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "登录时间"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_login_log_user",
+      "columns": ["user_id"]
+    },
+    {
+      "indexName": "idx_login_log_time",
+      "columns": ["login_time"]
+    }
+  ]
+}

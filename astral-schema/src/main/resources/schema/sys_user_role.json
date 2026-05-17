@@ -1,0 +1,57 @@
+{
+  "tableName": "sys_user_role",
+  "tableComment": "用户角色关联表",
+  "moduleName": "system",
+  "className": "UserRole",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "user_id",
+      "fieldName": "userId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "用户ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "role_id",
+      "fieldName": "roleId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "角色ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_user_role_user",
+      "columns": ["user_id"]
+    },
+    {
+      "indexName": "idx_user_role_role",
+      "columns": ["role_id"]
+    },
+    {
+      "indexName": "uk_user_role",
+      "columns": ["user_id", "role_id"],
+      "isUnique": true
+    }
+  ]
+}

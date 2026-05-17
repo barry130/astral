@@ -1,0 +1,41 @@
+# 生产环境配置
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://mysql-master:3306/astral_sequence?useUnicode=true&characterEncoding=utf8&useSSL=true&serverTimezone=Asia/Shanghai
+    username: ${DB_USERNAME:astral}
+    password: ${DB_PASSWORD:changeme}
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 50
+  
+  data:
+    redis:
+      host: ${REDIS_HOST:redis-cluster}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:changeme}
+      database: 0
+
+# 序列生成器配置
+astral:
+  sequence:
+    snowflake:
+      worker-id: ${WORKER_ID:1}
+    segment:
+      step-size: 5000
+    redis:
+      local-cache-size: 200
+
+# 日志配置
+logging:
+  level:
+    root: WARN
+    com.astral: INFO
+  file:
+    name: /var/log/astral/application.log
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30

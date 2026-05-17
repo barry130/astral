@@ -1,0 +1,85 @@
+# ============================================
+# 集群模式配置示例
+# ============================================
+# 使用说明:
+# 1. 复制此文件为 application-cluster.yml
+# 2. 根据实际情况修改配置
+# 3. 启动时指定: java -jar app.jar --spring.profiles.active=cluster
+# ============================================
+
+server:
+  port: 8080
+
+# ==================== 集群模式配置 ====================
+astral:
+  cluster:
+    # 是否启用集群模式(必须设置为true)
+    enabled: true
+    
+    # 节点配置
+    node:
+      # 节点IP地址(留空则自动获取)
+      ip: ""
+      # 节点端口
+      port: 8080
+      # 节点名称(留空则自动生成)
+      name: ""
+  
+  sequence:
+    # 集群模式下推荐使用snowflake或redis
+    default-type: snowflake
+    
+    snowflake:
+      # 集群模式下不需要配置worker-id,会自动分配
+      # worker-id: -1  # -1表示自动分配
+      clock-backward-tolerant: true
+    
+    redis:
+      local-cache-size: 200
+      local-cache-expire-minutes: 30
+
+# ==================== Redis配置(集群模式必需) ====================
+spring:
+  data:
+    redis:
+      # Redis地址(集群模式推荐使用Redis Cluster或Sentinel)
+      host: localhost
+      port: 6379
+      password: 
+      database: 0
+      timeout: 5000ms
+      
+      # 连接池配置
+      lettuce:
+        pool:
+          max-active: 50
+          max-idle: 20
+          min-idle: 10
+          max-wait: 5000ms
+      
+      # Redis Cluster配置(如果使用集群模式)
+      # cluster:
+      #   nodes:
+      #     - redis-node-1:6379
+      #     - redis-node-2:6379
+      #     - redis-node-3:6379
+      #     - redis-node-4:6379
+      #     - redis-node-5:6379
+      #     - redis-node-6:6379
+      #   max-redirects: 3
+      
+      # Redis Sentinel配置(如果使用哨兵模式)
+      # sentinel:
+      #   master: mymaster
+      #   nodes:
+      #     - sentinel-1:26379
+      #     - sentinel-2:26379
+      #     - sentinel-3:26379
+
+# ==================== 日志配置 ====================
+logging:
+  level:
+    root: INFO
+    com.astral: INFO  # 集群模式建议使用DEBUG级别
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{nodeId}] %-5level %logger{50} - %msg%n'

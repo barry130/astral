@@ -1,0 +1,118 @@
+{
+  "tableName": "sys_dict_data",
+  "tableComment": "字典数据表",
+  "moduleName": "system",
+  "className": "DictData",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "dict_type_id",
+      "fieldName": "dictTypeId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "字典类型ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "dict_label",
+      "fieldName": "dictLabel",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "字典标签",
+      "length": 128,
+      "isRequired": true
+    },
+    {
+      "columnName": "dict_value",
+      "fieldName": "dictValue",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "字典值",
+      "length": 128,
+      "isRequired": true
+    },
+    {
+      "columnName": "dict_sort",
+      "fieldName": "dictSort",
+      "fieldType": "Integer",
+      "jdbcType": "INT",
+      "comment": "排序",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "css_class",
+      "fieldName": "cssClass",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "CSS样式",
+      "length": 128
+    },
+    {
+      "columnName": "list_class",
+      "fieldName": "listClass",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "表格回显样式",
+      "length": 128
+    },
+    {
+      "columnName": "is_default",
+      "fieldName": "isDefault",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "是否默认(0-否 1-是)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "状态(0-禁用 1-启用)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "description",
+      "fieldName": "description",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "描述",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_dict_data_type_id",
+      "columns": ["dict_type_id"]
+    },
+    {
+      "indexName": "idx_dict_data_status",
+      "columns": ["status"]
+    }
+  ]
+}

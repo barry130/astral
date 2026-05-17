@@ -1,0 +1,61 @@
+{
+  "tableName": "sequence_history",
+  "tableComment": "序列生成历史表",
+  "moduleName": "sequence",
+  "className": "SequenceHistory",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "biz_key",
+      "fieldName": "bizKey",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "业务键",
+      "length": 64,
+      "isRequired": true
+    },
+    {
+      "columnName": "sequence_type",
+      "fieldName": "sequenceType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "序列类型",
+      "length": 32
+    },
+    {
+      "columnName": "sequence_value",
+      "fieldName": "sequenceValue",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "序列值",
+      "isRequired": true
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_sequence_history_biz_key",
+      "columns": ["biz_key"]
+    },
+    {
+      "indexName": "idx_sequence_history_time",
+      "columns": ["create_time"]
+    }
+  ]
+}

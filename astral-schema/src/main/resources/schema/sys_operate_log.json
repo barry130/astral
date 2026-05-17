@@ -1,0 +1,133 @@
+{
+  "tableName": "sys_operate_log",
+  "tableComment": "操作日志表",
+  "moduleName": "log",
+  "className": "OperateLog",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "AUTO"
+    },
+    {
+      "columnName": "user_id",
+      "fieldName": "userId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "用户ID"
+    },
+    {
+      "columnName": "username",
+      "fieldName": "username",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "用户名",
+      "length": 64
+    },
+    {
+      "columnName": "module",
+      "fieldName": "module",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "操作模块",
+      "length": 64
+    },
+    {
+      "columnName": "operate_type",
+      "fieldName": "operateType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "操作类型",
+      "length": 32
+    },
+    {
+      "columnName": "request_method",
+      "fieldName": "requestMethod",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "请求方法",
+      "length": 10
+    },
+    {
+      "columnName": "request_url",
+      "fieldName": "requestUrl",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "请求URL",
+      "length": 256
+    },
+    {
+      "columnName": "request_params",
+      "fieldName": "requestParams",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "请求参数"
+    },
+    {
+      "columnName": "response_result",
+      "fieldName": "responseResult",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "响应结果"
+    },
+    {
+      "columnName": "ip",
+      "fieldName": "ip",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "IP地址",
+      "length": 64
+    },
+    {
+      "columnName": "location",
+      "fieldName": "location",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "操作地点",
+      "length": 128
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "状态(0-失败 1-成功)"
+    },
+    {
+      "columnName": "error_msg",
+      "fieldName": "errorMsg",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "错误信息"
+    },
+    {
+      "columnName": "execute_time",
+      "fieldName": "executeTime",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "执行时间(ms)"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_operate_log_user",
+      "columns": ["user_id"]
+    },
+    {
+      "indexName": "idx_operate_log_time",
+      "columns": ["create_time"]
+    }
+  ]
+}
