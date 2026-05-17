@@ -50,7 +50,19 @@ public class SchemaCodeGenerator {
         sb.append("import com.baomidou.mybatisplus.annotation.*;\n");
         sb.append("import com.fasterxml.jackson.annotation.JsonProperty;\n");
         sb.append("import lombok.Data;\n\n");
-        sb.append("import java.time.LocalDateTime;\n");
+        
+        boolean hasLocalDate = schema.getFields().stream().anyMatch(f -> "LocalDate".equals(f.getFieldType()));
+        boolean hasLocalDateTime = schema.getFields().stream().anyMatch(f -> "LocalDateTime".equals(f.getFieldType()));
+        
+        if (hasLocalDate) {
+            sb.append("import java.time.LocalDate;\n");
+        }
+        if (hasLocalDateTime) {
+            sb.append("import java.time.LocalDateTime;\n");
+        }
+        if (hasLocalDate || hasLocalDateTime) {
+            sb.append("\n");
+        }
         sb.append("import java.util.List;\n\n");
         sb.append("@Data\n");
         sb.append("@TableName(\"").append(schema.getTableName()).append("\")\n");

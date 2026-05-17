@@ -1,5 +1,6 @@
 package com.astral.sequence.service;
 
+import com.astral.common.error.ErrorCodes;
 import com.astral.common.exception.BusinessException;
 import com.astral.common.util.SequenceMetrics;
 import com.astral.dao.entity.SequenceConfig;
@@ -295,9 +296,7 @@ public class GeneratorFactory {
             String requestedType = type != null ? type.toUpperCase() : defaultType.toUpperCase();
             String existingType = config.getSequenceType().toUpperCase();
             if (!existingType.equals(requestedType)) {
-                throw new BusinessException(400,
-                        String.format("业务键 '%s' 已绑定序列类型 '%s'，不允许切换为 '%s'",
-                                bizKey, existingType, requestedType));
+                throw new BusinessException("SEQ006", bizKey, existingType, requestedType);
             }
         }
         return config;

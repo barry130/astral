@@ -35,6 +35,10 @@
         </dependency>
         <dependency>
             <groupId>com.astral</groupId>
+            <artifactId>astral-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.astral</groupId>
             <artifactId>astral-monitor</artifactId>
         </dependency>
         <dependency>

@@ -1,5 +1,6 @@
 package com.astral.server.controller;
 
+import com.astral.common.error.ErrorCodes;
 import com.astral.common.result.Result;
 import com.astral.server.dto.ClusterNode;
 import com.astral.server.dto.ClusterStatus;
@@ -78,7 +79,7 @@ public class ClusterController {
     public Result<ClusterNode> getCurrentNode() {
         ClusterNode node = clusterService.getCurrentNode();
         if (node == null) {
-            return Result.error("集群未启用或当前节点未注册");
+            return Result.error("CLUSTER001");
         }
         return Result.success(node);
     }
@@ -94,7 +95,7 @@ public class ClusterController {
     public Result<ClusterNode> getNodeStatus(@PathVariable String nodeId) {
         ClusterNode node = clusterService.getNodeStatus(nodeId);
         if (node == null) {
-            return Result.error("节点不存在");
+            return Result.error("CLUSTER002");
         }
         return Result.success(node);
     }

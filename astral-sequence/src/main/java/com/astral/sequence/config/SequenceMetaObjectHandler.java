@@ -83,25 +83,31 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
         }
 
         // 自动填充主键 ID
-        Object idVal = metaObject.getValue("id");
-        if (idVal == null) {
-            // 使用 "entity:表名" 作为业务键，为每个表独立生成 ID 序列
-            String bizKey = "entity:" + tableName;
-            long nextId = segmentGenerator.next(bizKey);
-            strictInsertFill(metaObject, "id", Long.class, nextId);
-            log.debug("Auto-filled id={} for table={}", nextId, tableName);
+        if (metaObject.hasGetter("id")) {
+            Object idVal = metaObject.getValue("id");
+            if (idVal == null) {
+                // 使用 "entity:表名" 作为业务键，为每个表独立生成 ID 序列
+                String bizKey = "entity:" + tableName;
+                long nextId = segmentGenerator.next(bizKey);
+                strictInsertFill(metaObject, "id", Long.class, nextId);
+                log.debug("Auto-filled id={} for table={}", nextId, tableName);
+            }
         }
 
         // 自动填充创建时间
-        Object createTime = metaObject.getValue("createTime");
-        if (createTime == null) {
-            strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
+        if (metaObject.hasGetter("createTime")) {
+            Object createTime = metaObject.getValue("createTime");
+            if (createTime == null) {
+                strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
+            }
         }
         
         // 自动填充更新时间
-        Object updateTime = metaObject.getValue("updateTime");
-        if (updateTime == null) {
-            strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+        if (metaObject.hasGetter("updateTime")) {
+            Object updateTime = metaObject.getValue("updateTime");
+            if (updateTime == null) {
+                strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+            }
         }
     }
 
@@ -115,7 +121,9 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
      */
     @Override
     public void updateFill(MetaObject metaObject) {
-        strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+        if (metaObject.hasGetter("updateTime")) {
+            strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+        }
     }
 
     /**

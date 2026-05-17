@@ -30,8 +30,6 @@ CREATE TABLE IF NOT EXISTS sequence_config (
     min_value BIGINT NOT NULL DEFAULT 1,
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     description VARCHAR(256),
-    current_value BIGINT,
-    total_generate BIGINT,
     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -41,7 +39,7 @@ CREATE INDEX IF NOT EXISTS idx_config_enabled ON sequence_config(enabled);
 -- 序列使用统计表
 CREATE TABLE IF NOT EXISTS sequence_statistics (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    biz_key VARCHAR(64) NOT NULL UNIQUE,
+    biz_key VARCHAR(64) NOT NULL,
     current_value BIGINT NOT NULL DEFAULT 0,
     total_generate BIGINT NOT NULL DEFAULT 0,
     last_generate_time TIMESTAMP,
@@ -51,18 +49,6 @@ CREATE TABLE IF NOT EXISTS sequence_statistics (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_statistics_biz_key ON sequence_statistics(biz_key);
-
--- 序列生成历史记录表
-CREATE TABLE IF NOT EXISTS sequence_history (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    biz_key VARCHAR(64) NOT NULL,
-    sequence_type VARCHAR(32) NOT NULL,
-    sequence_value BIGINT NOT NULL,
-    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_history_biz_key ON sequence_history(biz_key);
-CREATE INDEX IF NOT EXISTS idx_history_create_time ON sequence_history(create_time);
 
 -- 用户表
 CREATE TABLE IF NOT EXISTS sys_user (
@@ -74,12 +60,12 @@ CREATE TABLE IF NOT EXISTS sys_user (
     phone VARCHAR(32),
     avatar VARCHAR(256),
     status TINYINT NOT NULL DEFAULT 1,
-    deleted TINYINT NOT NULL DEFAULT 0,
     login_ip VARCHAR(64),
     login_time TIMESTAMP,
     pwd_update_time TIMESTAMP,
     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0,
     CONSTRAINT uk_sys_user_username UNIQUE (username)
 );
 
@@ -142,6 +128,55 @@ CREATE TABLE IF NOT EXISTS sys_role_permission (
 
 CREATE INDEX IF NOT EXISTS idx_sys_role_permission_permission_id ON sys_role_permission(permission_id);
 
+-- 字典类型表
+CREATE TABLE IF NOT EXISTS sys_dict_type (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dict_code VARCHAR(64) NOT NULL,
+    dict_name VARCHAR(128) NOT NULL,
+    data_type VARCHAR(32),
+    jdbc_type VARCHAR(32),
+    data_length INT,
+    description VARCHAR(1024),
+    status TINYINT NOT NULL DEFAULT 1,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_sys_dict_type_code UNIQUE (dict_code)
+);
+
+-- 字典数据表
+CREATE TABLE IF NOT EXISTS sys_dict_data (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dict_type_id BIGINT NOT NULL,
+    dict_label VARCHAR(128) NOT NULL,
+    dict_value VARCHAR(128) NOT NULL,
+    dict_sort INT NOT NULL DEFAULT 0,
+    css_class VARCHAR(128),
+    list_class VARCHAR(128),
+    is_default TINYINT NOT NULL DEFAULT 0,
+    status TINYINT NOT NULL DEFAULT 1,
+    description VARCHAR(256),
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_dict_data_type_id ON sys_dict_data(dict_type_id);
+CREATE INDEX IF NOT EXISTS idx_dict_data_status ON sys_dict_data(status);
+
+-- 系统配置表
+CREATE TABLE IF NOT EXISTS sys_config (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    config_name VARCHAR(128) NOT NULL,
+    config_key VARCHAR(128) NOT NULL,
+    config_value CLOB,
+    config_type TINYINT NOT NULL DEFAULT 1,
+    description VARCHAR(256),
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_sys_config_key UNIQUE (config_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sys_config_type ON sys_config(config_type);
+
 -- 操作日志表
 CREATE TABLE IF NOT EXISTS sys_operate_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -158,8 +193,7 @@ CREATE TABLE IF NOT EXISTS sys_operate_log (
     status TINYINT NOT NULL DEFAULT 1,
     error_msg CLOB,
     execute_time BIGINT,
-    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted TINYINT NOT NULL DEFAULT 0
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_sys_operate_log_user_id ON sys_operate_log(user_id);
@@ -256,15 +290,63 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
-SELECT 'user:manage', '用户管理', '/api/v1/users/**', NULL, 1, 5
+SELECT 'statistics:view', '查看统计', '/api/v1/statistics/**', NULL, 1, 5
 WHERE NOT EXISTS (
-    SELECT 1 FROM sys_permission WHERE permission_code = 'user:manage'
+    SELECT 1 FROM sys_permission WHERE permission_code = 'statistics:view'
 );
 
 INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
-SELECT 'monitor:view', '查看监控', '/api/v1/monitor/**', NULL, 1, 6
+SELECT 'cluster:view', '集群管理', '/api/v1/cluster/**', NULL, 1, 6
 WHERE NOT EXISTS (
-    SELECT 1 FROM sys_permission WHERE permission_code = 'monitor:view'
+    SELECT 1 FROM sys_permission WHERE permission_code = 'cluster:view'
+);
+
+INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
+SELECT 'system:user:view', '用户管理', '/api/v1/system/user/**', NULL, 1, 10
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_permission WHERE permission_code = 'system:user:view'
+);
+
+INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
+SELECT 'system:role:view', '角色管理', '/api/v1/system/role/**', NULL, 1, 11
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_permission WHERE permission_code = 'system:role:view'
+);
+
+INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
+SELECT 'system:permission:view', '权限管理', '/api/v1/system/permission/**', NULL, 1, 12
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_permission WHERE permission_code = 'system:permission:view'
+);
+
+INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
+SELECT 'system:dict:view', '数据字典', '/api/v1/system/dict/**', NULL, 1, 13
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_permission WHERE permission_code = 'system:dict:view'
+);
+
+INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
+SELECT 'system:config:view', '系统配置', '/api/v1/system/config/**', NULL, 1, 14
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_permission WHERE permission_code = 'system:config:view'
+);
+
+INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
+SELECT 'system:token:view', 'Token管理', '/api/v1/system/token/**', NULL, 1, 15
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_permission WHERE permission_code = 'system:token:view'
+);
+
+INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
+SELECT 'system:schema:view', '表结构管理', '/api/v1/system/table-schema/**', NULL, 1, 16
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_permission WHERE permission_code = 'system:schema:view'
+);
+
+INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
+SELECT '*:*:*', '超级管理员', '*', NULL, 0, 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM sys_permission WHERE permission_code = '*:*:*'
 );
 
 INSERT INTO sys_user_role (user_id, role_id)
@@ -292,3 +374,78 @@ WHERE r.role_code = 'USER'
   AND NOT EXISTS (
       SELECT 1 FROM sys_role_permission rp WHERE rp.role_id = r.id AND rp.permission_id = p.id
   );
+
+-- 字典初始数据
+INSERT INTO sys_dict_type (dict_code, dict_name, description)
+SELECT 'sys_user_status', '用户状态', '用户状态列表'
+WHERE NOT EXISTS (SELECT 1 FROM sys_dict_type WHERE dict_code = 'sys_user_status');
+
+INSERT INTO sys_dict_type (dict_code, dict_name, description)
+SELECT 'sys_enabled_status', '启用状态', '通用启用禁用状态'
+WHERE NOT EXISTS (SELECT 1 FROM sys_dict_type WHERE dict_code = 'sys_enabled_status');
+
+INSERT INTO sys_dict_type (dict_code, dict_name, description)
+SELECT 'sequence_type', '序列类型', '序列生成器类型'
+WHERE NOT EXISTS (SELECT 1 FROM sys_dict_type WHERE dict_code = 'sequence_type');
+
+-- 用户状态字典数据
+INSERT INTO sys_dict_data (dict_type_id, dict_label, dict_value, dict_sort, is_default, status)
+SELECT id, '正常', '1', 1, 1, 1 FROM sys_dict_type WHERE dict_code = 'sys_user_status'
+AND NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_label = '正常' AND dict_value = '1');
+
+INSERT INTO sys_dict_data (dict_type_id, dict_label, dict_value, dict_sort, is_default, status)
+SELECT id, '停用', '0', 2, 0, 1 FROM sys_dict_type WHERE dict_code = 'sys_user_status'
+AND NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_label = '停用' AND dict_value = '0');
+
+-- 启用状态字典数据
+INSERT INTO sys_dict_data (dict_type_id, dict_label, dict_value, dict_sort, is_default, status)
+SELECT id, '启用', '1', 1, 1, 1 FROM sys_dict_type WHERE dict_code = 'sys_enabled_status'
+AND NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_label = '启用' AND dict_value = '1');
+
+INSERT INTO sys_dict_data (dict_type_id, dict_label, dict_value, dict_sort, is_default, status)
+SELECT id, '禁用', '0', 2, 0, 1 FROM sys_dict_type WHERE dict_code = 'sys_enabled_status'
+AND NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_label = '禁用' AND dict_value = '0');
+
+-- 序列类型字典数据
+INSERT INTO sys_dict_data (dict_type_id, dict_label, dict_value, dict_sort, is_default, status)
+SELECT id, '雪花算法', 'SNOWFLAKE', 1, 0, 1 FROM sys_dict_type WHERE dict_code = 'sequence_type'
+AND NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_label = '雪花算法');
+
+INSERT INTO sys_dict_data (dict_type_id, dict_label, dict_value, dict_sort, is_default, status)
+SELECT id, '号段模式', 'SEGMENT', 2, 1, 1 FROM sys_dict_type WHERE dict_code = 'sequence_type'
+AND NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_label = '号段模式');
+
+INSERT INTO sys_dict_data (dict_type_id, dict_label, dict_value, dict_sort, is_default, status)
+SELECT id, 'Redis模式', 'REDIS', 3, 0, 1 FROM sys_dict_type WHERE dict_code = 'sequence_type'
+AND NOT EXISTS (SELECT 1 FROM sys_dict_data WHERE dict_label = 'Redis模式');
+
+-- 系统配置初始数据
+INSERT INTO sys_config (config_name, config_key, config_value, config_type, description)
+SELECT '系统名称', 'sys.site.name', 'Astral 序列管理系统', 1, '系统显示名称'
+WHERE NOT EXISTS (SELECT 1 FROM sys_config WHERE config_key = 'sys.site.name');
+
+INSERT INTO sys_config (config_name, config_key, config_value, config_type, description)
+SELECT '默认序列类型', 'sequence.default.type', 'SEGMENT', 1, '新建业务键时默认使用的序列类型'
+WHERE NOT EXISTS (SELECT 1 FROM sys_config WHERE config_key = 'sequence.default.type');
+
+INSERT INTO sys_config (config_name, config_key, config_value, config_type, description)
+SELECT '默认号段步长', 'sequence.default.step', '1000', 1, '号段模式默认步长大小'
+WHERE NOT EXISTS (SELECT 1 FROM sys_config WHERE config_key = 'sequence.default.step');
+
+CREATE TABLE IF NOT EXISTS sys_api_statistics (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    api_path VARCHAR(128) NOT NULL,
+    api_method VARCHAR(16) NOT NULL,
+    call_count BIGINT NOT NULL DEFAULT 0,
+    success_count BIGINT NOT NULL DEFAULT 0,
+    failure_count BIGINT NOT NULL DEFAULT 0,
+    total_time BIGINT NOT NULL DEFAULT 0,
+    avg_time BIGINT NOT NULL DEFAULT 0,
+    max_time BIGINT NOT NULL DEFAULT 0,
+    stat_date DATE NOT NULL,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_stat_path_date ON sys_api_statistics(api_path, stat_date);
+CREATE INDEX IF NOT EXISTS idx_api_stat_date ON sys_api_statistics(stat_date);

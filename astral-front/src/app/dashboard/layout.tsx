@@ -21,6 +21,7 @@ import {
   SafetyOutlined,
   KeyOutlined,
   TableOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '@/context/AuthContext';
 import { TabContext } from '@/context/TabContext';
@@ -38,17 +39,19 @@ interface TabItem {
 }
 
 /** 侧边栏菜单配置：定义所有可访问的页面及其图标和名称 */
-const menuConfig: { key: string; icon: React.ReactNode; label: string }[] = [
+const menuConfig: { key: string; icon: React.ReactNode; label: string; permission?: string }[] = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
-  { key: '/dashboard/sequence', icon: <ApiOutlined />, label: '序列管理' },
-  { key: '/dashboard/cluster', icon: <ClusterOutlined />, label: '集群管理' },
-  { key: '/dashboard/system/user', icon: <TeamOutlined />, label: '用户管理' },
-  { key: '/dashboard/system/role', icon: <SafetyOutlined />, label: '角色权限' },
-  { key: '/dashboard/system/dict', icon: <BookOutlined />, label: '数据字典' },
-  { key: '/dashboard/system/config', icon: <SettingOutlined />, label: '系统配置' },
-  { key: '/dashboard/system/token', icon: <KeyOutlined />, label: 'Token管理' },
-  { key: '/dashboard/system/table-schema', icon: <TableOutlined />, label: '表结构管理' },
-  { key: '/dashboard/log', icon: <FileTextOutlined />, label: '日志管理' },
+  { key: '/dashboard/sequence', icon: <ApiOutlined />, label: '序列管理', permission: 'sequence:view' },
+  { key: '/dashboard/statistics', icon: <BarChartOutlined />, label: 'API统计', permission: 'statistics:view' },
+  { key: '/dashboard/cluster', icon: <ClusterOutlined />, label: '集群管理', permission: 'cluster:view' },
+  { key: '/dashboard/system/user', icon: <TeamOutlined />, label: '用户管理', permission: 'system:user:view' },
+  { key: '/dashboard/system/role', icon: <SafetyOutlined />, label: '角色权限', permission: 'system:role:view' },
+  { key: '/dashboard/system/permission', icon: <SafetyOutlined />, label: '权限管理', permission: 'system:permission:view' },
+  { key: '/dashboard/system/dict', icon: <BookOutlined />, label: '数据字典', permission: 'system:dict:view' },
+  { key: '/dashboard/system/config', icon: <SettingOutlined />, label: '系统配置', permission: 'system:config:view' },
+  { key: '/dashboard/system/token', icon: <KeyOutlined />, label: 'Token管理', permission: 'system:token:view' },
+  { key: '/dashboard/system/table-schema', icon: <TableOutlined />, label: '表结构管理', permission: 'system:schema:view' },
+  { key: '/dashboard/log', icon: <FileTextOutlined />, label: '日志管理', permission: 'log:view' },
 ];
 
 /**
@@ -59,16 +62,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   /** 从认证上下文获取登录状态和用户信息 */
   const { isLogin, logout, loading, user } = useAuth();
   const router = useRouter();
-  /** 当前路由路径 */
   const pathname = usePathname();
-  /** 侧边栏折叠状态 */
   const [collapsed, setCollapsed] = useState(false);
-  /** 已打开的标签页列表 */
   const [openTabs, setOpenTabs] = useState<TabItem[]>([]);
-  /** 当前激活的标签页 */
   const [activeTab, setActiveTab] = useState(pathname);
-  /** 标签页是否已初始化（避免首次加载重复添加） */
   const [initialized, setInitialized] = useState(false);
+
+  const userPermissions = user?.permissions || [];
+  const filteredMenuConfig = menuConfig.filter(item => {
+    if (!item.permission) return true;
+    return userPermissions.includes(item.permission) || userPermissions.includes('*:*:*');
+  });
 
   /** 未登录时重定向到首页 */
   useEffect(() => {
@@ -81,20 +85,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!initialized) {
       // 首次加载：只添加当前页签
-      const currentTab = menuConfig.find(item => item.key === pathname);
+      const currentTab = filteredMenuConfig.find(item => item.key === pathname);
       if (currentTab) {
         setOpenTabs([currentTab]);
         setInitialized(true);
       }
     } else {
-      // 后续导航：若标签不存在则添加，并切换激活状态
-      const currentTab = menuConfig.find(item => item.key === pathname);
+      const currentTab = filteredMenuConfig.find(item => item.key === pathname);
       if (currentTab && !openTabs.find(tab => tab.key === pathname)) {
         setOpenTabs(prev => [...prev, currentTab]);
       }
       setActiveTab(pathname);
     }
-  }, [pathname, initialized, openTabs]);
+  }, [pathname, initialized, openTabs, filteredMenuConfig]);
 
   /** 加载中显示全屏loading */
   if (loading) {
@@ -162,7 +165,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ];
 
   /** 将菜单配置转换为Ant Design Menu组件所需格式 */
-  const menuItems = menuConfig.map(item => ({
+  const menuItems = filteredMenuConfig.map(item => ({
     key: item.key,
     icon: item.icon,
     label: item.label,

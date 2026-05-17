@@ -1,5 +1,6 @@
 package com.astral.sequence.controller;
 
+import com.astral.common.error.ErrorCodes;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SequenceConfig;
 import com.astral.dao.entity.SequenceStatistics;
@@ -74,7 +75,7 @@ public class SequenceConfigController {
     @GetMapping("/{bizKey}")
     public Result<SequenceConfig> getByBizKey(@PathVariable String bizKey) {
         SequenceConfig config = sequenceConfigMapper.selectByBizKey(bizKey);
-        return config != null ? Result.success(config) : Result.error("配置不存在");
+        return config != null ? Result.success(config) : Result.error("SEQ007");
     }
 
     /**

@@ -1,27 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Form, Input, Button, message } from 'antd';
 import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
 import { useAuth } from '@/context/AuthContext';
+import { encryptPassword, clearPublicKeyCache } from '@/lib/crypto';
 
-/**
- * 登录页面组件
- * 提供用户名和密码输入表单，调用认证API进行登录
- */
 export default function LoginPage() {
-  /** 登录按钮加载状态 */
   const [loading, setLoading] = useState(false);
-  /** 从认证上下文获取登录方法 */
+  const [publicKeyLoading, setPublicKeyLoading] = useState(true);
   const { login } = useAuth();
   const router = useRouter();
 
-  /** 表单提交处理：调用登录API，成功后跳转到仪表盘 */
+  useEffect(() => {
+    encryptPassword('test').then(() => {
+      setPublicKeyLoading(false);
+    }).catch((error) => {
+      console.error('加密初始化失败:', error);
+      message.error(error.message || '加密初始化失败，请确保后端服务已启动');
+    });
+  }, []);
+
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {
-      await login(values.username, values.password);
+      const encryptedPassword = await encryptPassword(values.password);
+      await login(values.username, encryptedPassword);
+      clearPublicKeyCache();
       message.success('登录成功');
       router.push('/dashboard');
     } catch (error: any) {
@@ -84,7 +90,7 @@ export default function LoginPage() {
             <Button 
               type="primary" 
               htmlType="submit" 
-              loading={loading} 
+              loading={loading || publicKeyLoading} 
               block
               style={{ height: 48, fontSize: 16, fontWeight: 500 }}
             >

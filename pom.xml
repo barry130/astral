@@ -24,6 +24,7 @@
         <module>astral-dao</module>
         <module>astral-log</module>
         <module>astral-auth</module>
+        <module>astral-system</module>
         <module>astral-monitor</module>
         <module>astral-sequence</module>
         <module>astral-server</module>
@@ -71,6 +72,11 @@
             <dependency>
                 <groupId>com.astral</groupId>
                 <artifactId>astral-auth</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.astral</groupId>
+                <artifactId>astral-system</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

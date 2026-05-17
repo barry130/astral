@@ -2,37 +2,32 @@ package com.astral.auth.api;
 
 import com.astral.auth.dto.LoginRequest;
 import com.astral.auth.dto.LoginResponse;
+import com.astral.auth.security.RsaKeyManager;
 import com.astral.auth.service.AuthService;
+import com.astral.common.annotation.RateLimit;
 import com.astral.common.result.Result;
 import com.astral.log.annotation.LoginLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * 认证控制器
- * <p>
- * 提供用户认证相关的REST接口，包括登录、登出、获取用户信息。
- * 接口路径前缀：{@code /api/v1/auth}
- * </p>
- */
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
-    /** 认证服务 */
     private final AuthService authService;
+    private final RsaKeyManager rsaKeyManager;
 
-    /**
-     * 用户登录接口
-     * <p>
-     * 标注了 {@link LoginLog} 注解，登录成功后会自动记录登录日志。
-     * 同时将用户名设置到请求属性中，供登录日志切面使用。
-     * </p>
-     *
-     * @param request    登录请求，包含用户名和密码
-     * @param httpRequest HTTP请求对象，用于设置用户名属性
-     * @return 登录响应，包含用户信息和认证令牌
-     */
+    @GetMapping("/public-key")
+    public Result<Map<String, String>> getPublicKey() {
+        Map<String, String> result = new HashMap<>();
+        result.put("publicKey", rsaKeyManager.getPublicKeyBase64());
+        return Result.success(result);
+    }
+
+    @RateLimit(key = "ip", limit = 5, duration = 60, message = "登录尝试次数过多，请60秒后再试")
     @LoginLog("用户名密码登录")
     @PostMapping("/login")
     public Result<LoginResponse> login(@RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {

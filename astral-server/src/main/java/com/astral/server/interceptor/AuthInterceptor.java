@@ -2,6 +2,7 @@ package com.astral.server.interceptor;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.astral.common.error.ErrorCodes;
 import com.astral.common.result.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -38,7 +39,9 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (!StpUtil.isLogin()) {
             response.setContentType("application/json;charset=UTF-8");
             response.setStatus(401);
-            response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, "未登录")));
+            Result<?> result = Result.error("AUTH001");
+            result.setCode(401);
+            response.getWriter().write(objectMapper.writeValueAsString(result));
             return false;
         }
         
