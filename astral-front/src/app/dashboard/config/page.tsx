@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, Switch, message, Popconfirm, Card, Space, InputNumber, Tag, Row, Col } from 'antd';
+import { Button, Modal, Form, Input, Select, Switch, message, Popconfirm, Card, Space, InputNumber, Tag, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons';
 import { sequenceConfigApi, SequenceConfig } from '@/api/sequenceConfig';
 import { sequenceApi, SequenceType } from '@/api/sequence';
+import { ResizableTable } from '@/components/ResizableTable';
 
 /**
  * 序列配置管理页面组件
@@ -149,7 +150,7 @@ export default function ConfigPage() {
       </div>
       
       <Card className="fade-in-up">
-        <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="filter-bar">
           <div>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} size="large">
               新建配置
@@ -159,11 +160,12 @@ export default function ConfigPage() {
             刷新
           </Button>
         </div>
-        <Table 
+        <ResizableTable 
           dataSource={data} 
           columns={columns} 
           rowKey="id" 
           loading={loading}
+          scroll={{ x: 'max-content' }}
           pagination={{ 
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条配置`
@@ -174,7 +176,7 @@ export default function ConfigPage() {
       <Modal
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <SettingOutlined style={{ color: '#4a90d9' }} />
+            <SettingOutlined style={{ color: '#4a6fa5' }} />
             <span>{editingId ? '编辑配置' : '新建配置'}</span>
           </div>
         }
@@ -186,7 +188,7 @@ export default function ConfigPage() {
         width={520}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
-          <Row gutter={16}>
+          <Row gutter={[16,16]}>
             <Col span={24}>
               <Form.Item name="bizKey" label="业务键" rules={[{ required: true, message: '请输入业务键' }]}>
                 <Input placeholder="如: order_id, user_id" style={{ height: 40 }} />

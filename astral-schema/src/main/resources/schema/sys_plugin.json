@@ -1,0 +1,52 @@
+{
+  "tableName": "sys_plugin",
+  "tableComment": "插件状态表",
+  "moduleName": "plugin",
+  "className": "SysPlugin",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "plugin_id",
+      "fieldName": "pluginId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "插件ID",
+      "length": 64,
+      "isUnique": true
+    },
+    {
+      "columnName": "enabled",
+      "fieldName": "enabled",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "是否启用(1启用 0禁用)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sys_plugin_id",
+      "columns": [
+        "plugin_id"
+      ],
+      "unique": true
+    }
+  ]
+}

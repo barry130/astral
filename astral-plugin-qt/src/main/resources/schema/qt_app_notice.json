@@ -1,0 +1,161 @@
+{
+  "tableName": "qt_app_notice",
+  "tableComment": "轻听App公告表",
+  "moduleName": "qt",
+  "className": "QtAppNotice",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "type",
+      "fieldName": "type",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "展示渠道位掩码(1-开屏弹窗 2-通告栏 4-消息中心,可叠加)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "url",
+      "fieldName": "url",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "点击后跳转链接",
+      "length": 512
+    },
+    {
+      "columnName": "uid",
+      "fieldName": "uid",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "预留用户ID(历史字段)",
+      "length": 64
+    },
+    {
+      "columnName": "title",
+      "fieldName": "title",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "公告标题",
+      "length": 128
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "公告正文(可承载富文本)",
+      "length": 65535
+    },
+    {
+      "columnName": "is_show",
+      "fieldName": "isShow",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "是否启用(0-隐藏 1-展示)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "is_top",
+      "fieldName": "isTop",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "是否置顶(0-否 1-是)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "dialog_closable",
+      "fieldName": "dialogClosable",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "开屏弹窗是否可关闭(仅type含开屏生效)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "first_login_only",
+      "fieldName": "firstLoginOnly",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "仅首次登录弹出(仅type含开屏生效)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "marquee",
+      "fieldName": "marquee",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "通告栏是否跑马灯滚动(仅type含通告栏生效)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "effective_start",
+      "fieldName": "effectiveStart",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "生效时间(为空不限制)"
+    },
+    {
+      "columnName": "effective_end",
+      "fieldName": "effectiveEnd",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "失效时间(为空不限制)"
+    },
+    {
+      "columnName": "version_min",
+      "fieldName": "versionMin",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "生效APP版本下限(语义化版本,如1.2.0)",
+      "length": 32
+    },
+    {
+      "columnName": "version_max",
+      "fieldName": "versionMax",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "生效APP版本上限(语义化版本)",
+      "length": 32
+    },
+    {
+      "columnName": "audience",
+      "fieldName": "audience",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "可见人群(ALL全部/LOGGED_IN仅登录/NOT_LOGGED_IN仅游客)",
+      "length": 16,
+      "defaultValue": "ALL"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_qt_notice_show",
+      "columns": [
+        "is_show"
+      ]
+    }
+  ]
+}

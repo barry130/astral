@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 @Tag(name = "权限管理")
 @RestController
-@RequestMapping("/api/v1/system/permission")
+@RequestMapping("/api/v1/admin/system/permission")
 @RequiredArgsConstructor
 public class PermissionController {
 

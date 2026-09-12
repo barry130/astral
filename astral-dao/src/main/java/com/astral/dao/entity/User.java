@@ -12,7 +12,7 @@ import java.util.List;
 @TableName("sys_user")
 public class User {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Long id;
 
     private String username;
@@ -29,6 +29,12 @@ public class User {
     private String avatar;
 
     private Integer status;
+
+    @TableField("user_type")
+    private String userType;
+
+    @TableField("device_id")
+    private String deviceId;
 
     @TableField("login_ip")
     private String loginIp;

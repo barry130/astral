@@ -29,7 +29,7 @@
       "fieldName": "sequenceType",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "序列类型",
+      "comment": "序列类型(SEGMENT-号段 SNOWFLAKE-雪花 REDIS-Redis DATABASE-数据库 SIMPLE-内存)",
       "length": 32,
       "isRequired": true
     },
@@ -46,7 +46,7 @@
       "fieldName": "dateFormat",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "日期格式",
+      "comment": "日期格式(none-无 yyyyMMdd-按日 yyyyMM-按月 yyyy-按年)",
       "length": 32
     },
     {
@@ -78,7 +78,7 @@
       "fieldName": "enabled",
       "fieldType": "Boolean",
       "jdbcType": "BOOLEAN",
-      "comment": "是否启用",
+      "comment": "是否启用(0-禁用 1-启用)",
       "defaultValue": "true"
     },
     {
@@ -104,29 +104,22 @@
       "jdbcType": "TIMESTAMP",
       "comment": "更新时间",
       "isAutoFill": "UPDATE"
-    },
-    {
-      "columnName": "current_value",
-      "fieldName": "currentValue",
-      "fieldType": "Long",
-      "jdbcType": "BIGINT",
-      "comment": "当前值",
-      "defaultValue": "0"
-    },
-    {
-      "columnName": "total_generate",
-      "fieldName": "totalGenerate",
-      "fieldType": "Long",
-      "jdbcType": "BIGINT",
-      "comment": "总生成数",
-      "defaultValue": "0"
     }
   ],
   "indexes": [
     {
       "indexName": "uk_sequence_config_biz_key",
-      "columns": ["biz_key"],
+      "columns": [
+        "biz_key"
+      ],
       "isUnique": true
+    }
+  ],
+  "nonDbFields": [
+    {
+      "fieldName": "currentValue",
+      "fieldType": "Long",
+      "comment": "当前值（仅号段模式有意义，由序列统计表实时填充，非数据库列）"
     }
   ]
 }

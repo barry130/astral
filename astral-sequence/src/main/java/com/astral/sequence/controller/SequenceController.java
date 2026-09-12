@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/v1/sequence")
+@RequestMapping("/api/v1/all/sequence")
 @RequiredArgsConstructor
 public class SequenceController {
     private final SequenceService sequenceService;

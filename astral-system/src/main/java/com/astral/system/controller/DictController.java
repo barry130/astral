@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "数据字典")
 @RestController
-@RequestMapping("/api/v1/system/dict")
+@RequestMapping("/api/v1/admin/system/dict")
 @RequiredArgsConstructor
 public class DictController {
 

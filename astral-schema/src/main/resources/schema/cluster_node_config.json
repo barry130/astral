@@ -1,0 +1,129 @@
+{
+  "tableName": "cluster_node_config",
+  "tableComment": "集群节点配置表",
+  "moduleName": "cluster",
+  "className": "ClusterNodeConfig",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "node_id",
+      "fieldName": "nodeId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "节点ID",
+      "length": 64,
+      "isUnique": true
+    },
+    {
+      "columnName": "worker_id",
+      "fieldName": "workerId",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "Worker ID",
+      "isUnique": true
+    },
+    {
+      "columnName": "ip_address",
+      "fieldName": "ipAddress",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "IP地址",
+      "length": 64,
+      "isRequired": true
+    },
+    {
+      "columnName": "port",
+      "fieldName": "port",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "端口",
+      "defaultValue": "8080"
+    },
+    {
+      "columnName": "node_name",
+      "fieldName": "nodeName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "节点名称",
+      "length": 128
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "节点状态(0-离线 1-在线)",
+      "length": 32,
+      "defaultValue": "ONLINE"
+    },
+    {
+      "columnName": "max_worker_id",
+      "fieldName": "maxWorkerId",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "最大Worker ID",
+      "defaultValue": "1023"
+    },
+    {
+      "columnName": "enabled",
+      "fieldName": "enabled",
+      "fieldType": "Boolean",
+      "jdbcType": "BOOLEAN",
+      "comment": "是否启用(0-禁用 1-启用)",
+      "defaultValue": "TRUE"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_cluster_node_id",
+      "columns": [
+        "node_id"
+      ],
+      "unique": true
+    },
+    {
+      "indexName": "uk_cluster_worker_id",
+      "columns": [
+        "worker_id"
+      ],
+      "unique": true
+    },
+    {
+      "indexName": "idx_cluster_node_status",
+      "columns": [
+        "status"
+      ]
+    },
+    {
+      "indexName": "idx_cluster_node_enabled",
+      "columns": [
+        "enabled"
+      ]
+    }
+  ]
+}

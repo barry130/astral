@@ -1,0 +1,31 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# Maven 构建产物
+**/target/
+
+# 前端 (后端构建不需要)
+astral-front/
+astral-front/node_modules
+astral-front/.next
+
+# 本地数据与日志
+data/
+logs/
+*.log
+
+# 部署相关
+deploy/
+
+# 临时/其他
+.claude
+.qwen
+Vibe-Skills
+*.mv.db
+*.trace.db

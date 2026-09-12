@@ -54,13 +54,13 @@ export interface BusinessMonitorDTO {
 export const monitorApi = {
   /** 获取系统资源信息（CPU/内存/磁盘） */
   getSystemInfo: (): Promise<ApiResult<SystemMonitorDTO>> =>
-    request.get('/api/v1/monitor/system'),
+    request.get('/api/v1/admin/monitor/system'),
 
   /** 获取JVM运行信息 */
   getJvmInfo: (): Promise<ApiResult<JvmMonitorDTO>> =>
-    request.get('/api/v1/monitor/jvm'),
+    request.get('/api/v1/admin/monitor/jvm'),
 
   /** 获取业务指标信息 */
   getBusinessInfo: (): Promise<ApiResult<BusinessMonitorDTO>> =>
-    request.get('/api/v1/monitor/business'),
+    request.get('/api/v1/admin/monitor/business'),
 };

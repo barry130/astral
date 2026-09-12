@@ -1,0 +1,112 @@
+{
+  "tableName": "sys_mail_log",
+  "tableComment": "邮件发送记录",
+  "moduleName": "system",
+  "className": "SysMailLog",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "account_id",
+      "fieldName": "accountId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "发送账户ID"
+    },
+    {
+      "columnName": "plugin_id",
+      "fieldName": "pluginId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "调用插件ID",
+      "length": 32
+    },
+    {
+      "columnName": "scene",
+      "fieldName": "scene",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "业务场景(模板编码)",
+      "length": 64
+    },
+    {
+      "columnName": "to_email",
+      "fieldName": "toEmail",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "收件邮箱",
+      "length": 128
+    },
+    {
+      "columnName": "subject",
+      "fieldName": "subject",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "邮件主题",
+      "length": 256
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "邮件正文"
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "发送结果(0-失败 1-成功)"
+    },
+    {
+      "columnName": "error_msg",
+      "fieldName": "errorMsg",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "失败原因",
+      "length": 512
+    },
+    {
+      "columnName": "send_time",
+      "fieldName": "sendTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "发送时间"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_mail_log_email",
+      "columns": ["to_email"]
+    },
+    {
+      "indexName": "idx_mail_log_send_time",
+      "columns": ["send_time"]
+    }
+  ]
+}

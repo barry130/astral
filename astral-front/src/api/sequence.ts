@@ -56,21 +56,21 @@ export interface SequenceHistory {
 export const sequenceApi = {
   /** 生成下一个序列号 */
   next: (data: SequenceRequest): Promise<ApiResult<SequenceResponse>> =>
-    request.post('/api/v1/sequence/next', data),
+    request.post('/api/v1/all/sequence/next', data),
 
   /** 批量生成序列号 */
   batch: (data: SequenceBatchRequest): Promise<ApiResult<SequenceResponse>> =>
-    request.post('/api/v1/sequence/batch', data),
+    request.post('/api/v1/all/sequence/batch', data),
 
   /** 获取所有支持的序列类型 */
   getTypes: (): Promise<ApiResult<SequenceType[]>> =>
-    request.get('/api/v1/sequence/types'),
+    request.get('/api/v1/all/sequence/types'),
 
   /** 分页查询序列历史记录 */
   getHistoryPage: (pageNum = 1, pageSize = 20, bizKey?: string): Promise<ApiResult<any>> =>
-    request.get('/api/v1/sequence/history/page', { params: { pageNum, pageSize, bizKey } }),
+    request.get('/api/v1/admin/sequence/history/page', { params: { pageNum, pageSize, bizKey } }),
 
   /** 获取最近的序列历史记录 */
   getHistoryRecent: (bizKey?: string, limit = 100): Promise<ApiResult<SequenceHistory[]>> =>
-    request.get('/api/v1/sequence/history/recent', { params: { bizKey, limit } }),
+    request.get('/api/v1/admin/sequence/history/recent', { params: { bizKey, limit } }),
 };

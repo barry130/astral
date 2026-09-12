@@ -43,10 +43,7 @@ public class SequenceConfig {
     @TableField(value = "update_time", fill = FieldFill.UPDATE)
     private LocalDateTime updateTime;
 
-    @TableField("current_value")
+    @TableField(exist = false)
     private Long currentValue;
-
-    @TableField("total_generate")
-    private Long totalGenerate;
 
 }

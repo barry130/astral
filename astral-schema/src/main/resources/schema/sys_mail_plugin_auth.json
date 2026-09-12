@@ -1,0 +1,72 @@
+{
+  "tableName": "sys_mail_plugin_auth",
+  "tableComment": "插件发信授权",
+  "moduleName": "system",
+  "className": "SysMailPluginAuth",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "plugin_id",
+      "fieldName": "pluginId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "插件ID",
+      "length": 32
+    },
+    {
+      "columnName": "plugin_name",
+      "fieldName": "pluginName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "插件名称",
+      "length": 64
+    },
+    {
+      "columnName": "daily_limit",
+      "fieldName": "dailyLimit",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "每邮箱每日发送上限"
+    },
+    {
+      "columnName": "allowed_scenes",
+      "fieldName": "allowedScenes",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "允许的场景(JSON数组, NULL表示全部)",
+      "length": 512
+    },
+    {
+      "columnName": "enabled",
+      "fieldName": "enabled",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "是否启用(0-否 1-是)"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

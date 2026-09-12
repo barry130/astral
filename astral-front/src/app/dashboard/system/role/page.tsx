@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Space, Modal, Form, Input, InputNumber, Switch, Tag, message, Popconfirm, TreeSelect, Row, Col } from 'antd';
+import { Card, Button, Space, Modal, Form, Input, InputNumber, Switch, Tag, message, Popconfirm, TreeSelect, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from '@ant-design/icons';
 import { request } from '@/api/client';
+import { ResizableTable } from '@/components/ResizableTable';
 
 /** 角色实体接口 */
 interface Role {
@@ -41,25 +42,25 @@ interface Permission {
 const roleApi = {
   /** 分页查询角色 */
   getPage: (pageNum: number, pageSize: number, params?: Record<string, any>) =>
-    request.get('/api/v1/system/role/page', { params: { pageNum, pageSize, ...params } }),
+    request.get('/api/v1/admin/system/role/page', { params: { pageNum, pageSize, ...params } }),
   /** 获取所有角色 */
-  getAll: () => request.get('/api/v1/system/role/all'),
+  getAll: () => request.get('/api/v1/admin/system/role/all'),
   /** 创建角色 */
-  create: (data: any) => request.post('/api/v1/system/role', data),
+  create: (data: any) => request.post('/api/v1/admin/system/role', data),
   /** 更新角色 */
-  update: (id: number, data: any) => request.put(`/api/v1/system/role/${id}`, data),
+  update: (id: number, data: any) => request.put(`/api/v1/admin/system/role/${id}`, data),
   /** 删除角色 */
-  delete: (id: number) => request.delete(`/api/v1/system/role/${id}`),
+  delete: (id: number) => request.delete(`/api/v1/admin/system/role/${id}`),
   /** 获取角色的权限列表 */
-  getPermissions: (id: number) => request.get(`/api/v1/system/role/${id}/permissions`),
+  getPermissions: (id: number) => request.get(`/api/v1/admin/system/role/${id}/permissions`),
   /** 为角色分配权限 */
-  assignPermissions: (id: number, permissionIds: number[]) => request.put(`/api/v1/system/role/${id}/permissions`, { permissionIds }),
+  assignPermissions: (id: number, permissionIds: number[]) => request.put(`/api/v1/admin/system/role/${id}/permissions`, { permissionIds }),
 };
 
 /** 权限管理API封装 */
 const permissionApi = {
   /** 获取权限树 */
-  getTree: () => request.get('/api/v1/system/permission/tree'),
+  getTree: () => request.get('/api/v1/admin/system/permission/tree'),
 };
 
 /**
@@ -190,6 +191,7 @@ export default function RolePage() {
     {
       title: '操作',
       key: 'action',
+      width: 160,
       render: (_: any, r: Role) => (
         <Space>
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(r)}>编辑</Button>
@@ -205,11 +207,11 @@ export default function RolePage() {
   return (
     <div>
       <Card>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
           <Input.Search placeholder="搜索角色" allowClear style={{ width: 300 }} />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建角色</Button>
         </div>
-        <Table dataSource={data} columns={columns} rowKey="id" loading={loading} pagination={pagination} />
+        <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'] }} />
       </Card>
 
       <Modal title={editingRole ? '编辑角色' : '新建角色'} open={modalVisible} onOk={handleSubmit} onCancel={() => setModalVisible(false)}>
@@ -221,9 +223,9 @@ export default function RolePage() {
             <Input />
           </Form.Item>
           <Form.Item name="description" label="描述"><Input.TextArea rows={2} /></Form.Item>
-          <Row gutter={16}>
-            <Col span={12}><Form.Item name="sort" label="排序" initialValue={0}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item></Col>
-            <Col span={12}><Form.Item name="status" label="状态" valuePropName="checked" initialValue><Switch checkedChildren="启用" unCheckedChildren="禁用" /></Form.Item></Col>
+          <Row gutter={[16,16]}>
+            <Col xs={{ span: 24 }} md={{ span: 12 }}><Form.Item name="sort" label="排序" initialValue={0}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item></Col>
+            <Col xs={{ span: 24 }} md={{ span: 12 }}><Form.Item name="status" label="状态" valuePropName="checked" initialValue><Switch checkedChildren="启用" unCheckedChildren="禁用" /></Form.Item></Col>
           </Row>
         </Form>
       </Modal>

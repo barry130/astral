@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "角色权限关联表")
 @RestController
-@RequestMapping("/api/v1/system/role_permission")
+@RequestMapping("/api/v1/admin/system/role_permission")
 @RequiredArgsConstructor
 public class RolePermissionController {
 

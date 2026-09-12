@@ -23,6 +23,7 @@ public class CorsConfig {
     /**
      * 创建CORS过滤器Bean
      * <p>允许携带凭证（Cookie/Authorization）、所有请求头和方法，预检请求缓存1小时</p>
+     * <p>配置为 * 时放行全部来源（使用 originPatterns，兼容 allowCredentials=true）</p>
      *
      * @return CorsFilter实例
      */
@@ -32,8 +33,14 @@ public class CorsConfig {
         // 允许携带凭证（Cookie、Authorization头等）
         config.setAllowCredentials(true);
         // 配置允许的跨域来源
-        for (String origin : allowedOrigins) {
-            config.addAllowedOrigin(origin);
+        if (allowedOrigins.contains("*")) {
+            // 放行全部来源：Spring 在 allowCredentials=true 下不允许 allowedOrigins="*"，
+            // 必须使用 originPatterns（响应时回显具体 Origin）
+            config.setAllowedOriginPatterns(List.of("*"));
+        } else {
+            for (String origin : allowedOrigins) {
+                config.addAllowedOrigin(origin);
+            }
         }
         // 允许所有请求头
         config.addAllowedHeader("*");

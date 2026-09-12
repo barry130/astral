@@ -12,7 +12,7 @@
       "comment": "主键ID",
       "isPrimaryKey": true,
       "isAutoIncrement": true,
-      "mybatisPlusIdType": "AUTO"
+      "mybatisPlusIdType": "INPUT"
     },
     {
       "columnName": "dict_code",
@@ -38,7 +38,7 @@
       "fieldName": "dataType",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "数据类型",
+      "comment": "数据类型(1-字符串 2-数字 3-布尔 4-日期 5-JSON)",
       "length": 32
     },
     {
@@ -46,7 +46,7 @@
       "fieldName": "jdbcType",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "JDBC类型",
+      "comment": "JDBC类型(VARCHAR-字符串 INT-整数 BIGINT-长整数 DECIMAL-小数 TIMESTAMP-时间 DATE-日期 BIT-布尔)",
       "length": 32
     },
     {
@@ -92,7 +92,9 @@
   "indexes": [
     {
       "indexName": "uk_sys_dict_type_code",
-      "columns": ["dict_code"],
+      "columns": [
+        "dict_code"
+      ],
       "isUnique": true
     }
   ]

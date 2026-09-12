@@ -13,7 +13,7 @@
       "isPrimaryKey": true,
       "isAutoIncrement": true,
       "isRequired": false,
-      "mybatisPlusIdType": "AUTO"
+      "mybatisPlusIdType": "INPUT"
     },
     {
       "columnName": "username",
@@ -76,6 +76,23 @@
       "defaultValue": "1"
     },
     {
+      "columnName": "user_type",
+      "fieldName": "userType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "用户类型(ADMIN-管理端 APP-插件App端，统一用户体系)",
+      "length": 20,
+      "defaultValue": "ADMIN"
+    },
+    {
+      "columnName": "device_id",
+      "fieldName": "deviceId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "App端设备标识",
+      "length": 128
+    },
+    {
       "columnName": "login_ip",
       "fieldName": "loginIp",
       "fieldType": "String",
@@ -126,7 +143,9 @@
   "indexes": [
     {
       "indexName": "uk_sys_user_username",
-      "columns": ["username"],
+      "columns": [
+        "username"
+      ],
       "isUnique": true
     }
   ]

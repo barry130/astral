@@ -27,6 +27,11 @@
         <module>astral-system</module>
         <module>astral-monitor</module>
         <module>astral-sequence</module>
+        <module>astral-plugin-api</module>
+        <module>astral-plugin</module>
+        <module>astral-plugin-demo</module>
+        <module>astral-plugin-qt</module>
+        <module>astral-plugin-feedback</module>
         <module>astral-server</module>
     </modules>
 
@@ -87,6 +92,31 @@
             <dependency>
                 <groupId>com.astral</groupId>
                 <artifactId>astral-sequence</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.astral</groupId>
+                <artifactId>astral-plugin-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.astral</groupId>
+                <artifactId>astral-plugin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.astral</groupId>
+                <artifactId>astral-plugin-demo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.astral</groupId>
+                <artifactId>astral-plugin-qt</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.astral</groupId>
+                <artifactId>astral-plugin-feedback</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

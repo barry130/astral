@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +19,7 @@ import java.util.List;
  */
 @Tag(name = "字典类型表")
 @RestController
-@RequestMapping("/api/v1/system/dict/type")
+@RequestMapping("/api/v1/admin/system/dict/type")
 @RequiredArgsConstructor
 public class DictTypeController {
 
@@ -71,8 +72,10 @@ public class DictTypeController {
      */
     @Operation(summary = "创建")
     @PostMapping
+    @CacheEvict(value = "dictType", allEntries = true)
     public Result<Void> create(@RequestBody DictType entity) {
         dictTypeService.save(entity);
+        dictTypeService.evictCache();
         return Result.success();
     }
 
@@ -85,9 +88,11 @@ public class DictTypeController {
      */
     @Operation(summary = "更新")
     @PutMapping("/{id}")
+    @CacheEvict(value = "dictType", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictType entity) {
         entity.setId(id);
         dictTypeService.updateById(entity);
+        dictTypeService.evictCache();
         return Result.success();
     }
 
@@ -99,8 +104,10 @@ public class DictTypeController {
      */
     @Operation(summary = "删除")
     @DeleteMapping("/{id}")
+    @CacheEvict(value = "dictType", allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {
         dictTypeService.removeById(id);
+        dictTypeService.evictCache();
         return Result.success();
     }
 }

@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.*;
  * 监控控制器
  * <p>
  * 提供系统监控相关的REST接口，包括系统监控、JVM监控、业务监控。
- * 接口路径前缀：{@code /api/v1/monitor}
+ * 接口路径前缀：{@code /api/v1/admin/monitor}
  * </p>
  */
 @RestController
-@RequestMapping("/api/v1/monitor")
+@RequestMapping("/api/v1/admin/monitor")
 @RequiredArgsConstructor
 public class MonitorController {
     /** 系统监控服务 */

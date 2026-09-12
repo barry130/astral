@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Card, Form, Input, Select, Button, Table, message, Spin, InputNumber, Row, Col, Tag, Empty, Tabs, Popconfirm, Switch, Space, Modal, AutoComplete } from 'antd';
+import { Card, Form, Input, Select, Button, message, Spin, InputNumber, Row, Col, Tag, Empty, Tabs, Popconfirm, Switch, Space, Modal, AutoComplete } from 'antd';
 import { ApiOutlined, SendOutlined, BulbOutlined, HistoryOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ToolOutlined } from '@ant-design/icons';
 import { sequenceApi, SequenceType, SequenceResponse } from '@/api/sequence';
 import { sequenceConfigApi, SequenceConfig } from '@/api/sequenceConfig';
+import { ResizableTable } from '@/components/ResizableTable';
 
 /**
  * 序列管理页面组件
@@ -150,47 +151,39 @@ export default function SequencePage() {
     }
   };
 
-  /** 业务键选择变化：若已配置类型则自动填充并锁定类型选择 */
-  const handleBizKeyChange = (value: string | null, isBatch = false) => {
-    const config = configs.find(c => c.bizKey === value);
-    if (config?.sequenceType) {
-      if (isBatch) {
-        batchForm.setFieldValue('type', config.sequenceType);
-        setBatchTypeLocked(true);
-      } else {
-        form.setFieldValue('type', config.sequenceType);
-        setSingleTypeLocked(true);
-      }
-    } else {
-      if (isBatch) {
-        setBatchTypeLocked(false);
-      } else {
-        setSingleTypeLocked(false);
-      }
+  /** 业务键解析：调用后端实时查询该业务键是否已存在配置，存在则自动填充并锁定序列类型 */
+  const resolveTypeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resolveType = (value: string | null | undefined, isBatch = false) => {
+    const v = (value || '').trim();
+    const targetForm = isBatch ? batchForm : form;
+    const setLock = isBatch ? setBatchTypeLocked : setSingleTypeLocked;
+    if (!v) {
+      setLock(false);
+      targetForm.setFieldValue('type', undefined);
+      return;
     }
+    if (resolveTypeRef.current) clearTimeout(resolveTypeRef.current);
+    resolveTypeRef.current = setTimeout(() => {
+      sequenceConfigApi.getByBizKey(v).then((res) => {
+        if (res.code === 200 && res.data?.sequenceType) {
+          targetForm.setFieldValue('type', res.data.sequenceType);
+          setLock(true);
+        } else {
+          setLock(false);
+          targetForm.setFieldValue('type', undefined);
+        }
+      }).catch(() => {
+        setLock(false);
+      });
+    }, 300);
   };
-  
-  /** 单个生成业务键输入变化：实时匹配配置类型 */
-  const handleBizKeyInputChange = (value: string) => {
-    const config = configs.find(c => c.bizKey === value);
-    if (config?.sequenceType) {
-      form.setFieldValue('type', config.sequenceType);
-      setSingleTypeLocked(true);
-    } else {
-      setSingleTypeLocked(false);
-    }
-  };
-  
-  /** 批量生成业务键输入变化：实时匹配配置类型 */
-  const handleBatchBizKeyInputChange = (value: string) => {
-    const config = configs.find(c => c.bizKey === value);
-    if (config?.sequenceType) {
-      batchForm.setFieldValue('type', config.sequenceType);
-      setBatchTypeLocked(true);
-    } else {
-      setBatchTypeLocked(false);
-    }
-  };
+
+  /** 单个生成业务键输入变化：实时查询后端配置类型 */
+  const handleBizKeyInputChange = (value: string) => resolveType(value, false);
+  /** 批量生成业务键输入变化：实时查询后端配置类型 */
+  const handleBatchBizKeyInputChange = (value: string) => resolveType(value, true);
+  /** 业务键选择（下拉选中）变化 */
+  const handleBizKeyChange = (value: string | null, isBatch = false) => resolveType(value, isBatch);
   
   /** 刷新历史记录 */
   const loadHistory = () => {
@@ -284,10 +277,10 @@ export default function SequencePage() {
                         allowClear
                         onSelect={(value) => handleBizKeyChange(value, false)}
                         onChange={handleBizKeyInputChange}
-                        onClear={() => setSingleTypeLocked(false)}
+                        onClear={() => resolveType(undefined, false)}
                       />
                     </Form.Item>
-                    <Form.Item name="type" label="序列类型" extra={singleTypeLocked ? <span style={{ color: '#faad14' }}>⚠ 该业务键已绑定此类型，不可更改</span> : null}>
+                    <Form.Item name="type" label="序列类型" rules={[{ required: true, message: '请选择序列类型' }]} extra={singleTypeLocked ? <span style={{ color: '#faad14' }}>⚠ 该业务键已绑定此类型，不可更改</span> : null}>
                       <Select placeholder="选择类型" disabled={singleTypeLocked}>
                         {types.map((t) => (
                           <Select.Option key={t.code} value={t.code}>{t.description}</Select.Option>
@@ -311,12 +304,12 @@ export default function SequencePage() {
                         allowClear
                         onSelect={(value) => handleBizKeyChange(value, true)}
                         onChange={handleBatchBizKeyInputChange}
-                        onClear={() => setBatchTypeLocked(false)}
+                        onClear={() => resolveType(undefined, true)}
                       />
                     </Form.Item>
                     <Row gutter={8}>
-                      <Col span={12}>
-                        <Form.Item name="type" label="类型" extra={batchTypeLocked ? <span style={{ color: '#faad14' }}>⚠ 该业务键已绑定此类型，不可更改</span> : null}>
+                      <Col xs={{ span: 24 }} sm={{ span: 12 }}>
+                        <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择序列类型' }]} extra={batchTypeLocked ? <span style={{ color: '#faad14' }}>⚠ 该业务键已绑定此类型，不可更改</span> : null}>
                           <Select placeholder="类型" disabled={batchTypeLocked}>
                             {types.map((t) => (
                               <Select.Option key={t.code} value={t.code}>{t.description}</Select.Option>
@@ -324,7 +317,7 @@ export default function SequencePage() {
                           </Select>
                         </Form.Item>
                       </Col>
-                      <Col span={12}>
+                      <Col xs={{ span: 24 }} sm={{ span: 12 }}>
                         <Form.Item name="count" label="数量" initialValue={10}>
                           <InputNumber min={1} max={1000} style={{ width: '100%' }} />
                         </Form.Item>
@@ -342,11 +335,11 @@ export default function SequencePage() {
                   {result ? (
                     <div>
                       <Row gutter={16} style={{ marginBottom: 16 }}>
-                        <Col span={12}>
+                        <Col xs={{ span: 24 }} sm={{ span: 12 }}>
                           <div style={{ color: '#999', fontSize: 12 }}>业务键</div>
                           <div style={{ fontWeight: 500 }}>{result.bizKey}</div>
                         </Col>
-                        <Col span={12}>
+                        <Col xs={{ span: 24 }} sm={{ span: 12 }}>
                           <div style={{ color: '#999', fontSize: 12 }}>类型</div>
                           <div style={{ fontWeight: 500 }}>{result.type}</div>
                         </Col>
@@ -369,20 +362,21 @@ export default function SequencePage() {
                 </Card>
 
                 <Card title="历史记录">
-                  <Table
+                  <ResizableTable
                     dataSource={history}
                     columns={historyColumns}
                     rowKey="id"
                     size="small"
                     pagination={{ pageSize: 5 }}
                     locale={{ emptyText: '暂无历史记录' }}
+                    scroll={{ x: 'max-content' }}
                   />
                 </Card>
               </Col>
             </Row>
           ) : (
             <Card>
-              <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+              <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                 <Input.Search
                   placeholder="搜索业务键"
                   allowClear
@@ -390,18 +384,20 @@ export default function SequencePage() {
                   style={{ width: 300 }}
                   onSearch={handleConfigSearch}
                 />
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleConfigAdd}>
-                  新建配置
-                </Button>
+                <div className="page-toolbar">
+                  <Button type="primary" icon={<PlusOutlined />} onClick={handleConfigAdd}>
+                    新建配置
+                  </Button>
+                </div>
               </div>
-              <Table
+              <ResizableTable
                 dataSource={configs}
                 loading={configLoading}
                 rowKey="id"
                 columns={[
                   { title: '业务键', dataIndex: 'bizKey', key: 'bizKey', render: (v: string) => <Tag color="blue">{v}</Tag> },
                   { title: '序列类型', dataIndex: 'sequenceType', key: 'sequenceType', render: (v: string) => <Tag>{v}</Tag> },
-                  { title: '当前值', dataIndex: 'currentValue', key: 'currentValue', render: (v: number) => v || '-' },
+                  { title: '当前值', dataIndex: 'currentValue', key: 'currentValue', render: (v: number, r: SequenceConfig) => r.sequenceType === 'SEGMENT' ? (v ?? '-') : '—' },
                   { title: '步长', dataIndex: 'step', key: 'step', render: (v: number) => v || '-' },
                   { 
                     title: '状态', 
@@ -437,6 +433,7 @@ export default function SequencePage() {
                   showSizeChanger: true,
                   showTotal: (total: number) => `共 ${total} 条`
                 }}
+                scroll={{ x: 'max-content' }}
               />
             </Card>
           )}

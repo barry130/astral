@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Form, Input, Button, message } from 'antd';
+import { Form, Input, Button, message, Spin } from 'antd';
 import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
 import { useAuth } from '@/context/AuthContext';
 import { encryptPassword, clearPublicKeyCache } from '@/lib/crypto';
@@ -10,8 +10,15 @@ import { encryptPassword, clearPublicKeyCache } from '@/lib/crypto';
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [publicKeyLoading, setPublicKeyLoading] = useState(true);
-  const { login } = useAuth();
+  const { login, isLogin, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  // 已登录用户直接跳转到首页（仪表盘），避免重复登录
+  useEffect(() => {
+    if (!authLoading && isLogin) {
+      router.replace('/dashboard');
+    }
+  }, [authLoading, isLogin, router]);
 
   useEffect(() => {
     encryptPassword('test').then(() => {
@@ -37,6 +44,17 @@ export default function LoginPage() {
     }
   };
 
+  // 校验登录状态期间不展示表单，避免闪现后跳转
+  if (authLoading) {
+    return (
+      <div style={{
+        display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh',
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
     <div className="login-container">
       <div className="login-box fade-in-up">
@@ -44,7 +62,7 @@ export default function LoginPage() {
           <div style={{
             width: 56,
             height: 56,
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #2d2d44 100%)',
+            background: 'linear-gradient(135deg, #1c2027 0%, #2a2f38 100%)',
             borderRadius: 14,
             display: 'inline-flex',
             alignItems: 'center',

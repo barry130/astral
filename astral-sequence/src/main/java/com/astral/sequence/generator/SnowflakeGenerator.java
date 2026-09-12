@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Snowflake 算法序列号生成器
@@ -64,11 +65,13 @@ public class SnowflakeGenerator implements SequenceGenerator {
     /**
      * 每个业务键的锁对象映射表
      * <p>
-     * 使用细粒度锁（每个业务键一个锁）而不是全局锁，提高并发性能。
+     * 使用细粒度锁（每个业务键一个 ReentrantLock）而不是全局锁，提高并发性能。
      * 不同业务键的序列号生成可以并行执行。
+     * 采用 ReentrantLock 而非 synchronized：虚拟线程友好，waitNextMillis 忙等/阻塞期间
+     * 可从 carrier 卸载，避免 pinning。
      * </p>
      */
-    private final Map<String, Object> keyLocks = new ConcurrentHashMap<>();
+    private final Map<String, ReentrantLock> keyLocks = new ConcurrentHashMap<>();
 
     /**
      * 默认构造函数，使用默认的工作机器 ID 和数据中心 ID
@@ -115,8 +118,9 @@ public class SnowflakeGenerator implements SequenceGenerator {
     @Override
     public long next(String bizKey) {
         // 获取该业务键的专属锁对象，如果不存在则创建
-        Object lock = keyLocks.computeIfAbsent(bizKey, k -> new Object());
-        synchronized (lock) {
+        ReentrantLock lock = keyLocks.computeIfAbsent(bizKey, k -> new ReentrantLock());
+        lock.lock();
+        try {
             // 获取或创建该业务键的序列号状态
             SequenceState state = stateMap.computeIfAbsent(bizKey, k -> new SequenceState());
             long timestamp = System.currentTimeMillis();
@@ -156,6 +160,8 @@ public class SnowflakeGenerator implements SequenceGenerator {
 
             log.debug("Snowflake generated: bizKey={}, id={}", bizKey, id);
             return id;
+        } finally {
+            lock.unlock();
         }
     }
 

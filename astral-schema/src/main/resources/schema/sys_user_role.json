@@ -12,7 +12,7 @@
       "comment": "主键ID",
       "isPrimaryKey": true,
       "isAutoIncrement": true,
-      "mybatisPlusIdType": "AUTO"
+      "mybatisPlusIdType": "INPUT"
     },
     {
       "columnName": "user_id",
@@ -42,15 +42,22 @@
   "indexes": [
     {
       "indexName": "idx_user_role_user",
-      "columns": ["user_id"]
+      "columns": [
+        "user_id"
+      ]
     },
     {
       "indexName": "idx_user_role_role",
-      "columns": ["role_id"]
+      "columns": [
+        "role_id"
+      ]
     },
     {
       "indexName": "uk_user_role",
-      "columns": ["user_id", "role_id"],
+      "columns": [
+        "user_id",
+        "role_id"
+      ],
       "isUnique": true
     }
   ]

@@ -1,0 +1,75 @@
+{
+  "tableName": "qt_user_daka",
+  "tableComment": "轻听App用户打卡表",
+  "moduleName": "qt",
+  "className": "QtUserDaka",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "uid",
+      "fieldName": "uid",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "用户ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "data",
+      "fieldName": "data",
+      "fieldType": "LocalDate",
+      "jdbcType": "DATE",
+      "comment": "打卡日期",
+      "isRequired": true
+    },
+    {
+      "columnName": "integral",
+      "fieldName": "integral",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "积分",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "is_use_code",
+      "fieldName": "isUseCode",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "是否使用打卡码(0-否 1-是)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_qt_daka_uid_data",
+      "columns": [
+        "uid",
+        "data"
+      ]
+    }
+  ]
+}

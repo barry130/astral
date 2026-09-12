@@ -1,217 +1,90 @@
 version: '3.8'
 
 # ============================================
-# 序列生成器集群部署配置
+# Astral 管理后台 部署编排 (后端 + 前端)
+# PostgreSQL/Redis 复用服务器上已有的实例(裸机/已有容器), 不在此编排
 # ============================================
-# 启动命令: docker-compose up -d
-# 停止命令: docker-compose down
-# 查看日志: docker-compose logs -f
+# 使用方式(在 deploy/ 目录下):
+#   构建+启动:  docker compose up -d --build
+#   停止:       docker compose down
+#   查看日志:   docker compose logs -f backend
+#   重新构建:   docker compose build --no-cache backend
 # ============================================
 
 services:
-  # ==================== Redis ====================
-  redis:
-    image: redis:7-alpine
-    container_name: astral-redis
-    ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes --requirepass your_redis_password
-    volumes:
-      - redis-data:/data
-    networks:
-      - astral-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "your_redis_password", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
-  # ==================== MySQL ====================
-  mysql:
-    image: mysql:8.0
-    container_name: astral-mysql
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: astral_sequence
-      MYSQL_USER: astral
-      MYSQL_PASSWORD: astral_password
-    volumes:
-      - mysql-data:/var/lib/mysql
-      - ../sql:/docker-entrypoint-initdb.d
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
-      --max_connections=500
-    networks:
-      - astral-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-
-  # ==================== 序列生成器节点1 ====================
-  sequence-node-1:
+  # ==================== 后端 ====================
+  backend:
     build:
       context: ..
       dockerfile: astral-server/Dockerfile
-    container_name: astral-sequence-node-1
-    ports:
-      - "8081:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=cluster
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/astral_sequence?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-      - SPRING_DATASOURCE_USERNAME=astral
-      - SPRING_DATASOURCE_PASSWORD=astral_password
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_DATA_REDIS_PASSWORD=your_redis_password
-      - astral_CLUSTER_ENABLED=true
-      - astral_CLUSTER_NODE_NAME=sequence-node-1
-      - astral_CLUSTER_NODE_PORT=8080
-    depends_on:
-      redis:
-        condition: service_healthy
-      mysql:
-        condition: service_healthy
-    networks:
-      - astral-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+    container_name: astral-backend
     restart: unless-stopped
-
-  # ==================== 序列生成器节点2 ====================
-  sequence-node-2:
-    build:
-      context: ..
-      dockerfile: astral-server/Dockerfile
-    container_name: astral-sequence-node-2
     ports:
-      - "8082:8080"
+      - "27000:27000"
+    # 生产 JVM 参数 + SPRING_PROFILES_ACTIVE=prod（虚拟线程/线程参数/日志降级）
+    # 仅在启动 backend 时加载 prod.env；测试环境不引用此文件
+    env_file:
+      - prod.env
     environment:
-      - SPRING_PROFILES_ACTIVE=cluster
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/astral_sequence?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-      - SPRING_DATASOURCE_USERNAME=astral
-      - SPRING_DATASOURCE_PASSWORD=astral_password
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_DATA_REDIS_PASSWORD=your_redis_password
-      - astral_CLUSTER_ENABLED=true
-      - astral_CLUSTER_NODE_NAME=sequence-node-2
-      - astral_CLUSTER_NODE_PORT=8080
-    depends_on:
-      redis:
-        condition: service_healthy
-      mysql:
-        condition: service_healthy
-    networks:
-      - astral-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-    restart: unless-stopped
-
-  # ==================== 序列生成器节点3 ====================
-  sequence-node-3:
-    build:
-      context: ..
-      dockerfile: astral-server/Dockerfile
-    container_name: astral-sequence-node-3
-    ports:
-      - "8083:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=cluster
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/astral_sequence?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-      - SPRING_DATASOURCE_USERNAME=astral
-      - SPRING_DATASOURCE_PASSWORD=astral_password
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - SPRING_DATA_REDIS_PASSWORD=your_redis_password
-      - astral_CLUSTER_ENABLED=true
-      - astral_CLUSTER_NODE_NAME=sequence-node-3
-      - astral_CLUSTER_NODE_PORT=8080
-    depends_on:
-      redis:
-        condition: service_healthy
-      mysql:
-        condition: service_healthy
-    networks:
-      - astral-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-    restart: unless-stopped
-
-  # ==================== Nginx负载均衡 ====================
-  nginx:
-    image: nginx:alpine
-    container_name: astral-nginx
-    ports:
-      - "8080:8080"
+      # ---- 数据库与 Redis（复用服务器已有实例）----
+      # 全部取自 deploy/.env（已 gitignore），复制 .env.example 为 .env 后填写；
+      # 未填写时 compose 直接报错，避免用占位值静默启动。
+      SPRING_DATASOURCE_URL: "${SPRING_DATASOURCE_URL:?请在 deploy/.env 设置数据库连接串}"
+      SPRING_DATASOURCE_USERNAME: "${SPRING_DATASOURCE_USERNAME:?请在 deploy/.env 设置数据库账号}"
+      SPRING_DATASOURCE_PASSWORD: "${SPRING_DATASOURCE_PASSWORD:?请在 deploy/.env 设置数据库密码}"
+      REDIS_HOST: "${REDIS_HOST:?请在 deploy/.env 设置 Redis 地址}"
+      REDIS_PORT: "${REDIS_PORT:-6379}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?请在 deploy/.env 设置 Redis 密码}"
+      REDIS_DB: "${REDIS_DB:-7}"
+      # ---- 插件 ----
+      QT_PLUGIN_ENABLED: "true"
+      # ---- 时区 ----
+      TZ: Asia/Shanghai
+    # Linux 下让容器可通过 host.docker.internal 访问宿主机上的 PostgreSQL/Redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - sequence-node-1
-      - sequence-node-2
-      - sequence-node-3
+      # 持久化 RSA 密钥对 (命名卷自动继承镜像内 /app/data 的属主, 避免非 root 写权限问题)
+      - backend-data:/app/data
+      - backend-logs:/app/logs
     networks:
-      - astral-network
-    restart: unless-stopped
+      - astral-net
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:27000/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
-  # ==================== Prometheus监控(可选) ====================
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: astral-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=30d'
-    networks:
-      - astral-network
+  # ==================== 前端 ====================
+  frontend:
+    build:
+      context: ../astral-front
+      dockerfile: Dockerfile
+      args:
+        BACKEND_URL: http://backend:27000
+        # 默认留空: 浏览器走同源相对路径 /api, 由 Next.js 服务端 rewrites 转发到 backend 容器。
+        # 同源请求没有 Mixed Content / CORS 问题, 是 HTTPS(反向代理) 部署的唯一推荐形态;
+        # 如需浏览器直连后端, 可在服务器 deploy/.env 中覆盖, 但只能是 https:// 地址,
+        # http:// 会被 HTTPS 页面以 Mixed Content 拦截(表现为"无法连接到服务器")
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+    container_name: astral-frontend
     restart: unless-stopped
-
-  # ==================== Grafana可视化(可选) ====================
-  grafana:
-    image: grafana/grafana:latest
-    container_name: astral-grafana
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      # 后端容器地址: 供 Next.js rewrites 将 /api 转发到后端
+      BACKEND_URL: http://backend:27000
+      NODE_ENV: production
     depends_on:
-      - prometheus
+      backend:
+        condition: service_healthy
     networks:
-      - astral-network
-    restart: unless-stopped
+      - astral-net
 
 networks:
-  astral-network:
+  astral-net:
     driver: bridge
 
 volumes:
-  redis-data:
-  mysql-data:
-  prometheus-data:
-  grafana-data:
+  backend-data:
+  backend-logs:

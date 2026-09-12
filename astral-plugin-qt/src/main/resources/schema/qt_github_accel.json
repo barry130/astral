@@ -1,0 +1,76 @@
+{
+  "tableName": "qt_github_accel",
+  "tableComment": "轻听App GitHub加速前缀配置表(UPDATE_DESIGN.md)",
+  "moduleName": "qt",
+  "className": "QtGithubAccel",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "name",
+      "fieldName": "name",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "节点名称(如ghfast)",
+      "length": 64
+    },
+    {
+      "columnName": "prefix_url",
+      "fieldName": "prefixUrl",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "加速前缀(最终地址=前缀+原始链接直接拼接)",
+      "length": 256,
+      "isRequired": true
+    },
+    {
+      "columnName": "is_show",
+      "fieldName": "isShow",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "是否启用(1-启用参与App端探测 0-停用)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "sort",
+      "fieldName": "sort",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "排序(探测顺序,小在前)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "备注",
+      "length": 255
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": []
+}

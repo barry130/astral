@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Input, InputNumber, Select, message, Popconfirm, Tag } from 'antd';
+import { Button, Modal, Form, Input, InputNumber, Select, message, Popconfirm, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { request } from '@/api/client';
+import { ResizableTable } from '@/components/ResizableTable';
 
 const { Option } = Select;
 
@@ -21,7 +22,7 @@ export default function PermissionPage() {
   const fetchPermissions = async () => {
     setLoading(true);
     try {
-      const res = await request.get('/api/v1/system/permission/page', {
+      const res = await request.get('/api/v1/admin/system/permission/page', {
         params: { pageNum: 1, pageSize: 1000 }
       });
       setPermissions(res.data.records || []);
@@ -46,7 +47,7 @@ export default function PermissionPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      const res = await request.delete(`/api/v1/system/permission/${id}`);
+      const res = await request.delete(`/api/v1/admin/system/permission/${id}`);
       message.success('删除成功');
       fetchPermissions();
     } catch (error: any) {
@@ -58,10 +59,10 @@ export default function PermissionPage() {
     try {
       const values = await form.validateFields();
       if (editingPermission) {
-        await request.put(`/api/v1/system/permission/${editingPermission.id}`, values);
+        await request.put(`/api/v1/admin/system/permission/${editingPermission.id}`, values);
         message.success('更新成功');
       } else {
-        await request.post('/api/v1/system/permission', values);
+        await request.post('/api/v1/admin/system/permission', values);
         message.success('创建成功');
       }
       setModalVisible(false);
@@ -105,16 +106,17 @@ export default function PermissionPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-        <h2>权限管理</h2>
+      <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <h2 className="page-title">权限管理</h2>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新建权限</Button>
       </div>
-      <Table
+      <ResizableTable
         columns={columns}
         dataSource={permissions}
         rowKey="id"
         loading={loading}
         pagination={false}
+        scroll={{ x: 'max-content' }}
       />
       <Modal
         title={editingPermission ? '编辑权限' : '新建权限'}

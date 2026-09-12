@@ -1,0 +1,64 @@
+{
+  "tableName": "stat_page_hourly",
+  "tableComment": "统计页面小时桶",
+  "moduleName": "monitor",
+  "className": "StatPageHourly",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "bucket_hour",
+      "fieldName": "bucketHour",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "整点小时桶"
+    },
+    {
+      "columnName": "ut",
+      "fieldName": "ut",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "平台(app-android/app-ios/app-windows/web)",
+      "length": 16
+    },
+    {
+      "columnName": "page",
+      "fieldName": "page",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "页面路由",
+      "length": 256
+    },
+    {
+      "columnName": "pv",
+      "fieldName": "pv",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "该页访问次数"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

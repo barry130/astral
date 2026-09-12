@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 数据库序列号生成器
@@ -34,6 +35,18 @@ public class DatabaseGenerator implements SequenceGenerator {
     private final SequenceStatisticsMapper statisticsMapper;
 
     /**
+     * 每业务键独立锁（ReentrantLock 而非 synchronized）
+     * <p>
+     * 虚拟线程友好：阻塞在 DB I/O 期间可从 carrier 卸载，避免 synchronized pinning。
+     * </p>
+     */
+    private final Map<String, ReentrantLock> locks = new ConcurrentHashMap<>();
+
+    private ReentrantLock lockFor(String bizKey) {
+        return locks.computeIfAbsent(bizKey, k -> new ReentrantLock());
+    }
+
+    /**
      * 值缓存映射表
      * <p>
      * 用于缓存每个业务键的最后生成值，避免重复查询数据库。
@@ -50,8 +63,8 @@ public class DatabaseGenerator implements SequenceGenerator {
     /**
      * 生成下一个序列号
      * <p>
-     * 使用 synchronized 关键字保证线程安全，通过事务保证数据库操作的原子性。
-     * 如果业务键不存在，则自动创建初始记录。
+     * 使用 ReentrantLock 保证线程安全（虚拟线程友好，避免 synchronized pinning），
+     * 通过事务保证数据库操作的原子性。如果业务键不存在，则自动创建初始记录。
      * </p>
      *
      * @param bizKey 业务键
@@ -59,24 +72,30 @@ public class DatabaseGenerator implements SequenceGenerator {
      */
     @Override
     @Transactional
-    public synchronized long next(String bizKey) {
-        // 查询该业务键的统计记录
-        SequenceStatistics stat = statisticsMapper.selectByBizKey(bizKey);
-        if (stat == null) {
-            // 如果不存在，创建新的统计记录，初始值为 0
-            stat = new SequenceStatistics();
-            stat.setBizKey(bizKey);
-            stat.setCurrentValue(0L);
-            statisticsMapper.insert(stat);
+    public long next(String bizKey) {
+        ReentrantLock lock = lockFor(bizKey);
+        lock.lock();
+        try {
+            // 查询该业务键的统计记录
+            SequenceStatistics stat = statisticsMapper.selectByBizKey(bizKey);
+            if (stat == null) {
+                // 如果不存在，创建新的统计记录，初始值为 0
+                stat = new SequenceStatistics();
+                stat.setBizKey(bizKey);
+                stat.setCurrentValue(0L);
+                statisticsMapper.insert(stat);
+            }
+
+            // 当前值加 1 并更新到数据库
+            long value = stat.getCurrentValue() + 1;
+            stat.setCurrentValue(value);
+            statisticsMapper.updateById(stat);
+
+            log.debug("Database generated: bizKey={}, value={}", bizKey, value);
+            return value;
+        } finally {
+            lock.unlock();
         }
-
-        // 当前值加 1 并更新到数据库
-        long value = stat.getCurrentValue() + 1;
-        stat.setCurrentValue(value);
-        statisticsMapper.updateById(stat);
-
-        log.debug("Database generated: bizKey={}, value={}", bizKey, value);
-        return value;
     }
 
     /**
@@ -92,7 +111,7 @@ public class DatabaseGenerator implements SequenceGenerator {
      */
     @Override
     @Transactional
-    public synchronized String batch(String bizKey, int count) {
+    public String batch(String bizKey, int count) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < count; i++) {
             sb.append(next(bizKey));

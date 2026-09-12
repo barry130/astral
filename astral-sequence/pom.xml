@@ -23,7 +23,17 @@
 
         <dependency>
             <groupId>com.astral</groupId>
+            <artifactId>astral-plugin-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.astral</groupId>
             <artifactId>astral-dao</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.astral</groupId>
+            <artifactId>astral-schema</artifactId>
         </dependency>
 
         <dependency>

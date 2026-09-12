@@ -18,7 +18,7 @@ import java.util.List;
  */
 @Tag(name = "集群管理")
 @RestController
-@RequestMapping("/api/v1/cluster")
+@RequestMapping("/api/v1/admin/cluster")
 @RequiredArgsConstructor
 public class ClusterController {
 

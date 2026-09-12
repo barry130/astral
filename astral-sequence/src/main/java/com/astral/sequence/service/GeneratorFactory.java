@@ -15,6 +15,7 @@ import com.astral.sequence.generator.SegmentGenerator;
 import com.astral.sequence.generator.SequenceGenerator;
 import com.astral.sequence.generator.SimpleGenerator;
 import com.astral.sequence.generator.SnowflakeGenerator;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +65,8 @@ public class GeneratorFactory {
     private final SequenceConfigMapper configMapper;
     /** 序列统计数据访问接口 */
     private final SequenceStatisticsMapper statisticsMapper;
+    /** 实体 ID 全局序列提供者 */
+    private final com.astral.sequence.config.EntityIdSequenceProvider entityIdSequenceProvider;
 
     /**
      * Redis 生成器（可选）
@@ -206,9 +209,7 @@ public class GeneratorFactory {
     @Async("sequenceAsyncExecutor")
     public void saveHistoryBatchAsync(List<SequenceHistory> records) {
         try {
-            for (SequenceHistory record : records) {
-                historyMapper.insert(record);
-            }
+            historyService.saveBatch(records);
         } catch (Exception e) {
             log.warn("Async batch history save failed: count={}", records.size(), e);
         }
@@ -227,19 +228,22 @@ public class GeneratorFactory {
     @Async("sequenceAsyncExecutor")
     public void updateStatisticsAsync(String bizKey, long currentValue) {
         try {
-            SequenceStatistics stat = statisticsMapper.selectByBizKey(bizKey);
-            if (stat == null) {
-                // 统计记录不存在，创建新记录
-                stat = new SequenceStatistics();
-                stat.setBizKey(bizKey);
-                stat.setCurrentValue(currentValue);
-                statisticsMapper.insert(stat);
-            } else {
-                // 更新现有记录
-                stat.setCurrentValue(currentValue);
-                stat.setUpdateTime(LocalDateTime.now());
-                statisticsMapper.updateById(stat);
-            }
+        SequenceStatistics stat = statisticsMapper.selectByBizKey(bizKey);
+        if (stat == null) {
+            // 统计记录不存在，创建新记录
+            stat = new SequenceStatistics();
+            stat.setBizKey(bizKey);
+            stat.setCurrentValue(currentValue);
+            // sequence_* 表被 MetaObjectHandler 排除自动填充，需手动设置时间
+            stat.setCreateTime(LocalDateTime.now());
+            stat.setUpdateTime(LocalDateTime.now());
+            statisticsMapper.insert(stat);
+        } else {
+            // 更新现有记录
+            stat.setCurrentValue(currentValue);
+            stat.setUpdateTime(LocalDateTime.now());
+            statisticsMapper.updateById(stat);
+        }
         } catch (Exception e) {
             log.warn("Async statistics update failed: bizKey={}", bizKey, e);
         }
@@ -280,6 +284,13 @@ public class GeneratorFactory {
      * @throws BusinessException 当尝试切换已绑定类型的业务键时抛出
      */
     private SequenceConfig getOrCreateConfig(String bizKey, String type) {
+        // 所有实体 ID 序列（业务键以 _id 结尾）只允许号段模式，任何路径都不能切换类型
+        if (entityIdSequenceProvider.isEntityIdBizKey(bizKey)) {
+            String requestedType = type != null ? type.toUpperCase() : defaultType.toUpperCase();
+            if (!"SEGMENT".equals(requestedType)) {
+                throw new BusinessException("SEQ006", bizKey, "SEGMENT", requestedType);
+            }
+        }
         SequenceConfig config = configMapper.selectByBizKey(bizKey);
         if (config == null) {
             // 配置不存在，自动创建

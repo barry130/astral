@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 27000
   servlet:
     context-path: /
 
@@ -11,16 +11,23 @@ spring:
     exclude:
       - org.redisson.spring.starter.RedissonAutoConfigurationV2
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DB:7}
+
   datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:file:./data/astral
-    username: sa
-    password:
+    driver-class-name: org.postgresql.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/astral?currentSchema=astral}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
 
   sql:
     init:
       mode: always
-      schema-locations: classpath:sql/h2-init.sql,classpath:sql/dict-init.sql
+      schema-locations: classpath:sql/postgresql-init.sql,classpath:sql/dict-init.sql,classpath:sql/pg-seq-reset.sql
       encoding: UTF-8
 
   h2:
@@ -28,25 +35,47 @@ spring:
       enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
 
+  threads:
+    virtual:
+      # JDK 21 虚拟线程：Tomcat 请求线程池改虚拟线程（默认开启）
+      enabled: true
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=10m
+
 astral:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+
+  auth:
+    # token 自动续期阈值（秒）：剩余有效期低于该值时，任何携带有效 satoken 的请求都会把有效期
+    # 续满 sa-token.timeout（滑动续期，活跃用户不掉线）。0 = 关闭自动续期
+    token-renew-threshold: 86400
 
   plugins:
-    auth:
-      enabled: true
-    log:
-      enabled: true
-    monitor:
-      enabled: true
+    enabled: true
+    demo:
+      enabled: ${DEMO_PLUGIN_ENABLED:true}
+    qt:
+      enabled: ${QT_PLUGIN_ENABLED:true}
+    feedback:
+      enabled: ${FEEDBACK_PLUGIN_ENABLED:true}
 
   sequence:
     default-type: segment
     default-step: 1000
 
+  # 全端统计（STATS_DESIGN.md §5.4.6）
+  stat:
+    enabled: ${STAT_ENABLED:true}
+    error-retention-days: 90
+    hourly-retention-days: 180
+
 sa-token:
   token-name: satoken
-  timeout: 86400
+  timeout: 259200
   active-timeout: -1
   is-concurrent: true
   is-share: true

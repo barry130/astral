@@ -1,11 +1,14 @@
 package com.astral.sequence.config;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -15,31 +18,43 @@ import java.util.concurrent.ThreadPoolExecutor;
  * 异步操作包括：保存历史记录、更新统计数据等。
  * 这些操作不影响序列号生成的主流程，可以异步执行以提高性能。
  * </p>
+ * <p>
+ * 线程模型（JDK 21）：
+ * <ul>
+ *   <li>默认（{@code astral.threads.virtual.enabled=true}）：{@link Executors#newVirtualThreadPerTaskExecutor()}
+ *       ——避免阻塞任务占平台线程，降低内存开销（1核2G 场景）</li>
+ *   <li>{@code astral.threads.virtual.enabled=false}：平台线程池（core=2, max=8, queue=10000, DiscardOldest）
+ *       ——仅显式关闭时使用</li>
+ * </ul>
+ * </p>
  */
+@Slf4j
 @Configuration
 @EnableAsync
 public class AsyncConfig {
 
+    /** 是否启用 JDK 21 虚拟线程（默认 true：测试/本地均启用，无需 prod profile） */
+    @Value("${astral.threads.virtual.enabled:true}")
+    private boolean virtualEnabled;
+
     /**
-     * 序列号异步任务线程池
+     * 序列号异步任务执行器
      * <p>
-     * 线程池参数设计：
-     * <ul>
-     *   <li>核心线程数 2：保证基本的异步处理能力</li>
-     *   <li>最大线程数 8：应对突发的大量异步任务</li>
-     *   <li>队列容量 10000：缓冲大量待处理任务</li>
-     *   <li>拒绝策略 DiscardOldest：队列满时丢弃最旧的任务，保证新任务优先</li>
-     * </ul>
+     * 虚拟线程模式（production）：每任务一个虚拟线程，阻塞 I/O 时挂起而非占平台线程，
+     * 显著降低内存；无队列/拒绝策略，适合大量短时异步任务（日志、统计、序列历史）。
      * </p>
      * <p>
-     * 选择 DiscardOldestPolicy 的原因：历史记录和统计数据的丢失是可以接受的，
-     * 但应该优先处理最新的记录，因为它们更重要。
+     * 平台线程池模式（默认）：core=2, max=8, queue=10000, DiscardOldestPolicy。
      * </p>
      *
-     * @return 配置好的线程池执行器
+     * @return 配置好的执行器
      */
     @Bean(name = "sequenceAsyncExecutor")
     public Executor sequenceAsyncExecutor() {
+        if (virtualEnabled) {
+            log.info("[AsyncConfig] sequenceAsyncExecutor 使用 JDK 21 虚拟线程");
+            return Executors.newVirtualThreadPerTaskExecutor();
+        }
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
         executor.setMaxPoolSize(8);

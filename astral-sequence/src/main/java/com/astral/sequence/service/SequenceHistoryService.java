@@ -5,6 +5,7 @@ import com.astral.dao.mapper.SequenceHistoryMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SequenceHistoryService {
+public class SequenceHistoryService extends ServiceImpl<SequenceHistoryMapper, SequenceHistory> {
 
     /** 序列历史数据访问接口 */
     private final SequenceHistoryMapper historyMapper;

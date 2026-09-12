@@ -96,15 +96,22 @@ public class TokenServiceImpl implements TokenService {
                 // 提取登录IP和创建时间
                 String loginIp = (String) session.get("loginIp");
                 LocalDateTime createTime = null;
-                Object createTimeObj = session.getCreateTime();
-                if (createTimeObj != null) {
-                    // 兼容Long时间戳和LocalDateTime两种类型
-                    if (createTimeObj instanceof Long) {
-                        createTime = LocalDateTime.ofInstant(
-                            Instant.ofEpochMilli((Long) createTimeObj), 
-                            ZoneId.systemDefault());
-                    } else if (createTimeObj instanceof LocalDateTime) {
-                        createTime = (LocalDateTime) createTimeObj;
+                // 优先从会话中读取登录时显式存储的loginTime
+                Object loginTimeObj = session.get("loginTime");
+                if (loginTimeObj instanceof LocalDateTime) {
+                    createTime = (LocalDateTime) loginTimeObj;
+                } else {
+                    // 兼容旧Token：回退到会话创建时间（懒加载场景下可能不准确）
+                    Object createTimeObj = session.getCreateTime();
+                    if (createTimeObj != null) {
+                        // 兼容Long时间戳和LocalDateTime两种类型
+                        if (createTimeObj instanceof Long) {
+                            createTime = LocalDateTime.ofInstant(
+                                Instant.ofEpochMilli((Long) createTimeObj), 
+                                ZoneId.systemDefault());
+                        } else if (createTimeObj instanceof LocalDateTime) {
+                            createTime = (LocalDateTime) createTimeObj;
+                        }
                     }
                 }
 

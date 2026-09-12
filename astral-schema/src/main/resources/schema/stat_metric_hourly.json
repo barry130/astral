@@ -1,0 +1,92 @@
+{
+  "tableName": "stat_metric_hourly",
+  "tableComment": "统计小时指标桶",
+  "moduleName": "monitor",
+  "className": "StatMetricHourly",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "bucket_hour",
+      "fieldName": "bucketHour",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "整点小时桶"
+    },
+    {
+      "columnName": "ut",
+      "fieldName": "ut",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "平台(app-android/app-ios/app-windows/web)",
+      "length": 16
+    },
+    {
+      "columnName": "app_version",
+      "fieldName": "appVersion",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "App版本号",
+      "length": 32
+    },
+    {
+      "columnName": "pv",
+      "fieldName": "pv",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "页面访问次数"
+    },
+    {
+      "columnName": "visits",
+      "fieldName": "visits",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "访问次数(冷启动计1次)"
+    },
+    {
+      "columnName": "launches",
+      "fieldName": "launches",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "启动次数"
+    },
+    {
+      "columnName": "total_duration_ms",
+      "fieldName": "totalDurationMs",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "停留时长累加(毫秒)"
+    },
+    {
+      "columnName": "error_count",
+      "fieldName": "errorCount",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "JS/UTS错误次数"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

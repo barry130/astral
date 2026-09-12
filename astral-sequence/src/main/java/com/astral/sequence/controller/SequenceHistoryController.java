@@ -21,7 +21,7 @@ import java.util.List;
  */
 @Tag(name = "序列生成历史表")
 @RestController
-@RequestMapping("/api/v1/sequence/history")
+@RequestMapping("/api/v1/admin/sequence/history")
 @RequiredArgsConstructor
 public class SequenceHistoryController {
 

@@ -1,0 +1,89 @@
+{
+  "tableName": "sys_mail_template",
+  "tableComment": "邮件模板",
+  "moduleName": "system",
+  "className": "SysMailTemplate",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "template_code",
+      "fieldName": "templateCode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "模板编码(场景标识)",
+      "length": 64
+    },
+    {
+      "columnName": "template_name",
+      "fieldName": "templateName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "模板名称",
+      "length": 128
+    },
+    {
+      "columnName": "subject",
+      "fieldName": "subject",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "邮件主题",
+      "length": 256
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "邮件正文(支持${变量}占位)"
+    },
+    {
+      "columnName": "variables",
+      "fieldName": "variables",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "模板变量(JSON数组, 如[\"code\"])",
+      "length": 512
+    },
+    {
+      "columnName": "scene",
+      "fieldName": "scene",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "适用场景标识",
+      "length": 64
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "备注",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

@@ -9,9 +9,9 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 号段模式序列号生成器（默认生成器）
@@ -40,26 +40,14 @@ public class SegmentGenerator implements SequenceGenerator {
     private final SequenceSegmentMapper segmentMapper;
 
     /**
-     * 异步预加载线程池
+     * 异步预加载执行器
      * <p>
-     * 使用固定大小的线程池（2 个线程）来异步预加载下一个号段。
-     * 线程配置为守护线程，不会阻止 JVM 退出。
-     * 自定义线程名称便于调试和监控。
+     * 使用 JDK 21 虚拟线程（每任务一虚拟线程）异步预加载下一个号段。
+     * 预加载是 DB I/O 密集操作，虚拟线程在阻塞期间可从 carrier 卸载，
+     * 不占用平台线程，比固定大小平台线程池更高效、更省内存。
      * </p>
      */
-    private final ExecutorService preloadExecutor = Executors.newFixedThreadPool(
-            2,
-            new ThreadFactory() {
-                private final ThreadFactory defaultFactory = Executors.defaultThreadFactory();
-                @Override
-                public Thread newThread(Runnable r) {
-                    Thread t = defaultFactory.newThread(r);
-                    t.setName("segment-preload-" + t.threadId());
-                    t.setDaemon(true);
-                    return t;
-                }
-            }
-    );
+    private final ExecutorService preloadExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     /**
      * 每个业务键的号段缓冲区映射表
@@ -124,6 +112,8 @@ public class SegmentGenerator implements SequenceGenerator {
         private final AtomicReference<Segment> next = new AtomicReference<>();
         /** 是否正在加载下一个号段，防止重复加载 */
         private volatile boolean loadingNext = false;
+        /** 虚拟线程友好的锁（替代 synchronized，避免 pinning） */
+        private final ReentrantLock preloadLock = new ReentrantLock();
 
         /**
          * 获取下一个序列号
@@ -260,11 +250,14 @@ public class SegmentGenerator implements SequenceGenerator {
         private void tryPreloadNextAsync(String bizKey) {
             // 第一次检查：如果正在加载或已有预加载的号段，则直接返回
             if (loadingNext || next.get() != null) return;
-            // 加锁防止并发提交多个预加载任务
-            synchronized (this) {
+            // 加锁防止并发提交多个预加载任务（ReentrantLock 虚拟线程友好）
+            preloadLock.lock();
+            try {
                 // 第二次检查：获取锁后再次检查，避免重复加载
                 if (loadingNext || next.get() != null) return;
                 loadingNext = true;
+            } finally {
+                preloadLock.unlock();
             }
             // 提交异步预加载任务
             preloadExecutor.submit(() -> {

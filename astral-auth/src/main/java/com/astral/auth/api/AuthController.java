@@ -7,12 +7,19 @@ import com.astral.auth.service.AuthService;
 import com.astral.common.annotation.RateLimit;
 import com.astral.common.result.Result;
 import com.astral.log.annotation.LoginLog;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 认证控制器（旧路径 /api/v1/auth/**，已废弃）
+ * <p>App 与管理端请迁移到 /api/v1/all/auth/**（见 {@link AllAuthController}）。</p>
+ * @deprecated 使用 {@link AllAuthController}
+ */
+@Deprecated
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -30,7 +37,7 @@ public class AuthController {
     @RateLimit(key = "ip", limit = 5, duration = 60, message = "登录尝试次数过多，请60秒后再试")
     @LoginLog("用户名密码登录")
     @PostMapping("/login")
-    public Result<LoginResponse> login(@RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
+    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
         Result<LoginResponse> result = Result.success(authService.login(request));
         if (result.getData() != null) {
             httpRequest.setAttribute("username", result.getData().getUsername());

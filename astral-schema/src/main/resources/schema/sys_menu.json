@@ -1,0 +1,113 @@
+{
+  "tableName": "sys_menu",
+  "tableComment": "菜单管理表",
+  "moduleName": "system",
+  "className": "SysMenu",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "parent_id",
+      "fieldName": "parentId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "父菜单ID",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "name",
+      "fieldName": "name",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "菜单名称",
+      "length": 64,
+      "isRequired": true
+    },
+    {
+      "columnName": "icon",
+      "fieldName": "icon",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "图标名称",
+      "length": 64
+    },
+    {
+      "columnName": "path",
+      "fieldName": "path",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "路由路径",
+      "length": 256
+    },
+    {
+      "columnName": "permission",
+      "fieldName": "permission",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "所需权限标识",
+      "length": 128
+    },
+    {
+      "columnName": "sort",
+      "fieldName": "sort",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "排序号",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "visible",
+      "fieldName": "visible",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "是否可见(1可见 0隐藏)",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "type",
+      "fieldName": "type",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "菜单类型(0目录 1菜单 2按钮)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_sys_menu_parent",
+      "columns": [
+        "parent_id"
+      ]
+    },
+    {
+      "indexName": "idx_sys_menu_sort",
+      "columns": [
+        "sort"
+      ]
+    }
+  ]
+}

@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Space, Tag, message, Popconfirm, Select } from 'antd';
+import { Card, Button, Space, Tag, message, Popconfirm, Select } from 'antd';
 import { DeleteOutlined, LogoutOutlined } from '@ant-design/icons';
 import { request } from '@/api/client';
+import { ResizableTable } from '@/components/ResizableTable';
 
 /** Token会话实体接口 */
 interface Token {
@@ -37,20 +38,20 @@ interface User {
 const tokenApi = {
   /** 分页查询Token */
   getPage: (pageNum: number, pageSize: number, params?: Record<string, any>) =>
-    request.get('/api/v1/system/token/page', { params: { pageNum, pageSize, ...params } }),
+    request.get('/api/v1/admin/system/token/page', { params: { pageNum, pageSize, ...params } }),
   /** 吊销指定Token */
-  revoke: (id: string) => request.put(`/api/v1/system/token/${encodeURIComponent(id)}/revoke`),
+  revoke: (id: string) => request.put(`/api/v1/admin/system/token/${encodeURIComponent(id)}/revoke`),
   /** 踢出用户所有会话 */
-  kickOut: (userId: number) => request.put(`/api/v1/system/token/user/${userId}/kick`),
+  kickOut: (userId: number) => request.put(`/api/v1/admin/system/token/user/${userId}/kick`),
   /** 清理所有过期Token */
-  cleanExpired: () => request.delete('/api/v1/system/token/expired'),
+  cleanExpired: () => request.delete('/api/v1/admin/system/token/expired'),
 };
 
 /** 用户管理API封装（用于获取用户列表筛选） */
 const userApi = {
   /** 分页查询用户 */
   getPage: (pageNum: number, pageSize: number) =>
-    request.get('/api/v1/system/user/page', { params: { pageNum, pageSize } }),
+    request.get('/api/v1/admin/system/user/page', { params: { pageNum, pageSize } }),
 };
 
 /**
@@ -130,6 +131,7 @@ export default function TokenPage() {
 
   /** 表格列定义 */
   const columns = [
+    { title: '用户ID', dataIndex: 'userId', key: 'userId', width: 80 },
     { title: '用户', dataIndex: 'username', key: 'username' },
     { title: 'Token', dataIndex: 'token', key: 'token', ellipsis: true, render: (v: string) => `${v.substring(0, 20)}...` },
     { title: '登录IP', dataIndex: 'loginIp', key: 'loginIp' },
@@ -139,6 +141,7 @@ export default function TokenPage() {
     {
       title: '操作',
       key: 'action',
+      width: 160,
       render: (_: any, r: Token) => (
         <Space>
           {/* 仅对有效状态的Token显示踢出和吊销操作 */}
@@ -160,7 +163,7 @@ export default function TokenPage() {
   return (
     <div>
       <Card>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
             <Select placeholder="选择用户" allowClear style={{ width: 200 }} value={selectedUserId} onChange={(v) => { setSelectedUserId(v); loadData(1, pagination.pageSize, v, selectedStatus); }} options={users.map(u => ({ label: u.username, value: u.id }))} />
             <Select placeholder="状态" allowClear style={{ width: 120 }} value={selectedStatus} onChange={(v) => { setSelectedStatus(v); loadData(1, pagination.pageSize, selectedUserId, v); }} options={[{ label: '有效', value: 1 }, { label: '已吊销', value: 0 }]} />
@@ -171,7 +174,7 @@ export default function TokenPage() {
             </Popconfirm>
           </Space>
         </div>
-        <Table dataSource={data} columns={columns} rowKey="id" loading={loading} pagination={pagination} />
+        <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'], onChange: (page, pageSize) => loadData(page, pageSize, selectedUserId, selectedStatus) }} />
       </Card>
     </div>
   );

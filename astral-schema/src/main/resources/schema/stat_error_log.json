@@ -1,0 +1,142 @@
+{
+  "tableName": "stat_error_log",
+  "tableComment": "统计错误明细表",
+  "moduleName": "monitor",
+  "className": "StatErrorLog",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "fingerprint",
+      "fieldName": "fingerprint",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "错误指纹(MD5(type+message+首行栈))",
+      "length": 64
+    },
+    {
+      "columnName": "error_type",
+      "fieldName": "errorType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "错误类型(js/network/biz/crash预留)",
+      "length": 16
+    },
+    {
+      "columnName": "message",
+      "fieldName": "message",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "错误信息",
+      "length": 1024
+    },
+    {
+      "columnName": "stack",
+      "fieldName": "stack",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "堆栈"
+    },
+    {
+      "columnName": "page",
+      "fieldName": "page",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "发生页面",
+      "length": 256
+    },
+    {
+      "columnName": "ut",
+      "fieldName": "ut",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "平台(app-android/app-ios/app-windows/web)",
+      "length": 16
+    },
+    {
+      "columnName": "app_version",
+      "fieldName": "appVersion",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "App版本号",
+      "length": 32
+    },
+    {
+      "columnName": "os",
+      "fieldName": "os",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "操作系统版本",
+      "length": 64
+    },
+    {
+      "columnName": "model",
+      "fieldName": "model",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "设备型号",
+      "length": 128
+    },
+    {
+      "columnName": "device_id",
+      "fieldName": "deviceId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "设备ID",
+      "length": 64
+    },
+    {
+      "columnName": "release",
+      "fieldName": "release",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "发布标识(对齐Sentry release)",
+      "length": 64
+    },
+    {
+      "columnName": "ip",
+      "fieldName": "ip",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "发生IP地址(服务端解析)",
+      "length": 64
+    },
+    {
+      "columnName": "occur_time",
+      "fieldName": "occurTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "发生时间"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "入库时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_stat_error_fingerprint",
+      "columns": ["fingerprint"]
+    },
+    {
+      "indexName": "idx_stat_error_occur_time",
+      "columns": ["occur_time"]
+    },
+    {
+      "indexName": "idx_stat_error_type",
+      "columns": ["error_type"]
+    }
+  ]
+}

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "Token管理")
 @RestController
-@RequestMapping("/api/v1/system/token")
+@RequestMapping("/api/v1/admin/system/token")
 @RequiredArgsConstructor
 public class TokenController {
 

@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Table, Tag, Card, Row, Col, Statistic, Button, Popconfirm, message, Spin } from 'antd';
+import { Tag, Card, Row, Col, Statistic, Button, Popconfirm, message, Spin } from 'antd';
 import { ClusterOutlined, ReloadOutlined, DisconnectOutlined, NodeIndexOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { clusterApi, ClusterNode, ClusterStatus } from '@/api/cluster';
+import { ResizableTable } from '@/components/ResizableTable';
 
 /**
  * 集群管理页面组件
@@ -70,7 +71,7 @@ export default function ClusterPage() {
     { title: '状态', dataIndex: 'status', key: 'status', render: (v: string) => getStatusTag(v) },
     { title: '心跳时间', dataIndex: 'lastHeartbeat', key: 'lastHeartbeat', render: (v: string) => new Date(v).toLocaleString() },
     { title: '当前节点', dataIndex: 'isCurrent', key: 'isCurrent', render: (v: boolean) => v ? <Tag color="purple">当前</Tag> : '-' },
-    { title: '操作', key: 'action', width: 100, render: (_: any, r: ClusterNode) => (
+    { title: '操作', key: 'action', width: 140, render: (_: any, r: ClusterNode) => (
       // 非当前节点且在线状态才显示下线按钮
       !r.isCurrent && r.status === 'ONLINE' && (
         <Popconfirm title="确认下线此节点?" onConfirm={() => handleOffline(r.nodeId)}>
@@ -89,7 +90,7 @@ export default function ClusterPage() {
 
       <Spin spinning={loading}>
         <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-          <Col xs={12} sm={6}>
+          <Col xs={{ span: 24 }} sm={{ span: 12 }} lg={{ span: 6 }}>
             <Card className="stat-card fade-in-up stagger-1" hoverable>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ 
@@ -102,7 +103,7 @@ export default function ClusterPage() {
                   justifyContent: 'center',
                   marginBottom: 12
                 }}>
-                  <NodeIndexOutlined style={{ fontSize: 22, color: '#4a90d9' }} />
+                  <NodeIndexOutlined style={{ fontSize: 22, color: '#4a6fa5' }} />
                 </div>
                 <Statistic 
                   title="总节点数" 
@@ -112,7 +113,7 @@ export default function ClusterPage() {
               </div>
             </Card>
           </Col>
-          <Col xs={12} sm={6}>
+          <Col xs={{ span: 24 }} sm={{ span: 12 }} lg={{ span: 6 }}>
             <Card className="stat-card fade-in-up stagger-2" hoverable>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ 
@@ -135,7 +136,7 @@ export default function ClusterPage() {
               </div>
             </Card>
           </Col>
-          <Col xs={12} sm={6}>
+          <Col xs={{ span: 24 }} sm={{ span: 12 }} lg={{ span: 6 }}>
             <Card className="stat-card fade-in-up stagger-3" hoverable>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ 
@@ -158,7 +159,7 @@ export default function ClusterPage() {
               </div>
             </Card>
           </Col>
-          <Col xs={12} sm={6}>
+          <Col xs={{ span: 24 }} sm={{ span: 12 }} lg={{ span: 6 }}>
             <Card className="stat-card fade-in-up stagger-4" hoverable>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ 
@@ -187,7 +188,7 @@ export default function ClusterPage() {
           className="fade-in-up stagger-5"
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ClusterOutlined style={{ color: '#4a90d9' }} />
+              <ClusterOutlined style={{ color: '#4a6fa5' }} />
               <span>节点列表</span>
             </div>
           }
@@ -195,7 +196,7 @@ export default function ClusterPage() {
             <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
           }
         >
-          <Table 
+          <ResizableTable 
             dataSource={nodes} 
             columns={columns} 
             rowKey="nodeId"
@@ -203,6 +204,7 @@ export default function ClusterPage() {
               showSizeChanger: true,
               showTotal: (total) => `共 ${total} 个节点`
             }}
+            scroll={{ x: 'max-content' }}
           />
         </Card>
       </Spin>

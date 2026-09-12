@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Space, Tag, Modal, Tabs, message, Select, Input, Form, Switch, Popconfirm, Tooltip } from 'antd';
+import { Card, Button, Space, Tag, Modal, Tabs, message, Select, Input, Form, Switch, Popconfirm, Tooltip, Radio } from 'antd';
 import { CodeOutlined, DatabaseOutlined, FileTextOutlined, ApiOutlined, EditOutlined, SaveOutlined, PlusOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
 import { request } from '@/api/client';
+import { fetchDictOptions } from '@/api/dict';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { ResizableTable } from '@/components/ResizableTable';
 
 const { TabPane } = Tabs;
 
@@ -74,25 +76,25 @@ interface IndexSchema {
 /** 表结构管理API封装 */
 const tableSchemaApi = {
   /** 获取所有表结构 */
-  getAll: () => request.get('/api/v1/system/table-schema'),
+  getAll: () => request.get('/api/v1/admin/system/table-schema'),
   /** 按模块获取表结构 */
-  getByModule: (moduleName: string) => request.get(`/api/v1/system/table-schema/module/${moduleName}`),
+  getByModule: (moduleName: string) => request.get(`/api/v1/admin/system/table-schema/module/${moduleName}`),
   /** 生成完整代码（Entity/Mapper/Service/Controller） */
-  getFullCode: (tableName: string) => request.get(`/api/v1/system/table-schema/${tableName}/full-code`),
-  /** 生成建表SQL */
-  getSql: (tableName: string) => request.get(`/api/v1/system/table-schema/${tableName}/sql`),
-  /** 更新表结构 */
-  update: (tableName: string, data: TableSchema) => request.put(`/api/v1/system/table-schema/${tableName}`, data),
-  /** 生成ALTER SQL */
-  generateAlterSql: (tableName: string, data: TableSchema) => request.post(`/api/v1/system/table-schema/${tableName}/alter-sql`, data),
+  getFullCode: (tableName: string) => request.get(`/api/v1/admin/system/table-schema/${tableName}/full-code`),
+  /** 生成建表SQL（dialect：mysql / postgresql） */
+  getSql: (tableName: string, dialect: string) => request.get(`/api/v1/admin/system/table-schema/${tableName}/sql`, { params: { dialect } }),
+  /** 更新表结构（dialect：mysql / postgresql） */
+  update: (tableName: string, data: TableSchema, dialect: string) => request.put(`/api/v1/admin/system/table-schema/${tableName}`, data, { params: { dialect } }),
+  /** 生成ALTER SQL（dialect：mysql / postgresql） */
+  generateAlterSql: (tableName: string, data: TableSchema, dialect: string) => request.post(`/api/v1/admin/system/table-schema/${tableName}/alter-sql`, data, { params: { dialect } }),
   /** 导出单个表结构JSON */
-  exportSchema: (tableName: string) => request.get(`/api/v1/system/table-schema/${tableName}/export`),
+  exportSchema: (tableName: string) => request.get(`/api/v1/admin/system/table-schema/${tableName}/export`),
   /** 导出所有表结构JSON */
-  exportAll: () => request.get('/api/v1/system/table-schema/export-all'),
+  exportAll: () => request.get('/api/v1/admin/system/table-schema/export-all'),
   /** 创建新表结构 */
-  create: (data: any) => request.post('/api/v1/system/table-schema', data),
+  create: (data: any) => request.post('/api/v1/admin/system/table-schema', data),
   /** 删除表结构 */
-  delete: (tableName: string) => request.delete(`/api/v1/system/table-schema/${tableName}`),
+  delete: (tableName: string) => request.delete(`/api/v1/admin/system/table-schema/${tableName}`),
 };
 
 /** 模块筛选选项 */
@@ -127,6 +129,12 @@ const typeMapping: Record<string, string[]> = {
 
 /** 所有可用的Java字段类型 */
 const fieldTypes = Object.keys(typeMapping);
+
+/** SQL方言兜底选项（字典 sql_dialect 未配置时使用） */
+const fallbackDialects = [
+  { value: 'postgresql', label: 'PostgreSQL' },
+  { value: 'mysql', label: 'MySQL' },
+];
 
 /**
  * 表结构管理页面组件
@@ -171,17 +179,35 @@ export default function TableSchemaPage() {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   /** 新建表单实例 */
   const [createForm] = Form.useForm();
+  /** SQL方言（mysql / postgresql，默认与运行时数据库一致） */
+  const [sqlDialect, setSqlDialect] = useState('postgresql');
+  /** SQL方言下拉选项（字典 sql_dialect） */
+  const [dialectOptions, setDialectOptions] = useState<{ value: string; label: string }[]>(fallbackDialects);
 
-  /** 组件挂载时加载表结构列表和字典字段 */
+  /** 组件挂载时加载表结构列表、字典字段和SQL方言字典 */
   useEffect(() => {
     loadData();
     loadDictFields();
+    loadDialects();
   }, []);
+
+  /** 加载SQL方言选项（字典 sql_dialect，未配置时回退内置选项） */
+  const loadDialects = async () => {
+    try {
+      const map = await fetchDictOptions(['sql_dialect']);
+      const options = map['sql_dialect'] || [];
+      if (options.length > 0) {
+        setDialectOptions(options);
+      }
+    } catch (error: any) {
+      // 字典接口不可用时回退内置选项
+    }
+  };
 
   /** 加载字典字段（用于编辑时快速选择） */
   const loadDictFields = async () => {
     try {
-      const res = await request.get('/api/v1/system/dict/type/all');
+      const res = await request.get('/api/v1/admin/system/dict/type/all');
       if (res.code === 200) {
         setDictFields(res.data || []);
       }
@@ -224,20 +250,33 @@ export default function TableSchemaPage() {
     }
   };
 
-  /** 生成SQL：获取建表SQL并展示 */
-  const handleGenerateSql = async (schema: TableSchema) => {
+  /** 生成SQL：按指定方言获取建表SQL并展示 */
+  const handleGenerateSql = (schema: TableSchema) => {
     setCurrentSchema(schema);
+    setSqlModalVisible(true);
+    fetchSql(schema.tableName, sqlDialect);
+  };
+
+  /** 拉取建表SQL（方言切换时重新拉取） */
+  const fetchSql = async (tableName: string, dialect: string) => {
     setCodeLoading(true);
     try {
-      const res = await tableSchemaApi.getSql(schema.tableName);
+      const res = await tableSchemaApi.getSql(tableName, dialect);
       if (res.code === 200) {
         setGeneratedSql(res.data);
-        setSqlModalVisible(true);
       }
     } catch (error: any) {
       message.error(error.message);
     } finally {
       setCodeLoading(false);
+    }
+  };
+
+  /** 切换SQL方言（SQL弹窗内切换后重新生成） */
+  const handleDialectChange = (dialect: string) => {
+    setSqlDialect(dialect);
+    if (currentSchema) {
+      fetchSql(currentSchema.tableName, dialect);
     }
   };
 
@@ -252,7 +291,7 @@ export default function TableSchemaPage() {
     if (!editingSchema) return;
     setCodeLoading(true);
     try {
-      const res = await tableSchemaApi.update(editingSchema.tableName, editingSchema);
+      const res = await tableSchemaApi.update(editingSchema.tableName, editingSchema, sqlDialect);
       if (res.code === 200) {
         setAlterSql(res.data.alterSql);
         setUpdatedEntity(res.data.entityCode);
@@ -428,6 +467,7 @@ export default function TableSchemaPage() {
     {
       title: '操作',
       key: 'action',
+      width: 180,
       render: (_: any, r: TableSchema) => (
         <Space>
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(r)}>编辑</Button>
@@ -470,7 +510,7 @@ export default function TableSchemaPage() {
   return (
     <div>
       <Card>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="filter-bar">
           <Space>
             <Select style={{ width: 150 }} value={selectedModule} onChange={(v) => { setSelectedModule(v); loadData(v); }} options={modules} />
             <Input.Search placeholder="搜索表名/注释/类名" allowClear onSearch={setKeyword} style={{ width: 300 }} />
@@ -481,7 +521,7 @@ export default function TableSchemaPage() {
             <Tag color="blue">共 {filteredData.length} 张表</Tag>
           </Space>
         </div>
-        <Table dataSource={filteredData} columns={columns} rowKey="tableName" loading={loading} pagination={false} />
+        <ResizableTable dataSource={filteredData} columns={columns} rowKey="tableName" loading={loading} scroll={{ x: 'max-content' }} pagination={false} />
       </Card>
 
       <Modal title={`代码生成 - ${currentSchema?.tableName} (${currentSchema?.tableComment})`} open={codeModalVisible} onCancel={() => setCodeModalVisible(false)} width="80%" footer={null}>
@@ -527,11 +567,11 @@ export default function TableSchemaPage() {
             </div>
           </TabPane>
           <TabPane tab={<span>字段详情</span>} key="fields">
-            <Table dataSource={currentSchema?.fields} columns={fieldColumns} rowKey="columnName" pagination={false} size="small" />
+            <ResizableTable dataSource={currentSchema?.fields} columns={fieldColumns} rowKey="columnName" scroll={{ x: 'max-content' }} pagination={false} size="small" />
             {currentSchema?.nonDbFields && currentSchema.nonDbFields.length > 0 && (
               <>
                 <h4 style={{ marginTop: 16 }}>非数据库字段</h4>
-                <Table dataSource={currentSchema.nonDbFields} columns={fieldColumns} rowKey="columnName" pagination={false} size="small" />
+                <ResizableTable dataSource={currentSchema.nonDbFields} columns={fieldColumns} rowKey="columnName" scroll={{ x: 'max-content' }} pagination={false} size="small" />
               </>
             )}
           </TabPane>
@@ -539,6 +579,20 @@ export default function TableSchemaPage() {
       </Modal>
 
       <Modal title={`SQL生成 - ${currentSchema?.tableName} (${currentSchema?.tableComment})`} open={sqlModalVisible} onCancel={() => setSqlModalVisible(false)} width="60%" footer={null}>
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13 }}>数据库方言：</span>
+          <Radio.Group
+            value={sqlDialect}
+            onChange={(e) => handleDialectChange(e.target.value)}
+            optionType="button"
+            buttonStyle="solid"
+            size="small"
+            options={dialectOptions}
+          />
+          <Tooltip title="MySQL：内联COMMENT + AUTO_INCREMENT；PostgreSQL：COMMENT ON + BIGSERIAL">
+            <span style={{ fontSize: 12, color: '#999' }}>切换方言会重新生成SQL</span>
+          </Tooltip>
+        </div>
         <div style={{ position: 'relative' }}>
           <Button size="small" style={{ position: 'absolute', right: 8, top: 8, zIndex: 1 }} onClick={() => copyToClipboard(generatedSql)}>复制</Button>
           <SyntaxHighlighter language="sql" style={vscDarkPlus} customStyle={{ maxHeight: 500, overflow: 'auto' }}>
@@ -557,18 +611,28 @@ export default function TableSchemaPage() {
           <Button key="save" type="primary" icon={<SaveOutlined />} onClick={handleSaveSchema} loading={codeLoading}>保存并生成ALTER SQL</Button>,
         ]}
       >
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="filter-bar">
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={addField}>添加字段</Button>
           </Space>
-          <Tag color="blue">共 {editingSchema?.fields.length || 0} 个字段</Tag>
+          <Space>
+            <span style={{ fontSize: 13 }}>ALTER SQL方言：</span>
+            <Select
+              value={sqlDialect}
+              onChange={setSqlDialect}
+              options={dialectOptions}
+              size="small"
+              style={{ width: 140 }}
+            />
+            <Tag color="blue">共 {editingSchema?.fields.length || 0} 个字段</Tag>
+          </Space>
         </div>
-        <Table
+        <ResizableTable
           dataSource={editingSchema?.fields}
           rowKey="columnName"
           pagination={false}
           size="small"
-          scroll={{ y: 400 }}
+          scroll={{ x: 'max-content', y: 400 }}
           columns={[
             { title: '列名', dataIndex: 'columnName', key: 'columnName', width: 220, render: (v: string, _: any, index: number) => {
               const existingCodes = editingSchema?.fields.map((f: FieldSchema) => f.columnName).filter(Boolean) || [];

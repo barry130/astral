@@ -50,6 +50,18 @@ CREATE TABLE IF NOT EXISTS sequence_statistics (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_statistics_biz_key ON sequence_statistics(biz_key);
 
+-- 序列历史记录表
+CREATE TABLE IF NOT EXISTS sequence_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    biz_key VARCHAR(64) NOT NULL,
+    sequence_type VARCHAR(32) NOT NULL,
+    sequence_value BIGINT NOT NULL,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_history_biz_key ON sequence_history(biz_key);
+CREATE INDEX IF NOT EXISTS idx_history_create_time ON sequence_history(create_time);
+
 -- 用户表
 CREATE TABLE IF NOT EXISTS sys_user (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -290,12 +302,6 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
-SELECT 'statistics:view', '查看统计', '/api/v1/statistics/**', NULL, 1, 5
-WHERE NOT EXISTS (
-    SELECT 1 FROM sys_permission WHERE permission_code = 'statistics:view'
-);
-
-INSERT INTO sys_permission (permission_code, permission_name, url, method, type, sort)
 SELECT 'cluster:view', '集群管理', '/api/v1/cluster/**', NULL, 1, 6
 WHERE NOT EXISTS (
     SELECT 1 FROM sys_permission WHERE permission_code = 'cluster:view'
@@ -432,20 +438,3 @@ INSERT INTO sys_config (config_name, config_key, config_value, config_type, desc
 SELECT '默认号段步长', 'sequence.default.step', '1000', 1, '号段模式默认步长大小'
 WHERE NOT EXISTS (SELECT 1 FROM sys_config WHERE config_key = 'sequence.default.step');
 
-CREATE TABLE IF NOT EXISTS sys_api_statistics (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    api_path VARCHAR(128) NOT NULL,
-    api_method VARCHAR(16) NOT NULL,
-    call_count BIGINT NOT NULL DEFAULT 0,
-    success_count BIGINT NOT NULL DEFAULT 0,
-    failure_count BIGINT NOT NULL DEFAULT 0,
-    total_time BIGINT NOT NULL DEFAULT 0,
-    avg_time BIGINT NOT NULL DEFAULT 0,
-    max_time BIGINT NOT NULL DEFAULT 0,
-    stat_date DATE NOT NULL,
-    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX IF NOT EXISTS idx_api_stat_path_date ON sys_api_statistics(api_path, stat_date);
-CREATE INDEX IF NOT EXISTS idx_api_stat_date ON sys_api_statistics(stat_date);

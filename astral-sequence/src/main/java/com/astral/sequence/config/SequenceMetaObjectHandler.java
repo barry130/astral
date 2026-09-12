@@ -1,6 +1,7 @@
 package com.astral.sequence.config;
 
 import com.astral.sequence.generator.SegmentGenerator;
+import com.astral.sequence.service.GeneratorFactory;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import lombok.extern.slf4j.Slf4j;
@@ -16,18 +17,18 @@ import java.util.Set;
  * <p>
  * 在实体插入和更新时自动填充公共字段：
  * <ul>
- *   <li><b>id</b>：使用号段生成器自动填充主键 ID（排除序列相关表）</li>
+ *   <li><b>id</b>：使用号段生成器自动填充主键 ID（排除序列系统自身 4 张表），
+ *       每张业务表独立序列（业务键 = 表名_id，如 sys_user_id）</li>
  *   <li><b>createTime</b>：插入时自动填充当前时间</li>
  *   <li><b>updateTime</b>：插入和更新时自动填充当前时间</li>
  * </ul>
  * </p>
  * <p>
  * 排除的表包括：sequence_config、sequence_statistics、sequence_history、sequence_segment。
- * 这些表有自己的 ID 生成策略，不应该使用自动填充。
+ * 这 4 张表是序列系统自身的存储表，主键由数据库自增维护（避免递归取号）。
  * </p>
  */
 @Slf4j
-@Component
 public class SequenceMetaObjectHandler implements MetaObjectHandler {
 
     /**
@@ -46,18 +47,30 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
 
     /** 号段生成器，用于自动生成主键 ID */
     private final SegmentGenerator segmentGenerator;
+    /** 实体 ID 序列提供者（业务键 = 表名_id） */
+    private final EntityIdSequenceProvider entityIdSequenceProvider;
+    /** 生成器工厂，用于在分配 ID 后异步刷新序列统计的当前值（供序列管理页展示） */
+    private final GeneratorFactory generatorFactory;
 
     /**
      * 构造函数
      * <p>
-     * 使用 @Lazy 注解延迟注入 SegmentGenerator，避免循环依赖。
-     * 因为 SegmentGenerator 可能间接依赖于此处理器。
+     * 使用 @Lazy 注解延迟注入 SegmentGenerator 与 GeneratorFactory，避免循环依赖。
+     * 二者都可能间接依赖于 MyBatis 的 SqlSessionFactory，而元对象处理器在
+     * SqlSessionFactory 构建阶段就需要就绪，因此必须延迟到首次实际取号时再解析。
      * </p>
      *
      * @param segmentGenerator 号段生成器
+     * @param entityIdSequenceProvider 实体 ID 序列提供者
+     * @param generatorFactory 生成器工厂
      */
-    public SequenceMetaObjectHandler(@Lazy SegmentGenerator segmentGenerator) {
+    public SequenceMetaObjectHandler(
+            @Lazy SegmentGenerator segmentGenerator,
+            EntityIdSequenceProvider entityIdSequenceProvider,
+            @Lazy GeneratorFactory generatorFactory) {
         this.segmentGenerator = segmentGenerator;
+        this.entityIdSequenceProvider = entityIdSequenceProvider;
+        this.generatorFactory = generatorFactory;
     }
 
     /**
@@ -75,22 +88,20 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
      */
     @Override
     public void insertFill(MetaObject metaObject) {
-        // 解析实体对应的表名
         String tableName = resolveTableName(metaObject);
-        // 如果表名为空或在排除列表中，则跳过 ID 自动填充
         if (tableName == null || EXCLUDED_TABLES.contains(tableName)) {
             return;
         }
 
-        // 自动填充主键 ID
         if (metaObject.hasGetter("id")) {
             Object idVal = metaObject.getValue("id");
             if (idVal == null) {
-                // 使用 "entity:表名" 作为业务键，为每个表独立生成 ID 序列
-                String bizKey = "entity:" + tableName;
+                String bizKey = entityIdSequenceProvider.getBizKeyForTable(tableName);
                 long nextId = segmentGenerator.next(bizKey);
-                strictInsertFill(metaObject, "id", Long.class, nextId);
-                log.debug("Auto-filled id={} for table={}", nextId, tableName);
+                setFieldValByName("id", nextId, metaObject);
+                // 同步刷新序列统计的当前值，使序列管理页面的「当前值」能反映真实插入已占用的序列号
+                generatorFactory.updateStatisticsAsync(bizKey, nextId);
+                log.debug("Auto-filled id={} for table={} via bizKey={}", nextId, tableName, bizKey);
             }
         }
 

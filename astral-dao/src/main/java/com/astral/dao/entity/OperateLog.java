@@ -12,7 +12,7 @@ import java.util.List;
 @TableName("sys_operate_log")
 public class OperateLog {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Long id;
 
     @TableField("user_id")
@@ -49,7 +49,7 @@ public class OperateLog {
     @TableField("execute_time")
     private Long executeTime;
 
-    @TableField("create_time")
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
 }

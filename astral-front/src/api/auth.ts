@@ -32,13 +32,13 @@ export interface LoginResponse {
 export const authApi = {
   /** 用户登录 */
   login: (data: LoginRequest): Promise<ApiResult<LoginResponse>> =>
-    request.post('/api/v1/auth/login', data),
+    request.post('/api/v1/all/auth/login', data),
 
   /** 用户登出 */
   logout: (): Promise<ApiResult<void>> =>
-    request.post('/api/v1/auth/logout'),
+    request.post('/api/v1/all/auth/logout'),
 
   /** 获取当前用户信息 */
   getUserInfo: (): Promise<ApiResult<{ userId: number; username: string; isLogin: boolean }>> =>
-    request.get('/api/v1/auth/info'),
+    request.get('/api/v1/all/auth/info'),
 };

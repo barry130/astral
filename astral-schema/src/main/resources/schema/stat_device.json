@@ -1,0 +1,113 @@
+{
+  "tableName": "stat_device",
+  "tableComment": "统计设备登记表",
+  "moduleName": "monitor",
+  "className": "StatDevice",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "device_id",
+      "fieldName": "deviceId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "客户端匿名设备ID(UUID)",
+      "length": 64
+    },
+    {
+      "columnName": "ut",
+      "fieldName": "ut",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "平台(app-android/app-ios/app-windows/web)",
+      "length": 16
+    },
+    {
+      "columnName": "app_version",
+      "fieldName": "appVersion",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "App版本号",
+      "length": 32
+    },
+    {
+      "columnName": "model",
+      "fieldName": "model",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "设备型号",
+      "length": 128
+    },
+    {
+      "columnName": "os",
+      "fieldName": "os",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "操作系统版本",
+      "length": 64
+    },
+    {
+      "columnName": "last_ip",
+      "fieldName": "lastIp",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "最近上报IP地址(服务端解析)",
+      "length": 64
+    },
+    {
+      "columnName": "first_date",
+      "fieldName": "firstDate",
+      "fieldType": "LocalDate",
+      "jdbcType": "DATE",
+      "comment": "首次上报日期(新增设备口径)"
+    },
+    {
+      "columnName": "last_date",
+      "fieldName": "lastDate",
+      "fieldType": "LocalDate",
+      "jdbcType": "DATE",
+      "comment": "最近上报日期(活跃设备口径)"
+    },
+    {
+      "columnName": "last_active_time",
+      "fieldName": "lastActiveTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "最近活跃时间"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_stat_device_first_date",
+      "columns": ["first_date"]
+    },
+    {
+      "indexName": "idx_stat_device_last_date",
+      "columns": ["last_date"]
+    }
+  ]
+}

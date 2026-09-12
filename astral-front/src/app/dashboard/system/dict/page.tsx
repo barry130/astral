@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Card, Table, Button, Space, Modal, Form, Input, InputNumber, Switch, Tag, message, Popconfirm, Tabs, Select } from 'antd';
+import { Card, Button, Space, Modal, Form, Input, InputNumber, Switch, Tag, message, Popconfirm, Tabs, Select } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { request } from '@/api/client';
+import { ResizableTable } from '@/components/ResizableTable';
 
 /** Java类型与JDBC类型的映射关系，用于字典类型创建时自动匹配 */
 const typeMapping: Record<string, string[]> = {
@@ -75,24 +76,24 @@ interface DictData {
 const dictApi = {
   /** 分页查询字典类型 */
   getTypePage: (pageNum: number, pageSize: number, params?: Record<string, any>) =>
-    request.get('/api/v1/system/dict/type/page', { params: { pageNum, pageSize, ...params } }),
+    request.get('/api/v1/admin/system/dict/type/page', { params: { pageNum, pageSize, ...params } }),
   /** 获取所有字典类型（用于下拉选择） */
-  getAllTypes: () => request.get('/api/v1/system/dict/type/all'),
+  getAllTypes: () => request.get('/api/v1/admin/system/dict/type/all'),
   /** 创建字典类型 */
-  createType: (data: any) => request.post('/api/v1/system/dict/type', data),
+  createType: (data: any) => request.post('/api/v1/admin/system/dict/type', data),
   /** 更新字典类型 */
-  updateType: (id: number, data: any) => request.put(`/api/v1/system/dict/type/${id}`, data),
+  updateType: (id: number, data: any) => request.put(`/api/v1/admin/system/dict/type/${id}`, data),
   /** 删除字典类型 */
-  deleteType: (id: number) => request.delete(`/api/v1/system/dict/type/${id}`),
+  deleteType: (id: number) => request.delete(`/api/v1/admin/system/dict/type/${id}`),
   /** 分页查询字典数据 */
   getDataPage: (pageNum: number, pageSize: number, dictTypeId?: number) =>
-    request.get('/api/v1/system/dict/data/page', { params: { pageNum, pageSize, dictTypeId } }),
+    request.get('/api/v1/admin/system/dict/data/page', { params: { pageNum, pageSize, dictTypeId } }),
   /** 创建字典数据 */
-  createData: (data: any) => request.post('/api/v1/system/dict/data', data),
+  createData: (data: any) => request.post('/api/v1/admin/system/dict/data', data),
   /** 更新字典数据 */
-  updateData: (id: number, data: any) => request.put(`/api/v1/system/dict/data/${id}`, data),
+  updateData: (id: number, data: any) => request.put(`/api/v1/admin/system/dict/data/${id}`, data),
   /** 删除字典数据 */
-  deleteData: (id: number) => request.delete(`/api/v1/system/dict/data/${id}`),
+  deleteData: (id: number) => request.delete(`/api/v1/admin/system/dict/data/${id}`),
 };
 
 /**
@@ -318,6 +319,7 @@ export default function DictPage() {
     {
       title: '操作',
       key: 'action',
+      width: 140,
       render: (_: any, r: DictType) => (
         <Space>
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEditType(r)}>编辑</Button>
@@ -333,7 +335,7 @@ export default function DictPage() {
   const expandedRowRender = (record: DictType) => {
     const data = expandedRowData[record.id] || [];
     return (
-      <Table
+      <ResizableTable
         dataSource={data}
         columns={[
           { title: '字典标签', dataIndex: 'dictLabel', key: 'dictLabel' },
@@ -343,6 +345,7 @@ export default function DictPage() {
           { title: '状态', dataIndex: 'status', key: 'status', render: (v: number) => <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '启用' : '禁用'}</Tag> },
         ]}
         rowKey="id"
+        scroll={{ x: 'max-content' }}
         pagination={false}
         size="small"
         locale={{ emptyText: '暂无字典数据' }}
@@ -360,6 +363,7 @@ export default function DictPage() {
     {
       title: '操作',
       key: 'action',
+      width: 140,
       render: (_: any, r: DictData) => (
         <Space>
           <Button type="link" icon={<EditOutlined />} onClick={() => handleEditData(r)}>编辑</Button>
@@ -380,15 +384,16 @@ export default function DictPage() {
             label: '字典类型',
             children: (
               <Card>
-                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+                <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                   <Input.Search placeholder="搜索字典类型" allowClear style={{ width: 300 }} />
                   <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateType}>新建类型</Button>
                 </div>
-                <Table 
+                <ResizableTable 
                   dataSource={types} 
                   columns={typeColumns} 
                   rowKey="id" 
                   loading={typeLoading} 
+                  scroll={{ x: 'max-content' }}
                   expandable={{
                     expandedRowRender,
                     onExpand: (expanded, record) => {
@@ -398,6 +403,9 @@ export default function DictPage() {
                   pagination={{
                     ...typePagination,
                     onChange: (page, pageSize) => loadTypes(page, pageSize),
+                    showQuickJumper: true,
+                    showSizeChanger: true,
+                    pageSizeOptions: ['5', '10', '20', '50', '100'],
                   }} />
               </Card>
             ),
@@ -407,11 +415,11 @@ export default function DictPage() {
             label: '字典数据',
             children: (
               <Card>
-                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="filter-bar">
                   <Select placeholder="选择字典类型" style={{ width: 300 }} value={selectedTypeId} onChange={handleSelectType} options={allTypes.map(t => ({ label: t.dictName, value: t.id }))} />
                   <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateData} disabled={!selectedTypeId}>新建数据</Button>
                 </div>
-                <Table dataSource={dictData} columns={dataColumns} rowKey="id" loading={dataLoading}
+                <ResizableTable dataSource={dictData} columns={dataColumns} rowKey="id" loading={dataLoading} scroll={{ x: 'max-content' }}
                   pagination={{
                     ...dataPagination,
                     onChange: (page, pageSize) => {
@@ -425,6 +433,9 @@ export default function DictPage() {
                           });
                       }
                     },
+                    showQuickJumper: true,
+                    showSizeChanger: true,
+                    pageSizeOptions: ['5', '10', '20', '50', '100'],
                   }} />
               </Card>
             ),

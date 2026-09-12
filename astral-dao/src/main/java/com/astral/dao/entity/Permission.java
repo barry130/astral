@@ -12,7 +12,7 @@ import java.util.List;
 @TableName("sys_permission")
 public class Permission {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Long id;
 
     @TableField("permission_code")

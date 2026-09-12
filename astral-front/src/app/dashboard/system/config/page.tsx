@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Space, Modal, Form, Input, Select, Tag, message, Popconfirm } from 'antd';
+import { Card, Button, Space, Modal, Form, Input, Select, Tag, message, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { request } from '@/api/client';
+import { ResizableTable } from '@/components/ResizableTable';
 
 /** 系统配置实体接口 */
 interface SysConfig {
@@ -27,13 +28,13 @@ interface SysConfig {
 const configApi = {
   /** 分页查询配置 */
   getPage: (pageNum: number, pageSize: number, configName?: string) =>
-    request.get('/api/v1/system/config/page', { params: { pageNum, pageSize, configName } }),
+    request.get('/api/v1/admin/system/config/page', { params: { pageNum, pageSize, configName } }),
   /** 创建配置 */
-  create: (data: any) => request.post('/api/v1/system/config', data),
+  create: (data: any) => request.post('/api/v1/admin/system/config', data),
   /** 更新配置 */
-  update: (id: number, data: any) => request.put(`/api/v1/system/config/${id}`, data),
+  update: (id: number, data: any) => request.put(`/api/v1/admin/system/config/${id}`, data),
   /** 删除配置 */
-  delete: (id: number) => request.delete(`/api/v1/system/config/${id}`),
+  delete: (id: number) => request.delete(`/api/v1/admin/system/config/${id}`),
 };
 
 /**
@@ -126,6 +127,7 @@ export default function ConfigPage() {
     {
       title: '操作',
       key: 'action',
+      width: 140,
       render: (_: any, r: SysConfig) => (
         <Space>
           {/* 内置配置不允许编辑和删除 */}
@@ -141,11 +143,11 @@ export default function ConfigPage() {
   return (
     <div>
       <Card>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+        <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
           <Input.Search placeholder="搜索配置名称" allowClear onSearch={(v) => loadData(1, pagination.pageSize, v)} style={{ width: 300 }} />
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建配置</Button>
         </div>
-        <Table dataSource={data} columns={columns} rowKey="id" loading={loading} pagination={pagination} />
+        <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'] }} />
       </Card>
 
       <Modal title={editingConfig ? '编辑配置' : '新建配置'} open={modalVisible} onOk={handleSubmit} onCancel={() => setModalVisible(false)}>

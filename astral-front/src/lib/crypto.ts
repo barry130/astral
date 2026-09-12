@@ -8,7 +8,7 @@ export const getPublicKey = async (): Promise<string> => {
   }
   
   try {
-    const response = await fetch('/api/v1/auth/public-key');
+    const response = await fetch('/api/v1/all/auth/public-key');
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: 后端服务未启动或接口不可用`);
     }
@@ -24,7 +24,7 @@ export const getPublicKey = async (): Promise<string> => {
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error('获取公钥失败：请确保后端服务已启动在 localhost:8080');
+    throw new Error('获取公钥失败：请确保后端服务已启动在 localhost:27000');
   }
 };
 

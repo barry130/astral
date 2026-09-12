@@ -23,13 +23,28 @@ import java.util.List;
  * </p>
  */
 @RestController
-@RequestMapping("/api/v1/sequence/configs")
+@RequestMapping("/api/v1/admin/sequence/configs")
 @RequiredArgsConstructor
 public class SequenceConfigController {
     /** 序列配置数据访问接口 */
     private final SequenceConfigMapper sequenceConfigMapper;
     /** 序列统计数据访问接口 */
     private final SequenceStatisticsMapper statisticsMapper;
+    /** 实体 ID 全局序列提供者（用于内置序列保护） */
+    private final com.astral.sequence.config.EntityIdSequenceProvider entityIdSequenceProvider;
+
+    /**
+     * 校验是否为系统内置序列
+     * <p>
+     * 所有实体 ID 序列（业务键以 _id 结尾）不允许创建、修改、删除或启停，
+     * 保证各表 ID 生成的一致性。
+     * </p>
+     */
+    private void assertNotSystemSequence(SequenceConfig config, String errorCode) {
+        if (config != null && entityIdSequenceProvider.isEntityIdBizKey(config.getBizKey())) {
+            throw new com.astral.common.exception.BusinessException(errorCode, config.getBizKey());
+        }
+    }
 
     /**
      * 获取所有序列配置
@@ -38,7 +53,9 @@ public class SequenceConfigController {
      */
     @GetMapping
     public Result<List<SequenceConfig>> getAll() {
-        return Result.success(sequenceConfigMapper.selectList(null));
+        List<SequenceConfig> list = sequenceConfigMapper.selectList(null);
+        list.forEach(this::enrichCurrentValue);
+        return Result.success(list);
     }
 
     /**
@@ -63,7 +80,9 @@ public class SequenceConfigController {
             wrapper.like(com.astral.dao.entity.SequenceConfig::getBizKey, bizKey);
         }
         wrapper.orderByDesc(SequenceConfig::getCreateTime);
-        return Result.success(sequenceConfigMapper.selectPage(page, wrapper));
+        IPage<SequenceConfig> result = sequenceConfigMapper.selectPage(page, wrapper);
+        result.getRecords().forEach(this::enrichCurrentValue);
+        return Result.success(result);
     }
 
     /**
@@ -75,7 +94,31 @@ public class SequenceConfigController {
     @GetMapping("/{bizKey}")
     public Result<SequenceConfig> getByBizKey(@PathVariable String bizKey) {
         SequenceConfig config = sequenceConfigMapper.selectByBizKey(bizKey);
-        return config != null ? Result.success(config) : Result.error("SEQ007");
+        if (config == null) {
+            return Result.error("SEQ007");
+        }
+        enrichCurrentValue(config);
+        return Result.success(config);
+    }
+
+    /**
+     * 填充当前值
+     * <p>
+     * 序列配置表本身不存储当前值，号段模式的实际当前值记录在序列统计表中，
+     * 每次生成都会异步更新。此处实时读取统计表的当前值填充到返回对象，
+     * 供前端在号段模式下展示。非号段模式该字段无意义，保留为空。
+     * </p>
+     *
+     * @param config 序列配置
+     */
+    private void enrichCurrentValue(SequenceConfig config) {
+        if (!"SEGMENT".equals(config.getSequenceType())) {
+            return;
+        }
+        SequenceStatistics stat = statisticsMapper.selectByBizKey(config.getBizKey());
+        if (stat != null) {
+            config.setCurrentValue(stat.getCurrentValue());
+        }
     }
 
     /**
@@ -90,6 +133,7 @@ public class SequenceConfigController {
     @OperateLog("创建序列配置")
     @PostMapping
     public Result<SequenceConfig> create(@RequestBody SequenceConfig config) {
+        assertNotSystemSequence(config, "SEQ008");
         config.setCreateTime(java.time.LocalDateTime.now());
         config.setUpdateTime(java.time.LocalDateTime.now());
         if (config.getEnabled() == null) {
@@ -113,6 +157,8 @@ public class SequenceConfigController {
     @OperateLog("更新序列配置")
     @PutMapping("/{id}")
     public Result<SequenceConfig> update(@PathVariable Long id, @RequestBody SequenceConfig config) {
+        SequenceConfig existing = sequenceConfigMapper.selectById(id);
+        assertNotSystemSequence(existing, "SEQ008");
         config.setId(id);
         config.setUpdateTime(java.time.LocalDateTime.now());
         sequenceConfigMapper.updateById(config);
@@ -128,6 +174,8 @@ public class SequenceConfigController {
     @OperateLog("删除序列配置")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
+        SequenceConfig existing = sequenceConfigMapper.selectById(id);
+        assertNotSystemSequence(existing, "SEQ008");
         sequenceConfigMapper.deleteById(id);
         return Result.success();
     }
@@ -146,6 +194,8 @@ public class SequenceConfigController {
     @OperateLog("启用/禁用序列配置")
     @PutMapping("/{id}/toggle")
     public Result<Void> toggle(@PathVariable Long id, @RequestParam Boolean enabled) {
+        SequenceConfig existing = sequenceConfigMapper.selectById(id);
+        assertNotSystemSequence(existing, "SEQ008");
         SequenceConfig config = new SequenceConfig();
         config.setId(id);
         config.setEnabled(enabled);

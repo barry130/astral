@@ -6,6 +6,7 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableAsync;
 
@@ -20,6 +21,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @MapperScan("com.astral.dao.mapper")
 /** 启用异步方法支持（@Async注解） */
 @EnableAsync
+@EnableCaching
 public class AstralApplication {
     /**
      * 应用程序入口
@@ -33,8 +35,10 @@ public class AstralApplication {
     public static void main(String[] args) {
         // 初始化表结构注册中心
         SchemaRegistry.init();
-        // 启动时同步实体类与表结构
-        SchemaEntitySync.syncOnStartup();
+        // 启动时同步实体类与表结构（可通过 astral.schema.sync-on-startup=false 关闭，生产环境建议关闭）
+        if (!"false".equals(System.getProperty("astral.schema.sync-on-startup", "true"))) {
+            SchemaEntitySync.syncOnStartup();
+        }
         // 启动Spring Boot应用
         SpringApplication.run(AstralApplication.class, args);
     }

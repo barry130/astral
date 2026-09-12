@@ -34,7 +34,7 @@ function formatUptime(seconds: number): string {
 function getCpuColor(usage: number): string {
   if (usage > 80) return '#ff4d4f';
   if (usage > 60) return '#faad14';
-  return '#4a90d9';
+  return '#4a6fa5';
 }
 
 /** 根据内存使用率返回对应的颜色（红/黄/绿） */
@@ -119,7 +119,7 @@ export default function DashboardPage() {
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <DashboardOutlined style={{ fontSize: 22, color: '#4a90d9' }} />
+                <DashboardOutlined style={{ fontSize: 22, color: '#4a6fa5' }} />
               </div>
             </div>
           </Card>
@@ -218,7 +218,7 @@ export default function DashboardPage() {
           <Card 
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <DatabaseOutlined style={{ color: '#4a90d9' }} />
+                <DatabaseOutlined style={{ color: '#4a6fa5' }} />
                 <span>JVM 监控</span>
               </div>
             }
@@ -226,7 +226,7 @@ export default function DashboardPage() {
             className="fade-in-up stagger-5"
           >
             <Row gutter={[16, 20]}>
-              <Col span={12}>
+              <Col xs={{ span: 24 }} sm={{ span: 12 }}>
                 <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
                   <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>堆内存使用</div>
                   <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>
@@ -235,7 +235,7 @@ export default function DashboardPage() {
                   <div style={{ color: '#c0c4cc', fontSize: 12 }}>/ {formatBytes(jvm?.heapMax || 0)}</div>
                 </div>
               </Col>
-              <Col span={12}>
+              <Col xs={{ span: 24 }} sm={{ span: 12 }}>
                 <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
                   <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>堆内存使用率</div>
                   <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>
@@ -244,12 +244,12 @@ export default function DashboardPage() {
                   <Progress 
                     percent={jvm?.heapUsage || 0} 
                     showInfo={false}
-                    strokeColor="#4a90d9"
+                    strokeColor="#4a6fa5"
                     style={{ marginTop: 8 }}
                   />
                 </div>
               </Col>
-              <Col span={12}>
+              <Col xs={{ span: 24 }} sm={{ span: 12 }}>
                 <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
                   <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>线程数</div>
                   <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>
@@ -257,7 +257,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </Col>
-              <Col span={12}>
+              <Col xs={{ span: 24 }} sm={{ span: 12 }}>
                 <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
                   <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>GC 次数</div>
                   <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>
@@ -280,7 +280,7 @@ export default function DashboardPage() {
             className="fade-in-up stagger-6"
           >
             <Row gutter={[16, 20]}>
-              <Col span={12}>
+              <Col xs={{ span: 24 }} sm={{ span: 12 }}>
                 <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
                   <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>磁盘使用率</div>
                   <div style={{ 
@@ -298,7 +298,7 @@ export default function DashboardPage() {
                   />
                 </div>
               </Col>
-              <Col span={12}>
+              <Col xs={{ span: 24 }} sm={{ span: 12 }}>
                 <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
                   <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>运行时间</div>
                   <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>

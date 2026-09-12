@@ -28,7 +28,7 @@
       "fieldName": "sequenceType",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "序列类型",
+      "comment": "序列类型(SEGMENT-号段 SNOWFLAKE-雪花 REDIS-Redis DATABASE-数据库 SIMPLE-内存)",
       "length": 32
     },
     {
@@ -51,11 +51,15 @@
   "indexes": [
     {
       "indexName": "idx_sequence_history_biz_key",
-      "columns": ["biz_key"]
+      "columns": [
+        "biz_key"
+      ]
     },
     {
       "indexName": "idx_sequence_history_time",
-      "columns": ["create_time"]
+      "columns": [
+        "create_time"
+      ]
     }
   ]
 }

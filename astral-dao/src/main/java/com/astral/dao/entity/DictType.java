@@ -12,7 +12,7 @@ import java.util.List;
 @TableName("sys_dict_type")
 public class DictType {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Long id;
 
     @TableField("dict_code")

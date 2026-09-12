@@ -1,41 +1,69 @@
-# 生产环境配置
+# ============================================
+# 生产环境配置（1核 / 2GiB / 1Mbps 腾讯云学生机针对性优化）
+# 通过 SPRING_PROFILES_ACTIVE=prod 激活；docker-compose 引用本文件作为启动参数。
+# 测试/本地环境不激活本 profile，保持默认 application.yml，不受影响。
+#
+# 优化要点（仅 prod）：
+#   1. 虚拟线程（JDK 21）：Tomcat 请求线程 + @Async 异步池 → 降低平台线程内存占用，
+#      支撑高并发"等待中"请求（I/O 密集）
+#   2. 线程参数：Tomcat max-threads=40, Hikari pool=5（1核2G 上避免过度配）
+#   3. 日志降级：mybatis NoLoggingImpl + com.astral=INFO（单核上避免每 SQL stdout 开销）
+# ============================================
+
 server:
-  port: 8080
+  port: ${SERVER_PORT:27000}
+  tomcat:
+    # 1 核 CPU：40 工作线程足够，减少平台线程栈内存
+    threads:
+      max: ${TOMCAT_MAX_THREADS:40}
+      min-spare: ${TOMCAT_MIN_SPARE:5}
+    accept-count: ${TOMCAT_ACCEPT_COUNT:50}
+    max-connections: ${TOMCAT_MAX_CONNECTIONS:500}
 
 spring:
+  threads:
+    virtual:
+      # JDK 21 虚拟线程：Tomcat 请求线程池改虚拟线程（生产开启）
+      enabled: true
+
   datasource:
-    url: jdbc:mysql://mysql-master:3306/astral_sequence?useUnicode=true&characterEncoding=utf8&useSSL=true&serverTimezone=Asia/Shanghai
-    username: ${DB_USERNAME:astral}
-    password: ${DB_PASSWORD:changeme}
+    driver-class-name: org.postgresql.Driver
+    # 默认值与运行环境一致，可用环境变量覆盖
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/astral?currentSchema=astral}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     hikari:
-      minimum-idle: 10
-      maximum-pool-size: 50
-  
+      # 1核2G：连接池压到 5（DB 并发上限），避免过度占用内存
+      minimum-idle: ${HIKARI_MIN_IDLE:3}
+      maximum-pool-size: ${HIKARI_MAX_POOL:5}
+      connection-timeout: 30000
+
   data:
     redis:
-      host: ${REDIS_HOST:redis-cluster}
+      host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:changeme}
-      database: 0
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DB:7}
 
-# 序列生成器配置
+# 序列生成器
 astral:
-  sequence:
-    snowflake:
-      worker-id: ${WORKER_ID:1}
-    segment:
-      step-size: 5000
-    redis:
-      local-cache-size: 200
+  threads:
+    virtual:
+      # @Async(sequenceAsyncExecutor) 异步池改用 JDK 21 虚拟线程（生产开启）
+      enabled: true
 
-# 日志配置
+mybatis-plus:
+  configuration:
+    # 生产静默 SQL 日志：每条 SQL + 参数打印到 stdout 在单核上是无谓开销
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
 logging:
   level:
-    root: WARN
+    root: INFO
     com.astral: INFO
   file:
-    name: /var/log/astral/application.log
+    name: ${LOG_FILE:/app/logs/application.log}
   logback:
     rollingpolicy:
-      max-file-size: 100MB
+      max-file-size: 50MB
       max-history: 30

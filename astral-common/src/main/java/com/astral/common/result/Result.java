@@ -44,19 +44,25 @@ public class Result<T> implements Serializable {
     }
 
     public static <T> Result<T> fail(String message) {
-        return new Result<>(ApiConstants.SUCCESS_CODE, null, message, null);
+        return new Result<>(ApiConstants.ERROR_CODE, null, message, null);
     }
 
     public static <T> Result<T> error(String errorCode, Object... args) {
-        if (errorCode.contains("|")) {
-            String[] parts = errorCode.split("\\|", 2);
-            return new Result<>(ApiConstants.ERROR_CODE, parts[0], parts[1], null);
-        }
         return new Result<>(ApiConstants.ERROR_CODE, errorCode, ErrorCodes.format(errorCode, args), null);
     }
 
     public static <T> Result<T> error(int code, String message) {
         return new Result<>(code, message, null);
+    }
+
+    /**
+     * 使用最终消息构造错误结果（不再做占位符格式化）
+     * <p>
+     * 适用于消息已经过 BusinessException 格式化的场景，避免二次格式化导致消息重复拼接。
+     * </p>
+     */
+    public static <T> Result<T> errorRaw(String errorCode, String message) {
+        return new Result<>(ApiConstants.ERROR_CODE, errorCode, message, null);
     }
 
     public int getCode() {

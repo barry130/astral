@@ -12,7 +12,7 @@ import java.util.List;
 @TableName("sys_login_log")
 public class LoginLog {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.INPUT)
     private Long id;
 
     @TableField("user_id")
@@ -27,11 +27,15 @@ public class LoginLog {
 
     private String location;
 
+    private String browser;
+
+    private String os;
+
     private Integer status;
 
     private String msg;
 
-    @TableField("login_time")
+    @TableField(value = "login_time", fill = FieldFill.INSERT)
     private LocalDateTime loginTime;
 
 }

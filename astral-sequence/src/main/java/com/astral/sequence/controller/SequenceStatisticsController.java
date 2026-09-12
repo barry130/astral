@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "序列统计表")
 @RestController
-@RequestMapping("/api/v1/sequence/statistics")
+@RequestMapping("/api/v1/admin/sequence/statistics")
 @RequiredArgsConstructor
 public class SequenceStatisticsController {
 

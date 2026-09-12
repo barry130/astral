@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "用户角色关联表")
 @RestController
-@RequestMapping("/api/v1/system/user_role")
+@RequestMapping("/api/v1/admin/system/user_role")
 @RequiredArgsConstructor
 public class UserRoleController {
 

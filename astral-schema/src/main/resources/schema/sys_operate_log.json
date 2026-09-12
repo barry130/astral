@@ -12,7 +12,7 @@
       "comment": "主键ID",
       "isPrimaryKey": true,
       "isAutoIncrement": true,
-      "mybatisPlusIdType": "AUTO"
+      "mybatisPlusIdType": "INPUT"
     },
     {
       "columnName": "user_id",
@@ -42,7 +42,7 @@
       "fieldName": "operateType",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "操作类型",
+      "comment": "操作类型(1-查询 2-新增 3-修改 4-删除 5-登录 6-导出 7-导入 8-其他)",
       "length": 32
     },
     {
@@ -123,11 +123,15 @@
   "indexes": [
     {
       "indexName": "idx_operate_log_user",
-      "columns": ["user_id"]
+      "columns": [
+        "user_id"
+      ]
     },
     {
       "indexName": "idx_operate_log_time",
-      "columns": ["create_time"]
+      "columns": [
+        "create_time"
+      ]
     }
   ]
 }

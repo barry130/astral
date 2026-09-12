@@ -50,22 +50,25 @@ java -jar astral-server/target/astral-server-1.0.0.jar
 ### 步骤 3：访问系统
 
 - **前端**：http://localhost:3000（需单独启动前端）
-- **API 文档**：http://localhost:8080/swagger-ui.html
+- **API 文档**：http://localhost:27000/swagger-ui.html
 
 ### 步骤 4：通过 HTTP 调用 API
 
+> 登录接口的 `password` 字段为 **RSA 加密后的 Base64 串**（公钥通过 `GET /api/v1/all/auth/public-key` 获取），
+> 直接传明文会校验失败。前端（astral-front 的 `src/lib/crypto.ts`）已自动处理加密。
+
 ```bash
-# 登录
-curl -X POST http://localhost:8080/api/v1/auth/login \
+# 登录（password 需 RSA 加密）
+curl -X POST http://localhost:27000/api/v1/all/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
+  -d '{"username":"admin","password":"<RSA-encrypted-base64>"}'
 
 # 获取用户列表
-curl http://localhost:8080/api/v1/system/user/list \
+curl http://localhost:27000/api/v1/admin/system/user/list \
   -H "satoken: <your-token>"
 
 # 获取序列号
-curl -X POST http://localhost:8080/api/v1/sequence/next \
+curl -X POST http://localhost:27000/api/v1/all/sequence/next \
   -H "Content-Type: application/json" \
   -H "satoken: <your-token>" \
   -d '{"bizKey":"order_id"}'
@@ -156,7 +159,7 @@ npm install
 npm run dev
 ```
 
-前端通过 Next.js 的 rewrite 功能将 `/api/*` 代理到后端 `http://localhost:8080`。
+前端通过 Next.js 的 rewrite 功能将 `/api/*` 代理到后端 `http://localhost:27000`。
 
 ### 方式二：嵌入现有前端
 
@@ -189,8 +192,8 @@ axios.interceptors.request.use(config => {
 
 ### 数据库检查
 
-- [ ] 数据库已创建
-- [ ] 初始化脚本已执行
+- [ ] 数据库已创建（PostgreSQL，连接配置见 `application.yml`）
+- [ ] 启动时自动执行 `postgresql-init.sql` / `dict-init.sql` 初始化（`spring.sql.init.mode: always`）
 - [ ] 连接配置正确
 
 ### 功能检查
@@ -202,8 +205,7 @@ axios.interceptors.request.use(config => {
 
 ### 安全检查
 
-- [ ] 修改默认管理员密码
-- [ ] 生产环境关闭 H2 控制台
+- [ ] 修改默认管理员密码（admin/admin）
 - [ ] 配置 HTTPS
 - [ ] 敏感信息使用环境变量
 
@@ -212,9 +214,11 @@ axios.interceptors.request.use(config => {
 ## 📞 获取帮助
 
 1. 查看 [README.md](README.md) 了解完整功能
-2. 访问 [API 文档](http://localhost:8080/swagger-ui.html)
+2. 访问 [API 文档](http://localhost:27000/swagger-ui.html)
 3. 查看各模块详细指南
 
 ---
 
 **Made with ❤️ by Astral Team**
+
+

@@ -3,6 +3,8 @@ package com.astral.schema;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +32,7 @@ import java.util.stream.Collectors;
  * </p>
  */
 public class SchemaRegistry {
+    private static final Logger log = LoggerFactory.getLogger(SchemaRegistry.class);
     /** classpath中Schema文件的目录路径 */
     private static final String SCHEMA_PATH = "schema/";
     /** Schema缓存，以表名为key，线程安全 */
@@ -49,7 +52,7 @@ public class SchemaRegistry {
      * <p>
      * 执行流程：
      * 1. 创建外部Schema目录（data/schemas/）
-     * 2. 从classpath加载内置Schema
+     * 2. 从classpath加载内置Schema（支持jar与目录中的 schema/ 资源）
      * 3. 从外部目录加载动态Schema
      * </p>
      *
@@ -60,15 +63,98 @@ public class SchemaRegistry {
             externalSchemaDir = Paths.get("data", "schemas");
             Files.createDirectories(externalSchemaDir);
 
-            Enumeration<URL> resources = SchemaRegistry.class.getClassLoader().getResources(SCHEMA_PATH);
-            while (resources.hasMoreElements()) {
-                URL url = resources.nextElement();
-                loadSchemasFromUrl(url);
-            }
-
+            loadClasspathSchemas();
             loadExternalSchemas();
         } catch (IOException e) {
             throw new RuntimeException("Failed to initialize SchemaRegistry", e);
+        }
+    }
+
+    /**
+     * 从classpath加载所有内置Schema
+     * <p>
+     * 通过枚举 classpath 上所有 {@code schema/*.json} 资源加载（兼容 jar 与目录打包形式），
+     * 不依赖目录列表（directory listing）能力，可稳定运行于可执行 jar 场景。
+     * </p>
+     */
+    private static void loadClasspathSchemas() {
+        try {
+            Enumeration<URL> urls = SchemaRegistry.class.getClassLoader().getResources(SCHEMA_PATH);
+            Set<String> seenJars = new HashSet<>();
+            while (urls.hasMoreElements()) {
+                URL url = urls.nextElement();
+                String protocol = url.getProtocol();
+                if ("file".equals(protocol)) {
+                    // 目录形式（IDE / exploded 模式）：枚举目录下的 .json 文件
+                    try {
+                        Files.list(Paths.get(url.toURI()))
+                                .filter(p -> p.toString().endsWith(".json"))
+                                .forEach(p -> loadSchemaInternally(p.getFileName().toString()));
+                    } catch (Exception e) {
+                        log.warn("Cannot list schema dir: {}", url, e);
+                    }
+                } else if ("jar".equals(protocol)) {
+                    // jar 形式：解析 jar 中 schema/ 下的 .json 条目
+                    String jarPart = extractJarPath(url);
+                    if (jarPart != null && seenJars.add(jarPart)) {
+                        listJarSchemaEntries(jarPart);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Failed to scan classpath schemas", e);
+        }
+    }
+
+    /**
+     * 从 jar URL 中提取 jar 文件路径
+     */
+    private static String extractJarPath(URL url) {
+        String s = url.toString();
+        int idx = s.indexOf(".jar!");
+        if (idx < 0) return null;
+        String path = s.substring(0, idx + 4);
+        if (path.startsWith("jar:")) path = path.substring(4);
+        if (path.startsWith("file:")) path = path.substring(5);
+        return path;
+    }
+
+    /**
+     * 枚举 jar 内 schema/ 开头的 .json 条目并加载
+     */
+    private static void listJarSchemaEntries(String jarPath) {
+        try (java.util.jar.JarFile jarFile = new java.util.jar.JarFile(jarPath)) {
+            jarFile.stream()
+                    .filter(entry -> !entry.isDirectory())
+                    .map(java.util.jar.JarEntry::getName)
+                    .filter(name -> name.startsWith(SCHEMA_PATH) && name.endsWith(".json"))
+                    .map(name -> name.substring(SCHEMA_PATH.length()))
+                    .forEach(SchemaRegistry::loadSchemaInternally);
+        } catch (Exception e) {
+            log.warn("Cannot read jar schemas: {}", jarPath, e);
+        }
+    }
+
+    /**
+     * 从classpath读取JSON文件并解析为TableSchema对象，使用putIfAbsent确保
+     * 已存在的Schema不会被覆盖（外部Schema通过put方法覆盖）。
+     *
+     * @param filename Schema文件名（如 "sys_user.json"）
+     */
+    private static void loadSchemaInternally(String filename) {
+        String path = SCHEMA_PATH + filename;
+        try (InputStream is = SchemaRegistry.class.getClassLoader().getResourceAsStream(path)) {
+            if (is != null) {
+                TableSchema schema = MAPPER.readValue(is, TableSchema.class);
+                // 跳过废弃标记文件（仅有 deprecated/description，无 tableName 的占位 JSON）
+                if (schema.getTableName() == null || schema.getTableName().isBlank()) {
+                    log.info("Skip schema file without tableName: {}", filename);
+                    return;
+                }
+                SCHEMA_CACHE.putIfAbsent(schema.getTableName(), schema);
+            }
+        } catch (IOException e) {
+            // Schema file not found, skip
         }
     }
 
@@ -93,82 +179,6 @@ public class SchemaRegistry {
                     });
         } catch (IOException e) {
             // Directory might not exist
-        }
-    }
-
-    /**
-     * 从URL加载Schema文件
-     * <p>
-     * 尝试解析目录列表，如果失败则回退到加载已知Schema列表。
-     * </p>
-     *
-     * @param url classpath资源URL
-     * @throws IOException IO异常
-     */
-    private static void loadSchemasFromUrl(URL url) throws IOException {
-        try (InputStream is = url.openStream()) {
-            if (is != null) {
-                byte[] bytes = is.readAllBytes();
-                String content = new String(bytes);
-                String[] files = content.split("\n");
-                for (String file : files) {
-                    file = file.trim();
-                    if (file.endsWith(".json")) {
-                        loadSchema(file);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // Ignore if not a directory listing
-        }
-
-        // Fallback: load known schemas
-        loadKnownSchemas();
-    }
-
-    /**
-     * 加载已知的内置Schema文件
-     * <p>
-     * 包含系统所有核心表的Schema定义：用户、角色、权限、字典、配置、Token、
-     * 序列相关表、日志表等。
-     * </p>
-     */
-    private static void loadKnownSchemas() {
-        String[] schemaFiles = {
-            "sys_user.json", "sys_role.json", "sys_permission.json",
-            "sys_user_role.json", "sys_role_permission.json",
-            "sys_dict_type.json", "sys_dict_data.json",
-            "sys_config.json", "sys_token.json",
-            "sequence_config.json", "sequence_segment.json",
-            "sequence_history.json", "sequence_statistics.json",
-            "sys_login_log.json", "sys_operate_log.json"
-        };
-
-        for (String file : schemaFiles) {
-            loadSchema(file);
-        }
-    }
-
-    /**
-     * 加载单个Schema文件
-     * <p>
-     * 从classpath读取JSON文件并解析为TableSchema对象，使用putIfAbsent确保
-     * 已存在的Schema不会被覆盖（外部Schema通过put方法覆盖）。
-     * </p>
-     *
-     * @param filename Schema文件名（如 "sys_user.json"）
-     */
-    public static void loadSchema(String filename) {
-        try {
-            String path = SCHEMA_PATH + filename;
-            try (InputStream is = SchemaRegistry.class.getClassLoader().getResourceAsStream(path)) {
-                if (is != null) {
-                    TableSchema schema = MAPPER.readValue(is, TableSchema.class);
-                    SCHEMA_CACHE.putIfAbsent(schema.getTableName(), schema);
-                }
-            }
-        } catch (IOException e) {
-            // Schema file not found, skip
         }
     }
 

@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -15,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "系统配置")
 @RestController
-@RequestMapping("/api/v1/system/config")
+@RequestMapping("/api/v1/admin/system/config")
 @RequiredArgsConstructor
 public class SysConfigController {
 
@@ -57,8 +58,10 @@ public class SysConfigController {
      */
     @Operation(summary = "创建")
     @PostMapping
+    @CacheEvict(value = "sysConfig", allEntries = true)
     public Result<Void> create(@RequestBody SysConfig entity) {
         sysConfigService.save(entity);
+        sysConfigService.evictCache();
         return Result.success();
     }
 
@@ -71,9 +74,11 @@ public class SysConfigController {
      */
     @Operation(summary = "更新")
     @PutMapping("/{id}")
+    @CacheEvict(value = "sysConfig", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody SysConfig entity) {
         entity.setId(id);
         sysConfigService.updateById(entity);
+        sysConfigService.evictCache();
         return Result.success();
     }
 
@@ -85,8 +90,10 @@ public class SysConfigController {
      */
     @Operation(summary = "删除")
     @DeleteMapping("/{id}")
+    @CacheEvict(value = "sysConfig", allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {
         sysConfigService.removeById(id);
+        sysConfigService.evictCache();
         return Result.success();
     }
 }

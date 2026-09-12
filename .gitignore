@@ -58,3 +58,20 @@ Vibe-Skills/
 #react
 astral-front/.next
 astral-front/node_modules
+astral-front/out/
+
+# 构建产物
+*.tsbuildinfo
+astral-front/tsconfig.tsbuildinfo
+
+# 部署密钥/本地覆盖（.env.example 模板除外）
+deploy/.env
+deploy/*.local
+run-backend.local.bat
+run-frontend.local.bat
+astral-server/src/main/resources/application-local.yml
+astral-server/src/main/resources/application-local.yaml
+
+# 打包产物
+release/
+*.tar.gz

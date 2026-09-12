@@ -75,7 +75,9 @@
   "indexes": [
     {
       "indexName": "uk_sequence_statistics_biz_key",
-      "columns": ["biz_key"],
+      "columns": [
+        "biz_key"
+      ],
       "isUnique": true
     }
   ]

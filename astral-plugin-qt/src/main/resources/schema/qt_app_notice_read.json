@@ -1,0 +1,52 @@
+{
+  "tableName": "qt_app_notice_read",
+  "tableComment": "轻听App公告已读记录表",
+  "moduleName": "qt",
+  "className": "QtAppNoticeRead",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "notice_id",
+      "fieldName": "noticeId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "公告ID",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "user_id",
+      "fieldName": "userId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "用户ID",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "read_time",
+      "fieldName": "readTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "已读时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_qt_notice_read",
+      "columns": [
+        "notice_id",
+        "user_id"
+      ],
+      "unique": true
+    }
+  ]
+}

@@ -38,25 +38,25 @@ export interface ClusterStatus {
 export const clusterApi = {
   /** 获取所有在线节点 */
   getOnlineNodes: (): Promise<ApiResult<ClusterNode[]>> =>
-    request.get('/api/v1/cluster/nodes'),
+    request.get('/api/v1/admin/cluster/nodes'),
 
   /** 获取所有节点（包含离线和过期） */
   getAllNodes: (): Promise<ApiResult<ClusterNode[]>> =>
-    request.get('/api/v1/cluster/nodes/all'),
+    request.get('/api/v1/admin/cluster/nodes/all'),
 
   /** 获取集群整体状态统计 */
   getStatus: (): Promise<ApiResult<ClusterStatus>> =>
-    request.get('/api/v1/cluster/status'),
+    request.get('/api/v1/admin/cluster/status'),
 
   /** 获取当前节点信息 */
   getCurrentNode: (): Promise<ApiResult<ClusterNode>> =>
-    request.get('/api/v1/cluster/current'),
+    request.get('/api/v1/admin/cluster/current'),
 
   /** 获取指定节点状态 */
   getNodeStatus: (nodeId: string): Promise<ApiResult<ClusterNode>> =>
-    request.get(`/api/v1/cluster/node/${nodeId}`),
+    request.get(`/api/v1/admin/cluster/node/${nodeId}`),
 
   /** 手动下线指定节点 */
   offlineNode: (nodeId: string): Promise<ApiResult<void>> =>
-    request.post(`/api/v1/cluster/node/${nodeId}/offline`),
+    request.post(`/api/v1/admin/cluster/node/${nodeId}/offline`),
 };

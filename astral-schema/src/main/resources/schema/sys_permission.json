@@ -12,7 +12,7 @@
       "comment": "主键ID",
       "isPrimaryKey": true,
       "isAutoIncrement": true,
-      "mybatisPlusIdType": "AUTO"
+      "mybatisPlusIdType": "INPUT"
     },
     {
       "columnName": "permission_code",
@@ -116,12 +116,16 @@
   "indexes": [
     {
       "indexName": "uk_sys_permission_code",
-      "columns": ["permission_code"],
+      "columns": [
+        "permission_code"
+      ],
       "isUnique": true
     },
     {
       "indexName": "idx_sys_permission_parent",
-      "columns": ["parent_id"]
+      "columns": [
+        "parent_id"
+      ]
     }
   ]
 }

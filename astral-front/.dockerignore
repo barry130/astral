@@ -1,0 +1,20 @@
+# 依赖与构建产物
+node_modules
+.next
+out
+
+# Git/IDE
+.git
+.gitignore
+.idea
+.vscode
+*.iml
+
+# 环境与日志
+.env*.local
+*.log
+npm-debug.log*
+
+# 其他
+Dockerfile
+.dockerignore

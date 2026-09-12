@@ -1,15 +1,16 @@
 package com.astral.system.controller;
 
 import com.astral.dao.entity.DictData;
-import com.astral.dao.entity.SequenceHistory;
 import com.astral.dao.mapper.DictDataMapper;
 import com.astral.system.service.DictDataService;
 import com.astral.common.result.Result;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
+import java.util.List;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @Tag(name = "字典数据表")
 @RestController
-@RequestMapping("/api/v1/system/dict/data")
+@RequestMapping("/api/v1/admin/system/dict/data")
 @RequiredArgsConstructor
 public class DictDataController {
 
@@ -63,6 +64,19 @@ public class DictDataController {
     }
 
     /**
+     * 按字典类型编码(dict_code)查询启用的字典数据
+     * <p>用于前端按编码拉取下拉选项，避免硬编码枚举值</p>
+     *
+     * @param code 字典类型编码，如 qt_notice_channel
+     * @return 字典数据列表（按 dict_sort 升序）
+     */
+    @Operation(summary = "按字典编码查询字典数据")
+    @GetMapping("/byCode")
+    public Result<List<DictData>> byCode(@RequestParam("code") String code) {
+        return Result.success(dictDataService.listByCode(code));
+    }
+
+    /**
      * 创建字典数据
      *
      * @param entity 字典数据实体
@@ -70,6 +84,7 @@ public class DictDataController {
      */
     @Operation(summary = "创建")
     @PostMapping
+    @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> create(@RequestBody DictData entity) {
         dictDataService.save(entity);
         return Result.success();
@@ -84,6 +99,7 @@ public class DictDataController {
      */
     @Operation(summary = "更新")
     @PutMapping("/{id}")
+    @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictData entity) {
         entity.setId(id);
         dictDataService.updateById(entity);
@@ -98,6 +114,7 @@ public class DictDataController {
      */
     @Operation(summary = "删除")
     @DeleteMapping("/{id}")
+    @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {
         dictDataService.removeById(id);
         return Result.success();

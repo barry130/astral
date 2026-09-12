@@ -6,6 +6,7 @@ import com.astral.schema.FieldSchema;
 import com.astral.schema.SchemaCodeGenerator;
 import com.astral.schema.SchemaRegistry;
 import com.astral.schema.TableSchema;
+import com.astral.schema.SqlDialect;
 import com.astral.system.dto.CreateTableRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,8 +14,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 表结构管理控制器
@@ -22,7 +25,7 @@ import java.util.Map;
  */
 @Tag(name = "表结构管理")
 @RestController
-@RequestMapping("/api/v1/system/table-schema")
+@RequestMapping("/api/v1/admin/system/table-schema")
 public class TableSchemaController {
 
     /**
@@ -314,16 +317,33 @@ public class TableSchemaController {
      * 生成建表SQL语句
      *
      * @param tableName 表名
+     * @param dialect   SQL方言（mysql / postgresql），默认postgresql
      * @return CREATE TABLE SQL语句
      */
     @Operation(summary = "生成建表SQL")
     @GetMapping("/{tableName}/sql")
-    public Result<String> generateSql(@PathVariable String tableName) {
+    public Result<String> generateSql(@PathVariable String tableName,
+                                      @RequestParam(value = "dialect", required = false) String dialect) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             return Result.error("SYS009");
         }
-        return Result.success(SchemaCodeGenerator.generateCreateSql(schema));
+        return Result.success(SchemaCodeGenerator.generateCreateSql(schema, SqlDialect.of(dialect)));
+    }
+
+    /**
+     * 获取支持的SQL方言列表
+     * <p>供前端“生成SQL”的方言下拉选择使用，字典维护见 dict-init.sql 的 sql_dialect</p>
+     *
+     * @return 方言编码与名称列表
+     */
+    @Operation(summary = "获取支持的SQL方言")
+    @GetMapping("/dialects")
+    public Result<List<Map<String, String>>> getDialects() {
+        List<Map<String, String>> dialects = Arrays.stream(SqlDialect.values())
+                .map(d -> Map.of("code", d.getCode(), "name", d.getLabel()))
+                .collect(Collectors.toList());
+        return Result.success(dialects);
     }
 
     /**
@@ -337,7 +357,9 @@ public class TableSchemaController {
      */
     @Operation(summary = "更新表结构")
     @PutMapping("/{tableName}")
-    public Result<Map<String, String>> updateSchema(@PathVariable String tableName, @RequestBody TableSchema newSchema) throws IOException {
+    public Result<Map<String, String>> updateSchema(@PathVariable String tableName,
+                                                    @RequestBody TableSchema newSchema,
+                                                    @RequestParam(value = "dialect", required = false) String dialect) throws IOException {
         TableSchema oldSchema = SchemaRegistry.getSchema(tableName);
         if (oldSchema == null) {
             return Result.error("SYS009");
@@ -345,7 +367,7 @@ public class TableSchemaController {
 
         TableSchema savedOldSchema = SchemaRegistry.updateSchema(tableName, newSchema);
         // 生成新旧结构的差异SQL
-        String alterSql = SchemaCodeGenerator.generateAlterSql(savedOldSchema, newSchema);
+        String alterSql = SchemaCodeGenerator.generateAlterSql(savedOldSchema, newSchema, SqlDialect.of(dialect));
         String entityCode = SchemaCodeGenerator.generateEntity(newSchema);
 
         return Result.success(Map.of(
@@ -359,16 +381,19 @@ public class TableSchemaController {
      *
      * @param tableName 表名
      * @param newSchema 新的表结构定义
+     * @param dialect   SQL方言（mysql / postgresql），默认postgresql
      * @return ALTER TABLE SQL语句
      */
     @Operation(summary = "生成ALTER SQL")
     @PostMapping("/{tableName}/alter-sql")
-    public Result<String> generateAlterSql(@PathVariable String tableName, @RequestBody TableSchema newSchema) {
+    public Result<String> generateAlterSql(@PathVariable String tableName,
+                                           @RequestBody TableSchema newSchema,
+                                           @RequestParam(value = "dialect", required = false) String dialect) {
         TableSchema oldSchema = SchemaRegistry.getSchema(tableName);
         if (oldSchema == null) {
             return Result.error("SYS009");
         }
-        return Result.success(SchemaCodeGenerator.generateAlterSql(oldSchema, newSchema));
+        return Result.success(SchemaCodeGenerator.generateAlterSql(oldSchema, newSchema, SqlDialect.of(dialect)));
     }
 
     /**
