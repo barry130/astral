@@ -24,11 +24,14 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:}
 
+  # 数据库结构/种子数据不再随应用启动自动执行。
+  # 原 mode: always 会在每次启动时由 dict-init.sql 清空并重建字典表（DELETE + INSERT），
+  # 导致后台新增的字典项在重启后丢失；且任何脚本报错都会直接导致启动失败。
+  # 现改为手动应用 sql/migrations/ 下的增量脚本，命名与操作方法见 sql/migrations/README.md。
+  # （如需临时恢复自动初始化：设 SPRING_SQL_INIT_MODE=always，并把 schema-locations 指回脚本）
   sql:
     init:
-      mode: always
-      schema-locations: classpath:sql/postgresql-init.sql,classpath:sql/dict-init.sql,classpath:sql/pg-seq-reset.sql
-      encoding: UTF-8
+      mode: never
 
   h2:
     console:

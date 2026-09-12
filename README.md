@@ -59,18 +59,29 @@ Astral 是一套基于 Spring Boot 3 + Next.js 14 的全栈后台管理系统，
 mvn clean install -DskipTests
 ```
 
-### 2. 启动后端
+### 2. 初始化数据库（仅首次）
+
+应用启动时**不再自动执行 SQL**。全新数据库需先手动应用迁移脚本；**既有库只需登记基线版本，切勿重复执行 V2**（会清空字典表）：
+
+```bash
+cd astral-server/src/main/resources/sql/migrations
+psql -v ON_ERROR_STOP=1 -f V1__baseline_schema.sql
+psql -v ON_ERROR_STOP=1 -f V2__baseline_dict.sql
+psql -v ON_ERROR_STOP=1 -f V3__baseline_dict_sequence_reset.sql
+```
+
+> 完整流程（`schema_migrations` 跟踪表、既有库基线登记、服务器无 `psql` 时的 Docker 执行方式、后续增量变更规范）见 [sql/migrations/README.md](astral-server/src/main/resources/sql/migrations/README.md)。
+
+### 3. 启动后端
 
 ```bash
 mvn -pl astral-server spring-boot:run
 # Windows 可直接运行 run-backend.bat（需先设置 JAVA_HOME 指向 JDK 21，端口 27000）
 ```
 
-后端默认运行在 `http://localhost:27000`，启动时按 `spring.sql.init.schema-locations` 自动执行
-`classpath:sql/postgresql-init.sql`、`dict-init.sql`、`pg-seq-reset.sql` 初始化表结构（`spring.sql.init.mode: always`）；
-qt 插件自带建表脚本，由 `QtSchemaInitializer` 幂等创建。
+后端默认运行在 `http://localhost:27000`。数据库结构变更统一走 `sql/migrations/` 下的增量脚本，不再随启动自动执行。qt / feedback 插件的建表由各自的初始化器幂等完成。
 
-### 3. 启动前端
+### 4. 启动前端
 
 ```bash
 cd astral-front
@@ -81,19 +92,19 @@ npm run dev
 
 前端默认运行在 `http://localhost:3000`，自动将 `/api/*` 代理到后端 `http://localhost:27000`。
 
-### 4. 访问系统
+### 5. 访问系统
 
 - **前端界面**：http://localhost:3000
 - **API 文档**：http://localhost:27000/swagger-ui.html
 - **监控端点**：http://localhost:27000/actuator
 
-### 5. 默认账号
+### 6. 默认账号
 
 | 用户名 | 密码 | 角色 |
 |--------|------|------|
 | admin | admin | 管理员 |
 
-> 密码以 BCrypt 存储，由 `postgresql-init.sql` 种子数据写入；登录失败 5 次将锁定 15 分钟（内存态，重启后端可解除）。
+> 密码以 BCrypt 存储，由迁移基线 `V1__baseline_schema.sql` 的种子数据写入；登录失败 5 次将锁定 15 分钟（内存态，重启后端可解除）。
 
 ## 🏛️ 项目结构
 
@@ -192,8 +203,8 @@ spring:
 
   sql:
     init:
-      mode: always
-      schema-locations: classpath:sql/postgresql-init.sql,classpath:sql/dict-init.sql,classpath:sql/pg-seq-reset.sql
+      # 启动不再自动执行 SQL；结构变更走 sql/migrations/ 下的增量脚本（见其 README.md）
+      mode: never
 
 # 插件开关（未配置的插件默认开启）
 astral:

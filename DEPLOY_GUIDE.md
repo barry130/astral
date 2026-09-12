@@ -135,7 +135,34 @@ docker compose logs -f backend   # 后端日志
 
 成功标志：后端日志出现 `Started AstralApplication`，且 `docker compose ps` 中 backend 为 `healthy`。
 
-### 第三步：访问验证
+### 第三步：初始化/迁移数据库
+
+应用启动时**不再自动执行 SQL**。数据库变更统一由 `sql/migrations/` 下的增量脚本手动应用。
+
+**全新数据库**（首次部署）：按序执行 V1–V3 基线脚本并登记版本。
+
+```bash
+cd /opt/astral/astral-server/src/main/resources/sql/migrations
+export PGHOST=<数据库主机> PGUSER=<账号> PGPASSWORD=<密码> PGDATABASE=astral
+export PGOPTIONS='-c search_path=astral'      # 必须，表建在 astral schema
+
+psql -v ON_ERROR_STOP=1 -c "CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(32) PRIMARY KEY, description VARCHAR(128) NOT NULL, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);"
+for f in V*.sql; do
+  ver="${f%%__*}"; echo ">> $f"
+  psql -v ON_ERROR_STOP=1 -f "$f" || exit 1
+  psql -v ON_ERROR_STOP=1 -c "INSERT INTO schema_migrations(version, description) VALUES ('$ver','$f') ON CONFLICT DO NOTHING;"
+done
+```
+
+**既有数据库**（已用旧版自动初始化跑起来）：**不要**执行 V1–V3（V2 会清空字典表），只登记基线版本：
+
+```bash
+psql -v ON_ERROR_STOP=1 -c "INSERT INTO schema_migrations(version, description) VALUES ('V1','V1__baseline_schema.sql'),('V2','V2__baseline_dict.sql'),('V3','V3__baseline_dict_sequence_reset.sql') ON CONFLICT DO NOTHING;"
+```
+
+> 服务器未安装 `psql` 时，可用 `postgres:16-alpine` 容器执行；后续每次结构变更新增 `V4__xxx.sql` 并按上面方式应用一次。详见 [sql/migrations/README.md](../astral-server/src/main/resources/sql/migrations/README.md)。
+
+### 第四步：访问验证
 
 | 入口 | 地址 |
 |------|------|

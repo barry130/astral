@@ -70,8 +70,8 @@ POST /api/v1/stat/report          ← 公开接口（AuthInterceptor 放行，Ra
 
 ## 3. 数据模型（PostgreSQL）
 
-> DDL 统一追加到 `astral-server/src/main/resources/sql/postgresql-init.sql`（`spring.sql.init.mode: always`，启动自动执行，须幂等 `CREATE TABLE IF NOT EXISTS`）。
-> ⚠️ `application-prod.yml` 是 MySQL 且未配 `sql.init`：生产建表需单独处理（本期以默认 profile 的 PostgreSQL 为准，prod 列入"部署注意"）。
+> DDL 以增量迁移脚本形式新增：`astral-server/src/main/resources/sql/migrations/V{序号}__{描述}.sql`，手动应用（见该目录 README.md）。
+> 启动不再自动执行 SQL（`spring.sql.init.mode: never`）；全新库先应用 V1–V3 基线，既有库登记基线版本后按序追加。
 
 ### 3.1 `stat_device` 设备登记表（一台设备一行）
 
@@ -314,7 +314,7 @@ DDL 中 `id BIGINT PRIMARY KEY`（**不要** BIGSERIAL，ID 由序列填充）�
 
 ## 5. astral 后端修改点（A 开发）
 
-### 5.1 SQL 种子（`astral-server/src/main/resources/sql/postgresql-init.sql` 追加）
+### 5.1 SQL 种子（以增量迁移脚本追加：`sql/migrations/V{序号}__*.sql`）
 
 1. §3 的 5 张表 DDL（幂等）。
 2. **DB 菜单种子（D3）**——沿用现有种子风格（现有菜单 id：1、4~15、20、24，勿冲突）：

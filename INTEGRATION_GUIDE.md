@@ -193,7 +193,8 @@ axios.interceptors.request.use(config => {
 ### 数据库检查
 
 - [ ] 数据库已创建（PostgreSQL，连接配置见 `application.yml`）
-- [ ] 启动时自动执行 `postgresql-init.sql` / `dict-init.sql` 初始化（`spring.sql.init.mode: always`）
+- [ ] 已手动应用 `sql/migrations/` 下的迁移脚本（启动不再自动执行 SQL，见该目录 README.md）
+- [ ] `schema_migrations` 已登记已应用的版本
 - [ ] 连接配置正确
 
 ### 功能检查

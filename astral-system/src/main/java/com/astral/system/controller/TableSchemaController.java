@@ -333,7 +333,7 @@ public class TableSchemaController {
 
     /**
      * 获取支持的SQL方言列表
-     * <p>供前端“生成SQL”的方言下拉选择使用，字典维护见 dict-init.sql 的 sql_dialect</p>
+     * <p>供前端“生成SQL”的方言下拉选择使用，字典维护见迁移脚本 V2__baseline_dict.sql 的 sql_dialect</p>
      *
      * @return 方言编码与名称列表
      */
