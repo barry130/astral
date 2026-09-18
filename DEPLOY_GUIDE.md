@@ -39,8 +39,9 @@
 | 路径 | 说明 |
 |------|------|
 | `deploy/docker-compose.yml` | 服务编排（backend + frontend） |
-| `astral-server/Dockerfile` | 后端多阶段构建（Java 21，含全部 14 个模块） |
-| `astral-front/Dockerfile` | 前端多阶段构建（Next.js standalone） |
+| `astral-server/Dockerfile` | 后端多阶段构建（Java 21；BuildKit 缓存 Maven 仓库） |
+| `astral-front/Dockerfile` | 前端多阶段构建（Next.js standalone；BuildKit 缓存 npm） |
+| `.mvn/settings.xml` | Docker 构建用 Maven 镜像（阿里云 public） |
 | `.dockerignore` | 后端构建上下文排除项 |
 | `astral-front/.dockerignore` | 前端构建上下文排除项 |
 
@@ -65,6 +66,9 @@ vi .env      # 填入数据库、Redis 的真实地址与密码
 | `REDIS_PORT` | `6379` | Redis 端口 |
 | `REDIS_PASSWORD` | `<Redis密码>` | Redis 密码 |
 | `REDIS_DB` | `7` | Redis 库索引 |
+| `STORAGE_UPLOAD_TICKET_KEY` | `openssl rand -base64 48` 生成 | 文件存储：上传凭证 HMAC 密钥，需与 Worker Secret 一致 |
+| `STORAGE_ORIGIN_SHARED_SECRET` | 同上（另生成） | 文件存储：Worker 回调鉴权密钥，需与 Worker Secret 一致 |
+| `STORAGE_DOWNLOAD_SIGNING_KEY_V1` | 同上（另生成） | 文件存储：下载地址签名密钥，需与 Worker Secret 一致 |
 | `NEXT_PUBLIC_API_URL` | 留空（推荐）或 `https://<你的API域名>` | 浏览器访问 API 的基地址（构建时内联） |
 
 > `SPRING_DATASOURCE_*` 与 `REDIS_PASSWORD` 在 compose 中使用 `:?` 断言：未在 `.env` 填写时 `docker compose` 会**直接报错并提示缺哪个变量**，不会用占位值静默启动。`QT_PLUGIN_ENABLED`、`TZ` 已在 compose 中固定为 `true` / `Asia/Shanghai`。
@@ -124,7 +128,13 @@ docker compose build frontend
 docker compose up -d
 ```
 
-首次构建需下载 Maven 依赖 + npm 依赖，后端镜像可能耗时 5~15 分钟；若仍被 OOM 杀掉，先加 2G swap 再重试。
+**不要加 `--no-cache`。** Dockerfile 用了 BuildKit cache mount 缓存 Maven/npm 依赖；`--no-cache` 会迫使每次重下全部 jar，把构建重新拖到十几分钟。
+
+首次构建需下载 Maven 依赖 + npm 依赖，后端大约 2~5 分钟（走阿里云镜像）；同一台机器上的二次构建（只改源码、pom 没变）通常 1 分钟内。若仍被 OOM 杀掉，先加 2G swap 再重试。
+
+构建要求 Docker 20.10+ 且 BuildKit 开启（Docker 23+ 默认开启；若 `RUN --mount=type=cache` 报错，执行 `export DOCKER_BUILDKIT=1` 后再 build）。
+
+> Dockerfile 里的 `/root/.m2/repository` 是**构建容器内部**路径，不是宿主机目录。服务器上没有 `/root/.m2` 完全正常，也不需要手工创建。缓存由 BuildKit 自动落在 Docker 数据目录（Linux 一般是 `/var/lib/docker/buildkit`）。确认缓存在工作：`docker buildx du`，二次构建日志里应大量 `Downloading skipped` / 几乎不再打 `Downloading from aliyun`。
 
 查看进度与状态：
 
@@ -135,32 +145,20 @@ docker compose logs -f backend   # 后端日志
 
 成功标志：后端日志出现 `Started AstralApplication`，且 `docker compose ps` 中 backend 为 `healthy`。
 
-### 第三步：初始化/迁移数据库
+### 第三步：初始化/迁移数据库（Flyway 自动）
 
-应用启动时**不再自动执行 SQL**。数据库变更统一由 `sql/migrations/` 下的增量脚本手动应用。
+数据库迁移由 **Flyway** 接管：backend 容器启动时自动按版本号顺序应用
+`astral-server/src/main/resources/db/migration/V*.sql`，版本历史记录在 `flyway_schema_history` 表。
 
-**全新数据库**（首次部署）：按序执行 V1–V3 基线脚本并登记版本。
+- **全新服务器**：唯一手工步骤是建库（`CREATE DATABASE astral;`），schema、表结构、种子数据、数据字典全部由 Flyway 自动完成
+- **存量库**（已手工应用过旧版 V1–V4 脚本）：自动基线化（`baseline-on-migrate`），跳过初始化脚本只应用增量——**无需任何人工登记**
+- 后续每次发布新增 `V{yyyyMMddNNN}__xxx.sql`（如 `V20260915001__add_xxx.sql`），部署时**零手工数据库操作**
 
-```bash
-cd /opt/astral/astral-server/src/main/resources/sql/migrations
-export PGHOST=<数据库主机> PGUSER=<账号> PGPASSWORD=<密码> PGDATABASE=astral
-export PGOPTIONS='-c search_path=astral'      # 必须，表建在 astral schema
+查看迁移执行情况：`docker compose logs backend | grep -i flyway`，或在库里查 `SELECT * FROM astral.flyway_schema_history;`。
 
-psql -v ON_ERROR_STOP=1 -c "CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(32) PRIMARY KEY, description VARCHAR(128) NOT NULL, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);"
-for f in V*.sql; do
-  ver="${f%%__*}"; echo ">> $f"
-  psql -v ON_ERROR_STOP=1 -f "$f" || exit 1
-  psql -v ON_ERROR_STOP=1 -c "INSERT INTO schema_migrations(version, description) VALUES ('$ver','$f') ON CONFLICT DO NOTHING;"
-done
-```
-
-**既有数据库**（已用旧版自动初始化跑起来）：**不要**执行 V1–V3（V2 会清空字典表），只登记基线版本：
-
-```bash
-psql -v ON_ERROR_STOP=1 -c "INSERT INTO schema_migrations(version, description) VALUES ('V1','V1__baseline_schema.sql'),('V2','V2__baseline_dict.sql'),('V3','V3__baseline_dict_sequence_reset.sql') ON CONFLICT DO NOTHING;"
-```
-
-> 服务器未安装 `psql` 时，可用 `postgres:16-alpine` 容器执行；后续每次结构变更新增 `V4__xxx.sql` 并按上面方式应用一次。详见 [sql/migrations/README.md](../astral-server/src/main/resources/sql/migrations/README.md)。
+> 机制细节（基线行为、命名规范、checksum 防漂移、应急关闭 `FLYWAY_ENABLED=false`）见
+> [db/migration/README.md](../astral-server/src/main/resources/db/migration/README.md)。
+> 迁移失败会导致 backend 拒绝启动——这是刻意的防带伤运行设计，排查后重新 up 即可。
 
 ### 第四步：访问验证
 
@@ -185,7 +183,7 @@ docker compose restart frontend   # 重启单个服务
 docker compose down               # 停止（保留数据卷）
 docker compose up -d              # 再次启动
 
-# 更新发布（拉新代码后重建）
+# 更新发布（拉新代码后重建；不要加 --no-cache，否则 Maven 依赖缓存作废）
 git pull
 docker compose up -d --build
 ```
@@ -243,9 +241,16 @@ docker compose build --no-cache frontend && docker compose up -d frontend
 
 - 若服务器 `3000/27000` 被占用，修改 compose 中 `ports` 的宿主侧端口。
 
+**后端镜像构建卡在 Maven 很久（十几分钟 / 半小时）？**
+
+- 确认已拉取包含 `astral-server/Dockerfile` 里 `RUN --mount=type=cache` 的版本；旧 Dockerfile 的 `mvn dependency:go-offline` 会把尚未编译的内部模块拿到 Maven Central 解析，默认超时 30 分钟。
+- **不要** `docker compose build --no-cache backend`，这会丢掉 BuildKit 的 Maven 仓库缓存。
+- 确认 BuildKit 已开启：`docker buildx version` 能跑即可。若报 `RUN --mount` 未知，先 `export DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1`。
+- 构建日志里应出现从 `maven.aliyun.com` 拉 jar；若仍走 `repo.maven.apache.org`，检查 `.mvn/settings.xml` 是否在构建上下文里（不要被 `.dockerignore` 排除）。
+- 服务器上没有 `/root/.m2/repository` 是正常的：那是容器内路径。看缓存用 `docker buildx du`，不要去宿主机 `/root` 下找。
+
 ## 相关文档
 
 - [组件指南](COMPONENTS_GUIDE.md)
 - [插件开发指南](PLUGIN_GUIDE.md)
-- [集群模式](CLUSTER_MODE.md)
 

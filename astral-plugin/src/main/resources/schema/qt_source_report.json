@@ -1,0 +1,88 @@
+{
+  "tableName": "qt_source_report",
+  "tableComment": "音源包装载结果上报(装机分布统计与坏包发现)",
+  "moduleName": "qt",
+  "className": "QtSourceReport",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "platform",
+      "fieldName": "platform",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "客户端平台(1101/1102/1103)",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "app_version_code",
+      "fieldName": "appVersionCode",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "客户端应用版本号",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "source_version_code",
+      "fieldName": "sourceVersionCode",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "装载的音源包版本号",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "result",
+      "fieldName": "result",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "结果(ok成功/smoke_failed冒烟自检失败)",
+      "isRequired": true,
+      "defaultValue": "",
+      "length": 32
+    },
+    {
+      "columnName": "detail",
+      "fieldName": "detail",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "失败详情(可空)",
+      "length": 1024
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_qt_source_report_lookup",
+      "columns": [
+        "source_version_code",
+        "result"
+      ]
+    }
+  ]
+}

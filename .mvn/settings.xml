@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+    <!--
+      Docker 构建阶段使用（astral-server/Dockerfile 以 -s .mvn/settings.xml 显式加载）。
+      本机 IDEA/Maven 不会自动读这个文件，不影响本地开发。
+
+      直连 repo.maven.apache.org 在国内 / 小带宽 VPS 上经常慢到不可用；
+      阿里云 public 聚合了 Central + 常用仓库。
+
+      若部署在海外且 Aliyun 更慢：去掉 Dockerfile 里 mvn 的 -s .mvn/settings.xml 即可回退官方 Central。
+    -->
+    <mirrors>
+        <mirror>
+            <id>aliyun-public</id>
+            <name>Aliyun Maven Public</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <mirrorOf>central</mirrorOf>
+        </mirror>
+    </mirrors>
+</settings>

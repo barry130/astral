@@ -15,15 +15,6 @@
     <name>astral-common</name>
     <description>Common utilities and constants</description>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-        </dependency>
-    </dependencies>
+    <!-- 本模块只提供 Result / ErrorCode / BusinessException / RateLimit 等纯工具与常量，
+         源码仅依赖 java.*，不引入 Spring 与 hutool（此前声明会把 Spring Web 传递到所有模块） -->
 </project>

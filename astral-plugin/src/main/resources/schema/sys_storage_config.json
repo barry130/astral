@@ -1,0 +1,167 @@
+{
+  "tableName": "sys_storage_config",
+  "tableComment": "存储配置表",
+  "moduleName": "storage",
+  "className": "StorageConfigEntity",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "name",
+      "fieldName": "name",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "配置名称",
+      "isRequired": true,
+      "length": 128
+    },
+    {
+      "columnName": "provider_type",
+      "fieldName": "providerType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "存储类型(TELEGRAM/R2/S3_COMPATIBLE/QINIU/COS/OSS/UPYUN)",
+      "isRequired": true,
+      "defaultValue": "TELEGRAM",
+      "length": 32
+    },
+    {
+      "columnName": "chat_id",
+      "fieldName": "chatId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "Telegram 接收会话ID",
+      "length": 64
+    },
+    {
+      "columnName": "worker_base_url",
+      "fieldName": "workerBaseUrl",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "Worker 直传服务地址",
+      "length": 256
+    },
+    {
+      "columnName": "provider_options",
+      "fieldName": "providerOptions",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "Provider 专属连接信息(JSON,非敏感)"
+    },
+    {
+      "columnName": "max_file_size",
+      "fieldName": "maxFileSize",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "单文件大小上限(字节,空=全局默认)"
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "状态(ENABLED启用/DISABLED停用)",
+      "isRequired": true,
+      "defaultValue": "ENABLED",
+      "length": 16
+    },
+    {
+      "columnName": "is_default",
+      "fieldName": "isDefault",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "是否默认配置(0否 1是)",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "health_status",
+      "fieldName": "healthStatus",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "健康状态(UNKNOWN/OK/UNREACHABLE)",
+      "isRequired": true,
+      "defaultValue": "UNKNOWN",
+      "length": 16
+    },
+    {
+      "columnName": "last_test_time",
+      "fieldName": "lastTestTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "最近连通性测试时间"
+    },
+    {
+      "columnName": "last_test_message",
+      "fieldName": "lastTestMessage",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "最近测试结果信息",
+      "length": 512
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "备注",
+      "length": 256
+    },
+    {
+      "columnName": "create_by",
+      "fieldName": "createBy",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "创建人",
+      "length": 64
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_by",
+      "fieldName": "updateBy",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "更新人",
+      "length": 64
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_storage_config_name",
+      "columns": [
+        "name"
+      ],
+      "isUnique": true
+    },
+    {
+      "indexName": "uk_storage_config_default",
+      "columns": [
+        "is_default"
+      ],
+      "isUnique": true
+    }
+  ]
+}

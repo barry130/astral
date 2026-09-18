@@ -1,0 +1,94 @@
+{
+  "tableName": "sys_storage_folder_permission",
+  "tableComment": "文件夹授权表(扁平权限集合)",
+  "moduleName": "storage",
+  "className": "StorageFolderPermissionEntity",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "folder_id",
+      "fieldName": "folderId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "文件夹ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "subject_type",
+      "fieldName": "subjectType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "授权主体类型(USER/PLUGIN)",
+      "isRequired": true,
+      "length": 16
+    },
+    {
+      "columnName": "subject_id",
+      "fieldName": "subjectId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "授权主体ID(用户ID或插件ID)",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "permissions",
+      "fieldName": "permissions",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "权限集合(逗号分隔:READ,UPLOAD,UPDATE,DELETE,MANAGE)",
+      "isRequired": true,
+      "length": 256
+    },
+    {
+      "columnName": "expires_time",
+      "fieldName": "expiresTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "授权过期时间(空=永久)"
+    },
+    {
+      "columnName": "create_by",
+      "fieldName": "createBy",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "授权操作人",
+      "length": 64
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "授权时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "revoked_time",
+      "fieldName": "revokedTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "撤销时间(空=有效)"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_storage_folder_perm",
+      "columns": [
+        "folder_id",
+        "subject_type",
+        "subject_id"
+      ],
+      "isUnique": true
+    }
+  ]
+}

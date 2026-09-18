@@ -235,21 +235,7 @@
 
 ---
 
-## 6. 集群 `astral-server` `/api/v1/cluster`（仅管理员）
-
-| 方法 | URL | 作用 |
-|---|---|---|
-| GET | `/health` | 集群健康检查（返回 ok） |
-| GET | `/nodes` | 在线节点列表 |
-| GET | `/nodes/all` | 全部节点（含离线） |
-| GET | `/status` | 集群整体状态 |
-| GET | `/current` | 当前节点信息 |
-| GET | `/node/{nodeId}` | 指定节点状态 |
-| POST | `/node/{nodeId}/offline` | 节点下线 |
-
----
-
-## 7. 插件管理 `astral-plugin` `/api/v1/plugin`
+## 6. 插件管理 `astral-plugin` `/api/v1/admin/plugin`
 
 | 方法 | URL | 作用 |
 |---|---|---|
@@ -260,14 +246,9 @@
 | GET | `/nav-extensions` | 前端导航扩展（仅已启用插件） |
 | GET | `/configs` | 插件默认配置 |
 
-### 7.1 示例插件 `/api/v1/plugin/demo`
-| 方法 | URL | 作用 |
-|---|---|---|
-| GET | `/hello` | 示例接口（返回 message/status） |
-
 ---
 
-## 8. 轻听插件 `astral-plugin-qt`
+## 7. 轻听插件 `astral-plugin / qt`
 
 ### 8.1 App 用户 `/api/v1/user`（App 用户，satoken）
 | 方法 | URL | 作用 |
@@ -318,7 +299,7 @@
 
 ---
 
-## 9. 反馈插件 `astral-plugin-feedback`
+## 8. 反馈插件 `astral-plugin / feedback`
 
 ### 9.1 App 反馈 `/api/v1/app/feedback`（App 用户，satoken）
 | 方法 | URL | 作用 |

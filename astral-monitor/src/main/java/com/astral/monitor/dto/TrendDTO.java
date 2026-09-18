@@ -5,7 +5,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 小时趋势数据传输对象（STATS_DESIGN.md §4.2 trend / api/trend）
+ * 小时趋势数据传输对象（trend / api/trend）
  * <p>
  * 数组长度恒为 24，无数据小时补 0。
  * </p>

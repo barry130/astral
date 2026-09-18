@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 统计数据接入服务（STATS_DESIGN.md §5.3）
+ * 统计数据接入服务
  * <p>
  * 批量处理上报事件：设备 upsert、小时桶累加、错误明细落库。
  * 按 §5.4 约定采用"先 UPDATE 后 INSERT"的两步 upsert，避免唯一键竞态；

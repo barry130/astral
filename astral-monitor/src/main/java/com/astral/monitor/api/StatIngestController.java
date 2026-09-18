@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 统计数据接入控制器（STATS_DESIGN.md §4.1，旧路径 /api/v1/stat/report，已废弃）
+ * 统计数据接入控制器（旧路径 /api/v1/stat/report，已废弃）
  * <p>App 端请迁移到 /api/v1/app/stat/report（见 {@link AppStatController}）。</p>
  * @deprecated 使用 {@link AppStatController}
  */

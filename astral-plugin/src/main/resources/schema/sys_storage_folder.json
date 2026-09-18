@@ -1,0 +1,136 @@
+{
+  "tableName": "sys_storage_folder",
+  "tableComment": "存储文件夹表(授权与组织边界)",
+  "moduleName": "storage",
+  "className": "StorageFolderEntity",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "parent_id",
+      "fieldName": "parentId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "父文件夹ID(空=根)"
+    },
+    {
+      "columnName": "folder_name",
+      "fieldName": "folderName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "文件夹名称",
+      "isRequired": true,
+      "length": 128
+    },
+    {
+      "columnName": "folder_path",
+      "fieldName": "folderPath",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "文件夹全路径",
+      "isRequired": true,
+      "defaultValue": "",
+      "length": 512
+    },
+    {
+      "columnName": "storage_config_id",
+      "fieldName": "storageConfigId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "绑定存储配置ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "owner_type",
+      "fieldName": "ownerType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "属主类型(ADMIN/USER)",
+      "isRequired": true,
+      "defaultValue": "ADMIN",
+      "length": 16
+    },
+    {
+      "columnName": "owner_id",
+      "fieldName": "ownerId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "属主ID",
+      "length": 64
+    },
+    {
+      "columnName": "visibility",
+      "fieldName": "visibility",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "可见性(PUBLIC/PRIVATE)",
+      "isRequired": true,
+      "defaultValue": "PRIVATE",
+      "length": 16
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "状态(ENABLED启用)",
+      "isRequired": true,
+      "defaultValue": "ENABLED",
+      "length": 16
+    },
+    {
+      "columnName": "create_by",
+      "fieldName": "createBy",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "创建人",
+      "length": 64
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_by",
+      "fieldName": "updateBy",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "更新人",
+      "length": 64
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_storage_folder_parent",
+      "columns": [
+        "parent_id"
+      ]
+    },
+    {
+      "indexName": "idx_storage_folder_config",
+      "columns": [
+        "storage_config_id"
+      ]
+    }
+  ]
+}

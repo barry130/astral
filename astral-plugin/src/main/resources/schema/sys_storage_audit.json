@@ -1,0 +1,99 @@
+{
+  "tableName": "sys_storage_audit",
+  "tableComment": "存储审计表",
+  "moduleName": "storage",
+  "className": "StorageAuditEntity",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "action",
+      "fieldName": "action",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "动作(FILE_UPLOAD/FILE_DELETE/FOLDER_GRANT等)",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "subject_type",
+      "fieldName": "subjectType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "操作主体类型",
+      "length": 16
+    },
+    {
+      "columnName": "subject_id",
+      "fieldName": "subjectId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "操作主体ID",
+      "length": 64
+    },
+    {
+      "columnName": "target_type",
+      "fieldName": "targetType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "目标类型(FILE/FOLDER)",
+      "length": 32
+    },
+    {
+      "columnName": "target_id",
+      "fieldName": "targetId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "目标ID",
+      "length": 64
+    },
+    {
+      "columnName": "detail",
+      "fieldName": "detail",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "详情",
+      "length": 512
+    },
+    {
+      "columnName": "result",
+      "fieldName": "result",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "结果(OK/FAIL)",
+      "isRequired": true,
+      "defaultValue": "OK",
+      "length": 16
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_storage_audit_time",
+      "columns": [
+        "create_time"
+      ]
+    },
+    {
+      "indexName": "idx_storage_audit_action",
+      "columns": [
+        "action"
+      ]
+    }
+  ]
+}

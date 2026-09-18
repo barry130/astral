@@ -5,7 +5,7 @@ import { Card, Row, Col, Statistic, Spin, Progress } from 'antd';
 import { 
   ApiOutlined, 
   DesktopOutlined, 
-  ClusterOutlined, 
+  InfoCircleOutlined, 
   DashboardOutlined,
   RocketOutlined,
   ThunderboltOutlined,
@@ -272,7 +272,7 @@ export default function DashboardPage() {
           <Card 
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <ClusterOutlined style={{ color: '#52c41a' }} />
+                <InfoCircleOutlined style={{ color: '#52c41a' }} />
                 <span>系统信息</span>
               </div>
             }

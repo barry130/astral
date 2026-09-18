@@ -18,7 +18,7 @@ import java.util.Map;
 public interface StatErrorLogMapper extends BaseMapper<StatErrorLog> {
 
     /**
-     * 按 fingerprint 分组的当日错误汇总（STATS_DESIGN.md §4.2 error/summary）
+     * 按 fingerprint 分组的当日错误汇总（按 fingerprint 分组的当日错误汇总）
      * <p>
      * sampleMessage / topAppVersion 通过相关子查询取代表性值：
      * sampleMessage 取组内最近一条；topAppVersion 取组内出现最多的版本。

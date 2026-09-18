@@ -1,0 +1,154 @@
+{
+  "tableName": "qt_source_release",
+  "tableComment": "音源包发布记录(一个包可服务多个平台,版本号由后端生成)",
+  "moduleName": "qt",
+  "className": "QtSourceRelease",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "source_version_code",
+      "fieldName": "sourceVersionCode",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "音源包版本号(yyyyMMddNN,后端生成,更新判定的唯一依据)",
+      "isRequired": true
+    },
+    {
+      "columnName": "source_version_name",
+      "fieldName": "sourceVersionName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "音源包版本名(yyyy.MM.dd.N,后端由版本号派生,仅展示)",
+      "length": 64
+    },
+    {
+      "columnName": "platforms",
+      "fieldName": "platforms",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "适用平台(逗号分隔,1101安卓/1102iOS/1103Windows)",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "host_api_version",
+      "fieldName": "hostApiVersion",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "需要的宿主契约版本(高于客户端支持上限则不加载)",
+      "isRequired": true,
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "app_version_codes",
+      "fieldName": "appVersionCodes",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "按平台准入的应用版本号(JSON,如{\"1103\":[102]},平台缺省或空数组=不限制)",
+      "isRequired": true,
+      "defaultValue": ""
+    },
+    {
+      "columnName": "channel",
+      "fieldName": "channel",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "发布渠道(stable正式/beta测试)",
+      "isRequired": true,
+      "defaultValue": "stable",
+      "length": 16
+    },
+    {
+      "columnName": "notes",
+      "fieldName": "notes",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "更新说明(客户端设置页展示)",
+      "length": 1024
+    },
+    {
+      "columnName": "artifacts",
+      "fieldName": "artifacts",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "产物清单(JSON数组,当前生效全集:[{path,version,url}])",
+      "isRequired": true,
+      "defaultValue": ""
+    },
+    {
+      "columnName": "rollback_to",
+      "fieldName": "rollbackTo",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "指定回退到的版本号(可空)"
+    },
+    {
+      "columnName": "is_bad",
+      "fieldName": "isBad",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "是否标记坏包(1-是,客户端回退并拉黑该版本)",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "is_published",
+      "fieldName": "isPublished",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "是否发布(1-已发布,客户端可拉到)",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "published_at",
+      "fieldName": "publishedAt",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "发布时间(未发布为空,manifest 里作为 publishedAt 返回)"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_qt_source_release_code",
+      "columns": [
+        "source_version_code",
+        "channel"
+      ],
+      "isUnique": true
+    },
+    {
+      "indexName": "idx_qt_source_release_lookup",
+      "columns": [
+        "channel",
+        "is_published",
+        "source_version_code"
+      ]
+    }
+  ]
+}

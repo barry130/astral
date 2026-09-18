@@ -8,7 +8,7 @@
 
 | 模块 | 说明 |
 |------|------|
-| astral-server | Web/API 层（控制器、集群管理、入口） |
+| astral-server | Web/API 层（控制器、入口） |
 | astral-common | 公共工具（统一返回、异常、常量） |
 | astral-dao | 数据访问（MyBatis-Plus 实体 + Mapper） |
 | astral-schema | 表结构元数据（实体同步、代码生成引擎） |
@@ -17,8 +17,8 @@
 | astral-monitor | 监控服务（系统/JVM/业务指标） |
 | astral-system | 系统管理（用户/角色/权限/菜单/字典/配置/Token/表结构/邮件） |
 | astral-sequence | 序列生成（5 种算法，系统必需插件） |
-| astral-plugin-api / astral-plugin | 插件 SPI / 注册中心 |
-| astral-plugin-demo / qt | 示例 / 轻听音乐插件 |
+| astral-plugin-api | 插件 SPI（稳定接口） |
+| astral-plugin | 插件注册中心及内置 qt、feedback 业务插件 |
 
 ---
 
@@ -242,9 +242,8 @@ astral-server (Web 层, 入口)
 ├── astral-sequence (序列生成, 系统必需插件)
 ├── astral-schema (表结构元数据)
 ├── astral-system (系统管理域)
-├── astral-plugin (插件注册中心, 依赖 astral-plugin-api)
-├── astral-plugin-demo (示例插件)
-└── astral-plugin-qt (轻听音乐插件)
+├── astral-plugin-api (插件 SPI)
+└── astral-plugin (插件注册中心及 qt、feedback 内置插件)
 ```
 
 ---
@@ -298,13 +297,12 @@ astral-server (Web 层, 入口)
 | GET | `/api/v1/sequence/types` | 支持的类型 | ✅ |
 | CRUD | `/api/v1/sequence/configs` | 序列配置 | ✅ |
 
-### 插件与集群
+### 插件
 
 | 方法 | 路径 | 说明 | 需要认证 |
 |------|------|------|----------|
 | GET | `/api/v1/admin/plugin` | 插件列表 | ✅ |
 | GET | `/api/v1/admin/plugin/nav-extensions` | 前端导航扩展 | ✅ |
-| GET | `/api/v1/admin/cluster/**` | 集群节点/状态（仅管理员） | ✅ |
 | * | `/api/v1/user/**`、`/api/v1/app/**` | 轻听音乐 App 端（qt 插件 Bearer 拦截器接管） | Bearer Token |
 
 ---

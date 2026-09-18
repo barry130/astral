@@ -8,7 +8,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 统计批量上报请求体（STATS_DESIGN.md §4.1）
+ * 统计批量上报请求体
  * <p>
  * POST /api/v1/stat/report 的入参。单批 events 数量 ≤ 200。
  * </p>

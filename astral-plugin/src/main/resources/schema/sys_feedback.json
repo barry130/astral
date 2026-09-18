@@ -1,0 +1,169 @@
+{
+  "tableName": "sys_feedback",
+  "tableComment": "问题反馈主表",
+  "moduleName": "feedback",
+  "className": "Feedback",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "user_id",
+      "fieldName": "userId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "提交用户ID(sys_user.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "type",
+      "fieldName": "type",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "类型(issue问题/request需求)",
+      "isRequired": true,
+      "length": 16
+    },
+    {
+      "columnName": "title",
+      "fieldName": "title",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "标题",
+      "isRequired": true,
+      "length": 128
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "内容",
+      "isRequired": true,
+      "length": 5000
+    },
+    {
+      "columnName": "contact",
+      "fieldName": "contact",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "联系方式",
+      "length": 64
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "状态(pending提出/received已接收/resolved已解决/published已发布/deprecated已废弃)",
+      "isRequired": true,
+      "defaultValue": "pending",
+      "length": 16
+    },
+    {
+      "columnName": "is_public",
+      "fieldName": "isPublic",
+      "fieldType": "Boolean",
+      "jdbcType": "BOOLEAN",
+      "comment": "是否公开(发布后App才展示;私有仅本人可见)",
+      "isRequired": true,
+      "defaultValue": "false"
+    },
+    {
+      "columnName": "device",
+      "fieldName": "device",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "设备型号",
+      "length": 128
+    },
+    {
+      "columnName": "os",
+      "fieldName": "os",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "系统版本",
+      "length": 64
+    },
+    {
+      "columnName": "app_version",
+      "fieldName": "appVersion",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "App版本(如3.0.0)",
+      "length": 32
+    },
+    {
+      "columnName": "platform",
+      "fieldName": "platform",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "平台(android/ios)",
+      "length": 16
+    },
+    {
+      "columnName": "ip",
+      "fieldName": "ip",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "提交IP(服务端取)",
+      "length": 64
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    },
+    {
+      "columnName": "delete_time",
+      "fieldName": "deleteTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "软删除时间"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_feedback_user",
+      "columns": [
+        "user_id"
+      ]
+    },
+    {
+      "indexName": "idx_feedback_status",
+      "columns": [
+        "status"
+      ]
+    },
+    {
+      "indexName": "idx_feedback_type",
+      "columns": [
+        "type"
+      ]
+    },
+    {
+      "indexName": "idx_feedback_create_time",
+      "columns": [
+        "create_time"
+      ]
+    }
+  ]
+}

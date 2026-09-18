@@ -7,7 +7,6 @@ import {
   DashboardOutlined,
   ToolOutlined,
   ApiOutlined,
-  ClusterOutlined,
   LogoutOutlined,
   FileTextOutlined,
   UserOutlined,
@@ -42,6 +41,7 @@ import { getNavExtensions } from '@/api/plugin';
 import { menuApi, SysMenu } from '@/api/menu';
 import type { NavExtension } from '@/api/plugin';
 import { initStatTracker, trackPage } from '@/lib/statTracker';
+import NoticeBell from '@/components/NoticeBell';
 
 const { Header, Sider, Content } = Layout;
 
@@ -53,7 +53,6 @@ const iconMap: Record<string, React.ReactNode> = {
   DashboardOutlined: <DashboardOutlined />,
   ToolOutlined: <ToolOutlined />,
   ApiOutlined: <ApiOutlined />,
-  ClusterOutlined: <ClusterOutlined />,
   FileTextOutlined: <FileTextOutlined />,
   SettingOutlined: <SettingOutlined />,
   TeamOutlined: <TeamOutlined />,
@@ -111,7 +110,7 @@ interface TabItem {
 }
 
 /** 菜单分组标识（后端菜单树不可用时的兜底数据源使用） */
-type MenuGroup = 'overview' | 'cluster' | 'system' | 'ops';
+type MenuGroup = 'overview' | 'system' | 'ops';
 
 /**
  * 侧边栏菜单配置：定义所有可访问的页面及其图标、名称、所属业务域
@@ -127,7 +126,6 @@ const menuConfig: {
 }[] = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘', group: 'overview' },
   { key: '/dashboard/statistics', icon: <BarChartOutlined />, label: '数据统计', permission: 'statistics:view', group: 'overview' },
-  { key: '/dashboard/cluster', icon: <ClusterOutlined />, label: '集群管理', permission: 'cluster:view', group: 'cluster' },
   { key: '/dashboard/system/user', icon: <TeamOutlined />, label: '用户管理', permission: 'system:user:view', group: 'system' },
   { key: '/dashboard/system/role', icon: <SafetyCertificateOutlined />, label: '角色权限', permission: 'system:role:view', group: 'system' },
   { key: '/dashboard/system/permission', icon: <LockOutlined />, label: '权限管理', permission: 'system:permission:view', group: 'system' },
@@ -144,7 +142,6 @@ const menuConfig: {
 /** 分组元信息：分组 key（非路由）、图标、名称、展示顺序 */
 const MENU_GROUPS: Array<{ group: MenuGroup; key: string; icon: React.ReactNode; label: string }> = [
   { group: 'overview', key: `${GROUP_KEY_PREFIX}overview`, icon: <DashboardOutlined />, label: '概览' },
-  { group: 'cluster', key: `${GROUP_KEY_PREFIX}cluster`, icon: <ClusterOutlined />, label: '集群' },
   { group: 'system', key: `${GROUP_KEY_PREFIX}system`, icon: <SettingOutlined />, label: '系统管理' },
   { group: 'ops', key: `${GROUP_KEY_PREFIX}ops`, icon: <FileTextOutlined />, label: '运维' },
 ];
@@ -200,7 +197,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }).catch(() => {});
   }, []);
 
-  /** 全端统计 Web 端埋点（STATS_DESIGN.md §7.2）：进入/路由变化上报 */
+  /** 全端统计 Web 端埋点：进入/路由变化上报 */
   useEffect(() => {
     initStatTracker();
   }, []);
@@ -654,6 +651,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               title={themeMode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
               aria-label={themeMode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
             />
+            <NoticeBell buttonStyle={headerIconButtonStyle} />
             {!isMobile && breadcrumbItems.length > 1 && (
               <Breadcrumb
                 className="dashboard-breadcrumb"

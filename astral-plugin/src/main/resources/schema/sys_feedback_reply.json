@@ -1,0 +1,71 @@
+{
+  "tableName": "sys_feedback_reply",
+  "tableComment": "反馈回复表(双向、扁平)",
+  "moduleName": "feedback",
+  "className": "FeedbackReply",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "feedback_id",
+      "fieldName": "feedbackId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "反馈ID(sys_feedback.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "user_id",
+      "fieldName": "userId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "发送者ID(用户/管理员均为sys_user.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "回复内容",
+      "isRequired": true,
+      "length": 2000
+    },
+    {
+      "columnName": "reply_time",
+      "fieldName": "replyTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "回复时间(用于日期筛选)",
+      "isRequired": true
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_reply_feedback",
+      "columns": [
+        "feedback_id"
+      ]
+    },
+    {
+      "indexName": "idx_reply_time",
+      "columns": [
+        "reply_time"
+      ]
+    },
+    {
+      "indexName": "idx_reply_user",
+      "columns": [
+        "user_id"
+      ]
+    }
+  ]
+}

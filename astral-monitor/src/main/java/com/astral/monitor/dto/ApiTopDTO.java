@@ -3,7 +3,7 @@ package com.astral.monitor.dto;
 import lombok.Data;
 
 /**
- * 接口统计 Top 数据传输对象（STATS_DESIGN.md §4.2 api/top）
+ * 接口统计 Top 数据传输对象（api/top）
  * <p>
  * 字段名与被删除的旧 /api/v1/statistics/api/top 契约保持一致，
  * 旧前端 statistics/page.tsx 直接兼容。

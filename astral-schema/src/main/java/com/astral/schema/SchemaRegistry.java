@@ -9,13 +9,18 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.JarURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Schema注册中心
@@ -73,31 +78,30 @@ public class SchemaRegistry {
     /**
      * 从classpath加载所有内置Schema
      * <p>
-     * 通过枚举 classpath 上所有 {@code schema/*.json} 资源加载（兼容 jar 与目录打包形式），
-     * 不依赖目录列表（directory listing）能力，可稳定运行于可执行 jar 场景。
+     * 通过枚举 classpath 上所有 {@code schema/*.json} 资源加载（兼容 IDE 目录、普通 jar 与
+     * Spring Boot 可执行 jar 三种打包形式），不依赖目录列表（directory listing）能力。
      * </p>
      */
     private static void loadClasspathSchemas() {
         try {
             Enumeration<URL> urls = SchemaRegistry.class.getClassLoader().getResources(SCHEMA_PATH);
-            Set<String> seenJars = new HashSet<>();
+            Set<String> seen = new HashSet<>();
             while (urls.hasMoreElements()) {
                 URL url = urls.nextElement();
                 String protocol = url.getProtocol();
                 if ("file".equals(protocol)) {
                     // 目录形式（IDE / exploded 模式）：枚举目录下的 .json 文件
-                    try {
-                        Files.list(Paths.get(url.toURI()))
-                                .filter(p -> p.toString().endsWith(".json"))
-                                .forEach(p -> loadSchemaInternally(p.getFileName().toString()));
+                    try (Stream<Path> files = Files.list(Paths.get(url.toURI()))) {
+                        files.filter(p -> p.toString().endsWith(".json"))
+                                .sorted()
+                                .forEach(SchemaRegistry::loadSchemaFile);
                     } catch (Exception e) {
                         log.warn("Cannot list schema dir: {}", url, e);
                     }
                 } else if ("jar".equals(protocol)) {
-                    // jar 形式：解析 jar 中 schema/ 下的 .json 条目
-                    String jarPart = extractJarPath(url);
-                    if (jarPart != null && seenJars.add(jarPart)) {
-                        listJarSchemaEntries(jarPart);
+                    // jar 形式：枚举 jar 内 schema/ 下的 .json 条目
+                    if (seen.add(url.toString())) {
+                        listJarSchemaEntries(url);
                     }
                 }
             }
@@ -107,54 +111,73 @@ public class SchemaRegistry {
     }
 
     /**
-     * 从 jar URL 中提取 jar 文件路径
-     */
-    private static String extractJarPath(URL url) {
-        String s = url.toString();
-        int idx = s.indexOf(".jar!");
-        if (idx < 0) return null;
-        String path = s.substring(0, idx + 4);
-        if (path.startsWith("jar:")) path = path.substring(4);
-        if (path.startsWith("file:")) path = path.substring(5);
-        return path;
-    }
-
-    /**
      * 枚举 jar 内 schema/ 开头的 .json 条目并加载
+     * <p>
+     * 必须经 {@link JarURLConnection} 取 JarFile，不能按 URL 文本截出路径再 new JarFile：
+     * Spring Boot 可执行 jar 中资源地址形如
+     * {@code jar:nested:/app/app.jar/!BOOT-INF/lib/astral-plugin-1.0.0.jar!/schema/}，
+     * 其中的 nested: 路径不是文件系统路径，直接构造 JarFile 必然失败，
+     * 表现为启动日志 "Cannot read jar schemas"、表结构管理页与序列预置全部为空。
+     * </p>
      */
-    private static void listJarSchemaEntries(String jarPath) {
-        try (java.util.jar.JarFile jarFile = new java.util.jar.JarFile(jarPath)) {
+    private static void listJarSchemaEntries(URL dirUrl) {
+        try {
+            URLConnection connection = dirUrl.openConnection();
+            if (!(connection instanceof JarURLConnection jarConnection)) {
+                log.warn("Cannot read jar schemas (unsupported connection): {}", dirUrl);
+                return;
+            }
+            // 不关闭 JarFile：连接默认走缓存，句柄与 classloader 共用，关闭会影响后续类加载
+            JarFile jarFile = jarConnection.getJarFile();
             jarFile.stream()
                     .filter(entry -> !entry.isDirectory())
-                    .map(java.util.jar.JarEntry::getName)
-                    .filter(name -> name.startsWith(SCHEMA_PATH) && name.endsWith(".json"))
-                    .map(name -> name.substring(SCHEMA_PATH.length()))
-                    .forEach(SchemaRegistry::loadSchemaInternally);
+                    .filter(entry -> {
+                        String name = entry.getName();
+                        return name.startsWith(SCHEMA_PATH) && name.endsWith(".json");
+                    })
+                    .sorted(Comparator.comparing(JarEntry::getName))
+                    .forEach(entry -> loadSchemaEntry(jarFile, entry));
         } catch (Exception e) {
-            log.warn("Cannot read jar schemas: {}", jarPath, e);
+            log.warn("Cannot read jar schemas: {}", dirUrl, e);
+        }
+    }
+
+    /** 从外部目录文件加载Schema */
+    private static void loadSchemaFile(Path file) {
+        try (InputStream is = Files.newInputStream(file)) {
+            loadSchema(is, file.getFileName().toString());
+        } catch (IOException e) {
+            log.warn("Cannot read schema file: {}", file, e);
+        }
+    }
+
+    /** 从jar条目加载Schema */
+    private static void loadSchemaEntry(JarFile jarFile, JarEntry entry) {
+        try (InputStream is = jarFile.getInputStream(entry)) {
+            loadSchema(is, entry.getName().substring(SCHEMA_PATH.length()));
+        } catch (IOException e) {
+            log.warn("Cannot read schema entry: {}", entry.getName(), e);
         }
     }
 
     /**
-     * 从classpath读取JSON文件并解析为TableSchema对象，使用putIfAbsent确保
-     * 已存在的Schema不会被覆盖（外部Schema通过put方法覆盖）。
+     * 解析JSON并登记Schema，使用putIfAbsent确保已存在的Schema不会被覆盖
+     * （外部Schema通过put方法覆盖）。
      *
-     * @param filename Schema文件名（如 "sys_user.json"）
+     * @param is       Schema内容流
+     * @param filename Schema文件名（如 "sys_user.json"），仅用于日志
      */
-    private static void loadSchemaInternally(String filename) {
-        String path = SCHEMA_PATH + filename;
-        try (InputStream is = SchemaRegistry.class.getClassLoader().getResourceAsStream(path)) {
-            if (is != null) {
-                TableSchema schema = MAPPER.readValue(is, TableSchema.class);
-                // 跳过废弃标记文件（仅有 deprecated/description，无 tableName 的占位 JSON）
-                if (schema.getTableName() == null || schema.getTableName().isBlank()) {
-                    log.info("Skip schema file without tableName: {}", filename);
-                    return;
-                }
-                SCHEMA_CACHE.putIfAbsent(schema.getTableName(), schema);
+    private static void loadSchema(InputStream is, String filename) {
+        try {
+            TableSchema schema = MAPPER.readValue(is, TableSchema.class);
+            // 跳过废弃标记文件（仅有 deprecated/description，无 tableName 的占位 JSON）
+            if (schema.getTableName() == null || schema.getTableName().isBlank()) {
+                log.info("Skip schema file without tableName: {}", filename);
+                return;
             }
+            SCHEMA_CACHE.putIfAbsent(schema.getTableName(), schema);
         } catch (IOException e) {
-            // Schema file not found, skip
+            log.warn("Cannot parse schema file: {}", filename, e);
         }
     }
 

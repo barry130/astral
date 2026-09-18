@@ -1,5 +1,5 @@
 /**
- * 轻量 Web 端统计埋点（STATS_DESIGN.md §7.2 对齐）
+ * 轻量 Web 端统计埋点
  *
  * 生成匿名设备ID，采集 launcher / show / hide / page 事件，
  * 攒批 10s 或满 50 条上报；hide 时持久化队列防丢。

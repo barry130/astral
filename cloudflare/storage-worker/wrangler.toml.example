@@ -1,0 +1,28 @@
+# Astral Storage Worker 配置模板
+# 复制为 wrangler.toml 并填入 account_id / 路由；Secret 一律用 `wrangler secret put` 注入，
+# 不要把任何密钥写进本文件。
+
+name = "astral-storage"
+main = "src/worker.js"
+compatibility_date = "2026-01-15"
+
+# 每天从 Astral 拉取远端删除任务并执行（deleteMessage 后确认）
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+# Astral 后端公网地址（Worker 回源/回调使用，必须是 Worker 可访问的 https 地址）
+ASTRAL_ORIGIN_BASE_URL = "https://api.example.com"
+
+# 自定义域名（可选）：绑定后走 img.example.com；未绑定时使用 *.workers.dev 地址
+# 在 Dashboard → Workers → astral-storage → Settings → Domains & Routes 配置
+
+# 首次部署：
+#   npx wrangler deploy
+# 配置 Secret（四个都需要，与 Astral 后端一致）：
+#   npx wrangler secret put TG_BOT_TOKEN
+#   npx wrangler secret put STORAGE_UPLOAD_TICKET_KEY
+#   npx wrangler secret put STORAGE_ORIGIN_SHARED_SECRET
+#   npx wrangler secret put STORAGE_DOWNLOAD_SIGNING_KEY_V1
+# 本地验证：
+#   npx wrangler dev（需要本地 .dev.vars 提供 Secret，勿提交）

@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * 接口指标采集拦截器（STATS_DESIGN.md §5.3）
+ * 接口指标采集拦截器
  * <p>
  * preHandle 记录起始时间，afterCompletion 交给 {@link ApiMetricCollector}
  * 内存累加（uri、method、status、耗时），由定时任务每分钟落库。

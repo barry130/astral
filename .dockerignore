@@ -23,6 +23,13 @@ logs/
 # 部署相关
 deploy/
 
+# 构建上下文瘦身：后端 Dockerfile 用不到，排除可少传几十~上百 MB
+zyplayer-doc/
+cloudflare/
+scripts/
+*.md
+run-*.bat
+
 # 临时/其他
 .claude
 .qwen

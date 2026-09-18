@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 统计报表控制器（STATS_DESIGN.md §4.2 六个查询接口）
+ * 统计报表控制器（六个查询接口）
  * <p>
  * 面向 admin 前端（satoken 鉴权），权限 statistics:view。
  * </p>

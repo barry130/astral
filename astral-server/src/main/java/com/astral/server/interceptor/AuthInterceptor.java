@@ -60,6 +60,14 @@ public class AuthInterceptor implements HandlerInterceptor {
     private static final String TABLE_SCHEMA_PREFIX = "/api/v1/system/table-schema";
     private static final String TABLE_SCHEMA_ADMIN_PREFIX = "/api/v1/admin/system/table-schema";
 
+    /**
+     * storage 插件 Worker 专属路径：仅接受 HMAC 服务身份（StorageWorkerAuthInterceptor），
+     * 不接受浏览器 satoken。必须精确限定到 worker/origin 两个子树，
+     * 不能放行整个 /api/v1/all/storage/**（用户接口仍需登录）。
+     */
+    private static final String STORAGE_WORKER_PREFIX = "/api/v1/all/storage/worker/";
+    private static final String STORAGE_ORIGIN_PREFIX = "/api/v1/all/storage/origin/";
+
     /** 免认证路径白名单（合并原宿主 WebMvcConfig excludes 与 qt 插件 PUBLIC_PATHS） */
     private static final Set<String> PUBLIC_PATHS = Set.of(
             // 宿主认证（旧 /api/v1/auth 与新 /api/v1/all/auth）
@@ -78,7 +86,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/app/user/changePass",
             "/api/v1/app/user/upload",
             "/api/v1/app/user/refresh",
-            // 全端统计：匿名上报入口放行（STATS_DESIGN.md D1）
+            // 全端统计：匿名上报入口放行
             "/api/v1/stat/report",
             "/api/v1/app/stat/report"
     );
@@ -101,6 +109,12 @@ public class AuthInterceptor implements HandlerInterceptor {
         // 3. App 匿名公共区：/api/v1/app/** 中非 user 区（版本更新等）免认证，携带有效 token 时仅做续期
         //    （必须排除 /api/v1/app/user/** 子树，该区域仍需登录校验）
         if (uri.startsWith(APP_PUBLIC_PREFIX) && !uri.startsWith(QT_USER_PREFIX_NEW)) {
+            return true;
+        }
+
+        // 3.5 storage 插件 Worker 专属路径：由 StorageWorkerAuthInterceptor 做 HMAC 认证（STORAGE017），
+        //     跳过 satoken 校验；HMAC 拦截器由 storage 的 Web 配置按精确前缀注册
+        if (uri.startsWith(STORAGE_WORKER_PREFIX) || uri.startsWith(STORAGE_ORIGIN_PREFIX)) {
             return true;
         }
 

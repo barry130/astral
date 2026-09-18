@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * 统计事件传输对象（STATS_DESIGN.md §4.1）
+ * 统计事件传输对象
  * <p>
  * App 端批量上报的单个事件。字段与 uni_modules/qt-stat 采集插件对齐。
  * </p>

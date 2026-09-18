@@ -117,13 +117,22 @@ export default function LoginPage() {
           </Form.Item>
         </Form>
 
-        <div style={{ 
-          marginTop: 24, 
+        <div style={{
+          marginTop: 24,
           textAlign: 'center',
           color: '#909399',
           fontSize: 12
         }}>
           默认账号: admin / admin
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <a
+            onClick={() => router.push('/')}
+            style={{ fontSize: 12, color: '#909399', cursor: 'pointer' }}
+          >
+            ← 返回首页
+          </a>
         </div>
       </div>
     </div>

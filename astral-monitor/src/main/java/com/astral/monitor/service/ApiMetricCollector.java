@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- * 接口指标内存累加器（STATS_DESIGN.md §5.3 ApiMetricCollector）
+ * 接口指标内存累加器（ApiMetricCollector）
  * <p>
  * 拦截器在请求结束后仅写内存（纳秒级开销），由 {@code StatAggregationJob}
  * 每分钟 flush 落库到 {@code stat_api_hourly}，DB 写入量 = uri × 分钟。

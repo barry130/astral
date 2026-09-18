@@ -29,9 +29,6 @@
         <module>astral-sequence</module>
         <module>astral-plugin-api</module>
         <module>astral-plugin</module>
-        <module>astral-plugin-demo</module>
-        <module>astral-plugin-qt</module>
-        <module>astral-plugin-feedback</module>
         <module>astral-server</module>
     </modules>
 
@@ -104,21 +101,6 @@
                 <artifactId>astral-plugin</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <dependency>
-                <groupId>com.astral</groupId>
-                <artifactId>astral-plugin-demo</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.astral</groupId>
-                <artifactId>astral-plugin-qt</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.astral</groupId>
-                <artifactId>astral-plugin-feedback</artifactId>
-                <version>${project.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>com.baomidou</groupId>
@@ -144,9 +126,16 @@
                 <version>${springdoc.version}</version>
             </dependency>
 
+            <!-- 只用到 BCrypt / DigestUtil（crypto）与 StrUtil / RandomUtil（core，由 crypto 传递带入），
+                 故按模块声明具体子模块；hutool-all 会多带约 1MB 且拖入无关模块 -->
             <dependency>
                 <groupId>cn.hutool</groupId>
-                <artifactId>hutool-all</artifactId>
+                <artifactId>hutool-core</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-crypto</artifactId>
                 <version>${hutool.version}</version>
             </dependency>
 
@@ -166,9 +155,14 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- 全模块统一继承 Lombok 用于注解处理。
+             必须是 provided：compile 作用域会被 spring-boot-maven-plugin 打进可执行 jar
+             （曾经 1.96MB 的 lombok 就这样进了运行产物）。
+             注意 dependencyManagement 里的 <optional> 管不到这里，作用域必须显式声明。 -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

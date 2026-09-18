@@ -1,0 +1,202 @@
+{
+  "tableName": "sys_storage_file",
+  "tableComment": "存储文件表",
+  "moduleName": "storage",
+  "className": "StorageFileEntity",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "public_id",
+      "fieldName": "publicId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "对外稳定标识(不可预测)",
+      "isRequired": true,
+      "length": 48
+    },
+    {
+      "columnName": "upload_id",
+      "fieldName": "uploadId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "上传凭证ID(幂等键)",
+      "length": 48
+    },
+    {
+      "columnName": "folder_id",
+      "fieldName": "folderId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "所属文件夹ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "storage_config_id",
+      "fieldName": "storageConfigId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "存储配置ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "provider_type",
+      "fieldName": "providerType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "存储类型(TELEGRAM/R2/S3_COMPATIBLE/QINIU/COS/OSS/UPYUN)",
+      "isRequired": true,
+      "defaultValue": "TELEGRAM",
+      "length": 32
+    },
+    {
+      "columnName": "provider_locator_json",
+      "fieldName": "providerLocatorJson",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "Provider 专属定位信息(仅服务端与Worker链路使用,普通接口不回显)"
+    },
+    {
+      "columnName": "original_name",
+      "fieldName": "originalName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "原始文件名",
+      "isRequired": true,
+      "defaultValue": "",
+      "length": 255
+    },
+    {
+      "columnName": "content_type",
+      "fieldName": "contentType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "MIME类型",
+      "isRequired": true,
+      "defaultValue": "application/octet-stream",
+      "length": 128
+    },
+    {
+      "columnName": "size_bytes",
+      "fieldName": "sizeBytes",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "文件大小(字节)",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "checksum",
+      "fieldName": "checksum",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "校验和",
+      "length": 128
+    },
+    {
+      "columnName": "content_version",
+      "fieldName": "contentVersion",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "内容版本(缓存穿透参数)",
+      "isRequired": true,
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "visibility",
+      "fieldName": "visibility",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "可见性(PUBLIC/PRIVATE)",
+      "isRequired": true,
+      "defaultValue": "PRIVATE",
+      "length": 16
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "状态(AVAILABLE/DELETING/DELETE_FAILED/DELETED/ORPHAN_POSSIBLE/FAILED)",
+      "isRequired": true,
+      "defaultValue": "AVAILABLE",
+      "length": 24
+    },
+    {
+      "columnName": "uploader_type",
+      "fieldName": "uploaderType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "上传方类型(USER/ADMIN/PLUGIN/WORKER/BROWSER)",
+      "isRequired": true,
+      "defaultValue": "USER",
+      "length": 16
+    },
+    {
+      "columnName": "uploader_id",
+      "fieldName": "uploaderId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "上传者ID",
+      "length": 64
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    },
+    {
+      "columnName": "deleted_time",
+      "fieldName": "deletedTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "删除时间"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_storage_file_folder",
+      "columns": [
+        "folder_id"
+      ]
+    },
+    {
+      "indexName": "idx_storage_file_upload",
+      "columns": [
+        "upload_id"
+      ]
+    },
+    {
+      "indexName": "idx_storage_file_status",
+      "columns": [
+        "status"
+      ]
+    },
+    {
+      "indexName": "uk_storage_file_public_id",
+      "columns": [
+        "public_id"
+      ],
+      "isUnique": true
+    }
+  ]
+}

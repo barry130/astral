@@ -1,0 +1,130 @@
+{
+  "tableName": "qt_like_playlist",
+  "tableComment": "轻听App收藏歌单表",
+  "moduleName": "qt",
+  "className": "QtLikePlaylist",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "uid",
+      "fieldName": "uid",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "用户ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "pid",
+      "fieldName": "pid",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "歌单ID",
+      "length": 64,
+      "isRequired": true
+    },
+    {
+      "columnName": "platform",
+      "fieldName": "platform",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "平台(1-网易云 2-QQ音乐 3-酷狗 4-酷我 5-其他)",
+      "length": 16,
+      "isRequired": true
+    },
+    {
+      "columnName": "pic_url",
+      "fieldName": "picUrl",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "封面图",
+      "length": 256
+    },
+    {
+      "columnName": "name",
+      "fieldName": "name",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "歌单名称",
+      "length": 128
+    },
+    {
+      "columnName": "is_import",
+      "fieldName": "isImport",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "是否导入(0-否 1-是)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "deleted_at",
+      "fieldName": "deletedAt",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "删除时间"
+    },
+    {
+      "columnName": "updated_seq",
+      "fieldName": "updatedSeq",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "用户收藏变更序号(多端同步游标,用户维度递增)"
+    },
+    {
+      "columnName": "updated_at",
+      "fieldName": "updatedAt",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "收藏状态变更时间"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_qt_like_playlist",
+      "columns": [
+        "uid",
+        "deleted_at"
+      ]
+    },
+    {
+      "indexName": "idx_like_playlist_uid_seq",
+      "columns": [
+        "uid",
+        "updated_seq"
+      ]
+    },
+    {
+      "indexName": "uk_like_playlist_key",
+      "columns": [
+        "uid",
+        "pid",
+        "platform"
+      ],
+      "isUnique": true
+    }
+  ]
+}

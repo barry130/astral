@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 统计报表查询服务（STATS_DESIGN.md §4.2 六个报表接口）
+ * 统计报表查询服务（六个报表接口）
  * <p>
  * 口径：avgDurationMs = total_duration_ms / max(visits,1)；
  * trend 无数据小时补 0（长度恒 24）；api/top failure = status >= 400。

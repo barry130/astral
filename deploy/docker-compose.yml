@@ -8,7 +8,9 @@ version: '3.8'
 #   构建+启动:  docker compose up -d --build
 #   停止:       docker compose down
 #   查看日志:   docker compose logs -f backend
-#   重新构建:   docker compose build --no-cache backend
+#   重新构建:   docker compose build backend
+#   不要加 --no-cache：Dockerfile 用了 BuildKit cache mount 缓存 Maven/npm 依赖，
+#   --no-cache 会迫使每次重下全部 jar/包，把构建重新拖到十几分钟。
 # ============================================
 
 services:
@@ -17,6 +19,8 @@ services:
     build:
       context: ..
       dockerfile: astral-server/Dockerfile
+      # 构建阶段走宿主机网络，避免 bridge NAT 拖慢 Maven 下载（Linux 部署机收益最大）
+      network: host
     container_name: astral-backend
     restart: unless-stopped
     ports:
@@ -38,6 +42,11 @@ services:
       REDIS_DB: "${REDIS_DB:-7}"
       # ---- 插件 ----
       QT_PLUGIN_ENABLED: "true"
+      # ---- 文件存储插件 HMAC 密钥（Worker 通道）----
+      # 取自 deploy/.env；留空则不启用文件存储链路。与 Worker Secret 必须一致（STORAGE017）
+      STORAGE_UPLOAD_TICKET_KEY: "${STORAGE_UPLOAD_TICKET_KEY:-}"
+      STORAGE_ORIGIN_SHARED_SECRET: "${STORAGE_ORIGIN_SHARED_SECRET:-}"
+      STORAGE_DOWNLOAD_SIGNING_KEY_V1: "${STORAGE_DOWNLOAD_SIGNING_KEY_V1:-}"
       # ---- 时区 ----
       TZ: Asia/Shanghai
     # Linux 下让容器可通过 host.docker.internal 访问宿主机上的 PostgreSQL/Redis
@@ -60,6 +69,7 @@ services:
     build:
       context: ../astral-front
       dockerfile: Dockerfile
+      network: host
       args:
         BACKEND_URL: http://backend:27000
         # 默认留空: 浏览器走同源相对路径 /api, 由 Next.js 服务端 rewrites 转发到 backend 容器。

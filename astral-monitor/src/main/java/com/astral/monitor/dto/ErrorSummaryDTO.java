@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 错误分组汇总数据传输对象（STATS_DESIGN.md §4.2 error/summary）
+ * 错误分组汇总数据传输对象（error/summary）
  * <p>
  * 按 fingerprint 分组的一天错误统计。
  * </p>

@@ -1,0 +1,100 @@
+{
+  "tableName": "sys_storage_task",
+  "tableComment": "存储任务表(远端删除补偿等)",
+  "moduleName": "storage",
+  "className": "StorageTaskEntity",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "task_type",
+      "fieldName": "taskType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "任务类型(DELETE_REMOTE)",
+      "isRequired": true,
+      "length": 48
+    },
+    {
+      "columnName": "file_id",
+      "fieldName": "fileId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "关联文件ID"
+    },
+    {
+      "columnName": "payload_json",
+      "fieldName": "payloadJson",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "任务负载(JSON)"
+    },
+    {
+      "columnName": "retry_count",
+      "fieldName": "retryCount",
+      "fieldType": "Integer",
+      "jdbcType": "INT",
+      "comment": "重试次数",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "next_retry_time",
+      "fieldName": "nextRetryTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "下次重试时间"
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "状态(PENDING/RUNNING/DONE/FAILED)",
+      "isRequired": true,
+      "defaultValue": "PENDING",
+      "length": 16
+    },
+    {
+      "columnName": "error_message",
+      "fieldName": "errorMessage",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "最近错误信息",
+      "length": 512
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_storage_task_pickup",
+      "columns": [
+        "status",
+        "next_retry_time"
+      ]
+    }
+  ]
+}

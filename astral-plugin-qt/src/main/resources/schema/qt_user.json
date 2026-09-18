@@ -1,4 +1,0 @@
-{
-  "deprecated": true,
-  "description": "轻听 App 用户已统一并入宿主 sys_user，并通过 user_type='APP' 区分；不再创建或维护 qt_user 表。"
-}

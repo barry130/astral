@@ -3,7 +3,7 @@ package com.astral.monitor.dto;
 import lombok.Data;
 
 /**
- * 设备统计概览（单日）数据传输对象（STATS_DESIGN.md §4.2 overview）
+ * 设备统计概览（单日）数据传输对象（overview）
  */
 @Data
 public class DeviceOverviewDTO {

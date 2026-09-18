@@ -23,7 +23,6 @@ Astral 是一套基于 Spring Boot 3 + Next.js 14 的全栈后台管理系统，
 - 🔢 **序列生成**：5 种算法（Snowflake、号段、Redis、数据库、内存）
 - 🗂️ **表结构管理**：查看/新建/编辑表结构、生成代码、生成 SQL、导出 JSON
 - 📈 **系统监控**：CPU/内存/JVM 指标、Prometheus 集成
-- 🌐 **集群管理**：节点注册、心跳检测、WorkerId 自动分配
 
 ### 技术栈
 
@@ -59,18 +58,17 @@ Astral 是一套基于 Spring Boot 3 + Next.js 14 的全栈后台管理系统，
 mvn clean install -DskipTests
 ```
 
-### 2. 初始化数据库（仅首次）
+### 2. 初始化数据库（仅首次，一条语句）
 
-应用启动时**不再自动执行 SQL**。全新数据库需先手动应用迁移脚本；**既有库只需登记基线版本，切勿重复执行 V2**（会清空字典表）：
+数据库迁移由 Flyway 接管：启动后端时自动按序应用 `db/migration/V*.sql` 并记录 `flyway_schema_history`。
+唯一的手工步骤是建库；schema、表结构、种子数据、数据字典全部由 Flyway 完成。
+存量库（已手工应用过旧版脚本）会自动基线化，跳过初始化脚本，无需登记、无需人工干预。
 
 ```bash
-cd astral-server/src/main/resources/sql/migrations
-psql -v ON_ERROR_STOP=1 -f V1__baseline_schema.sql
-psql -v ON_ERROR_STOP=1 -f V2__baseline_dict.sql
-psql -v ON_ERROR_STOP=1 -f V3__baseline_dict_sequence_reset.sql
+psql -c "CREATE DATABASE astral;"
 ```
 
-> 完整流程（`schema_migrations` 跟踪表、既有库基线登记、服务器无 `psql` 时的 Docker 执行方式、后续增量变更规范）见 [sql/migrations/README.md](astral-server/src/main/resources/sql/migrations/README.md)。
+> 机制说明（基线行为、命名规范、新增变更流程）见 [db/migration/README.md](astral-server/src/main/resources/db/migration/README.md)。
 
 ### 3. 启动后端
 
@@ -79,7 +77,7 @@ mvn -pl astral-server spring-boot:run
 # Windows 可直接运行 run-backend.bat（需先设置 JAVA_HOME 指向 JDK 21，端口 27000）
 ```
 
-后端默认运行在 `http://localhost:27000`。数据库结构变更统一走 `sql/migrations/` 下的增量脚本，不再随启动自动执行。qt / feedback 插件的建表由各自的初始化器幂等完成。
+后端默认运行在 `http://localhost:27000`。数据库结构变更由 Flyway 在启动时自动应用 `db/migration/` 下的增量脚本。qt / feedback 插件的建表由各自的初始化器幂等完成。
 
 ### 4. 启动前端
 
@@ -95,6 +93,8 @@ npm run dev
 ### 5. 访问系统
 
 - **前端界面**：http://localhost:3000
+  - 根路径 `/` 为项目介绍首页（核心功能、业务插件、技术栈），不再自动跳转
+  - 登录页 `/login`、控制台 `/dashboard` 可从首页按钮进入
 - **API 文档**：http://localhost:27000/swagger-ui.html
 - **监控端点**：http://localhost:27000/actuator
 
@@ -119,11 +119,8 @@ astral/
 ├── astral-system/             # 系统管理（用户/角色/权限/菜单/字典/配置/Token/表结构/邮件）
 ├── astral-sequence/           # 序列生成核心（5 种生成器，系统必需插件）
 ├── astral-plugin-api/         # 插件 SPI（AstralPlugin、导航扩展、注册中心接口）
-├── astral-plugin/             # 插件注册中心（插件管理页后端、状态持久化）
-├── astral-plugin-demo/        # 示例插件（插件开发参考）
-├── astral-plugin-qt/          # 轻听音乐插件（App 用户/公告/版本/打卡/收藏）
-├── astral-plugin-feedback/    # 反馈插件（反馈/回复/站内通知）
-├── astral-server/             # Web 服务（Controller、配置、入口、集群）
+├── astral-plugin/             # 插件核心及内置插件（qt、feedback）
+├── astral-server/             # Web 服务（Controller、配置、入口）
 ├── astral-front/              # 前端（Next.js 14 + Ant Design 5）
 └── deploy/                    # Docker Compose 部署
 ```
@@ -184,8 +181,6 @@ astral/
 | 插件管理 | `/api/v1/admin/plugin` | 插件列表、启停、导航扩展 |
 | 轻听音乐 App | `/api/v1/app/user/**`(新) `/api/v1/app/**`（旧 `/api/v1/user/**` 保留废弃） | App 端接口（Bearer Token） |
 | 轻听音乐后台 | `/api/v1/admin/qt/**` | 管理端（宿主 Sa-Token） |
-| 集群管理 | `/api/v1/admin/cluster/**` | 节点列表、心跳（仅管理员） |
-| 示例插件 | `/api/v1/admin/plugin/demo/**` | demo 插件演示接口 |
 
 ## ⚙️ 配置说明
 
@@ -203,17 +198,17 @@ spring:
 
   sql:
     init:
-      # 启动不再自动执行 SQL；结构变更走 sql/migrations/ 下的增量脚本（见其 README.md）
+      # 结构变更由 Flyway 接管（db/migration/），sql.init 保持关闭
       mode: never
 
 # 插件开关（未配置的插件默认开启）
 astral:
   plugins:
     enabled: true
-    demo:
-      enabled: ${DEMO_PLUGIN_ENABLED:true}
     qt:
       enabled: ${QT_PLUGIN_ENABLED:true}
+    feedback:
+      enabled: ${FEEDBACK_PLUGIN_ENABLED:true}
 
   sequence:
     default-type: segment    # 默认号段模式
@@ -266,14 +261,11 @@ docker compose up -d --build
 
 | 文档 | 说明 |
 |------|------|
-| [组件指南](COMPONENTS_GUIDE.md) | 日志、认证（含 Sa-Token）、监控、集群 |
+| [组件指南](COMPONENTS_GUIDE.md) | 日志、认证（含 Sa-Token）、监控 |
 | [集成指南](INTEGRATION_GUIDE.md) | 与宿主系统/前端集成的步骤清单 |
 | [插件开发指南](PLUGIN_GUIDE.md) | 插件 SPI、建表、导航扩展 |
-| [集群模式](CLUSTER_MODE.md) | 集群架构与部署 |
 | [部署指南](DEPLOY_GUIDE.md) | Docker Compose 与环境变量 |
 | [接口文档](API.md) | 全量 Controller 接口清单 |
-| [全端统计设计](STATS_DESIGN.md) | 采集上报、指标、错误聚合 |
-| [存储插件设计](STORAGE_PLUGIN_DESIGN.md) | 文件上传与云存储（设计稿） |
 
 ## 🤝 贡献指南
 

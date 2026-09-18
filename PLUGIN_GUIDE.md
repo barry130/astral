@@ -1,198 +1,184 @@
 # Astral 插件化开发指南
 
-本文档介绍如何将新的功能模块（例如 uniappx 业务后端）作为插件集成到 Astral 后台管理系统中。
+本文档介绍如何在统一的 `astral-plugin` 模块中增加业务插件。后续插件不再创建独立 Maven 模块，也不需要修改根 POM、`astral-server/pom.xml` 或 Dockerfile。
 
-## 插件架构概览
+## 插件架构
 
+```text
+astral-plugin-api                         # 稳定 SPI，仅定义插件契约
+astral-plugin/
+├── src/main/java/com/astral/plugin/core # 注册中心与生命周期管理
+├── src/main/java/com/astral/qt          # 轻听音乐插件
+├── src/main/java/com/astral/feedback    # 反馈与统一通知插件
+└── src/main/resources                   # 各插件的 schema、SQL 等资源
+astral-sequence                           # 系统必需插件及统一序列服务
 ```
-astral-plugin-api    # 插件 SPI 接口定义（必须依赖）
-astral-plugin        # 插件注册中心与生命周期管理（核心模块）
-astral-plugin-demo   # 示例插件（可复制为模板）
-astral-plugin-qt     # 完整业务插件参考：轻听音乐 App 后端（用户/打卡/收藏/公告/更新）
-astral-sequence      # 序列服务插件（默认开启，参考实现）
+
+`astral-plugin-api` 保持独立，是为了让 `astral-sequence` 使用插件 SPI，同时避免统一插件模块与序列模块形成 Maven 循环依赖。所有业务插件实现都放入 `astral-plugin`。
+
+插件实现被 Spring 扫描为 Bean 后，由 `PluginRegistry` 自动发现并注册。后台插件管理页可控制运行时启停状态，状态持久化在 `sys_plugin`。
+
+## 新增插件（以 uniappx 为例）
+
+### 1. 建立业务目录
+
+直接在统一模块中创建目录，不新增 POM：
+
+```text
+astral-plugin/src/main/java/com/astral/uniappx/
+├── UniappxPlugin.java
+├── controller/
+├── service/
+├── mapper/
+├── entity/
+├── dto/
+└── config/
 ```
 
-插件通过 Spring 的自动配置机制被发现，注册到 `PluginRegistry` 后即可在后台"插件管理"页面中启用/禁用。
+资源统一放在 `astral-plugin/src/main/resources` 下，并使用插件专属名称避免冲突，例如：
 
-### 插件 API 前缀声明（重要）
+```text
+sql/uniappx-schema.sql
+schema/uniappx_order.json
+```
 
-实现 `getApiPrefixes()` 声明插件暴露的 REST 路径前缀后，插件一旦被禁用，
-匹配这些前缀的请求会被 `PluginApiInterceptor` 拦截并返回 `PLUGIN001` 错误：
+### 2. 实现插件接口
 
 ```java
-@Override
-public List<String> getApiPrefixes() {
-    return List.of("/api/v1/admin/plugin/demo");  // 你的插件接口前缀
-}
-```
+package com.astral.uniappx;
 
-### 系统必需插件（不允许禁用）
+import com.astral.plugin.api.AstralPlugin;
+import org.springframework.stereotype.Component;
 
-实现 `isRequired()` 返回 `true` 可将插件标记为**系统必需**：管理端禁用操作返回
-`PLUGIN002` 错误，前端插件管理页的开关被锁定。参考 `SequencePlugin`：
+import java.util.List;
 
-```java
-@Override
-public boolean isRequired() { return true; }
-```
-
-参考实现：`SequencePlugin`（astral-sequence 模块）是系统必需插件，声明 `/api/v1/sequence`
-前缀并承载全部业务实体的全局 ID 生成（业务键=数据库名_id，号段模式，内置序列锁定不可改）。
-
-## 创建新插件（以 uniappx 为例）
-
-### 步骤 1：创建 Maven 模块
-
-```xml
-<!-- uniappx-plugin/pom.xml -->
-<project>
-    <parent>
-        <groupId>com.astral</groupId>
-        <artifactId>astral</artifactId>
-        <version>1.0.0</version>
-    </parent>
-    <artifactId>uniappx-plugin</artifactId>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.astral</groupId>
-            <artifactId>astral-plugin-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.astral</groupId>
-            <artifactId>astral-common</artifactId>
-        </dependency>
-        <!-- 如需要数据库操作，添加 astral-dao -->
-        <dependency>
-            <groupId>com.astral</groupId>
-            <artifactId>astral-dao</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-    </dependencies>
-</project>
-```
-
-### 步骤 2：实现 AstralPlugin 接口
-
-```java
-@Service
+@Component
 public class UniappxPlugin implements AstralPlugin {
-
     @Override
-    public String getPluginId() { return "uniappx"; }
-
-    @Override
-    public String getPluginName() { return "UniAppX 业务后端"; }
-
-    @Override
-    public String getVersion() { return "1.0.0"; }
-
-    @Override
-    public String getDescription() { return "处理 uniappx 移动端业务请求"; }
-
-    @Override
-    public List<String> getApiPrefixes() { return List.of("/api/v1/app"); }
-
-    @Override
-    public void onEnable() {
-        // 插件启用时的初始化逻辑（如启动定时任务、加载配置）
+    public String getPluginId() {
+        return "uniappx";
     }
 
     @Override
-    public void onDisable() {
-        // 插件禁用时的清理逻辑
+    public String getPluginName() {
+        return "UniAppX 业务";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0.0";
+    }
+
+    @Override
+    public String getDescription() {
+        return "处理 UniAppX 移动端业务请求";
+    }
+
+    @Override
+    public List<String> getApiPrefixes() {
+        return List.of("/api/v1/app/uniappx", "/api/v1/admin/uniappx");
     }
 }
 ```
 
-### 步骤 3：注册插件到根 POM
+API 前缀必须精确到插件拥有的 Controller 根路径，不要声明 `/api/v1/app` 或 `/api/v1/admin` 这类宽泛前缀，否则禁用插件时会误拦截其他业务。
 
-在根 `pom.xml` 的 `<modules>` 中添加 `uniappx-plugin`，并在 `astral-server/pom.xml` 中引入依赖：
+### 3. 增加启动配置
 
-```xml
-<dependency>
-    <groupId>com.astral</groupId>
-    <artifactId>uniappx-plugin</artifactId>
-</dependency>
-```
-
-### 步骤 4：配置启用开关
-
-在 `application.yml` 中：
+在 `astral-server/src/main/resources/application.yml` 中增加插件启动配置：
 
 ```yaml
 astral:
   plugins:
     uniappx:
-      enabled: ${UNIAPPX_PLUGIN_ENABLED:false}
+      enabled: ${UNIAPPX_PLUGIN_ENABLED:true}
 ```
 
-### 步骤 5：编写业务代码
+需要按配置决定是否创建的 Web 配置、初始化器或任务，可使用：
 
-插件内可以任意使用 Controller / Service / Mapper / Entity，包名建议使用 `com.astral.uniappx.*`，会被主应用的 `@ComponentScan("com.astral")` 自动扫描。
+```java
+@ConditionalOnProperty(
+    name = "astral.plugins.uniappx.enabled",
+    havingValue = "true",
+    matchIfMissing = true
+)
+```
 
-### 步骤 6：前端扩展（可选）
+配置开关在应用启动时生效；后台插件管理页操作的是 `sys_plugin` 中的运行时状态，两者职责不同。
 
-实现 `PluginFrontendExtension` 接口，在后台侧边栏动态注册菜单：
+### 4. 编写业务代码
+
+Controller、Service、Mapper、Entity 和配置都放在 `com.astral.uniappx` 下。主应用通过 `@ComponentScan("com.astral")` 自动扫描组件。
+
+如果使用独立 Mapper 包，应提供配置：
+
+```java
+@Configuration
+@MapperScan("com.astral.uniappx.mapper")
+public class UniappxMapperConfig {
+}
+```
+
+数据库结构变更应遵循 `astral-server/src/main/resources/db/migration/README.md` 的 Flyway 增量迁移规范（新增 `V{yyyyMMddNNN}__xxx.sql`，启动时自动应用；已发布脚本禁止修改）。插件自建 `*SchemaInitializer` 仅限幂等建表（`CREATE TABLE IF NOT EXISTS`）。
+
+### 5. 注册前端导航（可选）
 
 ```java
 @Component
 public class UniappxFrontendExtension implements PluginFrontendExtension {
-
     @Override
-    public String getPluginId() { return "uniappx"; }
+    public String getPluginId() {
+        return "uniappx";
+    }
 
     @Override
     public List<NavItem> getNavItems() {
-        return List.of(
-            new NavItem("UniAppX 业务", "/dashboard/uniappx", "AppstoreOutlined", 90)
-        );
+        return List.of(new NavItem(
+            "UniAppX 业务", "/dashboard/uniappx", "AppstoreOutlined", 90
+        ));
     }
 }
 ```
 
-然后在 `astral-front/src/app/dashboard/uniappx/page.tsx` 创建对应页面。
+然后在 `astral-front/src/app/dashboard/uniappx/page.tsx` 创建页面。导航项的 `pluginId` 必须与 `AstralPlugin#getPluginId()` 一致。
 
-## 完整业务插件参考（astral-plugin-qt）
+## 系统必需插件
 
-`astral-plugin-qt`（轻听音乐 App 后端）是功能最完整的插件示例，展示了从零打造独立业务域需要覆盖的要点：
+实现 `isRequired()` 并返回 `true`，可禁止后台关闭该插件：
 
-| 关注点 | 实现示例 | 说明 |
-|--------|----------|------|
-| 统一用户体系 | 宿主 `sys_user` 表 + `QtUserService`，通过 `user_type='APP'` 区分 | App 用户并入宿主用户表，与管理端用户按用户类型隔离 |
-| 自身认证 | `QtAuthInterceptor`（Sa-Token，`satoken` 请求头） | 复用宿主 Sa-Token 登录态，并校验当前用户为 APP 用户 |
-| 独立表结构 | `resources/sql/qt-schema.sql` + `QtSchemaInitializer` | 启动时 `CREATE TABLE IF NOT EXISTS` 幂等建表 |
-| 实体 ID | 实体 `@TableId(type=INPUT)` + `@TableField(fill=...)` | 由宿主全局序列（astral_id）自动取号 |
-| Mapper 注册 | `@MapperScan("com.astral.qt.mapper")`（QtMapperConfig） | 宿主只扫 `com.astral.dao.mapper`，插件需自行注册 |
-| 宿主拦截器放行 | `WebMvcConfig` 排除 `/api/v1/user/**`、`/api/v1/app/**` | App 用户复用宿主 Sa-Token 登录态，由插件拦截器负责 APP 用户身份校验 |
-| 后台管理面 | `/api/v1/admin/qt/**` + `/dashboard/qt` | 复用宿主 Sa-Token 管理员认证 |
+```java
+@Override
+public boolean isRequired() {
+    return true;
+}
+```
 
-**关键模式：插件自身的 Controller 路径若需与外部前端（如 uniappx）对接，应保持路径与认证方式与对方约定完全一致。**
+`SequencePlugin` 是现有的系统必需插件，负责统一 ID/序列能力。
 
-## 插件生命周期
+## 完整参考
 
-| 阶段 | 触发时机 | 说明 |
-|------|----------|------|
-| 注册 | 应用启动 | 自动发现并注册到 PluginRegistry |
-| 启用 | 启动或后台启用 | 调用 `onEnable()` |
-| 禁用 | 后台禁用 | 调用 `onDisable()` |
-| 卸载 | 移除依赖重启 | 从注册表移除 |
+统一模块中的 Qt 插件展示了完整业务域的实现方式：
 
-## 权限控制
+| 关注点 | 实现位置 |
+|---|---|
+| 插件定义与导航 | `com.astral.qt.QtPlugin` |
+| App 用户与认证 | `com.astral.qt.service.QtUserService`、`QtWebConfig` |
+| Controller | `com.astral.qt.controller` |
+| Mapper 注册 | `com.astral.qt.config.QtMapperConfig` |
+| 数据库资源 | `resources/sql/qt-schema.sql`、`resources/schema/qt_*.json` |
 
-插件接口默认走 `/api/v1/**` 拦截器，需要认证。如需更细粒度权限：
+反馈与统一通知实现位于 `com.astral.feedback`，其资源为 `resources/sql/feedback-schema.sql`。
 
-1. 在 `sys_permission` 表添加权限记录（如 `uniappx:view`）
-2. 在 `PluginController` 或插件自己的 Controller 上使用 Sa-Token 注解
-3. 前端 `menuConfig` 中配置 `permission: 'uniappx:view'`
+## 开发检查清单
 
-## 注意事项
-
-- 插件模块的 Controller 路径建议统一以 `/api/v1/admin/plugin/{pluginId}` 或 `/api/v1/{biz}` 开头
-- 需要数据库表时，将建表脚本放在**插件自己的 resources** 下（如 `resources/sql/uniappx-schema.sql`），编写 `XxxSchemaInitializer`（`@Component` + `@ConditionalOnProperty`，启动时用 `ResourceDatabasePopulator` 执行 `CREATE TABLE IF NOT EXISTS` 脚本，幂等）。参考 `QtSchemaInitializer`；**不需要**手工注册到根目录 `sql/` 或 `SchemaRegistry`
-- 插件启用/禁用通过 `astral.plugins.{id}.enabled` 配置（`@ConditionalOnProperty` 消费），热切换为前端控制（后台切换时立即生效）
-
+- 插件 ID 唯一，且插件、导航扩展、配置中的 ID 一致。
+- API 前缀精确，不覆盖其他插件或宿主 API。
+- 新代码全部位于 `astral-plugin` 的独立业务 package。
+- 资源文件使用插件专属前缀，避免 classpath 同名冲突。
+- 数据库变更以只增不改的版本化迁移脚本提交。
+- Mapper 包已注册，Controller 的认证范围已明确。
+- 实体主键统一 `@TableId(type = IdType.INPUT)`，并保证实体至少有一个字段带 `@TableField(fill=...)`
+  （通常为 `createTime`=INSERT / `updateTime`=INSERT_UPDATE；表无 create_time 列时在该表时间字段上挂 INSERT fill 触发），
+  ID 由宿主 `SequenceMetaObjectHandler` 按业务键 `{表名}_id` 从全局序列自动填充，**不要写显式取号服务**。
+- 分别验证插件启用、运行时禁用和启动配置关闭场景。
+- 构建验证：后端 `mvn compile`（当前仓库无测试目录，`mvn test` 暂为空转项；一旦补测试，此条改为 `mvn -pl astral-server -am test`）；前端 `npm run build`。

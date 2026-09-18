@@ -75,3 +75,6 @@ astral-server/src/main/resources/application-local.yaml
 # 打包产物
 release/
 *.tar.gz
+
+# 本地克隆的第三方文档仓库（自带 .git，不入主库）
+zyplayer-doc/

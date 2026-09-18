@@ -193,8 +193,7 @@ axios.interceptors.request.use(config => {
 ### 数据库检查
 
 - [ ] 数据库已创建（PostgreSQL，连接配置见 `application.yml`）
-- [ ] 已手动应用 `sql/migrations/` 下的迁移脚本（启动不再自动执行 SQL，见该目录 README.md）
-- [ ] `schema_migrations` 已登记已应用的版本
+- [ ] 数据库迁移由 Flyway 启动时自动应用（`db/migration/`，存量库自动基线化，见该目录 README.md）
 - [ ] 连接配置正确
 
 ### 功能检查

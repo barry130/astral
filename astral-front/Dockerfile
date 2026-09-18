@@ -1,9 +1,13 @@
+# syntax=docker/dockerfile:1
 # 多阶段构建: Next.js 14 standalone
 # 第一阶段: 依赖安装
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# npmmirror 加速国内 VPS；BuildKit cache 让二次构建不再重下 node_modules。
+# 海外机器若镜像更慢：把 --registry 去掉即可回退 registry.npmjs.org。
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --registry=https://registry.npmmirror.com
 
 # 第二阶段: 构建
 FROM node:20-alpine AS builder

@@ -95,7 +95,7 @@ export default function PluginPage() {
       </div>
       <Card>
         {plugins.length === 0 ? (
-          <Empty description="暂无插件，可通过添加 astral-plugin-api 实现扩展" />
+          <Empty description="暂无插件，可在 astral-plugin 中新增业务插件" />
         ) : (
           <ResizableTable
             rowKey="pluginId"

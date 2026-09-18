@@ -105,8 +105,10 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
      * </ol>
      * </p>
      * <p>
-     * 未在 SchemaRegistry 中登记的表（如插件动态创建的 qt_* 表）会在首次插入时
-     * 由 GeneratorFactory 自动创建配置，ID 从 1 开始（无预留段）。
+     * 未在 SchemaRegistry 中登记的表（无 schema JSON 的遗留表）不会被预置：
+     * 首次插入时 SegmentGenerator 自行初始化号段，ID 从 1 开始（无预留段）。
+     * 因此插件表应随插件携带 schema JSON（astral-plugin/resources/schema/），
+     * 以获得预置预留段与锁定的配置行。
      * </p>
      */
     private void ensureEntityIdSequences() {

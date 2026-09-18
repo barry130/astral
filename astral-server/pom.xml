@@ -50,21 +50,6 @@
             <artifactId>astral-plugin</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.astral</groupId>
-            <artifactId>astral-plugin-demo</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>com.astral</groupId>
-            <artifactId>astral-plugin-qt</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>com.astral</groupId>
-            <artifactId>astral-plugin-feedback</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
@@ -92,6 +77,13 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
+        <!-- Flyway 数据库迁移：启动时自动按序应用 db/migration/V*.sql 并记录 flyway_schema_history。
+             版本由 spring-boot-starter-parent 托管（9.22.3，内置 PostgreSQL 支持）。
+             存量库通过 baseline-on-migrate 跳过 V1 基线（见 application.yml spring.flyway）。 -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson-spring-boot-starter</artifactId>
@@ -113,7 +105,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
     <build>
@@ -123,6 +115,14 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.astral.server.AstralApplication</mainClass>
+                    <!-- Lombok 仅在编译期做注解处理，绝不能进运行 jar（约 1.96MB）。
+                         provided 作用域不足以让它出局，必须显式排除。 -->
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
                 </configuration>
             </plugin>
         </plugins>

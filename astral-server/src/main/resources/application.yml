@@ -24,11 +24,23 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:}
 
-  # 数据库结构/种子数据不再随应用启动自动执行。
-  # 原 mode: always 会在每次启动时由 dict-init.sql 清空并重建字典表（DELETE + INSERT），
-  # 导致后台新增的字典项在重启后丢失；且任何脚本报错都会直接导致启动失败。
-  # 现改为手动应用 sql/migrations/ 下的增量脚本，命名与操作方法见 sql/migrations/README.md。
-  # （如需临时恢复自动初始化：设 SPRING_SQL_INIT_MODE=always，并把 schema-locations 指回脚本）
+  # 数据库迁移（Flyway）：启动时自动按版本号顺序应用 db/migration/V*.sql，
+  # 版本历史记录在 flyway_schema_history 表（取代旧的手工 schema_migrations）。
+  # - 全新空库：从 V20260914001__init.sql 全量建表 + 种子数据
+  # - 存量库（表已存在但无 flyway_schema_history）：baseline-on-migrate 自动打基线，
+  #   基线版本 = 20260914001，即初始化脚本被跳过不执行（其内容历史上已手工应用），
+  #   仅执行编号更大的增量脚本
+  # - 应急关闭：FLYWAY_ENABLED=false（仅排查问题时用，正常部署必须开启）
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    default-schema: astral
+    schemas: astral
+    baseline-on-migrate: true
+    baseline-version: 20260914001
+    baseline-description: "存量库基线：原手工 V1-V4 已应用，跳过初始化脚本"
+
+  # 数据库结构/种子数据不走 spring.sql.init（由上面的 Flyway 接管）。
   sql:
     init:
       mode: never
@@ -59,18 +71,32 @@ astral:
 
   plugins:
     enabled: true
-    demo:
-      enabled: ${DEMO_PLUGIN_ENABLED:true}
     qt:
       enabled: ${QT_PLUGIN_ENABLED:true}
     feedback:
       enabled: ${FEEDBACK_PLUGIN_ENABLED:true}
+    storage:
+      enabled: ${STORAGE_PLUGIN_ENABLED:true}
+      # 单文件上限（字节）：公共 Bot API 下载上限 20MiB，超过将无法再次下载
+      max-file-size-bytes: ${STORAGE_MAX_FILE_SIZE:20971520}
+      # 上传凭证有效期（秒），签发给 Cloudflare Worker 的短时上传授权
+      upload-ticket-ttl-seconds: 600
+      # 下载签名 URL 有效期（秒），公开/私有统一 300s（MVP 撤销窗口 = TTL）
+      download-url-ttl-seconds: 300
+      # Worker HMAC 时间戳窗口（秒）与重放保护
+      origin-timestamp-window-seconds: 300
+      # 允许的 MIME 白名单（MVP 不允许 SVG/HTML；text/javascript+application/json 供音源包产物上传）
+      allowed-mime-types: image/jpeg,image/png,image/webp,image/gif,text/javascript,application/javascript,application/json
+      # 上传/下载 HMAC 密钥：仅通过环境变量注入，禁止写入本文件或仓库
+      upload-ticket-key: ${STORAGE_UPLOAD_TICKET_KEY:}
+      origin-shared-secret: ${STORAGE_ORIGIN_SHARED_SECRET:}
+      download-signing-key: ${STORAGE_DOWNLOAD_SIGNING_KEY_V1:}
 
   sequence:
     default-type: segment
     default-step: 1000
 
-  # 全端统计（STATS_DESIGN.md §5.4.6）
+  # 全端统计
   stat:
     enabled: ${STAT_ENABLED:true}
     error-retention-days: 90

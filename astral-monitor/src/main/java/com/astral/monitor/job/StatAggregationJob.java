@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * 统计聚合与清理定时任务（STATS_DESIGN.md §5.3 StatAggregationJob）
+ * 统计聚合与清理定时任务（StatAggregationJob）
  * <p>
  * ① 每分钟将内存累加器的接口指标 flush 到 stat_api_hourly（先 UPDATE 后 INSERT 两步 upsert）；
  * ② 每天凌晨 4 点清理过期数据（错误默认 &gt;90 天、小时桶默认 &gt;180 天，天数可配）。

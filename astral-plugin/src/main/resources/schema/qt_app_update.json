@@ -1,0 +1,156 @@
+{
+  "tableName": "qt_app_update",
+  "tableComment": "轻听App版本更新表",
+  "moduleName": "qt",
+  "className": "QtAppUpdate",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "version_code",
+      "fieldName": "versionCode",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "版本号",
+      "isRequired": true
+    },
+    {
+      "columnName": "type",
+      "fieldName": "type",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "客户端平台类型(1101-Android 1102-iOS 1103-Windows)",
+      "isRequired": true
+    },
+    {
+      "columnName": "version_name",
+      "fieldName": "versionName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "版本名称",
+      "length": 64
+    },
+    {
+      "columnName": "version_info",
+      "fieldName": "versionInfo",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "版本信息",
+      "length": 512
+    },
+    {
+      "columnName": "update_type",
+      "fieldName": "updateType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "更新提示方式(1-弹窗 2-红点 3-无提示)",
+      "length": 32
+    },
+    {
+      "columnName": "download_url",
+      "fieldName": "downloadUrl",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "下载地址",
+      "length": 1024
+    },
+    {
+      "columnName": "channel",
+      "fieldName": "channel",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "发布渠道(stable-正式版 beta-测试版)",
+      "length": 16,
+      "defaultValue": "stable"
+    },
+    {
+      "columnName": "download_mode",
+      "fieldName": "downloadMode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "下载方式(已废弃保留:新逻辑按双链接并存,不再按模式二选一)",
+      "length": 16,
+      "defaultValue": "app"
+    },
+    {
+      "columnName": "browser_url",
+      "fieldName": "browserUrl",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "浏览器下载地址(可空,双链接之一)",
+      "length": 512
+    },
+    {
+      "columnName": "is_github",
+      "fieldName": "isGithub",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "直链是否为GitHub链接(1-是参与加速拼接 0-否)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "is_force",
+      "fieldName": "isForce",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "是否强制更新(0-非强制 1-强制)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "is_published",
+      "fieldName": "isPublished",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "是否发布(1-已发布App端收到更新通知 0-未发布仅本地测试不推送不校验非官方)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "file_size",
+      "fieldName": "fileSize",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "安装包大小(字节)"
+    },
+    {
+      "columnName": "md5",
+      "fieldName": "md5",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "安装包MD5",
+      "length": 64
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_qt_update_type",
+      "columns": [
+        "type",
+        "version_code"
+      ]
+    }
+  ]
+}

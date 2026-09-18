@@ -354,6 +354,415 @@ body, html, #__next {
   margin-bottom: 36px;
 }
 
+/* ============================================================
+   项目介绍首页（Landing，路由 /）
+   全部走设计令牌（--color-* / --radius-* / --shadow-*），
+   深色模式随 [data-theme="dark"] 令牌翻转自动适配。
+   ============================================================ */
+.landing-container {
+  min-height: 100vh;
+  background: var(--color-bg-base);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 顶部导航 ---- */
+.landing-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--glass-bg, var(--color-bg-white));
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.landing-header-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.landing-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.landing-logo-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--color-surface-dark) 0%, var(--color-surface-dark-hover) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 17px;
+}
+
+.landing-logo-name {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.landing-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---- Hero ---- */
+.landing-hero {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 96px 24px 72px;
+  text-align: center;
+}
+
+.landing-hero-title {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
+.landing-hero-subtitle {
+  font-size: 20px;
+  color: var(--color-brand-text);
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.landing-hero-desc {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+  margin-bottom: 40px;
+}
+
+.landing-hero-actions {
+  display: flex;
+  justify-content: center;
+}
+
+/* ---- 内容区块 ---- */
+.landing-section {
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.landing-section-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.landing-section-desc {
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  margin-bottom: 32px;
+}
+
+/* ---- 功能卡片 ---- */
+.landing-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(1, 1fr);
+}
+
+.landing-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 900px) {
+  .landing-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .landing-grid-3 {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+.landing-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.landing-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* 可点击进入用户侧页面的插件卡片 */
+.landing-card-link {
+  cursor: pointer;
+}
+
+.landing-card-action {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-brand-text);
+}
+
+.landing-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--color-brand-text);
+  margin-bottom: 14px;
+}
+
+.landing-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.landing-card-desc {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+}
+
+/* ---- 技术栈标签 ---- */
+.landing-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.landing-tag {
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+/* ---- 页脚 ---- */
+.landing-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--color-border-light);
+  padding: 32px 24px 40px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.landing-footer-secondary {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 600px) {
+  .landing-hero {
+    padding: 56px 16px 40px;
+  }
+
+  .landing-hero-title {
+    font-size: 32px;
+  }
+
+  .landing-hero-subtitle {
+    font-size: 16px;
+  }
+}
+
+/* ============================================================
+   图床（用户侧，路由 /imgbed）
+   与 Landing 同样走设计令牌，深色模式自动适配。
+   ============================================================ */
+.imgbed-container {
+  min-height: 100vh;
+  background: var(--color-bg-base);
+  color: var(--color-text);
+}
+
+.imgbed-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.imgbed-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.imgbed-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.imgbed-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.imgbed-user {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-right: 4px;
+}
+
+.imgbed-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.imgbed-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.imgbed-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.imgbed-label {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.imgbed-hint {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.imgbed-dragger .ant-upload-drag {
+  background: var(--color-bg-card) !important;
+  border: 1px dashed var(--color-border) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.imgbed-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 24px 0 12px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.imgbed-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .imgbed-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .imgbed-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.imgbed-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.imgbed-thumb {
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-base);
+  overflow: hidden;
+}
+
+.imgbed-meta {
+  padding: 10px 12px 0;
+}
+
+.imgbed-name {
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imgbed-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.imgbed-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 12px 12px;
+  margin-top: auto;
+}
+
 /* Dashboard layout */
 .dashboard-layout {
   min-height: 100vh;

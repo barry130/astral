@@ -36,9 +36,10 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
+        <!-- 仅使用 cn.hutool.core.util.StrUtil，用 hutool-core 即可 -->
         <dependency>
             <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
+            <artifactId>hutool-core</artifactId>
         </dependency>
 
         <dependency>

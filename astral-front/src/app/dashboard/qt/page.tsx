@@ -13,6 +13,7 @@ import {
 } from '@/api/qt';
 import { fetchDictOptions } from '@/api/dict';
 import { ResizableTable } from '@/components/ResizableTable';
+import SourceReleasesTab from './SourceReleasesTab';
 
 const { Paragraph } = Typography;
 
@@ -282,7 +283,7 @@ export default function QtAdminPage() {
         <div>
           <h2 style={{ margin: 0 }}>轻听 API 管理</h2>
           <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-            面向 qt-uniappx 的音乐 App 后端：签到/收藏/公告/版本更新（插件 astral-plugin-qt）
+            面向 qt-uniappx 的音乐 App 后端：签到/收藏/公告/版本更新（astral-plugin 内置 Qt 插件）
           </Paragraph>
         </div>
         <div className="page-toolbar">
@@ -330,6 +331,11 @@ export default function QtAdminPage() {
                   />
                 </div>
               ),
+            },
+            {
+              key: 'source-releases',
+              label: '音源包',
+              children: <SourceReleasesTab />,
             },
             {
               key: 'github-accels',

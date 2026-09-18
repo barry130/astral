@@ -127,6 +127,76 @@ export const qtAdminApi = {
     request.delete(`/api/v1/admin/qt/updates/${id}`),
 };
 
+/** 音源包产物条目（artifacts 是「当前生效全集」，客户端按 path 比 version 决定要不要重下） */
+export interface QtSourceArtifact {
+  path: string;
+  version?: number;
+  url?: string;
+}
+
+/** 音源包发布记录（SOURCE_UPDATE_DESIGN §五） */
+export interface QtSourceRelease {
+  id?: number;
+  /** 版本号（yyyyMMddNN，后端生成，请求体不送） */
+  sourceVersionCode?: number;
+  /** 版本名（yyyy.MM.dd.N，后端派生） */
+  sourceVersionName?: string;
+  /** 适用平台（1101/1102/1103） */
+  platforms: number[];
+  /** 按平台准入的应用版本号（平台缺省或空数组=不限制） */
+  appVersionCodes?: Record<string, number[]>;
+  hostApiVersion?: number;
+  channel?: string;
+  notes?: string;
+  artifacts?: QtSourceArtifact[];
+  rollbackTo?: number | null;
+  bad?: boolean;
+  published?: boolean;
+  publishedAt?: string;
+  createTime?: string;
+}
+
+/** 装机分布统计行（版本×平台×结果聚合） */
+export interface QtSourceStatRow {
+  source_version_code: number;
+  platform: number;
+  result: string;
+  cnt: number;
+}
+
+/** 音源包管理 API（后台 Admin，需宿主登录态） */
+export const sourceReleaseApi = {
+  list: (
+    pageNum = 1,
+    pageSize = 10,
+    params?: { platform?: number; channel?: string; published?: boolean; full?: number },
+  ): Promise<ApiResult<QtPage<QtSourceRelease>>> =>
+    request.get('/api/v1/admin/qt/source-releases', { params: { pageNum, pageSize, ...params } }),
+
+  stats: (): Promise<ApiResult<QtSourceStatRow[]>> =>
+    request.get('/api/v1/admin/qt/source-releases/stats'),
+
+  /** 新建：后端生成版本号并随响应返回（先拿号 → 上传文件 → 回填 artifacts → 发布） */
+  create: (data: QtSourceRelease): Promise<ApiResult<QtSourceRelease>> =>
+    request.post('/api/v1/admin/qt/source-releases', data),
+
+  /** 编辑：artifacts 按 path 合并，只传变更项，其余自动继承上一版 */
+  update: (id: number, data: QtSourceRelease): Promise<ApiResult<void>> =>
+    request.put(`/api/v1/admin/qt/source-releases/${id}`, data),
+
+  publish: (id: number): Promise<ApiResult<void>> =>
+    request.post(`/api/v1/admin/qt/source-releases/${id}/publish`),
+
+  unpublish: (id: number): Promise<ApiResult<void>> =>
+    request.post(`/api/v1/admin/qt/source-releases/${id}/unpublish`),
+
+  markBad: (id: number, rollbackTo?: number): Promise<ApiResult<void>> =>
+    request.post(`/api/v1/admin/qt/source-releases/${id}/bad`, null, { params: { rollbackTo } }),
+
+  remove: (id: number): Promise<ApiResult<void>> =>
+    request.delete(`/api/v1/admin/qt/source-releases/${id}`),
+};
+
 /** GitHub 加速节点管理 API（后台 Admin，需宿主登录态；UPDATE_DESIGN.md §2.2） */
 export const githubAccelApi = {
   /** 分页列表（直接查库，不走缓存） */

@@ -26,7 +26,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/api/**");
 
-        // 2. 接口指标采集拦截器（STATS_DESIGN.md §5.2，认证之后注册；采集入口不统计，防自举；
+        // 2. 接口指标采集拦截器（认证之后注册；采集入口不统计，防自举；
         //    astral.stat.enabled=false 时 Bean 不存在，自动跳过）
         ApiRequestMetricInterceptor metricInterceptor = apiRequestMetricInterceptor.getIfAvailable();
         if (metricInterceptor != null) {
