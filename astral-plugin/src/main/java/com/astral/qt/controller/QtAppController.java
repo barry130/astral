@@ -97,10 +97,10 @@ public class QtAppController {
     // ==================== 音源包热更新（SOURCE_UPDATE_DESIGN §五） ====================
 
     /**
-     * 音源包 manifest（§2.2）：响应体是<b>裸 JSON</b>（不包 QtRestResp），
-     * 带 ETag/If-None-Match 协商缓存，命中直接 304，客户端零成本结束本轮检查。
+     * 音源包 manifest（§2.2）：响应体包 QtRestResp（code=200，data 为 QtSourceManifestVo），
+     * 保持免认证。带 ETag/If-None-Match 协商缓存，命中直接 304，客户端零成本结束本轮检查。
      */
-    @Operation(summary = "音源包manifest（免认证，裸JSON+ETag/304）")
+    @Operation(summary = "音源包manifest（免认证，QtRestResp包装+ETag/304）")
     @GetMapping("/source/manifest")
     public ResponseEntity<String> sourceManifest(
             @RequestParam("platform") Long platform,
@@ -110,15 +110,18 @@ public class QtAppController {
             @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) throws Exception {
         QtSourceManifestVo manifest = sourceService.buildManifest(platform, appVersionCode, hostApiVersion, channel);
         // ETag 必须按「不含 generatedAt」的稳定内容计算：generatedAt 每次请求都变，
-        // 直接对响应体做摘要会让 If-None-Match 永远不命中
-        com.fasterxml.jackson.databind.node.ObjectNode stable =
+        // 直接对响应体做摘要会让 If-None-Match 永远不命中。稳定拷贝按包装后的结构来
+        com.fasterxml.jackson.databind.node.ObjectNode data =
                 (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.valueToTree(manifest);
-        stable.remove("generatedAt");
+        data.remove("generatedAt");
+        com.fasterxml.jackson.databind.node.ObjectNode stable = objectMapper.createObjectNode();
+        stable.put("code", 200);
+        stable.set("data", data);
         String etag = "\"" + DigestUtil.md5Hex(objectMapper.writeValueAsString(stable)) + "\"";
         if (etag.equals(ifNoneMatch)) {
             return ResponseEntity.status(304).eTag(etag).build();
         }
-        String body = objectMapper.writeValueAsString(manifest);
+        String body = objectMapper.writeValueAsString(QtRestResp.success(manifest));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")
                 .eTag(etag)
