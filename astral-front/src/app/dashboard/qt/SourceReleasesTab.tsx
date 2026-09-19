@@ -11,10 +11,10 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tag, Typography, Upload, message,
+  Button, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tag, Typography, Upload, message,
 } from 'antd';
 import { BarChartOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
-import { sourceReleaseApi, QtSourceRelease, QtSourceArtifact, QtSourceStatRow, enumLabel } from '@/api/qt';
+import { sourceReleaseApi, qtAdminApi, QtSourceRelease, QtSourceArtifact, QtSourceStatRow, enumLabel } from '@/api/qt';
 import { fetchDictOptions, DictOption } from '@/api/dict';
 import { storageApi } from '@/api/storage';
 import { ResizableTable } from '@/components/ResizableTable';
@@ -48,6 +48,9 @@ const FALLBACK_STATE_LABEL: Record<string, string> = {
 /** artifacts 编辑行：path 从数据字典下拉选择，url 由行内上传生成（永久地址） */
 type ArtifactRow = { path?: string; url?: string };
 
+/** 按平台准入编辑行：unlimited=不限制（提交时省略该平台键）；touched=已显式设置过，晚到的版本列表不再自动全选 */
+type AdmissionRow = { unlimited: boolean; codes: number[]; touched?: boolean };
+
 /** 发布状态派生键：坏包 > 已发布 > 未发布（与服务端 bad/published 两布尔字段对应） */
 const stateKeyOf = (r: QtSourceRelease): string =>
   r.bad ? 'bad' : r.published ? 'published' : 'unpublished';
@@ -67,6 +70,10 @@ export default function SourceReleasesTab() {
   const [dict, setDict] = useState<Record<string, DictOption[]>>({});
   /** 行内上传中状态，按 Form.List 字段索引标记 */
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  /** 现存 App 版本号（平台码 → versionCode 降序），用于准入下拉自动反显 */
+  const [appVersions, setAppVersions] = useState<Record<number, number[]>>({});
+  /** 按平台准入选择状态（key=平台码），随「适用平台」联动增删 */
+  const [admission, setAdmission] = useState<Record<number, AdmissionRow>>({});
 
   // 由数据字典派生出的下拉/标签选项（数值类将 value 转为 number 以便比较）
   const platformOpts = (dict.qt_update_platform?.length ? dict.qt_update_platform : FALLBACK_PLATFORM_OPTS)
@@ -84,6 +91,9 @@ export default function SourceReleasesTab() {
     const fromDict = enumLabel(stateOpts, key);
     return fromDict !== key ? fromDict : (FALLBACK_STATE_LABEL[key] ?? key);
   };
+
+  /** 监听「适用平台」：准入选择行随其联动 */
+  const watchedPlatforms: number[] = Form.useWatch('platforms', form) || [];
 
   const load = (p = page) => {
     setLoading(true);
@@ -104,6 +114,52 @@ export default function SourceReleasesTab() {
     ]).then(setDict).catch(() => {});
   }, []);
 
+  // 现存应用版本号（取版本更新管理的数据），按平台分组供准入下拉反显
+  useEffect(() => {
+    qtAdminApi.updates(1, 200).then((res) => {
+      if (res.code !== 200) return;
+      const grouped: Record<number, number[]> = {};
+      for (const u of res.data.records || []) {
+        if (u.type == null || u.versionCode == null) continue;
+        (grouped[u.type] = grouped[u.type] || []).push(u.versionCode);
+      }
+      for (const k of Object.keys(grouped)) {
+        grouped[Number(k)] = Array.from(new Set(grouped[Number(k)])).sort((a, b) => b - a);
+      }
+      setAppVersions(grouped);
+    }).catch(() => {});
+  }, []);
+
+  // 平台增删时同步准入行：新增平台默认全选现存版本，删除平台连带移除；
+  // 版本列表晚到时为未显式设置过的空行补默认全选
+  const platformKey = watchedPlatforms.join(',');
+  useEffect(() => {
+    setAdmission((prev) => {
+      const next: Record<number, AdmissionRow> = {};
+      for (const p of watchedPlatforms) {
+        const old = prev[p];
+        const codes = appVersions[p] || [];
+        if (old) {
+          next[p] = !old.touched && !old.codes.length && codes.length
+            ? { ...old, unlimited: false, codes: [...codes] }
+            : old;
+          continue;
+        }
+        next[p] = { unlimited: !codes.length, codes: [...codes] };
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platformKey, appVersions]);
+
+  // 提交预览：与 submit 同一规则，生成将写入的 appVersionCodes
+  const admissionPreview: Record<string, number[]> = {};
+  for (const p of watchedPlatforms) {
+    const row = admission[p];
+    if (!row || row.unlimited || !row.codes.length) continue;
+    admissionPreview[String(p)] = [...row.codes].sort((a, b) => b - a);
+  }
+
   const refreshAfter = (msg: string) => {
     message.success(msg);
     load();
@@ -111,33 +167,49 @@ export default function SourceReleasesTab() {
 
   const openModal = (record?: QtSourceRelease) => {
     if (record) {
+      // 存量准入配置反显：键存在=显式版本集；键缺省或空数组=该平台不限制
+      const adm: Record<number, AdmissionRow> = {};
+      const stored = record.appVersionCodes || {};
+      for (const p of record.platforms || []) {
+        const codes = stored[String(p)];
+        adm[p] = codes?.length
+          ? { unlimited: false, codes: [...codes].sort((a, b) => b - a), touched: true }
+          : { unlimited: true, codes: [], touched: true };
+      }
+      setAdmission(adm);
       form.setFieldsValue({
         id: record.id,
         platforms: record.platforms,
         channel: record.channel,
         hostApiVersion: record.hostApiVersion,
         notes: record.notes,
-        appVersionCodesText: JSON.stringify(record.appVersionCodes || {}, null, 0),
         // 回传全集（不含 version）：url 没变的条目后端保持原 version，url 变了才 +1
         artifacts: (record.artifacts || []).map((a) => ({ path: a.path, url: a.url })),
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ platforms: [1103], channel: 'stable', hostApiVersion: 1, appVersionCodesText: '', artifacts: [] });
+      form.setFieldsValue({ platforms: [1103], channel: 'stable', hostApiVersion: 1, artifacts: [] });
+      // 新建默认：已选平台各自全选现存版本（用户自行删除不需要的）
+      setAdmission(() => {
+        const adm: Record<number, AdmissionRow> = {};
+        for (const p of [1103]) {
+          const codes = appVersions[p] || [];
+          adm[p] = { unlimited: !codes.length, codes: [...codes] };
+        }
+        return adm;
+      });
     }
     setModal(true);
   };
 
   const submit = async () => {
     const values = await form.validateFields();
-    let appVersionCodes: Record<string, number[]> = {};
-    if (values.appVersionCodesText?.trim()) {
-      try {
-        appVersionCodes = JSON.parse(values.appVersionCodesText);
-      } catch {
-        message.error('准入配置不是合法 JSON');
-        return;
-      }
+    // 准入：勾「不限制」或一个未选的平台不写键（=该平台不限制，含未来新版本）
+    const appVersionCodes: Record<string, number[]> = {};
+    for (const p of values.platforms || []) {
+      const row = admission[p];
+      if (!row || row.unlimited || !row.codes.length) continue;
+      appVersionCodes[String(p)] = [...row.codes].sort((a, b) => b - a);
     }
     const artifacts: QtSourceArtifact[] = (values.artifacts || [])
       .filter((a: ArtifactRow) => a.path)
@@ -363,11 +435,37 @@ export default function SourceReleasesTab() {
             <Input.TextArea rows={2} placeholder="客户端设置页展示，如：酷我母带接口修复；kw 链顺序调整" />
           </Form.Item>
           <Form.Item
-            name="appVersionCodesText"
-            label="按平台准入的应用版本号（JSON，可空=不限制）"
-            tooltip='如 {"1103":[102,103],"1101":[304]}；平台缺省或空数组表示该平台不限制，用于灰度放量'
+            label="按平台准入的应用版本号"
+            tooltip="默认每个平台全选现存版本，可删除不需要的（灰度放量）；勾「不限制」或一个不选=该平台不限制（含未来新版本）"
           >
-            <Input placeholder='{"1103":[102,103]}' />
+            {watchedPlatforms.length ? watchedPlatforms.map((p) => {
+              const row = admission[p] || { unlimited: true, codes: [] as number[] };
+              const versions = appVersions[p] || [];
+              return (
+                <Space key={p} align="baseline" style={{ display: 'flex', marginBottom: 4 }}>
+                  <Tag color="blue" style={{ marginRight: 0 }}>{platformLabel(p)}</Tag>
+                  <Checkbox
+                    checked={row.unlimited}
+                    onChange={(e) => setAdmission((prev) => ({
+                      ...prev, [p]: { ...row, unlimited: e.target.checked, touched: true },
+                    }))}
+                  >不限制</Checkbox>
+                  <Select
+                    mode="multiple" allowClear disabled={row.unlimited}
+                    value={row.unlimited ? [] : row.codes}
+                    placeholder={versions.length ? '默认全选，可删除不需要的版本' : '该平台暂无已发布版本'}
+                    style={{ minWidth: 240 }}
+                    options={versions.map((c) => ({ value: c, label: String(c) }))}
+                    onChange={(vals: number[]) => setAdmission((prev) => ({
+                      ...prev, [p]: { ...row, codes: vals, touched: true },
+                    }))}
+                  />
+                </Space>
+              );
+            }) : <Typography.Text type="secondary">先选择适用平台</Typography.Text>}
+            <Paragraph type="secondary" style={{ marginBottom: 0 }}>
+              将写入：{JSON.stringify(admissionPreview)}（键缺省或空数组 = 该平台不限制）
+            </Paragraph>
           </Form.Item>
           <Paragraph type="secondary" style={{ marginBottom: 8 }}>
             产物按 path 合并：只填本次变更的文件（上传后自动填入永久地址，版本号由后端按 url 是否变化维护），
