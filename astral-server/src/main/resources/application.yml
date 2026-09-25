@@ -85,8 +85,8 @@ astral:
       download-url-ttl-seconds: 300
       # Worker HMAC 时间戳窗口（秒）与重放保护
       origin-timestamp-window-seconds: 300
-      # 允许的 MIME 白名单（MVP 不允许 SVG/HTML；text/javascript+application/json 供音源包产物上传）
-      allowed-mime-types: image/jpeg,image/png,image/webp,image/gif,text/javascript,application/javascript,application/json
+      # 允许的 MIME 白名单：留空 = 不限制文件类型（文件管理上传不再限定类型）；如需收紧，填逗号分隔的 MIME 列表
+      allowed-mime-types: ${STORAGE_ALLOWED_MIME_TYPES:}
       # 上传/下载 HMAC 密钥：仅通过环境变量注入，禁止写入本文件或仓库
       upload-ticket-key: ${STORAGE_UPLOAD_TICKET_KEY:}
       origin-shared-secret: ${STORAGE_ORIGIN_SHARED_SECRET:}

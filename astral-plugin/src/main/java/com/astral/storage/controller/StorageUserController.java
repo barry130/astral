@@ -37,6 +37,19 @@ public class StorageUserController {
         return userId == null ? null : userId.toString();
     }
 
+    /** 登记来源 IP（X-Forwarded-For 第一段 → X-Real-IP → remoteAddr，项目既有取法） */
+    private static String clientIp(jakarta.servlet.http.HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        String real = request.getHeader("X-Real-IP");
+        if (real != null && !real.isBlank()) {
+            return real.trim();
+        }
+        return request.getRemoteAddr();
+    }
+
     /** 用户侧「我的文件夹」列表：本人所有 + 授权给我的（含当前用户权限集合），供图床等用户页面选择目标文件夹 */
     @GetMapping("/folders")
     public Result<List<StorageDtos.FolderMineView>> myFolders(jakarta.servlet.http.HttpServletRequest request) {
@@ -61,14 +74,18 @@ public class StorageUserController {
             throw new com.astral.common.exception.BusinessException("COMMON002", "缺少 folderId");
         }
         StorageFolderEntity folder = folderService.getById(req.folderId());
-        folderService.requirePermission(userId, folder.getId(), "UPLOAD");
+        // 管理员豁免（UPDATE_DESIGN.md §3.3）：持全权权限者跳过文件夹上传权限与策略约束（对齐 myFolders 先例）
+        boolean adminExempt = permissionChecker.hasPermission(PermissionChecker.SUPER_PERMISSION);
+        if (!adminExempt) {
+            folderService.requirePermission(userId, folder.getId(), "UPLOAD");
+        }
         // 配置取文件夹绑定的存储配置；被禁用时明确拒绝
         StorageConfigEntity config = configService.getById(folder.getStorageConfigId());
         if (!StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
             throw new com.astral.common.exception.BusinessException("STORAGE002");
         }
         UploadTicketService.IssuedTicket issued = ticketService.issue(
-                config, folder, userId, req.fileName(), req.contentType(), req.sizeBytes());
+                config, folder, userId, req.fileName(), req.contentType(), req.sizeBytes(), adminExempt);
         StorageDtos.TicketFormView form = issued.formFields() == null ? null
                 : new StorageDtos.TicketFormView(
                         issued.formFields().policy(), issued.formFields().authorization());
@@ -80,11 +97,22 @@ public class StorageUserController {
     /**
      * 对象存储直传完成回执：浏览器凭 uploadId 通知登记；服务端 HEAD 对象确认存在后落库。
      * TELEGRAM 上传由 Worker 回调登记，调用本接口返回 STORAGE019。
+     * 登记成功后按文件夹策略 verifyContent 执行内容验证（失败删对象置 FAILED 并报错）。
      */
     @PostMapping("/files/register")
     public Result<StorageFileEntity> registerUpload(@RequestBody StorageDtos.RegisterUploadReq req,
                                                     jakarta.servlet.http.HttpServletRequest request) {
-        StorageFileEntity file = fileService.registerFromBrowser(req.uploadId(), userId(request));
+        StorageFileEntity file = fileService.registerFromBrowser(req.uploadId(), userId(request), clientIp(request));
+        fileService.verifyContentAfterRegistration(file.getPublicId());
+        file.setProviderLocatorJson(null);
+        return Result.success(file);
+    }
+
+    /** 按上传凭证 ID 查登记结果（客户端直传 complete 阶段使用；上传者本人或持文件夹 READ 权限） */
+    @GetMapping("/uploads/{uploadId}")
+    public Result<StorageFileEntity> uploadResult(@PathVariable String uploadId,
+                                                  jakarta.servlet.http.HttpServletRequest request) {
+        StorageFileEntity file = fileService.getByUploadId(uploadId, userId(request));
         file.setProviderLocatorJson(null);
         return Result.success(file);
     }
@@ -93,14 +121,19 @@ public class StorageUserController {
     @PostMapping("/files/{publicId}/permanent-url")
     public Result<StorageDtos.PermanentUrlView> permanentUrl(@PathVariable String publicId,
                                                              jakarta.servlet.http.HttpServletRequest request) {
-        return Result.success(fileService.issuePermanentUrl(publicId, userId(request)));
+        // 管理员豁免（对齐 myFolders/uploadTicket 先例）：持全权管理员跳过文件夹 READ 门，
+        // 否则 qt-media/avatar 等用户文件夹对 admin 无授权行，会报 STORAGE013
+        boolean adminExempt = permissionChecker.hasPermission(PermissionChecker.SUPER_PERMISSION);
+        return Result.success(fileService.issuePermanentUrl(publicId, userId(request), adminExempt));
     }
 
     /** 签发短时下载 URL（私有/公开统一走签名） */
     @PostMapping("/files/{publicId}/download-url")
     public Result<StorageDtos.DownloadUrlView> downloadUrl(@PathVariable String publicId,
                                                            jakarta.servlet.http.HttpServletRequest request) {
-        return Result.success(fileService.issueDownloadUrl(publicId, userId(request)));
+        // 管理员豁免：同 permanentUrl，跳过文件夹 READ 门
+        boolean adminExempt = permissionChecker.hasPermission(PermissionChecker.SUPER_PERMISSION);
+        return Result.success(fileService.issueDownloadUrl(publicId, userId(request), adminExempt));
     }
 
     @GetMapping("/files/{publicId}")

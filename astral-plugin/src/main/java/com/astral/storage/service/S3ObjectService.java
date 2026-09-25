@@ -126,7 +126,7 @@ public class S3ObjectService {
         byte[] signingKey = signingKey(o.secretAccessKey(), day, o.region());
         String signature = hex(hmac(signingKey, stringToSign));
 
-        String url = "https://" + host.value() + canonicalUri + "?" + canonicalQuery + "&X-Amz-Signature=" + signature;
+        String url = host.scheme() + "://" + host.value() + canonicalUri + "?" + canonicalQuery + "&X-Amz-Signature=" + signature;
         return new PresignedUrl(url, now.getEpochSecond() + Long.parseLong(query.get("X-Amz-Expires")));
     }
 
@@ -178,7 +178,7 @@ public class S3ObjectService {
             String scope = day + "/" + o.region() + "/s3/aws4_request";
             String stringToSign = String.join("\n", "AWS4-HMAC-SHA256", amzDate, scope, hex(sha256(canonicalRequest)));
             String signature = hex(hmac(signingKey(o.secretAccessKey(), day, o.region()), stringToSign));
-            HttpRequest request = HttpRequest.newBuilder(URI.create("https://" + host.value() + canonicalUri))
+            HttpRequest request = HttpRequest.newBuilder(URI.create(host.scheme() + "://" + host.value() + canonicalUri))
                     .method("HEAD", HttpRequest.BodyPublishers.noBody())
                     .header("x-amz-content-sha256", EMPTY_SHA256)
                     .header("x-amz-date", amzDate)
@@ -209,7 +209,7 @@ public class S3ObjectService {
         String scope = day + "/" + o.region() + "/s3/aws4_request";
         String stringToSign = String.join("\n", "AWS4-HMAC-SHA256", amzDate, scope, hex(sha256(canonicalRequest)));
         String signature = hex(hmac(signingKey(o.secretAccessKey(), day, o.region()), stringToSign));
-        return HttpRequest.newBuilder(URI.create("https://" + host.value() + canonicalUri))
+        return HttpRequest.newBuilder(URI.create(host.scheme() + "://" + host.value() + canonicalUri))
                 .method(method, HttpRequest.BodyPublishers.noBody())
                 .header("x-amz-content-sha256", EMPTY_SHA256)
                 .header("x-amz-date", amzDate)
@@ -225,17 +225,19 @@ public class S3ObjectService {
 
     // ==================== SigV4 原语 ====================
 
-    private record Host(String value) {
+    private record Host(String value, String scheme) {
     }
 
     private Host hostOf(String endpoint) {
         URI uri = URI.create(endpoint);
         String host = uri.getHost();
         int port = uri.getPort();
+        // 预签名 URL 的 scheme 跟随 endpoint：自建 S3 兼容端点（MinIO/本地开发）可能是 http
+        String scheme = uri.getScheme() == null ? "https" : uri.getScheme();
         if (port > 0 && port != 443) {
-            return new Host(host + ":" + port);
+            return new Host(host + ":" + port, scheme);
         }
-        return new Host(host);
+        return new Host(host, scheme);
     }
 
     private byte[] signingKey(String secretKey, String day, String region) {

@@ -149,6 +149,14 @@
       "length": 64
     },
     {
+      "columnName": "uploader_ip",
+      "fieldName": "uploaderIp",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "登记来源IP(浏览器回执路径填充；worker回调路径不落)",
+      "length": 64
+    },
+    {
       "columnName": "create_time",
       "fieldName": "createTime",
       "fieldType": "LocalDateTime",

@@ -4,13 +4,16 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.astral.dao.entity.User;
 import com.astral.qt.common.QtException;
 import com.astral.qt.common.QtRestResp;
+import com.astral.qt.dto.QtAvatarTicketReqDto;
 import com.astral.qt.dto.QtChangePwByEmailDto;
+import com.astral.qt.dto.QtCoverTicketReqDto;
 import com.astral.qt.dto.QtLikePlaylistActionDto;
 import com.astral.qt.dto.QtLikeSongActionDto;
 import com.astral.qt.dto.QtLoginDto;
 import com.astral.qt.dto.QtRegisterDto;
 import com.astral.qt.dto.QtSendEmailDto;
 import com.astral.qt.dto.QtUpdateUserDto;
+import com.astral.qt.dto.QtUploadCompleteReqDto;
 import com.astral.qt.dto.QtUserDakaDto;
 import com.astral.qt.dto.QtUploadLikeListDto;
 import com.astral.qt.dto.vo.QtDakaDaysAndCodeVo;
@@ -19,9 +22,12 @@ import com.astral.qt.dto.vo.QtLikeChangesVo;
 import com.astral.qt.dto.vo.QtLikeListVo;
 import com.astral.qt.dto.vo.QtLikePageVo;
 import com.astral.qt.dto.vo.QtLikeSeqVo;
+import com.astral.qt.dto.vo.QtUploadCompleteVo;
+import com.astral.qt.dto.vo.QtUploadTicketVo;
 import com.astral.qt.dto.vo.QtUserInfoVo;
 import com.astral.qt.service.QtDakaService;
 import com.astral.qt.service.QtLikeService;
+import com.astral.qt.service.QtMediaService;
 import com.astral.qt.service.QtUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -55,6 +61,9 @@ public class QtAppUserController {
 
     @Resource
     private QtLikeService likeService;
+
+    @Resource
+    private QtMediaService mediaService;
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")
@@ -120,6 +129,54 @@ public class QtAppUserController {
     @PostMapping("/upload")
     public QtRestResp<QtDataVo<String>> upload(@RequestParam("avatar") MultipartFile file) {
         return QtRestResp.success(userService.upload(file));
+    }
+
+    // ==================== 媒体直传（UPDATE_DESIGN.md §5，文件不经过 Astral 服务器） ====================
+
+    @Operation(summary = "头像上传取直传凭证（仅修改时可用；每日次数由文件夹策略限制）")
+    @PostMapping("/avatar/ticket")
+    public QtRestResp<QtUploadTicketVo> avatarTicket(@RequestHeader(value = "satoken", required = false) String satoken,
+                                                     @Valid @RequestBody QtAvatarTicketReqDto dto) {
+        return QtRestResp.success(mediaService.avatarTicket(
+                currentUserId(satoken), dto.getFileName(), dto.getContentType(), dto.getSizeBytes()));
+    }
+
+    @Operation(summary = "头像直传完成回执：核对登记后直写 sys_user.avatar")
+    @PostMapping("/avatar/complete")
+    public QtRestResp<QtUploadCompleteVo> avatarComplete(@RequestHeader(value = "satoken", required = false) String satoken,
+                                                         @Valid @RequestBody QtUploadCompleteReqDto dto,
+                                                         jakarta.servlet.http.HttpServletRequest request) {
+        return QtRestResp.success(mediaService.avatarComplete(currentUserId(satoken), dto.getUploadId(), request));
+    }
+
+    @Operation(summary = "歌单封面上传取直传凭证（仅修改自己收藏的歌单；每日全部歌单合计限次）")
+    @PostMapping("/like/playlist/{pid}/cover/ticket")
+    public QtRestResp<QtUploadTicketVo> coverTicket(@RequestHeader(value = "satoken", required = false) String satoken,
+                                                    @PathVariable String pid,
+                                                    @Valid @RequestBody QtCoverTicketReqDto dto) {
+        return QtRestResp.success(mediaService.coverTicket(
+                currentUserId(satoken), pid, dto.getPlatform(),
+                dto.getFileName(), dto.getContentType(), dto.getSizeBytes()));
+    }
+
+    @Operation(summary = "歌单封面直传完成回执：核对登记后直写 qt_like_playlist.pic_url")
+    @PostMapping("/like/playlist/{pid}/cover/complete")
+    public QtRestResp<QtUploadCompleteVo> coverComplete(@RequestHeader(value = "satoken", required = false) String satoken,
+                                                        @PathVariable String pid,
+                                                        @RequestParam("platform") String platform,
+                                                        @Valid @RequestBody QtUploadCompleteReqDto dto,
+                                                        jakarta.servlet.http.HttpServletRequest request) {
+        return QtRestResp.success(mediaService.coverComplete(
+                currentUserId(satoken), pid, platform, dto.getUploadId(), request));
+    }
+
+    @Operation(summary = "取消自定义歌单封面（恢复默认展示，不消耗每日次数）")
+    @DeleteMapping("/like/playlist/{pid}/cover")
+    public QtRestResp<Void> coverClear(@RequestHeader(value = "satoken", required = false) String satoken,
+                                       @PathVariable String pid,
+                                       @RequestParam("platform") String platform) {
+        mediaService.coverClear(currentUserId(satoken), pid, platform);
+        return QtRestResp.success();
     }
 
     @Operation(summary = "更新用户信息")

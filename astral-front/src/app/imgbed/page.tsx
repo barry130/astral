@@ -19,6 +19,7 @@ import {
   InboxOutlined,
   CopyOutlined,
   DeleteOutlined,
+  FileOutlined,
   LinkOutlined,
   HomeOutlined,
   PictureOutlined,
@@ -28,7 +29,7 @@ import { storageApi, MyStorageFolder, StorageFile } from '@/api/storage';
 
 /**
  * 图床（用户侧，路由 /imgbed）
- * 浏览授权给自己的文件夹、直传图片到存储 Provider、复制外链。
+ * 浏览授权给自己的文件夹、直传文件到存储 Provider、复制外链。
  * 文件正文不经过 Astral：先换取上传凭证，再直传 Worker / 对象存储，最后回执登记。
  */
 
@@ -41,8 +42,8 @@ function hasPerm(myPermissions: string | undefined, perm: string): boolean {
   return myPermissions.split(',').map((p) => p.trim().toUpperCase()).includes(perm);
 }
 
-/** 单个图片卡片：按需换取访问 URL（PUBLIC 走永久链接，私有走短时签名链接） */
-function ImageCard({
+/** 单个文件卡片：按需换取访问 URL（PUBLIC 走永久链接，私有走短时签名链接） */
+function FileCard({
   file,
   canUpdate,
   canDelete,
@@ -56,6 +57,7 @@ function ImageCard({
   const [url, setUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const isImage = !!file.contentType?.startsWith('image/');
 
   const loadUrl = useCallback(async () => {
     if (!file.publicId) return;
@@ -122,6 +124,8 @@ function ImageCard({
       <div className="imgbed-thumb">
         {loading ? (
           <Spin />
+        ) : !isImage ? (
+          <FileOutlined style={{ fontSize: 28, color: 'var(--color-text-tertiary)' }} />
         ) : url ? (
           <Image src={url} alt={file.originalName} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
         ) : (
@@ -148,7 +152,7 @@ function ImageCard({
           size="small"
           icon={<CopyOutlined />}
           disabled={!url}
-          onClick={() => copy(`![${file.originalName || 'image'}](${url})`, 'Markdown 已复制')}
+          onClick={() => copy(isImage ? `![${file.originalName || 'image'}](${url})` : `[${file.originalName || 'file'}](${url})`, 'Markdown 已复制')}
         >
           Markdown
         </Button>
@@ -163,7 +167,7 @@ function ImageCard({
           />
         )}
         {canDelete && (
-          <Popconfirm title="确定删除这张图片？" onConfirm={remove} okText="删除" cancelText="取消">
+          <Popconfirm title="确定删除这个文件？" onConfirm={remove} okText="删除" cancelText="取消">
             <Button size="small" danger icon={<DeleteOutlined />} loading={busy} />
           </Popconfirm>
         )}
@@ -365,14 +369,13 @@ export default function ImageBedPage() {
               </div>
               <div className="imgbed-toolbar-right">
                 <span className="imgbed-hint">
-                  {canUpload ? '支持拖拽 / 点击上传图片' : '当前文件夹无上传权限'}
+                  {canUpload ? '支持拖拽 / 点击上传文件（不限类型）' : '当前文件夹无上传权限'}
                 </span>
               </div>
             </div>
 
             <Upload.Dragger
               multiple
-              accept="image/*"
               showUploadList={false}
               disabled={!canUpload || uploading}
               customRequest={customUploadRequest}
@@ -382,13 +385,13 @@ export default function ImageBedPage() {
                 <InboxOutlined />
               </p>
               <p className="ant-upload-text">
-                {uploading ? '上传中…' : '点击或拖拽图片到此区域上传'}
+                {uploading ? '上传中…' : '点击或拖拽文件到此区域上传'}
               </p>
               <p className="ant-upload-hint">文件直传存储服务，不经过应用服务器</p>
             </Upload.Dragger>
 
             <div className="imgbed-list-head">
-              <span>共 {total} 张图片</span>
+              <span>共 {total} 个文件</span>
               <Button size="small" onClick={() => folderId != null && loadFiles(folderId, page)}>
                 刷新
               </Button>
@@ -399,11 +402,11 @@ export default function ImageBedPage() {
                 <Spin />
               </div>
             ) : files.length === 0 ? (
-              <Empty description="该文件夹还没有图片" style={{ padding: 60 }} />
+              <Empty description="该文件夹还没有文件" style={{ padding: 60 }} />
             ) : (
               <div className="imgbed-grid">
                 {files.map((f) => (
-                  <ImageCard
+                  <FileCard
                     key={f.publicId || f.id}
                     file={f}
                     canUpdate={canUpdate}

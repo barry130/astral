@@ -36,10 +36,12 @@ public class StorageWorkerController {
 
     /**
      * 上传结果回调：Worker 完成 sendDocument 后登记元数据（幂等，uploadId 唯一）。
+     * 登记后按文件夹策略 verifyContent 执行内容验证（失败删对象置 FAILED 并报错）。
      */
     @PostMapping("/worker/upload-callback")
     public Result<WorkerCallbackResp> uploadCallback(@RequestBody StorageDtos.WorkerCallbackReq req) {
         StorageFileEntity file = fileService.registerFromCallback(req);
+        fileService.verifyContentAfterRegistration(file.getPublicId());
         return Result.success(new WorkerCallbackResp(file.getPublicId(), file.getStatus()));
     }
 

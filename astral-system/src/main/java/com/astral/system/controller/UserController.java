@@ -1,7 +1,6 @@
 package com.astral.system.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
-import cn.hutool.crypto.digest.BCrypt;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.User;
 import com.astral.dao.entity.UserRole;
@@ -215,7 +214,9 @@ public class UserController {
         if (user == null) {
             return Result.error("用户不存在");
         }
-        user.setPassword(BCrypt.hashpw(password));
+        // 传明文交给 UserServiceImpl.updateById 统一 BCrypt 一次：这里再 hashpw 会被
+        // updateById 对非空 password 再哈希，落库成 BCrypt(BCrypt(明文))，登录 checkpw 必败
+        user.setPassword(password);
         user.setPwdUpdateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
         userService.updateById(user);

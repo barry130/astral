@@ -26,10 +26,13 @@ public final class StorageDtos {
 
     // ==================== 文件夹与授权 ====================
 
-    public record FolderCreateReq(Long parentId, String folderName, Long configId, String visibility) {
+    /** policy：上传策略对象（前端结构化提交，服务端归一化落 JSON；null=不改动，空对象=清除） */
+    public record FolderCreateReq(Long parentId, String folderName, Long configId, String visibility,
+                                  Map<String, Object> policy) {
     }
 
-    public record FolderUpdateReq(String folderName, String visibility, String status, Long configId) {
+    public record FolderUpdateReq(String folderName, String visibility, String status, Long configId,
+                                  Map<String, Object> policy) {
     }
 
     public record FolderPermRow(String subjectType, String subjectId, String permissions) {

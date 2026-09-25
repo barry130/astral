@@ -67,6 +67,9 @@ public class StorageFileEntity {
 
     private String uploaderId;
 
+    /** 登记来源 IP（浏览器回执路径填充；worker 回调路径为 worker 地址，不落） */
+    private String uploaderIp;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

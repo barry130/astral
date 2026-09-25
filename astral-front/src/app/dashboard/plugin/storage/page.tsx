@@ -2,16 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tabs,
+  Alert, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tabs,
   Tag, Tooltip, Upload, message,
 } from 'antd';
+import { ResizableTable } from '@/components/ResizableTable';
 import {
   CloudUploadOutlined, DeleteOutlined, ExperimentOutlined, PlusOutlined,
-  ReloadOutlined, StarOutlined, LinkOutlined,
+  ReloadOutlined, StarOutlined, LinkOutlined, EyeOutlined,
 } from '@ant-design/icons';
 import { storageApi } from '@/api/storage';
 import { fetchDictOptions, DictOption } from '@/api/dict';
-import type { StorageConfig, StorageFile, StorageFolder, StoragePageResult, StorageTask, StorageAudit, S3ProviderOptions } from '@/api/storage';
+import type { StorageConfig, StorageFile, StorageFolder, StoragePageResult, StorageTask, StorageAudit, S3ProviderOptions, FolderUploadPolicy } from '@/api/storage';
 
 function fmtBytes(bytes?: number): string {
   if (!bytes && bytes !== 0) return '-';
@@ -103,13 +104,35 @@ export default function StoragePage() {
     }).catch((e) => message.error(e.message));
   };
 
+  // 收集弹窗中的策略表单字段并序列化为后端 policy 对象：
+  // 启用 → 携带各字段（未填 = 不限制）；停用且为编辑 → 传空对象（后端清除策略）
+  const buildFolderPolicy = (values: any): FolderUploadPolicy | undefined => {
+    if (!values.policyEnabled) return folderModal.editing ? {} : undefined;
+    return {
+      requireLogin: values.policyRequireLogin ?? true,
+      minSizeBytes: values.policyMinSizeBytes || undefined,
+      maxSizeBytes: values.policyMaxSizeMb ? Math.round(values.policyMaxSizeMb * 1024 * 1024) : undefined,
+      allowedMimes: values.policyMimes?.length ? values.policyMimes : undefined,
+      allowedExtensions: values.policyExtensions?.length ? values.policyExtensions : undefined,
+      dailyUploadLimit: values.policyDailyLimit || undefined,
+      forceVisibility: values.policyForceVisibility || undefined,
+      verifyContent: values.policyVerifyContent || undefined,
+      maxPixels: values.policyMaxPixels || undefined,
+    };
+  };
+
   const submitFolder = async () => {
     const values = await folderForm.validateFields();
+    const payload = { ...values, policy: buildFolderPolicy(values) };
+    delete payload.policyEnabled;
+    ['policyRequireLogin', 'policyMinSizeBytes', 'policyMaxSizeMb', 'policyDailyLimit',
+      'policyMimes', 'policyExtensions', 'policyForceVisibility', 'policyVerifyContent',
+      'policyMaxPixels'].forEach((k) => delete payload[k]);
     try {
       if (folderModal.editing?.id) {
-        await storageApi.updateFolder(folderModal.editing.id, values);
+        await storageApi.updateFolder(folderModal.editing.id, payload);
       } else {
-        await storageApi.createFolder(values);
+        await storageApi.createFolder(payload);
       }
       message.success('已保存');
       setFolderModal({ open: false });
@@ -117,6 +140,29 @@ export default function StoragePage() {
     } catch (e: any) {
       message.error(e.message);
     }
+  };
+
+  // 打开文件夹弹窗；编辑时把 upload_policy JSON 回显到策略表单字段
+  const openFolderModal = (record?: StorageFolder) => {
+    setFolderModal({ open: true, editing: record });
+    if (!record) { folderForm.resetFields(); return; }
+    const echo: any = { ...record };
+    try {
+      if (record.uploadPolicy) {
+        const p = JSON.parse(record.uploadPolicy);
+        echo.policyEnabled = true;
+        echo.policyRequireLogin = p.requireLogin !== false;
+        echo.policyMinSizeBytes = p.minSizeBytes;
+        echo.policyMaxSizeMb = p.maxSizeBytes ? p.maxSizeBytes / (1024 * 1024) : undefined;
+        echo.policyDailyLimit = p.dailyUploadLimit;
+        echo.policyMimes = p.allowedMimes;
+        echo.policyExtensions = p.allowedExtensions;
+        echo.policyForceVisibility = p.forceVisibility;
+        echo.policyVerifyContent = p.verifyContent;
+        echo.policyMaxPixels = p.maxPixels;
+      }
+    } catch { /* 策略 JSON 非法时按未配置回显 */ }
+    folderForm.setFieldsValue(echo);
   };
 
   const openPermissions = async (folder: StorageFolder) => {
@@ -158,7 +204,7 @@ export default function StoragePage() {
       const res = await storageApi.downloadUrl(file.publicId!);
       if (res.code === 200) {
         await navigator.clipboard.writeText(res.data.url);
-        message.success(`下载地址已复制（${new Date(res.data.expiresAt * 1000).toLocaleTimeString()} 过期）`);
+        message.success(`短链已复制（${new Date(res.data.expiresAt * 1000).toLocaleTimeString()} 过期）`);
       }
     } catch (e: any) {
       message.error(e.message || '生成下载地址失败');
@@ -174,6 +220,19 @@ export default function StoragePage() {
       }
     } catch (e: any) {
       message.error(e.message || '生成永久链接失败');
+    }
+  };
+
+  // ==================== 图片预览（弹层；图片源用短链=短时签名下载地址） ====================
+  const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
+  const previewImage = async (file: StorageFile) => {
+    try {
+      const res = await storageApi.downloadUrl(file.publicId!);
+      if (res.code === 200) {
+        setPreview({ url: res.data.url, name: file.originalName || file.publicId || '图片预览' });
+      }
+    } catch (e: any) {
+      message.error(e.message || '获取预览地址失败');
     }
   };
 
@@ -419,6 +478,7 @@ export default function StoragePage() {
     fetchDictOptions([
       'storage_provider_type', 'storage_status', 'storage_file_status',
       'storage_task_status', 'storage_visibility', 'storage_permission',
+      'storage_verify_content',
     ]).then(setDict).catch(() => {});
   }, []);
 
@@ -514,13 +574,16 @@ export default function StoragePage() {
       <Tag color={v === 'PUBLIC' ? 'green' : 'blue'}>{dictLabel('storage_visibility', v)}</Tag>
     ) },
     { title: '所有者', width: 130, render: (_: any, r: StorageFolder) => `${r.ownerType}:${r.ownerId}` },
+    { title: '策略', dataIndex: 'uploadPolicy', width: 80, render: (v: string) => (
+      v ? <Tag color="purple">已配置</Tag> : <Tag>默认</Tag>
+    ) },
     { title: '状态', dataIndex: 'status', width: 90, render: (v: string) => statusTag(v) },
     {
       title: '操作', key: 'action', width: 260,
       render: (_: any, record: StorageFolder) => (
         <Space>
           <Button size="small" onClick={() => openPermissions(record)}>授权</Button>
-          <Button size="small" onClick={() => { setFolderModal({ open: true, editing: record }); folderForm.setFieldsValue(record); }}>编辑</Button>
+          <Button size="small" onClick={() => openFolderModal(record)}>编辑</Button>
           <Popconfirm title="确定删除该文件夹？" onConfirm={async () => {
             try { await storageApi.deleteFolder(record.id!); message.success('已删除'); loadFolders(); }
             catch (e: any) { message.error(e.message); }
@@ -543,15 +606,20 @@ export default function StoragePage() {
     { title: '状态', dataIndex: 'status', width: 110, render: (v: string) => fileStatusTag(v) },
     { title: '时间', dataIndex: 'createTime', width: 160, render: (v: string) => (v || '').replace('T', ' ').slice(0, 19) },
     {
-      title: '操作', key: 'action', width: 280,
+      title: '操作', key: 'action', width: 330,
       render: (_: any, record: StorageFile) => (
         <Space>
-          <Tooltip title="生成短时下载地址并复制">
-            <Button size="small" icon={<LinkOutlined />} onClick={() => copyDownloadUrl(record)}>地址</Button>
+          <Tooltip title="生成短时签名下载地址（短链）并复制">
+            <Button size="small" icon={<LinkOutlined />} onClick={() => copyDownloadUrl(record)}>短链</Button>
           </Tooltip>
           <Tooltip title="生成永久公开链接（仅公开文件；对象存储系需配置公开域名，Telegram 需重新部署 Worker）">
             <Button size="small" icon={<LinkOutlined />} onClick={() => copyPermanentUrl(record)}>永久</Button>
           </Tooltip>
+          {record.contentType?.startsWith('image/') && (
+            <Tooltip title="预览图片">
+              <Button size="small" icon={<EyeOutlined />} onClick={() => previewImage(record)}>预览</Button>
+            </Tooltip>
+          )}
           <Popconfirm title="删除后会移除远端对象（Telegram 为异步任务），确定？" onConfirm={async () => {
             try { await storageApi.deleteFile(record.publicId!); message.success('已进入删除流程'); loadFiles(); }
             catch (e: any) { message.error(e.message); }
@@ -580,6 +648,23 @@ export default function StoragePage() {
         message="Bot Token / Access Key 只进入对应存储端，不经过本系统；公开文件可生成永久直链，私有文件只发短时签名地址。"
       />
 
+      {/* 图片预览弹层：图片源为短链（短时签名下载地址），公开/私有均可用 */}
+      <Modal
+        open={!!preview}
+        footer={null}
+        onCancel={() => setPreview(null)}
+        title={preview?.name}
+        width={760}
+      >
+        {preview && (
+          <img
+            src={preview.url}
+            alt={preview.name}
+            style={{ maxWidth: '100%', maxHeight: '70vh', display: 'block', margin: '0 auto', objectFit: 'contain' }}
+          />
+        )}
+      </Modal>
+
       <Card>
         <Tabs
           items={[
@@ -606,10 +691,9 @@ export default function StoragePage() {
                     <Upload
                       customRequest={customUploadRequest}
                       showUploadList={false}
-                      accept="image/jpeg,image/png,image/webp,image/gif"
                     >
                       <Button type="primary" icon={<CloudUploadOutlined />} loading={uploading} disabled={!uploadFolderId}>
-                        上传图片
+                        上传文件
                       </Button>
                     </Upload>
                     <Button icon={<ReloadOutlined />} onClick={() => loadFiles()}>刷新</Button>
@@ -623,7 +707,7 @@ export default function StoragePage() {
               children: (
                 <div>
                   <div style={{ marginBottom: 12 }}>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => { setFolderModal({ open: true }); folderForm.resetFields(); }}>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => openFolderModal()}>
                       新建文件夹
                     </Button>
                   </div>
@@ -905,6 +989,69 @@ export default function StoragePage() {
               <Select allowClear options={configs.filter((c) => c.status === 'ENABLED').map((c) => ({ label: c.name, value: c.id! }))} />
             </Form.Item>
           )}
+          <Form.Item name="policyEnabled" label="上传策略" valuePropName="checked" initialValue={false}>
+            <Switch checkedChildren="启用" unCheckedChildren="停用" />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(a: any, b: any) => a.policyEnabled !== b.policyEnabled}>
+            {({ getFieldValue }) => getFieldValue('policyEnabled') ? (
+              <>
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  message="策略约束浏览器直传的全部环节（签发/存储/登记校验）；拥有管理员权限的用户上传时跳过策略限制。未填写的项表示不限制。"
+                />
+                <Form.Item name="policyRequireLogin" label="要求登录" valuePropName="checked" initialValue={true}>
+                  <Switch />
+                </Form.Item>
+                <Form.Item name="policyMaxSizeMb" label="单文件大小上限（MB）">
+                  <InputNumber min={0.01} max={20} step={0.5} style={{ width: '100%' }} />
+                </Form.Item>
+                <Form.Item name="policyMinSizeBytes" label="单文件大小下限（字节）">
+                  <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                </Form.Item>
+                <Form.Item name="policyDailyLimit" label="每用户每日上传次数上限">
+                  <InputNumber min={1} precision={0} style={{ width: '100%' }} />
+                </Form.Item>
+                <Form.Item name="policyMimes" label="允许的 MIME 类型（留空 = 不限制）">
+                  <Select
+                    mode="tags"
+                    allowClear
+                    tokenSeparators={[',']}
+                    placeholder="如 image/png"
+                    options={[
+                      { label: 'image/png', value: 'image/png' },
+                      { label: 'image/jpeg', value: 'image/jpeg' },
+                      { label: 'image/webp', value: 'image/webp' },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item name="policyExtensions" label="允许的扩展名（留空 = 不限制）">
+                  <Select
+                    mode="tags"
+                    allowClear
+                    tokenSeparators={[',']}
+                    placeholder="如 png"
+                    options={[
+                      { label: 'png', value: 'png' },
+                      { label: 'jpg', value: 'jpg' },
+                      { label: 'jpeg', value: 'jpeg' },
+                      { label: 'webp', value: 'webp' },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item name="policyForceVisibility" label="强制可见性（留空 = 沿用文件夹默认可见性）">
+                  <Select allowClear options={dict['storage_visibility'] || []} />
+                </Form.Item>
+                <Form.Item name="policyVerifyContent" label="登记后内容校验" initialValue="none">
+                  <Select allowClear options={dict['storage_verify_content'] || []} />
+                </Form.Item>
+                <Form.Item name="policyMaxPixels" label="图片最大像素数（仅全量校验时检查）">
+                  <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+                </Form.Item>
+              </>
+            ) : null}
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -964,7 +1111,8 @@ function PagedTable({ files, columns, onPage, rowKey }: {
   const plain = Array.isArray(files);
   const records: any[] = plain ? files : files.records || [];
   return (
-    <Table
+    <ResizableTable
+      resizeKey={`storage-${rowKey}`}
       rowKey={rowKey}
       columns={columns}
       dataSource={records}

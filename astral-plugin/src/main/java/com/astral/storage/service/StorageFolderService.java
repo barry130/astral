@@ -40,6 +40,7 @@ public class StorageFolderService {
     private final StorageConfigMapper configMapper;
     private final StorageFileMapper fileMapper;
     private final StorageAuditService auditService;
+    private final UploadPolicyService policyService;
 
     public List<StorageFolderEntity> listAll() {
         return folderMapper.selectList(new LambdaQueryWrapper<StorageFolderEntity>()
@@ -154,6 +155,8 @@ public class StorageFolderService {
         folder.setOwnerId(operator);
         folder.setVisibility(visibility);
         folder.setStatus(StorageFolderEntity.STATUS_ENABLED);
+        // 上传策略（UPDATE_DESIGN.md §3.3）：结构化对象归一化后落 JSON；null/空 = 不配置
+        folder.setUploadPolicy(policyService.normalize(req.policy()));
         folder.setCreateBy(operator);
         folder.setUpdateBy(operator);
         folderMapper.insert(folder);
@@ -195,6 +198,10 @@ public class StorageFolderService {
                 throw new BusinessException("STORAGE002");
             }
             folder.setStorageConfigId(req.configId());
+        }
+        // 上传策略（UPDATE_DESIGN.md §3.3）：仅当请求显式携带 policy 字段时才改动（null = 保持不变）
+        if (req.policy() != null) {
+            folder.setUploadPolicy(policyService.normalize(req.policy()));
         }
         folder.setUpdateBy(operator);
         folderMapper.updateById(folder);

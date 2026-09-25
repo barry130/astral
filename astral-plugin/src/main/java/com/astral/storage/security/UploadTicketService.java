@@ -8,6 +8,7 @@ import com.astral.storage.service.CosApiService;
 import com.astral.storage.service.OssApiService;
 import com.astral.storage.service.ProviderSupport;
 import com.astral.storage.service.S3ObjectService;
+import com.astral.storage.service.UploadPolicyService;
 import com.astral.storage.service.UpyunApiService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,6 +21,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -49,6 +51,7 @@ public class UploadTicketService {
     private final CosApiService cosApiService;
     private final OssApiService ossApiService;
     private final UpyunApiService upyunApiService;
+    private final UploadPolicyService policyService;
 
     public UploadTicketService(StorageProperties properties,
                                StringRedisTemplate stringRedisTemplate,
@@ -56,7 +59,8 @@ public class UploadTicketService {
                                S3ObjectService s3ObjectService,
                                CosApiService cosApiService,
                                OssApiService ossApiService,
-                               UpyunApiService upyunApiService) {
+                               UpyunApiService upyunApiService,
+                               UploadPolicyService policyService) {
         this.properties = properties;
         this.stringRedisTemplate = stringRedisTemplate;
         this.objectMapper = objectMapper;
@@ -64,6 +68,7 @@ public class UploadTicketService {
         this.cosApiService = cosApiService;
         this.ossApiService = ossApiService;
         this.upyunApiService = upyunApiService;
+        this.policyService = policyService;
     }
 
     /** 上传凭证签发结果（formFields 仅 UPYUN 表单直传非空） */
@@ -81,23 +86,44 @@ public class UploadTicketService {
     }
 
     /**
-     * 签发上传凭证。调用方需已完成身份认证与文件夹 UPLOAD 权限校验。
+     * 签发上传凭证。调用方需已完成身份认证与文件夹 UPLOAD 权限校验（或持有管理员豁免）。
      * <p>TELEGRAM：返回 Worker 直传地址（POST multipart，formField=file）；
      * S3 系（R2/S3/七牛）/COS/OSS：返回预签名 PUT 地址，浏览器直传对象存储；
      * UPYUN：返回表单 API 地址 + policy/authorization 附加字段（POST multipart，formField=file）。</p>
+     * <p>文件夹策略（UPDATE_DESIGN.md §3.3）：requireLogin / maxSizeBytes / allowedMimes /
+     * dailyUploadLimit 在此强制执行；adminExempt=true（持全权管理员）跳过文件夹策略与配额，
+     * 仅保留插件全局上限。</p>
      */
     public IssuedTicket issue(StorageConfigEntity config, StorageFolderEntity folder,
                               String uploaderId, String fileName, String contentType, long sizeBytes) {
+        return issue(config, folder, uploaderId, fileName, contentType, sizeBytes, false);
+    }
+
+    public IssuedTicket issue(StorageConfigEntity config, StorageFolderEntity folder,
+                              String uploaderId, String fileName, String contentType, long sizeBytes,
+                              boolean adminExempt) {
+        UploadPolicyService.PolicySpec policy = policyService.resolve(folder);
         String ticketKey = requireKey();
-        long maxSize = effectiveMaxSize(config);
+        if (policy.requireLogin() && (uploaderId == null || uploaderId.isBlank())) {
+            throw new BusinessException("STORAGE013");
+        }
         if (sizeBytes <= 0) {
             throw new BusinessException("STORAGE006");
         }
+        long maxSize = effectiveMaxSize(config, policy);
         if (sizeBytes > maxSize) {
+            throw adminExempt ? new BusinessException("STORAGE006") : new BusinessException("STORAGE030");
+        }
+        if (policy.minSizeBytes() > 0 && sizeBytes < policy.minSizeBytes() && !adminExempt) {
             throw new BusinessException("STORAGE006");
         }
-        if (!isMimeAllowed(contentType)) {
-            throw new BusinessException("STORAGE005", contentType);
+        if (!isMimeAllowedForFolder(contentType, policy)) {
+            throw adminExempt
+                    ? new BusinessException("STORAGE005", contentType)
+                    : new BusinessException("STORAGE031", contentType);
+        }
+        if (!adminExempt) {
+            policyService.checkDailyQuota(folder, policy, uploaderId);
         }
 
         String providerType = config.getProviderType() == null || config.getProviderType().isBlank()
@@ -152,7 +178,7 @@ public class UploadTicketService {
         }
 
         String payload = buildPayload(config, folder, uploadId, uploaderId, fileName, contentType, exp, nonce,
-                providerType, publicId, objectKey);
+                providerType, publicId, objectKey, policy, maxSize, adminExempt);
         String payloadB64 = StorageHmac.b64UrlEncode(payload.getBytes(StandardCharsets.UTF_8));
         String signature = StorageHmac.sign(ticketKey.getBytes(StandardCharsets.UTF_8), payloadB64);
         ticket = payloadB64 + "." + signature;
@@ -195,13 +221,9 @@ public class UploadTicketService {
             if (sizeBytes > maxSize) {
                 throw new BusinessException("STORAGE006");
             }
-            // MIME 授权以票据签发时校验过的 mime 为准；回调 contentType 只是 Telegram/存储方
-            // 回报的元数据（Telegram 会把不认识的类型归一为 application/octet-stream，
-            // 如 .js/.json 文档），不参与白名单判定，存储时原样保留（octet-stream 下载即纯下载）
-            String mime = node.path("mime").asText(contentType);
-            if (!isMimeAllowed(mime)) {
-                throw new BusinessException("STORAGE005", mime);
-            }
+            // MIME 以票据签发时校验过的值为准（票据 payload 由服务端写入、HMAC+Redis 保护）：
+            // 签发时已按「文件夹策略优先、回落全局」判定，这里不再用全局白名单复查，
+            // 避免文件夹允许但全局未配置的类型被误拒（UPDATE_DESIGN.md §3.3）
             return node;
         } catch (BusinessException e) {
             throw e;
@@ -218,9 +240,17 @@ public class UploadTicketService {
 
     /** 实际生效的单文件上限：配置值与插件全局值取小 */
     public long effectiveMaxSize(StorageConfigEntity config) {
+        return effectiveMaxSize(config, null);
+    }
+
+    /** 实际生效的单文件上限：插件全局、存储配置、文件夹策略三者取小（只能收紧不能放宽） */
+    public long effectiveMaxSize(StorageConfigEntity config, UploadPolicyService.PolicySpec policy) {
         long limit = properties.getMaxFileSizeBytes();
         if (config != null && config.getMaxFileSize() != null && config.getMaxFileSize() > 0) {
             limit = Math.min(limit, config.getMaxFileSize());
+        }
+        if (policy != null && policy.maxSizeBytes() != null && policy.maxSizeBytes() > 0) {
+            limit = Math.min(limit, policy.maxSizeBytes());
         }
         return limit;
     }
@@ -231,6 +261,20 @@ public class UploadTicketService {
             "application/x-javascript", "text/javascript");
 
     public boolean isMimeAllowed(String contentType) {
+        return isMimeAllowedForFolder(contentType, null);
+    }
+
+    /**
+     * MIME 白名单判定（UPDATE_DESIGN.md §3.3）：文件夹策略 allowedMimes 优先，
+     * 未配置时回落插件全局 allowed-mime-types（空 = 不限制）。
+     */
+    public boolean isMimeAllowedForFolder(String contentType, UploadPolicyService.PolicySpec policy) {
+        List<String> allowlist = policy != null && policy.allowedMimes() != null && !policy.allowedMimes().isEmpty()
+                ? policy.allowedMimes()
+                : properties.getAllowedMimeTypes();
+        if (allowlist == null || allowlist.isEmpty()) {
+            return true;
+        }
         if (contentType == null || contentType.isBlank()) {
             return false;
         }
@@ -239,28 +283,35 @@ public class UploadTicketService {
             mime = mime.substring(0, mime.indexOf(';')).trim();
         }
         mime = MIME_ALIASES.getOrDefault(mime, mime);
-        return properties.getAllowedMimeTypes().stream().anyMatch(mime::equals);
+        return allowlist.stream().anyMatch(mime::equals);
     }
 
     private String buildPayload(StorageConfigEntity config, StorageFolderEntity folder, String uploadId,
                                 String uploaderId, String fileName, String contentType,
-                                long exp, String nonce, String providerType, String publicId, String objectKey) {
+                                long exp, String nonce, String providerType, String publicId, String objectKey,
+                                UploadPolicyService.PolicySpec policy, long maxSize, boolean adminExempt) {
         try {
             return objectMapper.writeValueAsString(new TicketPayload(
                     1, uploadId, config.getId(), folder.getId(), config.getChatId(),
-                    effectiveMaxSize(config), contentType.toLowerCase(), uploaderId,
+                    maxSize, contentType.toLowerCase(), uploaderId,
                     Instant.now().getEpochSecond(), exp, nonce,
-                    providerType, fileName, publicId, objectKey));
+                    providerType, fileName, publicId, objectKey,
+                    policy.verifyContent(), adminExempt));
         } catch (Exception e) {
             throw new IllegalStateException("上传凭证序列化失败", e);
         }
     }
 
-    /** 凭证负载（与 Worker 侧字段一致；Worker 只读不改；后四项仅 R2/S3 使用） */
+    /**
+     * 凭证负载（与 Worker 侧字段一致；Worker 只读不改；publicId/objectKey 仅对象存储家族使用，
+     * 末尾两项为文件夹策略扩展：verifyContent 供登记后内容验证读取，adminExempt 供复查豁免）。
+     * Worker 只识别自己关心的字段，新增字段对 Worker 透明。
+     */
     record TicketPayload(int v, String uploadId, Long configId, Long folderId, String chatId,
                          long maxSize, String mime, String uploaderId,
                          long iat, long exp, String nonce,
-                         String providerType, String fileName, String publicId, String objectKey) {
+                         String providerType, String fileName, String publicId, String objectKey,
+                         String verifyContent, boolean adminExempt) {
     }
 
     /** 对象键安全段：仅保留文件名字符，防止路径穿越与编码歧义 */

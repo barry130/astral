@@ -28,8 +28,8 @@ public class StorageProperties {
     /** Worker HMAC 时间戳允许窗口（秒） */
     private int originTimestampWindowSeconds = 300;
 
-    /** 允许上传的 MIME 白名单（MVP 禁止 SVG/HTML） */
-    private List<String> allowedMimeTypes = List.of("image/jpeg", "image/png", "image/webp", "image/gif");
+    /** 允许上传的 MIME 白名单：空列表 = 不限制文件类型 */
+    private List<String> allowedMimeTypes = List.of();
 
     /** 上传凭证 HMAC 密钥（Astral 与 Worker 共享） */
     private String uploadTicketKey;

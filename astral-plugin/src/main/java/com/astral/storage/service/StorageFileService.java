@@ -51,6 +51,7 @@ public class StorageFileService {
     private final StorageFolderService folderService;
     private final StorageAuditService auditService;
     private final UploadTicketService ticketService;
+    private final UploadPolicyService policyService;
     private final StorageUrlSigner urlSigner;
     private final S3ObjectService s3ObjectService;
     private final CosApiService cosApiService;
@@ -58,6 +59,8 @@ public class StorageFileService {
     private final UpyunApiService upyunApiService;
     private final StorageProperties properties;
     private final ObjectMapper objectMapper;
+
+    private static final java.net.http.HttpClient VERIFY_HTTP_CLIENT = java.net.http.HttpClient.newHttpClient();
 
     // ==================== 查询 ====================
 
@@ -98,6 +101,24 @@ public class StorageFileService {
         return file;
     }
 
+    /** 按上传凭证 ID 查文件（Qt 业务 complete 阶段使用）：上传者本人或持文件夹 READ 权限 */
+    public StorageFileEntity getByUploadId(String uploadId, String userId) {
+        if (uploadId == null || uploadId.isBlank()) {
+            throw new BusinessException("STORAGE008");
+        }
+        StorageFileEntity file = fileMapper.selectOne(new LambdaQueryWrapper<StorageFileEntity>()
+                .eq(StorageFileEntity::getUploadId, uploadId)
+                .last("LIMIT 1"));
+        if (file == null || StorageFileEntity.STATUS_DELETED.equals(file.getStatus())) {
+            throw new BusinessException("STORAGE016");
+        }
+        boolean uploader = userId != null && userId.equals(file.getUploaderId());
+        if (!uploader) {
+            folderService.requirePermission(userId, file.getFolderId(), "READ");
+        }
+        return file;
+    }
+
     // ==================== 上传回调登记 ====================
 
     /**
@@ -126,6 +147,12 @@ public class StorageFileService {
 
         long folderId = ticketService.folderIdOf(ticket);
         StorageFolderEntity folder = folderService.getById(folderId);
+        UploadPolicyService.PolicySpec policy = policyService.resolve(folder);
+        boolean adminExempt = ticket.path("adminExempt").asBoolean(false);
+        if (!adminExempt) {
+            // 登记时配额复查（签发与登记之间的窗口；FAILED 行不计入，见 UploadPolicyService）
+            policyService.checkDailyQuota(folder, policy, ticket.path("uploaderId").asText(null));
+        }
         String publicId = UUID.randomUUID().toString().replace("-", "");
         StorageFileEntity file = new StorageFileEntity();
         file.setPublicId(publicId);
@@ -138,7 +165,7 @@ public class StorageFileService {
         file.setContentType(normalizeMime(req.contentType()));
         file.setSizeBytes(req.sizeBytes());
         file.setContentVersion(1L);
-        file.setVisibility(folder.getVisibility());
+        file.setVisibility(policy.forceVisibility() != null ? policy.forceVisibility() : folder.getVisibility());
         file.setStatus(StorageFileEntity.STATUS_AVAILABLE);
         file.setUploaderType("WORKER");
         file.setUploaderId(ticket.path("uploaderId").asText(null));
@@ -153,9 +180,11 @@ public class StorageFileService {
     /**
      * 浏览器直传对象存储完成后的回执登记：校验凭证上下文与操作者、HEAD 对象确认真实存在，
      * 然后以签发凭证时生成的 publicId/对象键落库（幂等，upload_id 唯一）。
+     *
+     * @param clientIp 登记来源 IP（X-Forwarded-For 第一段 → X-Real-IP → remoteAddr），仅本路径落库
      */
     @Transactional(rollbackFor = Exception.class)
-    public StorageFileEntity registerFromBrowser(String uploadId, String userId) {
+    public StorageFileEntity registerFromBrowser(String uploadId, String userId, String clientIp) {
         if (uploadId == null || uploadId.isBlank()) {
             throw new BusinessException("STORAGE008");
         }
@@ -177,6 +206,12 @@ public class StorageFileService {
         }
         long folderId = ticketService.folderIdOf(ticket);
         StorageFolderEntity folder = folderService.getById(folderId);
+        UploadPolicyService.PolicySpec policy = policyService.resolve(folder);
+        boolean adminExempt = ticket.path("adminExempt").asBoolean(false);
+        if (!adminExempt) {
+            // 登记时配额复查（签发与登记之间的窗口；FAILED 行不计入，见 UploadPolicyService）
+            policyService.checkDailyQuota(folder, policy, ticketUploader);
+        }
         StorageConfigEntity config = configMapper.selectById(ticket.path("configId").asLong());
         if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
             throw new BusinessException("STORAGE002");
@@ -209,10 +244,11 @@ public class StorageFileService {
         file.setContentType(normalizeMime(ticket.path("mime").asText("application/octet-stream")));
         file.setSizeBytes(sizeBytes);
         file.setContentVersion(1L);
-        file.setVisibility(folder.getVisibility());
+        file.setVisibility(policy.forceVisibility() != null ? policy.forceVisibility() : folder.getVisibility());
         file.setStatus(StorageFileEntity.STATUS_AVAILABLE);
         file.setUploaderType("BROWSER");
         file.setUploaderId(ticketUploader);
+        file.setUploaderIp(clientIp);
         fileMapper.insert(file);
         auditService.record("FILE_UPLOAD", "BROWSER", uploadId, "FILE", file.getPublicId(),
                 file.getOriginalName() + " " + sizeBytes + "B provider=" + providerType, "OK");
@@ -221,9 +257,151 @@ public class StorageFileService {
         return file;
     }
 
+    // ==================== 登记后内容验证（UPDATE_DESIGN.md §3.3 ③） ====================
+
+    /**
+     * 按文件夹策略 verifyContent 对已登记文件做内容验证（magic / full）。
+     * <p>必须在登记事务提交后调用（本方法含网络 I/O，不进事务）；
+     * 验证失败：删除远端对象（TELEGRAM 走删除任务）+ 登记行置 FAILED + 抛 STORAGE033，
+     * FAILED 行不消耗每日配额（UploadPolicyService 计数排除）。</p>
+     */
+    public void verifyContentAfterRegistration(String publicId) {
+        StorageFileEntity file = getByPublicId(publicId);
+        if (!StorageFileEntity.STATUS_AVAILABLE.equals(file.getStatus())) {
+            return;
+        }
+        UploadPolicyService.PolicySpec policy = policyService.resolve(folderService.getById(file.getFolderId()));
+        String level = policy.verifyContent();
+        if (UploadPolicyService.VERIFY_NONE.equals(level)) {
+            return;
+        }
+        try {
+            boolean full = UploadPolicyService.VERIFY_FULL.equals(level);
+            byte[] head = fetchContentBytes(file, full ? -1 : 4096);
+            String actual = detectImageMime(head);
+            String declared = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
+            if (actual == null) {
+                // 非图片内容不在内置 magic 识别范围内：仅当登记类型声称是图片时才判失败
+                if (declared.startsWith("image/")) {
+                    throw new BusinessException("STORAGE033", "内容与图片类型不符");
+                }
+                return;
+            }
+            if (!actual.equals(declared)) {
+                throw new BusinessException("STORAGE033", "实际内容 " + actual + " 与登记类型 " + declared + " 不符");
+            }
+            if (full && policy.maxPixels() != null
+                    && ("image/png".equals(actual) || "image/jpeg".equals(actual))) {
+                // WebP 无 JDK 内置解码器，magic 已核对，像素校验跳过（PNG/JPEG 才做解码）
+                java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(head));
+                if (image != null
+                        && (long) image.getWidth() * image.getHeight() > policy.maxPixels()) {
+                    throw new BusinessException("STORAGE033", "图片像素数超过上限");
+                }
+            }
+        } catch (BusinessException e) {
+            markVerificationFailed(file);
+            throw e;
+        } catch (Exception e) {
+            log.warn("[Storage] 内容验证失败: publicId={}, {}", publicId, e.getMessage());
+            markVerificationFailed(file);
+            throw new BusinessException("STORAGE033", "内容下载或解码失败");
+        }
+    }
+
+    /** 验证失败处置：删远端对象（TELEGRAM 转删除任务）+ 登记行置 FAILED */
+    private void markVerificationFailed(StorageFileEntity file) {
+        try {
+            String providerType = providerTypeOf(file);
+            if (ProviderSupport.isServerManagedFamily(providerType)) {
+                StorageConfigEntity config = configMapper.selectById(file.getStorageConfigId());
+                if (config != null) {
+                    deleteObjectByProvider(providerType, config, locatorKey(file));
+                }
+            } else {
+                // TELEGRAM：远端删除走既有任务机制
+                StorageTaskEntity task = new StorageTaskEntity();
+                task.setTaskType(StorageTaskEntity.TYPE_DELETE_REMOTE);
+                task.setFileId(file.getId());
+                task.setPayloadJson(file.getProviderLocatorJson() == null ? "{}" : file.getProviderLocatorJson());
+                task.setRetryCount(0);
+                task.setStatus(StorageTaskEntity.STATUS_PENDING);
+                taskMapper.insert(task);
+            }
+        } catch (Exception e) {
+            log.warn("[Storage] 验证失败后的远端对象清理异常: publicId={}, {}", file.getPublicId(), e.getMessage());
+        }
+        file.setStatus(StorageFileEntity.STATUS_FAILED);
+        file.setUpdateTime(LocalDateTime.now());
+        fileMapper.updateById(file);
+    }
+
+    /** 拉取文件内容（limit>0 时按 Range 只取前缀；-1 全量，大小已被登记 HEAD 收口） */
+    private byte[] fetchContentBytes(StorageFileEntity file, int limit) throws Exception {
+        StorageConfigEntity config = configMapper.selectById(file.getStorageConfigId());
+        if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
+            throw new BusinessException("STORAGE002");
+        }
+        String providerType = providerTypeOf(file);
+        String url;
+        if (StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)) {
+            url = urlSigner.issue(config, file).url();
+        } else if (ProviderSupport.isS3Family(providerType)) {
+            url = s3ObjectService.presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds()).url();
+        } else if (StorageConfigEntity.PROVIDER_COS.equals(providerType)) {
+            url = cosApiService.presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds()).url();
+        } else if (StorageConfigEntity.PROVIDER_OSS.equals(providerType)) {
+            url = ossApiService.presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds()).url();
+        } else if (StorageConfigEntity.PROVIDER_UPYUN.equals(providerType)) {
+            url = upyunApiService.downloadUrl(config, locatorKey(file), properties.getDownloadUrlTtlSeconds()).url();
+        } else {
+            throw new BusinessException("STORAGE019", providerType);
+        }
+        var builder = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).GET();
+        if (limit > 0) {
+            builder.header("Range", "bytes=0-" + (limit - 1));
+        }
+        var response = VERIFY_HTTP_CLIENT.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());
+        try (var in = response.body()) {
+            return in.readNBytes(limit > 0 ? limit : Integer.MAX_VALUE);
+        }
+    }
+
+    /** 内置图片 magic 识别（PNG/JPEG/GIF/WebP）；非图片返回 null */
+    private String detectImageMime(byte[] head) {
+        if (head == null || head.length < 12) {
+            return null;
+        }
+        if ((head[0] & 0xFF) == 0x89 && head[1] == 'P' && head[2] == 'N' && head[3] == 'G') {
+            return "image/png";
+        }
+        if ((head[0] & 0xFF) == 0xFF && (head[1] & 0xFF) == 0xD8 && (head[2] & 0xFF) == 0xFF) {
+            return "image/jpeg";
+        }
+        if (head[0] == 'G' && head[1] == 'I' && head[2] == 'F') {
+            return "image/gif";
+        }
+        if (head[0] == 'R' && head[1] == 'I' && head[2] == 'F' && head[3] == 'F'
+                && head[8] == 'W' && head[9] == 'E' && head[10] == 'B' && head[11] == 'P') {
+            return "image/webp";
+        }
+        return null;
+    }
+
     // ==================== 下载 ====================
 
+    /** 下载 URL（无豁免；供 APP 上传者完成类调用，见 QtMediaService） */
     public StorageDtos.DownloadUrlView issueDownloadUrl(String publicId, String userId) {
+        return issueDownloadUrl(publicId, userId, false);
+    }
+
+    /**
+     * 下载 URL。
+     * @param adminExempt 持全权管理员豁免（对齐 StorageUserController.uploadTicket 先例）：
+     *                   跳过文件夹 READ 权限门，否则 qt-media/avatar 等用户文件夹对 admin
+     *                   无授权行时会报 STORAGE013。APP 上传者 / 常规用户传 false。
+     */
+    public StorageDtos.DownloadUrlView issueDownloadUrl(String publicId, String userId, boolean adminExempt) {
         StorageFileEntity file = getByPublicId(publicId);
         if (StorageFileEntity.STATUS_DELETED.equals(file.getStatus())) {
             throw new BusinessException("STORAGE021");
@@ -231,9 +409,9 @@ public class StorageFileService {
         if (!StorageFileEntity.STATUS_AVAILABLE.equals(file.getStatus())) {
             throw new BusinessException("STORAGE016");
         }
-        // 上传者本人或持文件夹 READ 权限
+        // 上传者本人或持文件夹 READ 权限（管理员豁免时跳过）
         boolean uploader = userId != null && userId.equals(file.getUploaderId());
-        if (!uploader) {
+        if (!uploader && !adminExempt) {
             folderService.requirePermission(userId, file.getFolderId(), "READ");
         }
         StorageConfigEntity config = configMapper.selectById(file.getStorageConfigId());
@@ -272,7 +450,17 @@ public class StorageFileService {
      * 对象存储系 → provider_options.publicBaseUrl + 对象键。
      * 仅 PUBLIC 可见文件可签发；私有点击会得到明确报错。
      */
+    /** 永久公开链接（无豁免；供 APP 上传者完成类调用，见 QtMediaService） */
     public StorageDtos.PermanentUrlView issuePermanentUrl(String publicId, String userId) {
+        return issuePermanentUrl(publicId, userId, false);
+    }
+
+    /**
+     * 永久公开链接。
+     * @param adminExempt 持全权管理员豁免（对齐 uploadTicket 先例）：跳过文件夹 READ 门，
+     *                   否则 qt-media/avatar 等用户文件夹对 admin 无授权行会报 STORAGE013。
+     */
+    public StorageDtos.PermanentUrlView issuePermanentUrl(String publicId, String userId, boolean adminExempt) {
         StorageFileEntity file = getByPublicId(publicId);
         if (StorageFileEntity.STATUS_DELETED.equals(file.getStatus())) {
             throw new BusinessException("STORAGE021");
@@ -280,8 +468,9 @@ public class StorageFileService {
         if (!StorageFileEntity.STATUS_AVAILABLE.equals(file.getStatus())) {
             throw new BusinessException("STORAGE016");
         }
+        // 上传者本人或持文件夹 READ 权限（管理员豁免时跳过）
         boolean uploader = userId != null && userId.equals(file.getUploaderId());
-        if (!uploader) {
+        if (!uploader && !adminExempt) {
             folderService.requirePermission(userId, file.getFolderId(), "READ");
         }
         if (!StorageFileEntity.VISIBILITY_PUBLIC.equals(file.getVisibility())) {

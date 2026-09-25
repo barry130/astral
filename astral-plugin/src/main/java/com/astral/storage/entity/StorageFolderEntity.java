@@ -47,6 +47,9 @@ public class StorageFolderEntity {
     /** ENABLED | DISABLED */
     private String status;
 
+    /** 上传策略 JSON（requireLogin/maxSizeBytes/allowedMimes/dailyUploadLimit 等）；空 = 沿用插件全局默认 */
+    private String uploadPolicy;
+
     private String createBy;
 
     @TableField(fill = FieldFill.INSERT)

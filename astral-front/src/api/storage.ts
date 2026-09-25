@@ -28,6 +28,21 @@ export interface StorageFolder {
   ownerId?: string;
   visibility?: string;
   status?: string;
+  /** 文件夹级上传策略 JSON（null = 未配置，走默认行为） */
+  uploadPolicy?: string | null;
+}
+
+/** 文件夹上传策略（对应后端 UploadPolicyService.PolicySpec） */
+export interface FolderUploadPolicy {
+  requireLogin?: boolean;
+  minSizeBytes?: number;
+  maxSizeBytes?: number;
+  allowedMimes?: string[];
+  allowedExtensions?: string[];
+  dailyUploadLimit?: number;
+  forceVisibility?: string;
+  verifyContent?: string;
+  maxPixels?: number;
 }
 
 /** 文件夹授权行 */
@@ -140,9 +155,9 @@ export const storageApi = {
 
   // 文件夹与授权
   listFolders: () => request.get('/api/v1/admin/plugin/storage/folders'),
-  createFolder: (data: { parentId?: number; folderName: string; configId?: number; visibility?: string }) =>
+  createFolder: (data: { parentId?: number; folderName: string; configId?: number; visibility?: string; policy?: FolderUploadPolicy }) =>
     request.post('/api/v1/admin/plugin/storage/folders', data),
-  updateFolder: (id: number, data: { folderName?: string; visibility?: string; status?: string; configId?: number }) =>
+  updateFolder: (id: number, data: { folderName?: string; visibility?: string; status?: string; configId?: number; policy?: FolderUploadPolicy }) =>
     request.put(`/api/v1/admin/plugin/storage/folders/${id}`, data),
   deleteFolder: (id: number) => request.delete(`/api/v1/admin/plugin/storage/folders/${id}`),
   getFolderPermissions: (id: number) => request.get(`/api/v1/admin/plugin/storage/folders/${id}/permissions`),

@@ -1166,22 +1166,30 @@ body {
 
 /* 总宽强制铺满容器：rc-table 在未配置 scroll.x 时不会给 <table> 定宽，
    此时 table-layout:fixed 会让表格只占列宽之和（右侧留白）。
-   这里显式撑到 100%，列宽之和小于容器时按比例放大、大于容器时按比例压缩，
-   既不出现左右滚动条，也不会铺不满。 */
-.ant-table .ant-table-content > table,
-.ant-table .ant-table-header > table,
-.ant-table .ant-table-body > table {
+   只在 fill 模式（列宽之和 ≤ 容器宽）生效；scroll 模式必须由 rc-table 的
+   内联 width=列宽总和接管，表格才会在超宽时溢出触发横向滚动而不是被压扁。 */
+.rt-table--fill .ant-table-content > table,
+.rt-table--fill .ant-table-header > table,
+.rt-table--fill .ant-table-body > table {
   width: 100% !important;
 }
 
 /* 单元格内容不许溢出到表格外：
-   1. overflow:hidden + min-width:0 —— 长串/超长内容在单元格内截断，顶不出表格右边缘；
+   1. white-space:nowrap —— 关键修复。此前没有 nowrap，窄列里的 8 位 ID 会被折成
+      4 行（20070011 → 20/07/00/11），行高被撑成正常值的 4 倍；现在窄列内容
+      单行显示并由下面的 ellipsis 截断，行高恒定；
+   2. overflow:hidden + min-width:0 —— 超长内容在单元格内截断，顶不出表格右边缘；
       （Popconfirm / Tooltip / Dropdown 走 portal 渲染到 body，不受影响）
-   2. .ant-space 允许换行 —— 操作列的按钮组放不下时换成两行显示，按钮一个不少；
-   3. 表单控件限制在单元格宽度内，不会被 Input/Select 默认宽度撑破单元格。 */
+   3. .ant-space 撑满单元格宽度 —— 操作列的按钮组放不下时换成两行显示，按钮一个不少。 */
 .ant-table-cell {
   overflow: hidden !important;
   min-width: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* 表头同样不允许折行（此前「版本号」被压成两行、「非强制」被截成「非强」） */
+.ant-table-thead > tr > th {
+  white-space: nowrap !important;
 }
 
 /* 表格里没显式开 ellipsis 的纯文本单元：内容过长时截断加省略号，而不是把格子撑破。
@@ -1190,7 +1198,10 @@ body {
   text-overflow: ellipsis !important;
 }
 
+/* 操作列的按钮组：限制在单元格宽度内并允许换行，而不是溢出后被 overflow:hidden 裁掉。
+   保持 inline-flex 以免挤走同格内的其他内容。 */
 .ant-table .ant-space {
+  max-width: 100%;
   flex-wrap: wrap !important;
   row-gap: 6px;
 }
@@ -2246,4 +2257,189 @@ body {
 
 [data-theme="dark"] .global-loading-bar {
   background: rgba(138, 166, 214, 0.16);
+}
+
+/* ==================== 表格响应式：工具条 / 列设置 / 卡片模式 ==================== */
+
+/* 列设置工具条：只在列数较多（≥6）时出现，右对齐，不挤占表格宽度 */
+.rt-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.rt-cols-panel {
+  width: 220px;
+  padding: 10px;
+  background: var(--color-bg-white);
+  border-radius: var(--radius-md);
+}
+
+.rt-cols-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.rt-cols-act {
+  padding: 0 4px !important;
+  font-size: 12px;
+}
+
+.rt-cols-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.rt-cols-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text);
+  transition: background var(--transition-fast);
+}
+
+.rt-cols-item:hover {
+  background: var(--color-bg-base);
+}
+
+.rt-cols-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 表头拖拽手柄（列宽调整） */
+.rt-th-title {
+  position: relative;
+  display: block;
+}
+
+.rt-th-resize {
+  position: absolute;
+  right: -7px;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  cursor: col-resize;
+  touch-action: none;
+  border-radius: 2px;
+  transition: background var(--transition-fast);
+}
+
+/* scroll 模式下提示可横向滚动：右侧渐隐遮罩提示还有列 */
+.rt-table--scroll .ant-table-content {
+  position: relative;
+}
+
+/* ---------- 移动端卡片模式（宽表在手机上整行换成卡片） ---------- */
+.rt-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rt-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rt-card {
+  padding: 12px;
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.rt-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rt-card-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 卡片标题：允许换行（卡片高度不受列宽约束，不再需要截断） */
+.rt-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.rt-card-subtitle {
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  word-break: break-word;
+}
+
+.rt-card-action {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 字段名 + 值 网格：auto-fill 让窄屏自动 1~2 列，宽一点自动 2~3 列 */
+.rt-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: 10px 14px;
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px dashed var(--color-border);
+}
+
+.rt-card-item {
+  min-width: 0;
+  margin: 0;
+}
+
+.rt-card-label {
+  margin-bottom: 3px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  color: var(--color-text-tertiary);
+}
+
+.rt-card-value {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--color-text);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.rt-card-blank {
+  color: var(--color-text-tertiary);
+}
+
+.rt-card-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
 }

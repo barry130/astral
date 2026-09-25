@@ -176,8 +176,8 @@ export default function QtAdminPage() {
   };
 
   const accelColumns = [
-    { title: 'ID', dataIndex: 'id', width: 70 },
-    { title: '节点名称', dataIndex: 'name', width: 120 },
+    { title: 'ID', dataIndex: 'id', width: 104 },
+    { title: '节点名称', dataIndex: 'name', width: 132 },
     { title: '加速前缀', dataIndex: 'prefixUrl', ellipsis: true },
     {
       title: '启用', dataIndex: 'isShow', width: 80,
@@ -218,25 +218,26 @@ export default function QtAdminPage() {
     },
   ];
 
+  // 列宽是「期望最小宽度」：合计放得下容器就等比铺满，放不下横向滚动，不再压扁内容
   const updateColumns = [
-    { title: 'ID', dataIndex: 'id', width: 70 },
-    { title: '版本号', dataIndex: 'versionCode', width: 90 },
+    { title: 'ID', dataIndex: 'id', width: 104 },
+    { title: '版本号', dataIndex: 'versionCode', width: 104 },
     {
-      title: '平台', dataIndex: 'type', width: 90,
+      title: '平台', dataIndex: 'type', width: 100,
       render: (t: number) => <Tag color={t === 1101 ? 'blue' : 'green'}>{enumLabel(updatePlatformOpts, t)}</Tag>,
     },
-    { title: '版本名', dataIndex: 'versionName', width: 110 },
-    { title: '更新说明', dataIndex: 'versionInfo', ellipsis: true },
+    { title: '版本名', dataIndex: 'versionName', width: 116 },
+    { title: '更新说明', dataIndex: 'versionInfo', width: 176, ellipsis: true },
     {
-      title: '提示方式', dataIndex: 'updateType', width: 100,
+      title: '提示方式', dataIndex: 'updateType', width: 96,
       render: (v: string) => <Tag>{enumLabel(updateTypeOpts, v)}</Tag>,
     },
     {
-      title: '渠道', dataIndex: 'channel', width: 90,
+      title: '渠道', dataIndex: 'channel', width: 88,
       render: (v: string) => <Tag color="purple">{enumLabel(updateChannelOpts, v)}</Tag>,
     },
     {
-      title: '下载链接', width: 180, ellipsis: true,
+      title: '下载链接', width: 148, ellipsis: true,
       render: (_: any, r: QtUpdate) => (
         <Space size={4} wrap>
           {r.downloadUrl && <Tag color="blue">直链</Tag>}
@@ -247,19 +248,19 @@ export default function QtAdminPage() {
       ),
     },
     {
-      title: '发布', dataIndex: 'isPublished', width: 90,
+      title: '发布', dataIndex: 'isPublished', width: 88,
       render: (v: number) => v === 1
         ? <Tag color="success">{publishStateLabel(v)}</Tag>
         : <Tag color="default">{publishStateLabel(v)}</Tag>,
     },
     {
-      title: '强制', dataIndex: 'isForce', width: 80,
+      title: '强制', dataIndex: 'isForce', width: 88,
       render: (v: number) => v === 1 ? <Tag color="red">强制</Tag> : <Tag>非强制</Tag>,
     },
-    { title: '包大小', dataIndex: 'fileSize', width: 100, render: (v: number) => v ? `${(v / 1048576).toFixed(2)} MB` : '-' },
-    { title: 'MD5', dataIndex: 'md5', ellipsis: true },
-    { title: '直链地址', dataIndex: 'downloadUrl', ellipsis: true },
-    { title: '浏览器地址', dataIndex: 'browserUrl', ellipsis: true },
+    { title: '包大小', dataIndex: 'fileSize', width: 96, render: (v: number) => v ? `${(v / 1048576).toFixed(2)} MB` : '-' },
+    { title: 'MD5', dataIndex: 'md5', width: 132, ellipsis: true },
+    { title: '直链地址', dataIndex: 'downloadUrl', width: 180, ellipsis: true },
+    { title: '浏览器地址', dataIndex: 'browserUrl', width: 180, ellipsis: true },
     {
       title: '操作', key: 'action', width: 160,
       render: (_: any, record: QtUpdate) => (

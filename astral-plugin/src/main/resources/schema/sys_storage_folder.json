@@ -87,6 +87,13 @@
       "length": 16
     },
     {
+      "columnName": "upload_policy",
+      "fieldName": "uploadPolicy",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "上传策略JSON(requireLogin/maxSizeBytes/minSizeBytes/allowedMimes/allowedExtensions/dailyUploadLimit/forceVisibility/verifyContent/maxPixels)，空=沿用插件全局默认"
+    },
+    {
       "columnName": "create_by",
       "fieldName": "createBy",
       "fieldType": "String",
