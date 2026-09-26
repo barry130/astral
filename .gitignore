@@ -29,10 +29,11 @@ buildNumber.properties
 .DS_Store
 Thumbs.db
 
-# Log
-logs/
+# Log（仅锚定仓库根的运行日志目录！不带 / 前缀的 log/ 会匹配任意层级，
+# 已实际误伤 astral-log/src 与 astral-front dashboard/log 页面，导致云端构建缺源码）
+/logs/
+/log/
 *.log
-log/
 
 # Temp
 *.tmp
