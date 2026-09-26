@@ -62,20 +62,20 @@ export default function LoginPage() {
           <div style={{
             width: 56,
             height: 56,
-            background: 'linear-gradient(135deg, #1c2027 0%, #2a2f38 100%)',
+            background: 'var(--color-brand)',
             borderRadius: 14,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 20,
-            boxShadow: '0 8px 24px rgba(26, 26, 46, 0.2)'
+            boxShadow: '0 8px 20px rgba(24, 24, 27, 0.16)'
           }}>
-            <SafetyOutlined style={{ fontSize: 28, color: '#fff' }} />
+            <SafetyOutlined style={{ fontSize: 26, color: '#fff' }} />
           </div>
           <h1 className="login-title">Astral</h1>
-          <p className="login-subtitle">Astral后台管理系统</p>
+          <p className="login-subtitle">Astral 后台管理系统</p>
         </div>
-        
+
         <Form
           name="login"
           onFinish={onFinish}
@@ -86,11 +86,11 @@ export default function LoginPage() {
             name="username"
             rules={[{ required: true, message: '请输入用户名' }]}
           >
-            <Input 
-              prefix={<UserOutlined style={{ color: '#909399' }} />}
+            <Input
+              prefix={<UserOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
               placeholder="用户名"
               autoComplete="username"
-              style={{ height: 48 }}
+              style={{ height: 44, borderRadius: 10 }}
             />
           </Form.Item>
           <Form.Item
@@ -98,19 +98,19 @@ export default function LoginPage() {
             rules={[{ required: true, message: '请输入密码' }]}
           >
             <Input.Password
-              prefix={<LockOutlined style={{ color: '#909399' }} />}
+              prefix={<LockOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
               placeholder="密码"
               autoComplete="current-password"
-              style={{ height: 48 }}
+              style={{ height: 44, borderRadius: 10 }}
             />
           </Form.Item>
-          <Form.Item style={{ marginBottom: 0, marginTop: 32 }}>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              loading={loading || publicKeyLoading} 
+          <Form.Item style={{ marginBottom: 0, marginTop: 28 }}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading || publicKeyLoading}
               block
-              style={{ height: 48, fontSize: 16, fontWeight: 500 }}
+              style={{ height: 44, fontSize: 15, fontWeight: 600, borderRadius: 10 }}
             >
               登 录
             </Button>
@@ -120,7 +120,7 @@ export default function LoginPage() {
         <div style={{
           marginTop: 24,
           textAlign: 'center',
-          color: '#909399',
+          color: 'var(--color-text-tertiary)',
           fontSize: 12
         }}>
           默认账号: admin / admin
@@ -129,7 +129,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           <a
             onClick={() => router.push('/')}
-            style={{ fontSize: 12, color: '#909399', cursor: 'pointer' }}
+            style={{ fontSize: 12, color: 'var(--color-text-tertiary)', cursor: 'pointer' }}
           >
             ← 返回首页
           </a>

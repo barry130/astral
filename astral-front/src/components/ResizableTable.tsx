@@ -243,7 +243,7 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
             onPointerDown={(e) => startDrag(e, key)}
             onPointerEnter={() => setHoverKey(key)}
             onPointerLeave={() => setHoverKey(null)}
-            style={{ background: hoverKey === key ? 'rgba(74, 111, 165, 0.35)' : 'transparent' }}
+            style={{ background: hoverKey === key ? 'rgba(24, 24, 27, 0.35)' : 'transparent' }}
           />
         </span>
       ) : (

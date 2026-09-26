@@ -142,8 +142,8 @@ function DeviceTab() {
         type: 'line',
         smooth: true,
         data: trend?.today ?? [],
-        itemStyle: { color: '#5470c6' },
-        areaStyle: { opacity: 0.15 },
+        itemStyle: { color: '#18181b' },
+        areaStyle: { opacity: 0.08 },
       },
       {
         name: '昨日',
@@ -261,7 +261,7 @@ function ApiTab() {
       {
         data: topData.slice(0, 10).map((i) => i.callCount || 0),
         type: 'bar',
-        itemStyle: { color: '#5470c6' },
+        itemStyle: { color: '#3f3f46', borderRadius: [4, 4, 0, 0] },
       },
     ],
   };

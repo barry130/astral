@@ -30,18 +30,36 @@ function formatUptime(seconds: number): string {
   return `${days}天 ${hours}时 ${mins}分`;
 }
 
-/** 根据CPU使用率返回对应的颜色（红/黄/蓝） */
+/** 根据CPU使用率返回对应的颜色（红/黄/石墨黑） */
 function getCpuColor(usage: number): string {
-  if (usage > 80) return '#ff4d4f';
-  if (usage > 60) return '#faad14';
-  return '#4a6fa5';
+  if (usage > 80) return '#dc2626';
+  if (usage > 60) return '#d97706';
+  return '#18181b';
 }
 
 /** 根据内存使用率返回对应的颜色（红/黄/绿） */
 function getMemoryColor(usage: number): string {
-  if (usage > 85) return '#ff4d4f';
-  if (usage > 70) return '#faad14';
-  return '#52c41a';
+  if (usage > 85) return '#dc2626';
+  if (usage > 70) return '#d97706';
+  return '#16a34a';
+}
+
+/** 统计卡图标芯片：中性浅灰底 + 深灰图标（极简风，色彩只留给状态值与进度条） */
+function StatIcon({ icon }: { icon: React.ReactNode }) {
+  return (
+    <div style={{
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+      background: 'rgba(24, 24, 27, 0.04)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      <span style={{ fontSize: 20, color: '#3f3f46', display: 'inline-flex' }}>{icon}</span>
+    </div>
+  );
 }
 
 /**
@@ -88,7 +106,7 @@ export default function DashboardPage() {
     <div>
       <div style={{ marginBottom: 24 }}>
         <h2 className="page-title" style={{ marginBottom: 8 }}>仪表盘</h2>
-        <p style={{ color: '#909399', margin: 0 }}>实时监控系统运行状态</p>
+        <p style={{ color: 'var(--color-text-secondary)', margin: 0 }}>实时监控系统运行状态</p>
       </div>
 
       <Row gutter={[16, 16]}>
@@ -110,17 +128,7 @@ export default function DashboardPage() {
                   style={{ marginTop: 12 }}
                 />
               </div>
-              <div style={{ 
-                width: 48, 
-                height: 48, 
-                borderRadius: 12, 
-                background: 'rgba(74, 144, 217, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <DashboardOutlined style={{ fontSize: 22, color: '#4a6fa5' }} />
-              </div>
+              <StatIcon icon={<DashboardOutlined />} />
             </div>
           </Card>
         </Col>
@@ -142,17 +150,7 @@ export default function DashboardPage() {
                   style={{ marginTop: 12 }}
                 />
               </div>
-              <div style={{ 
-                width: 48, 
-                height: 48, 
-                borderRadius: 12, 
-                background: 'rgba(82, 196, 26, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <DesktopOutlined style={{ fontSize: 22, color: '#52c41a' }} />
-              </div>
+              <StatIcon icon={<DesktopOutlined />} />
             </div>
           </Card>
         </Col>
@@ -165,21 +163,11 @@ export default function DashboardPage() {
                   value={business?.sequenceGenerationTotal || 0}
                   valueStyle={{ fontSize: 28 }}
                 />
-                <div style={{ color: '#909399', fontSize: 12, marginTop: 4 }}>
+                <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginTop: 4 }}>
                   活跃配置: {business?.configCount || 0}
                 </div>
               </div>
-              <div style={{ 
-                width: 48, 
-                height: 48, 
-                borderRadius: 12, 
-                background: 'rgba(255, 148, 52, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <RocketOutlined style={{ fontSize: 22, color: '#ff9434' }} />
-              </div>
+              <StatIcon icon={<RocketOutlined />} />
             </div>
           </Card>
         </Col>
@@ -193,21 +181,11 @@ export default function DashboardPage() {
                   precision={0}
                   valueStyle={{ fontSize: 28 }}
                 />
-                <div style={{ color: '#909399', fontSize: 12, marginTop: 4 }}>
+                <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12, marginTop: 4 }}>
                   每秒序列生成数
                 </div>
               </div>
-              <div style={{ 
-                width: 48, 
-                height: 48, 
-                borderRadius: 12, 
-                background: 'rgba(114, 46, 209, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <ThunderboltOutlined style={{ fontSize: 22, color: '#722ed1' }} />
-              </div>
+              <StatIcon icon={<ThunderboltOutlined />} />
             </div>
           </Card>
         </Col>
@@ -218,7 +196,7 @@ export default function DashboardPage() {
           <Card 
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <DatabaseOutlined style={{ color: '#4a6fa5' }} />
+                <DatabaseOutlined style={{ color: '#52525b' }} />
                 <span>JVM 监控</span>
               </div>
             }
@@ -227,40 +205,40 @@ export default function DashboardPage() {
           >
             <Row gutter={[16, 20]}>
               <Col xs={{ span: 24 }} sm={{ span: 12 }}>
-                <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
-                  <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>堆内存使用</div>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>
+                <div style={{ padding: 16, background: 'var(--color-bg-base)', borderRadius: 8 }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 4 }}>堆内存使用</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text)' }}>
                     {formatBytes(jvm?.heapUsed || 0)}
                   </div>
-                  <div style={{ color: '#c0c4cc', fontSize: 12 }}>/ {formatBytes(jvm?.heapMax || 0)}</div>
+                  <div style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>/ {formatBytes(jvm?.heapMax || 0)}</div>
                 </div>
               </Col>
               <Col xs={{ span: 24 }} sm={{ span: 12 }}>
-                <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
-                  <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>堆内存使用率</div>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>
+                <div style={{ padding: 16, background: 'var(--color-bg-base)', borderRadius: 8 }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 4 }}>堆内存使用率</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text)' }}>
                     {jvm?.heapUsage?.toFixed(1) || 0}%
                   </div>
                   <Progress 
                     percent={jvm?.heapUsage || 0} 
                     showInfo={false}
-                    strokeColor="#4a6fa5"
+                    strokeColor="#18181b"
                     style={{ marginTop: 8 }}
                   />
                 </div>
               </Col>
               <Col xs={{ span: 24 }} sm={{ span: 12 }}>
-                <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
-                  <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>线程数</div>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>
+                <div style={{ padding: 16, background: 'var(--color-bg-base)', borderRadius: 8 }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 4 }}>线程数</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text)' }}>
                     {jvm?.threadCount || 0}
                   </div>
                 </div>
               </Col>
               <Col xs={{ span: 24 }} sm={{ span: 12 }}>
-                <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
-                  <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>GC 次数</div>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>
+                <div style={{ padding: 16, background: 'var(--color-bg-base)', borderRadius: 8 }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 4 }}>GC 次数</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text)' }}>
                     {jvm?.gcCount || 0}
                   </div>
                 </div>
@@ -272,7 +250,7 @@ export default function DashboardPage() {
           <Card 
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <InfoCircleOutlined style={{ color: '#52c41a' }} />
+                <InfoCircleOutlined style={{ color: '#52525b' }} />
                 <span>系统信息</span>
               </div>
             }
@@ -281,27 +259,27 @@ export default function DashboardPage() {
           >
             <Row gutter={[16, 20]}>
               <Col xs={{ span: 24 }} sm={{ span: 12 }}>
-                <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
-                  <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>磁盘使用率</div>
+                <div style={{ padding: 16, background: 'var(--color-bg-base)', borderRadius: 8 }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 4 }}>磁盘使用率</div>
                   <div style={{ 
                     fontSize: 24, 
                     fontWeight: 600, 
-                    color: (system?.diskUsage || 0) > 80 ? '#ff4d4f' : '#303133' 
+                    color: (system?.diskUsage || 0) > 80 ? '#dc2626' : 'var(--color-text)'
                   }}>
                     {system?.diskUsage?.toFixed(1) || 0}%
                   </div>
                   <Progress 
                     percent={system?.diskUsage || 0} 
                     showInfo={false}
-                    strokeColor={(system?.diskUsage || 0) > 80 ? '#ff4d4f' : '#52c41a'}
+                    strokeColor={(system?.diskUsage || 0) > 80 ? '#dc2626' : '#16a34a'}
                     style={{ marginTop: 8 }}
                   />
                 </div>
               </Col>
               <Col xs={{ span: 24 }} sm={{ span: 12 }}>
-                <div style={{ padding: 16, background: '#fafbfc', borderRadius: 8 }}>
-                  <div style={{ color: '#909399', fontSize: 13, marginBottom: 4 }}>运行时间</div>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: '#303133' }}>
+                <div style={{ padding: 16, background: 'var(--color-bg-base)', borderRadius: 8 }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 4 }}>运行时间</div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--color-text)' }}>
                     {formatUptime((system?.uptime || 0) / 1000)}
                   </div>
                 </div>

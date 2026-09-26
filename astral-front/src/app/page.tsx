@@ -9,6 +9,7 @@ import {
   TeamOutlined,
   AppstoreOutlined,
   AudioOutlined,
+  CustomerServiceOutlined,
   CommentOutlined,
   DatabaseOutlined,
   LineChartOutlined,
@@ -65,6 +66,8 @@ interface PluginCard {
   /** 有用户侧页面可进入的插件提供跳转路径 */
   href?: string;
   action?: string;
+  /** 公开页：未登录也可直接进入（如轻听音乐介绍页） */
+  public?: boolean;
 }
 
 const PLUGINS: PluginCard[] = [
@@ -72,6 +75,9 @@ const PLUGINS: PluginCard[] = [
     icon: <AudioOutlined />,
     title: '轻听音乐（qt）',
     desc: 'App 用户体系、公告、版本更新、打卡、收藏，提供 /api/v1/app/** 开放接口',
+    href: '/lightlisten',
+    action: '了解轻听',
+    public: true,
   },
   {
     icon: <CommentOutlined />,
@@ -116,6 +122,12 @@ export default function HomePage() {
             <span className="landing-logo-name">Astral</span>
           </div>
           <div className="landing-header-actions">
+            <Button
+              icon={<CustomerServiceOutlined />}
+              onClick={() => router.push('/lightlisten')}
+            >
+              轻听音乐
+            </Button>
             <Button
               icon={<PictureOutlined />}
               onClick={() => router.push(isLogin ? '/imgbed' : '/login')}
@@ -188,7 +200,7 @@ export default function HomePage() {
             <div
               key={p.title}
               className={`landing-card${p.href ? ' landing-card-link' : ''}`}
-              onClick={p.href ? () => router.push(isLogin ? p.href! : '/login') : undefined}
+              onClick={p.href ? () => router.push(p.public || isLogin ? p.href! : '/login') : undefined}
             >
               <div className="landing-card-icon">{p.icon}</div>
               <h3 className="landing-card-title">{p.title}</h3>

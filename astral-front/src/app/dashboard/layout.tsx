@@ -593,7 +593,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           <div className="sider-logo">
             {siderCollapsed ? (
-              <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700, margin: 0 }}>X</h1>
+              <div
+                aria-hidden
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  background: 'var(--color-brand)',
+                  color: '#fff',
+                  fontSize: 15,
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  letterSpacing: 0,
+                }}
+              >
+                A
+              </div>
             ) : (
               <h1>Astral<span>.</span></h1>
             )}
@@ -623,10 +640,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 selectedKeys={[pathname]}
                 items={displayedMenuItems}
                 onClick={handleMenuClick}
-                theme="dark"
                 inlineCollapsed={siderCollapsed}
                 style={{
                   borderRight: 'none',
+                  background: 'transparent',
                   marginTop: menuKeyword.trim() ? 0 : 8,
                 }}
               />
@@ -661,11 +678,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <div className="header-user" style={{ cursor: 'pointer' }}>
-                <Avatar 
-                  size={isMobile ? 32 : 36} 
-                  style={{ 
-                    background: 'linear-gradient(135deg, #4a90d9 0%, #3a7bc8 100%)',
-                    fontWeight: 600 
+                <Avatar
+                  size={isMobile ? 32 : 36}
+                  style={{
+                    background: 'var(--color-brand)',
+                    fontWeight: 600
                   }}
                   icon={<UserOutlined />}
                 />
@@ -675,10 +692,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             </Dropdown>
           </Header>
-          <div className="tabs-wrapper" style={{ 
-            background: '#fff', 
-            padding: '8px 16px 0', 
-            borderBottom: '1px solid #eef0f2',
+          <div className="tabs-wrapper" style={{
+            background: 'var(--color-bg-white)',
+            padding: '8px 16px 0',
+            borderBottom: '1px solid var(--color-border-light)',
             position: 'sticky',
             top: 64,
             zIndex: 10,

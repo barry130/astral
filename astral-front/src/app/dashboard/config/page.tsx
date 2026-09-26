@@ -176,7 +176,7 @@ export default function ConfigPage() {
       <Modal
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <SettingOutlined style={{ color: '#4a6fa5' }} />
+            <SettingOutlined style={{ color: '#52525b' }} />
             <span>{editingId ? '编辑配置' : '新建配置'}</span>
           </div>
         }

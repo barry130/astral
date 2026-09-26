@@ -15,12 +15,14 @@ const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)';
 /** 主题持久化键 */
 const THEME_STORAGE_KEY = 'astral:theme';
 
-/** 品牌主色：浅色下唯一 CTA 色，与 globals.css 的 --color-brand 保持一致 */
-const COLOR_PRIMARY = '#4a6fa5';
-const COLOR_SIDEBAR = '#1c2027';
-/** 深色模式专用：#4a6fa5 在深底上文字对比度仅 3.1:1，文字/链接需用更亮的色值 */
-const COLOR_PRIMARY_TEXT_DARK = '#8aa6d6';
-const COLOR_SIDEBAR_DARK = '#0f1218';
+/** 品牌主色：石墨黑，与 globals.css 的 --color-brand 保持一致（极简现代风） */
+const COLOR_PRIMARY = '#18181b';
+/** 侧边栏底色：白（浅色模式）/ 容器同色（深色模式），配合右侧分隔线 */
+const COLOR_SIDEBAR = '#ffffff';
+/** 深色模式专用：石墨黑在深底上不可读，文字/链接需用更亮的灰 */
+const COLOR_PRIMARY_TEXT_DARK = '#a1a1aa';
+const COLOR_PRIMARY_DARK = '#52525b';
+const COLOR_SIDEBAR_DARK = '#1a1e26';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -59,22 +61,22 @@ const getInitialThemeMode = (): ThemeMode => {
 const lightBaseToken = {
   colorPrimary: COLOR_PRIMARY,
   colorInfo: COLOR_PRIMARY,
-  colorSuccess: '#22a06b',
-  colorWarning: '#d4a017',
-  colorError: '#d64545',
+  colorSuccess: '#16a34a',
+  colorWarning: '#d97706',
+  colorError: '#dc2626',
   borderRadius: 8,
-  colorBgLayout: '#f4f5f7',
+  colorBgLayout: '#f7f7f8',
   colorBgContainer: '#ffffff',
   colorBgElevated: '#ffffff',
-  colorText: '#2c3038',
-  colorTextSecondary: '#6b7280',
-  colorTextTertiary: '#5b6470',
-  colorBorder: '#e6e9ed',
-  colorBorderSecondary: '#eef0f2',
-  colorSplit: '#eef0f2',
-  boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)',
-  boxShadowSecondary: '0 4px 12px rgba(16, 24, 40, 0.06)',
-  boxShadowTertiary: '0 1px 2px rgba(16, 24, 40, 0.04)',
+  colorText: '#18181b',
+  colorTextSecondary: '#52525b',
+  colorTextTertiary: '#71717a',
+  colorBorder: '#e4e4e7',
+  colorBorderSecondary: '#f0f0f1',
+  colorSplit: '#f0f0f1',
+  boxShadow: '0 1px 2px rgba(24, 24, 27, 0.04)',
+  boxShadowSecondary: '0 4px 12px rgba(24, 24, 27, 0.05)',
+  boxShadowTertiary: '0 1px 2px rgba(24, 24, 27, 0.04)',
   motionDurationMid: '0.15s',
 };
 
@@ -86,39 +88,40 @@ const lightComponents: ComponentTokens = {
     siderBg: COLOR_SIDEBAR,
   },
   Menu: {
-    itemHeight: 40,
-    itemMarginInline: 12,
+    itemHeight: 38,
+    itemMarginInline: 10,
     itemBg: 'transparent',
-    itemHoverBg: 'rgba(255, 255, 255, 0.06)',
-    itemSelectedBg: 'rgba(255, 255, 255, 0.10)',
-    itemSelectedColor: '#ffffff',
+    itemHoverBg: 'rgba(24, 24, 27, 0.04)',
+    itemSelectedBg: 'rgba(24, 24, 27, 0.06)',
+    itemSelectedColor: '#18181b',
+    itemColor: '#52525b',
   },
   Table: {
-    headerBg: '#f7f8fa',
-    headerColor: '#6b7280',
-    borderColor: '#eef0f2',
+    headerBg: '#fafafa',
+    headerColor: '#71717a',
+    borderColor: '#f0f0f1',
     cellPaddingBlock: 10,
     cellPaddingInline: 14,
-    rowHoverBg: 'rgba(28, 32, 39, 0.03)',
+    rowHoverBg: 'rgba(24, 24, 27, 0.03)',
   },
-  Card: { paddingLG: 18, headerFontSize: 15, colorBorderSecondary: '#e6e9ed', borderRadiusLG: 10 },
-  Button: { fontWeight: 500, boxShadow: '0 1px 2px rgba(16, 24, 40, 0.06)' },
+  Card: { paddingLG: 18, headerFontSize: 15, colorBorderSecondary: '#e4e4e7', borderRadiusLG: 10 },
+  Button: { fontWeight: 500, boxShadow: '0 1px 2px rgba(24, 24, 27, 0.05)' },
   Modal: { borderRadiusLG: 12 },
   Drawer: { paddingLG: 18 },
-  Tabs: { itemColor: '#6b7280', itemActiveColor: COLOR_PRIMARY, itemSelectedColor: COLOR_PRIMARY, inkBarColor: COLOR_PRIMARY },
-  Segmented: { trackBg: '#eceff2', itemSelectedBg: '#ffffff', itemSelectedColor: COLOR_PRIMARY },
+  Tabs: { itemColor: '#71717a', itemActiveColor: COLOR_PRIMARY, itemSelectedColor: COLOR_PRIMARY, inkBarColor: COLOR_PRIMARY },
+  Segmented: { trackBg: '#f0f0f1', itemSelectedBg: '#ffffff', itemSelectedColor: COLOR_PRIMARY },
   Tooltip: { borderRadius: 8 },
-  Input: { activeShadow: '0 0 0 3px rgba(74, 111, 165, 0.14)', hoverBorderColor: COLOR_PRIMARY },
-  Select: { optionSelectedBg: 'rgba(74, 111, 165, 0.10)' },
-  Tag: { defaultBg: '#f4f5f7', defaultColor: '#5b6470' },
-  Empty: { colorTextDescription: '#8a94a1' },
+  Input: { activeShadow: '0 0 0 3px rgba(24, 24, 27, 0.08)', hoverBorderColor: COLOR_PRIMARY },
+  Select: { optionSelectedBg: 'rgba(24, 24, 27, 0.05)' },
+  Tag: { defaultBg: '#f7f7f8', defaultColor: '#52525b' },
+  Empty: { colorTextDescription: '#a1a1aa' },
 };
 
 /* ============================ 深色主题 ============================ */
 
 const darkBaseToken = {
-  colorPrimary: COLOR_PRIMARY,
-  colorInfo: COLOR_PRIMARY,
+  colorPrimary: COLOR_PRIMARY_DARK,
+  colorInfo: COLOR_PRIMARY_DARK,
   colorLink: COLOR_PRIMARY_TEXT_DARK,
   colorSuccess: '#2fb57c',
   colorWarning: '#e0a82c',
@@ -152,12 +155,13 @@ const darkComponents: ComponentTokens = {
     siderBg: COLOR_SIDEBAR_DARK,
   },
   Menu: {
-    itemHeight: 40,
-    itemMarginInline: 12,
+    itemHeight: 38,
+    itemMarginInline: 10,
     itemBg: 'transparent',
-    itemHoverBg: 'rgba(255, 255, 255, 0.06)',
-    itemSelectedBg: 'rgba(255, 255, 255, 0.10)',
-    itemSelectedColor: '#ffffff',
+    itemHoverBg: 'rgba(255, 255, 255, 0.05)',
+    itemSelectedBg: 'rgba(255, 255, 255, 0.09)',
+    itemSelectedColor: '#e6e9ee',
+    itemColor: '#9aa3b0',
   },
   Table: {
     headerBg: '#20252f',
@@ -171,11 +175,11 @@ const darkComponents: ComponentTokens = {
   Button: { fontWeight: 500, boxShadow: '0 1px 2px rgba(0, 0, 0, 0.34)' },
   Modal: { borderRadiusLG: 12 },
   Drawer: { paddingLG: 18 },
-  Tabs: { itemColor: '#9aa3b0', itemActiveColor: COLOR_PRIMARY_TEXT_DARK, itemSelectedColor: COLOR_PRIMARY_TEXT_DARK, inkBarColor: COLOR_PRIMARY },
-  Segmented: { trackBg: '#1f242d', itemSelectedBg: '#2a313d', itemSelectedColor: COLOR_PRIMARY_TEXT_DARK },
+  Tabs: { itemColor: '#9aa3b0', itemActiveColor: '#e6e9ee', itemSelectedColor: '#e6e9ee', inkBarColor: '#a1a1aa' },
+  Segmented: { trackBg: '#1f242d', itemSelectedBg: '#2a313d', itemSelectedColor: '#e6e9ee' },
   Tooltip: { borderRadius: 8, colorBgSpotlight: '#2a313d' },
-  Input: { activeShadow: '0 0 0 3px rgba(138, 166, 214, 0.18)', hoverBorderColor: COLOR_PRIMARY_TEXT_DARK },
-  Select: { optionSelectedBg: 'rgba(138, 166, 214, 0.14)' },
+  Input: { activeShadow: '0 0 0 3px rgba(161, 161, 170, 0.14)', hoverBorderColor: '#a1a1aa' },
+  Select: { optionSelectedBg: 'rgba(255, 255, 255, 0.08)' },
   Tag: { defaultBg: '#1f242d', defaultColor: '#9aa3b0' },
   Empty: { colorTextDescription: '#8a94a1' },
 };

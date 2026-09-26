@@ -145,7 +145,7 @@ function FeedbackPanel() {
         name: '新增反馈',
         type: 'bar',
         data: days.map((d) => d.count),
-        itemStyle: { color: '#1677ff', borderRadius: [4, 4, 0, 0] },
+        itemStyle: { color: '#18181b', borderRadius: [4, 4, 0, 0] },
         barMaxWidth: 36,
       }],
     };
@@ -231,7 +231,7 @@ function FeedbackPanel() {
       <Row gutter={[16, 16]} style={{ marginBottom: 12 }}>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}><Card size="small"><Statistic title="全部" value={stat?.total ?? '-'} /></Card></Col>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}><Card size="small"><Statistic title="待处理" value={stat?.pending ?? '-'} valueStyle={{ color: '#fa8c16' }} /></Card></Col>
-        <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}><Card size="small"><Statistic title="已接收" value={stat?.received ?? '-'} valueStyle={{ color: '#1677ff' }} /></Card></Col>
+        <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}><Card size="small"><Statistic title="已接收" value={stat?.received ?? '-'} valueStyle={{ color: '#18181b' }} /></Card></Col>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}><Card size="small"><Statistic title="今日新增" value={stat?.todayNew ?? '-'} valueStyle={{ color: '#52c41a' }} /></Card></Col>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}><Card size="small"><Statistic title="未回复" value={stat?.unreplied ?? '-'} valueStyle={{ color: '#eb2f96' }} /></Card></Col>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}><Card size="small"><Statistic title="已解决" value={stat?.resolved ?? '-'} /></Card></Col>
