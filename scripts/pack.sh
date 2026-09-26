@@ -57,7 +57,11 @@ tar \
   --exclude="${PROJECT_DIR}/astral-front/out" \
   --exclude="${PROJECT_DIR}/**/target" \
   --exclude="${PROJECT_DIR}/data" \
+  --exclude="${PROJECT_DIR}/**/data" \
   --exclude="${PROJECT_DIR}/logs" \
+  --exclude="${PROJECT_DIR}/**/logs" \
+  --exclude="${PROJECT_DIR}/**/*.mv.db" \
+  --exclude="${PROJECT_DIR}/**/*.trace.db" \
   --exclude="${PROJECT_DIR}/.git" \
   --exclude="${PROJECT_DIR}/.idea" \
   --exclude="${PROJECT_DIR}/.vscode" \

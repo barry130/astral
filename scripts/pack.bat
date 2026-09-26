@@ -48,7 +48,7 @@ if not exist "!OUT_DIR!" mkdir "!OUT_DIR!"
 if exist "!ARCHIVE!" del /f /q "!ARCHIVE!"
 
 pushd "!SRC_DIR!\.."
-tar --exclude=!PROJECT_DIR!/astral-front/node_modules --exclude=!PROJECT_DIR!/astral-front/.next --exclude=!PROJECT_DIR!/astral-front/out --exclude=!PROJECT_DIR!/*/target --exclude=!PROJECT_DIR!/data --exclude=!PROJECT_DIR!/logs --exclude=!PROJECT_DIR!/.git --exclude=!PROJECT_DIR!/.idea --exclude=!PROJECT_DIR!/.vscode --exclude=!PROJECT_DIR!/.claude --exclude=!PROJECT_DIR!/.qwen --exclude=!PROJECT_DIR!/*.log --exclude=!PROJECT_DIR!/deploy/.env --exclude=!PROJECT_DIR!/*.local --exclude=!PROJECT_DIR!/run-backend.local.bat --exclude=!PROJECT_DIR!/*/application-local.yml --exclude=!PROJECT_DIR!/*/application-local.yaml --exclude=!PROJECT_DIR!/*/*.tsbuildinfo -czf "!ARCHIVE!" "!PROJECT_DIR!"
+tar --exclude=!PROJECT_DIR!/astral-front/node_modules --exclude=!PROJECT_DIR!/astral-front/.next --exclude=!PROJECT_DIR!/astral-front/out --exclude=!PROJECT_DIR!/*/target --exclude=!PROJECT_DIR!/*/data --exclude=!PROJECT_DIR!/*/logs --exclude=*.mv.db --exclude=*.trace.db --exclude=!PROJECT_DIR!/.git --exclude=!PROJECT_DIR!/.idea --exclude=!PROJECT_DIR!/.vscode --exclude=!PROJECT_DIR!/.claude --exclude=!PROJECT_DIR!/.qwen --exclude=!PROJECT_DIR!/*.log --exclude=!PROJECT_DIR!/deploy/.env --exclude=!PROJECT_DIR!/*.local --exclude=!PROJECT_DIR!/run-backend.local.bat --exclude=!PROJECT_DIR!/*/application-local.yml --exclude=!PROJECT_DIR!/*/application-local.yaml --exclude=!PROJECT_DIR!/*/*.tsbuildinfo -czf "!ARCHIVE!" "!PROJECT_DIR!"
 set "RC=!ERRORLEVEL!"
 popd
 
