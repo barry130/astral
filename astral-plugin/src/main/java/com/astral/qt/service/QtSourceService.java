@@ -56,29 +56,38 @@ public class QtSourceService {
     /**
      * 生成 manifest（GET /api/v1/app/source/manifest）。
      * <p>
-     * 服务端预筛规则：已发布、未标坏、渠道匹配、platforms 包含请求平台、应用版本准入命中，
-     * 取 code 最大的一条；无命中则 release 为 null（客户端保持当前版本）。
+     * 渠道即测试/正式标识（复用 channel 字段，与版本更新同源语义）：
+     * channel=beta 为测试包，仅对拥有 qt_admin / qt_tester 权限（含超管 *:*:*）的用户投放；
+     * 其余（stable 正式包）对所有用户投放。客户端不再上送 channel，由服务端按版本号
+     * 从新到旧统一选取：第一个「平台匹配 + 应用版本准入命中 + 未标坏 + 人群可见」的版本即候选，
+     * 无命中则 release 为 null（客户端保持当前版本）。
+     * 因此测试包版本号高于正式包时，有权限用户收到测试包、无权限用户收到最新正式包；
+     * 正式包版本号更高时，所有用户（含有权限者）都收到该正式包，不会收到版本号更低的测试包。
      * hostApiVersion 不参与服务端筛选，由客户端按自身契约版本决定是否跳过（§2.3 第 3 步）。
      * </p>
      * <p>
      * 回退信号：若存在比候选更新的已发布坏包，则在响应里显式携带 rollbackTo
      * （坏包指定了目标则用之，否则回退到候选本身），客户端据此允许降级（§2.3 第 5 步）。
+     * 无权限用户对测试坏包不可感知（连同回退信号一并跳过）。
      * </p>
      */
-    public QtSourceManifestVo buildManifest(Long platform, Long appVersionCode, Long hostApiVersion, String channel) {
+    public QtSourceManifestVo buildManifest(Long platform, Long appVersionCode, Long hostApiVersion, boolean tester) {
         QtSourceManifestVo manifest = new QtSourceManifestVo();
         if (!QtSourceRelease.isSupportedPlatform(platform)) {
             return manifest;
         }
-        String ch = normalizeChannel(channel);
         List<QtSourceRelease> published = releaseMapper.selectList(new LambdaQueryWrapper<QtSourceRelease>()
-                .eq(QtSourceRelease::getChannel, ch)
                 .eq(QtSourceRelease::getIsPublished, 1)
                 .orderByDesc(QtSourceRelease::getSourceVersionCode));
         QtSourceRelease candidate = null;
         QtSourceRelease newestBad = null;
         for (QtSourceRelease r : published) {
             if (!platformMatches(r, platform)) {
+                continue;
+            }
+            // 测试包人群过滤：无 qt_admin/qt_tester 权限的用户视同不存在该测试包
+            // （前置于坏包登记，回退信号对无权限用户同样不可感知）
+            if (isTestRelease(r) && !tester) {
                 continue;
             }
             if (r.getIsBad() != null && r.getIsBad() == 1) {
@@ -103,6 +112,12 @@ public class QtSourceService {
                     ? newestBad.getRollbackTo() : candidate.getSourceVersionCode());
         }
         return manifest;
+    }
+
+    /** 渠道是否为测试包（beta）；其余值（stable 及历史脏数据）一律按正式包投放 */
+    private boolean isTestRelease(QtSourceRelease release) {
+        return QtSourceRelease.CHANNEL_BETA.equalsIgnoreCase(
+                release.getChannel() == null ? "" : release.getChannel().trim());
     }
 
     /** 装载结果上报（POST /api/v1/app/source/report，免认证），只做落库，失败不阻塞客户端 */

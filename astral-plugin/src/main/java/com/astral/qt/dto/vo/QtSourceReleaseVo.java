@@ -33,7 +33,7 @@ public class QtSourceReleaseVo {
     /** 按平台准入的应用版本号：key 为平台字符串，value 为允许的应用版本号；平台缺省或空数组=不限制 */
     private Map<String, List<Long>> appVersionCodes;
 
-    /** 发布渠道：stable / beta */
+    /** 发布渠道：stable 正式（所有用户）/ beta 测试（仅 qt_admin/qt_tester 权限用户） */
     private String channel;
 
     /** 更新说明 */

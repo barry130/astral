@@ -318,7 +318,7 @@ COMMENT ON COLUMN qt_source_release.source_version_name IS '音源包版本名(y
 COMMENT ON COLUMN qt_source_release.platforms IS '适用平台(逗号分隔,1101安卓/1102iOS/1103Windows)';
 COMMENT ON COLUMN qt_source_release.host_api_version IS '需要的宿主契约版本(高于客户端支持上限则不加载)';
 COMMENT ON COLUMN qt_source_release.app_version_codes IS '按平台准入的应用版本号(JSON,如{"1103":[102],"1101":[304]},平台缺省或空数组=不限制)';
-COMMENT ON COLUMN qt_source_release.channel IS '发布渠道(stable正式/beta测试)';
+COMMENT ON COLUMN qt_source_release.channel IS '发布渠道(stable正式,所有用户可收到/beta测试,仅qt_admin或qt_tester权限用户可收到,正式版版本号更高时所有用户收到正式版)';
 COMMENT ON COLUMN qt_source_release.notes IS '更新说明(客户端设置页展示)';
 COMMENT ON COLUMN qt_source_release.artifacts IS '产物清单(JSON数组,当前生效全集:[{path,version,url}])';
 COMMENT ON COLUMN qt_source_release.rollback_to IS '指定回退到的版本号(可空)';

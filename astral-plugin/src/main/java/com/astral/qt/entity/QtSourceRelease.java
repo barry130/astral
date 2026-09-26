@@ -70,7 +70,7 @@ public class QtSourceRelease {
     /** 按平台准入的应用版本号（JSON，如 {"1103":[102],"1101":[304]}；平台缺省或空数组=不限制） */
     private String appVersionCodes;
 
-    /** 发布渠道：stable 正式 / beta 测试 */
+    /** 发布渠道：stable 正式（所有用户可收到）/ beta 测试（仅 qt_admin/qt_tester 权限用户可收到） */
     private String channel;
 
     /** 更新说明（客户端设置页展示） */

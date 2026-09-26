@@ -25,7 +25,10 @@ public class QtSourceReleaseCreateDto {
     /** 需要的宿主契约版本（可空，默认 1） */
     private Long hostApiVersion;
 
-    /** 发布渠道（可空，默认 stable） */
+    /**
+     * 发布渠道（可空，默认 stable）：stable 正式（所有用户可收到）/
+     * beta 测试（仅拥有 qt_admin / qt_tester 权限的用户可收到，与版本更新渠道同源语义）
+     */
     private String channel;
 
     /** 更新说明 */

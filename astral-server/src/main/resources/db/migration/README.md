@@ -24,6 +24,8 @@
 | 20260914004 | `V20260914004__remove_cluster.sql` | 整体移除集群模式：删菜单/权限/表/序列登记（代码侧同步删除） | 执行 |
 | 20260914005 | `V20260914005__qt_source_dict.sql` | 音源包产物路径登记数据字典（qt_source_artifact_path） | 执行 |
 | 20260914006 | `V20260914006__qt_source_dict_ext.sql` | 音源包装载结果/发布状态登记数据字典（qt_source_report_result / qt_source_release_state） | 执行 |
+| 20260925001 | `V20260925001__storage_folder_upload_policy.sql` | 文件夹级上传策略：storage 表加列 + storage_verify_content 字典 | 执行 |
+| 20260926001 | `V20260926001__qt_permission_codes.sql` | 登记轻听测试权限编码 qt_tester（音源包/版本更新测试版 beta 渠道按 qt_admin/qt_tester 人群投放） | 执行 |
 
 ## 命名规范
 

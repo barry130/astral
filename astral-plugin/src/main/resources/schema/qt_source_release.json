@@ -62,7 +62,7 @@
       "fieldName": "channel",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "发布渠道(stable正式/beta测试)",
+      "comment": "发布渠道(stable正式,所有用户可收到/beta测试,仅qt_admin或qt_tester权限用户可收到)",
       "isRequired": true,
       "defaultValue": "stable",
       "length": 16

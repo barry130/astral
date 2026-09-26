@@ -3,6 +3,10 @@
 /**
  * 音源包热更新管理 Tab（SOURCE_UPDATE_DESIGN §五/§七）
  *
+ * 发布渠道复用版本更新字典 qt_update_channel（stable=正式版 / beta=测试版）：
+ * 正式版所有用户都能收到；测试版仅对拥有 qt_admin / qt_tester 权限（含超管）的用户投放，
+ * 正式版版本号更高时所有用户都收到正式版。
+ *
  * 发布流程对应「先拿号 → 上传文件 → 回填 artifacts → 发布」四步：
  * 1. 新建：只填平台/渠道/准入/说明，后端生成版本号（如 2026091801）随响应返回；
  * 2. 把变更文件上传到 source/<版本号>/ 目录（图床/存储页），拿到永久地址；
@@ -37,8 +41,8 @@ const FALLBACK_PLATFORM_OPTS = [
 ];
 
 const FALLBACK_CHANNEL_OPTS = [
-  { value: 'stable', label: 'stable 正式' },
-  { value: 'beta', label: 'beta 测试' },
+  { value: 'stable', label: '正式版' },
+  { value: 'beta', label: '测试版' },
 ];
 
 const FALLBACK_STATE_LABEL: Record<string, string> = {
@@ -324,7 +328,9 @@ export default function SourceReleasesTab() {
       title: '平台', dataIndex: 'platforms', width: 160,
       render: (list: number[]) => (list || []).map((p) => <Tag key={p} color="blue">{platformLabel(p)}</Tag>),
     },
-    { title: '渠道', dataIndex: 'channel', width: 90, render: (v: string) => <Tag color="purple">{enumLabel(channelOpts, v)}</Tag> },
+    { title: '渠道', dataIndex: 'channel', width: 90, render: (v: string) => (
+      <Tag color={v === 'beta' ? 'orange' : 'purple'}>{enumLabel(channelOpts, v)}</Tag>
+    ) },
     { title: '说明', dataIndex: 'notes', ellipsis: true },
     {
       title: '产物', dataIndex: 'artifacts', width: 120,
@@ -421,7 +427,10 @@ export default function SourceReleasesTab() {
             <Form.Item name="platforms" label="适用平台" rules={[{ required: true, message: '至少选一个平台' }]}>
               <Select mode="multiple" options={platformOpts} style={{ minWidth: 220 }} placeholder="可多选，一个包服务多平台" />
             </Form.Item>
-            <Form.Item name="channel" label="发布渠道" rules={[{ required: true }]}>
+            <Form.Item
+              name="channel" label="发布渠道" rules={[{ required: true }]}
+              tooltip="正式版（stable）所有用户都能收到；测试版（beta）仅对拥有 qt_admin / qt_tester 权限（含超管）的用户投放，与版本更新渠道同源"
+            >
               <Select options={channelOpts} style={{ width: 140 }} />
             </Form.Item>
             <Form.Item name="hostApiVersion" label="宿主契约版本">
