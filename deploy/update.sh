@@ -3,7 +3,8 @@
 # 服务器侧一键更新：拉取 CI 构建好的镜像并重建容器
 #
 # 前提：
-#   1) 本机已 docker login 过镜像仓库（ghcr.io 用带 read:packages 的 PAT）
+#   1) （仅当镜像包为私有）本机已 docker login 过镜像仓库（ghcr.io 用带 read:packages 的 PAT）
+#      包公开时无需登录，直接 pull —— 本仓库是 public，GHCR 包默认公开，属于这种情况
 #   2) deploy/.env 已设置 REGISTRY（ghcr.io/<GitHub用户名>）
 #
 # 用法：

@@ -198,7 +198,9 @@ docker compose up -d --build
 
 ## CI 构建 + 服务器 pull 更新（可选，推荐）
 
-适用场景：镜像由 GitHub Actions 构建并推送到 **ghcr.io**（GitHub 容器仓库，私有包，不依赖 Docker Hub），服务器只负责 `pull` 和起容器。
+适用场景：镜像由 GitHub Actions 构建并推送到 **ghcr.io**（GitHub 容器仓库，不依赖 Docker Hub、不用另开账号），服务器只负责 `pull` 和起容器。
+
+> **包可见性**：本仓库是 **public**，GHCR 包默认同样公开 —— 服务器可匿名 `pull`，**不需要 `docker login`**。若要改成私有：到 Packages 页面把包改为 private（之后服务器需 `docker login ghcr.io`），或把 workflow 的 `registry` 换成腾讯云 TCR / 阿里云 ACR 等私有仓库。
 
 相比「本机 `docker save` 全量 `tar.gz` → `scp` → `docker load`」，这种方式**每次只传输发生变化的镜像层**（改后端≈jar 层，改前端≈`.next` 层），基础镜像层不再重复搬运；服务器也不再需要完整源码，只保留 `deploy/` 目录即可。
 
@@ -206,8 +208,8 @@ docker compose up -d --build
 
 1. 提交 `.github/workflows/docker-publish.yml`、`deploy/docker-compose.registry.yml`、`deploy/update.sh`
 2. GitHub 仓库 **Settings → Actions → General → Workflow permissions** 选 `Read and write permissions`（否则 workflow 推送镜像时报 403）
-3. **Actions → docker-publish → Run workflow** 手动触发一次。成功后镜像出现在 `https://github.com/<用户名>?tab=packages`；**第一次推送成功之前 Packages 页面是空的，属正常现象**
-4. 服务器登录镜像仓库（ghcr.io 的密码用勾选 `read:packages` 的 Personal Access Token，不要用账号密码）：
+3. **Actions → docker-publish → Run workflow** 手动触发一次（直接 push 到 `master` 也会自动触发）。成功后镜像出现在 `https://github.com/<用户名>?tab=packages`；**第一次推送成功之前 Packages 页面是空的，属正常现象**。每个镜像会打两个 tag：`latest` 与「日期-短SHA」如 `20260927-d2585de`（后者用于精确发布/回滚）
+4. （**仅当包被设为私有才需要**）服务器登录镜像仓库，密码用勾选 `read:packages` 的 Personal Access Token，不要用账号密码：
 
    ```bash
    echo "<PAT>" | docker login ghcr.io -u <GitHub用户名> --password-stdin
@@ -239,7 +241,7 @@ docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-b
 
 - **构建期参数搬到 CI**：改成 pull 之后 `docker-compose.yml` 里的 `build.args` 不再生效，`NEXT_PUBLIC_API_URL` 必须在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 里设置（留空即走同源 `/api` + Next rewrites）
 - **CPU 架构必须匹配**：GitHub runner 产出 `linux/amd64`。服务器若是 ARM（aarch64），需在 workflow 中打开 `platforms: linux/arm64`，否则容器报 `exec format error` 起不来
-- **Actions 额度**：私有仓库 Free 计划 2000 分钟/月，公开仓库不限；workflow 已用 `concurrency` 取消同分支旧构建、用 `paths` 过滤无关提交
+- **Actions 额度**：本仓库是 public，Actions 分钟数不限（Free 计划只对私有仓库计 2000 分钟/月）；workflow 已用 `concurrency` 取消同分支旧构建、用 `paths` 过滤无关提交。首次实测：两个镜像合计约 4.5 分钟
 - **磁盘回收**：每次 pull 都会留下旧镜像，`update.sh` 已带 7 天回收；手动回收用 `docker image prune -af --filter "until=168h"`
 - **自动更新（仅建议测试环境）**：cron 每 10 分钟执行 `update.sh`；或用 watchtower：
 
