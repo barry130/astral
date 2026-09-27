@@ -1,22 +1,24 @@
 # ============================================
-# CI：把后端 / 前端构建成镜像并推送到 ghcr.io（GitHub 容器仓库，不需要 Docker Hub、不用另开账号）
+# CI：把后端 / 前端构建成镜像并推送到【腾讯云 TCR 个人版】
 #
-# 目的：服务器不再需要「本机 docker save 全量 tar.gz → scp → docker load」，
-#       改为服务器 docker compose pull，只拉取发生变化的镜像层。
+# 镜像地址形如：ccr.ccs.tencentyun.com/tcb-100008754513-winj/astral-backend:<tag>
 #
-# 关于包可见性（重要）：
-#   本仓库是 public，推上去的 GHCR 包默认也是公开的 —— 服务器可【匿名 pull，无需 docker login】。
-#   想让镜像私有：到 Packages 页面把该包改为 private（之后服务器需要 docker login ghcr.io），
-#   或把下面的 registry 换成私有仓库（腾讯云 TCR / 阿里云 ACR 个人版）。
+# 为什么不用 ghcr.io：国内服务器拉 ghcr.io 慢且易断（实测首次 pull 15 分钟未完成）。
+# 腾讯云 TCR 与服务器同区，可走内网地址拉取，快且免公网流量。
 #
-# 首次使用步骤：
-#   1) 提交本文件到 master（或直接在 GitHub 页面 Actions → docker-publish → Run workflow）
-#   2) 构建成功后，镜像出现在 https://github.com/<owner>?tab=packages
-#      （第一次 push 之前 Packages 页面是空的，这是正常的）
-#   3) 服务器侧执行 deploy/update.sh（包为公开时不需要 docker login）
+# 【首次使用前必须做两件事】
+#   1) 在 GitHub 仓库 Settings → Secrets and variables → Actions → Secrets 添加：
+#        TCR_USERNAME  —— 腾讯云控制台「容器镜像服务 → 个人版 → 访问凭证」里的登录用户名
+#                         （一般是腾讯云账号 UIN 或子账号，以控制台给出的 docker login 指令为准）
+#        TCR_PASSWORD  —— 同一页面设置/查看的固定密码
+#      直达链接：https://github.com/barry130/astral/settings/secrets/actions
+#   2) 确认命名空间 tcb-100008754513-winj 下存在两个镜像仓库：
+#        astral-backend、astral-frontend
+#      （TCR 个人版通常在推送时自动创建；若报 repository not found，去控制台手动新建同名仓库）
 #
-# 若推送报 403：仓库 Settings → Actions → General → Workflow permissions
-#   选 "Read and write permissions"（本文件的 permissions: packages: write 需要它兜底）。
+# 未配置 Secrets 时本 workflow 不会报红：只打一条 warning 并跳过推送，配置好后重跑即可。
+#
+# 服务器侧拉取：见 deploy/update.sh 与 DEPLOY_GUIDE.md「CI 构建 + 服务器 pull 更新」。
 # ============================================
 name: docker-publish
 
@@ -31,14 +33,15 @@ on:
       - '.github/workflows/docker-publish.yml'
   workflow_dispatch: # 支持手动触发（首次验证请用这个，不要靠 push 试错）
 
-# 同一分支只保留最后一次构建，省 Actions 分钟数（私有仓库免费额度 2000 分钟/月）
+# 同一分支只保留最后一次构建，省 Actions 分钟数（本仓库是 public，分钟数不限，但避免排队）
 concurrency:
   group: docker-publish-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  # 镜像仓库前缀：ghcr.io/<GitHub用户名，必须全小写>
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+  REGISTRY_HOST: ccr.ccs.tencentyun.com
+  # 命名空间路径（不含具体仓库名），必须与服务器 deploy/.env 里的 REGISTRY 保持一致
+  IMAGE_PREFIX: ccr.ccs.tencentyun.com/tcb-100008754513-winj
 
 jobs:
   # ---------- 生成一个「日期 + 短 SHA」的发布 tag，供回滚使用 ----------
@@ -56,19 +59,34 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # 推 ghcr.io 必需
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v3
+      # 凭证未配置时不报红：打一条 warning 直接跳过，配置好 Secrets 后重跑即可
+      - id: creds
+        env:
+          U: ${{ secrets.TCR_USERNAME }}
+          P: ${{ secrets.TCR_PASSWORD }}
+        run: |
+          if [ -n "$U" ] && [ -n "$P" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::TCR_USERNAME / TCR_PASSWORD 未配置，本次跳过构建与推送。配置后重跑本 workflow 即可。"
+          fi
 
-      - uses: docker/login-action@v3
+      - if: steps.creds.outputs.ok == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - if: steps.creds.outputs.ok == 'true'
+        uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # 内置令牌，无需额外配置 Secret
+          registry: ${{ env.REGISTRY_HOST }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
 
-      - uses: docker/build-push-action@v6
+      - if: steps.creds.outputs.ok == 'true'
+        uses: docker/build-push-action@v6
         with:
           context: . # 仓库根：Dockerfile 依赖根 pom + .mvn + 各模块 pom
           file: astral-server/Dockerfile
@@ -76,7 +94,7 @@ jobs:
           # 服务器若是 ARM(aarch64) 架构：改成 platforms: linux/arm64
           # 需要同时支持两种架构：platforms: linux/amd64,linux/arm64
           # platforms: linux/amd64
-          provenance: false # 关掉 attestation，避免 GHCR 里出现 unknown/unknown 平台条目
+          provenance: false # 关掉 attestation，避免仓库里出现 unknown/unknown 平台条目
           tags: |
             ${{ env.IMAGE_PREFIX }}/astral-backend:latest
             ${{ env.IMAGE_PREFIX }}/astral-backend:${{ needs.meta.outputs.tag }}
@@ -89,19 +107,33 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v3
+      - id: creds
+        env:
+          U: ${{ secrets.TCR_USERNAME }}
+          P: ${{ secrets.TCR_PASSWORD }}
+        run: |
+          if [ -n "$U" ] && [ -n "$P" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::TCR_USERNAME / TCR_PASSWORD 未配置，本次跳过构建与推送。配置后重跑本 workflow 即可。"
+          fi
 
-      - uses: docker/login-action@v3
+      - if: steps.creds.outputs.ok == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - if: steps.creds.outputs.ok == 'true'
+        uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ env.REGISTRY_HOST }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
 
-      - uses: docker/build-push-action@v6
+      - if: steps.creds.outputs.ok == 'true'
+        uses: docker/build-push-action@v6
         with:
           context: astral-front
           file: astral-front/Dockerfile

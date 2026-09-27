@@ -44,7 +44,7 @@
 | `.mvn/settings.xml` | Docker 构建用 Maven 镜像（阿里云 public） |
 | `.dockerignore` | 后端构建上下文排除项 |
 | `astral-front/.dockerignore` | 前端构建上下文排除项 |
-| `.github/workflows/docker-publish.yml` | （可选）CI：push 到 `master` 自动构建并推送镜像到 ghcr.io |
+| `.github/workflows/docker-publish.yml` | （可选）CI：push 到 `master` 自动构建并推送镜像到腾讯云 TCR 个人版 |
 | `deploy/docker-compose.registry.yml` | （可选）overlay：服务镜像改为从私有仓库 pull，服务器不本地构建 |
 | `deploy/update.sh` | （可选）服务器一键更新：pull + 重建 + 清理旧镜像 |
 
@@ -73,7 +73,7 @@ vi .env      # 填入数据库、Redis 的真实地址与密码
 | `STORAGE_ORIGIN_SHARED_SECRET` | 同上（另生成） | 文件存储：Worker 回调鉴权密钥，需与 Worker Secret 一致 |
 | `STORAGE_DOWNLOAD_SIGNING_KEY_V1` | 同上（另生成） | 文件存储：下载地址签名密钥，需与 Worker Secret 一致 |
 | `NEXT_PUBLIC_API_URL` | 留空（推荐）或 `https://<你的API域名>` | 浏览器访问 API 的基地址（构建时内联）。**改用 CI 构建镜像后本项在 `.env` 中不再生效**，需改为 GitHub 仓库变量，见下文「CI 构建 + 服务器 pull 更新」 |
-| `REGISTRY` | `ghcr.io/<你的GitHub用户名>` | （可选）镜像仓库前缀，只到命名空间，配合 `docker-compose.registry.yml` 使用 |
+| `REGISTRY` | `ccr.ccs.tencentyun.com/tcb-100008754513-winj` | （可选）镜像仓库前缀，只到命名空间；配合 `docker-compose.registry.yml` 使用 |
 | `TAG` | `latest` 或 `20260926-a1b2c3d` | （可选）镜像 tag，兼作回滚开关 |
 
 > `SPRING_DATASOURCE_*` 与 `REDIS_PASSWORD` 在 compose 中使用 `:?` 断言：未在 `.env` 填写时 `docker compose` 会**直接报错并提示缺哪个变量**，不会用占位值静默启动。`QT_PLUGIN_ENABLED`、`TZ` 已在 compose 中固定为 `true` / `Asia/Shanghai`。
@@ -198,24 +198,36 @@ docker compose up -d --build
 
 ## CI 构建 + 服务器 pull 更新（可选，推荐）
 
-适用场景：镜像由 GitHub Actions 构建并推送到 **ghcr.io**（GitHub 容器仓库，不依赖 Docker Hub、不用另开账号），服务器只负责 `pull` 和起容器。
+适用场景：镜像由 GitHub Actions 构建并推送到 **腾讯云 TCR 个人版**（`ccr.ccs.tencentyun.com`），服务器只负责 `pull` 和起容器。
 
-> **包可见性**：本仓库是 **public**，GHCR 包默认同样公开 —— 服务器可匿名 `pull`，**不需要 `docker login`**。若要改成私有：到 Packages 页面把包改为 private（之后服务器需 `docker login ghcr.io`），或把 workflow 的 `registry` 换成腾讯云 TCR / 阿里云 ACR 等私有仓库。
+选它而不是 ghcr.io 的原因：国内服务器拉 `ghcr.io` 慢且易断（实测首次 `pull` 15 分钟未完成），而 TCR 与服务器同区，可走**内网地址**拉取，快且免公网流量。
+
+> **TCR 仓库默认私有**：服务器需要**先 `docker login` 一次**（凭证持久化在 `/root/.docker/config.json`，之后 `update.sh` 自动复用），或者把仓库改成公开。镜像名形如 `ccr.ccs.tencentyun.com/tcb-100008754513-winj/astral-backend:<tag>`。
+>
+> 仍想用 ghcr.io 也可以：把 workflow 里的 `REGISTRY_HOST` / `IMAGE_PREFIX` / 登录凭证换回 ghcr.io，`deploy/.env` 的 `REGISTRY` 同步改为 `ghcr.io/<用户名>`。
 
 相比「本机 `docker save` 全量 `tar.gz` → `scp` → `docker load`」，这种方式**每次只传输发生变化的镜像层**（改后端≈jar 层，改前端≈`.next` 层），基础镜像层不再重复搬运；服务器也不再需要完整源码，只保留 `deploy/` 目录即可。
 
 ### 一次性配置
 
 1. 提交 `.github/workflows/docker-publish.yml`、`deploy/docker-compose.registry.yml`、`deploy/update.sh`
-2. GitHub 仓库 **Settings → Actions → General → Workflow permissions** 选 `Read and write permissions`（否则 workflow 推送镜像时报 403）
-3. **Actions → docker-publish → Run workflow** 手动触发一次（直接 push 到 `master` 也会自动触发）。成功后镜像出现在 `https://github.com/<用户名>?tab=packages`；**第一次推送成功之前 Packages 页面是空的，属正常现象**。每个镜像会打两个 tag：`latest` 与「日期-短SHA」如 `20260927-d2585de`（后者用于精确发布/回滚）
-4. （**仅当包被设为私有才需要**）服务器登录镜像仓库，密码用勾选 `read:packages` 的 Personal Access Token，不要用账号密码：
+2. 在 **Settings → Secrets and variables → Actions → Secrets** 添加两个仓库密钥（[直达链接](https://github.com/barry130/astral/settings/secrets/actions)）：
+
+   | Secret | 取值 |
+   |---|---|
+   | `TCR_USERNAME` | 腾讯云控制台「容器镜像服务 → 个人版 → 访问凭证」里的登录用户名（一般是腾讯云账号 UIN 或子账号，以控制台给出的 `docker login` 指令为准） |
+   | `TCR_PASSWORD` | 同一页面设置/查看的固定密码 |
+
+   > 未配置这两个 Secret 时 workflow **不会报红**：只打一条 warning 并跳过推送，配置好后重跑即可。
+3. 确认命名空间 `tcb-100008754513-winj` 下有两个镜像仓库：`astral-backend`、`astral-frontend`（TCR 个人版通常在推送时自动创建；若报 `repository not found`，去控制台手动新建同名仓库）
+4. **Actions → docker-publish → Run workflow** 手动触发一次（直接 push 到 `master` 也会自动触发）。成功后到 TCR 控制台的「镜像仓库」页面能看到两个镜像，每个镜像有两个 tag：`latest` 与「日期-短SHA」如 `20260927-d2585de`（后者用于精确发布/回滚）
+5. 服务器登录 TCR（仓库默认私有），凭证会持久化，只需一次：
 
    ```bash
-   echo "<PAT>" | docker login ghcr.io -u <GitHub用户名> --password-stdin
+   echo "<访问凭证密码>" | docker login ccr.ccs.tencentyun.com -u <腾讯云账号> --password-stdin
    ```
 
-5. 服务器 `deploy/.env` 补两行：`REGISTRY=ghcr.io/<GitHub用户名>`、`TAG=latest`
+6. 服务器 `deploy/.env` 补两行：`REGISTRY=ccr.ccs.tencentyun.com/tcb-100008754513-winj`、`TAG=latest`
 
 ### 每次更新
 
@@ -253,13 +265,13 @@ docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-b
   ```
 
   watchtower 不遵守 compose 的 `depends_on` 健康检查顺序；且自动更新会把 Flyway 迁移静默推上线，生产环境建议固定日期 tag + 人工执行 `update.sh`
-- **换用国内镜像仓库**：把 workflow 里的 `registry:`、登录账号密码换成腾讯云 TCR 个人版 / 阿里云 ACR 个人版，`deploy/.env` 的 `REGISTRY` 同步改成该仓库地址；同地域服务器用**内网地址**拉取可免公网流量
+- **换镜像仓库 / 走内网加速**：拉起地址由 `deploy/.env` 的 `REGISTRY` 决定。服务器与 registry 同区时，把 `REGISTRY` 换成控制台给出的**内网地址**（仓库路径不变，可直接换）；要整体换回 ghcr.io 或换阿里云 ACR，则需同时改 workflow 的 `REGISTRY_HOST` / `IMAGE_PREFIX` / 登录凭证
 
 ### 从 tar.gz 镜像包迁移到本方案
 
 现状：服务器上跑的是本机 `docker save` 打包、`docker load` 装载的镜像，再 `docker compose up -d` 起容器。
 
-迁移**不需要改 `docker-compose.yml`**，只是给服务补上 `image:`，让容器改用从 ghcr 拉取的镜像。数据卷、端口、`deploy/.env`、数据库里的 Flyway 历史全部沿用。
+迁移**不需要改 `docker-compose.yml`**，只是给服务补上 `image:`，让容器改用从 TCR 拉取的镜像。数据卷、端口、`deploy/.env`、数据库里的 Flyway 历史全部沿用。
 
 > **最关键的一条**：必须在**原来的 compose 工作目录、原来的项目名下**操作。
 > `deploy/docker-compose.yml` 的卷是 `backend-data` / `backend-logs`，compose 会给它们加项目名前缀（默认 = 首个 compose 文件所在目录名，通常是 `deploy`）。换个目录跑会新建一套空卷 → RSA 密钥对重新生成、日志丢失。
@@ -295,8 +307,11 @@ git pull                         # 服务器有仓库时；否则 scp 三个文�
 #   deploy/docker-compose.registry.yml、deploy/update.sh、deploy/.env.example
 
 # 给 .env 补两行（不要覆盖原有内容）
-printf 'REGISTRY=ghcr.io/barry130\nTAG=20260927-358e7ba\n' >> .env
+printf 'REGISTRY=ccr.ccs.tencentyun.com/tcb-100008754513-winj\nTAG=latest\n' >> .env
 chmod +x update.sh
+
+# 登录一次 TCR（仓库默认私有；凭证持久化在 /root/.docker/config.json，之后 update.sh 自动复用）
+echo '<访问凭证密码>' | docker login ccr.ccs.tencentyun.com -u <腾讯云账号> --password-stdin
 
 # 首次迁移先手动两条命令，把「清理旧镜像」留到验证之后
 docker compose -f docker-compose.yml -f docker-compose.registry.yml pull
@@ -311,7 +326,7 @@ docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-b
 docker compose -f docker-compose.yml -f docker-compose.registry.yml ps
 docker compose -f docker-compose.yml -f docker-compose.registry.yml logs --tail=200 backend | grep -Ei 'Started AstralApplication|flyway|ERROR'
 curl -fsS http://localhost:27000/actuator/health
-docker inspect astral-backend --format '{{ .Config.Image }}'   # 应变为 ghcr.io/barry130/astral-backend:...
+docker inspect astral-backend --format '{{ .Config.Image }}'   # 应变为 ccr.ccs.tencentyun.com/tcb-100008754513-winj/astral-backend:...
 ```
 
 确认无误后再回收旧镜像与归档：
@@ -323,7 +338,7 @@ rm -f /opt/astral-docker-*.tar.gz                # 归档建议另存一份做�
 
 #### 回滚
 
-- **本次切换前**没有 ghcr 历史镜像可回滚：摘掉 overlay 再 `up -d`（`docker compose up -d`，compose 会用回本地那对旧镜像，前提是还没被 prune 掉），或重新 `docker load` 旧 tar 包按原方式启动
+- **本次切换前**没有 registry 上的历史镜像可回滚：摘掉 overlay 再 `up -d`（`docker compose up -d`，compose 会用回本地那对旧镜像，前提是还没被 prune 掉），或重新 `docker load` 旧 tar 包按原方式启动
 - **切换之后**的每次发布：`./update.sh <上一个日期 tag>` 即可回滚镜像
 
 > 任何时候都**不要** `docker compose down -v`：`-v` 会删掉 `backend-data` 卷（RSA 密钥对、文件数据随之丢失），`down` 不带 `-v` 是安全的。

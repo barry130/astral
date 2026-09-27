@@ -3,9 +3,11 @@
 # 服务器侧一键更新：拉取 CI 构建好的镜像并重建容器
 #
 # 前提：
-#   1) （仅当镜像包为私有）本机已 docker login 过镜像仓库（ghcr.io 用带 read:packages 的 PAT）
-#      包公开时无需登录，直接 pull —— 本仓库是 public，GHCR 包默认公开，属于这种情况
-#   2) deploy/.env 已设置 REGISTRY（ghcr.io/<GitHub用户名>）
+#   1) 先登录一次镜像仓库（腾讯云 TCR 个人版默认私有）。凭证会持久化到 /root/.docker/config.json，
+#      之后 ./update.sh 自动复用，不需要每次登录：
+#        echo '<访问凭证密码>' | docker login ccr.ccs.tencentyun.com -u <腾讯云账号> --password-stdin
+#      若你已把仓库设为「公开」，可跳过本步
+#   2) deploy/.env 已设置 REGISTRY（如 ccr.ccs.tencentyun.com/tcb-100008754513-winj）
 #
 # 用法：
 #   ./update.sh                      # 用 deploy/.env 里的 TAG（默认 latest）
