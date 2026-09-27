@@ -44,6 +44,9 @@
 | `.mvn/settings.xml` | Docker 构建用 Maven 镜像（阿里云 public） |
 | `.dockerignore` | 后端构建上下文排除项 |
 | `astral-front/.dockerignore` | 前端构建上下文排除项 |
+| `.github/workflows/docker-publish.yml` | （可选）CI：push 到 `master` 自动构建并推送镜像到 ghcr.io |
+| `deploy/docker-compose.registry.yml` | （可选）overlay：服务镜像改为从私有仓库 pull，服务器不本地构建 |
+| `deploy/update.sh` | （可选）服务器一键更新：pull + 重建 + 清理旧镜像 |
 
 ## 环境变量配置
 
@@ -69,7 +72,9 @@ vi .env      # 填入数据库、Redis 的真实地址与密码
 | `STORAGE_UPLOAD_TICKET_KEY` | `openssl rand -base64 48` 生成 | 文件存储：上传凭证 HMAC 密钥，需与 Worker Secret 一致 |
 | `STORAGE_ORIGIN_SHARED_SECRET` | 同上（另生成） | 文件存储：Worker 回调鉴权密钥，需与 Worker Secret 一致 |
 | `STORAGE_DOWNLOAD_SIGNING_KEY_V1` | 同上（另生成） | 文件存储：下载地址签名密钥，需与 Worker Secret 一致 |
-| `NEXT_PUBLIC_API_URL` | 留空（推荐）或 `https://<你的API域名>` | 浏览器访问 API 的基地址（构建时内联） |
+| `NEXT_PUBLIC_API_URL` | 留空（推荐）或 `https://<你的API域名>` | 浏览器访问 API 的基地址（构建时内联）。**改用 CI 构建镜像后本项在 `.env` 中不再生效**，需改为 GitHub 仓库变量，见下文「CI 构建 + 服务器 pull 更新」 |
+| `REGISTRY` | `ghcr.io/<你的GitHub用户名>` | （可选）镜像仓库前缀，只到命名空间，配合 `docker-compose.registry.yml` 使用 |
+| `TAG` | `latest` 或 `20260926-a1b2c3d` | （可选）镜像 tag，兼作回滚开关 |
 
 > `SPRING_DATASOURCE_*` 与 `REDIS_PASSWORD` 在 compose 中使用 `:?` 断言：未在 `.env` 填写时 `docker compose` 会**直接报错并提示缺哪个变量**，不会用占位值静默启动。`QT_PLUGIN_ENABLED`、`TZ` 已在 compose 中固定为 `true` / `Asia/Shanghai`。
 >
@@ -183,10 +188,70 @@ docker compose restart frontend   # 重启单个服务
 docker compose down               # 停止（保留数据卷）
 docker compose up -d              # 再次启动
 
-# 更新发布（拉新代码后重建；不要加 --no-cache，否则 Maven 依赖缓存作废）
+# 更新发布（方式一：服务器本地构建；不要加 --no-cache，否则 Maven 依赖缓存作废）
 git pull
 docker compose up -d --build
+
+# 更新发布（方式二：镜像已由 CI 构建好，服务器只拉取、不编译，见下节）
+./update.sh
 ```
+
+## CI 构建 + 服务器 pull 更新（可选，推荐）
+
+适用场景：镜像由 GitHub Actions 构建并推送到 **ghcr.io**（GitHub 容器仓库，私有包，不依赖 Docker Hub），服务器只负责 `pull` 和起容器。
+
+相比「本机 `docker save` 全量 `tar.gz` → `scp` → `docker load`」，这种方式**每次只传输发生变化的镜像层**（改后端≈jar 层，改前端≈`.next` 层），基础镜像层不再重复搬运；服务器也不再需要完整源码，只保留 `deploy/` 目录即可。
+
+### 一次性配置
+
+1. 提交 `.github/workflows/docker-publish.yml`、`deploy/docker-compose.registry.yml`、`deploy/update.sh`
+2. GitHub 仓库 **Settings → Actions → General → Workflow permissions** 选 `Read and write permissions`（否则 workflow 推送镜像时报 403）
+3. **Actions → docker-publish → Run workflow** 手动触发一次。成功后镜像出现在 `https://github.com/<用户名>?tab=packages`；**第一次推送成功之前 Packages 页面是空的，属正常现象**
+4. 服务器登录镜像仓库（ghcr.io 的密码用勾选 `read:packages` 的 Personal Access Token，不要用账号密码）：
+
+   ```bash
+   echo "<PAT>" | docker login ghcr.io -u <GitHub用户名> --password-stdin
+   ```
+
+5. 服务器 `deploy/.env` 补两行：`REGISTRY=ghcr.io/<GitHub用户名>`、`TAG=latest`
+
+### 每次更新
+
+```bash
+cd /opt/astral/deploy
+chmod +x update.sh          # 首次执行一次
+./update.sh                 # 拉取 + 重建 + 清理 7 天前的旧镜像
+./update.sh 20260926-a1b2c3d   # 指定 CI 产出的日期 tag 精确发布
+```
+
+等价的原始命令（不想用脚本时）：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.registry.yml pull
+docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-build
+```
+
+### 回滚
+
+`./update.sh <上一个日期 tag>`。注意 backend 启动会自动应用 Flyway 迁移，**镜像回滚不会回滚数据库**，涉及破坏性迁移时需单独评估。
+
+### 关键注意点
+
+- **构建期参数搬到 CI**：改成 pull 之后 `docker-compose.yml` 里的 `build.args` 不再生效，`NEXT_PUBLIC_API_URL` 必须在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 里设置（留空即走同源 `/api` + Next rewrites）
+- **CPU 架构必须匹配**：GitHub runner 产出 `linux/amd64`。服务器若是 ARM（aarch64），需在 workflow 中打开 `platforms: linux/arm64`，否则容器报 `exec format error` 起不来
+- **Actions 额度**：私有仓库 Free 计划 2000 分钟/月，公开仓库不限；workflow 已用 `concurrency` 取消同分支旧构建、用 `paths` 过滤无关提交
+- **磁盘回收**：每次 pull 都会留下旧镜像，`update.sh` 已带 7 天回收；手动回收用 `docker image prune -af --filter "until=168h"`
+- **自动更新（仅建议测试环境）**：cron 每 10 分钟执行 `update.sh`；或用 watchtower：
+
+  ```bash
+  docker run -d --name watchtower --restart=always \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v /root/.docker/config.json:/config.json:ro -e DOCKER_CONFIG=/ \
+    containrrr/watchtower --interval 300 --cleanup astral-backend astral-frontend
+  ```
+
+  watchtower 不遵守 compose 的 `depends_on` 健康检查顺序；且自动更新会把 Flyway 迁移静默推上线，生产环境建议固定日期 tag + 人工执行 `update.sh`
+- **换用国内镜像仓库**：把 workflow 里的 `registry:`、登录账号密码换成腾讯云 TCR 个人版 / 阿里云 ACR 个人版，`deploy/.env` 的 `REGISTRY` 同步改成该仓库地址；同地域服务器用**内网地址**拉取可免公网流量
 
 ## 数据持久化
 

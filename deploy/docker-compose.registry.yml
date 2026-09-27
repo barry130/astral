@@ -1,0 +1,27 @@
+# ============================================
+# 可选 overlay：让服务器「只 pull 镜像，不本地构建」
+#
+# 用法（在 deploy/ 目录）：
+#   构建并推送（开发机，需先 docker login）：
+#     docker compose -f docker-compose.yml -f docker-compose.registry.yml build
+#     docker compose -f docker-compose.yml -f docker-compose.registry.yml push
+#   服务器更新：
+#     ./update.sh            # 等价于 pull + up -d --no-build + 清理旧镜像
+#
+# 不引用本文件时，docker-compose.yml 的行为与以前完全一致（服务器本地构建），
+# 两条路可以并存：CI 正常时走 pull，仓库/网络不通时回退本地 build。
+#
+# REGISTRY / TAG 来自 deploy/.env（见 .env.example）：
+#   REGISTRY=ghcr.io/<GitHub用户名>      不带仓库名，只到命名空间
+#   TAG=latest                           或 CI 产出的日期 tag（如 20260926-a1b2c3d），用于回滚
+# ============================================
+
+services:
+  backend:
+    image: ${REGISTRY}/astral-backend:${TAG:-latest}
+    # up -d 时总是先尝试拉取最新镜像；配合 --no-build 可确保不会退化成服务器本地编译
+    pull_policy: always
+
+  frontend:
+    image: ${REGISTRY}/astral-frontend:${TAG:-latest}
+    pull_policy: always

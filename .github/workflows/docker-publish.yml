@@ -1,0 +1,116 @@
+# ============================================
+# CI：把后端 / 前端构建成镜像并推送到 ghcr.io（GitHub 容器仓库，私有包，不需要 Docker Hub）
+#
+# 目的：服务器不再需要「本机 docker save 全量 tar.gz → scp → docker load」，
+#       改为服务器 docker compose pull，只拉取发生变化的镜像层。
+#
+# 首次使用步骤：
+#   1) 提交本文件到 master（或直接在 GitHub 页面 Actions → docker-publish → Run workflow）
+#   2) 构建成功后，镜像出现在 https://github.com/<owner>?tab=packages
+#      （第一次 push 之前 Packages 页面是空的，这是正常的）
+#   3) 服务器侧：docker login ghcr.io -u <GitHub用户名> --password-stdin 后执行 deploy/update.sh
+#
+# 若推送报 403：仓库 Settings → Actions → General → Workflow permissions
+#   选 "Read and write permissions"（本文件的 permissions: packages: write 需要它兜底）。
+# ============================================
+name: docker-publish
+
+on:
+  push:
+    branches: [master]
+    # 只在影响镜像内容的路径变化时构建，避免改文档/说明也跑一遍 CI
+    paths:
+      - 'pom.xml'
+      - '.mvn/**'
+      - 'astral-*/**' # 覆盖 astral-server/**、astral-front/** 等全部模块
+      - '.github/workflows/docker-publish.yml'
+  workflow_dispatch: # 支持手动触发（首次验证请用这个，不要靠 push 试错）
+
+# 同一分支只保留最后一次构建，省 Actions 分钟数（私有仓库免费额度 2000 分钟/月）
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 镜像仓库前缀：ghcr.io/<GitHub用户名，必须全小写>
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  # ---------- 生成一个「日期 + 短 SHA」的发布 tag，供回滚使用 ----------
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - id: v
+        run: echo "tag=$(date -u +%Y%m%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+  # ==================== 后端 ====================
+  backend:
+    needs: meta
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # 推 ghcr.io 必需
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} # 内置令牌，无需额外配置 Secret
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: . # 仓库根：Dockerfile 依赖根 pom + .mvn + 各模块 pom
+          file: astral-server/Dockerfile
+          push: true
+          # 服务器若是 ARM(aarch64) 架构：改成 platforms: linux/arm64
+          # 需要同时支持两种架构：platforms: linux/amd64,linux/arm64
+          # platforms: linux/amd64
+          provenance: false # 关掉 attestation，避免 GHCR 里出现 unknown/unknown 平台条目
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/astral-backend:latest
+            ${{ env.IMAGE_PREFIX }}/astral-backend:${{ needs.meta.outputs.tag }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+  # ==================== 前端 ====================
+  frontend:
+    needs: meta
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: astral-front
+          file: astral-front/Dockerfile
+          push: true
+          provenance: false
+          # ⚠️ 构建期参数必须在 CI 里定义：服务器改成「只 pull 不 build」后，
+          #    deploy/docker-compose.yml 里的 build.args 不再生效。
+          #    NEXT_PUBLIC_API_URL 建议留空（走同源 /api + Next rewrites）；
+          #    如需设置，到 Settings → Secrets and variables → Actions → Variables 新建同名变量。
+          build-args: |
+            BACKEND_URL=http://backend:27000
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/astral-frontend:latest
+            ${{ env.IMAGE_PREFIX }}/astral-frontend:${{ needs.meta.outputs.tag }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
