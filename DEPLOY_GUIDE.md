@@ -255,6 +255,79 @@ docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-b
   watchtower 不遵守 compose 的 `depends_on` 健康检查顺序；且自动更新会把 Flyway 迁移静默推上线，生产环境建议固定日期 tag + 人工执行 `update.sh`
 - **换用国内镜像仓库**：把 workflow 里的 `registry:`、登录账号密码换成腾讯云 TCR 个人版 / 阿里云 ACR 个人版，`deploy/.env` 的 `REGISTRY` 同步改成该仓库地址；同地域服务器用**内网地址**拉取可免公网流量
 
+### 从 tar.gz 镜像包迁移到本方案
+
+现状：服务器上跑的是本机 `docker save` 打包、`docker load` 装载的镜像，再 `docker compose up -d` 起容器。
+
+迁移**不需要改 `docker-compose.yml`**，只是给服务补上 `image:`，让容器改用从 ghcr 拉取的镜像。数据卷、端口、`deploy/.env`、数据库里的 Flyway 历史全部沿用。
+
+> **最关键的一条**：必须在**原来的 compose 工作目录、原来的项目名下**操作。
+> `deploy/docker-compose.yml` 的卷是 `backend-data` / `backend-logs`，compose 会给它们加项目名前缀（默认 = 首个 compose 文件所在目录名，通常是 `deploy`）。换个目录跑会新建一套空卷 → RSA 密钥对重新生成、日志丢失。
+
+#### 迁移前核对（服务器上执行）
+
+```bash
+cd /opt/astral/deploy
+
+# 1) 当前容器的 compose 项目名与工作目录 —— 迁移必须在这个目录下做
+docker inspect astral-backend --format '{{ index .Config.Labels "com.docker.compose.project" }} | {{ index .Config.Labels "com.docker.compose.project.working_dir" }}'
+
+# 2) 容器实际挂的卷名 —— 迁移后必须还是这几个
+docker inspect astral-backend --format '{{ range .Mounts }}{{ .Type }} {{ .Name }} -> {{ .Destination }}{{ "\n" }}{{ end }}'
+
+# 3) 当前镜像名与 ID —— 回滚锚点，先别删
+docker images | grep -Ei 'astral|deploy'
+docker inspect astral-backend astral-frontend --format '{{ .Name }} <- {{ .Config.Image }} ({{ .Image }})'
+
+# 4) 前端构建期内联地址：NEXT_PUBLIC_API_URL 若在 .env 里非空，
+#    必须先把它配到 GitHub 仓库 Variables 并重跑 CI，否则新镜像会退回同源 /api 行为
+grep -n 'NEXT_PUBLIC_API_URL' .env
+```
+
+若第 1 步查不到 `com.docker.compose.project` 标签，说明当前容器是 `docker run` 直接起的（不归 compose 管）。此时先 `docker rm -f astral-backend astral-frontend`（**卷独立于容器，不会丢**），再执行下面的 `./update.sh`，由 compose 重新创建。
+
+#### 迁移步骤
+
+```bash
+cd /opt/astral/deploy            # 第 1 步查到的工作目录
+
+git pull                         # 服务器有仓库时；否则 scp 三个文件过来：
+#   deploy/docker-compose.registry.yml、deploy/update.sh、deploy/.env.example
+
+# 给 .env 补两行（不要覆盖原有内容）
+printf 'REGISTRY=ghcr.io/barry130\nTAG=20260927-358e7ba\n' >> .env
+chmod +x update.sh
+
+# 首次迁移先手动两条命令，把「清理旧镜像」留到验证之后
+docker compose -f docker-compose.yml -f docker-compose.registry.yml pull
+docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-build
+```
+
+首次建议把 `TAG` 钉死成具体日期 tag（如 `20260927-358e7ba`）而不是 `latest`，排查最省事。compose 只会 **recreate 容器**，不会动卷——日志里应出现 `Recreated`，而不应出现 `Creating volume`。
+
+#### 验证
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.registry.yml ps
+docker compose -f docker-compose.yml -f docker-compose.registry.yml logs --tail=200 backend | grep -Ei 'Started AstralApplication|flyway|ERROR'
+curl -fsS http://localhost:27000/actuator/health
+docker inspect astral-backend --format '{{ .Config.Image }}'   # 应变为 ghcr.io/barry130/astral-backend:...
+```
+
+确认无误后再回收旧镜像与归档：
+
+```bash
+docker image prune -af --filter "until=24h"      # 回收 tar 装载的旧镜像
+rm -f /opt/astral-docker-*.tar.gz                # 归档建议另存一份做离线备用
+```
+
+#### 回滚
+
+- **本次切换前**没有 ghcr 历史镜像可回滚：摘掉 overlay 再 `up -d`（`docker compose up -d`，compose 会用回本地那对旧镜像，前提是还没被 prune 掉），或重新 `docker load` 旧 tar 包按原方式启动
+- **切换之后**的每次发布：`./update.sh <上一个日期 tag>` 即可回滚镜像
+
+> 任何时候都**不要** `docker compose down -v`：`-v` 会删掉 `backend-data` 卷（RSA 密钥对、文件数据随之丢失），`down` 不带 `-v` 是安全的。
+
 ## 数据持久化
 
 | 数据卷 | 挂载点 | 内容 |
