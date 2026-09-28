@@ -2,7 +2,7 @@
 
 本文档介绍如何将 Astral 管理后台（后端 + 前端）打包为 Docker 镜像并部署到服务器。
 
-- 后端：Spring Boot 3.2.3 / Java 21 / 端口 `27000`
+- 后端：Spring Boot 4.1.0 / Java 25 / 端口 `27000`
 - 前端：Next.js 14（standalone）/ 端口 `3000`
 - 数据库：PostgreSQL（复用服务器已有实例）
 - 缓存：Redis（复用服务器已有实例）
@@ -32,7 +32,7 @@
 
 **本机（可选，仅本地调试）：**
 
-- JDK 21、Maven 3.6+、Node.js 18+
+- JDK 25、Maven 3.9+、Node.js 20+
 
 ## 部署相关文件
 
@@ -232,11 +232,20 @@ docker compose up -d --build
 ### 每次更新
 
 ```bash
-cd /opt/astral/deploy
+cd /opt/astral
+git pull                    # ① 必须先更新仓库本身：compose 文件 / update.sh 都在里面
+cd deploy
 chmod +x update.sh          # 首次执行一次
-./update.sh                 # 拉取 + 重建 + 清理 7 天前的旧镜像
+./update.sh                 # ② 拉取镜像 + 重建容器 + 清理 7 天前的旧镜像
 ./update.sh 20260926-a1b2c3d   # 指定 CI 产出的日期 tag 精确发布
 ```
+
+> ⚠️ `./update.sh` 只负责「拉镜像 + 重建容器」，它读取的是服务器上**已有的** compose 文件。
+> 所以跳过 `git pull`、只跑 `./update.sh`，会出现「镜像换了、容器配置还是旧的」——
+> 典型症状是新增/修改过的 `extra_hosts`、`environment`、`ports`、`volumes` 不生效。
+> 若服务器是用 tar.gz 部署而非 git，同样要先把新的 `deploy/` 覆盖上去（**别覆盖 `deploy/.env`**）。
+> 只想更新 compose 配置而不换镜像时，在 `deploy/` 下执行
+> `docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-build --force-recreate`。
 
 等价的原始命令（不想用脚本时）：
 
@@ -377,6 +386,30 @@ docker compose build --no-cache frontend && docker compose up -d frontend
 - 确认 compose 中 `SPRING_DATASOURCE_URL` 指向的 PostgreSQL 实例可从服务器访问。
 - 检查数据库账号密码与 `currentSchema` 是否正确。
 - 查看 `docker compose logs backend` 中的连接异常。
+
+**后端启动报 `java.net.UnknownHostException: host.docker.internal`？**
+
+`host.docker.internal` 是 **Docker Desktop（macOS / Windows）自带**的主机名，Linux 上**必须靠 compose 的 `extra_hosts` 映射**才会出现在容器的 `/etc/hosts` 里。看到这个异常，说明那条映射没生效。按顺序查：
+
+```bash
+# 1) 容器是否真的拿到了这条映射（最常见原因是 compose 文件是旧的，或容器不是 compose 起的）
+docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
+#    期望输出：["host.docker.internal:host-gateway"]
+#    输出 null 或 [] → 容器不是由当前 docker-compose.yml 创建的，执行：
+#      cd /opt/astral && git pull          # 先更新 compose 文件
+#      cd deploy && ./update.sh            # 再重建容器
+#    （只跑 update.sh 不 git pull，用的就是服务器上的旧 compose 文件）
+
+# 2) 容器内能否解析
+docker exec astral-backend getent hosts host.docker.internal
+
+# 3) host-gateway 这个特殊值需要 Docker Engine 20.10+
+docker version --format '{{.Server.Version}}'
+```
+
+如果第 1 步有映射、第 2 步也能解析，但连接报的是 **`Connection refused`**（而不是 `UnknownHost`），那是另一回事：PostgreSQL 只监听了 `127.0.0.1`，容器经网关 IP 进不来。改 `postgresql.conf` 的 `listen_addresses = '*'` 并放行 `5432`，或把 `deploy/.env` 里的地址换成 PG 可达的内网 / 公网 IP。
+
+**不想依赖 `host.docker.internal`**：直接在 `deploy/.env` 把 `SPRING_DATASOURCE_URL` 与 `REDIS_HOST` 写成数据库的内网或公网地址即可（此时 `extra_hosts` 多余但无害）。注意容器内访问宿主机不能用 `127.0.0.1`——那是容器自己。
 
 **前端无法调用后端 API？**
 
