@@ -3,6 +3,8 @@ package com.astral.sequence.config;
 import com.astral.sequence.generator.SegmentGenerator;
 import com.astral.sequence.service.GeneratorFactory;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
+import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
@@ -19,23 +21,34 @@ import java.util.Set;
  * <ul>
  *   <li><b>id</b>：使用号段生成器自动填充主键 ID（排除序列系统自身 4 张表），
  *       每张业务表独立序列（业务键 = 表名_id，如 sys_user_id）</li>
- *   <li><b>createTime</b>：插入时自动填充当前时间</li>
- *   <li><b>updateTime</b>：插入和更新时自动填充当前时间</li>
+ *   <li><b>时间列</b>：按实体字段列表，把所有标注了
+ *       {@code FieldFill.INSERT} / {@code UPDATE} / {@code INSERT_UPDATE}
+ *       且类型为 {@code LocalDateTime} 的字段填成当前时间
+ *       —— 不只是 {@code createTime} / {@code updateTime}，也包括
+ *       {@code loginTime} 这类同样声明了填充的字段</li>
  * </ul>
  * </p>
  * <p>
- * 排除的表包括：sequence_config、sequence_statistics、sequence_history、sequence_segment。
- * 这 4 张表是序列系统自身的存储表，主键由数据库自增维护（避免递归取号）。
+ * <b>排除的表</b>：sequence_config、sequence_statistics、sequence_history、sequence_segment。
+ * 这 4 张表是序列系统自身的存储表，主键由数据库自增 / MyBatis-Plus 维护
+ * （避免递归取号）。<b>注意：排除仅针对主键 id 的取号，时间列照常填充</b>——
+ * 早期实现是整段 early-return，导致这 4 张表的 createTime 永远为 null，
+ * 而实体上又标了 {@code fill = FieldFill.INSERT}，MyBatis-Plus 会把该列
+ * 强制写进 INSERT 并显式写入 NULL，反而顶掉了 DDL 的
+ * {@code DEFAULT CURRENT_TIMESTAMP}，最终 NOT NULL 违约。
  * </p>
  */
 @Slf4j
 public class SequenceMetaObjectHandler implements MetaObjectHandler {
 
     /**
-     * 排除自动填充的表名集合
+     * 不参与「主键取号」的表名集合
      * <p>
-     * 这些表是序列生成系统的核心表，使用自己的 ID 生成策略，
-     * 不应该被自动填充覆盖。
+     * 这些表是序列生成系统的核心表，使用数据库自增 / MyBatis-Plus 自身的
+     * 主键策略，不能走号段生成器（否则会递归取号）。
+     * </p>
+     * <p>
+     * <b>该集合只影响 id 填充，不影响 createTime / updateTime 等时间列。</b>
      * </p>
      */
     private static final Set<String> EXCLUDED_TABLES = Set.of(
@@ -76,11 +89,12 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
     /**
      * 插入时自动填充
      * <p>
-     * 处理三个字段：
+     * 分两件事，互不影响：
      * <ol>
-     *   <li>id：如果为空，使用号段生成器自动生成（排除特定表）</li>
-     *   <li>createTime：如果为空，填充当前时间</li>
-     *   <li>updateTime：如果为空，填充当前时间</li>
+     *   <li><b>主键 id</b>：为空时用号段生成器取号；
+     *       {@link #EXCLUDED_TABLES} 中的表跳过（否则递归取号）</li>
+     *   <li><b>时间列</b>：所有表（含排除表）统一填充，见
+     *       {@link #fillTimestamps(MetaObject, boolean)}</li>
      * </ol>
      * </p>
      *
@@ -89,11 +103,10 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
     @Override
     public void insertFill(MetaObject metaObject) {
         String tableName = resolveTableName(metaObject);
-        if (tableName == null || EXCLUDED_TABLES.contains(tableName)) {
-            return;
-        }
+        boolean excluded = tableName != null && EXCLUDED_TABLES.contains(tableName);
 
-        if (metaObject.hasGetter("id")) {
+        // 1) 主键取号：排除表不做
+        if (!excluded && tableName != null && metaObject.hasGetter("id")) {
             Object idVal = metaObject.getValue("id");
             if (idVal == null) {
                 String bizKey = entityIdSequenceProvider.getBizKeyForTable(tableName);
@@ -105,35 +118,67 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
             }
         }
 
-        // 自动填充创建时间
-        if (metaObject.hasGetter("createTime")) {
-            Object createTime = metaObject.getValue("createTime");
-            if (createTime == null) {
-                strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
-            }
-        }
-        
-        // 自动填充更新时间
-        if (metaObject.hasGetter("updateTime")) {
-            Object updateTime = metaObject.getValue("updateTime");
-            if (updateTime == null) {
-                strictInsertFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
-            }
-        }
+        // 2) 时间列：所有表都要填，排除表也一样
+        fillTimestamps(metaObject, true);
     }
 
     /**
      * 更新时自动填充
      * <p>
-     * 只更新 updateTime 字段，保持 createTime 不变。
+     * 只填 updateTime 一类字段，保持 createTime 不变。
      * </p>
      *
      * @param metaObject MyBatis-Plus 元对象
      */
     @Override
     public void updateFill(MetaObject metaObject) {
-        if (metaObject.hasGetter("updateTime")) {
-            strictUpdateFill(metaObject, "updateTime", LocalDateTime.class, LocalDateTime.now());
+        fillTimestamps(metaObject, false);
+    }
+
+    /**
+     * 按实体的真实字段列表填充时间列
+     * <p>
+     * <b>为什么不是按字段名写死？</b>
+     * 原实现只认识 {@code createTime} / {@code updateTime} 两个字面字段名，
+     * 于是 {@code LoginLog.loginTime}（同样标了 {@code fill = FieldFill.INSERT}）
+     * 永远没人填 —— 而 MyBatis-Plus 只要看到 fill 注解，就会把该列强制写进
+     * INSERT 并显式写入 NULL，反而顶掉了 DDL 的 {@code DEFAULT CURRENT_TIMESTAMP}，
+     * 结果是 NOT NULL 违约、接口 500。
+     * </p>
+     * <p>
+     * 这里改为遍历 {@link TableInfo} 的字段列表，凡是
+     * 「标了 INSERT / UPDATE 填充 + 类型是 LocalDateTime + 当前值为 null」
+     * 的字段一律补当前时间，从根上消除「注解声明了填充但处理器不认识」的错配。
+     * </p>
+     *
+     * @param metaObject MyBatis-Plus 元对象
+     * @param insert     true=插入填充（FieldFill.INSERT / INSERT_UPDATE），
+     *                   false=更新填充（FieldFill.UPDATE / INSERT_UPDATE）
+     */
+    private void fillTimestamps(MetaObject metaObject, boolean insert) {
+        Object entity = metaObject.getOriginalObject();
+        if (entity == null) {
+            return;
+        }
+        TableInfo tableInfo = TableInfoHelper.getTableInfo(entity.getClass());
+        if (tableInfo == null) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        for (TableFieldInfo field : tableInfo.getFieldList()) {
+            boolean fillable = insert ? field.isWithInsertFill() : field.isWithUpdateFill();
+            if (!fillable || !LocalDateTime.class.equals(field.getPropertyType())) {
+                continue;
+            }
+            String property = field.getProperty();
+            if (metaObject.hasGetter(property) && metaObject.getValue(property) == null) {
+                if (insert) {
+                    strictInsertFill(metaObject, property, LocalDateTime.class, now);
+                } else {
+                    strictUpdateFill(metaObject, property, LocalDateTime.class, now);
+                }
+            }
         }
     }
 
