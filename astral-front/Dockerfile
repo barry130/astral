@@ -1,7 +1,19 @@
 # syntax=docker/dockerfile:1
 # 多阶段构建: Next.js 14 standalone
+#
+# 【Node 版本，勿随意改】三个阶段统一 node:24-alpine（Active LTS，支持到 2028-04）。
+#   版本依据 https://github.com/nodejs/Release/blob/main/schedule.json
+#   - 原来用的 node:20-alpine，但 Node 20 已于 2026-04-30 EOL，不再有安全修复，故升级；
+#   - 不要改成 node:25-alpine：25 是奇数号非 LTS 线，2026-06-01 已 EOL，
+#     等于用一个停维版本换掉另一个停维版本；
+#   - 想跟进 26 也可以（2026-10-28 转 LTS），但请三个阶段一起改。
+#   - 三阶段版本必须一致：deps 阶段装的 node_modules 会被后两阶段直接复用，
+#     跨版本可能带来 native 模块 ABI 不一致。本项目当前无 native 依赖
+#     （package.json 里没有 sharp / @img 等），但保持一致仍是必要的纪律。
+#   - 本地开发机若跑 Node 25，只影响本机，与本镜像无关（但 25 本身也是 EOL 版本）。
+#
 # 第一阶段: 依赖安装
-FROM node:20-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 # npmmirror 加速国内 VPS；BuildKit cache 让二次构建不再重下 node_modules。
@@ -10,7 +22,7 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci --registry=https://registry.npmmirror.com
 
 # 第二阶段: 构建
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -25,7 +37,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
 # 第三阶段: 运行 (standalone 产物)
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 # 运行时环境变量: 后端地址 (供 next.config.js rewrites 使用)
