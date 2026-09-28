@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Tabs } from 'antd';
-import { MailOutlined, FileTextOutlined, SafetyOutlined } from '@ant-design/icons';
+import { Tabs } from '@/components/antd-compat';
+import { MailOutlined, FileTextOutlined, SafetyOutlined } from '@/components/antd-compat/icons';
 import MailAccountPage from './account/page';
 import MailTemplatePage from './template/page';
 import MailPluginAuthPage from './plugin-auth/page';

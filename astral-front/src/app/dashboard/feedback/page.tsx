@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Row, Col, Statistic, Tag, Button, Space, Select, Input, Switch, Popconfirm, Drawer, Timeline, Form, message, Typography, Divider, Tabs, Tooltip, Spin } from 'antd';
-import { ReloadOutlined, MessageOutlined, DeleteOutlined, SendOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Statistic, Tag, Button, Space, Select, Input, Switch, Popconfirm, Drawer, Timeline, Form, message, Typography, Divider, Tabs, Tooltip, Spin } from '@/components/antd-compat';
+import { ReloadOutlined, MessageOutlined, DeleteOutlined, SendOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@/components/antd-compat/icons';
 import dynamic from 'next/dynamic';
 // echarts 体积大且非首屏（在 Tabs 内的反馈面板），改为客户端动态加载，避免打进主 bundle
 const ReactECharts = dynamic(() => import('echarts-for-react'), {

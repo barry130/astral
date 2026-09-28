@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
-  AndroidOutlined,
-  WindowsOutlined,
-  CustomerServiceOutlined,
-  StarFilled,
-  MobileOutlined,
-  CloudDownloadOutlined,
-} from '@ant-design/icons';
+  Bot,
+  Grid2x2,
+  Headphones,
+  Star,
+  Smartphone,
+  CloudDownload,
+} from 'lucide-react';
 
 /**
  * 轻听音乐介绍页（路由 /lightlisten）
@@ -27,22 +27,22 @@ export const metadata: Metadata = {
 /** 卖点卡片：文案取自官方宣传物料 */
 const FEATURES = [
   {
-    icon: <CustomerServiceOutlined />,
+    icon: <Headphones strokeWidth={1.8} />,
     title: '海量曲库',
     desc: '千万正版音乐\n随心听',
   },
   {
-    icon: <StarFilled />,
+    icon: <Star strokeWidth={1.8} fill="currentColor" />,
     title: '个性推荐',
     desc: '智能算法\n懂你所爱',
   },
   {
-    icon: <MobileOutlined />,
+    icon: <Smartphone strokeWidth={1.8} />,
     title: '多端同步',
     desc: '手机 / 电脑\n无缝切换',
   },
   {
-    icon: <CloudDownloadOutlined />,
+    icon: <CloudDownload strokeWidth={1.8} />,
     title: '离线畅听',
     desc: '下载歌曲\n随时随地',
   },
@@ -116,7 +116,7 @@ export default function LightListenPage() {
                 rel="noopener noreferrer"
                 title="手机随时听"
               >
-                <AndroidOutlined className="ql-pill-icon" />
+                <Bot className="ql-pill-icon" strokeWidth={1.8} />
                 <span className="ql-pill-text">
                   <b>Android 版</b>
                   <i>点击下载</i>
@@ -129,7 +129,7 @@ export default function LightListenPage() {
                 rel="noopener noreferrer"
                 title="大屏更沉浸"
               >
-                <WindowsOutlined className="ql-pill-icon" />
+                <Grid2x2 className="ql-pill-icon" strokeWidth={1.8} />
                 <span className="ql-pill-text">
                   <b>Windows 版</b>
                   <i>点击下载</i>

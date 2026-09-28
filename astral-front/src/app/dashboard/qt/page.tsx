@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Row, Col, Statistic, Tabs, Tag, Button, Input,
-  Form, Modal, Space, message, Switch, Popconfirm, Typography, Select } from 'antd';
+  Form, Modal, Space, message, Switch, Popconfirm, Typography, Select } from '@/components/antd-compat';
 import {
   UserOutlined, CalendarOutlined, CloudDownloadOutlined,
   ReloadOutlined, PlusOutlined, ExperimentOutlined, ClearOutlined,
-} from '@ant-design/icons';
+} from '@/components/antd-compat/icons';
 import {
   qtAdminApi, githubAccelApi, QtOverview, QtUpdate, QtPage,
   QtGithubAccel, QtGithubAccelProbe, enumLabel,

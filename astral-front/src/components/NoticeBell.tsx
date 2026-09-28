@@ -1,11 +1,21 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Empty, List, Modal, Popover, Tag } from 'antd';
-import { BellOutlined, CheckOutlined } from '@ant-design/icons';
+import { Bell, Check } from 'lucide-react';
+
 import { request } from '@/api/client';
 import type { SysNotice } from '@/api/feedback';
 import { noticeTypeLabel } from '@/api/feedback';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 /**
  * 顶栏消息提示铃铛
@@ -40,11 +50,11 @@ function saveReadIds(set: Set<number>) {
   }
 }
 
-/** 通知类型 → 标签颜色（纯展示配色） */
-const TYPE_COLOR: Record<string, string> = {
-  announce: 'blue',
-  feedback: 'orange',
-  request: 'green',
+/** 通知类型 → 徽章配色（纯展示） */
+const TYPE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'success' | 'warning' | 'destructive'> = {
+  announce: 'default',
+  feedback: 'warning',
+  request: 'success',
 };
 
 function fmtTime(v?: string): string {
@@ -52,7 +62,7 @@ function fmtTime(v?: string): string {
   return v.slice(0, 16).replace('T', ' ');
 }
 
-export default function NoticeBell({ buttonStyle }: { buttonStyle?: React.CSSProperties }) {
+export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?: React.CSSProperties }) {
   const [notices, setNotices] = useState<SysNotice[]>([]);
   const [readIds, setReadIds] = useState<Set<number>>(() => loadReadIds());
   const [open, setOpen] = useState(false);
@@ -60,7 +70,8 @@ export default function NoticeBell({ buttonStyle }: { buttonStyle?: React.CSSPro
 
   const load = useCallback(() => {
     // 管理端收件箱：不按 channel 过滤，广播 + 发给当前管理员的点对点全可见
-    request.get('/api/v1/admin/message/inbox')
+    request
+      .get('/api/v1/admin/message/inbox')
       .then((res: any) => setNotices(res.data || []))
       .catch(() => {
         // 反馈插件禁用 / 网络异常：角标归零，不弹错误打扰
@@ -94,101 +105,100 @@ export default function NoticeBell({ buttonStyle }: { buttonStyle?: React.CSSPro
     saveReadIds(next);
   };
 
-  const content = (
-    <div style={{ width: 340, maxHeight: 420, overflowY: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 4px 8px' }}>
-        <span style={{ fontWeight: 600 }}>消息通知（{unread.length} 未读）</span>
-        {unread.length > 0 && (
-          <Button type="link" size="small" icon={<CheckOutlined />} onClick={markAllRead}>
-            全部已读
-          </Button>
-        )}
-      </div>
-      {notices.length === 0 ? (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无通知" style={{ padding: '12px 0' }} />
-      ) : (
-        <List
-          dataSource={notices}
-          rowKey={(n) => String(n.id)}
-          renderItem={(n) => {
-            const isUnread = n.id != null && !readIds.has(n.id);
-            return (
-              <List.Item
-                style={{ cursor: 'pointer', padding: '8px 4px' }}
-                onClick={() => {
-                  markRead(n);
-                  setDetail(n);
-                }}
-              >
-                <List.Item.Meta
-                  title={
-                    <span style={{ fontWeight: isUnread ? 600 : 400 }}>
-                      {n.isTop === 1 && <Tag color="red" style={{ marginRight: 4 }}>置顶</Tag>}
-                      {isUnread && <Badge status="processing" style={{ marginRight: 4 }} />}
-                      {n.title}
-                    </span>
-                  }
-                  description={
-                    <span style={{ fontSize: 12, color: '#999' }}>
-                      <Tag color={TYPE_COLOR[n.noticeType || ''] || 'default'} style={{ marginRight: 6 }}>
-                        {noticeTypeLabel(n.noticeType)}
-                      </Tag>
-                      {fmtTime(n.createTime)}
-                    </span>
-                  }
-                />
-              </List.Item>
-            );
-          }}
-        />
-      )}
-    </div>
-  );
-
   return (
     <>
       <Popover
-        content={content}
-        trigger="click"
-        placement="bottomRight"
         open={open}
         onOpenChange={(v) => {
           setOpen(v);
           if (v) load(); // 展开时刷新一次，角标跟进最新通知
         }}
       >
-        <Button
-          type="text"
-          icon={
-            <Badge count={unread.length} size="small" offset={[-2, 2]}>
-              <BellOutlined />
-            </Badge>
-          }
-          style={buttonStyle}
-          title="消息通知"
-          aria-label="消息通知"
-        />
-      </Popover>
-      <Modal
-        open={detail != null}
-        title={detail?.title}
-        footer={null}
-        onCancel={() => setDetail(null)}
-        width={520}
-      >
-        <div style={{ marginBottom: 8, fontSize: 12, color: '#999' }}>
-          <Tag color={TYPE_COLOR[detail?.noticeType || ''] || 'default'}>
-            {noticeTypeLabel(detail?.noticeType)}
-          </Tag>
-          {fmtTime(detail?.createTime)}
-        </div>
-        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{detail?.content}</div>
-        {detail?.url && (
-          <div style={{ marginTop: 12 }}>
-            <a href={detail.url} target="_blank" rel="noreferrer">{detail.url}</a>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="icon" title="消息通知" aria-label="消息通知">
+            <span className="relative">
+              <Bell className="size-4" />
+              {unread.length > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-white">
+                  {unread.length > 99 ? '99+' : unread.length}
+                </span>
+              )}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-[340px] p-2">
+          <div className="flex items-center justify-between px-1 pb-2">
+            <span className="text-sm font-semibold">消息通知（{unread.length} 未读）</span>
+            {unread.length > 0 && (
+              <Button variant="link" size="sm" className="h-auto p-0" onClick={markAllRead}>
+                <Check />
+                全部已读
+              </Button>
+            )}
           </div>
-        )}
-      </Modal>
+          <div className="max-h-[380px] overflow-y-auto">
+            {notices.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 px-4 py-8 text-sm text-muted-foreground">
+                <Bell className="size-6 opacity-40" strokeWidth={1.5} aria-hidden />
+                <span>暂无通知</span>
+              </div>
+            ) : (
+              <ul className="space-y-0.5">
+                {notices.map((n) => {
+                  const isUnread = n.id != null && !readIds.has(n.id);
+                  return (
+                    <li
+                      key={String(n.id)}
+                      onClick={() => {
+                        markRead(n);
+                        setDetail(n);
+                        setOpen(false);
+                      }}
+                      className="cursor-pointer rounded-md px-2 py-2 transition-colors hover:bg-accent"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        {isUnread && <span className="size-1.5 shrink-0 rounded-full bg-blue-500" aria-hidden />}
+                        {n.isTop === 1 && <Badge variant="destructive">置顶</Badge>}
+                        <span className={cn('truncate text-sm', isUnread ? 'font-semibold text-foreground' : 'text-foreground/90')}>
+                          {n.title}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5 pl-2 text-xs text-muted-foreground">
+                        <Badge variant={TYPE_VARIANT[n.noticeType || ''] || 'outline'} className="px-1.5 py-0">
+                          {noticeTypeLabel(n.noticeType)}
+                        </Badge>
+                        <span>{fmtTime(n.createTime)}</span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <Dialog open={detail != null} onOpenChange={(v) => !v && setDetail(null)}>
+        <DialogContent className="max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>{detail?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Badge variant={TYPE_VARIANT[detail?.noticeType || ''] || 'outline'}>
+              {noticeTypeLabel(detail?.noticeType)}
+            </Badge>
+            <span>{fmtTime(detail?.createTime)}</span>
+          </div>
+          <div className="whitespace-pre-wrap leading-relaxed">{detail?.content}</div>
+          {detail?.url && (
+            <div>
+              <a href={detail.url} target="_blank" rel="noreferrer" className="break-all text-primary underline underline-offset-4">
+                {detail.url}
+              </a>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

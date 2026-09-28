@@ -16,8 +16,8 @@
 import { useEffect, useState } from 'react';
 import {
   Button, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tag, Typography, Upload, message,
-} from 'antd';
-import { BarChartOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
+} from '@/components/antd-compat';
+import { BarChartOutlined, PlusOutlined, UploadOutlined } from '@/components/antd-compat/icons';
 import { sourceReleaseApi, qtAdminApi, QtSourceRelease, QtSourceArtifact, QtSourceStatRow, enumLabel } from '@/api/qt';
 import { fetchDictOptions, DictOption } from '@/api/dict';
 import { storageApi } from '@/api/storage';

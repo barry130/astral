@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Tag, Switch, Button, message, Space, Empty, Tooltip } from 'antd';
-import { ApiOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined, LockOutlined } from '@ant-design/icons';
+import { Card, Tag, Switch, Button, message, Space, Empty, Tooltip } from '@/components/antd-compat';
+import { ApiOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined, LockOutlined } from '@/components/antd-compat/icons';
 import { pluginApi, PluginInfo } from '@/api/plugin';
 import { ResizableTable } from '@/components/ResizableTable';
 

@@ -1,20 +1,21 @@
 'use client';
 
 import React, { type ReactNode } from 'react';
-import { Empty, Space } from 'antd';
+import { InboxIcon } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
 
 /**
  * 统一空状态
  *
  * 所有列表 / 抽屉 / 弹窗在「无数据」时使用，保证文案层级、图标、操作按钮风格一致。
- * 图标请用 var(--icon-lg) 之类的尺寸令牌，勿裸写 fontSize。
  */
 export interface EmptyStateProps {
   /** 主文案 */
   description: ReactNode;
   /** 辅助说明（灰字，可选） */
   hint?: ReactNode;
-  /** 语义图标：替代 antd 默认插画，与 image 二选一 */
+  /** 语义图标：默认使用收件箱图标，与 image 二选一 */
   icon?: ReactNode;
   /** 完全自定义插画（优先于 icon） */
   image?: ReactNode;
@@ -41,39 +42,25 @@ export function EmptyState({
     <div
       role="status"
       aria-label={label}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: `${padding}px 0`,
-      }}
+      className="flex flex-col items-center"
+      style={{ paddingTop: padding, paddingBottom: padding }}
     >
       {image ? (
-        <div style={{ marginBottom: 12 }}>{image}</div>
+        <div className="mb-3">{image}</div>
       ) : icon ? (
-        <div style={{ marginBottom: 12, color: 'var(--color-text-tertiary)' }} aria-hidden>
+        <div className="mb-3 text-muted-foreground" aria-hidden>
           {icon}
         </div>
       ) : (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} imageStyle={{ height: 64, marginBottom: 12 }} />
+        <InboxIcon className="mb-3 size-8 text-muted-foreground/60" strokeWidth={1.5} aria-hidden />
       )}
 
-      <div style={{ textAlign: 'center', maxWidth: 420 }}>
-        <div style={{ fontSize: 13.5, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
-          {description}
-        </div>
-        {hint ? (
-          <div style={{ fontSize: 12.5, color: 'var(--color-text-tertiary)', lineHeight: 1.6, marginTop: 4 }}>
-            {hint}
-          </div>
-        ) : null}
+      <div className="max-w-[420px] text-center">
+        <div className="text-[13.5px] leading-relaxed text-muted-foreground">{description}</div>
+        {hint ? <div className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground/70">{hint}</div> : null}
       </div>
 
-      {action ? (
-        <div style={{ marginTop: 12 }}>
-          <Space wrap>{action}</Space>
-        </div>
-      ) : null}
+      {action ? <div className="mt-3 flex flex-wrap justify-center gap-2">{action}</div> : null}
     </div>
   );
 }

@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Skeleton } from 'antd';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * 表格骨架屏
  *
  * 首次加载（尚无数据）时使用，比「暂无数据 + 转圈」更准确地表达「还在加载」。
- * 翻页 / 筛选触发的二次加载仍建议用 Table 的 loading（会保留已有数据）。
+ * 翻页 / 筛选触发的二次加载仍建议用表格自身的 loading 态（保留已有数据）。
  */
 export interface TableSkeletonProps {
   /** 数据行数 */
@@ -35,19 +36,13 @@ export function TableSkeleton({
       {Array.from({ length: totalRows }).map((_, r) => (
         <div
           key={r}
-          style={{
-            display: 'flex',
-            gap: 16,
-            padding: '9px 14px',
-            fontWeight: withHeader && r === 0 ? 600 : 400,
-          }}
+          className="flex gap-4 px-3.5 py-2.5"
+          style={{ fontWeight: withHeader && r === 0 ? 600 : 400 }}
         >
           {Array.from({ length: columns }).map((_, c) => (
             <Skeleton
               key={c}
-              active
-              title={false}
-              paragraph={{ rows: 1, width: c === 0 ? '34%' : '14%' }}
+              className="h-4"
               style={{ margin: 0, width: c === 0 ? '34%' : '14%' }}
             />
           ))}

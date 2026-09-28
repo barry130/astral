@@ -1,7 +1,10 @@
 'use client';
 
 import React, { type ReactNode } from 'react';
-import { Alert, Button } from 'antd';
+import { AlertCircle } from 'lucide-react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 /**
  * 统一错误状态
@@ -33,20 +36,19 @@ export function ErrorState({
   padding = 12,
 }: ErrorStateProps) {
   return (
-    <div role="alert" style={{ padding: `${padding}px 0` }}>
-      <Alert
-        type="error"
-        showIcon={showIcon}
-        message={message}
-        description={description}
-        action={
-          onRetry ? (
-            <Button size="small" onClick={onRetry} aria-label={`重试：${retryText}`}>
+    <div role="alert" style={{ paddingTop: padding, paddingBottom: padding }}>
+      <Alert variant="destructive">
+        {showIcon && <AlertCircle />}
+        <AlertTitle>{message}</AlertTitle>
+        {description ? <AlertDescription>{description}</AlertDescription> : null}
+        {onRetry ? (
+          <div className="col-start-2 mt-2">
+            <Button size="sm" variant="outline" onClick={onRetry} aria-label={`重试：${retryText}`}>
               {retryText}
             </Button>
-          ) : undefined
-        }
-      />
+          </div>
+        ) : null}
+      </Alert>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Card, Form, Input, Select, Button, message, Spin, InputNumber, Row, Col, Tag, Empty, Tabs, Popconfirm, Switch, Space, Modal, AutoComplete } from 'antd';
-import { ApiOutlined, SendOutlined, BulbOutlined, HistoryOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ToolOutlined } from '@ant-design/icons';
+import { Card, Form, Input, Select, Button, message, Spin, InputNumber, Row, Col, Tag, Empty, Tabs, Popconfirm, Switch, Space, Modal, AutoComplete } from '@/components/antd-compat';
+import { ApiOutlined, SendOutlined, BulbOutlined, HistoryOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ToolOutlined } from '@/components/antd-compat/icons';
 import { sequenceApi, SequenceType, SequenceResponse } from '@/api/sequence';
 import { sequenceConfigApi, SequenceConfig } from '@/api/sequenceConfig';
 import { ResizableTable } from '@/components/ResizableTable';

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Card, Button, Space, Tag, Modal, Tabs, message, Select, Input, Form, Switch, Popconfirm, Tooltip, Radio, Spin } from 'antd';
-import { CodeOutlined, DatabaseOutlined, FileTextOutlined, ApiOutlined, EditOutlined, SaveOutlined, PlusOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Card, Button, Space, Tag, Modal, Tabs, message, Select, Input, Form, Switch, Popconfirm, Tooltip, Radio, Spin } from '@/components/antd-compat';
+import { CodeOutlined, DatabaseOutlined, FileTextOutlined, ApiOutlined, EditOutlined, SaveOutlined, PlusOutlined, DeleteOutlined, DownloadOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
 import { fetchDictOptions } from '@/api/dict';
 // 代码高亮体积大且只在 Tab 展开/抽屉打开时才可见，改为客户端按需加载（ssr: false 仅在客户端组件可用）

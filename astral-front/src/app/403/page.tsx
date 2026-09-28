@@ -1,8 +1,8 @@
 'use client';
 
-import { Result, Button } from 'antd';
+import { Result, Button } from '@/components/antd-compat';
 import { useRouter } from 'next/navigation';
-import { HomeOutlined, BackwardOutlined } from '@ant-design/icons';
+import { HomeOutlined, BackwardOutlined } from '@/components/antd-compat/icons';
 
 export default function ForbiddenPage() {
   const router = useRouter();

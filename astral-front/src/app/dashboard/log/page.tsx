@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Tag, Tabs } from 'antd';
-import { FileTextOutlined, SecurityScanOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Tabs } from '@/components/antd-compat';
+import { FileTextOutlined, SecurityScanOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@/components/antd-compat/icons';
 import { logApi, OperateLog, LoginLog } from '@/api/log';
 
 /**

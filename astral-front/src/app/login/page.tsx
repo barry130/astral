@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Form, Input, Button, message, Spin } from 'antd';
-import { UserOutlined, LockOutlined, SafetyOutlined } from '@ant-design/icons';
+import { Loader2, User, Lock, ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { useAuth } from '@/context/AuthContext';
 import { encryptPassword, clearPublicKeyCache } from '@/lib/crypto';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [publicKeyLoading, setPublicKeyLoading] = useState(true);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string }>({});
   const { login, isLogin, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -21,24 +27,34 @@ export default function LoginPage() {
   }, [authLoading, isLogin, router]);
 
   useEffect(() => {
-    encryptPassword('test').then(() => {
-      setPublicKeyLoading(false);
-    }).catch((error) => {
-      console.error('加密初始化失败:', error);
-      message.error(error.message || '加密初始化失败，请确保后端服务已启动');
-    });
+    encryptPassword('test')
+      .then(() => {
+        setPublicKeyLoading(false);
+      })
+      .catch((error) => {
+        console.error('加密初始化失败:', error);
+        toast.error(error.message || '加密初始化失败，请确保后端服务已启动');
+      });
   }, []);
 
-  const onFinish = async (values: { username: string; password: string }) => {
+  const onFinish = async (e: FormEvent) => {
+    e.preventDefault();
+    // 轻量校验（替代 antd Form rules）
+    const errors: { username?: string; password?: string } = {};
+    if (!username.trim()) errors.username = '请输入用户名';
+    if (!password.trim()) errors.password = '请输入密码';
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     setLoading(true);
     try {
-      const encryptedPassword = await encryptPassword(values.password);
-      await login(values.username, encryptedPassword);
+      const encryptedPassword = await encryptPassword(password);
+      await login(username, encryptedPassword);
       clearPublicKeyCache();
-      message.success('登录成功');
+      toast.success('登录成功');
       router.push('/dashboard');
     } catch (error: any) {
-      message.error(error.message || '登录失败');
+      toast.error(error.message || '登录失败');
     } finally {
       setLoading(false);
     }
@@ -47,10 +63,8 @@ export default function LoginPage() {
   // 校验登录状态期间不展示表单，避免闪现后跳转
   if (authLoading) {
     return (
-      <div style={{
-        display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh',
-      }}>
-        <Spin size="large" />
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -58,78 +72,66 @@ export default function LoginPage() {
   return (
     <div className="login-container">
       <div className="login-box fade-in-up">
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 56,
-            height: 56,
-            background: 'var(--color-brand)',
-            borderRadius: 14,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 20,
-            boxShadow: '0 8px 20px rgba(24, 24, 27, 0.16)'
-          }}>
-            <SafetyOutlined style={{ fontSize: 26, color: '#fff' }} />
+        <div className="mb-8 text-center">
+          <div
+            className="mb-5 inline-flex size-14 items-center justify-center rounded-[14px] bg-primary shadow-[0_8px_20px_rgba(24,24,27,0.16)]"
+          >
+            <ShieldCheck className="size-6 text-primary-foreground" />
           </div>
           <h1 className="login-title">Astral</h1>
           <p className="login-subtitle">Astral 后台管理系统</p>
         </div>
 
-        <Form
-          name="login"
-          onFinish={onFinish}
-          size="large"
-          autoComplete="off"
-        >
-          <Form.Item
-            name="username"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          >
-            <Input
-              prefix={<UserOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
-              placeholder="用户名"
-              autoComplete="username"
-              style={{ height: 44, borderRadius: 10 }}
-            />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: '请输入密码' }]}
-          >
-            <Input.Password
-              prefix={<LockOutlined style={{ color: 'var(--color-text-tertiary)' }} />}
-              placeholder="密码"
-              autoComplete="current-password"
-              style={{ height: 44, borderRadius: 10 }}
-            />
-          </Form.Item>
-          <Form.Item style={{ marginBottom: 0, marginTop: 28 }}>
+        <form onSubmit={onFinish} autoComplete="off" noValidate>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-11 rounded-[10px] pl-10"
+                  placeholder="用户名"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  aria-invalid={!!fieldErrors.username}
+                />
+              </div>
+              {fieldErrors.username && <p className="text-xs text-destructive">{fieldErrors.username}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="password"
+                  className="h-11 rounded-[10px] pl-10"
+                  placeholder="密码"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={!!fieldErrors.password}
+                />
+              </div>
+              {fieldErrors.password && <p className="text-xs text-destructive">{fieldErrors.password}</p>}
+            </div>
+
             <Button
-              type="primary"
-              htmlType="submit"
-              loading={loading || publicKeyLoading}
-              block
-              style={{ height: 44, fontSize: 15, fontWeight: 600, borderRadius: 10 }}
+              type="submit"
+              disabled={loading || publicKeyLoading}
+              className="mt-4 h-11 w-full rounded-[10px] text-[15px] font-semibold"
             >
+              {(loading || publicKeyLoading) && <Loader2 className="animate-spin" />}
               登 录
             </Button>
-          </Form.Item>
-        </Form>
+          </div>
+        </form>
 
-        <div style={{
-          marginTop: 24,
-          textAlign: 'center',
-          color: 'var(--color-text-tertiary)',
-          fontSize: 12
-        }}>
-          默认账号: admin / admin
-        </div>
+        <div className="mt-6 text-center text-xs text-muted-foreground">默认账号: admin / admin</div>
 
-        <div style={{ textAlign: 'center', marginTop: 12 }}>
+        <div className="mt-3 text-center">
           <a
             onClick={() => router.push('/')}
-            style={{ fontSize: 12, color: 'var(--color-text-tertiary)', cursor: 'pointer' }}
+            className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
           >
             ← 返回首页
           </a>

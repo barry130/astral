@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Row, Col, Statistic, DatePicker, Input, Select, Button, Space, Tag, message } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { Card, Table, Row, Col, Statistic, DatePicker, Input, Select, Button, Space, Tag, message } from '@/components/antd-compat';
+import { ReloadOutlined } from '@/components/antd-compat/icons';
 import { mailApi, MailLog, MailStatistics } from '@/api/mail';
-import type { RangePickerProps } from 'antd/es/date-picker';
+import type { RangePickerProps } from '@/components/antd-compat';
 
 const { RangePicker } = DatePicker;
 

@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Tag, message, Popconfirm } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined } from '@ant-design/icons';
+import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Tag, message, Popconfirm } from '@/components/antd-compat';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined } from '@/components/antd-compat/icons';
 import { mailApi, MailAccount } from '@/api/mail';
 import { usePerm, MAIL_PERMISSIONS } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';

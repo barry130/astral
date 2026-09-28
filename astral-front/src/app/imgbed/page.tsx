@@ -14,7 +14,7 @@ import {
   Switch,
   Pagination,
   Tag,
-} from 'antd';
+} from '@/components/antd-compat';
 import {
   InboxOutlined,
   CopyOutlined,
@@ -23,7 +23,7 @@ import {
   LinkOutlined,
   HomeOutlined,
   PictureOutlined,
-} from '@ant-design/icons';
+} from '@/components/antd-compat/icons';
 import { useAuth } from '@/context/AuthContext';
 import { storageApi, MyStorageFolder, StorageFile } from '@/api/storage';
 
@@ -381,13 +381,13 @@ export default function ImageBedPage() {
               customRequest={customUploadRequest}
               className="imgbed-dragger"
             >
-              <p className="ant-upload-drag-icon">
+              <p className="mb-2 text-3xl text-muted-foreground">
                 <InboxOutlined />
               </p>
-              <p className="ant-upload-text">
+              <p className="text-sm font-medium text-foreground">
                 {uploading ? '上传中…' : '点击或拖拽文件到此区域上传'}
               </p>
-              <p className="ant-upload-hint">文件直传存储服务，不经过应用服务器</p>
+              <p className="mt-1 text-xs text-muted-foreground">文件直传存储服务，不经过应用服务器</p>
             </Upload.Dragger>
 
             <div className="imgbed-list-head">

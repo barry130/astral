@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Alert, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tabs,
   Tag, Tooltip, Upload, message,
-} from 'antd';
+} from '@/components/antd-compat';
 import { ResizableTable } from '@/components/ResizableTable';
 import {
   CloudUploadOutlined, DeleteOutlined, ExperimentOutlined, PlusOutlined,
   ReloadOutlined, StarOutlined, LinkOutlined, EyeOutlined,
-} from '@ant-design/icons';
+} from '@/components/antd-compat/icons';
 import { storageApi } from '@/api/storage';
 import { fetchDictOptions, DictOption } from '@/api/dict';
 import type { StorageConfig, StorageFile, StorageFolder, StoragePageResult, StorageTask, StorageAudit, S3ProviderOptions, FolderUploadPolicy } from '@/api/storage';

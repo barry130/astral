@@ -13,8 +13,8 @@ import { Card,
   Button,
   Drawer,
   Space,
-  Typography } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+  Typography } from '@/components/antd-compat';
+import { ReloadOutlined } from '@/components/antd-compat/icons';
 import dynamic from 'next/dynamic';
 // echarts 体积大且本页非首屏，改为客户端动态加载（ssr: false 只允许在客户端组件中使用，本文件有 'use client'）
 const ReactECharts = dynamic(() => import('echarts-for-react'), {

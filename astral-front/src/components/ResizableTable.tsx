@@ -1,11 +1,21 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Checkbox, Popover, Space, Table } from 'antd';
-import type { ColumnType, ColumnsType, TableProps } from 'antd/es/table';
-import { ReloadOutlined, SlidersOutlined } from '@ant-design/icons';
+import { RotateCw, SlidersHorizontal } from 'lucide-react';
+
 import { EmptyState } from '@/components/EmptyState';
 import { TableCardList } from '@/components/TableCardList';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DataTable } from '@/components/data-table/DataTable';
+import {
+  columnTitleText,
+  resolveColumnKey,
+  type DataTableColumn,
+  type DataTableExpandable,
+  type DataTablePagination,
+} from '@/components/data-table/types';
 
 /**
  * 全局统一表格入口：按视口与列宽自动选择呈现方式，页面只写一份 columns。
@@ -15,13 +25,13 @@ import { TableCardList } from '@/components/TableCardList';
  *  2. scroll 列宽之和 > 容器宽 → 保留每列 px 宽度并横向滚动；
  *  3. fill   列宽之和 ≤ 容器宽 → 列宽换算成百分比（合计 100%）铺满容器。
  *
- * 旧实现无条件把列宽压成「合计 100% 的百分比」并剥离 scroll.x，13 列的表在
- * 1290px 容器里每列只剩 ~80px：8 位 ID 被折成 4 行、表头「版本号」折成两行、
- * 「非强制」被截成「非强」。现在的规则是——列宽代表「期望最小宽度」：容器放得
- * 下就等比铺满不留白，放不下就横向滚动，绝不把内容压到不可读。
+ * 列宽代表「期望最小宽度」：容器放得下就等比铺满不留白，放不下就横向滚动，
+ * 绝不把内容压到不可读。
  *
- * 交互：表头右缘可拖拽调宽；「列设置」可隐藏不需要看的列（适合 13 列以上的宽表
- * 在窄屏上只看关键字段）。两者都按页面写入 localStorage，刷新后保留。
+ * 交互：表头右缘可拖拽调宽；「列设置」可隐藏不需要看的列。两者都按页面写入
+ * localStorage，刷新后保留。
+ *
+ * 渲染层已由 antd Table 迁移到自研 DataTable（shadcn/ui + Tailwind）。
  */
 
 /** 移动端断点，与 providers.tsx 的 MOBILE_QUERY、globals.css 的 @media 保持一致 */
@@ -38,35 +48,44 @@ const COLS_SETTING_MIN = 6;
 type ColumnKey = string;
 type RenderMode = 'fill' | 'scroll' | 'card';
 
-interface ResizableTableProps<T> extends TableProps<T> {
+interface ResizableTableProps<T> {
+  /** 列定义（自研 DataTableColumn，与 antd ColumnType 同形） */
+  columns?: Array<DataTableColumn<T>>;
+  dataSource?: readonly T[];
+  rowKey?: string | ((record: T) => string | number);
+  loading?: boolean | { spinning?: boolean };
+  pagination?: false | DataTablePagination;
+  size?: 'small' | 'middle';
+  /**
+   * 与 antd 同形的滚动配置：`x` 由本组件接管（fill/scroll 自适配），
+   * 这里只消费 `y` 作为表体最大高度，保留 `x` 仅为兼容既有页面写法。
+   */
+  scroll?: { x?: number | string; y?: number | string };
+  /** 空态文案覆盖（与 antd locale 同形） */
+  locale?: { emptyText?: React.ReactNode };
+  /** 容器内联样式（少量页面用于限高） */
+  style?: React.CSSProperties;
+  /** 展开行配置，透传给 DataTable */
+  expandable?: DataTableExpandable<T>;
+  /** 初始展开所有行，透传给 DataTable */
+  defaultExpandAllRows?: boolean;
+  /** 容器类名 */
+  className?: string;
+  /**
+   * 兼容签名：antd Table 的 onChange（分页/筛选/排序变化）。
+   * 本项目页面统一通过 pagination.onChange 处理翻页，此项仅用于兼容既有写法，不产生行为。
+   */
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  onChange?: (...args: any[]) => void;
   /** 列宽 / 列显隐记忆的标识；不传时按当前页面路径区分 */
   resizeKey?: string;
   /** 是否允许拖拽列宽（默认 true） */
   resizable?: boolean;
   /** 手机端是否启用卡片模式（默认 true，可见列数 ≥ CARD_MIN_COLS 时生效） */
   cardOnMobile?: boolean;
+  /** 行级属性（与 antd 同形；支持 onClick / className / title / draggable 等原生属性） */
+  onRow?: (record: T, index: number) => React.HTMLAttributes<HTMLTableRowElement>;
 }
-
-/** 列的唯一标识：优先 key，其次 dataIndex，最后下标 */
-const colKeyOf = <T,>(col: ColumnType<T>, index: number): ColumnKey => {
-  if (col.key !== undefined && col.key !== null) return String(col.key);
-  if (col.dataIndex) {
-    return Array.isArray(col.dataIndex) ? col.dataIndex.join('.') : String(col.dataIndex);
-  }
-  return `col-${index}`;
-};
-
-/** 表头文案的可读名称（列设置面板用；渲染函数型表头退回 dataIndex） */
-const colTitleText = (col: ColumnType<any>): string => {
-  if (typeof col.title === 'string') return col.title;
-  if (typeof col.title === 'number') return String(col.title);
-  if (col.dataIndex) return String(Array.isArray(col.dataIndex) ? col.dataIndex.join('.') : col.dataIndex);
-  return '列';
-};
-
-/** 操作列识别：固定 key 为 action，或表头文案含「操作」 */
-const isActionCol = (col: ColumnType<any>): boolean =>
-  col.key === 'action' || /操作|action/i.test(colTitleText(col));
 
 /** 表头文案 → 默认列宽（命中关键词给固定宽度，否则按字宽估算） */
 const HEADER_WIDTH_RULES: Array<[RegExp, number]> = [
@@ -79,8 +98,8 @@ const HEADER_WIDTH_RULES: Array<[RegExp, number]> = [
 ];
 
 const estimateWidth = (title: unknown): number => {
-  // 渲染函数型表头无法安全取值，给一个通用宽度
-  if (typeof title === 'function') return 132;
+  // 渲染函数型/节点型表头无法安全取值，给一个通用宽度
+  if (typeof title === 'function' || (title !== null && typeof title === 'object')) return 132;
   const text = typeof title === 'string' ? title : typeof title === 'number' ? String(title) : '';
   for (const [pattern, fixed] of HEADER_WIDTH_RULES) {
     if (pattern.test(text)) return fixed;
@@ -90,19 +109,31 @@ const estimateWidth = (title: unknown): number => {
   return Math.max(96, Math.min(Math.round(w), MAX_AUTO_WIDTH));
 };
 
+/** 操作列识别：固定 key 为 action，或表头文案含「操作」 */
+const isActionCol = <T,>(col: DataTableColumn<T>): boolean =>
+  col.key === 'action' || /操作|action/i.test(columnTitleText(col));
+
 export function ResizableTable<T extends object>(props: ResizableTableProps<T>) {
   const {
     columns,
     resizeKey,
     resizable = true,
     cardOnMobile = true,
-    scroll,
-    style,
     className,
-    locale,
     loading,
-    ...rest
+    pagination,
+    size,
+    scroll,
+    locale,
+    style,
+    expandable,
+    defaultExpandAllRows,
+    dataSource,
+    rowKey,
+    onRow,
   } = props;
+  /** 表体纵向滚动高度（x 由本组件接管，忽略） */
+  const scrollY = typeof scroll?.y === 'number' ? scroll.y : undefined;
 
   const suffix = resizeKey ?? (typeof window === 'undefined' ? 'server' : window.location.pathname);
   const widthKey = `astral:table-widths:${suffix}`;
@@ -119,9 +150,9 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
   const widthRef = useRef<Record<ColumnKey, number>>({});
 
   // ---------- 列 + 稳定 key（key 必须按原始下标取，隐藏列后 key 仍稳定） ----------
-  const colsWithKey = useMemo<Array<{ col: ColumnType<T>; key: ColumnKey }>>(() => {
-    const list = (columns ?? []) as unknown as ColumnType<T>[];
-    return list.map((col, index) => ({ col, key: colKeyOf(col, index) }));
+  const colsWithKey = useMemo<Array<{ col: DataTableColumn<T>; key: ColumnKey }>>(() => {
+    const list = (columns ?? []) as Array<DataTableColumn<T>>;
+    return list.map((col, index) => ({ col, key: resolveColumnKey(col, index) }));
   }, [columns]);
 
   useEffect(() => {
@@ -210,7 +241,7 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
     const startWidth = widthRef.current[key] ?? 120;
     // 表格总宽被等比拉伸/压缩后，实际渲染列宽与记录值存在比例差，
     // 按真实比例换算拖拽增量，保证手感与显示一致
-    const th = e.currentTarget.closest('th');
+    const th = (e.currentTarget as HTMLElement).closest('th');
     const renderedWidth = th ? th.getBoundingClientRect().width : startWidth;
     const scale = renderedWidth > 0 && startWidth > 0 ? renderedWidth / startWidth : 1;
     document.body.style.cursor = 'col-resize';
@@ -230,7 +261,7 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
   }, []);
 
   /** 表格模式列：拖拽手柄 + 百分比 / px 宽度 */
-  const resolvedColumns = useMemo<ColumnsType<T>>(() => {
+  const resolvedColumns = useMemo<Array<DataTableColumn<T>>>(() => {
     return visibleCols.map(({ col, key }) => {
       const title = col.title as React.ReactNode;
       const titleNode: React.ReactNode = resizable ? (
@@ -240,10 +271,10 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
             role="separator"
             aria-label="拖拽调整列宽"
             className="rt-th-resize"
+            style={{ background: hoverKey === key ? 'rgba(24, 24, 27, 0.35)' : 'transparent' }}
             onPointerDown={(e) => startDrag(e, key)}
             onPointerEnter={() => setHoverKey(key)}
             onPointerLeave={() => setHoverKey(null)}
-            style={{ background: hoverKey === key ? 'rgba(24, 24, 27, 0.35)' : 'transparent' }}
           />
         </span>
       ) : (
@@ -253,38 +284,25 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
         mode === 'fill' && totalPx > 0
           ? `${((effectiveWidths[key] / totalPx) * 100).toFixed(4)}%`
           : effectiveWidths[key];
-      return { ...col, key, width, title: titleNode } as ColumnType<T>;
+      return { ...col, key, width, title: titleNode };
     });
   }, [visibleCols, effectiveWidths, mode, totalPx, resizable, hoverKey, startDrag]);
 
   /** 卡片模式列：同一份列定义，去掉拖拽手柄 */
-  const cardColumns = useMemo<ColumnsType<T>>(
-    () => visibleCols.map(({ col, key }) => ({ ...col, key }) as ColumnType<T>),
+  const cardColumns = useMemo<Array<DataTableColumn<T>>>(
+    () => visibleCols.map(({ col, key }) => ({ ...col, key })),
     [visibleCols],
   );
 
-  /** scroll.y 透传（部分页面固定表体高度）；scroll.x 由本组件接管 */
-  const scrollY = typeof scroll === 'object' && scroll ? scroll.y : undefined;
-  const resolvedScroll: TableProps<T>['scroll'] =
-    mode === 'scroll'
-      ? scrollY !== undefined
-        ? { x: totalPx, y: scrollY }
-        : { x: totalPx }
-      : scrollY !== undefined
-        ? { y: scrollY }
-        : undefined;
-
   /**
    * 统一空状态：
-   * - 默认渲染 EmptyState，全项目列表页共享同一套空态视觉；页面可用 locale.emptyText 覆盖
-   * - 加载中隐藏「暂无数据」：翻页 / 筛选触发 loading 时不显示空态，避免把「正在加载」误读成「没有数据」
+   * - 默认渲染 EmptyState，全项目列表页共享同一套空态视觉
+   * - 加载中隐藏「暂无数据」：翻页 / 筛选触发 loading 时不显示空态，
+   *   避免把「正在加载」误读成「没有数据」
    */
-  const tableLocale = useMemo(() => ({
-    ...locale,
-    emptyText: loading
-      ? ''
-      : (locale?.emptyText ?? <EmptyState description="暂无数据" padding={20} ariaLabel="暂无数据" />),
-  }), [locale, loading]);
+  const emptyNode = loading
+    ? null
+    : (locale?.emptyText ?? <EmptyState description="暂无数据" padding={20} ariaLabel="暂无数据" />);
 
   // ---------- 列设置面板 ----------
   const toggleCol = (key: ColumnKey) =>
@@ -301,25 +319,35 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
     [colsWithKey],
   );
 
-  const resetWidths = () => setWidths({});
-  const showAllCols = () => setHidden(new Set());
-
   const colSettingsPanel = (
     <div className="rt-cols-panel">
       <div className="rt-cols-head">
         <span>列设置</span>
-        <Space size={0}>
-          <Button type="link" size="small" className="rt-cols-act" onClick={showAllCols}>全部</Button>
-          <Button type="link" size="small" className="rt-cols-act" icon={<ReloadOutlined />} onClick={resetWidths}>
+        <span className="flex items-center">
+          <Button
+            variant="link"
+            size="sm"
+            className="rt-cols-act h-auto p-0"
+            onClick={() => setHidden(new Set())}
+          >
+            全部
+          </Button>
+          <Button
+            variant="link"
+            size="sm"
+            className="rt-cols-act h-auto p-0"
+            onClick={() => setWidths({})}
+          >
+            <RotateCw className="size-3" />
             重置
           </Button>
-        </Space>
+        </span>
       </div>
       <div className="rt-cols-list">
         {toggleableCols.map(({ col, key }) => (
           <label key={key} className="rt-cols-item">
-            <Checkbox checked={!hidden.has(key)} onChange={() => toggleCol(key)} />
-            <span className="rt-cols-name">{colTitleText(col)}</span>
+            <Checkbox checked={!hidden.has(key)} onCheckedChange={() => toggleCol(key)} />
+            <span className="rt-cols-name">{columnTitleText(col)}</span>
           </label>
         ))}
       </div>
@@ -333,38 +361,56 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
       <div className={wrapperClass} ref={wrapRef}>
         {visibleCols.length >= COLS_SETTING_MIN ? (
           <div className="rt-toolbar">
-            <Popover trigger="click" placement="bottomRight" content={colSettingsPanel}>
-              <Button size="small" icon={<SlidersOutlined />}>列设置</Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <SlidersHorizontal className="size-3.5" />
+                  列设置
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end">{colSettingsPanel}</PopoverContent>
             </Popover>
           </div>
         ) : null}
         <TableCardList<T>
-          dataSource={rest.dataSource}
+          dataSource={dataSource}
           columns={cardColumns}
-          rowKey={rest.rowKey}
+          rowKey={rowKey}
           loading={loading}
-          pagination={rest.pagination}
+          pagination={pagination}
         />
       </div>
     );
   }
 
   return (
-    <div className={wrapperClass} ref={wrapRef}>
+    <div className={wrapperClass} ref={wrapRef} style={style}>
       {visibleCols.length >= COLS_SETTING_MIN ? (
         <div className="rt-toolbar">
-          <Popover trigger="click" placement="bottomRight" content={colSettingsPanel}>
-            <Button size="small" icon={<SlidersOutlined />}>列设置</Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="sm" variant="outline">
+                <SlidersHorizontal className="size-3.5" />
+                列设置
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end">{colSettingsPanel}</PopoverContent>
           </Popover>
         </div>
       ) : null}
-      <Table<T>
-        {...rest}
+      <DataTable<T>
         columns={resolvedColumns}
-        locale={tableLocale}
-        scroll={resolvedScroll}
-        tableLayout="fixed"
-        style={{ width: '100%', ...style }}
+        dataSource={dataSource}
+        rowKey={rowKey}
+        loading={loading}
+        pagination={pagination}
+        size={size}
+        scrollY={scrollY}
+        expandable={expandable}
+        defaultExpandAllRows={defaultExpandAllRows}
+        emptyText={emptyNode}
+        onRow={onRow}
+        bordered={false}
       />
     </div>
   );

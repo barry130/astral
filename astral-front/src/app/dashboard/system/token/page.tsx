@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Button, Space, Tag, message, Popconfirm, Select } from 'antd';
-import { DeleteOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Card, Button, Space, Tag, message, Popconfirm, Select } from '@/components/antd-compat';
+import { DeleteOutlined, LogoutOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
 import { ResizableTable } from '@/components/ResizableTable';
 
