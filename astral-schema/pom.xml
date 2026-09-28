@@ -16,13 +16,16 @@
     <description>Table schema metadata definitions and compile-time code generation</description>
 
     <dependencies>
+        <!-- Jackson 3：databind 坐标迁移到 tools.jackson。
+             jsr310/jdk8/parameter-names 已在 Jackson 3.0 合并进 jackson-databind，不再需要独立依赖；
+             注解仍复用 Jackson 2 的 com.fasterxml.jackson.core:jackson-annotations（Jackson 3 官方约定）。 -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -43,7 +46,7 @@
         <dependency>
             <groupId>org.apache.maven.plugin-tools</groupId>
             <artifactId>maven-plugin-annotations</artifactId>
-            <version>3.11.0</version>
+            <version>3.16.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -53,7 +56,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-plugin-plugin</artifactId>
-                <version>3.11.0</version>
+                <!-- 3.11.0 内置 ASM 读不了 Java 25 字节码（Unsupported class file major version 69），
+                     3.16.0 起支持；本模块需与 JDK 25 的 release 25 编译产物配套 -->
+                <version>3.16.0</version>
                 <configuration>
                     <goalPrefix>astral-schema</goalPrefix>
                 </configuration>

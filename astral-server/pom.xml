@@ -78,11 +78,18 @@
             <artifactId>postgresql</artifactId>
         </dependency>
         <!-- Flyway 数据库迁移：启动时自动按序应用 db/migration/V*.sql 并记录 flyway_schema_history。
-             版本由 spring-boot-starter-parent 托管（9.22.3，内置 PostgreSQL 支持）。
+             【Spring Boot 4 关键变化】Flyway 自动配置已从 spring-boot-autoconfigure 拆到独立模块
+             spring-boot-flyway（该模块内含 flyway-core 12.x）。若只依赖 flyway-core，
+             FlywayAutoConfiguration 不会存在于 classpath，Flyway 将【静默不执行】、迁移失效。
+             Flyway 10 起数据库支持同样拆分为独立模块，PostgreSQL 需再引 flyway-database-postgresql。
              存量库通过 baseline-on-migrate 跳过 V1 基线（见 application.yml spring.flyway）。 -->
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
         <dependency>
             <groupId>org.redisson</groupId>
@@ -96,7 +103,14 @@
         <dependency>
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-redis-jackson</artifactId>
-            <version>1.42.0</version>
+            <version>1.46.0</version>
+        </dependency>
+        <!-- MyBatis-Plus 分页拦截器 PaginationInnerInterceptor（见 MybatisPlusConfig）。
+             3.5.9 起该类从 mybatis-plus-extension 移到 mybatis-plus-jsqlparser，
+             且 starter 聚合 pom 中标记 optional 不传递，必须显式引入，否则分页 SQL 改写失效。 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springdoc</groupId>

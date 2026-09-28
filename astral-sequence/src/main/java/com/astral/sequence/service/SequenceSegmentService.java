@@ -1,7 +1,7 @@
 package com.astral.sequence.service;
 
 import com.astral.dao.entity.SequenceSegment;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
  * 号段分配服务接口

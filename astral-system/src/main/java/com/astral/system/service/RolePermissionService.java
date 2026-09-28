@@ -1,7 +1,7 @@
 package com.astral.system.service;
 
 import com.astral.dao.entity.RolePermission;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
  * 角色权限关联服务接口

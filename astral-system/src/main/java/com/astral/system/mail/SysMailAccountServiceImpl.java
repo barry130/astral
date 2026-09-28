@@ -2,7 +2,7 @@ package com.astral.system.mail;
 
 import com.astral.dao.entity.SysMailAccount;
 import com.astral.dao.mapper.SysMailAccountMapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 @Service

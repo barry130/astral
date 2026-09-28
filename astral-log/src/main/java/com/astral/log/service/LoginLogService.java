@@ -1,7 +1,7 @@
 package com.astral.log.service;
 
 import com.astral.dao.entity.LoginLog;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
  * 登录日志服务接口

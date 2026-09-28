@@ -5,7 +5,7 @@ import com.astral.qt.dto.QtUserDakaDto;
 import com.astral.qt.dto.vo.QtDakaDaysAndCodeVo;
 import com.astral.qt.entity.QtUserDaka;
 import com.astral.qt.mapper.QtUserDakaMapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

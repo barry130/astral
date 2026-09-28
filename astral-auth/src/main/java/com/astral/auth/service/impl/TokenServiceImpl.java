@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -95,24 +97,13 @@ public class TokenServiceImpl implements TokenService {
 
                 // 提取登录IP和创建时间
                 String loginIp = (String) session.get("loginIp");
-                LocalDateTime createTime = null;
-                // 优先从会话中读取登录时显式存储的loginTime
-                Object loginTimeObj = session.get("loginTime");
-                if (loginTimeObj instanceof LocalDateTime) {
-                    createTime = (LocalDateTime) loginTimeObj;
-                } else {
+                // 优先从会话中读取登录时显式存储的loginTime。
+                // 该字段历史上出现过 LocalDateTime / ISO-8601 字符串 / yyyy-MM-dd HH:mm:ss 字符串 /
+                // 毫秒时间戳等多种形态（Sa-Token 与 Jackson 版本不同导致），统一走宽容解析。
+                LocalDateTime createTime = parseLoginTime(session.get("loginTime"));
+                if (createTime == null) {
                     // 兼容旧Token：回退到会话创建时间（懒加载场景下可能不准确）
-                    Object createTimeObj = session.getCreateTime();
-                    if (createTimeObj != null) {
-                        // 兼容Long时间戳和LocalDateTime两种类型
-                        if (createTimeObj instanceof Long) {
-                            createTime = LocalDateTime.ofInstant(
-                                Instant.ofEpochMilli((Long) createTimeObj), 
-                                ZoneId.systemDefault());
-                        } else if (createTimeObj instanceof LocalDateTime) {
-                            createTime = (LocalDateTime) createTimeObj;
-                        }
-                    }
+                    createTime = parseLoginTime(session.getCreateTime());
                 }
 
                 allTokens.add(TokenInfo.builder()
@@ -203,6 +194,60 @@ public class TokenServiceImpl implements TokenService {
             } catch (Exception ignored) {
                 // Token可能已经被清理，忽略异常
             }
+        }
+    }
+
+    /**
+     * 会话时间字段的历史格式集合，按「新 → 旧」顺序依次尝试
+     */
+    private static final DateTimeFormatter[] SESSION_TIME_FORMATS = {
+            // 2026-09-27T17:42:07（当前写入格式 / Sa-Token 1.46 + Jackson 3 默认）
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+            // 2026-09-27 17:42:07（Sa-Token 1.42 + Jackson 2 的 DATE_TIME_PATTERN）
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+            // 2026-09-27 17:42:07.123
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"),
+    };
+
+    /**
+     * 宽容解析会话中的时间字段
+     * <p>同一个字段在历史上出现过多种形态，全部在这里兼容：</p>
+     * <ul>
+     *   <li>{@link LocalDateTime}——Sa-Token 1.42(Jackson2) 反序列化出来的 {@code yyyy-MM-dd HH:mm:ss}，
+     *       或 1.46(Jackson3) 反序列化出来的 ISO-8601；</li>
+     *   <li>字符串——当前登录时写入的 ISO-8601，以及历史遗留的 {@code yyyy-MM-dd HH:mm:ss}；</li>
+     *   <li>{@link Number}——毫秒时间戳，如 Sa-Token 自己维护的 {@code createTime}。</li>
+     * </ul>
+     *
+     * @param value 会话中取出的原始值，可为 null
+     * @return 解析结果，无法识别时返回 null，由调用方决定回退策略
+     */
+    private static LocalDateTime parseLoginTime(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof LocalDateTime localDateTime) {
+            return localDateTime;
+        }
+        if (value instanceof Number number) {
+            return LocalDateTime.ofInstant(Instant.ofEpochMilli(number.longValue()), ZoneId.systemDefault());
+        }
+        String text = value.toString().trim();
+        if (text.isEmpty()) {
+            return null;
+        }
+        for (DateTimeFormatter formatter : SESSION_TIME_FORMATS) {
+            try {
+                return LocalDateTime.parse(text, formatter);
+            } catch (DateTimeParseException ignored) {
+                // 换下一种格式继续试
+            }
+        }
+        // 兜底：字符串形式的毫秒时间戳
+        try {
+            return LocalDateTime.ofInstant(Instant.ofEpochMilli(Long.parseLong(text)), ZoneId.systemDefault());
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 }

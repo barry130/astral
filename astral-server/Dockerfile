@@ -1,13 +1,16 @@
 # syntax=docker/dockerfile:1
 # 多阶段构建
-# 第一阶段: 编译 (Java 21)
+# 第一阶段: 编译 (Java 25)
 # 【已实测，勿改回 alpine】部署服务器上 eclipse-temurin:21-jdk-alpine 与
 # maven:3.9-eclipse-temurin-21-alpine 里的 java 连 `java -version` 都起不来，报
 # "Error occurred during initialization of VM / Failed setting boot class path"
 # （镜像 env 干净，无 CLASSPATH 等干扰；与 maven 无关，是 JDK alpine 变体本身的问题）。
 # 而 eclipse-temurin:21-jre-alpine（运行阶段）实测正常，所以仅构建阶段必须用 Ubuntu 基础镜像。
 # 构建阶段不进最终镜像，两者体积差异对产物无影响。
-FROM maven:3.9-eclipse-temurin-21 AS builder
+# 【JDK 25 升级注意】上述 alpine 结论是在 JDK 21 上实测的；本次仅把版本号从 21 提到 25，
+# 未在部署服务器上复验。若构建阶段出现同样的 VM 初始化错误，把 builder 换成
+# eclipse-temurin:25-jdk（Ubuntu 基础）即可，构建阶段不影响最终镜像体积。
+FROM maven:3.9-eclipse-temurin-25 AS builder
 
 WORKDIR /build
 
@@ -66,16 +69,18 @@ COPY astral-server/src astral-server/src
 RUN --mount=type=cache,id=astral-maven,target=/root/.m2/repository \
     mvn -B -s .mvn/settings.xml -DskipTests package -pl astral-server -am
 
-# 第二阶段: 运行 (Java 21 JRE)
-# 用 alpine 变体：约 170MB，Ubuntu 基础的 21-jre 约 330MB，省约 150MB。
+# 第二阶段: 运行 (Java 25 JRE)
+# 用 alpine 变体：约 170MB，Ubuntu 基础的 25-jre 约 330MB，省约 150MB。
 # 【已实测】docker run --rm eclipse-temurin:21-jre-alpine java -version 在部署服务器正常
 # （Temurin 21.0.12）。注意只有 JRE 变体可用，JDK / maven 的 alpine 变体会启动失败（见文件头注释）。
+# 【JDK 25 升级注意】同上：25-jre-alpine 未在部署服务器复验。若容器起不来（VM 初始化错误），
+# 换 eclipse-temurin:25-jre（Ubuntu 基础）即可，功能一致、仅体积大 ~150MB。
 # 若需回退到 Debian 写法，替换本阶段前三行为：
-#   FROM eclipse-temurin:21-jre
+#   FROM eclipse-temurin:25-jre
 #   RUN groupadd -r astral && useradd -r -g astral astral
 #   RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata curl && \
 #       ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && rm -rf /var/lib/apt/lists/*
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 WORKDIR /app
 
@@ -101,9 +106,14 @@ USER astral
 
 # JVM 参数优化（默认基线：面向 1核/2GiB 学生机）
 # 生产环境可通过 docker-compose 的 JAVA_OPTS 覆盖（引用 deploy/prod.env 参数）
+# 【Spring Boot 4 实测调参，勿调回 128m】JDK 25 + Spring Boot 4.1 启动完成后元空间实测
+# 已用 104MB（20911 个类 / 875 个类加载器 —— SB4 把自动配置拆成大量独立模块，类数明显多于 SB3）。
+# 旧值 -XX:MaxMetaspaceSize=128m 只剩约 24MB 余量，运行期继续加载类（springdoc 文档生成、
+# 插件代码生成、MyBatis/动态代理）极易抛 OutOfMemoryError: Metaspace。
+# 故上限提到 256m，并把 MetaspaceSize 提到 128m 以减少启动期反复扩容抖动。
 ENV JAVA_OPTS="-Xms384m -Xmx384m \
-  -XX:MetaspaceSize=96m \
-  -XX:MaxMetaspaceSize=128m \
+  -XX:MetaspaceSize=128m \
+  -XX:MaxMetaspaceSize=256m \
   -XX:+UseSerialGC \
   -XX:+HeapDumpOnOutOfMemoryError \
   -XX:HeapDumpPath=/app/logs \

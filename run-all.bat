@@ -2,13 +2,14 @@
 rem ============================================================
 rem Astral one-click launcher: backend + frontend in separate windows
 rem
-rem   run-all.bat               auto-locate JDK 21, start both
-rem   run-all.bat D:\jdk-21     use the given JDK 21 directory
+rem   run-all.bat               auto-locate JDK 25, start both
+rem   run-all.bat D:\jdk-25     use the given JDK 25 directory
 rem
-rem JDK 21 lookup order:
+rem JDK 25 lookup order:
 rem   1. first argument
-rem   2. system JAVA_HOME, only if java -version reports 21.x
-rem   3. auto-detect: %USERPROFILE%\.jdks\ms-21* / *-21*, then Program Files
+rem   2. system JAVA_HOME, only if java -version reports 25.x
+rem   3. auto-detect: %USERPROFILE%\.jdks\temurin-25* / ms-25* / *-25*,
+rem      then Program Files (Eclipse Adoptium / Java)
 rem
 rem Backend : run-backend.bat   logs\backend.log   port 27000
 rem Frontend: run-frontend.bat  logs\frontend.log  port 3000
@@ -19,40 +20,52 @@ setlocal
 
 set "VERFILE=%TEMP%\astral_jdk_version.txt"
 
-rem ==================== 1. locate JDK 21 ====================
+rem ==================== 1. locate JDK 25 ====================
 if "%~1"=="" goto jdk_auto
 set "JAVA_HOME=%~1"
-echo [run-all] using JDK 21 from argument: %JAVA_HOME%
+echo [run-all] using JDK 25 from argument: %JAVA_HOME%
 goto jdk_ok
 
 :jdk_auto
 if not defined JAVA_HOME goto jdk_default
 "%JAVA_HOME%\bin\java.exe" -version > "%VERFILE%" 2>&1
-findstr /R "21\." "%VERFILE%" >nul
+findstr /R "25\." "%VERFILE%" >nul
 if errorlevel 1 goto jdk_default
-echo [run-all] using system JAVA_HOME - verified as JDK 21: %JAVA_HOME%
+echo [run-all] using system JAVA_HOME - verified as JDK 25: %JAVA_HOME%
 goto jdk_ok
 
 :jdk_default
-rem auto-detect a local JDK 21 instead of hardcoding a machine-specific path
+rem auto-detect a local JDK 25 instead of hardcoding a machine-specific path
 set "JAVA_HOME="
-for /d %%D in ("%USERPROFILE%\.jdks\ms-21*") do set "JAVA_HOME=%%~fD"
-if not defined JAVA_HOME for /d %%D in ("%USERPROFILE%\.jdks\*-21*") do set "JAVA_HOME=%%~fD"
-if not defined JAVA_HOME for /d %%D in ("%ProgramFiles%\Eclipse Adoptium\jdk-21*") do set "JAVA_HOME=%%~fD"
-if not defined JAVA_HOME for /d %%D in ("%ProgramFiles%\Java\jdk-21*") do set "JAVA_HOME=%%~fD"
+for /d %%D in ("%USERPROFILE%\.jdks\temurin-25*") do set "JAVA_HOME=%%~fD"
+if not defined JAVA_HOME for /d %%D in ("%USERPROFILE%\.jdks\ms-25*") do set "JAVA_HOME=%%~fD"
+if not defined JAVA_HOME for /d %%D in ("%USERPROFILE%\.jdks\*-25*") do set "JAVA_HOME=%%~fD"
+if not defined JAVA_HOME for /d %%D in ("%ProgramFiles%\Eclipse Adoptium\jdk-25*") do set "JAVA_HOME=%%~fD"
+if not defined JAVA_HOME for /d %%D in ("%ProgramFiles%\Java\jdk-25*") do set "JAVA_HOME=%%~fD"
 if not defined JAVA_HOME (
-    echo [ERR] JDK 21 not found - pass it as the first argument: run-all.bat ^<jdk21-dir^>
+    echo [ERR] JDK 25 not found - pass it as the first argument: run-all.bat ^<jdk25-dir^>
     exit /b 1
 )
-echo [run-all] JAVA_HOME missing or not JDK 21, auto-detected: %JAVA_HOME%
+echo [run-all] JAVA_HOME missing or not JDK 25, auto-detected: %JAVA_HOME%
 
 :jdk_ok
 del "%VERFILE%" >nul 2>&1
 if not exist "%JAVA_HOME%\bin\java.exe" (
     echo [ERR] no JDK found at: %JAVA_HOME%
-    echo       usage: run-all.bat ^<jdk21-dir^>
+    echo       usage: run-all.bat ^<jdk25-dir^>
     exit /b 1
 )
+rem final guard: verify the resolved JDK really is 25.x
+"%JAVA_HOME%\bin\java.exe" -version > "%VERFILE%" 2>&1
+findstr /R "25\." "%VERFILE%" >nul
+if errorlevel 1 (
+    echo [ERR] resolved JDK is not 25.x: %JAVA_HOME%
+    type "%VERFILE%"
+    echo       Spring Boot 4.1 needs JDK 25 ^(maven.compiler.release=25^).
+    del "%VERFILE%" >nul 2>&1
+    exit /b 1
+)
+del "%VERFILE%" >nul 2>&1
 
 rem ==================== 2. pre-checks ====================
 where npm >nul 2>nul

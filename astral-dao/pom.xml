@@ -23,10 +23,11 @@
 
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
         </dependency>
 
-        <!-- 实体上的 @JsonProperty；此前靠 astral-common→spring-boot-starter-web 传递，需显式声明 -->
+        <!-- 实体上的 @JsonProperty；Jackson 3 仍复用 Jackson 2 注解模块，故坐标不变。
+             此前靠 astral-common→spring-boot-starter-web 传递，需显式声明 -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>

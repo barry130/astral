@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.3</version>
+        <version>4.1.0</version>
         <relativePath/>
     </parent>
 
@@ -33,20 +33,23 @@
     </modules>
 
     <properties>
-        <java.version>21</java.version>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <java.version>25</java.version>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
 
-        <lombok.version>1.18.36</lombok.version>
-        <mybatis-plus.version>3.5.5</mybatis-plus.version>
-        <redisson.version>3.27.0</redisson.version>
-        <caffeine.version>3.1.8</caffeine.version>
-        <springdoc.version>2.3.0</springdoc.version>
-        <hutool.version>5.8.25</hutool.version>
-        <mysql.version>8.3.0</mysql.version>
+        <!-- Lombok 需 >=1.18.40 才能在 JDK 25 下运行注解处理器；此处对齐 Spring Boot 4.1 托管版本 -->
+        <lombok.version>1.18.46</lombok.version>
+        <!-- MyBatis-Plus：Spring Boot 4 须使用 spring-boot4 starter（3.5.13+ 起提供） -->
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>
+        <redisson.version>3.52.0</redisson.version>
+        <caffeine.version>3.2.4</caffeine.version>
+        <!-- springdoc 3.x 才支持 Spring Boot 4 / Spring Framework 7 -->
+        <springdoc.version>3.1.1</springdoc.version>
+        <hutool.version>5.8.47</hutool.version>
+        <mysql.version>9.7.0</mysql.version>
     </properties>
 
     <dependencyManagement>
@@ -104,7 +107,15 @@
 
             <dependency>
                 <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <!-- MyBatis-Plus 3.5.9+ 把 JSqlParser 相关拦截器（PaginationInnerInterceptor 等）
+                 拆到独立制品，且聚合 pom 中标记为 optional 不传递，用到分页拦截器的模块需显式引入。
+                 此处选 jsqlparser 5.2 变体（JDK 11+），另一个 mybatis-plus-jsqlparser-4.9 面向 JDK 8。 -->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-jsqlparser</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
 
@@ -171,12 +182,21 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.15.0</version>
                 <configuration>
                     <encoding>UTF-8</encoding>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <release>${java.version}</release>
+                    <!-- JDK 23+ 起 javac 不再隐式发现 classpath 上的注解处理器（JDK-8306819），
+                         必须显式声明 processor path，否则 Lombok 不生成 getter/setter 而编译失败 -->
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>

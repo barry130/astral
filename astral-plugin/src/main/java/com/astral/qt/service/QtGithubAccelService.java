@@ -5,7 +5,7 @@ import com.astral.qt.dto.vo.QtGithubAccelVo;
 import com.astral.qt.entity.QtGithubAccel;
 import com.astral.qt.mapper.QtGithubAccelMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.PostConstruct;

@@ -1,8 +1,9 @@
 package com.astral.schema;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,15 +43,12 @@ public class SchemaRegistry {
     private static final String SCHEMA_PATH = "schema/";
     /** Schema缓存，以表名为key，线程安全 */
     private static final Map<String, TableSchema> SCHEMA_CACHE = new ConcurrentHashMap<>();
-    /** JSON序列化器，启用格式化输出 */
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    /** JSON序列化器，启用格式化输出（Jackson 3 起 java.time 已内置，无需再注册 JavaTimeModule） */
+    private static final ObjectMapper MAPPER = JsonMapper.builder()
+            .enable(SerializationFeature.INDENT_OUTPUT)
+            .build();
     /** 外部Schema文件存储目录 */
     private static Path externalSchemaDir;
-
-    static {
-        MAPPER.registerModule(new JavaTimeModule());
-        MAPPER.enable(SerializationFeature.INDENT_OUTPUT);
-    }
 
     /**
      * 初始化Schema注册中心
@@ -176,7 +174,7 @@ public class SchemaRegistry {
                 return;
             }
             SCHEMA_CACHE.putIfAbsent(schema.getTableName(), schema);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             log.warn("Cannot parse schema file: {}", filename, e);
         }
     }
@@ -196,7 +194,7 @@ public class SchemaRegistry {
                         try {
                             TableSchema schema = MAPPER.readValue(p.toFile(), TableSchema.class);
                             SCHEMA_CACHE.put(schema.getTableName(), schema);
-                        } catch (IOException e) {
+                        } catch (JacksonException e) {
                             // Skip invalid files
                         }
                     });

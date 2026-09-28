@@ -19,6 +19,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 
@@ -71,7 +72,11 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         // 将登录IP和登录时间存入Token会话，供Token管理页面读取
         SaSession tokenSession = StpUtil.getTokenSession();
         tokenSession.set("loginIp", getClientIp());
-        tokenSession.set("loginTime", LocalDateTime.now());
+        // loginTime 存 ISO-8601 字符串而不是裸 LocalDateTime：会话是持久化在 Redis 里的，
+        // Sa-Token 1.42(Jackson2) 把 java.time 固定写成 yyyy-MM-dd HH:mm:ss，1.46(Jackson3)
+        // 按默认 ISO-8601 读写，裸 LocalDateTime 一旦跨版本读写就会反序列化失败。
+        // 字符串不参与 java.time 的格式协商，新旧版本都能安全读回。
+        tokenSession.set("loginTime", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
         String token = StpUtil.getTokenValue();
         
         List<String> roles = stpInterface.getRoleList(user.getId(), null);

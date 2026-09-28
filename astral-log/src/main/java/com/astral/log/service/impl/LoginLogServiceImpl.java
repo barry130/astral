@@ -3,7 +3,7 @@ package com.astral.log.service.impl;
 import com.astral.dao.entity.LoginLog;
 import com.astral.dao.mapper.LoginLogMapper;
 import com.astral.log.service.LoginLogService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**

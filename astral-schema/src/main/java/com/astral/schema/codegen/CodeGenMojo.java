@@ -2,8 +2,8 @@ package com.astral.schema.codegen;
 
 import com.astral.schema.SchemaCodeGenerator;
 import com.astral.schema.TableSchema;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -71,8 +71,6 @@ public class CodeGenMojo extends AbstractMojo {
             return;
         }
 
-        mapper.registerModule(new JavaTimeModule());
-
         List<TableSchema> schemas = loadSchemas();
         if (schemas.isEmpty()) {
             getLog().warn("No schemas found, skipping code generation.");
@@ -117,7 +115,7 @@ public class CodeGenMojo extends AbstractMojo {
                             try {
                                 TableSchema schema = mapper.readValue(p.toFile(), TableSchema.class);
                                 schemas.add(schema);
-                            } catch (IOException e) {
+                            } catch (JacksonException e) {
                                 getLog().warn("Failed to load schema from " + p + ": " + e.getMessage());
                             }
                         });

@@ -164,7 +164,7 @@ public class SchemaCodeGenerator {
 
         sb.append("package ").append(servicePackage).append(";\n\n");
         sb.append("import ").append(entityPackage).append(".").append(className).append(";\n");
-        sb.append("import com.baomidou.mybatisplus.extension.service.IService;\n\n");
+        sb.append("import com.baomidou.mybatisplus.spring.service.IService;\n\n");
         sb.append("public interface ").append(className).append("Service extends IService<").append(className).append("> {\n");
         sb.append("}\n");
         return sb.toString();
@@ -191,7 +191,7 @@ public class SchemaCodeGenerator {
         sb.append("import ").append(entityPackage).append(".").append(className).append(";\n");
         sb.append("import ").append(mapperPackage).append(".").append(className).append("Mapper;\n");
         sb.append("import ").append(servicePackage).append(".").append(className).append("Service;\n");
-        sb.append("import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;\n");
+        sb.append("import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;\n");
         sb.append("import org.springframework.stereotype.Service;\n\n");
         sb.append("@Service\n");
         sb.append("public class ").append(className).append("ServiceImpl extends ServiceImpl<").append(className).append("Mapper, ").append(className).append("> implements ").append(className).append("Service {\n");

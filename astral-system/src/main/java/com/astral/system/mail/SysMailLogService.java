@@ -1,7 +1,7 @@
 package com.astral.system.mail;
 
 import com.astral.dao.entity.SysMailLog;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 import java.time.LocalDateTime;
 import java.util.Map;

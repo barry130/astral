@@ -1,7 +1,6 @@
 package com.astral.schema;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,10 +30,6 @@ import java.util.stream.Stream;
 public class SchemaEntitySync {
     private static final Logger log = LoggerFactory.getLogger(SchemaEntitySync.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
-
-    static {
-        MAPPER.registerModule(new JavaTimeModule());
-    }
 
     /**
      * 启动时同步Entity

@@ -1,7 +1,7 @@
 package com.astral.system.service;
 
 import com.astral.dao.entity.User;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
  * 用户服务接口

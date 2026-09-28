@@ -3,7 +3,7 @@ package com.astral.system.service.impl;
 import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.UserRoleMapper;
 import com.astral.system.service.UserRoleService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**

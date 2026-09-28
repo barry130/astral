@@ -35,6 +35,16 @@ public class LoginLogAspect {
     private final LogService logService;
 
     /**
+     * 与 sys_login_log 建表语句（V20260914001__init.sql）一致的字段长度。
+     * <p>超长会被 PostgreSQL 直接拒绝：{@code value too long for type character varying(N)}，
+     * 而登录日志保存失败会掩盖真正的登录失败原因，所以写库前统一按列宽截断。</p>
+     */
+    private static final int USERNAME_MAX_LENGTH = 64;
+    private static final int LOGIN_TYPE_MAX_LENGTH = 32;
+    private static final int IP_MAX_LENGTH = 64;
+    private static final int MSG_MAX_LENGTH = 256;
+
+    /**
      * 定义切点：拦截所有标注了 @LoginLog 注解的方法
      */
     @Pointcut("@annotation(com.astral.log.annotation.LoginLog)")
@@ -71,7 +81,7 @@ public class LoginLogAspect {
             return result;
         } catch (Exception e) {
             status = 0;
-            msg = e.getMessage();
+            msg = buildErrorMessage(e);
             saveLoginLog(username, loginType, ip, status, msg);
             throw e;
         }
@@ -94,12 +104,12 @@ public class LoginLogAspect {
         try {
             log.info("保存登录日志: username={}, loginType={}, status={}, ip={}", username, loginType, status, ip);
             com.astral.dao.entity.LoginLog loginLog = new com.astral.dao.entity.LoginLog();
-            loginLog.setUsername(username);
-            loginLog.setLoginType(loginType);
-            loginLog.setIp(ip);
+            loginLog.setUsername(truncate(username, USERNAME_MAX_LENGTH));
+            loginLog.setLoginType(truncate(loginType, LOGIN_TYPE_MAX_LENGTH));
+            loginLog.setIp(truncate(ip, IP_MAX_LENGTH));
             loginLog.setLocation("");
             loginLog.setStatus(status);
-            loginLog.setMsg(msg);
+            loginLog.setMsg(truncate(msg, MSG_MAX_LENGTH));
             loginLog.setLoginTime(LocalDateTime.now());
             log.info("调用logService.saveLoginLog");
             logService.saveLoginLog(loginLog);
@@ -107,6 +117,36 @@ public class LoginLogAspect {
         } catch (Exception e) {
             log.error("保存登录日志失败", e);
         }
+    }
+
+    /**
+     * 构造失败原因文案
+     * <p>{@link Throwable#getMessage()} 可能为 null（如 NPE），此时退化为异常类名，
+     * 保证日志里至少能看到失败类型。</p>
+     *
+     * @param e 登录过程中抛出的异常
+     * @return 非空的失败原因
+     */
+    private static String buildErrorMessage(Throwable e) {
+        String message = e.getMessage();
+        return (message == null || message.isBlank()) ? e.getClass().getSimpleName() : message;
+    }
+
+    /**
+     * 按数据库列宽截断字符串
+     * <p>登录失败时 {@code msg} 取的是异常 message，长度不可控（例如内嵌完整 SQL 与来源链），
+     * 超过 {@code sys_login_log.msg} 的 VARCHAR(256) 会让「记录日志」这个动作本身报错，
+     * 反而把真正的登录失败原因盖掉。</p>
+     *
+     * @param value     原始值，可为 null
+     * @param maxLength 目标列的最大字符数
+     * @return 截断后的值
+     */
+    private static String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 
     /**

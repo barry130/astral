@@ -1,7 +1,7 @@
 package com.astral.sequence.service;
 
 import com.astral.dao.entity.SequenceStatistics;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 /**
  * 序列统计服务接口

@@ -31,9 +31,10 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- Spring Boot 4 起 spring-boot-starter-aop 更名为 spring-boot-starter-aspectj -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
         </dependency>
 
         <!-- 仅使用 cn.hutool.core.util.StrUtil，用 hutool-core 即可 -->

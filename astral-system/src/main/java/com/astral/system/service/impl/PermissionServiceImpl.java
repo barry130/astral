@@ -3,7 +3,7 @@ package com.astral.system.service.impl;
 import com.astral.dao.entity.Permission;
 import com.astral.dao.mapper.PermissionMapper;
 import com.astral.system.service.PermissionService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**

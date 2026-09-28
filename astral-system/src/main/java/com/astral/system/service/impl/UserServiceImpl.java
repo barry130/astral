@@ -4,7 +4,7 @@ import cn.hutool.crypto.digest.BCrypt;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.system.service.UserService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 

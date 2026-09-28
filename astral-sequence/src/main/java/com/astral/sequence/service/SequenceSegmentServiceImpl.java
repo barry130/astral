@@ -3,7 +3,7 @@ package com.astral.sequence.service.impl;
 import com.astral.dao.entity.SequenceSegment;
 import com.astral.dao.mapper.SequenceSegmentMapper;
 import com.astral.sequence.service.SequenceSegmentService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 /**

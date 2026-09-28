@@ -39,6 +39,11 @@ spring:
     baseline-on-migrate: true
     baseline-version: 20260914001
     baseline-description: "存量库基线：原手工 V1-V4 已应用，跳过初始化脚本"
+    # 种子数据里的邮件模板正文包含 ${code}（运行时由后端替换的验证码变量），
+    # Flyway 默认把 ${...} 当占位符解析、缺失时直接抛错，
+    # 结果就是「全新空库用 Flyway 引导建库」必然失败（存量库因已打基线才没暴露）。
+    # 本项目迁移脚本不使用 Flyway 占位符，故关闭替换。
+    placeholder-replacement: false
 
   # 数据库结构/种子数据不走 spring.sql.init（由上面的 Flyway 接管）。
   sql:

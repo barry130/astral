@@ -8,8 +8,8 @@ import com.astral.storage.mapper.StorageFileMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -275,7 +275,7 @@ public class StorageConfigService {
         if (existing != null && existing.getProviderOptions() != null && !existing.getProviderOptions().isBlank()) {
             try {
                 JsonNode old = objectMapper.readTree(existing.getProviderOptions());
-                old.fieldNames().forEachRemaining(n -> merged.put(n, old.path(n).asText(null)));
+                old.propertyNames().forEach(n -> merged.put(n, old.path(n).asText(null)));
             } catch (Exception ignored) {
             }
         }
@@ -368,7 +368,7 @@ public class StorageConfigService {
                 boolean changed = false;
                 for (String field : new String[]{"secretAccessKey", "secretKey", "accessKeySecret", "password", "tokenKey"}) {
                     if (node.hasNonNull(field)) {
-                        ((com.fasterxml.jackson.databind.node.ObjectNode) node).put(field, "******");
+                        ((tools.jackson.databind.node.ObjectNode) node).put(field, "******");
                         changed = true;
                     }
                 }

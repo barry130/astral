@@ -2,7 +2,7 @@ package com.astral.feedback.config;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.astral.feedback.common.FeedbackRestResp;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -1,7 +1,7 @@
 package com.astral.system.service;
 
 import com.astral.dao.entity.DictType;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.baomidou.mybatisplus.spring.service.IService;
 
 import java.util.List;
 

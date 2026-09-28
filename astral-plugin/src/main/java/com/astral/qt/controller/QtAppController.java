@@ -13,7 +13,7 @@ import com.astral.qt.service.QtAppService;
 import com.astral.qt.service.QtGithubAccelService;
 import com.astral.qt.service.QtSourceService;
 import cn.dev33.satoken.stp.StpUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -127,10 +127,10 @@ public class QtAppController {
         QtSourceManifestVo manifest = sourceService.buildManifest(platform, appVersionCode, hostApiVersion, tester);
         // ETag 必须按「不含 generatedAt」的稳定内容计算：generatedAt 每次请求都变，
         // 直接对响应体做摘要会让 If-None-Match 永远不命中。稳定拷贝按包装后的结构来
-        com.fasterxml.jackson.databind.node.ObjectNode data =
-                (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.valueToTree(manifest);
+        tools.jackson.databind.node.ObjectNode data =
+                (tools.jackson.databind.node.ObjectNode) objectMapper.valueToTree(manifest);
         data.remove("generatedAt");
-        com.fasterxml.jackson.databind.node.ObjectNode stable = objectMapper.createObjectNode();
+        tools.jackson.databind.node.ObjectNode stable = objectMapper.createObjectNode();
         stable.put("code", 200);
         stable.set("data", data);
         stable.put("tester", tester);
