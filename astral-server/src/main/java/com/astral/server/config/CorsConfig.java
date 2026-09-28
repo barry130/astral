@@ -7,12 +7,15 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.List;
 
 /**
  * 跨域资源共享（CORS）配置类
  * <p>配置允许的跨域请求来源、请求头、请求方法等</p>
  */
+@Slf4j
 @Configuration
 public class CorsConfig {
 
@@ -37,6 +40,9 @@ public class CorsConfig {
             // 放行全部来源：Spring 在 allowCredentials=true 下不允许 allowedOrigins="*"，
             // 必须使用 originPatterns（响应时回显具体 Origin）
             config.setAllowedOriginPatterns(List.of("*"));
+            log.warn("CORS 配置为通配 '*' 且 allowCredentials=true：任何站点都可发起带凭据的跨域请求。"
+                    + "生产环境请通过 CORS_ALLOWED_ORIGINS 显式列出前端域名；"
+                    + "若前后端同源部署，则根本不需要配置本项。");
         } else {
             for (String origin : allowedOrigins) {
                 config.addAllowedOrigin(origin);

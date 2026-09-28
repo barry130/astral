@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 /**
  * 用户角色关联控制器
  * <p>提供用户角色关联关系的CRUD操作</p>
@@ -58,7 +60,7 @@ public class UserRoleController {
      */
     @Operation(summary = "创建")
     @PostMapping
-    public Result<Void> create(@RequestBody UserRole entity) {
+    public Result<Void> create(@Valid @RequestBody UserRole entity) {
         userRoleService.save(entity);
         return Result.success();
     }
@@ -72,7 +74,7 @@ public class UserRoleController {
      */
     @Operation(summary = "更新")
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody UserRole entity) {
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody UserRole entity) {
         entity.setId(id);
         userRoleService.updateById(entity);
         return Result.success();

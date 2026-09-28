@@ -1,5 +1,7 @@
 package com.astral.log.aspect;
 
+import org.springframework.beans.factory.annotation.Value;
+import com.astral.common.util.ClientIp;
 import com.astral.log.service.LogService;
 import cn.hutool.core.util.StrUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,6 +32,10 @@ import java.time.LocalDateTime;
 @Component
 @RequiredArgsConstructor
 public class LoginLogAspect {
+
+    /** 可信代理列表（决定能否采信 X-Forwarded-For），与全站口径一致 */
+    @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
+    private String trustedProxies;
 
     /** 日志服务，用于持久化登录日志 */
     private final LogService logService;
@@ -194,14 +200,13 @@ public class LoginLogAspect {
      */
     private String getIp(HttpServletRequest request) {
         if (request == null) return "unknown";
-        String ip = request.getHeader("X-Forwarded-For");
-        if (StrUtil.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (StrUtil.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
+        // 与全站一致走可信代理白名单解析：无条件采信 X-Forwarded-For 会让审计日志里的来源 IP 可伪造，
+        // 登录日志正是"谁在撞库"的追责依据，伪造即失去意义。
+        return ClientIp.resolve(
+                request.getHeader("X-Forwarded-For"),
+                request.getHeader("X-Real-IP"),
+                request.getRemoteAddr(),
+                trustedProxies);
     }
 
     /**

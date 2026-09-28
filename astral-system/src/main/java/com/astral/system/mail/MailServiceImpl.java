@@ -14,12 +14,18 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.TimeUnit;
+
 import jakarta.mail.internet.MimeMessage;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -32,6 +38,12 @@ import java.util.stream.Collectors;
 @Service
 public class MailServiceImpl implements MailService {
 
+    /** 默认每日额度（授权记录未配置 daily_limit 或配置为 0/负数时使用） */
+    private static final int DEFAULT_DAILY_LIMIT = 2;
+
+    /** 发信额度 Redis key 前缀 */
+    private static final String QUOTA_KEY_PREFIX = "astral:mail:quota:";
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Resource
@@ -42,6 +54,59 @@ public class MailServiceImpl implements MailService {
     private SysMailPluginAuthMapper pluginAuthMapper;
     @Resource
     private SysMailLogMapper logMapper;
+
+    /**
+     * Redis（可选）
+     * <p>额度计数用 Redis 原子自增；Redis 不可用时降级为数据库计数（弱一致，仅兜底），
+     * 不让基础设施故障直接导致业务不可用。</p>
+     */
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
+
+    /**
+     * 原子占用一次发信额度
+     *
+     * @param pluginId 插件ID
+     * @param toEmail  收件人
+     * @param limit    每日上限
+     * @return 占用成功返回 true；已达上限返回 false
+     */
+    private boolean tryConsumeQuota(String pluginId, String toEmail, int limit) {
+        if (stringRedisTemplate == null) {
+            // 降级：无 Redis 时退回数据库计数（并发下可能超额，但不会出现不可用）
+            log.warn("[Mail] Redis 不可用，每日额度降级为数据库计数，并发下可能超额");
+            Long sent = logMapper.countSuccessToday(toEmail, pluginId);
+            return sent == null || sent < limit;
+        }
+        String key = QUOTA_KEY_PREFIX + LocalDate.now() + ":" + pluginId + ":" + toEmail;
+        try {
+            Long used = stringRedisTemplate.opsForValue().increment(key);
+            if (used == null) {
+                return true;
+            }
+            if (used == 1L) {
+                // 首次计数：设置到当日 24 点过期，避免计数器常驻
+                stringRedisTemplate.expire(key, secondsUntilTomorrow(), TimeUnit.SECONDS);
+            }
+            if (used > limit) {
+                // 超限时把这次自增退回去，保持计数准确（并发下有极小误差，不影响限流语义）
+                stringRedisTemplate.opsForValue().decrement(key);
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            // Redis 抖动不应让发信整体不可用，退回数据库计数
+            log.warn("[Mail] 额度计数失败，降级为数据库计数: {}", e.getMessage());
+            Long sent = logMapper.countSuccessToday(toEmail, pluginId);
+            return sent == null || sent < limit;
+        }
+    }
+
+    /** 当前时刻距次日 0 点的秒数（最少 1 秒，避免 expire 0 导致 key 不落盘） */
+    private long secondsUntilTomorrow() {
+        long sec = LocalDateTime.now().until(LocalDate.now().plusDays(1).atStartOfDay(), ChronoUnit.SECONDS);
+        return Math.max(sec, 1L);
+    }
 
     @Override
     public void send(String pluginId, String toEmail, String templateCode, Map<String, String> variables) {
@@ -59,9 +124,11 @@ public class MailServiceImpl implements MailService {
             }
         }
         // 3. 每日额度校验（按收件人 + 插件）
-        Long sent = logMapper.countSuccessToday(toEmail, pluginId);
-        int limit = auth.getDailyLimit() != null ? auth.getDailyLimit() : 2;
-        if (sent != null && sent >= limit) {
+        //    原实现是「先 COUNT 成功记录，再发送」：两次操作之间有窗口，
+        //    并发请求可以同时读到未超限的计数，导致实际发送量远超 daily_limit（验证码轰炸）。
+        //    这里改为 Redis 原子占位（INCR + 当日过期），超限即拒绝。
+        int limit = auth.getDailyLimit() != null && auth.getDailyLimit() > 0 ? auth.getDailyLimit() : DEFAULT_DAILY_LIMIT;
+        if (!tryConsumeQuota(pluginId, toEmail, limit)) {
             throw new BusinessException("MAIL004");
         }
         // 4. 模板校验
@@ -161,6 +228,15 @@ public class MailServiceImpl implements MailService {
         log.info("[Mail] 邮件已发送: to={}, account={}", toEmail, acc.getAccountName());
     }
 
+    /**
+     * 渲染模板：把 {@code ${key}} 替换为变量值
+     *
+     * <p><b>必须对变量值做 HTML 转义</b>：模板正文是以 {@code text/html} 发出的
+     * （见 {@code helper.setText(content, true)}），变量里若带 HTML/脚本会被收件人邮箱直接渲染。
+     * 典型攻击面：用户昵称、反馈标题这类用户可控内容被塞进验证码/通知邮件，
+     * 攻击者可注入 {@code <img src=x onerror=...>} 或钓鱼链接做品牌仿冒。
+     * 转义只影响显示，不影响纯文本语义。</p>
+     */
     private String render(String template, Map<String, String> variables) {
         if (template == null) {
             return "";
@@ -168,11 +244,38 @@ public class MailServiceImpl implements MailService {
         String result = template;
         if (variables != null) {
             for (Map.Entry<String, String> e : variables.entrySet()) {
-                result = result.replace("${" + e.getKey() + "}",
-                        e.getValue() == null ? "" : e.getValue());
+                if (e.getKey() == null) {
+                    continue;
+                }
+                result = result.replace("${" + e.getKey() + "}", htmlEscape(e.getValue()));
             }
         }
         return result;
+    }
+
+    /**
+     * HTML 转义（&amp; &lt; &gt; &quot; &#39;）
+     *
+     * @param value 原始值，可为 null
+     * @return 转义后的安全字符串；null 转为空串
+     */
+    private static String htmlEscape(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(value.length() + 16);
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            switch (c) {
+                case '&' -> sb.append("&amp;");
+                case '<' -> sb.append("&lt;");
+                case '>' -> sb.append("&gt;");
+                case '"' -> sb.append("&quot;");
+                case '\'' -> sb.append("&#39;");
+                default -> sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     private void saveLog(Long accountId, String pluginId, String scene, String toEmail,

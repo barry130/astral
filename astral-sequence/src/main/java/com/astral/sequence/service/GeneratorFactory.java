@@ -5,10 +5,8 @@ import com.astral.common.exception.BusinessException;
 import com.astral.common.util.SequenceMetrics;
 import com.astral.dao.entity.SequenceConfig;
 import com.astral.dao.entity.SequenceHistory;
-import com.astral.dao.entity.SequenceStatistics;
 import com.astral.dao.mapper.SequenceConfigMapper;
 import com.astral.dao.mapper.SequenceHistoryMapper;
-import com.astral.dao.mapper.SequenceStatisticsMapper;
 import com.astral.sequence.generator.DatabaseGenerator;
 import com.astral.sequence.generator.RedisGenerator;
 import com.astral.sequence.generator.SegmentGenerator;
@@ -21,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -57,16 +54,14 @@ public class GeneratorFactory {
     private final DatabaseGenerator databaseGenerator;
     /** 号段模式生成器（默认） */
     private final SegmentGenerator segmentGenerator;
-    /** 序列历史服务 */
-    private final SequenceHistoryService historyService;
     /** 序列历史数据访问接口 */
     private final SequenceHistoryMapper historyMapper;
     /** 序列配置数据访问接口 */
     private final SequenceConfigMapper configMapper;
-    /** 序列统计数据访问接口 */
-    private final SequenceStatisticsMapper statisticsMapper;
     /** 实体 ID 全局序列提供者 */
     private final com.astral.sequence.config.EntityIdSequenceProvider entityIdSequenceProvider;
+    /** 历史/统计的异步写入器（@Async 必须落在外部 Bean 上才生效） */
+    private final SequenceAsyncWriter sequenceAsyncWriter;
 
     /**
      * Redis 生成器（可选）
@@ -119,9 +114,9 @@ public class GeneratorFactory {
         // 记录生成指标，用于监控和统计
         SequenceMetrics.recordGeneration();
         // 异步保存历史记录，不阻塞主流程
-        saveHistoryAsync(bizKey, actualType, value);
+        sequenceAsyncWriter.saveHistoryAsync(bizKey, actualType, value);
         // 异步更新统计数据
-        updateStatisticsAsync(bizKey, value);
+        sequenceAsyncWriter.updateStatisticsAsync(bizKey, value);
         return value;
     }
 
@@ -168,85 +163,15 @@ public class GeneratorFactory {
 
         // 如果有有效的历史记录，异步批量保存
         if (!batchHistory.isEmpty()) {
-            saveHistoryBatchAsync(batchHistory);
+            sequenceAsyncWriter.saveHistoryBatchAsync(batchHistory);
             // 使用最后一个序列号更新统计数据
-            long lastValue = Long.parseLong(values[values.length - 1]);
-            updateStatisticsAsync(bizKey, lastValue);
+            // 原实现直接 parse 最后一个值：批量结果里混入非数字（如生成器返回空串）会抛 NumberFormatException，
+            // 而这段在异步写入之前执行，异常会直接打断批量取号接口。这里改为容错解析。
+            long lastValue = parseLastValue(values);
+            sequenceAsyncWriter.updateStatisticsAsync(bizKey, lastValue);
         }
 
         return result;
-    }
-
-    /**
-     * 异步保存单条历史记录
-     * <p>
-     * 使用 @Async 注解在独立的线程池中执行，不阻塞序列号生成的主流程。
-     * 异常被捕获并记录日志，确保历史记录保存失败不会影响主业务。
-     * </p>
-     *
-     * @param bizKey 业务键
-     * @param type   生成器类型
-     * @param value  序列号值
-     */
-    @Async("sequenceAsyncExecutor")
-    public void saveHistoryAsync(String bizKey, String type, long value) {
-        try {
-            historyService.save(bizKey, type, value);
-        } catch (Exception e) {
-            log.warn("Async history save failed: bizKey={}, type={}, value={}", bizKey, type, value, e);
-        }
-    }
-
-    /**
-     * 异步批量保存历史记录
-     * <p>
-     * 逐条插入历史记录，而不是使用批量插入。
-     * 这样可以在某条记录失败时继续处理其他记录。
-     * </p>
-     *
-     * @param records 历史记录列表
-     */
-    @Async("sequenceAsyncExecutor")
-    public void saveHistoryBatchAsync(List<SequenceHistory> records) {
-        try {
-            historyService.saveBatch(records);
-        } catch (Exception e) {
-            log.warn("Async batch history save failed: count={}", records.size(), e);
-        }
-    }
-
-    /**
-     * 异步更新统计数据
-     * <p>
-     * 更新业务键的当前序列号值和更新时间。
-     * 如果统计记录不存在，则自动创建。
-     * </p>
-     *
-     * @param bizKey        业务键
-     * @param currentValue  当前序列号值
-     */
-    @Async("sequenceAsyncExecutor")
-    public void updateStatisticsAsync(String bizKey, long currentValue) {
-        try {
-        SequenceStatistics stat = statisticsMapper.selectByBizKey(bizKey);
-        if (stat == null) {
-            // 统计记录不存在，创建新记录
-            stat = new SequenceStatistics();
-            stat.setBizKey(bizKey);
-            stat.setCurrentValue(currentValue);
-            // sequence_* 表被 MetaObjectHandler 排除自动填充，需手动设置时间
-            stat.setCreateTime(LocalDateTime.now());
-            stat.setUpdateTime(LocalDateTime.now());
-            statisticsMapper.insert(stat);
-        } else {
-            // 更新现有记录
-            stat.setCurrentValue(currentValue);
-            stat.setUpdateTime(LocalDateTime.now());
-            statisticsMapper.updateById(stat);
-        }
-        } catch (Exception e) {
-            log.warn("Async statistics update failed: bizKey={}", bizKey, e);
-        }
     }
 
     /**
@@ -259,6 +184,23 @@ public class GeneratorFactory {
      * @param type 原始类型名称
      * @return 大写形式的类型名称
      */
+    /**
+     * 从批量结果中取最后一个有效的序列号值
+     *
+     * @param values 逗号分隔后的序列号数组
+     * @return 最后一个可解析的 long；全部无法解析时返回 0
+     */
+    private long parseLastValue(String[] values) {
+        for (int i = values.length - 1; i >= 0; i--) {
+            try {
+                return Long.parseLong(values[i].trim());
+            } catch (NumberFormatException ignored) {
+                // 跳过非法片段，继续往前找
+            }
+        }
+        return 0L;
+    }
+
     private String normalizeType(String type) {
         if (type == null) return defaultType.toUpperCase();
         return type.toUpperCase();

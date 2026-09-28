@@ -272,7 +272,7 @@ public class SchemaRegistry {
         TableSchema oldSchema = SCHEMA_CACHE.get(tableName);
         newSchema.setTableName(tableName);
 
-        Path filePath = externalSchemaDir.resolve(tableName + ".json");
+        Path filePath = resolveSchemaFile(tableName);
         MAPPER.writeValue(filePath.toFile(), newSchema);
 
         SCHEMA_CACHE.put(tableName, newSchema);
@@ -293,7 +293,7 @@ public class SchemaRegistry {
             throw new IOException("Table schema already exists: " + schema.getTableName());
         }
 
-        Path filePath = externalSchemaDir.resolve(schema.getTableName() + ".json");
+        Path filePath = resolveSchemaFile(schema.getTableName());
         MAPPER.writeValue(filePath.toFile(), schema);
 
         SCHEMA_CACHE.put(schema.getTableName(), schema);
@@ -313,10 +313,37 @@ public class SchemaRegistry {
             throw new IOException("Table schema not found: " + tableName);
         }
 
-        Path filePath = externalSchemaDir.resolve(tableName + ".json");
+        Path filePath = resolveSchemaFile(tableName);
         Files.deleteIfExists(filePath);
 
         SCHEMA_CACHE.remove(tableName);
+    }
+
+    /**
+     * 把表名解析为外部目录下的 schema 文件路径。
+     *
+     * <p><b>两道防线</b>：</p>
+     * <ol>
+     *   <li>标识符白名单（{@link SqlIdentifiers#requireValid}）——拒绝 {@code ../} 之类的字符；</li>
+     *   <li>{@code normalize() + startsWith()} 锚定——即使白名单被绕过，也保证最终路径
+     *       落在 {@code externalSchemaDir} 之内。Jackson 的 {@code writeValue(File)}
+     *       会自动创建父目录，所以「目录不存在」不能作为防护。</li>
+     * </ol>
+     *
+     * @param tableName 表名
+     * @return 位于 externalSchemaDir 之内的文件路径
+     * @throws IOException 表名不合法或解析后越出目录时
+     */
+    private static Path resolveSchemaFile(String tableName) throws IOException {
+        if (!SqlIdentifiers.isValid(tableName)) {
+            throw new IOException("Illegal table name: " + tableName);
+        }
+        Path base = externalSchemaDir.toAbsolutePath().normalize();
+        Path target = base.resolve(tableName + ".json").normalize();
+        if (!target.startsWith(base)) {
+            throw new IOException("Resolved path escapes schema dir: " + tableName);
+        }
+        return target;
     }
 
     /**

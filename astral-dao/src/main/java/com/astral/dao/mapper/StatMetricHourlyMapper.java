@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDateTime;
 
@@ -20,8 +21,13 @@ public interface StatMetricHourlyMapper extends BaseMapper<StatMetricHourly> {
      * <p>
      * 单条 SQL 行级原子更新，并发不丢计数；增量字段全量累加（0 值不改变结果）。
      * </p>
+     * <p><b>注解修正</b>：原为 {@code @Insert}，但语句是 {@code UPDATE}。
+     * MyBatis 对 {@code @Insert} 期望返回受影响行数 / 自增键，且部分配置下会走
+     * {@code ExecutorType} 的插入分支并误判 {@code useGeneratedKeys}；
+     * 同族的 {@code StatPageHourlyMapper} / {@code StatDeviceMapper} 用的都是 {@code @Update}，
+     * 这里统一为 {@code @Update}，语义与执行路径才一致。</p>
      */
-    @Insert("UPDATE stat_metric_hourly SET pv = pv + #{pv}, visits = visits + #{visits}, " +
+    @Update("UPDATE stat_metric_hourly SET pv = pv + #{pv}, visits = visits + #{visits}, " +
             "launches = launches + #{launches}, total_duration_ms = total_duration_ms + #{totalDurationMs}, " +
             "error_count = error_count + #{errorCount} " +
             "WHERE bucket_hour = #{bucketHour} AND ut = #{ut} AND app_version = #{appVersion}")

@@ -31,6 +31,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- 控制器 @RequestBody 上的 @Valid 触发字段级 @Size 校验（500→400） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
         <!-- Spring Boot 4 起 spring-boot-starter-aop 更名为 spring-boot-starter-aspectj -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

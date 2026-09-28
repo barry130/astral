@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 /**
  * 角色权限关联控制器
  * <p>提供角色权限关联关系的CRUD操作</p>
@@ -58,7 +60,7 @@ public class RolePermissionController {
      */
     @Operation(summary = "创建")
     @PostMapping
-    public Result<Void> create(@RequestBody RolePermission entity) {
+    public Result<Void> create(@Valid @RequestBody RolePermission entity) {
         rolePermissionService.save(entity);
         return Result.success();
     }
@@ -72,7 +74,7 @@ public class RolePermissionController {
      */
     @Operation(summary = "更新")
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody RolePermission entity) {
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody RolePermission entity) {
         entity.setId(id);
         rolePermissionService.updateById(entity);
         return Result.success();

@@ -2,6 +2,8 @@ package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -18,12 +20,17 @@ public class SysMenu {
     @TableField("parent_id")
     private Long parentId;
 
+    @Size(max = 64)
+    @NotNull
     private String name;
 
+    @Size(max = 64)
     private String icon;
 
+    @Size(max = 256)
     private String path;
 
+    @Size(max = 128)
     private String permission;
 
     private Integer sort;

@@ -2,6 +2,7 @@ package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,22 +17,28 @@ public class SysMailAccount {
     private Long id;
 
     @TableField("account_name")
+    @Size(max = 64)
     private String accountName;
 
     @TableField("smtp_host")
+    @Size(max = 128)
     private String smtpHost;
 
     @TableField("smtp_port")
     private Integer smtpPort;
 
+    @Size(max = 128)
     private String username;
 
+    @Size(max = 256)
     private String password;
 
     @TableField("from_addr")
+    @Size(max = 128)
     private String fromAddr;
 
     @TableField("from_name")
+    @Size(max = 64)
     private String fromName;
 
     @TableField("ssl_enable")
@@ -44,6 +51,7 @@ public class SysMailAccount {
 
     private Integer weight;
 
+    @Size(max = 256)
     private String remark;
 
     @TableField(value = "create_time", fill = FieldFill.INSERT)

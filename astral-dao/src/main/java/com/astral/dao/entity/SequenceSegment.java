@@ -2,6 +2,7 @@ package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ public class SequenceSegment {
     private Long id;
 
     @TableField("biz_key")
+    @Size(max = 64)
     private String bizKey;
 
     @TableField("min_value")

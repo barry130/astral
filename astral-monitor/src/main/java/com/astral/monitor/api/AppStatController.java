@@ -1,6 +1,8 @@
 package com.astral.monitor.api;
 
+import org.springframework.beans.factory.annotation.Value;
 import com.astral.common.result.Result;
+import com.astral.common.util.ClientIp;
 import com.astral.monitor.dto.StatReportRequest;
 import com.astral.monitor.service.StatIngestService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -8,7 +10,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AppStatController {
 
+    /** 可信代理列表（决定能否采信 X-Forwarded-For），与全站口径一致 */
+    @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
+    private String trustedProxies;
+
     private final StatIngestService statIngestService;
 
     /**
@@ -40,18 +45,16 @@ public class AppStatController {
     }
 
     /**
-     * 解析客户端真实 IP：X-Forwarded-For → X-Real-IP → remoteAddr
+     * 解析客户端真实 IP
+     * <p>与全站一致走 {@link ClientIp} 的可信代理白名单解析。
+     * 原实现无条件取 X-Forwarded-For 最左段 —— 该头客户端可任意伪造，
+     * 会导致统计口径里的地域/设备分布被污染，也会被用来绕过按 IP 的限速。</p>
      */
     private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(forwarded) && !"unknown".equalsIgnoreCase(forwarded)) {
-            int comma = forwarded.indexOf(',');
-            return (comma > 0 ? forwarded.substring(0, comma) : forwarded).trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (StringUtils.hasText(realIp) && !"unknown".equalsIgnoreCase(realIp)) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
+        return ClientIp.resolve(
+                request.getHeader("X-Forwarded-For"),
+                request.getHeader("X-Real-IP"),
+                request.getRemoteAddr(),
+                trustedProxies);
     }
 }

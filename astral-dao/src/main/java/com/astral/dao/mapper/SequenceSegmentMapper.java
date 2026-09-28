@@ -45,10 +45,11 @@ public interface SequenceSegmentMapper extends BaseMapper<SequenceSegment> {
      * @param minValue 起始值
      * @param maxValue 最大值
      * @param step     步长
-     * @return 影响行数
+     * @return 影响行数（0 = 已存在，由其它并发线程插入；依赖 uk_segment_biz_key 唯一索引）
      */
-    @Insert("INSERT INTO sequence_segment (biz_key, min_value, max_value, current_max_value, step, version) " +
-            "VALUES (#{bizKey}, #{minValue}, #{maxValue}, #{maxValue}, #{step}, 1)")
-    int insertSegment(@Param("bizKey") String bizKey, @Param("minValue") int minValue,
+    @Insert("INSERT INTO sequence_segment (biz_key, min_value, max_value, current_max_value, step, version, create_time, update_time) " +
+            "VALUES (#{bizKey}, #{minValue}, #{maxValue}, #{maxValue}, #{step}, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
+            "ON CONFLICT (biz_key) DO NOTHING")
+    int insertSegment(@Param("bizKey") String bizKey, @Param("minValue") long minValue,
                       @Param("maxValue") long maxValue, @Param("step") int step);
 }

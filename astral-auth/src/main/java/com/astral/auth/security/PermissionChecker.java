@@ -51,6 +51,24 @@ public class PermissionChecker {
         throw new BusinessException(ERROR_CODE_NO_PERMISSION);
     }
 
+    /**
+     * 校验当前登录用户是否为超级管理员（持有 {@code *:*:*}）。
+     *
+     * <p>用于<b>提权类</b>接口：重置他人密码、修改用户角色、修改角色权限。
+     * 这类操作一旦被非超管执行，攻击者可以给自己加上任意权限，
+     * 因此要求最严格的权限，而不是普通的 {@code :view} 权限。</p>
+     */
+    public void requireSuper() {
+        if (!StpUtil.isLogin()) {
+            return;
+        }
+        if (hasPermission(SUPER_PERMISSION)) {
+            return;
+        }
+        log.warn("超级管理员权限校验失败: userId={}", StpUtil.getLoginIdDefaultNull());
+        throw new BusinessException(ERROR_CODE_NO_PERMISSION);
+    }
+
     /** 当前用户是否具备指定权限（含 `*:*:*` 通配） */
     public boolean hasPermission(String permissionCode) {
         List<String> permissions = StpUtil.getPermissionList();

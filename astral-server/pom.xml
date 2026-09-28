@@ -121,6 +121,11 @@
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- 限流窗口容器：需要带过期淘汰与容量上限，否则按 IP 的 key 会把堆撑爆 -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

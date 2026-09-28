@@ -2,6 +2,7 @@ package com.astral.server.interceptor;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
+import com.astral.auth.security.LoginUserTypeResolver;
 import com.astral.common.result.Result;
 import com.astral.qt.common.QtRestResp;
 import tools.jackson.databind.ObjectMapper;
@@ -38,6 +39,16 @@ public class AuthInterceptor implements HandlerInterceptor {
     /** JSON序列化器，用于将错误响应写入响应体 */
     private final ObjectMapper objectMapper;
 
+    /** 登录用户类型解析器：区分「管理端用户」与「App 用户」 */
+    private final LoginUserTypeResolver loginUserTypeResolver;
+
+    /**
+     * 管理端接口要求的 user_type，默认 {@code ADMIN}。
+     * 配成空串可关闭管理端身份门禁（仅应急排障用）。
+     */
+    @Value("${astral.auth.admin-required-user-type:ADMIN}")
+    private String adminRequiredUserType;
+
     /** 续期阈值（秒）：剩余有效期低于该值时自动续满（0=关闭自动续期） */
     @Value("${astral.auth.token-renew-threshold:86400}")
     private long renewThreshold;
@@ -56,9 +67,14 @@ public class AuthInterceptor implements HandlerInterceptor {
     /** App 匿名公共区前缀：/api/v1/app/** 中非 user 区（如 /api/v1/app/update、/api/v1/app/stat/report）免认证 */
     private static final String APP_PUBLIC_PREFIX = "/api/v1/app/";
 
-    /** 表结构管理免认证前缀（历史约定保留） */
-    private static final String TABLE_SCHEMA_PREFIX = "/api/v1/system/table-schema";
-    private static final String TABLE_SCHEMA_ADMIN_PREFIX = "/api/v1/admin/system/table-schema";
+    /**
+     * 宿主管理端前缀。
+     *
+     * <p>该前缀下的接口需要「已登录 + 管理端身份（{@code sys_user.user_type = ADMIN}）」双重校验。
+     * 原因：管理端与轻听 App 端共用同一套 Sa-Token 命名空间，App 注册接口又是免认证的，
+     * 只校验 {@code StpUtil.isLogin()} 会让任何注册用户都能调用管理端接口。</p>
+     */
+    private static final String ADMIN_PREFIX = "/api/v1/admin/";
 
     /**
      * storage 插件 Worker 专属路径：仅接受 HMAC 服务身份（StorageWorkerAuthInterceptor），
@@ -74,17 +90,17 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/auth/public-key", "/api/v1/auth/login", "/api/v1/auth/logout",
             "/api/v1/all/auth/public-key", "/api/v1/all/auth/login", "/api/v1/all/auth/logout",
             // 轻听用户端免认证（旧 /api/v1/user 与新 /api/v1/app/user）
+            // 注意：upload 已从白名单移除 —— 匿名上传 + 同源静态目录 = 存储型 XSS，
+            // 头像上传属于「登录后才该做的事」，客户端请先登录再上传。
             "/api/v1/user/login",
             "/api/v1/user/register",
             "/api/v1/user/email",
             "/api/v1/user/changePass",
-            "/api/v1/user/upload",
             "/api/v1/user/refresh",
             "/api/v1/app/user/login",
             "/api/v1/app/user/register",
             "/api/v1/app/user/email",
             "/api/v1/app/user/changePass",
-            "/api/v1/app/user/upload",
             "/api/v1/app/user/refresh",
             // 全端统计：匿名上报入口放行
             "/api/v1/stat/report",
@@ -100,9 +116,10 @@ public class AuthInterceptor implements HandlerInterceptor {
         renewIfNeeded(token);
 
         // 2. 免认证白名单直接放行
-        if (PUBLIC_PATHS.contains(uri)
-                || uri.startsWith(TABLE_SCHEMA_PREFIX)
-                || uri.startsWith(TABLE_SCHEMA_ADMIN_PREFIX)) {
+        //    注意：这里只做「精确路径」匹配，不再有 startsWith 前缀放行。
+        //    宽前缀放行（曾经的 /api/v1/system/table-schema、/api/v1/admin/system/table-schema）
+        //    会让该前缀下「未来新增的接口」默认匿名，保护责任被下推给后续开发者，已移除。
+        if (PUBLIC_PATHS.contains(uri)) {
             return true;
         }
 
@@ -144,6 +161,13 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
+        // 5. 管理端身份门禁：/api/v1/admin/** 必须是管理端用户（user_type=ADMIN）
+        //    管理端与 App 端共用 Sa-Token 命名空间，App 注册免认证 —— 只判 isLogin()
+        //    等于把管理端对所有注册用户开放。此处按 sys_user.user_type 区分身份。
+        if (uri.startsWith(ADMIN_PREFIX) && !passAdminIdentityGate(response)) {
+            return false;
+        }
+
         // 从 Sa-Token 会话中读取用户信息（登录时已存入），避免每次请求查库
         Object loginId = StpUtil.getLoginIdDefaultNull();
         if (loginId != null) {
@@ -152,6 +176,39 @@ public class AuthInterceptor implements HandlerInterceptor {
             log.debug("请求用户: userId={}", loginId);
         }
         return true;
+    }
+
+    /**
+     * 管理端身份门禁。
+     *
+     * <p>要求当前登录用户的 {@code sys_user.user_type} 等于 {@link #adminRequiredUserType}
+     * （默认 {@code ADMIN}）。该列在 V20260914001 中定义为
+     * {@code NOT NULL DEFAULT 'ADMIN'}，历史管理员天然满足，不会因引入校验被锁在门外。</p>
+     *
+     * <p>把 {@code astral.auth.admin-required-user-type} 配成空串可关闭本校验
+     * （仅用于排障应急，不要在生产长期关闭）。</p>
+     *
+     * @return 通过返回 true；否则已写入 403 响应并返回 false
+     */
+    private boolean passAdminIdentityGate(HttpServletResponse response) throws Exception {
+        if (adminRequiredUserType == null || adminRequiredUserType.isBlank()) {
+            return true;
+        }
+        Object loginId = StpUtil.getLoginIdDefaultNull();
+        String userType = loginUserTypeResolver.resolve(loginId);
+        if (adminRequiredUserType.equals(userType)) {
+            return true;
+        }
+
+        log.warn("管理端身份门禁拒绝: userId={}, userType={}, 要求={}",
+                loginId, userType, adminRequiredUserType);
+
+        response.setContentType("application/json;charset=UTF-8");
+        response.setStatus(403);
+        Result<?> result = Result.error("COMMON005");
+        result.setCode(403);
+        response.getWriter().write(objectMapper.writeValueAsString(result));
+        return false;
     }
 
     /** Token 滑动续期：剩余有效期不足阈值时续满（任何异常不影响请求） */

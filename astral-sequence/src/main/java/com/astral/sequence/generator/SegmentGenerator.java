@@ -1,5 +1,6 @@
 package com.astral.sequence.generator;
 
+import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.SequenceSegment;
 import com.astral.dao.mapper.SequenceSegmentMapper;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
@@ -122,18 +127,29 @@ public class SegmentGenerator implements SequenceGenerator {
          * @return 序列号
          */
         public long next(String bizKey) {
-            Segment seg = current.get();
-            // 如果当前号段为空或已耗尽，需要加载或切换号段
-            if (seg == null || seg.isExhausted()) {
-                seg = loadOrSwitchSegment(bizKey, seg);
-            }
+            // 「判界 + 取号」必须是同一个原子操作。原实现是
+            //   seg.isExhausted() 判断  ->  seg.nextValue() 里 incrementAndGet 后再判界
+            // 两个线程可以同时通过判断，后者自增得到 max+1 并抛 IllegalStateException → 500。
+            // 现在 tryNextValue() 用 CAS 保证不会越界，取不到值就说明本段被别人抢完，重新换段。
+            for (int attempt = 0; attempt < 3; attempt++) {
+                Segment seg = current.get();
+                if (seg == null || seg.isExhausted()) {
+                    seg = loadOrSwitchSegment(bizKey, seg);
+                }
 
-            // 检查是否需要预加载下一个号段（使用率达到 80%）
-            if (shouldPreload(bizKey, seg)) {
-                tryPreloadNextAsync(bizKey);
-            }
+                Long value = seg.tryNextValue();
+                if (value == null) {
+                    // 本段已被并发取完，下一轮循环触发换段
+                    continue;
+                }
 
-            return seg.nextValue();
+                // 检查是否需要预加载下一个号段（使用率达到 80%）
+                if (shouldPreload(seg)) {
+                    tryPreloadNextAsync(bizKey);
+                }
+                return value;
+            }
+            throw new BusinessException("SEQ005");
         }
 
         /**
@@ -147,19 +163,33 @@ public class SegmentGenerator implements SequenceGenerator {
          * @param seg    当前号段（可能为 null 或已耗尽）
          * @return 新的可用号段
          */
-        private Segment loadOrSwitchSegment(String bizKey, Segment seg) {
+        private Segment loadOrSwitchSegment(String bizKey, Segment expected) {
             // 尝试获取预加载的下一个号段，获取成功后将 next 置为 null
             Segment nextSeg = next.getAndSet(null);
             if (nextSeg != null && !nextSeg.isExhausted()) {
-                // 预加载的号段可用，直接切换
-                current.set(nextSeg);
-                return nextSeg;
+                // 用 CAS 而不是直接 set：并发下两个线程可能同时走到这里，
+                // 直接 set 会让后写覆盖先写，先写入的那个号段被整体丢弃 → 整段跳号。
+                if (current.compareAndSet(expected, nextSeg)) {
+                    return nextSeg;
+                }
+                // CAS 失败说明已有其它线程完成了切换：把号段还回去，避免浪费一整段
+                if (nextSeg != null) {
+                    next.compareAndSet(null, nextSeg);
+                }
+                return current.get();
             }
 
-            // 预加载的号段不可用，从数据库获取新号段
-            Segment newSeg = fetchSegmentFromDb(bizKey, seg);
-            current.set(newSeg);
-            return newSeg;
+            // 预加载的号段不可用，从数据库获取新号段（同样用 CAS 落位）
+            Segment newSeg = fetchSegmentFromDb(bizKey, expected);
+            if (current.compareAndSet(expected, newSeg)) {
+                return newSeg;
+            }
+            // 切换失败：别人已经放了新段，直接用它的，本次申请的段被跳过（可接受）
+            Segment currentSeg = current.get();
+            if (currentSeg != null) {
+                next.compareAndSet(null, newSeg);
+            }
+            return currentSeg;
         }
 
         /**
@@ -187,13 +217,21 @@ public class SegmentGenerator implements SequenceGenerator {
 
                 // 获取步长，如果未配置或无效则使用默认值
                 int step = dbSeg.getStep() != null && dbSeg.getStep() > 0 ? dbSeg.getStep() : DEFAULT_STEP;
-                int version = dbSeg.getVersion();
+
+                // version / maxValue 在部分历史行上可能为 NULL（列无 NOT NULL 兜底时），
+                // 直接拆箱会 NPE 并吞掉整个取号流程。这里显式兜底：
+                // version 取不到就按 0 走（乐观锁会失败并重试），maxValue 取不到就按 0 起算。
+                Integer versionObj = dbSeg.getVersion();
+                int version = versionObj != null ? versionObj : 0;
+                Long maxValueObj = dbSeg.getMaxValue();
+                long baseMax = maxValueObj != null ? maxValueObj : 0L;
+
                 // 使用乐观锁更新：只有 version 匹配时才会更新成功
                 int updated = segmentMapper.allocateNextSegment(bizKey, version, step);
 
                 if (updated > 0) {
                     // 更新成功，计算新号段的范围
-                    long min = dbSeg.getMaxValue() + 1;
+                    long min = baseMax + 1;
                     long max = min + step - 1;
                     log.info("Segment allocated: bizKey={}, range=[{}, {}]", bizKey, min, max);
                     return new Segment(min, max);
@@ -231,8 +269,9 @@ public class SegmentGenerator implements SequenceGenerator {
          * @param seg    当前号段
          * @return 是否需要预加载
          */
-        private boolean shouldPreload(String bizKey, Segment seg) {
-            long used = seg.currentValue.get() - seg.min;
+        private boolean shouldPreload(Segment seg) {
+            // currentValue 初始为 min-1，取到第 k 个号后为 min-1+k，因此已用数要 +1
+            long used = seg.currentValue.get() - seg.min + 1;
             long total = seg.max - seg.min + 1;
             return total > 0 && ((double) used / total) >= PRELOAD_THRESHOLD;
         }
@@ -265,8 +304,13 @@ public class SegmentGenerator implements SequenceGenerator {
                     Segment seg = current.get();
                     if (seg != null) {
                         Segment preloaded = fetchSegmentFromDb(bizKey, seg);
-                        next.set(preloaded);
-                        log.debug("Preloaded next segment for bizKey: {}", bizKey);
+                        // 写入前核对 current 仍是预加载开始时读到的那个段：
+                        // 若期间已被切换，preloaded 是基于过期基线申请的，写回去会造成号段回退/重复。
+                        if (current.get() == seg) {
+                            next.compareAndSet(null, preloaded);
+                        } else {
+                            log.debug("跳过预加载结果：号段已被切换, bizKey={}", bizKey);
+                        }
                     }
                 } catch (Exception e) {
                     log.warn("Failed to preload next segment for bizKey: {}", bizKey, e);
@@ -306,12 +350,24 @@ public class SegmentGenerator implements SequenceGenerator {
          * @return 下一个可用的序列号
          * @throws IllegalStateException 如果号段已耗尽
          */
-        long nextValue() {
-            long value = currentValue.incrementAndGet();
-            if (value > max) {
-                throw new IllegalStateException("Segment exhausted: [" + min + ", " + max + "]");
+        /**
+         * 原子取号：CAS 保证「判断是否还有号」与「占用一个号」是同一个原子操作。
+         *
+         * <p>不再在耗尽时抛 {@code IllegalStateException}——原实现先自增再判界，
+         * 并发下后一个线程会得到 {@code max + 1} 从而抛异常，最终映射成 HTTP 500。</p>
+         *
+         * @return 分配到的序列号；本号段已耗尽返回 {@code null}（由调用方触发换段）
+         */
+        Long tryNextValue() {
+            while (true) {
+                long cur = currentValue.get();
+                if (cur >= max) {
+                    return null;
+                }
+                if (currentValue.compareAndSet(cur, cur + 1)) {
+                    return cur + 1;
+                }
             }
-            return value;
         }
 
         /**

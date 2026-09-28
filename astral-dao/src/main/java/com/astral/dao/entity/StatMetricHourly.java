@@ -2,6 +2,7 @@ package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -18,9 +19,11 @@ public class StatMetricHourly {
     @TableField("bucket_hour")
     private LocalDateTime bucketHour;
 
+    @Size(max = 16)
     private String ut;
 
     @TableField("app_version")
+    @Size(max = 32)
     private String appVersion;
 
     private Long pv;

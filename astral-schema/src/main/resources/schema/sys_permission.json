@@ -47,7 +47,7 @@
       "fieldType": "String",
       "jdbcType": "VARCHAR",
       "comment": "请求方法",
-      "length": 10
+      "length": 16
     },
     {
       "columnName": "parent_id",

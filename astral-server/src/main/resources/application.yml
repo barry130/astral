@@ -7,6 +7,17 @@ spring:
   application:
     name: astral
 
+  # 上传大小限制：此前完全未配置，Spring 默认仅 1MB —— 用户传稍大的头像就会
+  # 撞 MaxUploadSizeExceededException，且当时没有专门的异常处理，只看到「系统繁忙」。
+  # 与 storage 插件的 STORAGE_MAX_FILE_SIZE（默认 20MB）保持同一量级，
+  # 由 GlobalExceptionHandler.handleMaxUploadSizeExceeded 返回 413 + 明确文案。
+  servlet:
+    multipart:
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:50MB}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:60MB}
+      # 延迟解析：未进入 MultipartFile 参数的请求不会触发磁盘落盘
+      resolve-lazily: true
+
   autoconfigure:
     exclude:
       - org.redisson.spring.starter.RedissonAutoConfigurationV2
@@ -67,7 +78,21 @@ spring:
 
 astral:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+    # 允许的跨域来源，逗号分隔。
+    # 默认只放开 Next.js 开发服务器（http://localhost:3000）。
+    # 【不要在生产配成 *】：CorsConfig 里 allowCredentials=true，通配等于对任意站点
+    # 开放带凭据的跨域调用。生产的前端与后端同源（NEXT_PUBLIC_API_URL 留空，
+    # 浏览器走相对路径 /api，由 Next.js rewrites 转发），因此同源部署根本不需要 CORS。
+    # 只有当浏览器需要「直连另一个域名」时才需要显式配置，例如：
+    #   CORS_ALLOWED_ORIGINS=https://admin.example.com
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
+  web:
+    # 可信反向代理列表（逗号分隔，支持单个 IP 与 IPv4 CIDR）。
+    # 只有直连方命中该列表时才采信 X-Forwarded-For / X-Real-IP，
+    # 否则一律用 TCP 直连地址 —— 防止客户端伪造来源 IP 绕过按 IP 的限流与审计。
+    # 默认：回环 + 私有网段（覆盖 nginx 同机、Docker 网桥、内网 LB 三种常见部署）。
+    trusted-proxies: ${TRUSTED_PROXIES:127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
 
   auth:
     # token 自动续期阈值（秒）：剩余有效期低于该值时，任何携带有效 satoken 的请求都会把有效期
@@ -122,7 +147,11 @@ mybatis-plus:
   type-aliases-package: com.astral.dao.entity
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 默认用 SLF4J 输出 SQL（走上面的 logging.pattern，带上 requestId MDC），
+    # 不再用 StdOutImpl 直接打印到 stdout。
+    # StdOutImpl 会把绑定参数原样打到控制台：建表/改配置等 SQL 里若携带敏感值（如邮件授权码、token），
+    # 在默认/测试 profile（未被 application-prod.yml 覆盖）下会明文泄漏。要看 SQL 时单独把
+    # com.baomidou.mybatisplus 或具体 Mapper 设为 DEBUG 即可，无需全局 StdOutImpl。
   global-config:
     db-config:
       logic-delete-field: deleted
@@ -144,9 +173,11 @@ management:
     health:
       show-details: always
 
-logging:
-  level:
-    root: INFO
-    com.astral: DEBUG
+  logging:
+    level:
+      root: INFO
+      # 默认 INFO：原先的 DEBUG 会让全库 SQL + 内部流程日志持续刷屏，且经 StdOutImpl 把敏感参数打到控制台。
+      # 排查问题时按需临时调高对应包（如 com.astral.dao.mapper、com.astral.schema）到 DEBUG/TRACE。
+      com.astral: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{requestId:-}] %-5level %logger{36} - %msg%n"

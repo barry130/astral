@@ -6,14 +6,18 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.astral.auth.dto.LoginRequest;
 import com.astral.auth.dto.LoginResponse;
+import com.astral.auth.security.LoginUserTypeResolver;
 import com.astral.auth.security.RsaKeyManager;
 import com.astral.auth.service.AuthService;
 import com.astral.common.error.ErrorCodes;
 import com.astral.common.exception.BusinessException;
+import com.astral.common.util.ClientIp;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -24,15 +28,24 @@ import java.util.Collections;
 import java.util.List;
 
 @Service
+@Slf4j
 public class AuthServiceImpl implements AuthService {
     @Autowired
     private UserMapper userMapper;
+
+    /** 可信代理列表：决定是否采信 X-Forwarded-For（默认回环 + 私有网段） */
+    @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
+    private String trustedProxies;
     
     @Autowired
     private RsaKeyManager rsaKeyManager;
     
     @Autowired
     private StpInterface stpInterface;
+
+    /** 登录用户类型解析器：把 user_type 缓存进会话，供管理端身份门禁免查库读取 */
+    @Autowired
+    private LoginUserTypeResolver loginUserTypeResolver;
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -69,6 +82,9 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         // 将用户名存入 Sa-Token 会话，供 AuthInterceptor 直接读取，避免每次请求查库
         StpUtil.getSession().set("username", user.getUsername());
         StpUtil.getSession().set("nickname", user.getNickname());
+        // 用户类型（ADMIN / APP）同样缓存进会话：管理端身份门禁依赖它区分
+        // 「后台管理员」与「App 普通用户」，不能等到每次请求再查库
+        loginUserTypeResolver.cacheCurrentUserType(user.getUserType());
         // 将登录IP和登录时间存入Token会话，供Token管理页面读取
         SaSession tokenSession = StpUtil.getTokenSession();
         tokenSession.set("loginIp", getClientIp());
@@ -89,6 +105,7 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         response.setToken(token);
         response.setRoles(roles != null ? roles : Collections.emptyList());
         response.setPermissions(permissions != null ? permissions : Collections.emptyList());
+        response.setUserType(user.getUserType());
         return response;
     }
 
@@ -99,7 +116,11 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
 
     /**
      * 获取客户端真实IP地址
-     * <p>依次尝试 X-Forwarded-For、X-Real-IP、RemoteAddr</p>
+     *
+     * <p>走 {@link ClientIp} 的可信代理白名单逻辑：<b>只有直连方是可信代理时才采信
+     * {@code X-Forwarded-For}</b>，且从右往左取第一个非可信地址。
+     * 原实现无条件取 XFF 的第一个值，客户端可随意伪造，
+     * 会让登录日志里的来源 IP 失去取证价值。</p>
      *
      * @return 客户端IP地址，获取失败返回null
      */
@@ -108,26 +129,20 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
             ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs != null) {
                 HttpServletRequest req = attrs.getRequest();
-                String ip = req.getHeader("X-Forwarded-For");
-                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                    ip = req.getHeader("X-Real-IP");
-                }
-                if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-                    ip = req.getRemoteAddr();
-                }
-                // X-Forwarded-For 可能包含多个IP，取第一个（最原始的客户端IP）
-                if (ip != null && ip.contains(",")) {
-                    ip = ip.split(",")[0].trim();
-                }
-                return ip;
+                return ClientIp.resolve(
+                        req.getHeader("X-Forwarded-For"),
+                        req.getHeader("X-Real-IP"),
+                        req.getRemoteAddr(),
+                        trustedProxies);
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.debug("获取客户端IP失败: {}", e.getMessage());
         }
         return null;
     }
 
     @Override
-public LoginResponse getLoginInfo() {
+    public LoginResponse getLoginInfo() {
         if (!StpUtil.isLogin()) {
             throw new BusinessException("AUTH001");
         }
@@ -142,6 +157,7 @@ public LoginResponse getLoginInfo() {
         // 刷新会话中的用户信息
         StpUtil.getSession().set("username", user.getUsername());
         StpUtil.getSession().set("nickname", user.getNickname());
+        loginUserTypeResolver.cacheCurrentUserType(user.getUserType());
         
         List<String> roles = stpInterface.getRoleList(userId, null);
         List<String> permissions = stpInterface.getPermissionList(userId, null);
@@ -153,6 +169,7 @@ public LoginResponse getLoginInfo() {
         response.setToken(StpUtil.getTokenValue());
         response.setRoles(roles != null ? roles : Collections.emptyList());
         response.setPermissions(permissions != null ? permissions : Collections.emptyList());
+        response.setUserType(user.getUserType());
         return response;
     }
 }

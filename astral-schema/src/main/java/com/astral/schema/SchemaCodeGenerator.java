@@ -51,6 +51,23 @@ public class SchemaCodeGenerator {
         sb.append("package ").append(packageName).append(";\n\n");
         sb.append("import com.baomidou.mybatisplus.annotation.*;\n");
         sb.append("import com.fasterxml.jackson.annotation.JsonProperty;\n");
+        // 实体 String 字段若对应库表 VARCHAR(N)，生成 @Size(max=N)：入参超长时由 Bean Validation
+        // 拦截为 400（COMMON002），避免打到 DB 触发 value too long 的未捕获 500（详见 CODING_GUIDE §3.6）。
+        // max 严格等于 schema 里声明的 length（即 DDL 宽度），绝不改小，否则会误杀合法长值。
+        boolean hasSize = schema.getFields().stream()
+                .anyMatch(f -> isVarchar(f) && f.getLength() != null && f.getLength() > 0);
+        if (hasSize) {
+            sb.append("import jakarta.validation.constraints.Size;\n");
+        }
+        // 库表 NOT NULL 且无默认值、非自动填充的列，生成 @NotNull：入参缺失时由 Bean Validation
+        // 拦截为 400，避免打到 DB 触发 not-null 约束的未捕获 500（详见 CODING_GUIDE §3.6）。
+        // 有默认值/自动填充的列不标 @NotNull，否则会误杀「靠默认值/填充补全」的合法请求。
+        boolean hasNotNull = schema.getFields().stream()
+                .anyMatch(f -> Boolean.TRUE.equals(f.getIsRequired()) && !Boolean.TRUE.equals(f.getIsPrimaryKey())
+                        && f.getDefaultValue() == null && f.getIsAutoFill() == null);
+        if (hasNotNull) {
+            sb.append("import jakarta.validation.constraints.NotNull;\n");
+        }
         sb.append("import lombok.Data;\n\n");
         
         boolean hasLocalDate = schema.getFields().stream().anyMatch(f -> "LocalDate".equals(f.getFieldType()));
@@ -105,6 +122,13 @@ public class SchemaCodeGenerator {
                     sb.append("fill = FieldFill.").append(autoFill).append(")");
                 }
                 sb.append("\n");
+            }
+            if (isVarchar(field) && field.getLength() != null && field.getLength() > 0) {
+                sb.append("    @Size(max = ").append(field.getLength()).append(")\n");
+            }
+            if (Boolean.TRUE.equals(field.getIsRequired()) && !Boolean.TRUE.equals(field.getIsPrimaryKey())
+                    && field.getDefaultValue() == null && field.getIsAutoFill() == null) {
+                sb.append("    @NotNull\n");
             }
             sb.append("    private ").append(field.getFieldType()).append(" ").append(field.getFieldName()).append(";\n\n");
         }
@@ -234,7 +258,8 @@ public class SchemaCodeGenerator {
         sb.append("import io.swagger.v3.oas.annotations.Operation;\n");
         sb.append("import io.swagger.v3.oas.annotations.tags.Tag;\n");
         sb.append("import lombok.RequiredArgsConstructor;\n");
-        sb.append("import org.springframework.web.bind.annotation.*;\n\n");
+        sb.append("import org.springframework.web.bind.annotation.*;\n");
+        sb.append("import jakarta.validation.Valid;\n\n");
         sb.append("@Tag(name = \"").append(schema.getTableComment()).append("\")\n");
         sb.append("@RestController\n");
         sb.append("@RequestMapping(\"").append(basePath).append("\")\n");
@@ -258,14 +283,14 @@ public class SchemaCodeGenerator {
 
         sb.append("    @Operation(summary = \"创建\")\n");
         sb.append("    @PostMapping\n");
-        sb.append("    public Result<Void> create(@RequestBody ").append(className).append(" entity) {\n");
+        sb.append("    public Result<Void> create(@Valid @RequestBody ").append(className).append(" entity) {\n");
         sb.append("        ").append(lowercaseFirst(className)).append("Service.save(entity);\n");
         sb.append("        return Result.success();\n");
         sb.append("    }\n\n");
 
         sb.append("    @Operation(summary = \"更新\")\n");
         sb.append("    @PutMapping(\"/{id}\")\n");
-        sb.append("    public Result<Void> update(@PathVariable Long id, @RequestBody ").append(className).append(" entity) {\n");
+        sb.append("    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody ").append(className).append(" entity) {\n");
         sb.append("        entity.setId(id);\n");
         sb.append("        ").append(lowercaseFirst(className)).append("Service.updateById(entity);\n");
         sb.append("        return Result.success();\n");
@@ -328,7 +353,11 @@ public class SchemaCodeGenerator {
         SqlDialect db = dialect == null ? SqlDialect.POSTGRESQL : dialect;
         StringBuilder sb = new StringBuilder();
         String tableName = schema.getTableName();
-        sb.append("CREATE TABLE IF NOT EXISTS ").append(tableName).append(" (\n");
+        // 标识符校验 + 加引号：表名会被拼进 DDL，未校验即构成 DDL 注入；
+        // 加引号同时避免与 SQL 关键字（如 user、order）冲突
+        SqlIdentifiers.requireValid(tableName, "表名");
+        String quotedTable = SqlIdentifiers.quote(tableName);
+        sb.append("CREATE TABLE IF NOT EXISTS ").append(quotedTable).append(" (\n");
 
         List<String> columnDefs = schema.getFields().stream()
                 .map(f -> buildColumnDef(f, db))
@@ -358,8 +387,8 @@ public class SchemaCodeGenerator {
                         .append(index.isUnique() ? "UNIQUE " : "")
                         .append("INDEX ")
                         .append(db == SqlDialect.POSTGRESQL ? "IF NOT EXISTS " : "")
-                        .append(index.getIndexName())
-                        .append(" ON ").append(tableName)
+                        .append(SqlIdentifiers.quote(index.getIndexName()))
+                        .append(" ON ").append(quotedTable)
                         .append("(").append(String.join(", ", index.getColumns())).append(");\n");
             }
         }
@@ -384,7 +413,8 @@ public class SchemaCodeGenerator {
         boolean primaryKey = Boolean.TRUE.equals(field.getIsPrimaryKey());
         boolean autoIncrement = Boolean.TRUE.equals(field.getIsAutoIncrement());
 
-        col.append("    ").append(field.getColumnName()).append(" ");
+        SqlIdentifiers.requireValid(field.getColumnName(), "列名");
+        col.append("    ").append(SqlIdentifiers.quote(field.getColumnName())).append(" ");
         col.append(getSqlType(field, dialect, autoIncrement));
         if (autoIncrement && dialect == SqlDialect.MYSQL) {
             col.append(" AUTO_INCREMENT");
@@ -467,7 +497,8 @@ public class SchemaCodeGenerator {
      */
     private static String generateTableCommentSql(TableSchema schema, boolean withDefaultIdColumn) {
         StringBuilder sb = new StringBuilder();
-        String tableName = schema.getTableName();
+        SqlIdentifiers.requireValid(schema.getTableName(), "表名");
+        String tableName = SqlIdentifiers.quote(schema.getTableName());
 
         if (!hasText(schema.getTableComment()) && !withDefaultIdColumn
                 && schema.getFields().stream().noneMatch(f -> hasText(f.getComment()))) {
@@ -488,7 +519,7 @@ public class SchemaCodeGenerator {
             }
             if (hasText(field.getComment())) {
                 sb.append("COMMENT ON COLUMN ").append(tableName).append(".")
-                        .append(field.getColumnName()).append(" IS '")
+                        .append(SqlIdentifiers.quote(field.getColumnName())).append(" IS '")
                         .append(escapeSqlLiteral(field.getComment())).append("';\n");
             }
         }
@@ -504,8 +535,11 @@ public class SchemaCodeGenerator {
      * @return COMMENT ON COLUMN 语句
      */
     private static String generateColumnCommentSql(String tableName, FieldSchema field) {
+        SqlIdentifiers.requireValid(tableName, "表名");
+        SqlIdentifiers.requireValid(field.getColumnName(), "列名");
         StringBuilder sb = new StringBuilder();
-        sb.append("COMMENT ON COLUMN ").append(tableName).append(".").append(field.getColumnName());
+        sb.append("COMMENT ON COLUMN ").append(SqlIdentifiers.quote(tableName))
+                .append(".").append(SqlIdentifiers.quote(field.getColumnName()));
         if (hasText(field.getComment())) {
             sb.append(" IS '").append(escapeSqlLiteral(field.getComment())).append("'");
         } else {
@@ -643,7 +677,8 @@ public class SchemaCodeGenerator {
     public static String generateAlterSql(TableSchema oldSchema, TableSchema newSchema, SqlDialect dialect) {
         SqlDialect db = dialect == null ? SqlDialect.POSTGRESQL : dialect;
         StringBuilder sb = new StringBuilder();
-        String tableName = newSchema.getTableName();
+        SqlIdentifiers.requireValid(newSchema.getTableName(), "表名");
+        String tableName = SqlIdentifiers.quote(newSchema.getTableName());
 
         List<String> oldColumnNames = oldSchema.getFields().stream()
                 .map(FieldSchema::getColumnName)
@@ -685,7 +720,7 @@ public class SchemaCodeGenerator {
         for (FieldSchema oldField : oldSchema.getFields()) {
             if (!newColumnNames.contains(oldField.getColumnName())) {
                 sb.append("ALTER TABLE ").append(tableName)
-                        .append(" DROP COLUMN ").append(oldField.getColumnName())
+                        .append(" DROP COLUMN ").append(SqlIdentifiers.quote(oldField.getColumnName()))
                         .append(";\n");
             }
         }
@@ -716,20 +751,20 @@ public class SchemaCodeGenerator {
             }
             if (typeChanged) {
                 sb.append("ALTER TABLE ").append(tableName)
-                        .append(" ALTER COLUMN ").append(newField.getColumnName())
+                        .append(" ALTER COLUMN ").append(SqlIdentifiers.quote(newField.getColumnName()))
                         .append(" TYPE ")
                         .append(getSqlType(newField, db, Boolean.TRUE.equals(newField.getIsAutoIncrement())))
                         .append(";\n");
             }
             if (requiredChanged) {
                 sb.append("ALTER TABLE ").append(tableName)
-                        .append(" ALTER COLUMN ").append(newField.getColumnName())
+                        .append(" ALTER COLUMN ").append(SqlIdentifiers.quote(newField.getColumnName()))
                         .append(Boolean.TRUE.equals(newField.getIsRequired()) ? " SET NOT NULL" : " DROP NOT NULL")
                         .append(";\n");
             }
             if (defaultChanged) {
                 sb.append("ALTER TABLE ").append(tableName)
-                        .append(" ALTER COLUMN ").append(newField.getColumnName());
+                        .append(" ALTER COLUMN ").append(SqlIdentifiers.quote(newField.getColumnName()));
                 if (hasText(newField.getDefaultValue())) {
                     sb.append(" SET DEFAULT ").append(formatDefaultValue(newField.getDefaultValue(), db));
                 } else {
@@ -795,5 +830,20 @@ public class SchemaCodeGenerator {
      */
     private static String lowercaseFirst(String str) {
         return str.substring(0, 1).toLowerCase() + str.substring(1);
+    }
+
+    /**
+     * 判断字段是否为定长/变长字符串类型（需配合 length 生成 @Size 校验）。
+     *
+     * @param field 字段Schema
+     * @return 是否为 VARCHAR / CHAR / LONGVARCHAR
+     */
+    private static boolean isVarchar(FieldSchema field) {
+        String jdbc = field.getJdbcType();
+        if (jdbc == null) {
+            return false;
+        }
+        String t = jdbc.trim().toUpperCase(Locale.ROOT);
+        return t.equals("VARCHAR") || t.equals("CHAR") || t.equals("LONGVARCHAR");
     }
 }

@@ -1,5 +1,7 @@
 package com.astral.monitor.api;
 
+import org.springframework.beans.factory.annotation.Value;
+import com.astral.common.util.ClientIp;
 import com.astral.common.result.Result;
 import com.astral.monitor.dto.StatReportRequest;
 import com.astral.monitor.service.StatIngestService;
@@ -8,7 +10,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/stat")
 @RequiredArgsConstructor
 public class StatIngestController {
+
+    /** 可信代理列表（决定能否采信 X-Forwarded-For），与全站口径一致 */
+    @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
+    private String trustedProxies;
 
     private final StatIngestService statIngestService;
 
@@ -48,16 +53,10 @@ public class StatIngestController {
      * 解析客户端真实 IP：X-Forwarded-For → X-Real-IP → remoteAddr
      */
     private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(forwarded) && !"unknown".equalsIgnoreCase(forwarded)) {
-            // X-Forwarded-For 可能为逗号分隔的链路，取最左（真实客户端）
-            int comma = forwarded.indexOf(',');
-            return (comma > 0 ? forwarded.substring(0, comma) : forwarded).trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (StringUtils.hasText(realIp) && !"unknown".equalsIgnoreCase(realIp)) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
+        return ClientIp.resolve(
+                request.getHeader("X-Forwarded-For"),
+                request.getHeader("X-Real-IP"),
+                request.getRemoteAddr(),
+                trustedProxies);
     }
 }

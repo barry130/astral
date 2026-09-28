@@ -2,6 +2,8 @@ package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,6 +18,8 @@ public class SequenceStatistics {
     private Long id;
 
     @TableField("biz_key")
+    @Size(max = 64)
+    @NotNull
     private String bizKey;
 
     @TableField("current_value")

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * 请求ID过滤器
@@ -24,6 +25,15 @@ public class RequestIdFilter implements Filter {
 
     /** 请求ID请求头名称 */
     private static final String HEADER_REQUEST_ID = "X-Request-Id";
+
+    /**
+     * 允许透传的 Request ID 格式：仅字母、数字、连字符、下划线，长度 1~64。
+     *
+     * <p><b>为什么要校验</b>：该值会被写入响应头与 MDC（进而进入每一行日志）。
+     * 若不校验，客户端可以塞入换行符制造假的日志行（log forging），
+     * 或用超长值污染日志与响应头。不合法时直接重新生成，不影响正常客户端。</p>
+     */
+    private static final Pattern SAFE_REQUEST_ID = Pattern.compile("^[A-Za-z0-9_-]{1,64}$");
 
     /**
      * 执行过滤逻辑
@@ -42,9 +52,9 @@ public class RequestIdFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
-        // 优先使用客户端传入的Request ID，否则生成一个新的
+        // 优先使用客户端传入的Request ID（须通过格式校验），否则生成一个新的
         String requestId = httpRequest.getHeader(HEADER_REQUEST_ID);
-        if (requestId == null || requestId.isBlank()) {
+        if (requestId == null || !SAFE_REQUEST_ID.matcher(requestId).matches()) {
             // 生成16位UUID作为Request ID（去掉横杠后截取前16位）
             requestId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         }

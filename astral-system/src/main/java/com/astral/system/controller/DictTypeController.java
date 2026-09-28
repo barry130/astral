@@ -75,7 +75,6 @@ public class DictTypeController {
     @CacheEvict(value = "dictType", allEntries = true)
     public Result<Void> create(@RequestBody DictType entity) {
         dictTypeService.save(entity);
-        dictTypeService.evictCache();
         return Result.success();
     }
 
@@ -92,7 +91,6 @@ public class DictTypeController {
     public Result<Void> update(@PathVariable Long id, @RequestBody DictType entity) {
         entity.setId(id);
         dictTypeService.updateById(entity);
-        dictTypeService.evictCache();
         return Result.success();
     }
 
@@ -107,7 +105,6 @@ public class DictTypeController {
     @CacheEvict(value = "dictType", allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {
         dictTypeService.removeById(id);
-        dictTypeService.evictCache();
         return Result.success();
     }
 }

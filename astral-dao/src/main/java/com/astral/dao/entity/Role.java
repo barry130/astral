@@ -2,6 +2,8 @@ package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,11 +18,16 @@ public class Role {
     private Long id;
 
     @TableField("role_code")
+    @Size(max = 64)
+    @NotNull
     private String roleCode;
 
     @TableField("role_name")
+    @Size(max = 128)
+    @NotNull
     private String roleName;
 
+    @Size(max = 256)
     private String description;
 
     private Integer status;

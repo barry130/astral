@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 /**
  * 操作日志控制器
  * <p>提供操作日志的CRUD操作</p>
@@ -58,7 +60,7 @@ public class OperateLogController {
      */
     @Operation(summary = "创建")
     @PostMapping
-    public Result<Void> create(@RequestBody OperateLog entity) {
+    public Result<Void> create(@Valid @RequestBody OperateLog entity) {
         operateLogService.save(entity);
         return Result.success();
     }
@@ -72,7 +74,7 @@ public class OperateLogController {
      */
     @Operation(summary = "更新")
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody OperateLog entity) {
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody OperateLog entity) {
         entity.setId(id);
         operateLogService.updateById(entity);
         return Result.success();

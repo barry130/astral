@@ -7,7 +7,4 @@ import java.util.List;
 
 public interface DictTypeService extends IService<DictType> {
 
-    List<DictType> getAllCached();
-
-    void evictCache();
 }

@@ -31,11 +31,28 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Slf4j
 @Configuration
 @EnableAsync
-public class AsyncConfig {
+public class AsyncConfig implements org.springframework.scheduling.annotation.AsyncConfigurer {
 
     /** 是否启用 JDK 21 虚拟线程（默认 true：测试/本地均启用，无需 prod profile） */
     @Value("${astral.threads.virtual.enabled:true}")
     private boolean virtualEnabled;
+
+    /**
+     * 裸 {@code @Async}（不带执行器名）的默认执行器。
+     *
+     * <p><b>为什么必须显式指定</b>：Spring 在找不到 {@code AsyncConfigurer} /
+     * {@code TaskExecutor} Bean 时，会退化成 {@link org.springframework.core.task.SimpleAsyncTaskExecutor}
+     * —— 它<b>每来一个任务就新建一条平台线程，既不复用也不限流</b>。
+     * 本工程里 {@code FeedbackNoticeService} 的 5 个通知方法是裸 {@code @Async}，
+     * 反馈提交/回复/状态变更都会触发，高并发下会无上限地建线程直至 OOM。
+     * 这里把它们统一收敛到受控的 {@code sequenceAsyncExecutor}。</p>
+     *
+     * @return 默认异步执行器
+     */
+    @Override
+    public Executor getAsyncExecutor() {
+        return sequenceAsyncExecutor();
+    }
 
     /**
      * 序列号异步任务执行器

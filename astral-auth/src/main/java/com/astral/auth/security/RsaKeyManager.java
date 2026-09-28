@@ -92,7 +92,9 @@ public class RsaKeyManager {
         try {
             byte[] encryptedBytes = Base64.getDecoder().decode(encryptedPasswordBase64);
             byte[] decryptedBytes = decryptPassword(encryptedBytes);
-            return new String(decryptedBytes);
+            // 显式指定字符集：new String(byte[]) 依赖 JVM 默认字符集（Charset.defaultCharset()），
+            // 容器里若不是 UTF-8（如某些镜像默认 ISO-8859-1），解密出的密码会乱码 → 登录永远失败。
+            return new String(decryptedBytes, java.nio.charset.StandardCharsets.UTF_8);
         } catch (IllegalArgumentException e) {
             log.error("Base64解码失败: {}", e.getMessage());
             throw new GeneralSecurityException("密码格式错误", e);

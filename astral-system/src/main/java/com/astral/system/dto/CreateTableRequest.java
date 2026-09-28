@@ -1,6 +1,5 @@
 package com.astral.system.dto;
 
-import com.astral.schema.TableSchema;
 import lombok.Data;
 
 /**

@@ -34,11 +34,36 @@ public class AstralApplication {
     public static void main(String[] args) {
         // 初始化表结构注册中心
         SchemaRegistry.init();
-        // 启动时同步实体类与表结构（可通过 astral.schema.sync-on-startup=false 关闭，生产环境建议关闭）
-        if (!"false".equals(System.getProperty("astral.schema.sync-on-startup", "true"))) {
+        // 启动时同步实体类与表结构。
+        // 注意：此代码在 Spring 容器启动前执行，因此无法读取 application.yml 的配置，
+        // 只能通过 JVM 系统属性或环境变量控制（见 DEPLOY_GUIDE / 开发文档）。
+        // 生产环境务必关闭，否则它会删除「没有对应 schema JSON」的 entity .java 源文件。
+        if (schemaSyncEnabled()) {
             SchemaEntitySync.syncOnStartup();
         }
         // 启动Spring Boot应用
         SpringApplication.run(AstralApplication.class, args);
+    }
+
+    /**
+     * 是否启用启动时实体同步
+     * <p>优先级：JVM 系统属性 {@code astral.schema.sync-on-startup} > 环境变量
+     * {@code ASTRAL_SCHEMA_SYNC_ON_STARTUP} > 默认 true。
+     * 任一显式为 false（忽略大小写）即关闭。</p>
+     *
+     * @return 是否启用
+     */
+    private static boolean schemaSyncEnabled() {
+        String prop = System.getProperty("astral.schema.sync-on-startup");
+        if (prop != null) {
+            return !"false".equalsIgnoreCase(prop.trim());
+        }
+        String env = System.getenv("ASTRAL_SCHEMA_SYNC_ON_STARTUP");
+        if (env != null) {
+            return !"false".equalsIgnoreCase(env.trim());
+        }
+        System.err.println("[SchemaSync][WARN] 启动时实体同步默认开启：会删除无对应 schema JSON 的 entity .java 源文件。"
+                + " 生产环境请设置 ASTRAL_SCHEMA_SYNC_ON_STARTUP=false 关闭。");
+        return true;
     }
 }

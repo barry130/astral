@@ -1,11 +1,15 @@
 package com.astral.system.controller;
 
+import com.astral.auth.security.PermissionChecker;
 import com.astral.dao.entity.Permission;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.RolePermission;
+import com.astral.dao.entity.UserRole;
 import com.astral.system.service.PermissionService;
 import com.astral.system.service.RolePermissionService;
 import com.astral.system.service.RoleService;
+import com.astral.system.service.UserRoleService;
+import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -34,6 +38,10 @@ public class RoleController {
     private final RolePermissionService rolePermissionService;
     /** 权限服务 */
     private final PermissionService permissionService;
+    /** 用户角色关联服务：删除角色前校验引用，避免留下孤儿授权 */
+    private final UserRoleService userRoleService;
+    /** 权限校验器：管理端接口按 RBAC 权限编码校验 */
+    private final PermissionChecker permissionChecker;
 
     /**
      * 分页查询角色列表
@@ -46,6 +54,7 @@ public class RoleController {
     @GetMapping("/page")
     public Result<Page<Role>> page(@RequestParam(defaultValue = "1") Integer pageNum,
                                    @RequestParam(defaultValue = "10") Integer pageSize) {
+        permissionChecker.require("system:role:view");
         Page<Role> page = new Page<>(pageNum, pageSize);
         return Result.success(roleService.page(page));
     }
@@ -59,6 +68,7 @@ public class RoleController {
     @Operation(summary = "根据ID查询")
     @GetMapping("/{id}")
     public Result<Role> getById(@PathVariable Long id) {
+        permissionChecker.require("system:role:view");
         return Result.success(roleService.getById(id));
     }
 
@@ -71,6 +81,7 @@ public class RoleController {
     @Operation(summary = "创建")
     @PostMapping
     public Result<Void> create(@RequestBody Role entity) {
+        permissionChecker.requireSuper();
         roleService.save(entity);
         return Result.success();
     }
@@ -85,7 +96,12 @@ public class RoleController {
     @Operation(summary = "更新")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody Role entity) {
+        permissionChecker.requireSuper();
         entity.setId(id);
+        // 防止 mass assignment：这些字段不可由客户端改写。
+        // 只显式置 null 依赖"MP 默认跳过 null"这一策略，比让整个实体原样落库安全得多。
+        entity.setCreateTime(null);
+        entity.setUpdateTime(null);
         roleService.updateById(entity);
         return Result.success();
     }
@@ -99,7 +115,10 @@ public class RoleController {
     @Operation(summary = "删除")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        roleService.removeById(id);
+        permissionChecker.requireSuper();
+        // 引用校验 + 级联清理权限关联 + 删除角色，整体在一个事务里
+        // （见 RoleServiceImpl.deleteRoleWithRelations）
+        roleService.deleteRoleWithRelations(id);
         return Result.success();
     }
 
@@ -111,6 +130,7 @@ public class RoleController {
     @Operation(summary = "查询所有角色")
     @GetMapping("/all")
     public Result<List<Role>> getAll() {
+        permissionChecker.require("system:role:view");
         return Result.success(roleService.list());
     }
 
@@ -124,6 +144,7 @@ public class RoleController {
     @Operation(summary = "获取角色权限")
     @GetMapping("/{id}/permissions")
     public Result<List<Permission>> getRolePermissions(@PathVariable Long id) {
+        permissionChecker.require("system:role:view");
         List<RolePermission> rolePermissions = rolePermissionService.list(new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, id));
         if (rolePermissions.isEmpty()) {
             return Result.success(List.of());
@@ -145,21 +166,13 @@ public class RoleController {
     @Operation(summary = "分配角色权限")
     @PutMapping("/{id}/permissions")
     public Result<Void> assignPermissions(@PathVariable Long id, @RequestBody Map<String, List<Long>> body) {
-        List<Long> permissionIds = body.get("permissionIds");
-        // 先删除角色现有的所有权限关联
-        rolePermissionService.remove(new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, id));
-        if (permissionIds != null && !permissionIds.isEmpty()) {
-            // 构建新的角色权限关联列表并批量保存
-            List<RolePermission> rolePermissions = permissionIds.stream()
-                    .map(permissionId -> {
-                        RolePermission rp = new RolePermission();
-                        rp.setRoleId(id);
-                        rp.setPermissionId(permissionId);
-                        return rp;
-                    })
-                    .collect(Collectors.toList());
-            rolePermissionService.saveBatch(rolePermissions);
+        // 提权类操作：给角色加 `*:*:*` 再套到自己身上 = 提权，只允许超级管理员
+        permissionChecker.requireSuper();
+        if (roleService.getById(id) == null) {
+            return Result.fail("角色不存在");
         }
+        // 先删后插 + 权限存在性校验，整体在一个事务里（见 RolePermissionServiceImpl.assignPermissions）
+        rolePermissionService.assignPermissions(id, body.get("permissionIds"));
         return Result.success();
     }
 }

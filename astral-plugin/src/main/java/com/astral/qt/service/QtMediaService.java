@@ -1,5 +1,7 @@
 package com.astral.qt.service;
 
+import org.springframework.beans.factory.annotation.Value;
+import com.astral.common.util.ClientIp;
 import com.astral.auth.security.PermissionChecker;
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.User;
@@ -44,6 +46,10 @@ import java.util.regex.Pattern;
 @Slf4j
 @Service
 public class QtMediaService {
+
+    /** 可信代理列表（决定能否采信 X-Forwarded-For），与全站口径一致 */
+    @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
+    private String trustedProxies;
 
     /** 约定文件夹（默认仓库下的展示路径） */
     public static final String FOLDER_ROOT = "qt-media";

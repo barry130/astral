@@ -1,5 +1,6 @@
 package com.astral.log.aspect;
 
+import com.astral.common.util.ClientIp;
 import com.astral.log.service.LogService;
 import cn.hutool.core.util.StrUtil;
 import tools.jackson.databind.ObjectMapper;
@@ -11,13 +12,12 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
 
 /**
  * 操作日志AOP切面
@@ -28,6 +28,8 @@ import java.time.LocalDateTime;
  * </p>
  * <p>
  * 使用异步线程池 {@code sequenceAsyncExecutor} 进行日志保存，避免影响主业务流程性能。
+ * 异步写入由 {@link OperateLogWriter} 承担：{@code @Async} 依赖代理，
+ * 写在切面类里再由切面自己调用是不生效的（详见该类的注释）。
  * </p>
  */
 @Slf4j
@@ -36,10 +38,14 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class OperateLogAspect {
 
-    /** 日志服务，用于持久化操作日志 */
-    private final LogService logService;
+    /** 异步日志写入器：@Async 必须落在另一个 Bean 上才会走代理 */
+    private final OperateLogWriter operateLogWriter;
     /** JSON序列化器，用于将请求参数和响应结果转换为JSON字符串 */
     private final ObjectMapper objectMapper;
+
+    /** 可信代理列表（决定能否采信 X-Forwarded-For） */
+    @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
+    private String trustedProxies;
 
     /**
      * 定义切点：拦截所有标注了 @OperateLog 注解的方法
@@ -85,70 +91,14 @@ public class OperateLogAspect {
             result = joinPoint.proceed();
             responseResult = getResponseResult(result);
             long executeTime = System.currentTimeMillis() - startTime;
-            saveLogAsync(username, operateType, requestUrl, requestMethod, requestParams, responseResult, ip, status, errorMsg, executeTime);
+            operateLogWriter.saveAsync(username, operateType, requestUrl, requestMethod, requestParams, responseResult, ip, status, errorMsg, executeTime);
             return result;
         } catch (Exception e) {
             status = 0;
             errorMsg = e.getMessage();
             long executeTime = System.currentTimeMillis() - startTime;
-            saveLogAsync(username, operateType, requestUrl, requestMethod, requestParams, responseResult, ip, status, errorMsg, executeTime);
+            operateLogWriter.saveAsync(username, operateType, requestUrl, requestMethod, requestParams, responseResult, ip, status, errorMsg, executeTime);
             throw e;
-        }
-    }
-
-    /**
-     * 异步保存操作日志
-     * <p>
-     * 使用 {@code @Async("sequenceAsyncExecutor")} 注解，将日志保存操作提交到独立线程池执行，
-     * 确保不会影响主业务流程的响应速度。
-     * </p>
-     *
-     * @param username       操作用户名
-     * @param operateType    操作类型
-     * @param requestUrl     请求URL
-     * @param requestMethod  请求方法（GET/POST/PUT/DELETE等）
-     * @param requestParams  请求参数（JSON格式）
-     * @param responseResult 响应结果（JSON格式）
-     * @param ip             客户端IP地址
-     * @param status         执行状态（1=成功，0=失败）
-     * @param errorMsg       错误信息（失败时记录）
-     * @param executeTime    执行耗时（毫秒）
-     */
-    @Async("sequenceAsyncExecutor")
-    public void saveLogAsync(String username, String operateType, String requestUrl, String requestMethod,
-                             String requestParams, String responseResult, String ip, Integer status, String errorMsg, long executeTime) {
-        saveLog(username, operateType, requestUrl, requestMethod, requestParams, responseResult, ip, status, errorMsg, executeTime);
-    }
-
-    /**
-     * 实际保存日志的方法
-     * <p>
-     * 构建 {@link com.astral.dao.entity.OperateLog} 实体对象并调用服务层保存。
-     * 内部捕获异常，确保日志保存失败不会影响主流程。
-     * </p>
-     */
-    private void saveLog(String username, String operateType, String requestUrl, String requestMethod,
-                    String requestParams, String responseResult, String ip, Integer status, String errorMsg, long executeTime) {
-        try {
-            log.info("保存操作日志: operateType={}, status={}", operateType, status);
-            com.astral.dao.entity.OperateLog operateLog = new com.astral.dao.entity.OperateLog();
-            operateLog.setUsername(username);
-            operateLog.setModule("API");
-            operateLog.setOperateType(operateType);
-            operateLog.setRequestUrl(requestUrl);
-            operateLog.setRequestMethod(requestMethod);
-            operateLog.setRequestParams(requestParams);
-            operateLog.setResponseResult(responseResult);
-            operateLog.setIp(ip);
-            operateLog.setLocation("");
-            operateLog.setStatus(status);
-            operateLog.setErrorMsg(errorMsg);
-            operateLog.setExecuteTime(executeTime);
-            operateLog.setCreateTime(LocalDateTime.now());
-            logService.saveOperateLog(operateLog);
-            log.info("操作日志保存成功");
-        } catch (Exception e) {
-            log.error("保存操作日志失败", e);
         }
     }
 
@@ -191,14 +141,12 @@ public class OperateLogAspect {
      */
     private String getIp(HttpServletRequest request) {
         if (request == null) return "unknown";
-        String ip = request.getHeader("X-Forwarded-For");
-        if (StrUtil.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getHeader("X-Real-IP");
-        }
-        if (StrUtil.isEmpty(ip) || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        return ip;
+        // 走可信代理白名单解析：无条件采信 X-Forwarded-For 会让审计日志里的来源 IP 可伪造
+        return ClientIp.resolve(
+                request.getHeader("X-Forwarded-For"),
+                request.getHeader("X-Real-IP"),
+                request.getRemoteAddr(),
+                trustedProxies);
     }
 
     /**

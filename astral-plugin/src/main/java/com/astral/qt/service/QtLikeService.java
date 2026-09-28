@@ -84,7 +84,7 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
      * 旧全量同步（兼容保留）：单遍 diff + batch insert + 单次取号，
      * 删除与新增各一条批量 SQL，替代逐条 selectCount/insert。
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void uploadLikeList(Long uid, QtUploadLikeListDto dto) {
         if (dto == null) {
             return;
@@ -265,7 +265,7 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
     // ==================== 新接口：单条收藏/取消 ====================
 
     /** 收藏/取消收藏单曲（LIKE_SYNC_DESIGN.md §2.1），返回本次 seq */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public QtLikeSeqVo likeSong(Long uid, QtLikeSongActionDto dto) {
         likeSyncMapper.lockUser(uid);
         long seq = likeSyncMapper.selectUserMaxSeq(uid) + 1;
@@ -318,7 +318,7 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
      * 客户端删除歌单只推 playlist remove，成员 (sid,pid) 行由服务端一并清理；
      * 歌单 remove 事件随 changes 下发，客户端据此清理本地成员。</p>
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public QtLikeSeqVo likePlaylist(Long uid, QtLikePlaylistActionDto dto) {
         likeSyncMapper.lockUser(uid);
         long seq = likeSyncMapper.selectUserMaxSeq(uid) + 1;

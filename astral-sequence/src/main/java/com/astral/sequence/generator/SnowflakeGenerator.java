@@ -1,6 +1,7 @@
 package com.astral.sequence.generator;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -73,26 +74,36 @@ public class SnowflakeGenerator implements SequenceGenerator {
      */
     private final Map<String, ReentrantLock> keyLocks = new ConcurrentHashMap<>();
 
-    /**
-     * 默认构造函数，使用默认的工作机器 ID 和数据中心 ID
-     */
-    public SnowflakeGenerator() {
-        this(1, 1);
-    }
 
     /**
-     * 带参数的构造函数
+     * 构造：工作机器 ID / 数据中心 ID <b>必须来自配置</b>。
      *
-     * @param workerId     工作机器 ID，范围 1-31
-     * @param datacenterId 数据中心 ID，范围 1-31
+     * <p><b>为什么不能硬编码</b>：此前这里是 {@code this(1, 1)}，所有实例的时间戳 +
+     * 数据中心位 + 机器位完全相同，同一毫秒内并发会生成<b>完全相同的 ID</b>。
+     * 单机看不出来，一旦多实例部署就是大面积主键冲突。</p>
+     *
+     * <p><b>为什么非法值要让启动失败而不是降级为 1</b>：原来的「越界则静默置 1」
+     * 会把配置写错的情况藏起来——两个实例都配成 100，都会被静默改成 1，
+     * 表面上正常启动，实际必然重号。宁可启动失败让人立刻发现。</p>
+     *
+     * <p>多实例部署请给每个实例不同的 {@code worker-id}（K8s 可用 StatefulSet 序号，
+     * 或由注册中心分配），并配成环境变量。</p>
+     *
+     * @param workerId     工作机器 ID，范围 0-31
+     * @param datacenterId 数据中心 ID，范围 0-31
+     * @throws IllegalStateException 取值越界时（启动即失败，避免静默降级成重号源）
      */
-    public SnowflakeGenerator(long workerId, long datacenterId) {
-        // 边界检查：如果 ID 超出有效范围，则使用默认值 1
-        if (workerId > MAX_WORKER_ID || workerId < 1) {
-            workerId = 1;
+    public SnowflakeGenerator(
+            @Value("${astral.sequence.snowflake.worker-id:1}") long workerId,
+            @Value("${astral.sequence.snowflake.datacenter-id:1}") long datacenterId) {
+        if (workerId < 0 || workerId > MAX_WORKER_ID) {
+            throw new IllegalStateException(
+                    "astral.sequence.snowflake.worker-id 必须在 0-" + MAX_WORKER_ID + "，当前为 " + workerId
+                            + "；多实例部署时每个实例必须不同，否则会生成重复 ID");
         }
-        if (datacenterId > MAX_DATACENTER_ID || datacenterId < 1) {
-            datacenterId = 1;
+        if (datacenterId < 0 || datacenterId > MAX_DATACENTER_ID) {
+            throw new IllegalStateException(
+                    "astral.sequence.snowflake.datacenter-id 必须在 0-" + MAX_DATACENTER_ID + "，当前为 " + datacenterId);
         }
         this.workerId = workerId;
         this.datacenterId = datacenterId;

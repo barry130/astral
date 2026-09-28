@@ -2,6 +2,7 @@ package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,15 +17,18 @@ public class SysMailPluginAuth {
     private Long id;
 
     @TableField("plugin_id")
+    @Size(max = 32)
     private String pluginId;
 
     @TableField("plugin_name")
+    @Size(max = 64)
     private String pluginName;
 
     @TableField("daily_limit")
     private Integer dailyLimit;
 
     @TableField("allowed_scenes")
+    @Size(max = 512)
     private String allowedScenes;
 
     private Integer enabled;

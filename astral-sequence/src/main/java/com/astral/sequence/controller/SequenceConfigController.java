@@ -13,6 +13,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 /**
@@ -132,7 +134,7 @@ public class SequenceConfigController {
      */
     @OperateLog("创建序列配置")
     @PostMapping
-    public Result<SequenceConfig> create(@RequestBody SequenceConfig config) {
+    public Result<SequenceConfig> create(@Valid @RequestBody SequenceConfig config) {
         assertNotSystemSequence(config, "SEQ008");
         config.setCreateTime(java.time.LocalDateTime.now());
         config.setUpdateTime(java.time.LocalDateTime.now());
@@ -156,7 +158,7 @@ public class SequenceConfigController {
      */
     @OperateLog("更新序列配置")
     @PutMapping("/{id}")
-    public Result<SequenceConfig> update(@PathVariable Long id, @RequestBody SequenceConfig config) {
+    public Result<SequenceConfig> update(@PathVariable Long id, @Valid @RequestBody SequenceConfig config) {
         SequenceConfig existing = sequenceConfigMapper.selectById(id);
         assertNotSystemSequence(existing, "SEQ008");
         config.setId(id);

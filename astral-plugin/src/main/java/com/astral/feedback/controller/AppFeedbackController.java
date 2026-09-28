@@ -1,5 +1,7 @@
 package com.astral.feedback.controller;
 
+import org.springframework.beans.factory.annotation.Value;
+import com.astral.common.util.ClientIp;
 import com.astral.feedback.common.FeedbackRestResp;
 import com.astral.feedback.dto.ReplyDto;
 import com.astral.feedback.dto.SubmitFeedbackDto;
@@ -37,6 +39,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/app/feedback")
 public class AppFeedbackController {
+
+    /** 可信代理列表（决定能否采信 X-Forwarded-For），与全站口径一致 */
+    @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
+    private String trustedProxies;
 
     @Resource
     private FeedbackService feedbackService;

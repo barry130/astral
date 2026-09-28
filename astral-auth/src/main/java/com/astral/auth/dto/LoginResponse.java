@@ -24,4 +24,6 @@ public class LoginResponse {
     private List<String> roles;
     /** 用户权限编码列表，用于前端按钮级权限控制 */
     private List<String> permissions;
+    /** 用户类型：ADMIN 管理端 / APP 轻听 App 端（前端据此区分入口，后端据此做管理端身份门禁） */
+    private String userType;
 }

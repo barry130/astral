@@ -1,5 +1,7 @@
 package com.astral.storage.controller;
 
+import org.springframework.beans.factory.annotation.Value;
+import com.astral.common.util.ClientIp;
 import com.astral.auth.security.PermissionChecker;
 import com.astral.common.result.Result;
 import com.astral.storage.dto.StorageDtos;
@@ -25,6 +27,10 @@ import java.util.List;
 @RequestMapping("/api/v1/all/storage")
 @RequiredArgsConstructor
 public class StorageUserController {
+
+    /** 可信代理列表（决定能否采信 X-Forwarded-For），与全站口径一致 */
+    @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
+    private String trustedProxies;
 
     private final StorageConfigService configService;
     private final StorageFolderService folderService;

@@ -78,7 +78,7 @@ public class FeedbackService {
     // ==================== App 端 ====================
 
     /** 提交反馈 */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Feedback submit(Long userId, com.astral.feedback.dto.SubmitFeedbackDto dto,
                            String device, String os, String appVersion, String platform, String ip) {
         Feedback f = new Feedback();
@@ -146,7 +146,7 @@ public class FeedbackService {
     }
 
     /** 用户回复（同时通知管理员） */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public FeedbackReply userReply(Long userId, ReplyDto dto) {
         Feedback f = detail(userId, dto.getFeedbackId(), false);
         // 已废弃/已删除的反馈不允许回复
@@ -223,7 +223,7 @@ public class FeedbackService {
     }
 
     /** 状态流转（校验合法流转，触发通知） */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void changeStatus(Long id, StatusDto dto) {
         Feedback f = adminDetail(id);
         String from = f.getStatus();
@@ -255,7 +255,7 @@ public class FeedbackService {
     }
 
     /** 公开切换 */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void changePublic(Long id, PublicDto dto) {
         Feedback f = adminDetail(id);
         boolean target = dto.getIsPublic() != null && dto.getIsPublic();
@@ -277,7 +277,7 @@ public class FeedbackService {
     }
 
     /** 管理端回复（同时通知提交人） */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public FeedbackReply adminReply(Long adminId, ReplyDto dto) {
         Feedback f = adminDetail(dto.getFeedbackId());
         if (Feedback.STATUS_DEPRECATED.equals(f.getStatus())) {

@@ -1,7 +1,7 @@
 package com.astral.sequence.config;
 
 import com.astral.sequence.generator.SegmentGenerator;
-import com.astral.sequence.service.GeneratorFactory;
+import com.astral.sequence.service.SequenceAsyncWriter;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,7 +32,7 @@ public class SequenceAutoConfiguration {
     public MetaObjectHandler metaObjectHandler(
             @Lazy SegmentGenerator segmentGenerator,
             EntityIdSequenceProvider entityIdSequenceProvider,
-            @Lazy GeneratorFactory generatorFactory) {
-        return new SequenceMetaObjectHandler(segmentGenerator, entityIdSequenceProvider, generatorFactory);
+            SequenceAsyncWriter sequenceAsyncWriter) {
+        return new SequenceMetaObjectHandler(segmentGenerator, entityIdSequenceProvider, sequenceAsyncWriter);
     }
 }

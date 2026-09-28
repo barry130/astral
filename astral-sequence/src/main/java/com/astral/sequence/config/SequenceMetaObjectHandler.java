@@ -1,7 +1,7 @@
 package com.astral.sequence.config;
 
 import com.astral.sequence.generator.SegmentGenerator;
-import com.astral.sequence.service.GeneratorFactory;
+import com.astral.sequence.service.SequenceAsyncWriter;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
@@ -62,28 +62,28 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
     private final SegmentGenerator segmentGenerator;
     /** 实体 ID 序列提供者（业务键 = 表名_id） */
     private final EntityIdSequenceProvider entityIdSequenceProvider;
-    /** 生成器工厂，用于在分配 ID 后异步刷新序列统计的当前值（供序列管理页展示） */
-    private final GeneratorFactory generatorFactory;
+    /** 异步写入器，用于在分配 ID 后异步刷新序列统计的当前值（供序列管理页展示） */
+    private final SequenceAsyncWriter sequenceAsyncWriter;
 
     /**
      * 构造函数
      * <p>
-     * 使用 @Lazy 注解延迟注入 SegmentGenerator 与 GeneratorFactory，避免循环依赖。
+     * 使用 @Lazy 注解延迟注入 SegmentGenerator，避免循环依赖。
      * 二者都可能间接依赖于 MyBatis 的 SqlSessionFactory，而元对象处理器在
      * SqlSessionFactory 构建阶段就需要就绪，因此必须延迟到首次实际取号时再解析。
      * </p>
      *
      * @param segmentGenerator 号段生成器
      * @param entityIdSequenceProvider 实体 ID 序列提供者
-     * @param generatorFactory 生成器工厂
+     * @param sequenceAsyncWriter 序列历史/统计的异步写入器
      */
     public SequenceMetaObjectHandler(
             @Lazy SegmentGenerator segmentGenerator,
             EntityIdSequenceProvider entityIdSequenceProvider,
-            @Lazy GeneratorFactory generatorFactory) {
+            SequenceAsyncWriter sequenceAsyncWriter) {
         this.segmentGenerator = segmentGenerator;
         this.entityIdSequenceProvider = entityIdSequenceProvider;
-        this.generatorFactory = generatorFactory;
+        this.sequenceAsyncWriter = sequenceAsyncWriter;
     }
 
     /**
@@ -113,7 +113,7 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
                 long nextId = segmentGenerator.next(bizKey);
                 setFieldValByName("id", nextId, metaObject);
                 // 同步刷新序列统计的当前值，使序列管理页面的「当前值」能反映真实插入已占用的序列号
-                generatorFactory.updateStatisticsAsync(bizKey, nextId);
+                sequenceAsyncWriter.updateStatisticsAsync(bizKey, nextId);
                 log.debug("Auto-filled id={} for table={} via bizKey={}", nextId, tableName, bizKey);
             }
         }

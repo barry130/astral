@@ -2,6 +2,7 @@ package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,9 +17,11 @@ public class UserRole {
     private Long id;
 
     @TableField("user_id")
+    @NotNull
     private Long userId;
 
     @TableField("role_id")
+    @NotNull
     private Long roleId;
 
     @TableField(value = "create_time", fill = FieldFill.INSERT)
