@@ -1,4 +1,4 @@
-import { request, ApiResult } from './client';
+import { request, ApiResult, ApiRequestConfig } from './client';
 
 /** 系统监控数据接口 */
 export interface SystemMonitorDTO {
@@ -52,15 +52,15 @@ export interface BusinessMonitorDTO {
 
 /** 系统监控相关API */
 export const monitorApi = {
-  /** 获取系统资源信息（CPU/内存/磁盘） */
-  getSystemInfo: (): Promise<ApiResult<SystemMonitorDTO>> =>
-    request.get('/api/v1/admin/monitor/system'),
+  /** 获取系统资源信息（CPU/内存/磁盘）；options 透传给 request，轮询时传 { silent: true } */
+  getSystemInfo: (options?: ApiRequestConfig): Promise<ApiResult<SystemMonitorDTO>> =>
+    request.get('/api/v1/admin/monitor/system', options),
 
-  /** 获取JVM运行信息 */
-  getJvmInfo: (): Promise<ApiResult<JvmMonitorDTO>> =>
-    request.get('/api/v1/admin/monitor/jvm'),
+  /** 获取JVM运行信息；options 透传给 request，轮询时传 { silent: true } */
+  getJvmInfo: (options?: ApiRequestConfig): Promise<ApiResult<JvmMonitorDTO>> =>
+    request.get('/api/v1/admin/monitor/jvm', options),
 
-  /** 获取业务指标信息 */
-  getBusinessInfo: (): Promise<ApiResult<BusinessMonitorDTO>> =>
-    request.get('/api/v1/admin/monitor/business'),
+  /** 获取业务指标信息；options 透传给 request，轮询时传 { silent: true } */
+  getBusinessInfo: (options?: ApiRequestConfig): Promise<ApiResult<BusinessMonitorDTO>> =>
+    request.get('/api/v1/admin/monitor/business', options),
 };

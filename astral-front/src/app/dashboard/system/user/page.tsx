@@ -372,7 +372,14 @@ export default function UserPage() {
       <Card>
         <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ display: 'flex', gap: 12 }}>
-            <Input.Search placeholder="搜索用户名" allowClear onSearch={(v) => loadData(1, pagination.pageSize, v)} style={{ width: 300 }} />
+            {/* 必须写回 search 状态，否则翻页时 loadData(p, ps, search) 传回空串、丢失搜索条件 */}
+            <Input.Search
+              placeholder="搜索用户名"
+              allowClear
+              onChange={(e) => setSearch(e.target.value)}
+              onSearch={(v) => { setSearch(v); loadData(1, pagination.pageSize, v); }}
+              style={{ width: 300 }}
+            />
             <Select
               value={typeFilter}
               style={{ width: 140 }}

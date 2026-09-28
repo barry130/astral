@@ -76,26 +76,35 @@ export default function DashboardPage() {
   /** 业务监控数据 */
   const [business, setBusiness] = useState<BusinessMonitorDTO | null>(null);
 
-  /** 并行加载所有监控数据 */
-  const loadData = () => {
-    Promise.all([
-      monitorApi.getSystemInfo(),
-      monitorApi.getJvmInfo(),
-      monitorApi.getBusinessInfo(),
-    ])
-      .then(([sysRes, jvmRes, bizRes]) => {
+  /** 组件挂载时加载数据，并设置5秒定时刷新 */
+  useEffect(() => {
+    // alive 守卫：卸载后异步回调不再 setState，同时 clearInterval 停掉轮询
+    let alive = true;
+    /** 并行加载所有监控数据；轮询属后台心跳，用 silent 避免顶部加载条每 5 秒闪一次 */
+    const loadData = async () => {
+      try {
+        const [sysRes, jvmRes, bizRes] = await Promise.all([
+          monitorApi.getSystemInfo({ silent: true }),
+          monitorApi.getJvmInfo({ silent: true }),
+          monitorApi.getBusinessInfo({ silent: true }),
+        ]);
+        if (!alive) return;
         setSystem(sysRes.data);
         setJvm(jvmRes.data);
         setBusiness(bizRes.data);
-      })
-      .finally(() => setLoading(false));
-  };
+      } catch {
+        // 静默轮询失败不弹错，交由下一次 tick 重试
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
 
-  /** 组件挂载时加载数据，并设置5秒定时刷新 */
-  useEffect(() => {
     loadData();
     const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      alive = false;
+      clearInterval(interval);
+    };
   }, []);
 
   if (loading) {

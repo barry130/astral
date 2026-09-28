@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Tag, Button, Space, Select, Input, Modal, Form, Row, Col, Switch, DatePicker, InputNumber, message, Popconfirm, Typography } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -44,19 +44,20 @@ export default function NoticeManagement() {
   const [editing, setEditing] = useState<SysNotice | null>(null);
   const [form] = Form.useForm();
 
-  const load = (p = page, s = pageSize) => {
+  // kw/ch/ty 可由调用方显式传入：setState 异步，紧随其后的 load 读闭包会拿到旧筛选值
+  const load = useCallback((p = page, s = pageSize, kw = keyword, ch = channelFilter, ty = typeFilter) => {
     setLoading(true);
     const params: Record<string, any> = { pageNum: p, pageSize: s };
-    if (channelFilter) params.channel = channelFilter;
-    if (typeFilter) params.noticeType = typeFilter;
-    if (keyword) params.keyword = keyword;
+    if (ch) params.channel = ch;
+    if (ty) params.noticeType = ty;
+    if (kw) params.keyword = kw;
     messageAdminApi.page(params)
       .then((res) => {
         setData(res.data?.records || []);
         setTotal(res.data?.total || 0);
       })
       .finally(() => setLoading(false));
-  };
+  }, [page, pageSize, keyword, channelFilter, typeFilter]);
 
   useEffect(() => {
     load(1, pageSize);
@@ -81,7 +82,7 @@ export default function NoticeManagement() {
     setModalOpen(true);
   };
 
-  const openEdit = (record: SysNotice) => {
+  const openEdit = useCallback((record: SysNotice) => {
     setEditing(record);
     form.resetFields();
     const display = record.display ? [1, 2, 4].filter((b) => (record.display! & b) === b) : [4];
@@ -100,7 +101,7 @@ export default function NoticeManagement() {
         ? [dayjs(record.effectiveStart), dayjs(record.effectiveEnd)] : undefined,
     });
     setModalOpen(true);
-  };
+  }, [form]);
 
   const submit = async () => {
     const values = await form.validateFields();
@@ -142,7 +143,7 @@ export default function NoticeManagement() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = useCallback(async (id: number) => {
     try {
       await messageAdminApi.delete(id);
       message.success('已删除');
@@ -150,9 +151,10 @@ export default function NoticeManagement() {
     } catch (e: any) {
       message.error(e.message);
     }
-  };
+  }, [load]);
 
-  const columns = [
+  // 用 useMemo 固定列引用，否则每次渲染新建数组会让 ResizableTable 内的列 useMemo 全部失效
+  const columns = useMemo(() => [
     { title: 'ID', dataIndex: 'id', width: 80 },
     {
       title: '渠道', dataIndex: 'channel', width: 80,
@@ -188,7 +190,7 @@ export default function NoticeManagement() {
         </Space>
       ),
     },
-  ];
+  ], [openEdit, handleDelete]);
 
   return (
     <div>
@@ -209,7 +211,7 @@ export default function NoticeManagement() {
         <div style={{ marginBottom: 16 }}>
           <Space wrap>
             <Input.Search placeholder="搜索标题/内容" allowClear style={{ width: 220 }}
-              onSearch={(v) => { setKeyword(v); load(1, pageSize); }} />
+              onSearch={(v) => { setKeyword(v); load(1, pageSize, v); }} />
             <Select placeholder="渠道" allowClear style={{ width: 120 }} value={channelFilter}
               onChange={(v) => setChannelFilter(v)}
               options={noticeChannelOptions()} />

@@ -39,7 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authApi.getUserInfo()
         .then((res) => {
           if (res.code === 200) {
-            setUser(res.data as any);
+            // 类型已与后端对齐，无需再用 as any 掩盖
+            setUser(res.data);
           }
         })
         .catch(() => {

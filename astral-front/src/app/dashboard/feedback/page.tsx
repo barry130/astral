@@ -1,9 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Card, Row, Col, Statistic, Tag, Button, Space, Select, Input, Switch, Popconfirm, Drawer, Timeline, Form, message, Typography, Divider, Tabs, Tooltip } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Card, Row, Col, Statistic, Tag, Button, Space, Select, Input, Switch, Popconfirm, Drawer, Timeline, Form, message, Typography, Divider, Tabs, Tooltip, Spin } from 'antd';
 import { ReloadOutlined, MessageOutlined, DeleteOutlined, SendOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import ReactECharts from 'echarts-for-react';
+import dynamic from 'next/dynamic';
+// echarts 体积大且非首屏（在 Tabs 内的反馈面板），改为客户端动态加载，避免打进主 bundle
+const ReactECharts = dynamic(() => import('echarts-for-react'), {
+  ssr: false,
+  loading: () => <Spin />,
+});
 import {
   feedbackAdminApi, FEEDBACK_STATUS_COLOR,
   feedbackStatusLabel, feedbackTypeLabel, feedbackStatusOptions, feedbackTypeOptions,
@@ -44,25 +49,26 @@ function FeedbackPanel() {
   const [replyText, setReplyText] = useState('');
   const [replying, setReplying] = useState(false);
 
-  const load = (p = page, s = pageSize) => {
+  // kw/st/ty 可由调用方显式传入：setState 异步，紧随其后的 load 读闭包会拿到旧筛选值
+  const load = useCallback((p = page, s = pageSize, kw = keyword, st = statusFilter, ty = typeFilter) => {
     setLoading(true);
     const params: Record<string, any> = { pageNum: p, pageSize: s };
-    if (statusFilter) params.status = statusFilter;
-    if (typeFilter) params.type = typeFilter;
-    if (keyword) params.keyword = keyword;
+    if (st) params.status = st;
+    if (ty) params.type = ty;
+    if (kw) params.keyword = kw;
     feedbackAdminApi.page(params)
       .then((res) => {
         setData(res.data?.records || []);
         setTotal(res.data?.total || 0);
       })
       .finally(() => setLoading(false));
-  };
+  }, [page, pageSize, keyword, statusFilter, typeFilter]);
 
-  const loadStat = () => {
+  const loadStat = useCallback(() => {
     feedbackAdminApi.stat().then((res) => {
       if (res.code === 200) setStat(res.data);
     }).catch(() => {});
-  };
+  }, []);
 
   useEffect(() => {
     load(1, pageSize);
@@ -71,9 +77,9 @@ function FeedbackPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, typeFilter]);
 
-  const refresh = () => { load(); loadStat(); };
+  const refresh = useCallback(() => { load(); loadStat(); }, [load, loadStat]);
 
-  const openDetail = async (record: Feedback) => {
+  const openDetail = useCallback(async (record: Feedback) => {
     setDetail(record);
     setDrawerOpen(true);
     try {
@@ -82,9 +88,9 @@ function FeedbackPanel() {
     } catch (e: any) {
       setReplies([]);
     }
-  };
+  }, []);
 
-  const handleStatusChange = async (id: number, status: string) => {
+  const handleStatusChange = useCallback(async (id: number, status: string) => {
     try {
       await feedbackAdminApi.changeStatus(id, status);
       message.success('状态已更新');
@@ -93,9 +99,9 @@ function FeedbackPanel() {
     } catch (e: any) {
       message.error(e.message);
     }
-  };
+  }, [refresh, openDetail, detail]);
 
-  const handlePublicChange = async (record: Feedback, checked: boolean) => {
+  const handlePublicChange = useCallback(async (record: Feedback, checked: boolean) => {
     try {
       await feedbackAdminApi.changePublic(record.id!, checked);
       message.success(checked ? '已设为公开' : '已设为私有');
@@ -103,9 +109,9 @@ function FeedbackPanel() {
     } catch (e: any) {
       message.error(e.message);
     }
-  };
+  }, [refresh]);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = useCallback(async (id: number) => {
     try {
       await feedbackAdminApi.delete(id);
       message.success('已删除');
@@ -113,7 +119,7 @@ function FeedbackPanel() {
     } catch (e: any) {
       message.error(e.message);
     }
-  };
+  }, [refresh]);
 
   const submitReply = async () => {
     if (!detail || !replyText.trim()) {
@@ -151,7 +157,8 @@ function FeedbackPanel() {
     };
   }, [stat]);
 
-  const columns = [
+  // 用 useMemo 固定列引用，否则每次渲染新建数组会让 ResizableTable 内的列 useMemo 全部失效
+  const columns = useMemo(() => [
     { title: 'ID', dataIndex: 'id', width: 80 },
     {
       title: '类型', dataIndex: 'type', width: 90,
@@ -223,7 +230,7 @@ function FeedbackPanel() {
         </Space>
       ),
     },
-  ];
+  ], [handleStatusChange, handlePublicChange, openDetail, handleDelete]);
 
   return (
     <div>
@@ -241,7 +248,7 @@ function FeedbackPanel() {
         <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space wrap>
             <Input.Search placeholder="搜索标题/内容" allowClear style={{ width: 220 }}
-              onSearch={(v) => { setKeyword(v); load(1, pageSize); }} />
+              onSearch={(v) => { setKeyword(v); load(1, pageSize, v); }} />
             <Select placeholder="状态" allowClear style={{ width: 130 }} value={statusFilter}
               onChange={(v) => setStatusFilter(v)}
               options={feedbackStatusOptions()} />

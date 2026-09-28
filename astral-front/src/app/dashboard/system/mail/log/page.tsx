@@ -21,14 +21,16 @@ export default function MailLogPage() {
     mailApi.logStatistics().then((res: any) => { if (res.code === 200) setStats(res.data || {}); }).catch(() => {});
   };
 
-  const loadData = (page = 1, size = 10) => {
+  // f 允许调用方显式传入「本次要生效的筛选条件」：setState 是异步的，
+  // 紧接着 loadData 时闭包里的 filters 仍是旧值，直接读会漏掉本次筛选。
+  const loadData = (page = 1, size = 10, f = filters) => {
     setLoading(true);
     const params: any = { pageNum: page, pageSize: size };
-    if (filters.toEmail) params.toEmail = filters.toEmail;
-    if (filters.status !== undefined) params.status = filters.status;
-    if (filters.range && filters.range[0] && filters.range[1]) {
-      params.start = filters.range[0].format('YYYY-MM-DD HH:mm:ss');
-      params.end = filters.range[1].format('YYYY-MM-DD HH:mm:ss');
+    if (f.toEmail) params.toEmail = f.toEmail;
+    if (f.status !== undefined) params.status = f.status;
+    if (f.range && f.range[0] && f.range[1]) {
+      params.start = f.range[0].format('YYYY-MM-DD HH:mm:ss');
+      params.end = f.range[1].format('YYYY-MM-DD HH:mm:ss');
     }
     mailApi.logPage(params)
       .then((res: any) => {
@@ -74,13 +76,13 @@ export default function MailLogPage() {
       <Card>
         <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Input.Search placeholder="收件人邮箱" allowClear style={{ width: 240 }}
-            onSearch={(v) => { setFilters((f) => ({ ...f, toEmail: v })); loadData(1, pagination.pageSize); }} />
+            onSearch={(v) => { const next = { ...filters, toEmail: v }; setFilters(next); loadData(1, pagination.pageSize, next); }} />
           <Select placeholder="状态" allowClear style={{ width: 120 }}
-            onChange={(v) => { setFilters((f) => ({ ...f, status: v })); loadData(1, pagination.pageSize); }}
+            onChange={(v) => { const next = { ...filters, status: v }; setFilters(next); loadData(1, pagination.pageSize, next); }}
             options={[{ label: '成功', value: 1 }, { label: '失败', value: 0 }]} />
-          <RangePicker showTime onChange={(v) => { setFilters((f) => ({ ...f, range: v })); loadData(1, pagination.pageSize); }} />
+          <RangePicker showTime onChange={(v) => { const next = { ...filters, range: v }; setFilters(next); loadData(1, pagination.pageSize, next); }} />
           <div className="page-toolbar">
-            <Button icon={<ReloadOutlined />} onClick={() => { setFilters({}); loadData(1, pagination.pageSize); loadStats(); }}>刷新</Button>
+            <Button icon={<ReloadOutlined />} onClick={() => { setFilters({}); loadData(1, pagination.pageSize, {}); loadStats(); }}>刷新</Button>
           </div>
         </div>
         <Table dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={pagination}

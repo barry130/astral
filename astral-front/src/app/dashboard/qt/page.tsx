@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Row, Col, Statistic, Tabs, Tag, Button, Input,
   Form, Modal, Space, message, Switch, Popconfirm, Typography, Select } from 'antd';
 import {
@@ -44,18 +44,19 @@ export default function QtAdminPage() {
   const [dict, setDict] = useState<Record<string, { value: string; label: string }[]>>({});
 
   // 由数据字典派生出的下拉选项（数值类将 value 转为 number 以便比较）
-  const updatePlatformOpts = (dict.qt_update_platform || []).map((o) => ({ value: Number(o.value), label: o.label }));
-  const updateTypeOpts = dict.qt_update_type || [];
-  const updateChannelOpts = dict.qt_update_channel || [];
-  const updatePublishOpts = (dict.qt_update_publish || []).map((o) => ({ value: Number(o.value), label: o.label }));
+  // 用 useMemo 固定引用：这些数组会被下面 columns 的 useMemo 作为依赖
+  const updatePlatformOpts = useMemo(() => (dict.qt_update_platform || []).map((o) => ({ value: Number(o.value), label: o.label })), [dict]);
+  const updateTypeOpts = useMemo(() => dict.qt_update_type || [], [dict]);
+  const updateChannelOpts = useMemo(() => dict.qt_update_channel || [], [dict]);
+  const updatePublishOpts = useMemo(() => (dict.qt_update_publish || []).map((o) => ({ value: Number(o.value), label: o.label })), [dict]);
   // 发布状态：优先字典「qt_update_publish」，字典缺失时用固定映射兜底，绝不展示原始码值 0/1
-  const publishStateLabel = (v: number | undefined | null): string => {
+  const publishStateLabel = useCallback((v: number | undefined | null): string => {
     const fromDict = enumLabel(updatePublishOpts, v);
     // enumLabel 在字典缺失时回退为原值字符串，这里把 0/1 明确映射为文案
     if (fromDict !== String(v)) return fromDict;
     const map: Record<number, string> = { 1: '已发布', 0: '未发布' };
     return map[v ?? -1] ?? '-';
-  };
+  }, [updatePublishOpts]);
 
   const loadOverview = () => {
     qtAdminApi.overview().then((res) => {
@@ -63,7 +64,7 @@ export default function QtAdminPage() {
     }).catch(() => {});
   };
 
-  const loadUpdates = (page = updatePage) => {
+  const loadUpdates = useCallback((page = updatePage) => {
     setUpdatesLoading(true);
     qtAdminApi.updates(page, 10).then((res) => {
       if (res.code === 200) {
@@ -71,9 +72,9 @@ export default function QtAdminPage() {
         setUpdateTotal(res.data.total || 0);
       }
     }).finally(() => setUpdatesLoading(false));
-  };
+  }, [updatePage]);
 
-  const loadAccels = (page = accelPage) => {
+  const loadAccels = useCallback((page = accelPage) => {
     setAccelsLoading(true);
     githubAccelApi.list(page, 20).then((res) => {
       if (res.code === 200) {
@@ -81,7 +82,7 @@ export default function QtAdminPage() {
         setAccelTotal(res.data.total || 0);
       }
     }).finally(() => setAccelsLoading(false));
-  };
+  }, [accelPage]);
 
   const refresh = () => {
     setLoading(true);
@@ -99,14 +100,14 @@ export default function QtAdminPage() {
   }, []);
 
   // ==================== 版本更新 ====================
-  const openUpdateModal = (record?: QtUpdate) => {
+  const openUpdateModal = useCallback((record?: QtUpdate) => {
     if (record) {
       updateForm.setFieldsValue(record);
     } else {
       updateForm.resetFields();
     }
     setUpdateModal(true);
-  };
+  }, [updateForm]);
 
   const submitUpdate = async () => {
     const values = await updateForm.validateFields();
@@ -126,7 +127,7 @@ export default function QtAdminPage() {
   };
 
   // ==================== GitHub 加速节点 ====================
-  const openAccelModal = (record?: QtGithubAccel) => {
+  const openAccelModal = useCallback((record?: QtGithubAccel) => {
     if (record) {
       accelForm.setFieldsValue(record);
     } else {
@@ -134,7 +135,7 @@ export default function QtAdminPage() {
       accelForm.setFieldsValue({ isShow: 1, sort: 0 });
     }
     setAccelModal(true);
-  };
+  }, [accelForm]);
 
   const submitAccel = async () => {
     const values = await accelForm.validateFields();
@@ -175,7 +176,8 @@ export default function QtAdminPage() {
     }
   };
 
-  const accelColumns = [
+  // 用 useMemo 固定列引用，否则每次渲染新建数组会让 ResizableTable 内的列 useMemo 全部失效
+  const accelColumns = useMemo(() => [
     { title: 'ID', dataIndex: 'id', width: 104 },
     { title: '节点名称', dataIndex: 'name', width: 132 },
     { title: '加速前缀', dataIndex: 'prefixUrl', ellipsis: true },
@@ -216,10 +218,10 @@ export default function QtAdminPage() {
         </Space>
       ),
     },
-  ];
+  ], [probeMap, openAccelModal, loadAccels]);
 
   // 列宽是「期望最小宽度」：合计放得下容器就等比铺满，放不下横向滚动，不再压扁内容
-  const updateColumns = [
+  const updateColumns = useMemo(() => [
     { title: 'ID', dataIndex: 'id', width: 104 },
     { title: '版本号', dataIndex: 'versionCode', width: 104 },
     {
@@ -276,7 +278,7 @@ export default function QtAdminPage() {
         </Space>
       ),
     },
-  ];
+  ], [updatePlatformOpts, updateTypeOpts, updateChannelOpts, publishStateLabel, openUpdateModal, loadUpdates]);
 
   return (
     <div>

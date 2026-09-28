@@ -1,12 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Button, Space, Tag, Modal, Tabs, message, Select, Input, Form, Switch, Popconfirm, Tooltip, Radio } from 'antd';
+import dynamic from 'next/dynamic';
+import { Card, Button, Space, Tag, Modal, Tabs, message, Select, Input, Form, Switch, Popconfirm, Tooltip, Radio, Spin } from 'antd';
 import { CodeOutlined, DatabaseOutlined, FileTextOutlined, ApiOutlined, EditOutlined, SaveOutlined, PlusOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
 import { request } from '@/api/client';
 import { fetchDictOptions } from '@/api/dict';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+// 代码高亮体积大且只在 Tab 展开/抽屉打开时才可见，改为客户端按需加载（ssr: false 仅在客户端组件可用）
+const SyntaxHighlighter = dynamic(() => import('react-syntax-highlighter').then((m) => m.Prism), {
+  ssr: false,
+  loading: () => <Spin size="small" />,
+});
+// 直接引 styles/prism 会把上百套主题全部打进包，这里只引用到的那一套
+import vscDarkPlus from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus';
 import { ResizableTable } from '@/components/ResizableTable';
 
 const { TabPane } = Tabs;

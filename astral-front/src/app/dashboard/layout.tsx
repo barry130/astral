@@ -183,11 +183,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // 避免关闭页签后 setOpenTabs 触发 useEffect 把刚关闭的页签重新加回。
   const prevPathnameRef = useRef(pathname);
 
-  const userPermissions = user?.permissions || [];
-  const filteredMenuConfig = menuConfig.filter(item => {
+  // 必须 memo：下面 useMemo / effect 依赖 filteredMenuConfig，
+  // 每次渲染新建数组会击穿下游 3 个 useMemo 和标签页初始化 effect。
+  const userPermissions = useMemo(() => user?.permissions || [], [user?.permissions]);
+  const filteredMenuConfig = useMemo(() => menuConfig.filter(item => {
     if (!item.permission) return true;
     return userPermissions.includes(item.permission) || userPermissions.includes('*:*:*');
-  });
+  }), [userPermissions]);
 
   /** 动态加载后端菜单配置 */
   const [backendMenuTree, setBackendMenuTree] = useState<SysMenu[] | null>(null);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card,
   Row,
   Col,
@@ -15,7 +15,12 @@ import { Card,
   Space,
   Typography } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
-import ReactECharts from 'echarts-for-react';
+import dynamic from 'next/dynamic';
+// echarts 体积大且本页非首屏，改为客户端动态加载（ssr: false 只允许在客户端组件中使用，本文件有 'use client'）
+const ReactECharts = dynamic(() => import('echarts-for-react'), {
+  ssr: false,
+  loading: () => <Spin />,
+});
 import dayjs, { Dayjs } from 'dayjs';
 import {
   statApi,
@@ -226,7 +231,8 @@ function ApiTab() {
   const totalFailure = summary.failureCount || 0;
   const successRate = summary.successRate;
 
-  const columns = [
+  // 列定义只依赖模块级常量，用 useMemo 固定引用，避免 ResizableTable 每次渲染重建表头
+  const columns = useMemo(() => [
     { title: 'API路径', dataIndex: 'apiPath', ellipsis: true },
     { title: '方法', dataIndex: 'apiMethod', width: 80 },
     {
@@ -245,7 +251,7 @@ function ApiTab() {
     },
     { title: '平均耗时(ms)', dataIndex: 'avgTime', width: 120, sorter: (a: ApiTopItem, b: ApiTopItem) => a.avgTime - b.avgTime },
     { title: '最大耗时(ms)', dataIndex: 'maxTime', width: 120 },
-  ];
+  ], []);
 
   const barOption = {
     title: { text: 'Top 接口调用量', left: 'center', textStyle: { fontSize: 14 } },
