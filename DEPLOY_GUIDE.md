@@ -246,12 +246,65 @@ chmod +x update.sh          # 首次执行一次
 > 若服务器是用 tar.gz 部署而非 git，同样要先把新的 `deploy/` 覆盖上去（**别覆盖 `deploy/.env`**）。
 > 只想更新 compose 配置而不换镜像时，在 `deploy/` 下执行
 > `docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-build --force-recreate`。
+>
+> 另外：**宝塔面板里对容器点「升级」根本不读 compose 文件**（它只按原容器参数重建），
+> 见下节「别用宝塔面板『容器 → 升级』来更新这套栈」。
 
 等价的原始命令（不想用脚本时）：
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.registry.yml pull
 docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-build
+```
+
+### ⛔ 别用宝塔面板「容器 → 升级」来更新这套栈
+
+宝塔 Docker 面板「容器」列表里对 `astral-backend` 点**升级**，走的是「pull 新镜像 + 按**原容器的参数**重建一个容器」——**它不读 `deploy/docker-compose.yml`**。
+
+compose 文件里有、但原容器参数里没有的东西，重建后一律丢失：
+
+| 丢失项 | 症状 |
+|---|---|
+| `extra_hosts`（`host.docker.internal`） | 启动即挂：`java.net.UnknownHostException: host.docker.internal` |
+| `env_file: prod.env` | JVM 参数 / `SPRING_PROFILES_ACTIVE=prod` 丢失，按默认配置跑 |
+| `healthcheck` + `depends_on: service_healthy` | 前端不等后端就起，首次访问 502 |
+| `networks: astral-net` | 前端 `http://backend:27000` 解析不到，rewrites 转发失败 |
+| 命名卷 | 换成新卷 → `backend-data` 为空 → RSA 密钥对重新生成 |
+
+而且面板重建出来的容器**不带 `com.docker.compose.project` 标签**，之后 `./update.sh` 会直接报
+`Conflict. The container name "/astral-backend" is already in use`。
+
+**这套栈的统一入口是 `deploy/update.sh`（compose）。面板只用来看日志/状态，不要对容器点升级、重建、停止。**
+
+确实想留在面板里操作，只能用「Docker → Compose 项目 / 编排模板」那一栏；并且注意**面板项目里那份 yaml 是你创建项目时粘贴的副本**，在服务器上 `git pull` 不会自动更新它——要手动把 `deploy/docker-compose.yml` 的内容重新粘进去，再点「重新部署」。
+
+先确认当前容器归不归 compose 管：
+
+```bash
+docker inspect astral-backend --format '{{ index .Config.Labels "com.docker.compose.project" }}'
+# 有输出（如 deploy）→ 归 compose 管，直接 ./update.sh 即可
+# 输出为空        → 是面板 / docker run 起的，走下面「回退到 compose」
+```
+
+回退到 compose 管理（一次性，**先核对卷名再删容器**）：
+
+```bash
+cd /opt/astral/deploy
+
+# 1) 核对卷：/app/data 必须是命名卷 deploy_backend-data，/app/logs 必须是 deploy_backend-logs
+docker inspect astral-backend --format '{{ range .Mounts }}{{ .Type }} {{ .Name }} -> {{ .Destination }}{{ "\n" }}{{ end }}'
+#    若名字不对（或 Source 是随机路径），说明面板用了匿名卷，删容器前先备份：
+#      docker run --rm -v <那个卷名>:/data -v "$PWD":/backup alpine tar czf /backup/backend-data.tgz -C /data .
+
+# 2) 删掉面板起的容器（卷独立于容器，不会被删）；前端若也是面板起的，一并删
+docker rm -f astral-backend astral-frontend
+
+# 3) 由 compose 按 docker-compose.yml 重建
+./update.sh
+
+# 4) 验收
+docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
+#    期望：["host.docker.internal:host-gateway"]
 ```
 
 ### 回滚
@@ -392,13 +445,16 @@ docker compose build --no-cache frontend && docker compose up -d frontend
 `host.docker.internal` 是 **Docker Desktop（macOS / Windows）自带**的主机名，Linux 上**必须靠 compose 的 `extra_hosts` 映射**才会出现在容器的 `/etc/hosts` 里。看到这个异常，说明那条映射没生效。按顺序查：
 
 ```bash
-# 1) 容器是否真的拿到了这条映射（最常见原因是 compose 文件是旧的，或容器不是 compose 起的）
+# 1) 容器是否真的拿到了这条映射（最常见原因：compose 文件是旧的，或容器压根不是 compose 起的）
 docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
 #    期望输出：["host.docker.internal:host-gateway"]
-#    输出 null 或 [] → 容器不是由当前 docker-compose.yml 创建的，执行：
-#      cd /opt/astral && git pull          # 先更新 compose 文件
-#      cd deploy && ./update.sh            # 再重建容器
-#    （只跑 update.sh 不 git pull，用的就是服务器上的旧 compose 文件）
+#    输出 null 或 [] → 容器不是由当前 docker-compose.yml 创建的：
+#      a) 若「宝塔面板 → 容器 → 升级」重建过：面板不读 compose 文件，走
+#         本页「别用宝塔面板『容器 → 升级』来更新这套栈」一节回退到 compose 管理；
+#      b) 否则是 compose 文件旧了：
+#         cd /opt/astral && git pull          # 先更新 compose 文件
+#         cd deploy && ./update.sh            # 再重建容器
+#         （只跑 update.sh 不 git pull，用的就是服务器上的旧 compose 文件）
 
 # 2) 容器内能否解析
 docker exec astral-backend getent hosts host.docker.internal
