@@ -19,6 +19,17 @@
 # 未配置 Secrets 时本 workflow 不会报红：只打一条 warning 并跳过推送，配置好后重跑即可。
 #
 # 服务器侧拉取：见 deploy/update.sh 与 DEPLOY_GUIDE.md「CI 构建 + 服务器 pull 更新」。
+#
+# 【action 版本维护约定】
+#   以下 4 个 action 均已升到大版本线，其运行时是 node24。若再回退到旧的
+#   node20 版本（checkout@v4 / setup-buildx@v3 / login@v3 / build-push@v6），
+#   Actions 页面会重新出现「Node.js 20 is deprecated」告警。
+#   升级依据（均已核对各版本 action.yml 的 runs.using: node24）：
+#     actions/checkout@v5 起改用 node24（本项目直接用最新 v7）
+#     docker/*-action 的 v4 / build-push v7 起改用 node24
+#   另：runs-on 固定到 ubuntu-24.04，不再用 ubuntu-latest ——
+#     ubuntu-latest 自 2026-10-19 起会迁移到 Ubuntu 26，固定版本可避免基础镜像
+#     被静默替换导致的构建行为漂移。将来想跟进 26 时改成 ubuntu-26.04 即可。
 # ============================================
 name: docker-publish
 
@@ -46,7 +57,7 @@ env:
 jobs:
   # ---------- 生成一个「日期 + 短 SHA」的发布 tag，供回滚使用 ----------
   meta:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.v.outputs.tag }}
     steps:
@@ -56,11 +67,11 @@ jobs:
   # ==================== 后端 ====================
   backend:
     needs: meta
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 凭证未配置时不报红：打一条 warning 直接跳过，配置好 Secrets 后重跑即可
       - id: creds
@@ -76,17 +87,17 @@ jobs:
           fi
 
       - if: steps.creds.outputs.ok == 'true'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - if: steps.creds.outputs.ok == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY_HOST }}
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
 
       - if: steps.creds.outputs.ok == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: . # 仓库根：Dockerfile 依赖根 pom + .mvn + 各模块 pom
           file: astral-server/Dockerfile
@@ -104,11 +115,11 @@ jobs:
   # ==================== 前端 ====================
   frontend:
     needs: meta
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: creds
         env:
@@ -123,17 +134,17 @@ jobs:
           fi
 
       - if: steps.creds.outputs.ok == 'true'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - if: steps.creds.outputs.ok == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY_HOST }}
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
 
       - if: steps.creds.outputs.ok == 'true'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: astral-front
           file: astral-front/Dockerfile
