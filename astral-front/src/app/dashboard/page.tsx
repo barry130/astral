@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   Activity,
+  Coffee,
   Cpu,
   Database,
   Gauge,
@@ -13,6 +14,7 @@ import {
   Radio,
   TrendingDown,
   TrendingUp,
+  Zap,
 } from 'lucide-react';
 
 import { monitorApi, DashboardOverviewDTO } from '@/api/monitor';
@@ -48,6 +50,16 @@ function formatNumber(n?: number | null): string {
   return (n ?? 0).toLocaleString('zh-CN');
 }
 
+/** 可空字节数 → 可读格式；null 显示破折号（与「0 B」区分：前者是取不到，后者是真的空） */
+function formatSize(bytes?: number | null): string {
+  return bytes === null || bytes === undefined ? '—' : formatBytes(bytes);
+}
+
+/** 可空耗时（毫秒）；null 显示破折号 */
+function formatMs(ms?: number | null): string {
+  return ms === null || ms === undefined ? '—' : `${ms} ms`;
+}
+
 /* ------------------------------ 状态配色 ------------------------------ */
 
 interface Tone {
@@ -58,6 +70,7 @@ interface Tone {
 }
 
 const TONE_NORMAL: Tone = { text: 'text-foreground', bar: 'bg-primary' };
+const TONE_SUCCESS: Tone = { text: 'text-emerald-600', bar: 'bg-emerald-500' };
 const TONE_WARN: Tone = { text: 'text-amber-600', bar: 'bg-amber-500' };
 const TONE_DANGER: Tone = { text: 'text-destructive', bar: 'bg-destructive' };
 
@@ -71,10 +84,10 @@ function usageTone(usage: number, warn: number, danger: number): Tone {
   return TONE_NORMAL;
 }
 
-/** 接口成功率配色：越高越好，阈值方向与使用率相反 */
-function successRateTone(rate: number): Tone {
-  if (rate >= 99) return { text: 'text-emerald-600', bar: 'bg-emerald-500' };
-  if (rate >= 95) return TONE_WARN;
+/** 比率型指标配色（成功率、命中率等）：越高越好，阈值方向与使用率相反 */
+function ratioTone(rate: number, good: number, warn: number): Tone {
+  if (rate >= good) return TONE_SUCCESS;
+  if (rate >= warn) return TONE_WARN;
   return TONE_DANGER;
 }
 
@@ -236,6 +249,27 @@ function DetailBlock({ label, value, hint }: { label: string; value: React.React
   );
 }
 
+/**
+ * 外部依赖连通性徽标
+ * @param available true 正常 / false 异常 / null 未配置（三者文案不同，避免把「没配」误报成「故障」）
+ */
+function StatusBadge({ available }: { available: boolean | null | undefined }) {
+  if (available === null || available === undefined) {
+    return <span className="text-xs font-normal text-muted-foreground/70">未配置</span>;
+  }
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-xs font-normal',
+        available ? 'text-emerald-600' : 'text-destructive',
+      )}
+    >
+      <span className={cn('size-1.5 rounded-full', available ? 'bg-emerald-500' : 'bg-destructive')} />
+      {available ? '连接正常' : '连接异常'}
+    </span>
+  );
+}
+
 /* ------------------------------ 页面组件 ------------------------------ */
 
 /**
@@ -293,6 +327,8 @@ export default function DashboardPage() {
   const today = data?.today;
   const yesterday = data?.yesterday;
   const apiSummary = data?.api;
+  const database = data?.database;
+  const redis = data?.redis;
 
   const cpuUsage = system?.cpuUsage ?? 0;
   const memoryUsage = system?.memoryUsage ?? 0;
@@ -300,7 +336,18 @@ export default function DashboardPage() {
   const activeConnections = business?.activeConnections ?? null;
 
   const successRate = Number(apiSummary?.successRate ?? 0);
-  const rateTone = successRateTone(successRate);
+  const rateTone = ratioTone(successRate, 99, 95);
+
+  /** 连接池水位 = 活跃 / 上限。上限取不到（非 Hikari 或池未初始化）时为 0，前端不画进度条 */
+  const poolUsage =
+    database?.maxConnections && database.maxConnections > 0
+      ? ((database.activeConnections ?? 0) / database.maxConnections) * 100
+      : 0;
+  const poolTone = usageTone(poolUsage, 70, 90);
+
+  /** Redis 命中率：服务刚起、尚无读写记录时为 null，此时不画进度条 */
+  const hitRate = redis?.hitRate ?? null;
+  const hitTone = hitRate === null ? TONE_NORMAL : ratioTone(hitRate, 90, 70);
 
   return (
     <div>
@@ -446,7 +493,7 @@ export default function DashboardPage() {
         <Card className="fade-in-up stagger-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[15px]">
-              <Database className="size-4 text-muted-foreground" />
+              <Coffee className="size-4 text-muted-foreground" />
               JVM 监控
             </CardTitle>
           </CardHeader>
@@ -476,6 +523,117 @@ export default function DashboardPage() {
             <InfoRow label="JDK 版本">{jvm?.jdkVersion || '—'}</InfoRow>
             <InfoRow label="JVM 名称">{jvm?.jvmName || '—'}</InfoRow>
             <InfoRow label="线程总数">{formatNumber(system?.threadCount)}</InfoRow>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 外部依赖：数据库 / Redis */}
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="fade-in-up stagger-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-[15px]">
+              <Database className="size-4 text-muted-foreground" />
+              数据库
+              <span className="ml-auto">
+                <StatusBadge available={database?.available} />
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              {database?.productName
+                ? `${database.productName}${database.productVersion ? ` ${database.productVersion}` : ''}`
+                : '—'}
+              {database?.poolName && (
+                <span className="ml-2 text-xs text-muted-foreground/70">连接池 {database.poolName}</span>
+              )}
+            </div>
+
+            <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[13px] text-muted-foreground">连接池水位</span>
+                <span className={cn('text-lg font-semibold tabular-nums', poolTone.text)}>
+                  {formatNumber(database?.activeConnections)} / {formatNumber(database?.maxConnections)}
+                </span>
+              </div>
+              <Progress
+                value={poolUsage}
+                className="mt-2 h-1.5"
+                indicatorClassName={cn('transition-all', poolTone.bar)}
+              />
+              <div className="mt-3 flex justify-between text-xs text-muted-foreground">
+                <span>空闲 {formatNumber(database?.idleConnections)}</span>
+                <span>总计 {formatNumber(database?.totalConnections)}</span>
+                <span className={cn((database?.waitingThreads ?? 0) > 0 && 'text-amber-600')}>
+                  等待 {formatNumber(database?.waitingThreads)}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <DetailBlock label="数据量" value={formatSize(database?.databaseSize)} />
+              <DetailBlock label="探测耗时" value={formatMs(database?.pingMs)} hint="含取连接 + 一次查询" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="fade-in-up stagger-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-[15px]">
+              <Zap className="size-4 text-muted-foreground" />
+              Redis
+              <span className="ml-auto">
+                <StatusBadge available={redis?.available} />
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              {redis?.version ? `v${redis.version}` : '—'}
+              {redis?.mode && <span className="ml-2 text-xs text-muted-foreground/70">{redis.mode}</span>}
+              {redis?.databaseIndex !== null && redis?.databaseIndex !== undefined && (
+                <span className="ml-2 text-xs text-muted-foreground/70">DB {redis.databaseIndex}</span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <DetailBlock
+                label="内存占用"
+                value={formatSize(redis?.usedMemory)}
+                hint={`峰值 ${formatSize(redis?.usedMemoryPeak)}`}
+              />
+              <DetailBlock
+                label="Key 数量"
+                value={formatNumber(redis?.totalKeys)}
+                hint={`客户端 ${formatNumber(redis?.connectedClients)}`}
+              />
+            </div>
+
+            <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[13px] text-muted-foreground">缓存命中率</span>
+                <span className={cn('text-lg font-semibold tabular-nums', hitTone.text)}>
+                  {hitRate === null ? '—' : `${hitRate.toFixed(2)}%`}
+                </span>
+              </div>
+              {hitRate !== null && (
+                <Progress
+                  value={hitRate}
+                  className="mt-2 h-1.5"
+                  indicatorClassName={cn('transition-all', hitTone.bar)}
+                />
+              )}
+              <div className="mt-3 flex justify-between text-xs text-muted-foreground">
+                <span>命中 {formatNumber(redis?.keyspaceHits)}</span>
+                <span>未命中 {formatNumber(redis?.keyspaceMisses)}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground/80">
+              <span>每秒 {formatNumber(redis?.instantaneousOpsPerSec)} 命令</span>
+              <span>碎片率 {redis?.memFragmentationRatio ?? '—'}</span>
+              <span>探测 {formatMs(redis?.pingMs)}</span>
+            </div>
           </CardContent>
         </Card>
       </div>

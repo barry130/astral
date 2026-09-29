@@ -141,6 +141,7 @@ curl http://localhost:27000/api/v1/admin/system/user/list \
 - JVM 监控（堆内存、GC、线程数）
 - 业务指标监控（序列配置数、活跃连接数）
 - 站点统计（PV/访客/活跃设备/错误次数、接口调用成功率）
+- 外部依赖监控（数据库连接池水位与容量、Redis 内存与命中率）
 - 集成 Micrometer + Prometheus
 
 ### API 接口

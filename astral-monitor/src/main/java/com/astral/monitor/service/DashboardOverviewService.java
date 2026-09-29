@@ -1,22 +1,29 @@
 package com.astral.monitor.service;
 
 import com.astral.monitor.dto.DashboardOverviewDTO;
+import com.astral.monitor.dto.DatabaseMonitorDTO;
 import com.astral.monitor.dto.DeviceOverviewDTO;
+import com.astral.monitor.dto.RedisMonitorDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 仪表盘总览聚合服务
  * <p>
- * 把首页所需的三类数据（系统资源 / JVM / 业务与统计）聚合成一次请求返回：
+ * 把首页所需的各类数据聚合成一次请求返回：
  * <ul>
  *   <li>系统资源、JVM：走 {@link SystemMonitorService}、{@link JvmMonitorService}，纯 JMX 读取，无 IO</li>
  *   <li>业务规模：走 {@link BusinessMonitorService}，一次 count + 容器线程数</li>
  *   <li>今日/昨日概览、接口汇总：复用 {@link StatReportService}，与统计报表页口径完全一致</li>
+ *   <li>数据库、Redis：走 {@link DatabaseMonitorService}、{@link RedisMonitorService}，
+ *       是本次聚合中仅有的外部 IO，各自带 3 秒超时并并发执行</li>
  * </ul>
  * </p>
  * <p>
@@ -35,10 +42,18 @@ public class DashboardOverviewService {
     /** 全平台口径，与统计报表页默认值一致 */
     private static final String UT_ALL = "all";
 
+    /**
+     * 外部依赖探测执行器（虚拟线程）。
+     * <p>数据库与 Redis 探测各自带 3 秒超时，这里让两者并发执行 —— 串行时最坏会叠加到 6 秒。</p>
+     */
+    private static final ExecutorService PROBE_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
+
     private final SystemMonitorService systemMonitorService;
     private final JvmMonitorService jvmMonitorService;
     private final BusinessMonitorService businessMonitorService;
     private final StatReportService statReportService;
+    private final DatabaseMonitorService databaseMonitorService;
+    private final RedisMonitorService redisMonitorService;
 
     /**
      * 聚合首页仪表盘全部数据
@@ -58,6 +73,15 @@ public class DashboardOverviewService {
         dto.setYesterday(deviceOverview.get("yesterday"));
 
         dto.setApi(statReportService.getApiTop(today, API_SUMMARY_ONLY_LIMIT).getSummary());
+
+        // 外部依赖探测：两个 Service 内部各自带 3 秒超时，这里再并发执行，
+        // 避免串行叠加耗时（最坏情况 3s + 3s）
+        CompletableFuture<DatabaseMonitorDTO> databaseFuture =
+                CompletableFuture.supplyAsync(databaseMonitorService::getDatabaseInfo, PROBE_EXECUTOR);
+        CompletableFuture<RedisMonitorDTO> redisFuture =
+                CompletableFuture.supplyAsync(redisMonitorService::getRedisInfo, PROBE_EXECUTOR);
+        dto.setDatabase(databaseFuture.join());
+        dto.setRedis(redisFuture.join());
 
         return dto;
     }

@@ -172,7 +172,7 @@ astral/
 
 | 模块 | 路径 | 说明 |
 |------|------|------|
-| 系统监控 | `/api/v1/admin/monitor/**` | CPU/内存/JVM/业务指标 |
+| 系统监控 | `/api/v1/admin/monitor/**` | CPU/内存/JVM/数据库/Redis/业务指标 |
 
 ### 插件与其他
 

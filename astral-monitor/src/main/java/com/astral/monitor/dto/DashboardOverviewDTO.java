@@ -27,4 +27,8 @@ public class DashboardOverviewDTO {
     private DeviceOverviewDTO yesterday;
     /** 今日接口调用汇总（调用量/成功/失败/成功率） */
     private ApiTopSummaryDTO api;
+    /** 数据库运行状况（连接池水位/版本/容量/探测耗时） */
+    private DatabaseMonitorDTO database;
+    /** Redis 运行状况（内存/key 数/命中率/客户端数） */
+    private RedisMonitorDTO redis;
 }
