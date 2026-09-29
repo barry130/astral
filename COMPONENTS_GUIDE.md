@@ -139,13 +139,15 @@ curl http://localhost:27000/api/v1/admin/system/user/list \
 
 - 系统监控（CPU、内存、磁盘、网络）
 - JVM 监控（堆内存、GC、线程数）
-- 业务指标监控（QPS、响应时间、错误率）
+- 业务指标监控（序列配置数、活跃连接数）
+- 站点统计（PV/访客/活跃设备/错误次数、接口调用成功率）
 - 集成 Micrometer + Prometheus
 
 ### API 接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| GET | `/api/v1/admin/monitor/dashboard` | 仪表盘总览（首页聚合，一次返回全部） |
 | GET | `/api/v1/admin/monitor/system` | 系统资源状态 |
 | GET | `/api/v1/admin/monitor/jvm` | JVM 状态 |
 | GET | `/api/v1/admin/monitor/business` | 业务指标 |
@@ -284,6 +286,7 @@ astral-server (Web 层, 入口)
 
 | 方法 | 路径 | 说明 | 需要认证 |
 |------|------|------|----------|
+| GET | `/api/v1/admin/monitor/dashboard` | 仪表盘总览（首页聚合） | ✅ |
 | GET | `/api/v1/admin/monitor/system` | 系统监控 | ✅ |
 | GET | `/api/v1/admin/monitor/jvm` | JVM 监控 | ✅ |
 | GET | `/api/v1/admin/monitor/business` | 业务监控 | ✅ |

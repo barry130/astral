@@ -2,9 +2,11 @@ package com.astral.monitor.api;
 
 import com.astral.common.result.Result;
 import com.astral.monitor.dto.BusinessMonitorDTO;
+import com.astral.monitor.dto.DashboardOverviewDTO;
 import com.astral.monitor.dto.JvmMonitorDTO;
 import com.astral.monitor.dto.SystemMonitorDTO;
 import com.astral.monitor.service.BusinessMonitorService;
+import com.astral.monitor.service.DashboardOverviewService;
 import com.astral.monitor.service.JvmMonitorService;
 import com.astral.monitor.service.SystemMonitorService;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +15,12 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 监控控制器
  * <p>
- * 提供系统监控相关的REST接口，包括系统监控、JVM监控、业务监控。
+ * 提供系统监控相关的REST接口，包括系统监控、JVM监控、业务监控、仪表盘总览。
  * 接口路径前缀：{@code /api/v1/admin/monitor}
+ * </p>
+ * <p>
+ * 首页仪表盘请优先使用 {@code GET /dashboard}：一次返回全部所需数据，
+ * 其余三个接口保留给需要单独取某类指标的调用方。
  * </p>
  */
 @RestController
@@ -27,6 +33,22 @@ public class MonitorController {
     private final JvmMonitorService jvmMonitorService;
     /** 业务监控服务 */
     private final BusinessMonitorService businessMonitorService;
+    /** 仪表盘聚合服务 */
+    private final DashboardOverviewService dashboardOverviewService;
+
+    /**
+     * 获取仪表盘总览（首页专用聚合接口）
+     * <p>
+     * 一次返回系统资源、JVM、业务规模、今日/昨日设备概览与今日接口调用汇总，
+     * 替代首页原先并发调用五个接口的做法。
+     * </p>
+     *
+     * @return 仪表盘总览数据
+     */
+    @GetMapping("/dashboard")
+    public Result<DashboardOverviewDTO> getDashboard() {
+        return Result.success(dashboardOverviewService.getOverview());
+    }
 
     /**
      * 获取系统监控信息
@@ -57,7 +79,7 @@ public class MonitorController {
     /**
      * 获取业务监控信息
      * <p>
-     * 返回序列生成总数、QPS、配置数量等业务指标。
+     * 返回序列配置数量、活跃连接数等业务指标。
      * </p>
      *
      * @return 业务监控数据

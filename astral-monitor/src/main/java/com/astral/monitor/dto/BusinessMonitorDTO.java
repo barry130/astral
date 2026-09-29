@@ -5,20 +5,20 @@ import lombok.Data;
 /**
  * 业务监控数据传输对象
  * <p>
- * 封装业务级别的监控指标，包括序列生成统计、配置数量等。
- * 由 {@link com.astral.monitor.service.BusinessMonitorService} 生成并返回。
+ * 封装业务级别的监控指标，由 {@link com.astral.monitor.service.BusinessMonitorService}
+ * 生成并返回。
+ * </p>
+ * <p>
+ * 说明：原 sequenceGenerationTotal / sequenceGenerationQps 取自进程内
+ * {@code SequenceMetrics} 计数器，服务重启即清零，且序列生成本身是低频操作，
+ * QPS 长期在 0~1 抖动，无监控价值，已移除；
+ * cacheHitRatio 从未实现（项目无统一缓存层），一并移除。
  * </p>
  */
 @Data
 public class BusinessMonitorDTO {
-    /** 序列生成总数 */
-    private Long sequenceGenerationTotal;
-    /** 序列生成QPS（每秒查询数） */
-    private Double sequenceGenerationQps;
-    /** 缓存命中率（百分比） */
-    private Double cacheHitRatio;
-    /** 活跃连接数 */
-    private Integer activeConnections;
     /** 序列配置数量 */
     private Long configCount;
+    /** 当前活跃请求线程数（Tomcat busy threads），获取失败时为 null */
+    private Integer activeConnections;
 }
