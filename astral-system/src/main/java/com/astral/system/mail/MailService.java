@@ -22,4 +22,17 @@ public interface MailService {
 
     /** 后台测试发送：使用指定账户向指定邮箱发送一封测试邮件 */
     void testSend(Long accountId, String toEmail);
+
+    // ==================== 缓存失效（管理端写路径调用） ====================
+    // 发送路径的授权/模板/启用账户读取走 60s 进程内缓存（见 MailServiceImpl），
+    // 对应管理端 CRUD 完成后必须调用以下方法立即失效，避免最长 60s 的配置延迟。
+
+    /** 失效启用账户缓存：账户 新增/更新/删除/启停 后调用 */
+    void evictAccountCache();
+
+    /** 失效模板缓存：模板 新增/更新/删除 后调用 */
+    void evictTemplateCache();
+
+    /** 失效插件授权缓存：插件授权 新增/更新/删除 后调用 */
+    void evictPluginAuthCache();
 }

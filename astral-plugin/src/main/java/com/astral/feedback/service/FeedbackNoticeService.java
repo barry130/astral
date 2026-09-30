@@ -12,12 +12,15 @@ import com.astral.feedback.mapper.SysNoticeMapper;
 import com.astral.system.service.SysConfigService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -44,6 +47,22 @@ public class FeedbackNoticeService {
 
     /** 管理端角色编码：拥有该角色的用户接收管理侧通知（新反馈/用户回复） */
     private static final String ROLE_CODE_ADMIN = "ADMIN";
+
+    /** 生效通知原始行缓存键（单键，全端共用一份） */
+    private static final String CACHE_KEY_ACTIVE = "activeNotices";
+
+    /**
+     * is_show=1 通知原始行的进程内缓存（单键，TTL 60s）。
+     * <p>App/PC/Web 三端启动通知轮询共用 {@link #listForChannel} 这条读路径，
+     * 原先每次请求都全量 selectList。过滤链（渠道/时间窗/版本/人群/点对点）
+     * 全部在内存完成，缓存实体只读不写。所有写入（管理端 CRUD + 反馈事件
+     * 触发的点对点通知 insert）都调用 {@link #evictNoticeCache()} 立即失效，
+     * 收件人不受 TTL 延迟。</p>
+     */
+    private final Cache<String, List<SysNotice>> noticeCache = Caffeine.newBuilder()
+            .maximumSize(4)
+            .expireAfterWrite(Duration.ofSeconds(60))
+            .build();
 
     @Resource
     private SysNoticeMapper sysNoticeMapper;
@@ -105,17 +124,9 @@ public class FeedbackNoticeService {
      */
     public List<SysNotice> listForChannel(List<String> targets, String appVersion, boolean loggedIn, Long userId) {
         LocalDateTime retentionFrom = retentionFrom();
-        LambdaQueryWrapper<SysNotice> qw = new LambdaQueryWrapper<>();
-        qw.eq(SysNotice::getIsShow, 1L);
-        // 保留期：announce 不受限；其余类型仅最近 N 天（N=0/空=不限）
-        if (retentionFrom != null) {
-            qw.and(w -> w.eq(SysNotice::getNoticeType, SysNotice.TYPE_ANNOUNCE)
-                    .or().ge(SysNotice::getCreateTime, retentionFrom));
-        }
-        qw.orderByDesc(SysNotice::getIsTop).orderByDesc(SysNotice::getCreateTime);
         // 渠道匹配刻意放在 Java 侧：channel 是多值逗号列，用 LIKE 会误命中（新平台值可能互为子串），
         // 用数据库数组/分隔符函数又绑死方言；公告表数据量小，全量取回后精确匹配更稳。
-        List<SysNotice> all = sysNoticeMapper.selectList(qw);
+        List<SysNotice> all = listActiveNotices(retentionFrom);
 
         return all.stream()
                 .filter(n -> NoticeChannel.matches(n.getChannel(), targets))
@@ -124,6 +135,26 @@ public class FeedbackNoticeService {
                 .filter(n -> audienceMatches(n.getAudience(), loggedIn))
                 .filter(n -> n.getUserId() == null || (userId != null && userId.equals(n.getUserId())))
                 .collect(Collectors.toList());
+    }
+
+    /** is_show=1（含保留期窗口）的原始通知行：单键进程内缓存，写路径主动失效 + 60s TTL 兜底 */
+    private List<SysNotice> listActiveNotices(LocalDateTime retentionFrom) {
+        return noticeCache.get(CACHE_KEY_ACTIVE, k -> {
+            LambdaQueryWrapper<SysNotice> qw = new LambdaQueryWrapper<>();
+            qw.eq(SysNotice::getIsShow, 1L);
+            // 保留期：announce 不受限；其余类型仅最近 N 天（N=0/空=不限）
+            if (retentionFrom != null) {
+                qw.and(w -> w.eq(SysNotice::getNoticeType, SysNotice.TYPE_ANNOUNCE)
+                        .or().ge(SysNotice::getCreateTime, retentionFrom));
+            }
+            qw.orderByDesc(SysNotice::getIsTop).orderByDesc(SysNotice::getCreateTime);
+            return sysNoticeMapper.selectList(qw);
+        });
+    }
+
+    /** 任何通知写入（管理端 CRUD / 反馈事件触发）后调用：立即失效生效通知缓存 */
+    public void evictNoticeCache() {
+        noticeCache.invalidateAll();
     }
 
     /**
@@ -229,6 +260,7 @@ public class FeedbackNoticeService {
         notice.setCreateTime(LocalDateTime.now());
         notice.setUpdateTime(LocalDateTime.now());
         sysNoticeMapper.insert(notice);
+        evictNoticeCache();
         return notice;
     }
 
@@ -243,11 +275,13 @@ public class FeedbackNoticeService {
         }
         notice.setUpdateTime(LocalDateTime.now());
         sysNoticeMapper.updateById(notice);
+        evictNoticeCache();
     }
 
     /** 删除通知（物理删） */
     public void delete(Long id) {
         sysNoticeMapper.deleteById(id);
+        evictNoticeCache();
     }
 
     // ==================== 通知触发（异步） ====================
@@ -275,6 +309,7 @@ public class FeedbackNoticeService {
             n.setAudience("ALL");
             sysNoticeMapper.insert(fillDefault(n));
             log.info("[FeedbackPlugin] 状态变更通知已生成 feedbackId={}, userId={}", feedbackId, userId);
+            evictNoticeCache();
         } catch (Exception e) {
             log.warn("[FeedbackPlugin] 状态变更通知生成失败: {}", e.getMessage());
         }
@@ -295,6 +330,7 @@ public class FeedbackNoticeService {
             n.setAudience("ALL");
             sysNoticeMapper.insert(fillDefault(n));
             log.info("[FeedbackPlugin] 公开发布通知已生成 feedbackId={}, userId={}", feedbackId, userId);
+            evictNoticeCache();
         } catch (Exception e) {
             log.warn("[FeedbackPlugin] 公开发布通知生成失败: {}", e.getMessage());
         }
@@ -315,6 +351,7 @@ public class FeedbackNoticeService {
             n.setAudience("ALL");
             sysNoticeMapper.insert(fillDefault(n));
             log.info("[FeedbackPlugin] 管理员回复通知已生成 feedbackId={}, userId={}", feedbackId, userId);
+            evictNoticeCache();
         } catch (Exception e) {
             log.warn("[FeedbackPlugin] 管理员回复通知生成失败: {}", e.getMessage());
         }
@@ -336,6 +373,7 @@ public class FeedbackNoticeService {
                 n.setAudience("ALL");
                 sysNoticeMapper.insert(fillDefault(n));
             }
+            evictNoticeCache();
             log.info("[FeedbackPlugin] 用户回复通知已群发 ADMIN 角色 feedbackId={}", feedbackId);
         } catch (Exception e) {
             log.warn("[FeedbackPlugin] 用户回复通知生成失败: {}", e.getMessage());
@@ -359,6 +397,7 @@ public class FeedbackNoticeService {
                 n.setAudience("ALL");
                 sysNoticeMapper.insert(fillDefault(n));
             }
+            evictNoticeCache();
             log.info("[FeedbackPlugin] 新反馈通知已群发 ADMIN 角色 feedbackId={}", feedbackId);
         } catch (Exception e) {
             log.warn("[FeedbackPlugin] 新反馈通知生成失败: {}", e.getMessage());

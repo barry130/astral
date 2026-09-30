@@ -7,7 +7,6 @@ import com.astral.storage.entity.StorageConfigEntity;
 import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.entity.StorageFolderEntity;
 import com.astral.storage.entity.StorageTaskEntity;
-import com.astral.storage.mapper.StorageConfigMapper;
 import com.astral.storage.mapper.StorageFileMapper;
 import com.astral.storage.mapper.StorageTaskMapper;
 import com.astral.storage.security.StorageUrlSigner;
@@ -63,7 +62,8 @@ public class StorageFileService {
 
     private final StorageFileMapper fileMapper;
     private final StorageTaskMapper taskMapper;
-    private final StorageConfigMapper configMapper;
+    /** 服务端内部配置读取走共享缓存（StorageConfigCache），配置写入由 StorageConfigService 统一失效 */
+    private final StorageConfigCache configCache;
     private final StorageFolderService folderService;
     private final StorageAuditService auditService;
     private final UploadTicketService ticketService;
@@ -236,7 +236,7 @@ public class StorageFileService {
             // 登记时配额复查（签发与登记之间的窗口；FAILED 行不计入，见 UploadPolicyService）
             policyService.checkDailyQuota(folder, policy, ticketUploader);
         }
-        StorageConfigEntity config = configMapper.selectById(ticket.path("configId").asLong());
+        StorageConfigEntity config = configCache.getById(ticket.path("configId").asLong());
         if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
             throw new BusinessException("STORAGE002");
         }
@@ -341,7 +341,7 @@ public class StorageFileService {
         try {
             String providerType = providerTypeOf(file);
             if (ProviderSupport.isServerManagedFamily(providerType)) {
-                StorageConfigEntity config = configMapper.selectById(file.getStorageConfigId());
+                StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
                 if (config != null) {
                     deleteObjectByProvider(providerType, config, locatorKey(file));
                 }
@@ -365,7 +365,7 @@ public class StorageFileService {
 
     /** 拉取文件内容（limit>0 时按 Range 只取前缀；-1 全量，大小已被登记 HEAD 收口） */
     private byte[] fetchContentBytes(StorageFileEntity file, int limit) throws Exception {
-        StorageConfigEntity config = configMapper.selectById(file.getStorageConfigId());
+        StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
         if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
             throw new BusinessException("STORAGE002");
         }
@@ -474,7 +474,7 @@ public class StorageFileService {
         if (!uploader && !adminExempt) {
             folderService.requirePermission(userId, file.getFolderId(), "READ");
         }
-        StorageConfigEntity config = configMapper.selectById(file.getStorageConfigId());
+        StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
         if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
             throw new BusinessException("STORAGE002");
         }
@@ -536,7 +536,7 @@ public class StorageFileService {
         if (!StorageFileEntity.VISIBILITY_PUBLIC.equals(file.getVisibility())) {
             throw new BusinessException("STORAGE019", "永久链接仅对公开文件开放，请先将文件设为公开");
         }
-        StorageConfigEntity config = configMapper.selectById(file.getStorageConfigId());
+        StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
         if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
             throw new BusinessException("STORAGE002");
         }
@@ -602,7 +602,7 @@ public class StorageFileService {
         }
         String providerType = providerTypeOf(file);
         if (ProviderSupport.isServerManagedFamily(providerType)) {
-            StorageConfigEntity config = configMapper.selectById(file.getStorageConfigId());
+            StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
             if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
                 throw new BusinessException("STORAGE002");
             }

@@ -3,6 +3,7 @@ package com.astral.system.controller;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SysMailPluginAuth;
+import com.astral.system.mail.MailService;
 import com.astral.system.mail.SysMailPluginAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +25,9 @@ public class MailPluginAuthController {
 
     private final SysMailPluginAuthService pluginAuthService;
 
+    /** 发送路径的授权读取走 60s 进程内缓存，写完必须失效 */
+    private final MailService mailService;
+
     @Operation(summary = "列表")
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/list")
@@ -36,6 +40,7 @@ public class MailPluginAuthController {
     @PostMapping
     public Result<Void> create(@RequestBody SysMailPluginAuth entity) {
         pluginAuthService.save(entity);
+        mailService.evictPluginAuthCache();
         return Result.success();
     }
 
@@ -45,6 +50,7 @@ public class MailPluginAuthController {
     public Result<Void> update(@PathVariable Long id, @RequestBody SysMailPluginAuth entity) {
         entity.setId(id);
         pluginAuthService.updateById(entity);
+        mailService.evictPluginAuthCache();
         return Result.success();
     }
 
@@ -53,6 +59,7 @@ public class MailPluginAuthController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         pluginAuthService.removeById(id);
+        mailService.evictPluginAuthCache();
         return Result.success();
     }
 }

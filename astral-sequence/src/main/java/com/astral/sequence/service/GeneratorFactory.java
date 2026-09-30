@@ -14,6 +14,8 @@ import com.astral.sequence.generator.SequenceGenerator;
 import com.astral.sequence.generator.SimpleGenerator;
 import com.astral.sequence.generator.SnowflakeGenerator;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +67,19 @@ public class GeneratorFactory {
     private final SequenceAsyncWriter sequenceAsyncWriter;
 
     /**
+     * 序列配置进程内缓存（key=bizKey，TTL 60s）。
+     * <p>实体 ID 自动填充（SequenceMetaObjectHandler）每次 INSERT 都会经
+     * {@link #next} 取一次配置，原先每行插入都要 {@code selectByBizKey} 一轮库；
+     * 显式序列接口同理。配置行在运行期几乎不变（仅管理端 SequenceConfigController
+     * 会改），其写路径调用 {@link #evictConfigCache()} 立即失效，TTL 60s 兜底。
+     * 缓存实体只读不写。</p>
+     */
+    private final Cache<String, SequenceConfig> configCache = Caffeine.newBuilder()
+            .maximumSize(1000)
+            .expireAfterWrite(Duration.ofSeconds(60))
+            .build();
+
+    /**
      * Redis 生成器（可选）
      * <p>
      * 使用 @Autowired(required = false) 注入，因为 Redis 生成器是条件加载的。
@@ -104,7 +120,7 @@ public class GeneratorFactory {
      * @return 生成的序列号
      */
     public long next(String bizKey, String type) {
-        // 获取或自动创建业务键的配置，首次使用时会自动初始化
+        // 获取或自动创建业务键的配置（读路径走 60s 进程内缓存；不存在时首次会自动建行并回填缓存）
         SequenceConfig config = getOrCreateConfig(bizKey, type);
         // 确定实际使用的类型：优先使用配置中的类型，否则使用默认类型
         String actualType = normalizeType(config.getSequenceType() != null ? config.getSequenceType() : defaultType);
@@ -233,7 +249,7 @@ public class GeneratorFactory {
                 throw new BusinessException("SEQ006", bizKey, "SEGMENT", requestedType);
             }
         }
-        SequenceConfig config = configMapper.selectByBizKey(bizKey);
+        SequenceConfig config = configCache.get(bizKey, k -> configMapper.selectByBizKey(k));
         if (config == null) {
             // 配置不存在，自动创建
             config = new SequenceConfig();
@@ -243,6 +259,7 @@ public class GeneratorFactory {
             config.setCreateTime(LocalDateTime.now());
             config.setUpdateTime(LocalDateTime.now());
             configMapper.insert(config);
+            configCache.put(bizKey, config);
             log.info("Auto created config for bizKey: {}, type: {}", bizKey, config.getSequenceType());
         } else {
             // 配置已存在，校验类型是否一致
@@ -253,6 +270,15 @@ public class GeneratorFactory {
             }
         }
         return config;
+    }
+
+    /**
+     * 失效序列配置缓存。
+     * <p>管理端 SequenceConfigController 的 create/update/delete/toggle 等任何
+     * 直接改 sequence_config 的写操作完成后必须调用，否则新配置最长延迟 60s 生效。</p>
+     */
+    public void evictConfigCache() {
+        configCache.invalidateAll();
     }
 
     /**

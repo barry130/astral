@@ -12,6 +12,7 @@ import java.util.List;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -84,6 +85,7 @@ public class DictDataController {
      */
     @Operation(summary = "按字典编码查询字典数据")
     @GetMapping("/byCode")
+    @Cacheable(value = "dictData", key = "#code")
     public Result<List<DictData>> byCode(@RequestParam("code") String code) {
         return Result.success(dictDataService.listByCode(code));
     }

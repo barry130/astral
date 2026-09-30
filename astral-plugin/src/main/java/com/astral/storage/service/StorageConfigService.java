@@ -54,6 +54,10 @@ public class StorageConfigService {
     @Resource
     private UpyunApiService upyunApiService;
 
+    /** 服务端内部的配置读取缓存（文件操作/默认配置解析），写路径本类负责失效 */
+    @Resource
+    private StorageConfigCache configCache;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<StorageConfigEntity> listAll() {
@@ -81,12 +85,9 @@ public class StorageConfigService {
         return config;
     }
 
-    /** 解析默认启用的存储配置（STORAGE004） */
+    /** 解析默认启用的存储配置（STORAGE004）：高频读（QtMediaService 每次上传），走进程内缓存 */
     public StorageConfigEntity requireDefaultEnabled() {
-        StorageConfigEntity config = configMapper.selectOne(new LambdaQueryWrapper<StorageConfigEntity>()
-                .eq(StorageConfigEntity::getIsDefault, 1)
-                .eq(StorageConfigEntity::getStatus, StorageConfigEntity.STATUS_ENABLED)
-                .last("LIMIT 1"));
+        StorageConfigEntity config = configCache.getDefaultEnabled();
         if (config == null) {
             throw new BusinessException("STORAGE004");
         }
@@ -120,6 +121,7 @@ public class StorageConfigService {
         config.setCreateBy(operator);
         config.setUpdateBy(operator);
         configMapper.insert(config);
+        configCache.evictAll();
         auditService.record("CONFIG_CREATE", "USER", operator, "CONFIG", String.valueOf(config.getId()),
                 "name=" + config.getName() + " provider=" + providerType, "OK");
         return redactSecret(config);
@@ -147,6 +149,7 @@ public class StorageConfigService {
         config.setUpdateBy(operator);
         config.setHealthStatus(StorageConfigEntity.HEALTH_UNKNOWN);
         configMapper.updateById(config);
+        configCache.evictAll();
         auditService.record("CONFIG_UPDATE", "USER", operator, "CONFIG", String.valueOf(id), null, "OK");
         return redactSecret(config);
     }
@@ -159,6 +162,7 @@ public class StorageConfigService {
             throw new BusinessException("COMMON002", "该配置仍被 " + fileCount + " 个文件引用，无法删除");
         }
         configMapper.deleteById(id);
+        configCache.evictAll();
         auditService.record("CONFIG_DELETE", "USER", operator, "CONFIG", String.valueOf(id),
                 "name=" + config.getName(), "OK");
     }
@@ -172,6 +176,7 @@ public class StorageConfigService {
         configMapper.update(null, new LambdaUpdateWrapper<StorageConfigEntity>()
                 .eq(StorageConfigEntity::getId, id)
                 .set(StorageConfigEntity::getIsDefault, 1));
+        configCache.evictAll();
         auditService.record("CONFIG_SET_DEFAULT", "USER", operator, "CONFIG", String.valueOf(id), null, "OK");
     }
 
@@ -230,6 +235,7 @@ public class StorageConfigService {
         config.setLastTestMessage(message);
         config.setUpdateBy(operator);
         configMapper.updateById(config);
+        configCache.evictAll();
         auditService.record("CONFIG_TEST", "USER", operator, "CONFIG", String.valueOf(id), message, health);
         return new StorageDtos.ConfigTestResp(health, message, botUsername);
     }

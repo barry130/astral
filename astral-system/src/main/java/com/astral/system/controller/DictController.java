@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -61,6 +62,7 @@ public class DictController {
     @Operation(summary = "创建")
     @RequiresPermission("admin:system:dict:edit")
     @PostMapping
+    @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> create(@RequestBody DictData entity) {
         dictDataService.save(entity);
         return Result.success();
@@ -76,6 +78,7 @@ public class DictController {
     @Operation(summary = "更新")
     @RequiresPermission("admin:system:dict:edit")
     @PutMapping("/{id}")
+    @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictData entity) {
         entity.setId(id);
         dictDataService.updateById(entity);
@@ -91,6 +94,7 @@ public class DictController {
     @Operation(summary = "删除")
     @RequiresPermission("admin:system:dict:edit")
     @DeleteMapping("/{id}")
+    @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {
         dictDataService.removeById(id);
         return Result.success();

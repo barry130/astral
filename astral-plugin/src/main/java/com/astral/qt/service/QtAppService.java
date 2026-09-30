@@ -6,10 +6,14 @@ import com.astral.qt.entity.QtAppUpdate;
 import com.astral.qt.mapper.QtAppNoticeMapper;
 import com.astral.qt.mapper.QtAppUpdateMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -25,6 +29,19 @@ public class QtAppService {
 
     @Resource
     private QtAppUpdateMapper updateMapper;
+
+    /**
+     * 版本更新表按平台维度的进程内缓存（key=type，TTL 60s）。
+     * <p>App 启动轮询 {@code /api/v1/app/update} 与 {@code /api/v1/app/version/check}
+     * 是全量高频读，原先每个请求都打一轮 qt_app_update 查询（/update 还按渠道逐条 selectOne）。
+     * 这里缓存该平台下的<b>全量行</b>（含未发布——getOfficialVersion 官方校验刻意不过滤
+     * is_published），渠道/版本过滤在内存完成；后台版本 CRUD 后由 {@link #evictUpdateCache()}
+     * 主动失效，TTL 60s 兜底。缓存的实体只读不写，序列化直出。</p>
+     */
+    private final Cache<Long, List<QtAppUpdate>> updateCache = Caffeine.newBuilder()
+            .maximumSize(16)
+            .expireAfterWrite(Duration.ofSeconds(60))
+            .build();
 
     /** 获取展示中的公告列表 */
     public QtDataVo<List<QtAppNotice>> getNotice() {
@@ -90,27 +107,35 @@ public class QtAppService {
             log.warn("[QtPlugin] 版本号格式错误: {}", version);
             return null;
         }
-        List<QtAppUpdate> list = updateMapper.selectList(
-                new LambdaQueryWrapper<QtAppUpdate>()
-                        .eq(QtAppUpdate::getType, type)
-                        .eq(QtAppUpdate::getVersionCode, versionCode)
-                        .eq(QtAppUpdate::getVersionName, versionName)
-                        .last("LIMIT 1")
-        );
-        return list.isEmpty() ? null : list.get(0);
+        List<QtAppUpdate> list = listUpdatesByType(type);
+        QtAppUpdate official = list.stream()
+                .filter(u -> u.getVersionCode() != null && u.getVersionCode() == versionCode
+                        && versionName != null && versionName.equals(u.getVersionName()))
+                .findFirst()
+                .orElse(null);
+        return official;
     }
 
-    /** 查询指定渠道、高于当前版本、<b>已发布(is_published=1)</b> 的最新一条 */
+    /** 查询指定渠道、高于当前版本、<b>已发布(is_published=1)</b> 的最新一条（进程内缓存 + 内存过滤） */
     private QtAppUpdate findLatest(Long type, long versionCode, String channel) {
-        return updateMapper.selectOne(
-                new LambdaQueryWrapper<QtAppUpdate>()
-                        .eq(QtAppUpdate::getType, type)
-                        .eq(QtAppUpdate::getChannel, channel)
-                        .eq(QtAppUpdate::getIsPublished, 1)
-                        .gt(QtAppUpdate::getVersionCode, versionCode)
-                        .orderByDesc(QtAppUpdate::getVersionCode)
-                        .last("LIMIT 1")
-        );
+        return listUpdatesByType(type).stream()
+                .filter(u -> channel.equals(u.getChannel())
+                        && Integer.valueOf(1).equals(u.getIsPublished())
+                        && u.getVersionCode() != null
+                        && u.getVersionCode() > versionCode)
+                .max(Comparator.comparing(QtAppUpdate::getVersionCode))
+                .orElse(null);
+    }
+
+    /** 该平台的全量版本行（含未发布），带进程内缓存；后台 CRUD 主动失效，TTL 60s 兜底 */
+    private List<QtAppUpdate> listUpdatesByType(Long type) {
+        return updateCache.get(type, t -> updateMapper.selectList(
+                new LambdaQueryWrapper<QtAppUpdate>().eq(QtAppUpdate::getType, t)));
+    }
+
+    /** 后台版本更新 CRUD 后调用：失效全平台版本缓存（QtAdminController 写接口） */
+    public void evictUpdateCache() {
+        updateCache.invalidateAll();
     }
 
     /** 取两个更新中版本号更大的一个（相同版本号时优先 beta；任一为空则取另一个） */

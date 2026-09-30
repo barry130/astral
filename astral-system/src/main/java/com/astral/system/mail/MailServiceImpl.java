@@ -10,6 +10,8 @@ import com.astral.dao.mapper.SysMailLogMapper;
 import com.astral.dao.mapper.SysMailPluginAuthMapper;
 import com.astral.dao.mapper.SysMailTemplateMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
 
+import java.time.Duration;
 import jakarta.mail.internet.MimeMessage;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -75,6 +78,31 @@ public class MailServiceImpl implements MailService {
      */
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
+
+    // ==================== 进程内只读缓存（TTL 60s，管理端写路径主动失效） ====================
+    // 每次发信原先要打 3 轮 sys_mail_* 表（插件授权/模板/启用账户），验证码等高频场景全部缓存；
+    // 缓存条目只读不写，MailAccount/MailTemplate/MailPluginAuth 控制器的写操作调用 evict* 立即失效。
+
+    /** 启用账户缓存键（单键） */
+    private static final String KEY_ENABLED_ACCOUNTS = "enabled";
+
+    /** 插件发信授权（key=pluginId） */
+    private final Cache<String, SysMailPluginAuth> pluginAuthCache = Caffeine.newBuilder()
+            .maximumSize(64)
+            .expireAfterWrite(Duration.ofSeconds(60))
+            .build();
+
+    /** 邮件模板（key=templateCode） */
+    private final Cache<String, SysMailTemplate> templateCache = Caffeine.newBuilder()
+            .maximumSize(128)
+            .expireAfterWrite(Duration.ofSeconds(60))
+            .build();
+
+    /** 启用中的发信账户（单键） */
+    private final Cache<String, List<SysMailAccount>> enabledAccountsCache = Caffeine.newBuilder()
+            .maximumSize(4)
+            .expireAfterWrite(Duration.ofSeconds(60))
+            .build();
 
     /**
      * 原子占用一次发信额度
@@ -152,9 +180,9 @@ public class MailServiceImpl implements MailService {
 
     @Override
     public void send(String pluginId, String toEmail, String templateCode, Map<String, String> variables) {
-        // 1. 插件发信授权校验
-        SysMailPluginAuth auth = pluginAuthMapper.selectOne(
-                new LambdaQueryWrapper<SysMailPluginAuth>().eq(SysMailPluginAuth::getPluginId, pluginId));
+        // 1. 插件发信授权校验（缓存 60s，插件授权写操作主动失效）
+        SysMailPluginAuth auth = pluginAuthCache.get(pluginId, k -> pluginAuthMapper.selectOne(
+                new LambdaQueryWrapper<SysMailPluginAuth>().eq(SysMailPluginAuth::getPluginId, k)));
         if (auth == null || auth.getEnabled() == null || auth.getEnabled() != 1) {
             throw new BusinessException("MAIL003", pluginId);
         }
@@ -165,10 +193,10 @@ public class MailServiceImpl implements MailService {
                 throw new BusinessException("MAIL006", templateCode);
             }
         }
-        // 3. 模板校验
+        // 3. 模板校验（缓存 60s）
         //    必须先于「占额度」：模板不存在属于参数错误，不该白扣一次发信配额。
-        SysMailTemplate tpl = templateMapper.selectOne(
-                new LambdaQueryWrapper<SysMailTemplate>().eq(SysMailTemplate::getTemplateCode, templateCode));
+        SysMailTemplate tpl = templateCache.get(templateCode, k -> templateMapper.selectOne(
+                new LambdaQueryWrapper<SysMailTemplate>().eq(SysMailTemplate::getTemplateCode, k)));
         if (tpl == null) {
             throw new BusinessException("MAIL002", templateCode);
         }
@@ -193,6 +221,24 @@ public class MailServiceImpl implements MailService {
         }
     }
 
+    /** 失效启用账户缓存：MailAccountController 的 create/update/delete/toggle 后调用 */
+    @Override
+    public void evictAccountCache() {
+        enabledAccountsCache.invalidateAll();
+    }
+
+    /** 失效模板缓存：MailTemplateController 的 create/update/delete 后调用 */
+    @Override
+    public void evictTemplateCache() {
+        templateCache.invalidateAll();
+    }
+
+    /** 失效插件授权缓存：MailPluginAuthController 的 create/update/delete 后调用 */
+    @Override
+    public void evictPluginAuthCache() {
+        pluginAuthCache.invalidateAll();
+    }
+
     @Override
     public void testSend(Long accountId, String toEmail) {
         SysMailAccount acc = accountMapper.selectById(accountId);
@@ -214,8 +260,8 @@ public class MailServiceImpl implements MailService {
 
     private void sendWithAccount(String toEmail, String subject, String content,
                                  String pluginId, String scene) {
-        List<SysMailAccount> enabled = accountMapper.selectList(
-                new LambdaQueryWrapper<SysMailAccount>().eq(SysMailAccount::getEnabled, 1));
+        List<SysMailAccount> enabled = enabledAccountsCache.get(KEY_ENABLED_ACCOUNTS, k -> accountMapper.selectList(
+                new LambdaQueryWrapper<SysMailAccount>().eq(SysMailAccount::getEnabled, 1)));
         if (enabled == null || enabled.isEmpty()) {
             throw new BusinessException("MAIL001");
         }

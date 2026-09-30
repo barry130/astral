@@ -13,6 +13,7 @@ import com.astral.qt.entity.QtGithubAccel;
 import com.astral.qt.dto.vo.QtGithubAccelProbeVo;
 import com.astral.qt.mapper.QtAppNoticeMapper;
 import com.astral.qt.mapper.QtAppUpdateMapper;
+import com.astral.qt.service.QtAppService;
 import com.astral.qt.service.QtGithubAccelService;
 import com.astral.qt.service.QtSourceService;
 
@@ -56,6 +57,10 @@ public class QtAdminController {
 
     @Resource
     private QtAppUpdateMapper qtUpdateMapper;
+
+    /** App 端版本更新读取走进程内缓存，后台写完必须失效 */
+    @Resource
+    private QtAppService appService;
 
     @Resource
     private QtDakaService dakaService;
@@ -175,6 +180,7 @@ public class QtAdminController {
         update.setCreateTime(LocalDateTime.now());
         update.setUpdateTime(LocalDateTime.now());
         qtUpdateMapper.insert(update);
+        appService.evictUpdateCache();
         return QtRestResp.success(update);
     }
 
@@ -202,6 +208,7 @@ public class QtAdminController {
         }
         update.setUpdateTime(LocalDateTime.now());
         qtUpdateMapper.updateById(update);
+        appService.evictUpdateCache();
         return QtRestResp.success();
     }
 
@@ -290,6 +297,7 @@ public class QtAdminController {
     @DeleteMapping("/updates/{id}")
     public QtRestResp<Void> deleteUpdate(@PathVariable Long id) {
         qtUpdateMapper.deleteById(id);
+        appService.evictUpdateCache();
         return QtRestResp.success();
     }
 

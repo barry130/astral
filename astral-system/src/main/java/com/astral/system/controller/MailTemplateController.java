@@ -3,6 +3,7 @@ package com.astral.system.controller;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SysMailTemplate;
+import com.astral.system.mail.MailService;
 import com.astral.system.mail.SysMailTemplateService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,9 @@ public class MailTemplateController {
 
     private final SysMailTemplateService templateService;
 
+    /** 发送路径的模板读取走 60s 进程内缓存，写完必须失效 */
+    private final MailService mailService;
+
     @Operation(summary = "分页查询")
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/page")
@@ -45,6 +49,7 @@ public class MailTemplateController {
     @PostMapping
     public Result<Void> create(@RequestBody SysMailTemplate entity) {
         templateService.save(entity);
+        mailService.evictTemplateCache();
         return Result.success();
     }
 
@@ -54,6 +59,7 @@ public class MailTemplateController {
     public Result<Void> update(@PathVariable Long id, @RequestBody SysMailTemplate entity) {
         entity.setId(id);
         templateService.updateById(entity);
+        mailService.evictTemplateCache();
         return Result.success();
     }
 
@@ -62,6 +68,7 @@ public class MailTemplateController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         templateService.removeById(id);
+        mailService.evictTemplateCache();
         return Result.success();
     }
 

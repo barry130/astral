@@ -64,6 +64,7 @@ public class MailAccountController {
     @PostMapping
     public Result<Void> create(@RequestBody SysMailAccount entity) {
         accountService.save(entity);
+        mailService.evictAccountCache();
         return Result.success();
     }
 
@@ -118,6 +119,7 @@ public class MailAccountController {
         }
         wrapper.set(SysMailAccount::getUpdateTime, LocalDateTime.now());
         wrapper.update();
+        mailService.evictAccountCache();
         return Result.success();
     }
 
@@ -126,6 +128,7 @@ public class MailAccountController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         accountService.removeById(id);
+        mailService.evictAccountCache();
         return Result.success();
     }
 
@@ -139,6 +142,7 @@ public class MailAccountController {
                 .set(SysMailAccount::getEnabled, enabled)
                 .set(SysMailAccount::getUpdateTime, LocalDateTime.now())
                 .update();
+        mailService.evictAccountCache();
         return Result.success();
     }
 

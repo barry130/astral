@@ -76,7 +76,7 @@ public class DictTypeController {
     @Operation(summary = "创建")
     @RequiresPermission("admin:system:dict:edit")
     @PostMapping
-    @CacheEvict(value = "dictType", allEntries = true)
+    @CacheEvict(cacheNames = {"dictType", "dictData"}, allEntries = true)
     public Result<Void> create(@RequestBody DictType entity) {
         dictTypeService.save(entity);
         return Result.success();
@@ -92,7 +92,7 @@ public class DictTypeController {
     @Operation(summary = "更新")
     @RequiresPermission("admin:system:dict:edit")
     @PutMapping("/{id}")
-    @CacheEvict(value = "dictType", allEntries = true)
+    @CacheEvict(cacheNames = {"dictType", "dictData"}, allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictType entity) {
         entity.setId(id);
         dictTypeService.updateById(entity);
@@ -108,7 +108,7 @@ public class DictTypeController {
     @Operation(summary = "删除")
     @RequiresPermission("admin:system:dict:edit")
     @DeleteMapping("/{id}")
-    @CacheEvict(value = "dictType", allEntries = true)
+    @CacheEvict(cacheNames = {"dictType", "dictData"}, allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {
         dictTypeService.removeById(id);
         return Result.success();

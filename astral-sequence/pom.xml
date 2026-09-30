@@ -57,5 +57,11 @@
             <artifactId>redisson-spring-boot-starter</artifactId>
             <optional>true</optional>
         </dependency>
+
+        <!-- GeneratorFactory 序列配置读取的进程内缓存 -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
     </dependencies>
 </project>

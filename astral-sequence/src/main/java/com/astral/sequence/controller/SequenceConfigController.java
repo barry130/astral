@@ -8,6 +8,7 @@ import com.astral.dao.entity.SequenceStatistics;
 import com.astral.dao.mapper.SequenceConfigMapper;
 import com.astral.dao.mapper.SequenceStatisticsMapper;
 import com.astral.log.annotation.OperateLog;
+import com.astral.sequence.service.GeneratorFactory;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -36,6 +37,8 @@ public class SequenceConfigController {
     private final SequenceStatisticsMapper statisticsMapper;
     /** 实体 ID 全局序列提供者（用于内置序列保护） */
     private final com.astral.sequence.config.EntityIdSequenceProvider entityIdSequenceProvider;
+    /** 取号路径的配置读取走 60s 进程内缓存，管理端写完必须失效 */
+    private final GeneratorFactory generatorFactory;
 
     /**
      * 校验是否为系统内置序列
@@ -145,6 +148,7 @@ public class SequenceConfigController {
             config.setEnabled(true);
         }
         sequenceConfigMapper.insert(config);
+        generatorFactory.evictConfigCache();
         return Result.success(config);
     }
 
@@ -168,6 +172,7 @@ public class SequenceConfigController {
         config.setId(id);
         config.setUpdateTime(java.time.LocalDateTime.now());
         sequenceConfigMapper.updateById(config);
+        generatorFactory.evictConfigCache();
         return Result.success(config);
     }
 
@@ -184,6 +189,7 @@ public class SequenceConfigController {
         SequenceConfig existing = sequenceConfigMapper.selectById(id);
         assertNotSystemSequence(existing, "SEQ008");
         sequenceConfigMapper.deleteById(id);
+        generatorFactory.evictConfigCache();
         return Result.success();
     }
 
@@ -209,6 +215,7 @@ public class SequenceConfigController {
         config.setEnabled(enabled);
         config.setUpdateTime(java.time.LocalDateTime.now());
         sequenceConfigMapper.updateById(config);
+        generatorFactory.evictConfigCache();
         return Result.success();
     }
 }

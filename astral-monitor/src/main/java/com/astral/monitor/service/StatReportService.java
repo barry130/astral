@@ -15,16 +15,20 @@ import com.astral.monitor.dto.ErrorSummaryDTO;
 import com.astral.monitor.dto.TrendDTO;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * 统计报表查询服务（六个报表接口）
@@ -56,9 +60,39 @@ public class StatReportService {
     private final StatApiHourlyMapper statApiHourlyMapper;
 
     /**
+     * 报表聚合读缓存（key=接口+参数，TTL 60s）。
+     * <p>仪表盘/统计页六个报表接口全部是按日聚合查询（COUNT/SUM/Top/GroupBy），
+     * 同一日期+过滤条件在一分钟内重复打开页面时结果完全一致，原先每次都全量打库。
+     * ut/version 先经 {@link #normalize} 归一再进 key，"all"/""/null 合并为同一条目。
+     * 分页错误明细（getErrorPage）不缓存。缓存值为 DTO/Map，控制器只序列化不修改。
+     * 统计为近实时口径（分钟级上报 + 聚合任务），60s 延迟可接受。</p>
+     */
+    private final Cache<String, Object> reportCache = Caffeine.newBuilder()
+            .maximumSize(500)
+            .expireAfterWrite(Duration.ofSeconds(60))
+            .build();
+
+    /** 参数键片段：null/"all"/"" 统一成 "*"，其余 trim 后原样 */
+    private static String keyPart(String value) {
+        String norm = normalize(value);
+        return norm == null ? "*" : norm;
+    }
+
+    /** 读穿透包装：60s 内同参数直接命中缓存 */
+    @SuppressWarnings("unchecked")
+    private <T> T cached(String key, Supplier<T> loader) {
+        return (T) reportCache.get(key, k -> loader.get());
+    }
+
+    /**
      * 设备统计概览（今日 vs 昨日）
      */
     public Map<String, DeviceOverviewDTO> getOverview(LocalDate date, String ut, String version) {
+        return cached("ov:" + date + ":" + keyPart(ut) + ":" + keyPart(version),
+                () -> getOverviewDirect(date, ut, version));
+    }
+
+    private Map<String, DeviceOverviewDTO> getOverviewDirect(LocalDate date, String ut, String version) {
         Map<String, DeviceOverviewDTO> result = new HashMap<>(4);
         result.put("date", null);
         DeviceOverviewDTO today = buildOverview(date, ut, version);
@@ -113,6 +147,15 @@ public class StatReportService {
      * 24 小时趋势（今日 vs 昨日，补零）
      */
     public TrendDTO getTrend(String metric, LocalDate date, String ut, String version) {
+        String column = METRIC_COLUMNS.get(metric);
+        if (column == null) {
+            throw new IllegalArgumentException("不支持的指标: " + metric);
+        }
+        return cached("tr:" + metric + ":" + date + ":" + keyPart(ut) + ":" + keyPart(version),
+                () -> getTrendDirect(metric, date, ut, version));
+    }
+
+    private TrendDTO getTrendDirect(String metric, LocalDate date, String ut, String version) {
         String column = METRIC_COLUMNS.get(metric);
         if (column == null) {
             throw new IllegalArgumentException("不支持的指标: " + metric);
@@ -181,6 +224,11 @@ public class StatReportService {
      * </p>
      */
     public ApiTopResultDTO getApiTop(LocalDate date, int limit, String ut, String version) {
+        return cached("top:" + date + ":" + limit + ":" + keyPart(ut) + ":" + keyPart(version),
+                () -> getApiTopDirect(date, limit, ut, version));
+    }
+
+    private ApiTopResultDTO getApiTopDirect(LocalDate date, int limit, String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
         String utFilter = normalize(ut);
@@ -216,6 +264,12 @@ public class StatReportService {
      */
     public Map<String, List<Long>> getApiTrend(String uri, String method, LocalDate date,
                                               String ut, String version) {
+        return cached("apitr:" + uri + ":" + method + ":" + date + ":" + keyPart(ut) + ":" + keyPart(version),
+                () -> getApiTrendDirect(uri, method, date, ut, version));
+    }
+
+    private Map<String, List<Long>> getApiTrendDirect(String uri, String method, LocalDate date,
+                                                      String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
         List<Map<String, Object>> rows = statApiHourlyMapper.selectApiTrend(
@@ -266,6 +320,11 @@ public class StatReportService {
      * 错误分组汇总（按 fingerprint）
      */
     public List<ErrorSummaryDTO> getErrorSummary(LocalDate date, String ut, String version) {
+        return cached("err:" + date + ":" + keyPart(ut) + ":" + keyPart(version),
+                () -> getErrorSummaryDirect(date, ut, version));
+    }
+
+    private List<ErrorSummaryDTO> getErrorSummaryDirect(LocalDate date, String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
         List<Map<String, Object>> rows = statErrorLogMapper.selectErrorSummary(
@@ -294,6 +353,10 @@ public class StatReportService {
      * </p>
      */
     public List<String> getVersions(String ut) {
+        return cached("ver:" + keyPart(ut), () -> getVersionsDirect(ut));
+    }
+
+    private List<String> getVersionsDirect(String ut) {
         if (isAll(ut)) {
             return List.of();
         }
