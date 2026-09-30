@@ -136,7 +136,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<Result<?>> handleHttpRequestMethodNotSupported(HttpRequestMethodNotSupportedException e) {
         log.warn("Method not supported: {}", e.getMessage());
-        Result<?> body = Result.error("COMMON005", "不支持的请求方法: " + e.getMethod());
+        Result<?> body = Result.errorRaw("COMMON005", "不支持的请求方法: " + e.getMethod());
         body.setCode(HttpStatus.METHOD_NOT_ALLOWED.value());
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(body);
     }
