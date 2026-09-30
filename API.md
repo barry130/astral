@@ -319,6 +319,13 @@
 | GET | `/unread-count` | 未读数 |
 | POST | `/read-ack` | 已读回执（body：`{ids:[]}`） |
 
+> **投放平台识别（老客户端兼容）**：三个查询接口都按
+> `X-App-Ut` 头 → 遗留 `X-Platform` 头 → `channel` 查询参数 → 缺省 App 的顺序解析，
+> 详见 `NoticeChannel.resolveTargets`。新客户端只发统一平台头即可；
+> 老客户端写死的 `channel=app|pc|web|all` 继续被识别
+> （`app`→Android+iOS、`pc`→Windows、`web`→Web、`all`→不限平台），
+> 三者皆空时回落 Android+iOS（等价于旧的 `channel=app` 缺省）。
+
 ### 9.3 管理端反馈 `/api/v1/admin/feedback`（宿主管理员）
 | 方法 | URL | 作用 |
 |---|---|---|
@@ -341,3 +348,7 @@
 
 > 状态机：`pending提出 → received已接收 → resolved已解决 → published已发布`；任意状态→`deprecated已废弃`；已废弃可转回任意状态。
 > 通知类型：`issue` 反馈映射为 `feedback`，`request` 反馈映射为 `request`。
+> 通知渠道 `channel`：**逗号分隔的投放平台集合**，取值与 `stat_platform` 同源
+> （`app-android` / `app-ios` / `app-windows` / `web`），另有 `all` = 不限平台。
+> 分页的 `channel` 参数支持多选（逗号分隔，逐项「包含」匹配）；
+> 存量遗留值 `app` / `pc` 仍可提交，落库时分别归一为 `app-android,app-ios` / `app-windows`。

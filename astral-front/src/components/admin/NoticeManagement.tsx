@@ -198,7 +198,7 @@ export default function NoticeManagement() {
   const columns = useMemo(() => [
     { title: 'ID', dataIndex: 'id', width: 80 },
     {
-      title: '渠道', dataIndex: 'channel', width: 190,
+      title: '渠道', dataIndex: 'channel', width: 230,
       render: (v: string) => {
         const parts = (v || '').split(',').map((s) => s.trim()).filter(Boolean);
         if (!parts.length) return <Tag>未指定</Tag>;

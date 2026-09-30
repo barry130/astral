@@ -181,8 +181,17 @@ public class FeedbackNoticeService {
         LambdaQueryWrapper<SysNotice> qw = new LambdaQueryWrapper<>();
         List<String> channelFilters = NoticeChannel.parseFilter(channel);
         if (!channelFilters.isEmpty()) {
-            // 多值列没法用等值匹配；平台值之间互不为子串，用 OR LIKE 作为筛选近似（管理端筛选，非权限判定）
-            qw.and(w -> channelFilters.forEach(f -> w.or().like(SysNotice::getChannel, f)));
+            // 多值列没法用等值匹配；平台值之间互不为子串，用 OR LIKE 作为筛选近似（管理端筛选，非权限判定）。
+            // 首个条件不加 or()，避免生成以 OR 开头的非法片段。
+            qw.and(w -> {
+                for (int i = 0; i < channelFilters.size(); i++) {
+                    if (i == 0) {
+                        w.like(SysNotice::getChannel, channelFilters.get(i));
+                    } else {
+                        w.or().like(SysNotice::getChannel, channelFilters.get(i));
+                    }
+                }
+            });
         }
         if (noticeType != null && !noticeType.isBlank()) {
             qw.eq(SysNotice::getNoticeType, noticeType);
