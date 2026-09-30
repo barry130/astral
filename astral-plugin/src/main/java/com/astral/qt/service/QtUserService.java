@@ -7,6 +7,7 @@ import cn.hutool.crypto.digest.BCrypt;
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.User;
 import com.astral.auth.registry.AppUserRoleService;
+import com.astral.auth.service.UserLoginMarker;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.qt.common.QtException;
 import com.astral.qt.dto.QtChangePwByEmailDto;
@@ -23,6 +24,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -69,10 +71,23 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
     @Resource
     private AppUserRoleService appUserRoleService;
 
+    /** 登录/活跃标记：登录与注册自动登录时回写 sys_user.login_time/login_ip */
+    @Resource
+    private UserLoginMarker userLoginMarker;
+
     private static final Duration CODE_TTL = Duration.ofMinutes(10);
     private static final Duration RATE_TTL = Duration.ofSeconds(60);
     private static final String CODE_KEY = "qt:email:code:";
     private static final String RATE_KEY = "qt:email:ratelimit:";
+
+    /**
+     * 比对占位令牌后删除频控 key：只有 key 里存的还是「本次占位写入的令牌」才删。
+     * 发送若耗时超过频控 TTL（多账户 SMTP 超时累计可达分钟级），key 已过期并被
+     * 另一次发送重新占位，无条件 delete 会误删别人的窗口；令牌比对后误删不可能发生。
+     */
+    private static final DefaultRedisScript<Long> RELEASE_RATE_LIMIT_SCRIPT = new DefaultRedisScript<>(
+            "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0",
+            Long.class);
 
     // ==================== 登录/注册（统一走宿主 sys_user + Sa-Token） ====================
 
@@ -103,6 +118,9 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         // App 用户注册只填用户名/密码时可没有昵称，不兜底会导致这类账号完全无法登录。
         StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         String token = StpUtil.getTokenValue();
+
+        // 回写最后登录时间与来源 IP（App 用户 login_time 此前恒为 NULL，无法做不活跃筛选）
+        userLoginMarker.mark(user.getId());
 
         QtUserInfoVo vo = new QtUserInfoVo();
         vo.setToken(token);
@@ -156,6 +174,9 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         // 同上：注册时 nickname 常为空，直接 set(null) 会 NPE 导致注册接口 500
         StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         String token = StpUtil.getTokenValue();
+
+        // 注册自动登录同样视为一次登录：回写 login_time/login_ip
+        userLoginMarker.mark(user.getId());
 
         QtUserInfoVo vo = new QtUserInfoVo();
         vo.setToken(token);
@@ -217,9 +238,13 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
             throw new QtException("当前邮箱不在系统中");
         }
 
-        // 发送频率限制：同一邮箱同一业务 60 秒内只能发一次（Redis 计数器）
+        // 发送频率限制：同一邮箱同一业务 60 秒内只能发一次。
+        // 必须用 setIfAbsent 原子占位：原实现是 hasKey 判断后再 set，两次操作之间存在窗口，
+        // 并发/重放时两个请求都能通过判重，导致同一邮箱短时间内连发多封（可被刷爆邮件额度）。
+        // 占位值用一次性令牌（而不是常量 "1"），失败释放时按令牌比对，见 RELEASE_RATE_LIMIT_SCRIPT。
         String rateK = RATE_KEY + dto.getEmail() + ":" + dto.getBody();
-        if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(rateK))) {
+        String rateToken = UUID.randomUUID().toString();
+        if (!Boolean.TRUE.equals(stringRedisTemplate.opsForValue().setIfAbsent(rateK, rateToken, RATE_TTL))) {
             throw new QtException("发送过于频繁，请1分钟后再试");
         }
 
@@ -228,15 +253,26 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         // 委托系统邮件服务发送（插件授权/每日限额/随机账户/模板渲染/记录落库 均在系统侧完成）
         try {
             mailService.send("qt", dto.getEmail(), dto.getBody(), Map.of("code", code));
-            // 发送成功后才落库验证码与频控标记（TTL 各自控制有效期/频控窗口）
+            // 发送成功后才落库验证码（TTL 控制有效期）；频控窗口已在上面原子占位
             stringRedisTemplate.opsForValue().set(CODE_KEY + dto.getEmail() + ":" + dto.getBody(), code, CODE_TTL);
-            stringRedisTemplate.opsForValue().set(rateK, "1", RATE_TTL);
             log.info("[QtPlugin] 邮箱验证码已发送: email={}, body={}", dto.getEmail(), dto.getBody());
         } catch (BusinessException e) {
+            // 未发出去就释放频控窗口，避免把用户无谓地锁 60 秒（保持「只有成功发送才占用窗口」的原语义）
+            releaseRateLimit(rateK, rateToken);
             throw new QtException(e.getMessage());
         } catch (Exception e) {
+            releaseRateLimit(rateK, rateToken);
             log.error("[QtPlugin] 邮箱验证码发送失败: email={}", dto.getEmail(), e);
             throw new QtException("邮件发送失败，请稍后重试");
+        }
+    }
+
+    /** 释放邮箱发送频控窗口（发送失败时调用）；失败只记日志，不影响主流程异常抛出 */
+    private void releaseRateLimit(String rateK, String rateToken) {
+        try {
+            stringRedisTemplate.execute(RELEASE_RATE_LIMIT_SCRIPT, List.of(rateK), rateToken);
+        } catch (Exception e) {
+            log.warn("[QtPlugin] 频控窗口释放失败: {}", e.getMessage());
         }
     }
 

@@ -1,6 +1,7 @@
 package com.astral.log.controller;
 
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.LoginLog;
 import com.astral.log.service.LoginLogService;
 import com.astral.common.result.Result;
@@ -36,7 +37,7 @@ public class LoginLogController {
     @GetMapping("/page")
     public Result<Page<LoginLog>> page(@RequestParam(defaultValue = "1") Integer pageNum,
                                                @RequestParam(defaultValue = "10") Integer pageSize) {
-        Page<LoginLog> page = new Page<>(pageNum, pageSize);
+        Page<LoginLog> page = new Page<>(PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize));
         return Result.success(loginLogService.page(page));
     }
 

@@ -39,6 +39,9 @@
 | 20261001004 | `V20261001004__permission_cleanup_legacy_codes.sql` | 清理「端前缀迁移」期间被注册器重新插回的旧码（无前缀 + 无角色引用）。记录了一个真实时序陷阱：迁移先于代码生效时，旧代码启动会补插一批无引用孤儿行（id ≥ 1000001），使权限管理页条目翻倍 | 执行 |
 | 20261001005 | `V20261001005__app_user_role_and_permissions.sql` | 新增 App 端默认角色 `APP_USER`（`is_super=0`，持有全部 `user:` 前缀权限），并回填所有 `user_type='APP'` 存量用户。后续新增 `user:` 权限由 `AppUserRoleInitializer` 启动时自动补授，无需再写迁移；管理员可移除（移除后该用户 App 端接口 403，属预期） | 执行 |
 | 20261001006 | `V20261001006__cleanup_orphan_unprefixed_permissions.sql` | 再次清理无端前缀孤儿权限。与 20261001004 删除条件**完全一致**（无前缀 + 无角色引用），作为幂等收尾：任何未来的混合态部署都能在下次启动时自动收敛干净 | 执行 |
+| 20261001007 | `V20261001007__notice_channel_platform_multi.sql` | 通知渠道 `sys_notice.channel` 值域对齐统计平台并支持多选（逗号分隔，如 `app-android,app-ios`；`all`=不限）。旧值 `app`→`app-android,app-ios`、`pc`→`app-windows` 存量迁移，老客户端继续识别旧值。iOS 字典行用 `COALESCE(MAX(id),0)+1` + `NOT EXISTS` 取号（初版写死 9123 会撞 20261001003 的 menu_type 行、必然失败；修正发生在**部署前**，该版本从未应用到任何库，本地开发库跑的已是修正版） | 执行 |
+| 20261001008 | `V20261001008__daka_unique_and_stat_error_composite_index.sql` | ① `qt_user_daka` 建 `(uid,data)` 唯一索引（先清存量重复行，堵住并发双签到/积分翻倍）；② 统计错误表补 `(fingerprint,occur_time)` 复合索引并退役被其左前缀覆盖的旧单列 `idx_stat_error_fingerprint`。①整段带 `to_regclass` 守卫：全新空库（init.sql 流程 / `astral.plugins.qt.enabled=false`）下 Flyway 先于 `QtSchemaInitializer` 执行、`qt_user_daka` 尚不存在，此时跳过，唯一索引由 `qt-schema.sql` 的 `IF NOT EXISTS` 兜底。⚠️ 本地开发库若曾应用**初版** V08（2026-09-30 18:33 前后启动过、当时文件尚无守卫段），需 `flyway repair` 或删除 history 中 20261001008 行让其幂等重跑 | 执行 |
+| 20261001009 | `V20261001009__app_user_revoke_data_permissions.sql` | **修复：APP_USER 误持范围权限**。20261001005 按 `user:` 前缀全量授权未排除 `type=5`（DATA），端前缀重命名后 `user:qt:update:channel:beta` / `user:qt:source:channel:beta` 被批发给所有 App 用户（测试版全员可见）。本脚本收回 APP_USER 名下全部 DATA 授权；配套 `syncPermissions()` 改为只授 `type=API` 并每次启动收回 DATA。⚠️ 与该代码**同一次部署** | 执行 |
 
 ## 命名规范
 

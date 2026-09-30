@@ -148,6 +148,11 @@ Controller 方法/类
    for (channel : channels) picked = max(picked, findLatest(type, versionCode, channel))
 ```
 
+**beta 资格的授予来源**：范围权限（`type=DATA`）是投放资格，**只能由管理员按人/按角色授予**
+（如 `TESTER` 角色）；`APP_USER` 默认角色只批发 `type=API` 的接口权限，`syncPermissions()`
+每次启动还会主动收回 APP_USER 名下的 DATA 权限（V20261001009 修复的正是按 `user:` 前缀
+全量授权时把 beta 资一并批发给全部 App 用户的缺陷）。
+
 正确性：
 
 | 场景 | 无权限用户 | 有测试权限用户 |
@@ -211,8 +216,9 @@ Controller 方法/类
 | `V20261001001__permission_code_side_prefix.sql` | 权限码加「端」段（原地改写，id 不变）；`sys_menu.permission` 同步加前缀 |
 | `V20261001003__menu_type_dict.sql` | `menu_type` 数据字典（0目录/1菜单/2按钮），与 `permission_type` 相互独立 |
 | `V20261001004__permission_cleanup_legacy_codes.sql` | 清理混合态部署期间被注册器补插的无前缀孤儿码（无前缀 + 无角色引用） |
-| `V20261001005__app_user_role_and_permissions.sql` | 新增 `APP_USER` 角色（持有全部 `user:` 权限）并回填 `user_type='APP'` 存量用户 |
+| `V20261001005__app_user_role_and_permissions.sql` | 新增 `APP_USER` 角色（持有全部 `user:` 权限）并回填 `user_type='APP'` 存量用户。⚠️ 本脚本按前缀全量授权未排除 `type=DATA`，端前缀重命名后把两个 beta 资格误批发给全体 App 用户，由 `V20261001009` 修复 |
 | `V20261001006__cleanup_orphan_unprefixed_permissions.sql` | 与 20261001004 同条件的幂等收尾清理 |
+| `V20261001009__app_user_revoke_data_permissions.sql` | **修复 APP_USER 误持范围权限**：收回其名下全部 `type=DATA` 授权（beta 资格回归管理员按人授予）；配套 `syncPermissions()` 改为只授 `type=API` 并每次启动收回 DATA。**与代码同一次部署** |
 
 **升级须知（重要）**：
 1. `V20260930003` **不向任何角色授权**。这些接口在重构前完全没有校验（任何登录管理员可操作），

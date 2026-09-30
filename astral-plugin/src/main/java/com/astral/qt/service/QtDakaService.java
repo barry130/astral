@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -92,7 +93,14 @@ public class QtDakaService extends ServiceImpl<QtUserDakaMapper, QtUserDaka> {
         daka.setIsUseCode(Long.valueOf(dto.getType()));
         daka.setCreateTime(java.time.LocalDateTime.now());
         daka.setUpdateTime(java.time.LocalDateTime.now());
-        this.save(daka);
+        try {
+            this.save(daka);
+        } catch (DuplicateKeyException e) {
+            // 幂等兜底：上面的 monthDays.contains 只是快路径，双击/重放/并发时两个请求
+            // 都能通过判重。真正的互斥由 uk_qt_daka_uid_data 唯一索引保证，这里把冲突
+            // 转成与预检一致的业务提示，避免重复计分（积分与连续天数翻倍）。
+            throw new QtException("该日期已经签到过了哦，无法继续签到~");
+        }
     }
 
     public QtDakaDaysAndCodeVo getDakaDaysAndCode(Long uid) {

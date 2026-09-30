@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { toast } from 'sonner';
 import { Card,
   Row,
   Col,
@@ -115,7 +116,12 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
   const [yesterday, setYesterday] = useState<DayOverview>();
   const [trend, setTrend] = useState<{ hours: string[]; today: number[]; yesterday: number[] }>();
 
-  const fetchData = useCallback(async () => {
+  /**
+   * 拉取设备统计概览 + 趋势
+   * <p>isAlive 由 effect 注入：返回时若已被更新的请求取代（或组件已卸载）则直接丢弃，
+   * 避免慢响应覆盖新响应；刷新按钮调用时不传，等价于恒为 true。</p>
+   */
+  const fetchData = useCallback(async (isAlive: () => boolean = () => true) => {
     setLoading(true);
     try {
       const d = date.format('YYYY-MM-DD');
@@ -124,18 +130,23 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
         statApi.getOverview(d, ut, v),
         statApi.getTrend(metric, d, ut, v),
       ]);
+      if (!isAlive()) return;
       setToday(ov.data?.today);
       setYesterday(ov.data?.yesterday);
       setTrend(tr.data);
     } catch {
-      // 接口异常由 client.ts 统一提示
+      if (isAlive()) toast.error('设备统计数据加载失败');
     } finally {
-      setLoading(false);
+      if (isAlive()) setLoading(false);
     }
   }, [date, ut, version, metric]);
 
   useEffect(() => {
-    fetchData();
+    let alive = true;
+    void fetchData(() => alive);
+    return () => {
+      alive = false;
+    };
   }, [fetchData]);
 
   const rows: Array<{ key: string; label: string; field: keyof DayOverview; fmtFn?: (v?: number | null) => string }> = [
@@ -186,7 +197,7 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
         utOptions={utOptions}
         versionOptions={versionOptions}
         versionLoading={versionLoading}
-        onRefresh={fetchData}
+        onRefresh={() => { void fetchData(); }}
       />
 
       <Row gutter={[12, 12]}>
@@ -231,21 +242,27 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
   const [topData, setTopData] = useState<ApiTopItem[]>([]);
   const [summary, setSummary] = useState<ApiTopSummary>({ callCount: 0, successCount: 0, failureCount: 0, successRate: '0.00' });
 
-  const fetchData = useCallback(async () => {
+  /** isAlive 同 DeviceTab：被更新的请求取代后丢弃慢响应，避免旧数据覆盖新数据 */
+  const fetchData = useCallback(async (isAlive: () => boolean = () => true) => {
     setLoading(true);
     try {
       const res = await statApi.getApiTop(limit, date.format('YYYY-MM-DD'), ut, version || undefined);
+      if (!isAlive()) return;
       setTopData(res.data?.list || []);
       setSummary(res.data?.summary || { callCount: 0, successCount: 0, failureCount: 0, successRate: '0.00' });
     } catch {
-      // ignore
+      if (isAlive()) toast.error('接口统计数据加载失败');
     } finally {
-      setLoading(false);
+      if (isAlive()) setLoading(false);
     }
   }, [date, limit, ut, version]);
 
   useEffect(() => {
-    fetchData();
+    let alive = true;
+    void fetchData(() => alive);
+    return () => {
+      alive = false;
+    };
   }, [fetchData]);
 
   const totalCalls = summary.callCount || 0;
@@ -321,7 +338,7 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
         utOptions={utOptions}
         versionOptions={versionOptions}
         versionLoading={versionLoading}
-        onRefresh={fetchData}
+        onRefresh={() => { void fetchData(); }}
         extra={
           <Select
             value={limit}
@@ -381,20 +398,26 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentFingerprint, setCurrentFingerprint] = useState<string>();
 
-  const fetchSummary = useCallback(async () => {
+  /** isAlive 同 DeviceTab：被更新的请求取代后丢弃慢响应，避免旧数据覆盖新数据 */
+  const fetchSummary = useCallback(async (isAlive: () => boolean = () => true) => {
     setLoading(true);
     try {
       const res = await statApi.getErrorSummary(date.format('YYYY-MM-DD'), ut, version || undefined);
+      if (!isAlive()) return;
       setSummary(res.data || []);
     } catch {
-      // ignore
+      if (isAlive()) toast.error('错误统计数据加载失败');
     } finally {
-      setLoading(false);
+      if (isAlive()) setLoading(false);
     }
   }, [date, ut, version]);
 
   useEffect(() => {
-    fetchSummary();
+    let alive = true;
+    void fetchSummary(() => alive);
+    return () => {
+      alive = false;
+    };
   }, [fetchSummary]);
 
   const openDetail = (fingerprint: string) => {
@@ -402,7 +425,8 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
     setDrawerOpen(true);
   };
 
-  const columns = [
+  // 列定义只依赖 openDetail 与模块级常量，用 useMemo 固定引用，避免每次渲染新建数组击穿 ResizableTable 的列 useMemo
+  const columns = useMemo(() => [
     { title: '次数', dataIndex: 'count', width: 80, render: (v: number) => fmt(v) },
     { title: '影响设备', dataIndex: 'affectedDevices', width: 90, render: (v: number) => fmt(v) },
     {
@@ -424,7 +448,7 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
         </Button>
       ),
     },
-  ];
+  ], []);
 
   return (
     <Spin spinning={loading}>
@@ -438,7 +462,7 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
         utOptions={utOptions}
         versionOptions={versionOptions}
         versionLoading={versionLoading}
-        onRefresh={fetchSummary}
+        onRefresh={() => { void fetchSummary(); }}
       />
 
       <ResizableTable<ErrorSummaryItem>
@@ -484,7 +508,8 @@ function ErrorDetailDrawer({
   const [pageNum, setPageNum] = useState(1);
   const pageSize = 10;
 
-  const fetchDetail = useCallback(async () => {
+  /** isAlive：翻页/换组时丢弃被取代的慢响应，避免明细停在上一次请求的结果上 */
+  const fetchDetail = useCallback(async (isAlive: () => boolean = () => true) => {
     if (!fingerprint || !open) return;
     setLoading(true);
     try {
@@ -496,17 +521,22 @@ function ErrorDetailDrawer({
         ut,
         appVersion: version || undefined,
       });
+      if (!isAlive()) return;
       setRecords(res.data?.records || []);
       setTotal(res.data?.total || 0);
     } catch {
-      // ignore
+      if (isAlive()) toast.error('错误明细加载失败');
     } finally {
-      setLoading(false);
+      if (isAlive()) setLoading(false);
     }
   }, [fingerprint, open, pageNum, ut, version]);
 
   useEffect(() => {
-    fetchDetail();
+    let alive = true;
+    void fetchDetail(() => alive);
+    return () => {
+      alive = false;
+    };
   }, [fetchDetail]);
 
   // 切换 fingerprint 时回到第一页，否则会停在上一组的页码上

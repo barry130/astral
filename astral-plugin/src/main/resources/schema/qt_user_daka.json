@@ -65,11 +65,12 @@
   ],
   "indexes": [
     {
-      "indexName": "idx_qt_daka_uid_data",
+      "indexName": "uk_qt_daka_uid_data",
       "columns": [
         "uid",
         "data"
-      ]
+      ],
+      "isUnique": true
     }
   ]
 }

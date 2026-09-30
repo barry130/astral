@@ -43,17 +43,18 @@ public class StorageUserController {
         return userId == null ? null : userId.toString();
     }
 
-    /** 登记来源 IP（X-Forwarded-For 第一段 → X-Real-IP → remoteAddr，项目既有取法） */
-    private static String clientIp(jakarta.servlet.http.HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        String real = request.getHeader("X-Real-IP");
-        if (real != null && !real.isBlank()) {
-            return real.trim();
-        }
-        return request.getRemoteAddr();
+    /**
+     * 登记来源 IP。
+     * <p>必须走 {@link ClientIp#resolve}（带可信代理白名单），不能无条件取 XFF 第一段：
+     * 该头由客户端可任意伪造，直接采信会让审计/取证数据失效，也会让按 IP 的风控形同虚设。
+     * 只有直连方本身是可信代理时才采信转发头，并从右往左取第一个非可信跳。</p>
+     */
+    private String clientIp(jakarta.servlet.http.HttpServletRequest request) {
+        return ClientIp.resolve(
+                request.getHeader("X-Forwarded-For"),
+                request.getHeader("X-Real-IP"),
+                request.getRemoteAddr(),
+                trustedProxies);
     }
 
     /** 用户侧「我的文件夹」列表：本人所有 + 授权给我的（含当前用户权限集合），供图床等用户页面选择目标文件夹 */

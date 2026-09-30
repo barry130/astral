@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Tag, Tabs } from '@/components/antd-compat';
+import { Card, Table, Tag, Tabs, message } from '@/components/antd-compat';
 import { FileTextOutlined, SecurityScanOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@/components/antd-compat/icons';
 import { logApi, OperateLog, LoginLog } from '@/api/log';
 
@@ -37,6 +37,7 @@ export default function LogPage() {
           setOperateTotal(res.data.total);
         }
       })
+      .catch(() => message.error('操作日志加载失败'))
       .finally(() => setLoading(false));
   };
 
@@ -50,6 +51,7 @@ export default function LogPage() {
           setLoginTotal(res.data.total);
         }
       })
+      .catch(() => message.error('登录日志加载失败'))
       .finally(() => setLoading(false));
   };
 

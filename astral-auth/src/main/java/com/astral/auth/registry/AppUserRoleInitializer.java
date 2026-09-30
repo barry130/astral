@@ -1,5 +1,6 @@
 package com.astral.auth.registry;
 
+import com.astral.auth.security.PermissionCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -14,7 +15,8 @@ import org.springframework.stereotype.Component;
  * <p>每次启动做三件幂等的事：</p>
  * <ol>
  *   <li>补登记注解声明的权限（{@link PermissionRegistry#registerMissing()}）；</li>
- *   <li>把全部 {@code user:} 前缀权限授予 APP_USER（{@link AppUserRoleService#syncPermissions()}）；</li>
+ *   <li>把全部 {@code user:} 前缀<b>接口</b>权限授予 APP_USER，并收回其名下范围(DATA)权限
+ *       （{@link AppUserRoleService#syncPermissions()}）；</li>
  *   <li>把存量 {@code user_type='APP'} 用户纳入 APP_USER（{@link AppUserRoleService#backfillAppUsers()}）。</li>
  * </ol>
  *
@@ -34,6 +36,7 @@ public class AppUserRoleInitializer implements ApplicationRunner {
 
     private final PermissionRegistry permissionRegistry;
     private final AppUserRoleService appUserRoleService;
+    private final PermissionCache permissionCache;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -44,6 +47,10 @@ public class AppUserRoleInitializer implements ApplicationRunner {
             if (granted > 0 || linked > 0) {
                 log.info("[AppUserRole] 初始化完成：新增授权 {} 条，纳入 App 用户 {} 个", granted, linked);
             }
+            // 无条件失效权限缓存：Flyway 迁移先于本 Runner 执行且直改库（无法从 SQL 触达 Redis），
+            // 此刻 granted/revoked 可能都是 0，但会话缓存的权限列表仍是迁移前的旧集合。
+            // 每次 bump 一次版本的成本只是活跃会话各多查一次库，换取「迁移改动即时生效」。
+            permissionCache.bumpVersion();
         } catch (Exception e) {
             log.warn("[AppUserRole] 初始化失败（不影响启动，可在角色管理页手工分配 {}）：{}",
                     AppUserRoleService.ROLE_CODE, e.getMessage(), e);

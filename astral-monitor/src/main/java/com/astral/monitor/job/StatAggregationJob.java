@@ -60,44 +60,56 @@ public class StatAggregationJob {
         }
         int inserted = 0;
         int updated = 0;
+        int failed = 0;
         for (Map.Entry<ApiMetricCollector.ApiMetricKey, ApiMetricCollector.ApiMetricValue> entry : drained.entrySet()) {
             ApiMetricCollector.ApiMetricKey key = entry.getKey();
             ApiMetricCollector.ApiMetricValue value = entry.getValue();
-            long callCount = value.getCallCount();
-            long sumMs = value.getSumMs();
-            int maxMs = value.getMaxMs();
-
-            int rows = statApiHourlyMapper.incrementApi(
-                    key.getBucketHour(), key.getUri(), key.getMethod(), key.getStatus(),
-                    key.getUt(), key.getAppVersion(),
-                    callCount, sumMs, maxMs);
-            if (rows > 0) {
-                updated++;
-                continue;
-            }
-            StatApiHourly bucket = new StatApiHourly();
-            bucket.setBucketHour(key.getBucketHour());
-            bucket.setUri(key.getUri());
-            bucket.setMethod(key.getMethod());
-            bucket.setStatus(key.getStatus());
-            bucket.setUt(key.getUt());
-            bucket.setAppVersion(key.getAppVersion());
-            bucket.setCallCount(callCount);
-            bucket.setSumMs(sumMs);
-            bucket.setMaxMs(maxMs);
+            // 逐桶隔离：drain() 已经从内存摘除，这里任一步抛异常都不能中断整个方法，
+            // 否则本分钟「其余所有桶」的指标会连同这个桶一起永久丢失（静默、不可恢复）。
             try {
-                statApiHourlyMapper.insert(bucket);
-                inserted++;
-            } catch (DuplicateKeyException e) {
-                // 并发建桶冲突：补一次累加
-                statApiHourlyMapper.incrementApi(
+                long callCount = value.getCallCount();
+                long sumMs = value.getSumMs();
+                int maxMs = value.getMaxMs();
+
+                int rows = statApiHourlyMapper.incrementApi(
                         key.getBucketHour(), key.getUri(), key.getMethod(), key.getStatus(),
                         key.getUt(), key.getAppVersion(),
                         callCount, sumMs, maxMs);
-                updated++;
+                if (rows > 0) {
+                    updated++;
+                    continue;
+                }
+                StatApiHourly bucket = new StatApiHourly();
+                bucket.setBucketHour(key.getBucketHour());
+                bucket.setUri(key.getUri());
+                bucket.setMethod(key.getMethod());
+                bucket.setStatus(key.getStatus());
+                bucket.setUt(key.getUt());
+                bucket.setAppVersion(key.getAppVersion());
+                bucket.setCallCount(callCount);
+                bucket.setSumMs(sumMs);
+                bucket.setMaxMs(maxMs);
+                try {
+                    statApiHourlyMapper.insert(bucket);
+                    inserted++;
+                } catch (DuplicateKeyException e) {
+                    // 并发建桶冲突：补一次累加
+                    statApiHourlyMapper.incrementApi(
+                            key.getBucketHour(), key.getUri(), key.getMethod(), key.getStatus(),
+                            key.getUt(), key.getAppVersion(),
+                            callCount, sumMs, maxMs);
+                    updated++;
+                }
+            } catch (Exception e) {
+                failed++;
+                // 带上完整桶维度，便于按需从日志补录
+                log.error("[stat] 指标桶落库失败 bucketHour={} uri={} method={} status={} ut={} appVersion={} callCount={}: {}",
+                        key.getBucketHour(), key.getUri(), key.getMethod(), key.getStatus(),
+                        key.getUt(), key.getAppVersion(), value.getCallCount(), e.getMessage(), e);
             }
         }
-        log.info("[stat] 接口指标落库完成 buckets={} updated={} inserted={}", drained.size(), updated, inserted);
+        log.info("[stat] 接口指标落库完成 buckets={} updated={} inserted={} failed={}",
+                drained.size(), updated, inserted, failed);
     }
 
     /**

@@ -103,8 +103,8 @@ CREATE TABLE IF NOT EXISTS qt_user_daka (
     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_qt_daka_uid_data ON qt_user_daka(uid, data);
-
+-- 同一用户同一天只能签到一次：唯一约束是幂等性的最终保证（应用层「先查后插」有并发窗口）
+CREATE UNIQUE INDEX IF NOT EXISTS uk_qt_daka_uid_data ON qt_user_daka(uid, data);
 CREATE TABLE IF NOT EXISTS qt_like_playlist (
     id BIGINT PRIMARY KEY,
     uid BIGINT NOT NULL,

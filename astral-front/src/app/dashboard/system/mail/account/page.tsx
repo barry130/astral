@@ -48,7 +48,8 @@ export default function MailAccountPage() {
 
   const handleEdit = (r: MailAccount) => {
     setEditing(r);
-    form.setFieldsValue(r);
+    // 列表/详情接口不回传授权码（password 恒为 undefined），编辑时留空即表示不修改
+    form.setFieldsValue({ ...r, password: undefined });
     setModalVisible(true);
   };
 
@@ -70,16 +71,29 @@ export default function MailAccountPage() {
   };
 
   const submitTest = async () => {
-    const v = await testForm.validateFields();
-    try { await mailApi.accountTest(testId!, v.toEmail); message.success('测试邮件已发送，请查收'); setTestVisible(false); }
-    catch (e: any) { message.error(e.message); }
+    try {
+      const v = await testForm.validateFields();
+      await mailApi.accountTest(testId!, v.toEmail);
+      message.success('测试邮件已发送，请查收');
+      setTestVisible(false);
+    } catch (e: any) {
+      // 校验失败抛的是 { errorFields } 不是 Error，取不到 message，兜底一句中文提示（与 storage 页同款）
+      message.error(e?.message || '请检查表单填写是否完整');
+    }
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
     try {
-      if (editing?.id) await mailApi.accountUpdate(editing.id, values);
-      else await mailApi.accountCreate(values);
+      const values = await form.validateFields();
+      if (editing?.id) {
+        // 留空 = 不修改授权码：必须把该字段整个摘掉，否则会以空串覆盖掉已保存的授权码
+        // （后端 updateById 只忽略 null，不忽略空串）
+        const payload = { ...values };
+        if (!payload.password) delete payload.password;
+        await mailApi.accountUpdate(editing.id, payload);
+      } else {
+        await mailApi.accountCreate(values);
+      }
       message.success('保存成功');
       setModalVisible(false);
       loadData();
@@ -140,7 +154,14 @@ export default function MailAccountPage() {
             </Form.Item>
           </Space>
           <Form.Item name="username" label="登录账号" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="password" label="密码/授权码" rules={[{ required: true }]}><Input.Password /></Form.Item>
+          <Form.Item
+            name="password"
+            label="密码/授权码"
+            rules={editing ? [] : [{ required: true }]}
+            extra={editing ? '留空表示不修改' : undefined}
+          >
+            <Input.Password placeholder={editing ? '留空表示不修改' : undefined} />
+          </Form.Item>
           <Space style={{ display: 'flex' }}>
             <Form.Item name="fromAddr" label="发件地址" rules={[{ required: true }]} style={{ flex: 1 }}><Input placeholder="noreply@example.com" /></Form.Item>
             <Form.Item name="fromName" label="发件显示名"><Input placeholder="轻听APP" /></Form.Item>

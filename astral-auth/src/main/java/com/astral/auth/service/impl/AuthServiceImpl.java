@@ -9,6 +9,7 @@ import com.astral.auth.dto.LoginResponse;
 import com.astral.auth.security.LoginUserTypeResolver;
 import com.astral.auth.security.RsaKeyManager;
 import com.astral.auth.service.AuthService;
+import com.astral.auth.service.UserLoginMarker;
 import com.astral.common.error.ErrorCodes;
 import com.astral.common.exception.BusinessException;
 import com.astral.common.util.ClientIp;
@@ -46,6 +47,10 @@ public class AuthServiceImpl implements AuthService {
     /** 登录用户类型解析器：把 user_type 缓存进会话，供管理端身份门禁免查库读取 */
     @Autowired
     private LoginUserTypeResolver loginUserTypeResolver;
+
+    /** 登录/活跃标记：把最后登录时间与 IP 落回 sys_user（App 端此前从未回写，login_time 全 NULL） */
+    @Autowired
+    private UserLoginMarker userLoginMarker;
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -97,6 +102,8 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         // 按默认 ISO-8601 读写，裸 LocalDateTime 一旦跨版本读写就会反序列化失败。
         // 字符串不参与 java.time 的格式协商，新旧版本都能安全读回。
         tokenSession.set("loginTime", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        // 回写最后登录时间与 IP 到 sys_user（会话里的副本只够 Token 管理页展示，库里的字段此前无人写）
+        userLoginMarker.mark(user.getId(), getClientIp());
         String token = StpUtil.getTokenValue();
         
         List<String> roles = stpInterface.getRoleList(user.getId(), null);

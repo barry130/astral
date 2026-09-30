@@ -55,7 +55,8 @@ function FeedbackPanel() {
   const [replying, setReplying] = useState(false);
 
   // kw/st/ty 可由调用方显式传入：setState 异步，紧随其后的 load 读闭包会拿到旧筛选值
-  const load = useCallback((p = page, s = pageSize, kw = keyword, st = statusFilter, ty = typeFilter) => {
+  // isAlive 由筛选 effect 注入：返回时若已被更新的请求取代则丢弃，避免慢响应覆盖新响应
+  const load = useCallback((p = page, s = pageSize, kw = keyword, st = statusFilter, ty = typeFilter, isAlive: () => boolean = () => true) => {
     setLoading(true);
     const params: Record<string, any> = { pageNum: p, pageSize: s };
     if (st) params.status = st;
@@ -63,10 +64,16 @@ function FeedbackPanel() {
     if (kw) params.keyword = kw;
     feedbackAdminApi.page(params)
       .then((res) => {
+        if (!isAlive()) return;
         setData(res.data?.records || []);
         setTotal(res.data?.total || 0);
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (isAlive()) message.error('反馈列表加载失败');
+      })
+      .finally(() => {
+        if (isAlive()) setLoading(false);
+      });
   }, [page, pageSize, keyword, statusFilter, typeFilter]);
 
   const loadStat = useCallback(() => {
@@ -76,9 +83,13 @@ function FeedbackPanel() {
   }, []);
 
   useEffect(() => {
-    load(1, pageSize);
+    let alive = true;
+    load(1, pageSize, keyword, statusFilter, typeFilter, () => alive);
     loadStat();
     loadFeedbackDicts().catch(() => {});
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, typeFilter]);
 

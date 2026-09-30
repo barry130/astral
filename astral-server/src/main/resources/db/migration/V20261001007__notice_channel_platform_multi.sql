@@ -50,6 +50,19 @@ WHERE id = 128 AND dict_type_id = (SELECT id FROM sys_dict_type WHERE dict_code 
 -- 129 原 all  → 全部平台
 UPDATE sys_dict_data SET dict_label = '全部平台', dict_value = 'all', dict_sort = 5
 WHERE id = 129 AND dict_type_id = (SELECT id FROM sys_dict_type WHERE dict_code = 'notice_channel');
--- 新增 iOS（占用 9123：当前迁移里 sys_dict_data 的最大已用 id 为 9122）
+-- 新增 iOS
+--   ⚠️ 这里绝不能写死 id。sys_dict_data.id 是全局 PK 且**没有序列**（必须显式给值），
+--   原先写死 9123 并注释「当前最大已用 id 为 9122」——但版本号更小的权限重构迁移
+--   （V202609300xx / V202610010xx）已经把 id 用到 9130，其中 9123 被 permission_type 占用，
+--   于是这条 INSERT 必然 key 冲突、整个迁移失败，且因为撞的是更早版本的行，
+--   在任何已应用权限迁移的库上（新旧库都是）都无法成功。
+--   改为取当前最大 id + 1，并用 NOT EXISTS 保证重复执行不会插出第二行。
 INSERT INTO sys_dict_data (id, dict_type_id, dict_label, dict_value, dict_sort, status, description)
-SELECT 9123, id, 'iOS', 'app-ios', 2, 1, 'iOS App' FROM sys_dict_type WHERE dict_code = 'notice_channel';
+SELECT (SELECT COALESCE(MAX(id), 0) + 1 FROM sys_dict_data),
+       t.id, 'iOS', 'app-ios', 2, 1, 'iOS App'
+FROM sys_dict_type t
+WHERE t.dict_code = 'notice_channel'
+  AND NOT EXISTS (
+      SELECT 1 FROM sys_dict_data d
+      WHERE d.dict_type_id = t.id AND d.dict_value = 'app-ios'
+  );

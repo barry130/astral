@@ -2,6 +2,7 @@ package com.astral.monitor.api;
 
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
+import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.StatErrorLog;
 import com.astral.monitor.dto.ApiTopResultDTO;
 import com.astral.monitor.dto.DeviceOverviewDTO;
@@ -82,7 +83,8 @@ public class StatReportController {
             @RequestParam(defaultValue = "all") String ut,
             @RequestParam(required = false) String version) {
         LocalDate d = date != null ? date : LocalDate.now();
-        return Result.success(statReportService.getApiTop(d, limit, ut, version));
+        // 上界钳制：limit 直通 SQL 的 LIMIT，不钳制可由外部拼出超大结果集
+        return Result.success(statReportService.getApiTop(d, PageQuery.limit(limit, PageQuery.MAX_LIMIT), ut, version));
     }
 
     /**
@@ -115,7 +117,8 @@ public class StatReportController {
             @RequestParam(required = false) String appVersion,
             @RequestParam(required = false) String fingerprint) {
         return Result.success(statReportService.getErrorPage(
-                pageNum, pageSize, errorType, ut, appVersion, fingerprint));
+                PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize),
+                errorType, ut, appVersion, fingerprint));
     }
 
     /**

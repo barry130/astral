@@ -45,6 +45,22 @@ public class StorageFileService {
     private static final String TASK_TABLE = "sys_storage_task";
     private static final int MAX_DELETE_RETRY = 5;
 
+    /** 校验用 HTTP 连接超时（秒）：避免 Provider/Worker 卡死时回执请求无限挂起 */
+    private static final long VERIFY_CONNECT_TIMEOUT_SECONDS = 5;
+
+    /** 校验用 HTTP 单次请求超时（秒） */
+    private static final long VERIFY_REQUEST_TIMEOUT_SECONDS = 15;
+
+    /**
+     * 内容校验最多读入内存的字节数。
+     * <p>magic 识别只需要文件头，像素校验只需图像元信息，都不需要整幅图。
+     * 这里给一个远大于正常图片的硬上限，既是流式读取的边界，也避免校验本身成为内存放大器。</p>
+     */
+    private static final int MAX_VERIFY_BYTES = 8 * 1024 * 1024;
+
+    /** 图片 magic 识别所需的文件头长度 */
+    private static final int MAGIC_HEAD_BYTES = 4096;
+
     private final StorageFileMapper fileMapper;
     private final StorageTaskMapper taskMapper;
     private final StorageConfigMapper configMapper;
@@ -60,7 +76,15 @@ public class StorageFileService {
     private final StorageProperties properties;
     private final ObjectMapper objectMapper;
 
-    private static final java.net.http.HttpClient VERIFY_HTTP_CLIENT = java.net.http.HttpClient.newHttpClient();
+    /**
+     * 内容校验专用 HTTP 客户端。
+     * <p>必须显式设置连接超时：默认值依赖系统属性，未配置时行为等同于「无限等待」，
+     * 一旦 Provider/Worker 不回包，回执线程会一直挂着（接口不返回、连接与内存不释放）。</p>
+     */
+    private static final java.net.http.HttpClient VERIFY_HTTP_CLIENT = java.net.http.HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(VERIFY_CONNECT_TIMEOUT_SECONDS))
+            .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+            .build();
 
     // ==================== 查询 ====================
 
@@ -181,7 +205,7 @@ public class StorageFileService {
      * 浏览器直传对象存储完成后的回执登记：校验凭证上下文与操作者、HEAD 对象确认真实存在，
      * 然后以签发凭证时生成的 publicId/对象键落库（幂等，upload_id 唯一）。
      *
-     * @param clientIp 登记来源 IP（X-Forwarded-For 第一段 → X-Real-IP → remoteAddr），仅本路径落库
+     * @param clientIp 登记来源 IP（由调用方经 {@code ClientIp.resolve} 按可信代理解析），仅本路径落库
      */
     @Transactional(rollbackFor = Exception.class)
     public StorageFileEntity registerFromBrowser(String uploadId, String userId, String clientIp) {
@@ -277,7 +301,9 @@ public class StorageFileService {
         }
         try {
             boolean full = UploadPolicyService.VERIFY_FULL.equals(level);
-            byte[] head = fetchContentBytes(file, full ? -1 : 4096);
+            // full 校验也带上硬上限：magic 只需文件头、像素校验只需元信息，都不需要整幅图，
+            // 旧实现传 -1 会 readNBytes(Integer.MAX_VALUE) 把整个对象读进堆。
+            byte[] head = fetchContentBytes(file, full ? MAX_VERIFY_BYTES : MAGIC_HEAD_BYTES);
             String actual = detectImageMime(head);
             String declared = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
             if (actual == null) {
@@ -292,10 +318,11 @@ public class StorageFileService {
             }
             if (full && policy.maxPixels() != null
                     && ("image/png".equals(actual) || "image/jpeg".equals(actual))) {
-                // WebP 无 JDK 内置解码器，magic 已核对，像素校验跳过（PNG/JPEG 才做解码）
-                java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(head));
-                if (image != null
-                        && (long) image.getWidth() * image.getHeight() > policy.maxPixels()) {
+                // WebP 无 JDK 内置解码器，magic 已核对，像素校验跳过（PNG/JPEG 才做）
+                // 只读图像元信息、不整幅解码：否则「小文件 + 巨型画布」的构造图（解压炸弹）
+                // 会先把像素数据解出来占满堆，像素上限形同虚设。
+                long pixels = readPixelCount(head);
+                if (pixels > policy.maxPixels()) {
                     throw new BusinessException("STORAGE033", "图片像素数超过上限");
                 }
             }
@@ -357,13 +384,46 @@ public class StorageFileService {
         } else {
             throw new BusinessException("STORAGE019", providerType);
         }
-        var builder = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).GET();
+        var builder = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url))
+                .timeout(java.time.Duration.ofSeconds(VERIFY_REQUEST_TIMEOUT_SECONDS))
+                .GET();
         if (limit > 0) {
             builder.header("Range", "bytes=0-" + (limit - 1));
         }
         var response = VERIFY_HTTP_CLIENT.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());
         try (var in = response.body()) {
-            return in.readNBytes(limit > 0 ? limit : Integer.MAX_VALUE);
+            // limit <= 0 时也必须有上限，不能让校验把任意大小的对象读进堆
+            return in.readNBytes(limit > 0 ? limit : MAX_VERIFY_BYTES);
+        }
+    }
+
+    /**
+     * 只读图像元信息，得到像素总数（不解码像素数据）。
+     *
+     * @param content 图片字节
+     * @return 像素总数；无法识别格式/读取失败时返回 {@code -1}（调用方跳过像素校验，
+     *         类型是否合法仍由 magic 结果决定，与旧实现「解码失败则不校验」的行为一致）
+     */
+    private static long readPixelCount(byte[] content) {
+        try (javax.imageio.stream.ImageInputStream in = javax.imageio.ImageIO
+                .createImageInputStream(new java.io.ByteArrayInputStream(content))) {
+            if (in == null) {
+                return -1;
+            }
+            java.util.Iterator<javax.imageio.ImageReader> readers = javax.imageio.ImageIO.getImageReaders(in);
+            if (!readers.hasNext()) {
+                return -1;
+            }
+            javax.imageio.ImageReader reader = readers.next();
+            try {
+                reader.setInput(in, true, true);
+                return (long) reader.getWidth(0) * reader.getHeight(0);
+            } finally {
+                reader.dispose();
+            }
+        } catch (Exception e) {
+            log.warn("[Storage] 读取图片元信息失败，跳过像素校验: {}", e.getMessage());
+            return -1;
         }
     }
 

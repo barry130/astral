@@ -1,6 +1,7 @@
 package com.astral.log.controller;
 
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.OperateLog;
 import com.astral.log.service.OperateLogService;
 import com.astral.common.result.Result;
@@ -38,7 +39,7 @@ public class OperateLogController {
     @GetMapping("/page")
     public Result<Page<OperateLog>> page(@RequestParam(defaultValue = "1") Integer pageNum,
                                                @RequestParam(defaultValue = "10") Integer pageSize) {
-        Page<OperateLog> page = new Page<>(pageNum, pageSize);
+        Page<OperateLog> page = new Page<>(PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize));
         return Result.success(operateLogService.page(page));
     }
 

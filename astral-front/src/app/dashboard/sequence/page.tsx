@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Card, Form, Input, Select, Button, message, Spin, InputNumber, Row, Col, Tag, Empty, Tabs, Popconfirm, Switch, Space, Modal, AutoComplete } from '@/components/antd-compat';
 import { ApiOutlined, SendOutlined, BulbOutlined, HistoryOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ToolOutlined } from '@/components/antd-compat/icons';
 import { sequenceApi, SequenceType, SequenceResponse } from '@/api/sequence';
@@ -64,17 +64,21 @@ export default function SequencePage() {
 
   /** 组件挂载时加载序列类型、配置列表和历史记录 */
   useEffect(() => {
-    sequenceApi.getTypes().then((res) => {
-      if (res.code === 200) {
-        setTypes(res.data);
-      }
-    });
+    sequenceApi.getTypes()
+      .then((res) => {
+        if (res.code === 200) {
+          setTypes(res.data);
+        }
+      })
+      .catch(() => message.error('序列类型加载失败'));
     loadConfigs();
-    sequenceApi.getHistoryRecent(undefined, 100).then((res) => {
-      if (res.code === 200) {
-        setHistory(res.data || []);
-      }
-    });
+    sequenceApi.getHistoryRecent(undefined, 100)
+      .then((res) => {
+        if (res.code === 200) {
+          setHistory(res.data || []);
+        }
+      })
+      .catch(() => message.error('历史记录加载失败'));
   }, []);
 
   /** 加载配置列表（分页+搜索） */
@@ -93,9 +97,9 @@ export default function SequencePage() {
           if (r.code === 200) {
             setBizKeys(r.data?.map((c: SequenceConfig) => c.bizKey) || []);
           }
-        });
+        }).catch(() => { /* 业务键下拉失败不影响列表展示 */ });
       }
-    }).finally(() => setConfigLoading(false));
+    }).catch(() => message.error('序列配置加载失败')).finally(() => setConfigLoading(false));
   };
 
   /** 配置搜索处理 */
@@ -191,6 +195,13 @@ export default function SequencePage() {
     }, 300);
   };
 
+  /** 卸载时清理业务键解析的防抖定时器，避免组件卸载后定时器仍触发状态更新 */
+  useEffect(() => {
+    return () => {
+      if (resolveTypeRef.current) clearTimeout(resolveTypeRef.current);
+    };
+  }, []);
+
   /** 单个生成业务键输入变化：实时查询后端配置类型 */
   const handleBizKeyInputChange = (value: string) => resolveType(value, false);
   /** 批量生成业务键输入变化：实时查询后端配置类型 */
@@ -200,11 +211,13 @@ export default function SequencePage() {
   
   /** 刷新历史记录 */
   const loadHistory = () => {
-    sequenceApi.getHistoryRecent(undefined, 100).then((res) => {
-      if (res.code === 200) {
-        setHistory(res.data || []);
-      }
-    });
+    sequenceApi.getHistoryRecent(undefined, 100)
+      .then((res) => {
+        if (res.code === 200) {
+          setHistory(res.data || []);
+        }
+      })
+      .catch(() => message.error('历史记录加载失败'));
   };
 
   /** 生成单个序列号 */
@@ -255,6 +268,42 @@ export default function SequencePage() {
     { title: '序列号', dataIndex: 'sequenceValue', key: 'sequenceValue', render: (v: number) => <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: 3, fontSize: 12 }}>{v}</code> },
     { title: '时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => new Date(v).toLocaleString() },
   ];
+
+  // 配置表格列定义用 useMemo 固定引用，
+  // 避免每次渲染新建数组击穿 ResizableTable 内部按 columns 引用做的列 useMemo（键入时会整表重渲）。
+  // 依赖显式列出 canEditConfig：不依赖「dashboard/layout 的 loading 阻塞保证 user 就绪」这一隐式时序
+  const configColumns = useMemo(() => [
+    { title: '业务键', dataIndex: 'bizKey', key: 'bizKey', render: (v: string) => <Tag color="blue">{v}</Tag> },
+    { title: '序列类型', dataIndex: 'sequenceType', key: 'sequenceType', render: (v: string) => <Tag>{v}</Tag> },
+    { title: '当前值', dataIndex: 'currentValue', key: 'currentValue', render: (v: number, r: SequenceConfig) => r.sequenceType === 'SEGMENT' ? (v ?? '-') : '—' },
+    { title: '步长', dataIndex: 'step', key: 'step', render: (v: number) => v || '-' },
+    {
+      title: '状态',
+      dataIndex: 'enabled',
+      key: 'enabled',
+      render: (v: boolean, r: SequenceConfig) => (
+        <Switch
+          checked={v}
+          onChange={(checked) => handleConfigToggle(r.id!, checked)}
+          disabled={!canEditConfig}
+          checkedChildren="启用"
+          unCheckedChildren="禁用"
+        />
+      )
+    },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_: any, r: SequenceConfig) => (
+        <Space>
+          <Button type="link" icon={<EditOutlined />} disabled={!canEditConfig} onClick={() => handleConfigEdit(r)}>编辑</Button>
+          <Popconfirm title="确认删除?" disabled={!canEditConfig} onConfirm={() => handleConfigDelete(r.id!)}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEditConfig}>删除</Button>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ], [canEditConfig]);
 
   return (
     <div style={{ background: '#f5f5f5', minHeight: '100%' }}>
@@ -409,38 +458,7 @@ export default function SequencePage() {
                 dataSource={configs}
                 loading={configLoading}
                 rowKey="id"
-                columns={[
-                  { title: '业务键', dataIndex: 'bizKey', key: 'bizKey', render: (v: string) => <Tag color="blue">{v}</Tag> },
-                  { title: '序列类型', dataIndex: 'sequenceType', key: 'sequenceType', render: (v: string) => <Tag>{v}</Tag> },
-                  { title: '当前值', dataIndex: 'currentValue', key: 'currentValue', render: (v: number, r: SequenceConfig) => r.sequenceType === 'SEGMENT' ? (v ?? '-') : '—' },
-                  { title: '步长', dataIndex: 'step', key: 'step', render: (v: number) => v || '-' },
-                  { 
-                    title: '状态', 
-                    dataIndex: 'enabled', 
-                    key: 'enabled', 
-                    render: (v: boolean, r: SequenceConfig) => (
-                      <Switch 
-                        checked={v} 
-                        onChange={(checked) => handleConfigToggle(r.id!, checked)} 
-                        disabled={!canEditConfig}
-                        checkedChildren="启用" 
-                        unCheckedChildren="禁用" 
-                      />
-                    )
-                  },
-                  { 
-                    title: '操作', 
-                    key: 'action', 
-                    render: (_: any, r: SequenceConfig) => (
-                      <Space>
-                        <Button type="link" icon={<EditOutlined />} disabled={!canEditConfig} onClick={() => handleConfigEdit(r)}>编辑</Button>
-                        <Popconfirm title="确认删除?" disabled={!canEditConfig} onConfirm={() => handleConfigDelete(r.id!)}>
-                          <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEditConfig}>删除</Button>
-                        </Popconfirm>
-                      </Space>
-                    )
-                  }
-                ]}
+                columns={configColumns}
                 pagination={{
                   current: configPagination.current,
                   pageSize: configPagination.pageSize,

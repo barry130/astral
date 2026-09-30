@@ -65,8 +65,7 @@ public class ApiRequestMetricInterceptor implements HandlerInterceptor {
             String uri = ClientHeaders.normalize(request.getRequestURI(), MAX_URI_LENGTH);
             String ut = ClientHeaders.resolveUt(
                     request.getHeader(clientUtHeader), request.getHeader(legacyPlatformHeader));
-            String appVersion = ClientHeaders.normalize(
-                    request.getHeader(clientVersionHeader), ClientHeaders.MAX_VERSION);
+            String appVersion = ClientHeaders.normalizeVersion(request.getHeader(clientVersionHeader));
             apiMetricCollector.record(uri, request.getMethod(), response.getStatus(), costMs, ut, appVersion);
         }
     }

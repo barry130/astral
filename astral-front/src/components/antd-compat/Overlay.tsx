@@ -81,6 +81,11 @@ export function Modal({
       setSubmitting(true);
       try {
         await result;
+      } catch (e) {
+        // 兜底：onOk 返回的 Promise 失败时不要让 rejection 逃逸（onClick 不会消费返回值），
+        // 业务错误提示仍由各调用方在 onOk 内部自行处理，这里只保证不产生未捕获异常。
+        // 保留控制台输出，避免调试信息被静默吞掉。
+        console.error('[Modal] onOk 未处理异常:', e);
       } finally {
         setSubmitting(false);
       }

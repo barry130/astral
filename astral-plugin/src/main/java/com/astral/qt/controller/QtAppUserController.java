@@ -1,6 +1,7 @@
 package com.astral.qt.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.astral.auth.service.UserLoginMarker;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.User;
 import com.astral.qt.common.QtException;
@@ -34,6 +35,7 @@ import com.astral.qt.service.QtUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +63,10 @@ public class QtAppUserController {
     @Resource
     private QtUserService userService;
 
+    /** 登录/活跃标记：显式刷新 token 时回写 sys_user.login_time/login_ip */
+    @Resource
+    private UserLoginMarker userLoginMarker;
+
     @Resource
     private QtDakaService dakaService;
 
@@ -78,7 +84,8 @@ public class QtAppUserController {
 
     @Operation(summary = "刷新 token")
     @PostMapping("/refresh")
-    public QtRestResp<QtUserInfoVo> refresh(@RequestHeader(value = "satoken", required = true) String satoken) {
+    public QtRestResp<QtUserInfoVo> refresh(@RequestHeader(value = "satoken", required = true) String satoken,
+                                            HttpServletRequest request) {
         // 检查当前 token 是否有效
         if (!StpUtil.isLogin()) {
             throw new com.astral.qt.common.QtException(401, "登录状态已失效");
@@ -94,6 +101,8 @@ public class QtAppUserController {
         Object loginId = StpUtil.getLoginIdDefaultNull();
         if (loginId != null) {
             Long userId = Long.parseLong(loginId.toString());
+            // 显式刷新 token = 客户端仍活跃（App 通常在启动时调用）：回写最后活跃时间与 IP
+            userLoginMarker.mark(userId, request);
             QtUserInfoVo userVo = userService.getUserInfoByToken(userId, token);
             vo.setUser(userVo.getUser());
             vo.setRoles(userVo.getRoles());

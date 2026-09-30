@@ -16,6 +16,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,18 @@ public class MailServiceImpl implements MailService {
 
     /** 发信额度 Redis key 前缀 */
     private static final String QUOTA_KEY_PREFIX = "astral:mail:quota:";
+
+    /**
+     * 原子回补额度：仅当计数 &gt; 0 时 DECR（key 不存在/已耗尽时不动作，避免凭空造出 -1 计数器），
+     * 且 TTL 缺失（-1，永不过期）时补上当日过期；ARGV[1] = 到次日 0 点的秒数。
+     */
+    private static final DefaultRedisScript<Long> REFUND_QUOTA_SCRIPT = new DefaultRedisScript<>(
+            "local v = redis.call('GET', KEYS[1]) "
+                    + "if (not v) or (tonumber(v) <= 0) then return -1 end "
+                    + "local n = redis.call('DECR', KEYS[1]) "
+                    + "if redis.call('TTL', KEYS[1]) < 0 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end "
+                    + "return n",
+            Long.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -108,6 +121,35 @@ public class MailServiceImpl implements MailService {
         return Math.max(sec, 1L);
     }
 
+    /**
+     * 回补一次发信额度（占额度之后的发送环节失败时调用）。
+     * <p>{@link #tryConsumeQuota} 是「先占后发」，而发送可能因为无可用账户、SMTP 报错等原因失败。
+     * 不回补就会把用户当天的正常配额无谓消耗掉（表现为「验证码额度莫名用完」）。
+     * 回补本身失败只记日志：限流语义下计数偏高是保守方向，不影响可用性。</p>
+     *
+     * <p>必须用 Lua 原子回补而不是裸 {@code DECR}：额度可能是在 Redis 抖动期间按
+     * 「数据库计数」降级路径占用的（Redis 里根本没有这个 key）。此时裸 DECR 会让 Redis
+     * 凭空创建一个值为 {@code -1} 且无 TTL 的计数器——它当日永不过期，且起点为 -1，
+     * 等于当天比限额多发一封；与「{@code used==1} 才设置过期」的窗口交错时同样会留下
+     * 无 TTL 的常驻 key。Lua 里只在计数 &gt; 0 时回补，并在 TTL 缺失时补上当日过期。</p>
+     *
+     * @param pluginId 插件ID
+     * @param toEmail  收件人
+     */
+    private void refundQuota(String pluginId, String toEmail) {
+        if (stringRedisTemplate == null) {
+            // 降级模式下额度来自 DB 统计（只统计成功记录），无需也不应回补
+            return;
+        }
+        String key = QUOTA_KEY_PREFIX + LocalDate.now() + ":" + pluginId + ":" + toEmail;
+        try {
+            stringRedisTemplate.execute(REFUND_QUOTA_SCRIPT,
+                    List.of(key), String.valueOf(secondsUntilTomorrow()));
+        } catch (Exception e) {
+            log.warn("[Mail] 额度回补失败: {}", e.getMessage());
+        }
+    }
+
     @Override
     public void send(String pluginId, String toEmail, String templateCode, Map<String, String> variables) {
         // 1. 插件发信授权校验
@@ -123,7 +165,17 @@ public class MailServiceImpl implements MailService {
                 throw new BusinessException("MAIL006", templateCode);
             }
         }
-        // 3. 每日额度校验（按收件人 + 插件）
+        // 3. 模板校验
+        //    必须先于「占额度」：模板不存在属于参数错误，不该白扣一次发信配额。
+        SysMailTemplate tpl = templateMapper.selectOne(
+                new LambdaQueryWrapper<SysMailTemplate>().eq(SysMailTemplate::getTemplateCode, templateCode));
+        if (tpl == null) {
+            throw new BusinessException("MAIL002", templateCode);
+        }
+        // 4. 渲染主题与正文（渲染失败同样发生在占额度之前，不会消耗配额）
+        String subject = render(tpl.getSubject(), variables);
+        String content = render(tpl.getContent(), variables);
+        // 5. 每日额度校验（按收件人 + 插件）
         //    原实现是「先 COUNT 成功记录，再发送」：两次操作之间有窗口，
         //    并发请求可以同时读到未超限的计数，导致实际发送量远超 daily_limit（验证码轰炸）。
         //    这里改为 Redis 原子占位（INCR + 当日过期），超限即拒绝。
@@ -131,17 +183,14 @@ public class MailServiceImpl implements MailService {
         if (!tryConsumeQuota(pluginId, toEmail, limit)) {
             throw new BusinessException("MAIL004");
         }
-        // 4. 模板校验
-        SysMailTemplate tpl = templateMapper.selectOne(
-                new LambdaQueryWrapper<SysMailTemplate>().eq(SysMailTemplate::getTemplateCode, templateCode));
-        if (tpl == null) {
-            throw new BusinessException("MAIL002", templateCode);
-        }
-        // 5. 渲染主题与正文
-        String subject = render(tpl.getSubject(), variables);
-        String content = render(tpl.getContent(), variables);
         // 6. 选择启用账户并发送（失败自动重试下一个）
-        sendWithAccount(toEmail, subject, content, pluginId, templateCode);
+        //    发送失败要回补额度，否则「无可用账户 / SMTP 全部失败」会把用户当天的验证码配额吃掉。
+        try {
+            sendWithAccount(toEmail, subject, content, pluginId, templateCode);
+        } catch (RuntimeException e) {
+            refundQuota(pluginId, toEmail);
+            throw e;
+        }
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.astral.server.interceptor;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
 import com.astral.auth.security.LoginUserTypeResolver;
+import com.astral.auth.service.UserLoginMarker;
 import com.astral.common.result.Result;
 import com.astral.qt.common.QtRestResp;
 import tools.jackson.databind.ObjectMapper;
@@ -41,6 +42,9 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     /** 登录用户类型解析器：区分「管理端用户」与「App 用户」 */
     private final LoginUserTypeResolver loginUserTypeResolver;
+
+    /** 登录/活跃标记：滑动续期发生时回写 sys_user.login_time/login_ip */
+    private final UserLoginMarker userLoginMarker;
 
     /**
      * 管理端接口要求的 user_type，默认 {@code ADMIN}。
@@ -113,7 +117,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         String token = request.getHeader(TOKEN_HEADER);
 
         // 1. Token 自动续期（所有区域通用；匿名接口带了有效 token 也续）
-        renewIfNeeded(token);
+        renewIfNeeded(request, token);
 
         // 2. 免认证白名单直接放行
         //    注意：这里只做「精确路径」匹配，不再有 startsWith 前缀放行。
@@ -211,19 +215,26 @@ public class AuthInterceptor implements HandlerInterceptor {
         return false;
     }
 
-    /** Token 滑动续期：剩余有效期不足阈值时续满（任何异常不影响请求） */
-    private void renewIfNeeded(String token) {
+    /**
+     * Token 滑动续期：剩余有效期不足阈值时续满（任何异常不影响请求）。
+     *
+     * <p>续期发生 = 用户仍活跃，同步回写 {@code sys_user.login_time/login_ip}，
+     * 使「最后活跃」口径覆盖未重新登录但持续使用的用户（回写失败不影响请求）。</p>
+     */
+    private void renewIfNeeded(HttpServletRequest request, String token) {
         if (renewThreshold <= 0 || token == null || token.isBlank()) {
             return;
         }
         try {
             // token 无效/已过期时 getLoginIdByToken 返回 null，直接跳过
-            if (StpUtil.getLoginIdByToken(token) == null) {
+            Object loginId = StpUtil.getLoginIdByToken(token);
+            if (loginId == null) {
                 return;
             }
             long remain = StpUtil.getTokenTimeout(token);
             if (remain > 0 && remain < renewThreshold) {
                 StpUtil.renewTimeout(token, tokenTimeout);
+                userLoginMarker.mark(Long.parseLong(loginId.toString()), request);
                 log.debug("token 已自动续期: remain={}s -> {}s", remain, tokenTimeout);
             }
         } catch (Exception e) {

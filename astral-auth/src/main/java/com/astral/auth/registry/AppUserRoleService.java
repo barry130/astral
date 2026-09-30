@@ -1,6 +1,7 @@
 package com.astral.auth.registry;
 
 import com.astral.auth.security.PermissionCache;
+import com.astral.common.constant.PermissionType;
 import com.astral.dao.entity.Permission;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.RolePermission;
@@ -23,10 +24,12 @@ import java.util.List;
  *
  * <p><b>为什么需要它</b>：权限码规范是 {@code 端:域:资源:操作[:范围]}，端 = {@code admin/user/all}。
  * App 客户端（qt-uniappx / qt-pc）调用的接口一律 {@code user:} 前缀，管理端一律 {@code admin:} 前缀。
- * 于是「App 用户默认拥有 App 端全部权限」可以被精确表达为
- * <b>「持有全部 {@code user:} 权限」</b>——用前缀做集合定义，而不是罗列具体码：
- * 以后注解上新增一个 {@code user:xxx:yyy}，{@link AppUserRoleInitializer} 启动时会自动补给该角色，
- * 不需要再写一条迁移，也不会误把 {@code admin:} 权限发出去。</p>
+ * 于是「App 用户默认拥有 App 端全部<b>接口</b>权限」可以被精确表达为
+ * <b>「持有全部 {@code user:} 前缀且 {@code type=API} 的权限」</b>——用前缀+类型做集合定义，
+ * 而不是罗列具体码：以后注解上新增一个 {@code user:xxx:yyy}，{@link AppUserRoleInitializer}
+ * 启动时会自动补给该角色，不需要再写一条迁移，也不会误把 {@code admin:} 权限发出去。
+ * <b>范围权限（{@code type=DATA}，如 beta 渠道资格）不在此列</b>——那是投放资格，
+ * 只能由管理员按人/按角色授予。</p>
  *
  * <p><b>与 Flyway 分工</b>：{@code V20261001005} 负责存量数据一次性收敛（建角色/授权/回填），
  * 本类每次启动做同样的幂等收敛，负责增量与自愈（例如角色被误删、授权被清空）。
@@ -69,7 +72,7 @@ public class AppUserRoleService {
         Role role = new Role();
         role.setRoleCode(ROLE_CODE);
         role.setRoleName("App 用户");
-        role.setDescription("App 端默认角色：持有全部 user: 前缀权限（App 客户端接口）。新注册 App 用户自动分配，可按需移除。");
+        role.setDescription("App 端默认角色：持有全部 user: 前缀接口权限（App 客户端接口，不含范围/数据权限）。新注册 App 用户自动分配，可按需移除。");
         role.setStatus(1);
         role.setSort(100);
         role.setIsSuper(0);
@@ -81,14 +84,22 @@ public class AppUserRoleService {
     }
 
     /**
-     * 幂等：把库里所有 {@code user:} 前缀权限授予 APP_USER。
+     * 幂等：把库里所有 {@code user:} 前缀的<b>接口权限</b>（{@code type=API}）授予 APP_USER，
+     * 并收回该角色名下任何<b>范围权限</b>（{@code type=DATA}）。
      *
-     * @return 本次新增的授权条数（0 表示已是最新）
+     * <p><b>为什么排除 DATA</b>：范围权限（如 {@code user:qt:update:channel:beta}）表达的是
+     * 「结果里能多看见哪一部分」——测试资格 / 灰度投放，语义上必须由管理员按人授予
+     * （如 TESTER 角色）。若随默认角色批发，等于所有登录 App 用户都能看到测试版，
+     * 违背结果级权限的投放意图（V20261001005 起按前缀全量授予时未区分类型，本方法为修复）。</p>
+     *
+     * @return 本次新增的授权条数（0 表示已是最新；收回数另记日志）
      */
     public int syncPermissions() {
         Long roleId = ensureRole();
         List<Permission> appPermissions = permissionMapper.selectList(
-                new QueryWrapper<Permission>().likeRight("permission_code", APP_PERMISSION_PREFIX));
+                new QueryWrapper<Permission>()
+                        .likeRight("permission_code", APP_PERMISSION_PREFIX)
+                        .eq("type", PermissionType.API));
         int granted = 0;
         for (Permission p : appPermissions) {
             Long exists = rolePermissionMapper.selectCount(new QueryWrapper<RolePermission>()
@@ -103,7 +114,20 @@ public class AppUserRoleService {
             rolePermissionMapper.insert(link);
             granted++;
         }
-        if (granted > 0) {
+        // 收回：APP_USER 名下的范围权限（历史误授存量，或管理员误加）。带 not-exists 语义的
+        // 幂等清理——正常库删 0 行；与授权方向相反的同一不变量：APP_USER 永不持有 DATA 权限。
+        // 注意收回范围刻意只有 user: 前缀（本初始化器只「发放」user: 权限，对应地也只收回它发得出去的）；
+        // admin: 域 DATA 权限的误发存量一次性清理由 V20261001009 负责，这里不做全库清扫。
+        int revoked = rolePermissionMapper.delete(new QueryWrapper<RolePermission>()
+                .eq("role_id", roleId)
+                .inSql("permission_id",
+                        "SELECT id FROM sys_permission WHERE permission_code LIKE '"
+                                + APP_PERMISSION_PREFIX + "%' AND type = " + PermissionType.DATA));
+        if (revoked > 0) {
+            log.info("[AppUserRole] 已从 {} 收回范围(DATA)权限 {} 条（范围权限不随默认角色发放）",
+                    ROLE_CODE, revoked);
+        }
+        if (granted > 0 || revoked > 0) {
             permissionCache.bumpVersion();
         }
         return granted;

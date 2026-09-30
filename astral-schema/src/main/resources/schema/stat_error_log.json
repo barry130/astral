@@ -127,16 +127,16 @@
   ],
   "indexes": [
     {
-      "indexName": "idx_stat_error_fingerprint",
-      "columns": ["fingerprint"]
-    },
-    {
       "indexName": "idx_stat_error_occur_time",
       "columns": ["occur_time"]
     },
     {
       "indexName": "idx_stat_error_type",
       "columns": ["error_type"]
+    },
+    {
+      "indexName": "idx_stat_error_fp_time",
+      "columns": ["fingerprint", "occur_time"]
     }
   ]
 }

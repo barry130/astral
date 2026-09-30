@@ -3,6 +3,7 @@ package com.astral.auth.service.impl;
 import cn.dev33.satoken.dao.SaTokenDao;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
+import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.auth.dto.TokenInfo;
@@ -134,16 +135,20 @@ public class TokenServiceImpl implements TokenService {
         allTokens.sort(Comparator.comparing(TokenInfo::getCreateTime, 
                 Comparator.nullsLast(Comparator.naturalOrder())).reversed());
 
-        // 手动分页
+        // 手动分页。pageNum/pageSize 来自 query，必须先钳制再算偏移：
+        // pageNum < 1 会得到负 fromIndex 并让 subList 抛 IndexOutOfBoundsException（500），
+        // pageSize 过大则让下面的手工切片与上游序列都失去意义。
+        int safePageNum = PageQuery.pageNum(pageNum);
+        int safePageSize = PageQuery.pageSize(pageSize);
         int total = allTokens.size();
-        int fromIndex = (pageNum - 1) * pageSize;
-        int toIndex = Math.min(fromIndex + pageSize, total);
+        int fromIndex = (safePageNum - 1) * safePageSize;
+        int toIndex = Math.min(fromIndex + safePageSize, total);
 
         List<TokenInfo> pageData = fromIndex < total 
                 ? allTokens.subList(fromIndex, toIndex) 
                 : new ArrayList<>();
 
-        Page<TokenInfo> page = new Page<>(pageNum, pageSize, total);
+        Page<TokenInfo> page = new Page<>(safePageNum, safePageSize, total);
         page.setRecords(pageData);
         return page;
     }

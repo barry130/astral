@@ -61,8 +61,8 @@ export default function StoragePage() {
   };
 
   const submitConfig = async () => {
-    const values = await configForm.validateFields();
     try {
+      const values = await configForm.validateFields();
       if (configModal.editing?.id) {
         await storageApi.updateConfig(configModal.editing.id, values);
       } else {
@@ -72,7 +72,9 @@ export default function StoragePage() {
       setConfigModal({ open: false });
       loadConfigs();
     } catch (e: any) {
-      message.error(e.message);
+      // 必填校验失败时 validateFields 抛的是 { errorFields } 不是 Error，取不到 message，兜底一句中文提示；
+      // 字段级错误仍由表单内联展示，这里只保证「点了确定没有任何反馈」不再发生
+      message.error(e?.message || '请检查表单填写是否完整');
     }
   };
 
@@ -127,13 +129,13 @@ export default function StoragePage() {
   };
 
   const submitFolder = async () => {
-    const values = await folderForm.validateFields();
-    const payload = { ...values, policy: buildFolderPolicy(values) };
-    delete payload.policyEnabled;
-    ['policyRequireLogin', 'policyMinSizeBytes', 'policyMaxSizeMb', 'policyDailyLimit',
-      'policyMimes', 'policyExtensions', 'policyForceVisibility', 'policyVerifyContent',
-      'policyMaxPixels'].forEach((k) => delete payload[k]);
     try {
+      const values = await folderForm.validateFields();
+      const payload = { ...values, policy: buildFolderPolicy(values) };
+      delete payload.policyEnabled;
+      ['policyRequireLogin', 'policyMinSizeBytes', 'policyMaxSizeMb', 'policyDailyLimit',
+        'policyMimes', 'policyExtensions', 'policyForceVisibility', 'policyVerifyContent',
+        'policyMaxPixels'].forEach((k) => delete payload[k]);
       if (folderModal.editing?.id) {
         await storageApi.updateFolder(folderModal.editing.id, payload);
       } else {
@@ -143,7 +145,8 @@ export default function StoragePage() {
       setFolderModal({ open: false });
       loadFolders();
     } catch (e: any) {
-      message.error(e.message);
+      // 同 submitConfig：校验失败不会带上 message，兜底中文提示
+      message.error(e?.message || '请检查表单填写是否完整');
     }
   };
 
@@ -198,10 +201,13 @@ export default function StoragePage() {
   const [uploadFolderId, setUploadFolderId] = useState<number | undefined>();
   const [uploading, setUploading] = useState(false);
 
-  const loadFiles = (query = fileQuery) => {
+  /** isAlive 由筛选 effect 注入：被更新的请求取代后丢弃慢响应，避免旧结果覆盖新结果 */
+  const loadFiles = (query = fileQuery, isAlive: () => boolean = () => true) => {
     storageApi.pageFiles(query).then((res) => {
-      if (res.code === 200) setFiles(res.data);
-    }).catch((e) => message.error(e.message));
+      if (res.code === 200 && isAlive()) setFiles(res.data);
+    }).catch((e) => {
+      if (isAlive()) message.error(e.message);
+    });
   };
 
   const copyDownloadUrl = async (file: StorageFile) => {
@@ -488,7 +494,11 @@ export default function StoragePage() {
   }, []);
 
   useEffect(() => {
-    loadFiles();
+    let alive = true;
+    loadFiles(fileQuery, () => alive);
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileQuery.current, fileQuery.size, fileQuery.folderId, fileQuery.keyword]);
 

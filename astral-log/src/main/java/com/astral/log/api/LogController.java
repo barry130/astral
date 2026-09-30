@@ -1,6 +1,7 @@
 package com.astral.log.api;
 
 import com.astral.common.result.Result;
+import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.LoginLog;
 import com.astral.dao.entity.OperateLog;
 import com.astral.dao.mapper.LoginLogMapper;
@@ -58,7 +59,7 @@ public class LogController {
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime) {
 
-        Page<OperateLog> page = new Page<>(pageNum, pageSize);
+        Page<OperateLog> page = new Page<>(PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize));
         QueryWrapper<OperateLog> wrapper = new QueryWrapper<>();
         wrapper.orderByDesc("create_time");
 
@@ -108,7 +109,7 @@ public class LogController {
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(required = false) String username) {
         
-        Page<LoginLog> page = new Page<>(pageNum, pageSize);
+        Page<LoginLog> page = new Page<>(PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize));
         QueryWrapper<LoginLog> wrapper = new QueryWrapper<>();
         wrapper.orderByDesc("login_time");
         

@@ -3,6 +3,7 @@ package com.astral.common.util;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * 统一客户端系统头契约（反馈 + 统计共用一套）。
@@ -67,6 +68,15 @@ public final class ClientHeaders {
     /** 与 {@code stat_api_hourly.app_version} / {@code sys_feedback.app_version} 列宽一致 */
     public static final int MAX_VERSION = 32;
 
+    /**
+     * 版本号允许的字符形态：语义化版本号及其预发布/构建元数据。
+     * <p>如 {@code 1.2.3} / {@code 1.0.0-beta.1} / {@code 2.1.0+23} / {@code 20260930}。
+     * 首字符必须是字母或数字（避免 {@code .} / {@code -} 开头的纯符号串），
+     * 后续每段由分隔符 {@code . _ + -} 接一串字母数字。空串不匹配。</p>
+     */
+    private static final Pattern VERSION_PATTERN =
+            Pattern.compile("[0-9A-Za-z]+(?:[._+-][0-9A-Za-z]+)*");
+
     /** 与 {@code sys_feedback.device} 列宽一致 */
     public static final int MAX_DEVICE = 128;
 
@@ -129,6 +139,23 @@ public final class ClientHeaders {
     public static String normalizeUt(String raw) {
         String value = normalize(raw, MAX_UT).toLowerCase(Locale.ROOT);
         return UT_VALUES.contains(value) ? value : "";
+    }
+
+    /**
+     * 归一客户端版本号：先 {@link #normalize}（去空白 + 截断）再校验字符形态，不符者归空串。
+     *
+     * <p><b>为什么要校验</b>：{@code app_version} 与 {@code ut} 一样参与
+     * {@code stat_api_hourly} 的分组与唯一键，而它同样由客户端自报。仅截断长度是不够的——
+     * 一个爬虫每次换一个 32 字符的随机串，仍能持续制造新分组。这里先把明显不是版本号的值
+     * （含空白、控制字符、非 ASCII、超长乱码等）挡掉；数量级上的无界增长由
+     * {@code ApiMetricCollector} 的桶基数上限兜底。</p>
+     *
+     * @param raw 请求头原始值，可为 null
+     * @return 合法的版本号，或空串表示「未知/未携带」
+     */
+    public static String normalizeVersion(String raw) {
+        String value = normalize(raw, MAX_VERSION);
+        return VERSION_PATTERN.matcher(value).matches() ? value : "";
     }
 
     /**
