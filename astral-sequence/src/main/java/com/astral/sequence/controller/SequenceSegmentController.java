@@ -1,5 +1,6 @@
 package com.astral.sequence.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.SequenceSegment;
 import com.astral.sequence.service.SequenceSegmentService;
 import com.astral.common.result.Result;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "号段分配表")
 @RestController
 @RequestMapping("/api/v1/admin/sequence/segment")
+@RequiresPermission("admin:sequence:view")
 @RequiredArgsConstructor
 public class SequenceSegmentController {
 
@@ -57,6 +59,7 @@ public class SequenceSegmentController {
      * @return 操作结果
      */
     @Operation(summary = "创建")
+    @RequiresPermission("admin:sequence:edit")
     @PostMapping
     public Result<Void> create(@RequestBody SequenceSegment entity) {
         sequenceSegmentService.save(entity);
@@ -71,6 +74,7 @@ public class SequenceSegmentController {
      * @return 操作结果
      */
     @Operation(summary = "更新")
+    @RequiresPermission("admin:sequence:edit")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody SequenceSegment entity) {
         entity.setId(id);
@@ -85,6 +89,7 @@ public class SequenceSegmentController {
      * @return 操作结果
      */
     @Operation(summary = "删除")
+    @RequiresPermission("admin:sequence:edit")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         sequenceSegmentService.removeById(id);

@@ -1,6 +1,6 @@
 package com.astral.system.controller;
 
-import com.astral.auth.security.PermissionChecker;
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SysMenu;
 import com.astral.system.service.SysMenuService;
@@ -16,43 +16,44 @@ import java.util.stream.Collectors;
 public class SysMenuController {
 
     private final SysMenuService sysMenuService;
-    private final PermissionChecker permissionChecker;
 
+    @RequiresPermission("admin:system:menu:view")
     @GetMapping("/tree")
     public Result<List<Map<String, Object>>> getMenuTree() {
-        permissionChecker.require("system:menu:view");
         List<SysMenu> all = sysMenuService.listAll();
         List<Map<String, Object>> tree = buildTree(all, 0L);
         return Result.success(tree);
     }
 
+    @RequiresPermission("admin:system:menu:view")
     @GetMapping("/list")
     public Result<List<Map<String, Object>>> getMenuList() {
-        permissionChecker.require("system:menu:view");
         List<SysMenu> all = sysMenuService.listAll();
         List<Map<String, Object>> result = all.stream().map(this::toMap).collect(Collectors.toList());
         return Result.success(result);
     }
 
+    @RequiresPermission("admin:system:menu:view")
     @GetMapping("/{id}")
     public Result<SysMenu> getById(@PathVariable Long id) {
-        permissionChecker.require("system:menu:view");
         return Result.success(sysMenuService.listAll().stream()
                 .filter(m -> id.equals(m.getId()))
                 .findFirst()
                 .orElseThrow(() -> new com.astral.common.exception.BusinessException("SYS013")));
     }
 
+    // 菜单行本身不授予任何权限（可见性还受各自 node.permission 约束），
+    // 因此维护菜单属于可委派的配置类操作，要求 admin:system:menu:edit
+    @RequiresPermission(value = "admin:system:menu:edit", name = "菜单维护", domain = "system",
+            description = "管理端菜单树的新增/修改/删除")
     @PostMapping
     public Result<SysMenu> create(@RequestBody SysMenu menu) {
-        // 菜单直接决定管理端可见范围，属于提权面，要求超管
-        permissionChecker.requireSuper();
         return Result.success(sysMenuService.create(menu));
     }
 
+    @RequiresPermission("admin:system:menu:edit")
     @PutMapping("/{id}")
     public Result<SysMenu> update(@PathVariable Long id, @RequestBody SysMenu menu) {
-        permissionChecker.requireSuper();
         return Result.success(sysMenuService.update(id, menu));
     }
 
@@ -61,9 +62,9 @@ public class SysMenuController {
      * <p>原实现写在 Controller 里，只删一层子菜单且两条 delete 不在同一事务：
      * 第二条失败会留下 parent_id 悬空的孤儿节点，且孙级菜单永远删不掉。</p>
      */
+    @RequiresPermission("admin:system:menu:edit")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        permissionChecker.requireSuper();
         sysMenuService.deleteWithChildren(id);
         return Result.success();
     }

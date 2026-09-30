@@ -47,7 +47,7 @@ public class SegmentGenerator implements SequenceGenerator {
     /**
      * 异步预加载执行器
      * <p>
-     * 使用 JDK 21 虚拟线程（每任务一虚拟线程）异步预加载下一个号段。
+     * 使用 JDK 25 虚拟线程（每任务一虚拟线程）异步预加载下一个号段。
      * 预加载是 DB I/O 密集操作，虚拟线程在阻塞期间可从 carrier 卸载，
      * 不占用平台线程，比固定大小平台线程池更高效、更省内存。
      * </p>

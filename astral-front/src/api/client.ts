@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { beginRequest, endRequest } from '@/lib/requestLoading';
+import { clientHeaders } from '@/lib/client-info';
 
 // API 方法自身已包含 /api 前缀, 同源访问时 baseURL 必须为空, 避免拼成 /api/api/...
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
@@ -23,6 +24,13 @@ const client = axios.create({
 
 client.interceptors.request.use(
   (config) => {
+    // 统一客户端系统头（X-App-Ut=web / X-App-Version / X-Device / X-OS）：
+    // 本实例的请求全部走 /api/**，由 next.config.js 的 rewrite 转发到 astral，
+    // 因此整个管理台只要是经这里发出的请求都满足「请求 astral 必带这几个头」。
+    // 契约见 src/lib/client-info.ts。
+    for (const [name, value] of Object.entries(clientHeaders())) {
+      config.headers.set(name, value);
+    }
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
       if (token) {

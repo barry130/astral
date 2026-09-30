@@ -15,25 +15,43 @@ import java.time.LocalDateTime;
  * 统一通知表（sys_notice）
  * <p>轻听公告（qt_app_notice）超集 + 反馈/需求通知统一入口。</p>
  * <ul>
- *   <li>channel：app | pc | web | all</li>
+ *   <li>channel：逗号分隔的平台集合，取值与 {@code stat_platform} 同源
+ *       （app-android / app-ios / app-windows / web），另可用 all 表示不限平台</li>
  *   <li>notice_type：announce 公告 | feedback 反馈 | request 需求</li>
  *   <li>user_id：NULL=广播；有值=点对点</li>
  *   <li>display：位掩码 1=开屏 2=通告栏 4=消息中心</li>
  * </ul>
+ * <p>渠道的解析/匹配/归一统一走 {@link com.astral.feedback.common.NoticeChannel}，
+ * 本类只保留常量别名，不要在业务代码里手写渠道字符串比较。</p>
  */
 @Data
 @TableName("sys_notice")
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SysNotice {
 
-    /** 渠道：App */
+    /** 渠道：不限平台（所有平台可见），见 {@link com.astral.feedback.common.NoticeChannel#ALL} */
+    public static final String CHANNEL_ALL = com.astral.feedback.common.NoticeChannel.ALL;
+    /** 渠道：Android App（= stat_platform 的 app-android） */
+    public static final String CHANNEL_ANDROID = com.astral.common.util.ClientHeaders.UT_ANDROID;
+    /** 渠道：iOS App（= stat_platform 的 app-ios） */
+    public static final String CHANNEL_IOS = com.astral.common.util.ClientHeaders.UT_IOS;
+    /** 渠道：Windows 桌面端（= stat_platform 的 app-windows，旧值 pc） */
+    public static final String CHANNEL_WINDOWS = com.astral.common.util.ClientHeaders.UT_WINDOWS;
+    /** 渠道：Web / H5（= stat_platform 的 web） */
+    public static final String CHANNEL_WEB = com.astral.common.util.ClientHeaders.UT_WEB;
+
+    /**
+     * 移动端双平台（Android + iOS）。
+     * <p>改造前 {@code channel=app} 的等价物：qt-uniappx 同一份包同时跑在两端。</p>
+     */
+    public static final String CHANNEL_MOBILE = CHANNEL_ANDROID + "," + CHANNEL_IOS;
+
+    /** @deprecated 遗留值 app，新代码请用 {@link #CHANNEL_MOBILE}；仅存量数据/老客户端参数还会出现 */
+    @Deprecated
     public static final String CHANNEL_APP = "app";
-    /** 渠道：PC（桌面端） */
+    /** @deprecated 遗留值 pc，新代码请用 {@link #CHANNEL_WINDOWS}；仅存量数据/老客户端参数还会出现 */
+    @Deprecated
     public static final String CHANNEL_PC = "pc";
-    /** 渠道：Web */
-    public static final String CHANNEL_WEB = "web";
-    /** 渠道：全部（所有端可见） */
-    public static final String CHANNEL_ALL = "all";
 
     /** 类型：公告 */
     public static final String TYPE_ANNOUNCE = "announce";
@@ -45,7 +63,7 @@ public class SysNotice {
     @TableId(value = "id", type = IdType.INPUT)
     private Long id;
 
-    /** 渠道：app | pc | web | all */
+    /** 渠道：逗号分隔的平台集合（或 all），取值与 stat_platform 同源；见 {@code NoticeChannel} */
     private String channel;
 
     /** 类型：announce 公告 | feedback 反馈 | request 需求 */

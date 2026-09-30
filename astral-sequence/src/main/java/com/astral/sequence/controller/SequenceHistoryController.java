@@ -1,5 +1,6 @@
 package com.astral.sequence.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.SequenceHistory;
 import com.astral.sequence.service.SequenceHistoryService;
 import com.astral.common.result.Result;
@@ -22,6 +23,7 @@ import java.util.List;
 @Tag(name = "序列生成历史表")
 @RestController
 @RequestMapping("/api/v1/admin/sequence/history")
+@RequiresPermission("admin:sequence:view")
 @RequiredArgsConstructor
 public class SequenceHistoryController {
 

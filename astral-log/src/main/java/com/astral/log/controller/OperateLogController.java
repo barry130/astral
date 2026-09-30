@@ -1,5 +1,6 @@
 package com.astral.log.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.OperateLog;
 import com.astral.log.service.OperateLogService;
 import com.astral.common.result.Result;
@@ -19,6 +20,7 @@ import jakarta.validation.Valid;
 @Tag(name = "操作日志表")
 @RestController
 @RequestMapping("/api/v1/admin/log/operate_log")
+@RequiresPermission(value = "admin:log:view", name = "查看日志", description = "操作日志查询")
 @RequiredArgsConstructor
 public class OperateLogController {
 

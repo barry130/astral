@@ -142,6 +142,45 @@ public class UniappxFrontendExtension implements PluginFrontendExtension {
 
 然后在 `astral-front/src/app/dashboard/uniappx/page.tsx` 创建页面。导航项的 `pluginId` 必须与 `AstralPlugin#getPluginId()` 一致。
 
+## 声明插件权限（`PermissionProvider`）
+
+插件通过实现 `PermissionProvider` 声明自己需要的权限，应用启动时由 `PermissionRegistry`
+**自动登记**进 `sys_permission`（只增不改：后台改过名称/状态的行不会被覆盖）：
+
+```java
+@Component
+public class QtPlugin implements AstralPlugin, PluginFrontendExtension, PermissionProvider {
+
+    @Override
+    public List<PermissionDef> getPermissions() {
+        return List.of(
+            // 接口权限（TYPE_API=4）：控制后台管理接口是否可达
+            new PermissionDef("admin:qt:admin", "轻听管理", "qt", TYPE_API, "轻听插件后台管理"),
+            // 数据权限（TYPE_DATA=5）：结果级权限，授予「结果里能看见哪一部分」
+            new PermissionDef("user:qt:update:channel:beta", "轻听测试版接收资格(版本更新)", "qt", TYPE_DATA,
+                    "可看到 beta 渠道的版本更新；正式版版本号更高时仍收到正式版")
+        );
+    }
+}
+```
+
+- 权限编码规范见 `AGENTS.md` 约束 5：`域:资源:操作[:范围]`，全小写。
+- `TYPE_API` / `TYPE_DATA` 是 `PermissionProvider` 的接口常量（分别为 4 / 5），实现类可直接引用。
+- 插件控制器上的 `@RequiresPermission("admin:qt:admin")` / `@RequiresSuper` 也会被自动登记，
+  一般**无需**在 `getPermissions()` 里重复声明带注解的接口权限；此处声明的是「没有落在具体注解上」的权限，
+  尤其是**结果级权限**（它们不拦截接口，而是由业务用 `DataScopeResolver` 解析可见集合）。
+
+### 结果级权限的用法（同一接口、不同人群、不同结果）
+
+以轻听版本更新为例：`user:qt:update:channel:beta` 授予的是「能看见 beta 渠道」的资格，
+业务在可见集合内按版本号最大者投放——正式版版本号更高时，持测试权限的用户依然收到正式版：
+
+```java
+Set<String> channels = dataScopeResolver.resolveChannelsByToken(
+        satoken, PermissionChecker.QT_UPDATE_CHANNEL_SCOPE);   // 无权限 → [stable]
+return QtRestResp.success(appService.getUpdate(type, version, channels)); // 集合内取最高版本
+```
+
 ## 系统必需插件
 
 实现 `isRequired()` 并返回 `true`，可禁止后台关闭该插件：
@@ -177,6 +216,8 @@ public boolean isRequired() {
 - 资源文件使用插件专属前缀，避免 classpath 同名冲突。
 - 数据库变更以只增不改的版本化迁移脚本提交。
 - Mapper 包已注册，Controller 的认证范围已明确。
+- 管理端接口已用 `@RequiresPermission`（提权类用 `@RequiresSuper`）声明权限，编码符合 `域:资源:操作[:范围]`；
+  结果级权限（按人群返回不同结果）已用 `DataScopeResolver` 解析可见集合，而不是布尔分支。
 - 实体主键统一 `@TableId(type = IdType.INPUT)`，并保证实体至少有一个字段带 `@TableField(fill=...)`
   （通常为 `createTime`=INSERT / `updateTime`=INSERT_UPDATE；表无 create_time 列时在该表时间字段上挂 INSERT fill 触发），
   ID 由宿主 `SequenceMetaObjectHandler` 按业务键 `{表名}_id` 从全局序列自动填充，**不要写显式取号服务**。

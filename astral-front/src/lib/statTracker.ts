@@ -8,6 +8,8 @@
  */
 'use client';
 
+import { clientHeaders } from '@/lib/client-info';
+
 /** 匿名设备ID 的 localStorage key */
 const DEVICE_ID_KEY = 'qt_stat_device_id';
 /** 持久化队列 key */
@@ -179,7 +181,10 @@ async function flush() {
   try {
     await fetch('/api/v1/stat/report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // 统一客户端系统头：本处不经 axios 实例，需要自己带上（契约见 lib/client-info.ts）。
+      // 事件体里的 ut 只进 stat_device/stat_metric/stat_error；请求头这一路才是
+      // 接口统计（stat_api_hourly）的平台/版本维度来源。
+      headers: { 'Content-Type': 'application/json', ...clientHeaders() },
       body: JSON.stringify({ events: batch }),
     });
   } catch {

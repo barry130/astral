@@ -6,7 +6,9 @@ import lombok.Data;
 
 /**
  * 提交反馈请求体
- * <p>服务端自动补 user_id（拦截器注入）、device/os/app_version/platform（请求头）、ip。</p>
+ * <p>服务端自动补 user_id（拦截器注入）、ip（可信代理白名单解析），
+ * 以及 device/os/app_version/platform 四个字段——统一从客户端系统头读取，
+ * 契约见 {@code com.astral.common.util.ClientHeaders}（与接口统计共用一套）。</p>
  */
 @Data
 public class SubmitFeedbackDto {

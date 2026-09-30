@@ -5,6 +5,7 @@ import { Card, Form, Input, Select, Button, message, Spin, InputNumber, Row, Col
 import { ApiOutlined, SendOutlined, BulbOutlined, HistoryOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ToolOutlined } from '@/components/antd-compat/icons';
 import { sequenceApi, SequenceType, SequenceResponse } from '@/api/sequence';
 import { sequenceConfigApi, SequenceConfig } from '@/api/sequenceConfig';
+import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
 /**
@@ -48,6 +49,18 @@ export default function SequencePage() {
   const [singleTypeLocked, setSingleTypeLocked] = useState(false);
   /** 批量生成类型锁定状态 */
   const [batchTypeLocked, setBatchTypeLocked] = useState(false);
+
+  const hasPerm = usePerm();
+  /**
+   * 序列生成 / 批量生成权限：admin:sequence:generate、admin:sequence:batch 目前只在权限表中登记，
+   * 后端未用 @RequiresPermission 强制校验，因此这里只是前端拦截（不构成服务端防护）。
+   */
+  /** 是否具备序列生成权限 */
+  const canGenerate = hasPerm('admin:sequence:generate');
+  /** 是否具备批量生成权限 */
+  const canBatch = hasPerm('admin:sequence:batch');
+  /** 是否具备序列配置维护权限（须与后端 SequenceConfigController 上的 @RequiresPermission("admin:sequence:edit") 一致） */
+  const canEditConfig = hasPerm('admin:sequence:edit');
 
   /** 组件挂载时加载序列类型、配置列表和历史记录 */
   useEffect(() => {
@@ -288,7 +301,7 @@ export default function SequencePage() {
                       </Select>
                     </Form.Item>
                     <Form.Item style={{ marginBottom: 0 }}>
-                      <Button type="primary" htmlType="submit" block icon={<SendOutlined />}>
+                      <Button type="primary" htmlType="submit" block icon={<SendOutlined />} disabled={!canGenerate}>
                         生成下一个
                       </Button>
                     </Form.Item>
@@ -324,7 +337,7 @@ export default function SequencePage() {
                       </Col>
                     </Row>
                     <Form.Item style={{ marginBottom: 0 }}>
-                      <Button htmlType="submit" block icon={<BulbOutlined />}>批量生成</Button>
+                      <Button htmlType="submit" block icon={<BulbOutlined />} disabled={!canBatch}>批量生成</Button>
                     </Form.Item>
                   </Form>
                 </Card>
@@ -385,9 +398,11 @@ export default function SequencePage() {
                   onSearch={handleConfigSearch}
                 />
                 <div className="page-toolbar">
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleConfigAdd}>
-                    新建配置
-                  </Button>
+                  {canEditConfig && (
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleConfigAdd}>
+                      新建配置
+                    </Button>
+                  )}
                 </div>
               </div>
               <ResizableTable
@@ -407,6 +422,7 @@ export default function SequencePage() {
                       <Switch 
                         checked={v} 
                         onChange={(checked) => handleConfigToggle(r.id!, checked)} 
+                        disabled={!canEditConfig}
                         checkedChildren="启用" 
                         unCheckedChildren="禁用" 
                       />
@@ -417,9 +433,9 @@ export default function SequencePage() {
                     key: 'action', 
                     render: (_: any, r: SequenceConfig) => (
                       <Space>
-                        <Button type="link" icon={<EditOutlined />} onClick={() => handleConfigEdit(r)}>编辑</Button>
-                        <Popconfirm title="确认删除?" onConfirm={() => handleConfigDelete(r.id!)}>
-                          <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+                        <Button type="link" icon={<EditOutlined />} disabled={!canEditConfig} onClick={() => handleConfigEdit(r)}>编辑</Button>
+                        <Popconfirm title="确认删除?" disabled={!canEditConfig} onConfirm={() => handleConfigDelete(r.id!)}>
+                          <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEditConfig}>删除</Button>
                         </Popconfirm>
                       </Space>
                     )
@@ -446,6 +462,7 @@ export default function SequencePage() {
         onOk={handleConfigSubmit}
         onCancel={() => setModalVisible(false)}
         okText="保存"
+        okButtonProps={{ disabled: !canEditConfig }}
       >
         <Form form={configForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="bizKey" label="业务键" rules={[{ required: true }]}>

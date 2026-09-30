@@ -117,6 +117,18 @@ function InputBase({
     onChange?.(e);
   };
 
+  // 宽度类样式要落到**外层包装**上，而不是内层 <input>。
+  // 原因：外层包装是 w-full、内层 input 也是 w-full，调用方的 `style={{ width: 220 }}`
+  // 如果只作用在内层，外层依旧占满整行 —— 在 `.filter-bar`（flex + space-between）里
+  // 就会把右侧按钮挤到第二行，表现为「搜索 + 新建」莫名变成两行。
+  // 内联 style 优先级高于 w-full 类，所以：无 style → 保持 w-full（表单里照常填满），
+  // 有 style.width → 按调用方给的宽度。其余样式（如 textAlign）仍留给 input。
+  const { width, minWidth, maxWidth, ...restStyle } = style ?? {};
+  const widthStyle: CSSProperties = {};
+  if (width !== undefined) widthStyle.width = width;
+  if (minWidth !== undefined) widthStyle.minWidth = minWidth;
+  if (maxWidth !== undefined) widthStyle.maxWidth = maxWidth;
+
   const inputEl = (
     <input
       id={id}
@@ -140,7 +152,7 @@ function InputBase({
       autoComplete={autoComplete}
       aria-label={aria['aria-label']}
       className={cn(FIELD_BASE, SIZE_H[size] ?? SIZE_H.middle, className)}
-      style={style}
+      style={restStyle}
     />
   );
 
@@ -149,7 +161,12 @@ function InputBase({
 
   if (!hasAffix) {
     return (
-      <span className={cn('relative inline-flex w-full', status === 'error' && 'text-destructive')}>{inputEl}</span>
+      <span
+        className={cn('relative inline-flex w-full', status === 'error' && 'text-destructive')}
+        style={widthStyle}
+      >
+        {inputEl}
+      </span>
     );
   }
 
@@ -174,10 +191,13 @@ function InputBase({
     </span>
   );
 
-  if (!addonBefore && !addonAfter) return box;
+  if (!addonBefore && !addonAfter) {
+    // 同上：宽度由这个包装层决定（无 style 时 w-full 填满，有 style.width 时按调用方）
+    return <span className="relative inline-flex w-full" style={widthStyle}>{box}</span>;
+  }
 
   return (
-    <span className="flex w-full items-stretch">
+    <span className="flex w-full items-stretch" style={widthStyle}>
       {addonBefore ? (
         <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
           {addonBefore}
@@ -296,11 +316,26 @@ export function InputSearch({ onSearch, enterButton, loading, allowClear, ...res
 
   const trigger = (v: string) => onSearch?.(v);
 
+  // 宽度必须由**最外层**这个 span 承担。它下面还有「输入框 + 搜索按钮」两个子元素，
+  // 若外层是 w-full，调用方的 style={{ width: 300 }} 只会缩到内层，
+  // 外层仍占满整行 —— 在 `.filter-bar`（flex + space-between）里就会把右侧
+  // 「新建」按钮挤到第二行，表现为工具栏莫名变成两行。
+  // 无 width 时才用 w-full，保证放在窄容器里仍能填满。
+  const { width, minWidth, maxWidth, ...innerStyle } = rest.style ?? {};
+  const outerStyle: CSSProperties = {};
+  if (width !== undefined) outerStyle.width = width;
+  if (minWidth !== undefined) outerStyle.minWidth = minWidth;
+  if (maxWidth !== undefined) outerStyle.maxWidth = maxWidth;
+
   return (
-    <span className="inline-flex w-full items-stretch">
+    <span
+      className={cn('inline-flex items-stretch', width === undefined && 'w-full')}
+      style={outerStyle}
+    >
       <span className="min-w-0 flex-1">
         <InputBase
           {...rest}
+          style={innerStyle}
           allowClear={allowClear}
           prefix={rest.prefix ?? <Search className="size-3.5" />}
           value={current}
@@ -511,13 +546,17 @@ function SelectBase({
     return optionsFromChildren(children);
   }, [options, children]);
 
+  // 空串在单选下等价于「无值」：显示 placeholder 而不是一个看不见的空标签。
+  // 与 antd 行为一致，也让父组件用 value='' 清空时能真正清掉（否则会退化成
+  // 非受控模式、回落到内部旧状态，清空失效）。
+  const isEmptyValue = (v: any) => v === undefined || v === null || v === '';
   const selected: any[] = multiple
     ? Array.isArray(current)
       ? current
-      : current === undefined || current === null || current === ''
+      : isEmptyValue(current)
         ? []
         : [current]
-    : current === undefined || current === null
+    : isEmptyValue(current)
       ? []
       : [current];
 
@@ -746,6 +785,18 @@ export interface SwitchProps {
   autoFocus?: boolean;
 }
 
+/**
+ * 带文字标签的 Switch 轨道尺寸阶梯（默认尺寸）。
+ * 文字容器可用宽 = 轨道宽 - 34；位移 = 轨道宽 - 24。
+ * 类名必须是字面量（Tailwind 靠扫源码收集），所以用常量表而非模板拼接。
+ */
+const TRACK_LADDER = [
+  { cls: 'w-16', travel: 'translate-x-10' }, // 可用 30px：≤2 个汉字（启用/禁用/强制）
+  { cls: 'w-20', travel: 'translate-x-14' }, // 可用 46px：3 个汉字（非强制/未发布/已发布）
+  { cls: 'w-24', travel: 'translate-x-18' }, // 可用 62px：4 个汉字或 GitHub直链
+  { cls: 'w-28', travel: 'translate-x-22' }, // 可用 78px：更长标签
+] as const;
+
 export function Switch({
   checked,
   defaultChecked,
@@ -773,6 +824,20 @@ export function Switch({
   const hasText = checkedChildren !== undefined || unCheckedChildren !== undefined;
   const small = size === 'small';
 
+  // 文字标签的轨道宽度必须按标签长度算，不能固定 w-16：
+  // 文字容器可用宽 = 轨道宽 - 左缩进 24 - 右缩进 8 - 边框 2 = 轨道宽 - 34，
+  // w-16(64) 只剩 30px，而 11px 字号下「非强制」「未发布」约 33px、「普通直链」约 44px ⇒ 折成两行。
+  // Tailwind 只认源码里出现过的字面量类名，所以轨道宽度写成常量表，不能模板拼接。
+  // 滑块位移沿用原有换算关系：位移 = 轨道宽 - 24（原本 w-16 ↔ translate-x-10 即 40 = 64 - 24）。
+  const labelWidthPx = (v: ReactNode) => {
+    if (typeof v !== 'string') return 0;
+    let px = 0;
+    for (const ch of v) px += /[\x00-\xff]/.test(ch) ? 6.2 : 11; // ASCII ≈ 6.2px，中文/全角 ≈ 11px
+    return Math.ceil(px);
+  };
+  const textNeed = Math.max(labelWidthPx(checkedChildren), labelWidthPx(unCheckedChildren));
+  const track = TRACK_LADDER[textNeed <= 30 ? 0 : textNeed <= 46 ? 1 : textNeed <= 62 ? 2 : 3];
+
   return (
     <button
       id={id}
@@ -786,7 +851,7 @@ export function Switch({
         'relative inline-flex shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors',
         on ? 'bg-primary' : 'bg-input',
         small ? 'h-4 w-8' : 'h-5 w-10',
-        hasText && (small ? 'h-5 w-14 px-1.5' : 'h-6 w-16 px-2'),
+        hasText && (small ? 'h-5 w-14 px-1.5' : cn('h-6 px-2', track.cls)),
         (disabled || loading) && 'cursor-not-allowed opacity-50',
         className,
       )}
@@ -795,13 +860,14 @@ export function Switch({
         className={cn(
           'pointer-events-none inline-block rounded-full bg-background shadow-sm transition-transform',
           small ? 'size-3' : 'size-4',
-          on ? (hasText ? (small ? 'translate-x-9' : 'translate-x-10') : small ? 'translate-x-4' : 'translate-x-5') : 'translate-x-0',
+          on ? (hasText ? (small ? 'translate-x-9' : track.travel) : small ? 'translate-x-4' : 'translate-x-5') : 'translate-x-0',
         )}
       />
       {hasText ? (
         <span
           className={cn(
-            'pointer-events-none absolute inset-y-0 flex items-center text-[11px] font-medium text-primary-foreground',
+            // whitespace-nowrap：标签永不折行；overflow-hidden 兜底，估算偏差时在轨道内裁掉而不是溢出按钮外
+            'pointer-events-none absolute inset-y-0 flex items-center overflow-hidden whitespace-nowrap text-[11px] font-medium text-primary-foreground',
             on ? 'left-2 right-6 justify-start' : 'left-6 right-2 justify-end',
           )}
         >
@@ -1290,6 +1356,7 @@ export function TreeSelect({
   const [open, setOpen] = useState(false);
   const selected: any[] = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
   void showCheckedStrategy;
+  const checkable = treeCheckable !== false && treeCheckable !== undefined;
 
   /** value → 标题的反查表 */
   const titleMap = useMemo(() => {
@@ -1329,21 +1396,38 @@ export function TreeSelect({
           tabIndex={disabled ? -1 : 0}
           className={cn(
             'flex w-full cursor-pointer items-center gap-1 rounded-md border border-input bg-transparent px-2.5 py-1 shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40',
-            SIZE_H[size] ?? SIZE_H.middle,
+            // 多选：不能沿用固定高度——已选项一多会换行，固定 h-9 会溢出；
+            // 改用「最小高度」+ 标签区自身上限/内部滚动（见下方 max-h-20）。
+            // 单选保持原固定高度，不影响其它调用方。
+            checkable ? 'min-h-9 py-1' : (SIZE_H[size] ?? SIZE_H.middle),
             disabled && 'cursor-not-allowed opacity-50',
             className,
           )}
           style={style}
         >
-          <span className="min-w-0 flex-1 truncate">
+          {/* max-h-20 + overflow-y-auto 放在标签区自身：触发器是 items-center，
+              子项高度不受容器 max-height 约束，上限必须挂在这里才生效。
+              overflow-y-auto 会让 overflow-x 一并计算为 auto，标签绝不会横向漏出。 */}
+          <span className="flex max-h-20 min-w-0 flex-1 flex-wrap items-center gap-1 overflow-y-auto">
             {selected.length === 0 ? (
-              <span className="text-muted-foreground">{placeholder}</span>
+              <span className="truncate text-muted-foreground">{placeholder}</span>
             ) : (
-              selected.map((v) => titleMap.get(v) ?? String(v)).filter(Boolean).map((t, i) => (
-                <span key={i} className="mr-1">
-                  {t}
-                </span>
-              ))
+              selected.map((v) => titleMap.get(v) ?? String(v)).filter(Boolean).map((t, i) =>
+                checkable ? (
+                  // max-w-full + truncate：单个标签再长也不会把容器撑宽；
+                  // 换行（flex-wrap）让「标签总宽」不再等于 max-content，弹窗宽度因此不再被撑爆
+                  <span
+                    key={i}
+                    className="inline-flex max-w-full items-center truncate rounded-sm bg-muted px-1.5 py-0.5 text-xs leading-5"
+                  >
+                    {t}
+                  </span>
+                ) : (
+                  <span key={i} className="mr-1 truncate">
+                    {t}
+                  </span>
+                ),
+              )
             )}
           </span>
           {allowClear && selected.length > 0 && !disabled ? (
@@ -1362,7 +1446,11 @@ export function TreeSelect({
           <ChevronDown className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
         </div>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-56 p-1">
+      <PopoverContent
+        align="start"
+        collisionPadding={12}
+        className="w-[var(--radix-popover-trigger-width)] min-w-56 max-w-[min(560px,calc(100vw-2rem))] p-1"
+      >
         <div className="max-h-72 overflow-y-auto">
           <TreeCheckList nodes={treeData} selected={selected} onToggle={toggle} />
         </div>

@@ -148,31 +148,39 @@ export const METRIC_OPTIONS = [
 
 /** 设备统计概览 */
 export const statApi = {
-  getOverview: (date?: string, ut: string = 'all') =>
-    request.get<OverviewData>('/api/v1/admin/stat/overview', { params: { date, ut } }),
+  getOverview: (date?: string, ut: string = 'all', version?: string) =>
+    request.get<OverviewData>('/api/v1/admin/stat/overview', { params: { date, ut, version } }),
 
   /** 指标 24 小时趋势（gran 本期固定 hour） */
-  getTrend: (metric: string, date?: string, ut: string = 'all') =>
-    request.get<TrendData>('/api/v1/admin/stat/trend', { params: { metric, date, ut, gran: 'hour' } }),
+  getTrend: (metric: string, date?: string, ut: string = 'all', version?: string) =>
+    request.get<TrendData>('/api/v1/admin/stat/trend', { params: { metric, date, ut, version, gran: 'hour' } }),
 
   /** 接口调用 Top 榜 */
-  getApiTop: (limit: number = 10, date?: string) =>
-    request.get<ApiTopResult>('/api/v1/admin/stat/api/top', { params: { limit, date } }),
+  getApiTop: (limit: number = 10, date?: string, ut: string = 'all', version?: string) =>
+    request.get<ApiTopResult>('/api/v1/admin/stat/api/top', { params: { limit, date, ut, version } }),
 
   /** 单接口 24 小时趋势 */
-  getApiTrend: (uri: string, method: string, date?: string) =>
-    request.get<ApiTrendData>('/api/v1/admin/stat/api/trend', { params: { uri, method, date } }),
+  getApiTrend: (uri: string, method: string, date?: string, ut: string = 'all', version?: string) =>
+    request.get<ApiTrendData>('/api/v1/admin/stat/api/trend', { params: { uri, method, date, ut, version } }),
 
-  /** 错误明细分页 */
+  /** 错误明细分页（appVersion 为明细窗口内的版本约束） */
   getErrorPage: (params: {
     pageNum?: number;
     pageSize?: number;
     errorType?: string;
+    ut?: string;
     appVersion?: string;
     fingerprint?: string;
   }) => request.get<PageResult<StatErrorLogItem>>('/api/v1/admin/stat/error/page', { params }),
 
   /** 错误分组汇总 */
-  getErrorSummary: (date?: string) =>
-    request.get<ErrorSummaryItem[]>('/api/v1/admin/stat/error/summary', { params: { date } }),
+  getErrorSummary: (date?: string, ut: string = 'all', version?: string) =>
+    request.get<ErrorSummaryItem[]>('/api/v1/admin/stat/error/summary', { params: { date, ut, version } }),
+
+  /**
+   * 某平台下出现过的版本列表（版本下拉数据源）
+   * <p>ut 为 all / 空时后端返回空数组 —— 全部平台下版本只能为空。</p>
+   */
+  getVersions: (ut: string) =>
+    request.get<string[]>('/api/v1/admin/stat/versions', { params: { ut } }),
 };

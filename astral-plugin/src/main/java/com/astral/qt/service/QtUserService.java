@@ -6,6 +6,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.User;
+import com.astral.auth.registry.AppUserRoleService;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.qt.common.QtException;
 import com.astral.qt.dto.QtChangePwByEmailDto;
@@ -61,6 +62,13 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
     @Resource
     private StpInterface stpInterface;
 
+    /**
+     * App 端默认角色（APP_USER）归属维护：新注册 App 用户自动分配该角色，
+     * 使其开箱即拥有全部 {@code user:} 前缀权限（App 客户端接口）。
+     */
+    @Resource
+    private AppUserRoleService appUserRoleService;
+
     private static final Duration CODE_TTL = Duration.ofMinutes(10);
     private static final Duration RATE_TTL = Duration.ofSeconds(60);
     private static final String CODE_KEY = "qt:email:code:";
@@ -89,7 +97,11 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         StpUtil.login(user.getId());
         // 将用户名/昵称写入 Sa-Token 会话，与宿主一致
         StpUtil.getSession().set("username", user.getUsername());
-        StpUtil.getSession().set("nickname", user.getNickname());
+        // nickname 必须兜底成空串：SaSession.dataMap 是 ConcurrentHashMap，
+        // `set(key, null)` 会在 ConcurrentHashMap.put 里抛 NPE
+        // （实测栈：SaSession.set:501 -> ConcurrentHashMap.putVal:1023 -> 登录接口 500「系统出现错误」）。
+        // App 用户注册只填用户名/密码时可没有昵称，不兜底会导致这类账号完全无法登录。
+        StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         String token = StpUtil.getTokenValue();
 
         QtUserInfoVo vo = new QtUserInfoVo();
@@ -135,9 +147,14 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         // id / createTime / updateTime 由全局序列 + MetaObjectHandler 自动填充
         this.save(user);
 
+        // 默认角色必须在 populateRolesAndPermissions 之前分配：
+        // 否则注册响应里的 permissions 是空的，客户端首次启动就判定「无权限」。
+        appUserRoleService.assignToUser(user.getId());
+
         StpUtil.login(user.getId());
         StpUtil.getSession().set("username", user.getUsername());
-        StpUtil.getSession().set("nickname", user.getNickname());
+        // 同上：注册时 nickname 常为空，直接 set(null) 会 NPE 导致注册接口 500
+        StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         String token = StpUtil.getTokenValue();
 
         QtUserInfoVo vo = new QtUserInfoVo();

@@ -139,7 +139,7 @@ curl http://localhost:27000/api/v1/admin/system/user/list \
 
 - 系统监控（CPU、内存、磁盘、网络）
 - JVM 监控（堆内存、GC、线程数）
-- 业务指标监控（序列配置数、活跃连接数）
+- 业务指标监控（序列配置数、当前并发请求数）
 - 站点统计（PV/访客/活跃设备/错误次数、接口调用成功率）
 - 外部依赖监控（数据库连接池水位与容量、Redis 内存与命中率）
 - 集成 Micrometer + Prometheus
@@ -152,6 +152,70 @@ curl http://localhost:27000/api/v1/admin/system/user/list \
 | GET | `/api/v1/admin/monitor/system` | 系统资源状态 |
 | GET | `/api/v1/admin/monitor/jvm` | JVM 状态 |
 | GET | `/api/v1/admin/monitor/business` | 业务指标 |
+
+### 站点统计接口
+
+三个统计维度（设备 / 接口 / 错误）共用「日期 + 平台 + 版本」筛选：
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/admin/stat/overview` | 设备统计概览（今日 vs 昨日） |
+| GET | `/api/v1/admin/stat/trend` | 指标 24 小时趋势 |
+| GET | `/api/v1/admin/stat/api/top` | 接口调用 Top 榜 + 当天全量汇总 |
+| GET | `/api/v1/admin/stat/api/trend` | 单接口 24 小时趋势 |
+| GET | `/api/v1/admin/stat/error/summary` | 错误分组汇总（按 fingerprint） |
+| GET | `/api/v1/admin/stat/error/page` | 错误明细分页 |
+| GET | `/api/v1/admin/stat/versions` | 某平台下出现过的版本列表（版本下拉数据源） |
+
+筛选参数约定：
+
+- `ut`：平台（`app-android` / `app-ios` / `app-windows` / `web`）；**不传、空、`all` 均表示不加平台过滤**
+- `version`：客户端版本；同样遵循「不传 / 空 / `all` ⇒ 不限制」
+- 版本下拉只在选定具体平台后才有数据：全部平台时 `/versions` 返回空数组，前端把版本置空并禁用。
+
+### 统一客户端系统头（凡请求 astral 后端都必须携带）
+
+四个端（qt-uniappx / qt-pc / astral-front / 将来的小程序）请求 astral 后端时，
+一律携带下面这 4 个请求头。**反馈与统计共用同一套**，服务端两条独立链路的取值
+都收口在 `com.astral.common.util.ClientHeaders`：
+
+| 请求头 | 含义 | 取值 | 上限 | 接口统计落库 | 反馈落库 |
+|--------|------|------|------|--------------|----------|
+| `X-App-Ut` | 客户端平台 | `app-android` / `app-ios` / `app-windows` / `web` | 16 | `stat_api_hourly.ut` | `sys_feedback.platform` |
+| `X-App-Version` | 客户端版本 | 语义化版本，如 `1.1.0` / `3.0.1` | 32 | `stat_api_hourly.app_version` | `sys_feedback.app_version` |
+| `X-Device` | 设备型号 / 主机名 | `Pixel 6` / `iPhone 15 Pro` / `DESKTOP-ABC` / `Chrome 131` | 128 | — | `sys_feedback.device` |
+| `X-OS` | 操作系统及版本 | `Android 14` / `iOS 18.2` / `Windows 11 Pro 23H2 (22631)` | 64 | — | `sys_feedback.os` |
+
+各端的实际取值：
+
+| 端 | `X-App-Ut` | `X-App-Version` | `X-Device` | `X-OS` |
+|----|-----------|-----------------|-----------|--------|
+| qt-uniappx（Android/iOS） | `app-android` / `app-ios` | `manifest.json` 的 `versionName` | `getDeviceInfo().deviceModel` | `osName + " " + osVersion` |
+| qt-pc（Windows） | `app-windows` | `CARGO_PKG_VERSION`（= `app.config.json` 的 `version.name`） | `%COMPUTERNAME%` | 注册表 `CurrentVersion` 的 ProductName + DisplayVersion + BuildNumber |
+| astral-front（管理台） | `web` | `package.json` 的 `version`（构建期注入） | 浏览器及大版本 | UA 推断的操作系统 |
+
+实现位置（改契约时必须四处同步）：
+
+- 后端（权威定义）：`astral-common` 的 `com.astral.common.util.ClientHeaders`
+- qt-uniappx：`services/client-info.ts`（`http.ts` / `source-update.uts` / `qt-stat` 上报均复用）
+- qt-pc：`src-tauri/src/astral.rs` 的 `client_headers()`，在 `AstralClient::request()` 收口处注入
+- astral-front：`src/lib/client-info.ts`，在 axios 请求拦截器统一注入
+
+约定与注意事项：
+
+- **平台值走 `stat_platform` 字典**（`app-android` / `app-ios` / `app-windows` / `web`），
+  反馈页与统计页的下拉/展示共用这一份字典，不要另造取值。
+- **`ut` 做白名单校验**：这四个头都是客户端可伪造的，而 `ut` / `app_version` 直接参与
+  `stat_api_hourly` 的分组与唯一键。未知 `ut` 一律归空串（等价于「未携带」），
+  防止伪造值把分组数撑爆。新增平台时在 `ClientHeaders.UT_VALUES` 与字典各加一行。
+- **长度超限截断**（不导致落库失败）；缺失 / 空白一律归空串，`「全部平台 / 全部版本」`口径不受影响。
+- 头名可配：`astral.stat.client-ut-header` / `client-version-header` / `client-legacy-platform-header`。
+- **遗留 `X-Platform`**（旧版 App 反馈实现，值 `android` / `ios`）服务端仍会读取并映射为
+  统一值做过渡兼容，客户端已不再发送。
+- **只给 astral 请求加**：音源直链、GitHub 加速探测、对象存储预签名上传（PUT / multipart）
+  **绝对不能**带——既会把本机信息泄露给第三方，自定义头还会直接破坏签名/表单校验。
+- 接口统计是**服务端测量**，与设备统计/错误统计的来源不同：后两者由 App 主动上报，
+  事件体里天然带 `ut` / `appVersion`，不依赖请求头。
 
 ### Prometheus 集成
 
@@ -291,6 +355,13 @@ astral-server (Web 层, 入口)
 | GET | `/api/v1/admin/monitor/system` | 系统监控 | ✅ |
 | GET | `/api/v1/admin/monitor/jvm` | JVM 监控 | ✅ |
 | GET | `/api/v1/admin/monitor/business` | 业务监控 | ✅ |
+| GET | `/api/v1/admin/stat/overview` | 设备统计概览 | ✅ |
+| GET | `/api/v1/admin/stat/trend` | 指标 24 小时趋势 | ✅ |
+| GET | `/api/v1/admin/stat/api/top` | 接口调用 Top 榜 | ✅ |
+| GET | `/api/v1/admin/stat/api/trend` | 单接口 24 小时趋势 | ✅ |
+| GET | `/api/v1/admin/stat/error/summary` | 错误分组汇总 | ✅ |
+| GET | `/api/v1/admin/stat/error/page` | 错误明细分页 | ✅ |
+| GET | `/api/v1/admin/stat/versions` | 平台版本列表（版本下拉数据源） | ✅ |
 
 ### 序列
 
@@ -339,16 +410,47 @@ Sa-Token 认证拦截器作用于 `/api/**`，排除项（见 `astral-server` �
 
 ## 📊 技术栈
 
-| 功能 | 技术 |
-|------|------|
-| Java 版本 | 21 |
-| 框架 | Spring Boot 3.2.3 |
-| ORM | MyBatis-Plus 3.5.5 |
-| 认证 | Sa-Token |
-| 密码加密 | BCrypt (Hutool) |
-| 本地缓存 | Caffeine（`spring.cache.type: caffeine`） |
-| 指标收集 | Micrometer + Prometheus |
-| 工具库 | Hutool 5.8.25 |
+### 后端
+
+| 功能 | 技术 | 版本 |
+|------|------|------|
+| Java 版本 | JDK（`maven.compiler.release`） | 25 |
+| 框架 | Spring Boot（Spring Framework 7.0） | 4.1.0 |
+| Web 容器 | Tomcat（随 Spring Boot 托管），已开启虚拟线程 | 11.0.x |
+| 认证 | Sa-Token（`sa-token-spring-boot4-starter` + `sa-token-redis-jackson`） | 1.46.0 |
+| ORM | MyBatis-Plus（`mybatis-plus-spring-boot4-starter` + `mybatis-plus-jsqlparser`） | 3.5.17 |
+| 数据库 | PostgreSQL（运行库，驱动 `org.postgresql:postgresql` 42.7.11）；MySQL 9.7 / H2 可切换 | — |
+| 数据迁移 | Flyway（`spring-boot-flyway` + `flyway-database-postgresql`），启动自动应用 `db/migration/` | 12.4.0 |
+| 连接池 | HikariCP | 7.0.2 |
+| 分布式缓存 | Redis（Spring Data Redis / Lettuce）；Redisson 仅供可选 Redis 序列生成器 | 3.52.0 |
+| 本地缓存 | Caffeine（`spring.cache.type: caffeine`） | 3.2.4 |
+| API 文档 | SpringDoc OpenAPI（Swagger UI：`/swagger-ui.html`） | 3.1.1 |
+| 指标收集 | Micrometer + Prometheus（`micrometer-registry-prometheus`） | — |
+| 密码加密 | BCrypt（Hutool `cn.hutool.crypto.digest.BCrypt`） | — |
+| 工具库 | Hutool（`hutool-core` + `hutool-crypto`） | 5.8.47 |
+| 注解处理 | Lombok（JDK 23+ 起必须在 `maven-compiler-plugin` 显式声明） | 1.18.46 |
+
+> 版本号来源：`pom.xml` 的 `<properties>` 与各模块 `pom.xml`（`postgresql` / `micrometer` 等由 Spring Boot BOM 托管）。
+> Spring Boot 4 相关的 starter 名称与配置模块已改名，升级时勿直接套用 Spring Boot 3 的写法，见 `AGENTS.md`
+> 「升级到 Spring Boot 4.1 / JDK 25 后必须知道的坑」。
+
+### 前端（astral-front）
+
+| 功能 | 技术 | 版本 |
+|------|------|------|
+| 框架 | Next.js（App Router，默认 Turbopack 构建，`output: 'standalone'`） | 16.3.6 |
+| UI 运行时 | React / React DOM | 19.2 |
+| 语言 | TypeScript | 5.6 |
+| 样式 | Tailwind CSS（`@tailwindcss/postcss`）+ `tw-animate-css` | 4.3 |
+| 组件 | shadcn/ui（Radix UI 原始组件，`@radix-ui/react-*`）；**已移除 Ant Design** | — |
+| 图标 | lucide-react | 1.48 |
+| 图表 | ECharts + echarts-for-react | 6.0 |
+| 请求 | axios（统一收口在 `src/api/client.ts`） | 1.7 |
+| 其它 | dayjs / sonner（toast）/ jsencrypt（登录 RSA）/ react-syntax-highlighter | — |
+| 运行时 | Node.js（镜像 `node:24-alpine`，三阶段版本必须一致） | 24 LTS |
+| 包管理 | npm（`package-lock.json` 已提交，镜像走 `npm ci`） | — |
+
+注：Next 16 起 `next lint` 已移除，`package.json` 因此没有 lint 脚本；类型检查用 `npx tsc --noEmit`。
 
 ---
 

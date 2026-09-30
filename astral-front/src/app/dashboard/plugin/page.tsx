@@ -4,11 +4,15 @@ import { useEffect, useState } from 'react';
 import { Card, Tag, Switch, Button, message, Space, Empty, Tooltip } from '@/components/antd-compat';
 import { ApiOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined, LockOutlined } from '@/components/antd-compat/icons';
 import { pluginApi, PluginInfo } from '@/api/plugin';
+import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
 export default function PluginPage() {
   const [loading, setLoading] = useState(false);
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
+  const hasPerm = usePerm();
+  /** 是否具备插件启停权限（须与后端 PluginController 上的 @RequiresPermission("admin:plugin:edit") 一致） */
+  const canEdit = hasPerm('admin:plugin:edit');
 
   const loadData = () => {
     setLoading(true);
@@ -74,12 +78,16 @@ export default function PluginPage() {
             <Switch checked disabled checkedChildren="启用" unCheckedChildren="禁用" />
           </Tooltip>
         ) : (
-          <Switch
-            checked={record.enabled}
-            onChange={(checked) => togglePlugin(record, checked)}
-            checkedChildren="启用"
-            unCheckedChildren="禁用"
-          />
+          <Space>
+            <Switch
+              checked={record.enabled}
+              onChange={(checked) => togglePlugin(record, checked)}
+              disabled={!canEdit}
+              checkedChildren="启用"
+              unCheckedChildren="禁用"
+            />
+            {!canEdit && <Tag>只读</Tag>}
+          </Space>
         ),
     },
   ];

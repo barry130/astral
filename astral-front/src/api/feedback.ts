@@ -49,7 +49,7 @@ export interface FeedbackReply {
 /** 统一通知实体 */
 export interface SysNotice {
   id?: number;
-  /** app | web | all */
+  /** 投放平台：逗号分隔（app-android / app-ios / app-windows / web），或 all=不限平台 */
   channel?: string;
   /** announce | feedback | request */
   noticeType?: string;
@@ -143,12 +143,14 @@ export const messageAdminApi = {
     request.delete(`/api/v1/admin/message/${id}`),
 };
 
-/** 反馈插件枚举字典编码（对应 dict-init.sql 中 feedback_status/feedback_type/notice_channel/notice_type） */
+/** 反馈插件枚举字典编码（对应 dict-init.sql 中 feedback_status/feedback_type/notice_channel/notice_type/stat_platform） */
 export const FEEDBACK_DICT_CODES = [
   'feedback_status',
   'feedback_type',
   'notice_channel',
   'notice_type',
+  // 客户端平台与接口统计共用同一份字典（统一客户端系统头 X-App-Ut 的取值）
+  'stat_platform',
 ] as const;
 
 interface FeedbackDictCache {
@@ -156,6 +158,7 @@ interface FeedbackDictCache {
   feedbackType: DictOption[];
   noticeChannel: DictOption[];
   noticeType: DictOption[];
+  platform: DictOption[];
 }
 
 /** 字典缓存（页面挂载时 loadFeedbackDicts 预热） */
@@ -173,6 +176,7 @@ export async function loadFeedbackDicts(): Promise<Partial<FeedbackDictCache>> {
     feedbackType: map.feedback_type || [],
     noticeChannel: map.notice_channel || [],
     noticeType: map.notice_type || [],
+    platform: map.stat_platform || [],
   };
   return dictCache;
 }
@@ -200,6 +204,20 @@ export function feedbackTypeLabel(v?: string): string {
   return hit ? hit.label : (FEEDBACK_TYPE_TEXT_FALLBACK[v] || v);
 }
 
+/**
+ * 客户端平台文案：优先字典 stat_platform，miss 回退。
+ *
+ * 注意历史值：统一客户端系统头落地前，feedback.ts 发的是裸 `android` / `ios`
+ * （`AppFeedbackController` 现在会把遗留头映射成 `app-android` / `app-ios`，
+ * 但**存量行**仍是旧值），所以回退表同时收录新旧两套取值。
+ */
+export function feedbackPlatformLabel(v?: string): string {
+  if (!v) return '-';
+  const hit = dictCache.platform?.find((o) => o.value === v);
+  if (hit) return hit.label;
+  return FEEDBACK_PLATFORM_TEXT_FALLBACK[v] || v;
+}
+
 /** 通知类型文案：优先字典，miss 回退 */
 export function noticeTypeLabel(v?: string): string {
   if (!v) return '-';
@@ -207,11 +225,19 @@ export function noticeTypeLabel(v?: string): string {
   return hit ? hit.label : (NOTICE_TYPE_TEXT_FALLBACK[v] || v);
 }
 
-/** 通知渠道文案：优先字典，miss 回退 */
+/** 通知渠道文案：值为逗号分隔的平台集合，逐项翻译后拼接；优先字典，miss 回退 */
 export function noticeChannelLabel(v?: string): string {
   if (!v) return '-';
-  const hit = dictCache.noticeChannel?.find((o) => o.value === v);
-  return hit ? hit.label : (NOTICE_CHANNEL_TEXT_FALLBACK[v] || v);
+  const parts = v
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((one) => {
+      const hit = dictCache.platform?.find((o) => o.value === one)
+        || dictCache.noticeChannel?.find((o) => o.value === one);
+      return hit ? hit.label : (NOTICE_CHANNEL_TEXT_FALLBACK[one] || one);
+    });
+  return parts.length ? parts.join(' / ') : '-';
 }
 
 /** 选项列表（下拉用）：优先字典，miss 回退 */
@@ -230,10 +256,17 @@ export function noticeTypeOptions(): DictOption[] {
     ? dictCache.noticeType
     : Object.entries(NOTICE_TYPE_TEXT_FALLBACK).map(([value, label]) => ({ value, label }));
 }
+/** 通知渠道「不限平台」哨兵值：与后端 NoticeChannel.ALL 一致，不参与 stat_platform 字典 */
+export const NOTICE_CHANNEL_ALL = 'all';
+
+/** 通知渠道可选项：平台部分复用 stat_platform 字典（与统计/反馈同一份），末尾追加「全部平台」 */
 export function noticeChannelOptions(): DictOption[] {
-  return dictCache.noticeChannel?.length
-    ? dictCache.noticeChannel
-    : Object.entries(NOTICE_CHANNEL_TEXT_FALLBACK).map(([value, label]) => ({ value, label }));
+  const platforms = dictCache.platform?.length
+    ? dictCache.platform
+    : Object.entries(FEEDBACK_PLATFORM_TEXT_FALLBACK)
+        .filter(([v]) => v.includes('-') || v === 'web')
+        .map(([value, label]) => ({ value, label }));
+  return [...platforms, { value: NOTICE_CHANNEL_ALL, label: '全部平台' }];
 }
 
 /** 兜底文案（字典未加载/网络失败时的 fallback，与 dict-init.sql 一致） */
@@ -253,10 +286,31 @@ const NOTICE_TYPE_TEXT_FALLBACK: Record<string, string> = {
   feedback: '反馈',
   request: '需求',
 };
+/**
+ * 通知渠道兜底文案。新值 = 投放平台（与 stat_platform 同源）+ all 哨兵；
+ * 旧值是改造前的「端」枚举 app / pc / web，存量行与老客户端参数仍可能是它们。
+ */
 const NOTICE_CHANNEL_TEXT_FALLBACK: Record<string, string> = {
-  app: 'App',
+  'app-android': 'Android',
+  'app-ios': 'iOS',
+  'app-windows': 'Windows',
   web: 'Web',
-  all: '全部',
+  all: '全部平台',
+  app: 'App（旧）',
+  pc: 'PC（旧）',
+};
+/**
+ * 客户端平台兜底文案。新值 = 统一客户端系统头 X-App-Ut（与 stat_platform 字典同源）；
+ * 旧值是 X-Platform 时代的裸 android / ios，存量反馈行仍是它们。
+ */
+const FEEDBACK_PLATFORM_TEXT_FALLBACK: Record<string, string> = {
+  'app-android': 'Android',
+  'app-ios': 'iOS',
+  'app-windows': 'Windows',
+  web: 'Web',
+  android: 'Android',
+  ios: 'iOS',
+  windows: 'Windows',
 };
 
 // 兼容旧导出名：仍可从字典/fallback 读，供未迁移的调用点使用

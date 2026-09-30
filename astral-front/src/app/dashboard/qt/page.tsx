@@ -12,6 +12,7 @@ import {
   QtGithubAccel, QtGithubAccelProbe, enumLabel,
 } from '@/api/qt';
 import { fetchDictOptions } from '@/api/dict';
+import { usePerm, QT_PERMISSIONS } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import SourceReleasesTab from './SourceReleasesTab';
 
@@ -27,6 +28,7 @@ export default function QtAdminPage() {
   const [updatePage, setUpdatePage] = useState(1);
   const [updatesLoading, setUpdatesLoading] = useState(false);
   const [updateModal, setUpdateModal] = useState(false);
+  const [updateIsEdit, setUpdateIsEdit] = useState(false);
   const [updateForm] = Form.useForm();
 
   // GitHub 加速节点（UPDATE_DESIGN.md）
@@ -42,6 +44,10 @@ export default function QtAdminPage() {
 
   // 数据字典选项（按 dict_code 动态拉取，避免写死枚举值）
   const [dict, setDict] = useState<Record<string, { value: string; label: string }[]>>({});
+
+  const hasPerm = usePerm();
+  // 轻听后台管理权限：必须与后端 QtAdminController 类级 @RequiresPermission("admin:qt:admin") 保持一致
+  const canEdit = hasPerm(QT_PERMISSIONS.admin);
 
   // 由数据字典派生出的下拉选项（数值类将 value 转为 number 以便比较）
   // 用 useMemo 固定引用：这些数组会被下面 columns 的 useMemo 作为依赖
@@ -103,8 +109,10 @@ export default function QtAdminPage() {
   const openUpdateModal = useCallback((record?: QtUpdate) => {
     if (record) {
       updateForm.setFieldsValue(record);
+      setUpdateIsEdit(true);
     } else {
       updateForm.resetFields();
+      setUpdateIsEdit(false);
     }
     setUpdateModal(true);
   }, [updateForm]);
@@ -207,18 +215,18 @@ export default function QtAdminPage() {
       title: '操作', key: 'action', width: 160,
       render: (_: any, record: QtGithubAccel) => (
         <Space>
-          <Button type="link" onClick={() => openAccelModal(record)}>编辑</Button>
-          <Popconfirm title="确认删除该节点？" onConfirm={async () => {
+          <Button type="link" disabled={!canEdit} onClick={() => openAccelModal(record)}>编辑</Button>
+          <Popconfirm title="确认删除该节点？" disabled={!canEdit} onConfirm={async () => {
             await githubAccelApi.remove(record.id!);
             message.success('已删除，缓存已刷新');
             loadAccels();
           }}>
-            <Button type="link" danger>删除</Button>
+            <Button type="link" danger disabled={!canEdit}>删除</Button>
           </Popconfirm>
         </Space>
       ),
     },
-  ], [probeMap, openAccelModal, loadAccels]);
+  ], [probeMap, openAccelModal, loadAccels, canEdit]);
 
   // 列宽是「期望最小宽度」：合计放得下容器就等比铺满，放不下横向滚动，不再压扁内容
   const updateColumns = useMemo(() => [
@@ -267,18 +275,18 @@ export default function QtAdminPage() {
       title: '操作', key: 'action', width: 160,
       render: (_: any, record: QtUpdate) => (
         <Space>
-          <Button type="link" onClick={() => openUpdateModal(record)}>编辑</Button>
-          <Popconfirm title="确认删除？" onConfirm={async () => {
+          <Button type="link" disabled={!canEdit} onClick={() => openUpdateModal(record)}>编辑</Button>
+          <Popconfirm title="确认删除？" disabled={!canEdit} onConfirm={async () => {
             await qtAdminApi.deleteUpdate(record.id!);
             message.success('已删除');
             loadUpdates();
           }}>
-            <Button type="link" danger>删除</Button>
+            <Button type="link" danger disabled={!canEdit}>删除</Button>
           </Popconfirm>
         </Space>
       ),
     },
-  ], [updatePlatformOpts, updateTypeOpts, updateChannelOpts, publishStateLabel, openUpdateModal, loadUpdates]);
+  ], [updatePlatformOpts, updateTypeOpts, updateChannelOpts, publishStateLabel, openUpdateModal, loadUpdates, canEdit]);
 
   return (
     <div>
@@ -292,6 +300,7 @@ export default function QtAdminPage() {
         <div className="page-toolbar">
           <Space>
             <Button icon={<ReloadOutlined spin={loading} />} onClick={refresh}>刷新</Button>
+            {!canEdit && <Tag>只读</Tag>}
           </Space>
         </div>
       </div>
@@ -317,7 +326,7 @@ export default function QtAdminPage() {
               children: (
                 <div>
                   <div className="filter-bar" style={{ marginBottom: 12 }}>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => openUpdateModal()}>新增版本</Button>
+                    {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={() => openUpdateModal()}>新增版本</Button>}
                   </div>
                   <ResizableTable
                     rowKey="id"
@@ -347,9 +356,9 @@ export default function QtAdminPage() {
                 <div>
                   <div className="filter-bar" style={{ marginBottom: 12 }}>
                     <Space>
-                      <Button type="primary" icon={<PlusOutlined />} onClick={() => openAccelModal()}>新增节点</Button>
-                      <Button icon={<ExperimentOutlined />} loading={probing} onClick={runProbe}>手动探活</Button>
-                      <Button icon={<ClearOutlined />} onClick={evictAccelCache}>刷新缓存</Button>
+                      {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={() => openAccelModal()}>新增节点</Button>}
+                      <Button icon={<ExperimentOutlined />} loading={probing} disabled={!canEdit} onClick={runProbe}>手动探活</Button>
+                      <Button icon={<ClearOutlined />} disabled={!canEdit} onClick={evictAccelCache}>刷新缓存</Button>
                     </Space>
                   </div>
                   <ResizableTable
@@ -374,50 +383,79 @@ export default function QtAdminPage() {
 
       {/* 版本更新弹窗 */}
       <Modal
-        title="编辑版本信息"
+        title={updateIsEdit ? '编辑版本信息' : '新增版本'}
         open={updateModal}
         onCancel={() => setUpdateModal(false)}
         onOk={submitUpdate}
+        okButtonProps={{ disabled: !canEdit }}
         destroyOnClose
       >
         <Form form={updateForm} layout="vertical" initialValues={{ type: 1101, channel: 'stable', isGithub: 0, isForce: 0, isPublished: 0, updateType: '1' }}>
           <Form.Item name="id" hidden><Input /></Form.Item>
-          <Form.Item name="versionCode" label="版本号" rules={[{ required: true, message: '请输入版本号' }]}>
-            <Input type="number" />
-          </Form.Item>
-          <Form.Item name="versionName" label="版本名称"><Input placeholder="如 2.3.0" /></Form.Item>
-          <Form.Item name="type" label="平台" rules={[{ required: true, message: '请选择平台' }]}>
-            <Select options={updatePlatformOpts as any} placeholder="请选择平台" />
-          </Form.Item>
-          <Form.Item name="updateType" label="提示方式" rules={[{ required: true, message: '请选择提示方式' }]}>
-            <Select options={updateTypeOpts as any} placeholder="请选择提示方式" />
-          </Form.Item>
-          <Form.Item name="channel" label="发布渠道" rules={[{ required: true, message: '请选择渠道' }]}>
-            <Select options={updateChannelOpts as any} placeholder="请选择渠道" />
-          </Form.Item>
-          <Form.Item name="isForce" label="是否强制更新" valuePropName="checked" getValueFromEvent={(checked: boolean) => checked ? 1 : 0} getValueProps={(v: number) => ({ checked: v === 1 })}>
-            <Switch checkedChildren="强制" unCheckedChildren="非强制" />
-          </Form.Item>
-          <Form.Item
-            name="isPublished"
-            label="是否发布"
-            valuePropName="checked"
-            getValueFromEvent={(checked: boolean) => checked ? 1 : 0}
-            getValueProps={(v: number) => ({ checked: v === 1 })}
-            tooltip="未发布：仅本地版本测试，用户收不到更新通知，也不校验非官方 APP；已发布：用户才能收到更新通知"
-          >
-            <Switch checkedChildren="已发布" unCheckedChildren="未发布" />
-          </Form.Item>
-          <Form.Item
-            name="isGithub"
-            label="GitHub 下载"
-            valuePropName="checked"
-            getValueFromEvent={(checked: boolean) => checked ? 1 : 0}
-            getValueProps={(v: number) => ({ checked: v === 1 })}
-            tooltip="开启后：App 端「直接下载」前会并发探测所有启用的加速前缀（前缀+直链），命中可用节点即走加速地址，全部不可用回退原始链接"
-          >
-            <Switch checkedChildren="GitHub直链" unCheckedChildren="普通直链" />
-          </Form.Item>
+          {/* 两列排布：原先 13 个字段纵向堆叠达 995px，超出屏幕高度，
+              现在压到约 8 行（超高时弹窗内部滚动，见antd-compat Modal 的 max-h 处理） */}
+          <Row gutter={[16, 0]}>
+            <Col xs={{ span: 24 }} md={{ span: 12 }}>
+              <Form.Item name="versionCode" label="版本号" rules={[{ required: true, message: '请输入版本号' }]}>
+                <Input type="number" />
+              </Form.Item>
+            </Col>
+            <Col xs={{ span: 24 }} md={{ span: 12 }}>
+              <Form.Item name="versionName" label="版本名称"><Input placeholder="如 2.3.0" /></Form.Item>
+            </Col>
+            <Col xs={{ span: 24 }} md={{ span: 12 }}>
+              <Form.Item name="type" label="平台" rules={[{ required: true, message: '请选择平台' }]}>
+                <Select options={updatePlatformOpts as any} placeholder="请选择平台" />
+              </Form.Item>
+            </Col>
+            <Col xs={{ span: 24 }} md={{ span: 12 }}>
+              <Form.Item name="updateType" label="提示方式" rules={[{ required: true, message: '请选择提示方式' }]}>
+                <Select options={updateTypeOpts as any} placeholder="请选择提示方式" />
+              </Form.Item>
+            </Col>
+            <Col xs={{ span: 24 }} md={{ span: 12 }}>
+              <Form.Item name="channel" label="发布渠道" rules={[{ required: true, message: '请选择渠道' }]}>
+                <Select options={updateChannelOpts as any} placeholder="请选择渠道" />
+              </Form.Item>
+            </Col>
+            <Col xs={{ span: 24 }} md={{ span: 12 }}>
+              <Form.Item name="fileSize" label="安装包大小(字节)"><Input type="number" placeholder="可选，如 48234457" /></Form.Item>
+            </Col>
+            <Col xs={{ span: 24 }} md={{ span: 12 }}>
+              <Form.Item name="md5" label="安装包 MD5"><Input placeholder="可选" /></Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={[16, 0]}>
+            <Col xs={{ span: 24 }} md={{ span: 8 }}>
+              <Form.Item name="isForce" label="是否强制更新" valuePropName="checked" getValueFromEvent={(checked: boolean) => checked ? 1 : 0} getValueProps={(v: number) => ({ checked: v === 1 })}>
+                <Switch checkedChildren="强制" unCheckedChildren="非强制" />
+              </Form.Item>
+            </Col>
+            <Col xs={{ span: 24 }} md={{ span: 8 }}>
+              <Form.Item
+                name="isPublished"
+                label="是否发布"
+                valuePropName="checked"
+                getValueFromEvent={(checked: boolean) => checked ? 1 : 0}
+                getValueProps={(v: number) => ({ checked: v === 1 })}
+                tooltip="未发布：仅本地版本测试，用户收不到更新通知，也不校验非官方 APP；已发布：用户才能收到更新通知"
+              >
+                <Switch checkedChildren="已发布" unCheckedChildren="未发布" />
+              </Form.Item>
+            </Col>
+            <Col xs={{ span: 24 }} md={{ span: 8 }}>
+              <Form.Item
+                name="isGithub"
+                label="GitHub 下载"
+                valuePropName="checked"
+                getValueFromEvent={(checked: boolean) => checked ? 1 : 0}
+                getValueProps={(v: number) => ({ checked: v === 1 })}
+                tooltip="开启后：App 端「直接下载」前会并发探测所有启用的加速前缀（前缀+直链），命中可用节点即走加速地址，全部不可用回退原始链接"
+              >
+                <Switch checkedChildren="GitHub直链" unCheckedChildren="普通直链" />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item name="versionInfo" label="更新说明"><Input.TextArea rows={3} placeholder="更新内容说明" /></Form.Item>
           <Form.Item
             name="downloadUrl"
@@ -449,8 +487,6 @@ export default function QtAdminPage() {
           >
             <Input placeholder="浏览器下载地址（两个链接都填时 App 端展示两个按钮）" />
           </Form.Item>
-          <Form.Item name="fileSize" label="安装包大小(字节)"><Input type="number" placeholder="可选，如 48234457" /></Form.Item>
-          <Form.Item name="md5" label="安装包 MD5"><Input placeholder="可选" /></Form.Item>
           <Paragraph type="secondary" style={{ marginBottom: 0 }}>
             「下载方式」字段已废弃：App 端按双链接并存展示按钮，不再按模式二选一。
           </Paragraph>
@@ -463,6 +499,7 @@ export default function QtAdminPage() {
         open={accelModal}
         onCancel={() => setAccelModal(false)}
         onOk={submitAccel}
+        okButtonProps={{ disabled: !canEdit }}
         destroyOnClose
       >
         <Form form={accelForm} layout="vertical" initialValues={{ isShow: 1, sort: 0 }}>

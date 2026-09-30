@@ -96,8 +96,8 @@ const PLUGINS: PluginCard[] = [
 ];
 
 const TECH_STACK = [
-  'Spring Boot 3.2',
-  'Java 21',
+  'Spring Boot 4.1',
+  'Java 25',
   'Sa-Token',
   'MyBatis-Plus',
   'PostgreSQL',
@@ -146,7 +146,7 @@ export default function HomePage() {
       {/* Hero */}
       <section className="landing-hero">
         <h1 className="landing-hero-title fade-in-up">Astral 后台管理系统</h1>
-        <p className="landing-hero-subtitle fade-in-up stagger-1">基于 Spring Boot 3 + Next.js 16 的全栈管理平台</p>
+        <p className="landing-hero-subtitle fade-in-up stagger-1">基于 Spring Boot 4.1 + Next.js 16 的全栈管理平台</p>
         <p className="landing-hero-desc fade-in-up stagger-2">
           前后端分离架构，内置 RBAC 权限模型、操作日志审计、Sa-Token 认证与可扩展插件体系，开箱即用。
         </p>
@@ -217,7 +217,7 @@ export default function HomePage() {
 
       {/* 页脚 */}
       <footer className="landing-footer">
-        <p>Astral Management System · Spring Boot 3 + Next.js 16</p>
+        <p>Astral Management System · Spring Boot 4.1 + Next.js 16</p>
         <p className="landing-footer-secondary">默认账号 admin / admin · 详见项目 README</p>
       </footer>
     </div>

@@ -1,7 +1,10 @@
 package com.astral.qt.service;
 
+import com.astral.qt.common.QtException;
 import com.astral.qt.dto.QtPlaylistDto;
 import com.astral.qt.dto.QtSongDto;
+import com.astral.qt.dto.QtLikeBatchDto;
+import com.astral.qt.dto.QtLikeBatchOpDto;
 import com.astral.qt.dto.QtLikePlaylistActionDto;
 import com.astral.qt.dto.QtLikeSongActionDto;
 import com.astral.qt.dto.QtUploadLikeListDto;
@@ -339,6 +342,209 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
             songMapper.softRemoveAllByPlaylist(uid, dto.getPid(), seq, now);
         }
         return QtLikeSeqVo.of(seq);
+    }
+
+    // ==================== 新接口：批量收藏（LIKE_SYNC_DESIGN.md §2.5） ====================
+
+    /** 批量操作的分段类型：同型连续段各自合成一条批量 SQL，段间按序执行保住原始顺序语义 */
+    private enum BatchRunKind {
+        SONG_UPSERT, SONG_RM_PID, SONG_RM_ALL, PLAYLIST_UPSERT, PLAYLIST_RM
+    }
+
+    /** 一个连续同型段 */
+    private static class BatchRun {
+        final BatchRunKind kind;
+        final List<QtLikeBatchOpDto> ops = new ArrayList<>();
+
+        BatchRun(BatchRunKind kind) {
+            this.kind = kind;
+        }
+    }
+
+    /**
+     * 批量收藏/取消（歌曲+歌单混排，单批 ≤200），供客户端离线队列/批量导入一次提交。
+     * <p>与单条接口同语义：事务内用户级咨询锁串行化、seq 用户维度单调递增、last-write-wins。
+     * seq 按数组顺序逐条递增（批内后写必胜，changes 流保持单调）；整批一个事务，
+     * 返回整批最大 seq——本批占用连续区段 [base+1, seq]，其他端变更必然更大，
+     * 客户端把同步游标直接推进到该值是安全的。</p>
+     * <p>弱 DB 往返优化：①取锁+取号合并一条 SQL；②按数组原始顺序把连续同型段各自合成
+     * 一条批量 SQL——段间顺序执行保住「playlist remove 级联软删 vs song add」的先后语义，
+     * 段内按自然键去重保最后一条（规避 PG 同语句同键冲突）。
+     * 典型导入（1 歌单 add + N 首 add）整批只需 3 次 DB 往返：取号 + 歌单 upsert + 歌曲 upsert。</p>
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public QtLikeSeqVo likeBatch(Long uid, QtLikeBatchDto dto) {
+        List<QtLikeBatchOpDto> ops = dto == null || dto.getOps() == null ? Collections.emptyList() : dto.getOps();
+        if (ops.isEmpty()) {
+            return QtLikeSeqVo.of(likeSyncMapper.selectUserMaxSeq(uid));
+        }
+        for (QtLikeBatchOpDto op : ops) {
+            validateBatchOp(op);
+        }
+        long baseSeq = likeSyncMapper.lockAndMaxSeq(uid);
+
+        // 按原始顺序编号 + 连续同型分段
+        long seq = baseSeq;
+        List<BatchRun> runs = new ArrayList<>();
+        for (QtLikeBatchOpDto op : ops) {
+            seq++;
+            op.setSeq(seq);
+            BatchRunKind kind = classifyBatchOp(op);
+            if (!runs.isEmpty()) {
+                BatchRun last = runs.get(runs.size() - 1);
+                if (last.kind == kind) {
+                    last.ops.add(op);
+                    continue;
+                }
+            }
+            BatchRun run = new BatchRun(kind);
+            run.ops.add(op);
+            runs.add(run);
+        }
+        for (BatchRun run : runs) {
+            executeBatchRun(uid, run);
+        }
+        return QtLikeSeqVo.of(seq);
+    }
+
+    /** 条件必填校验（扁平 DTO 无法按 type 用 Bean Validation 标注），违规抛 320 */
+    private void validateBatchOp(QtLikeBatchOpDto op) {
+        if (isBlank(op.getType())) {
+            throw new QtException(320, "type不能为空");
+        }
+        if (isBlank(op.getAction())) {
+            throw new QtException(320, "action不能为空");
+        }
+        if ("song".equals(op.getType())) {
+            if (isBlank(op.getSid()) || isBlank(op.getPlatform())) {
+                throw new QtException(320, "song操作必须携带sid和platform");
+            }
+        } else if (isBlank(op.getPid()) || isBlank(op.getPlatform())) {
+            throw new QtException(320, "playlist操作必须携带pid和platform");
+        }
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
+
+    private BatchRunKind classifyBatchOp(QtLikeBatchOpDto op) {
+        boolean add = "add".equals(op.getAction());
+        if ("song".equals(op.getType())) {
+            if (add) {
+                return BatchRunKind.SONG_UPSERT;
+            }
+            // remove 不带 pid = 从全部歌单移除，SQL 形态不同，单独成段
+            return normalizePid(op.getPid()).isEmpty() ? BatchRunKind.SONG_RM_ALL : BatchRunKind.SONG_RM_PID;
+        }
+        return add ? BatchRunKind.PLAYLIST_UPSERT : BatchRunKind.PLAYLIST_RM;
+    }
+
+    /** 段内去重的自然键（同键保留最后一条，其 seq 最大=最终态） */
+    private String batchOpKey(BatchRunKind kind, QtLikeBatchOpDto op) {
+        return switch (kind) {
+            case SONG_UPSERT, SONG_RM_PID -> "s@" + op.getSid() + "@" + op.getPlatform() + "@" + normalizePid(op.getPid());
+            case SONG_RM_ALL -> "a@" + op.getSid() + "@" + op.getPlatform();
+            case PLAYLIST_UPSERT, PLAYLIST_RM -> "p@" + op.getPid() + "@" + op.getPlatform();
+        };
+    }
+
+    /** 执行一个同型段：段内按自然键去重后走对应批量 SQL */
+    private void executeBatchRun(Long uid, BatchRun run) {
+        Map<String, QtLikeBatchOpDto> dedup = new LinkedHashMap<>();
+        for (QtLikeBatchOpDto op : run.ops) {
+            dedup.put(batchOpKey(run.kind, op), op);
+        }
+        List<QtLikeBatchOpDto> items = new ArrayList<>(dedup.values());
+        switch (run.kind) {
+            case SONG_UPSERT -> {
+                List<QtLikeSong> rows = new ArrayList<>(items.size());
+                for (QtLikeBatchOpDto op : items) {
+                    rows.add(buildBatchSong(uid, op));
+                }
+                songMapper.upsertActiveBatch(rows);
+            }
+            case SONG_RM_PID -> songMapper.softRemoveByPlaylistBatch(buildBatchSongRows(uid, items), uid, LocalDateTime.now());
+            case SONG_RM_ALL -> songMapper.softRemoveAllBatch(buildBatchSongRows(uid, items), uid, LocalDateTime.now());
+            case PLAYLIST_UPSERT -> {
+                List<QtLikePlaylist> rows = new ArrayList<>(items.size());
+                for (QtLikeBatchOpDto op : items) {
+                    rows.add(buildBatchPlaylist(uid, op));
+                }
+                playlistMapper.upsertActiveBatch(rows);
+            }
+            case PLAYLIST_RM -> {
+                List<QtLikePlaylist> rows = new ArrayList<>(items.size());
+                for (QtLikeBatchOpDto op : items) {
+                    rows.add(buildBatchPlaylistRow(uid, op));
+                }
+                playlistMapper.softRemoveBatch(rows, uid, LocalDateTime.now());
+                // 级联软删成员歌曲行（与单条 remove 一致），成员行带同一 seq 供其他端感知摘 pid
+                songMapper.softRemoveAllByPlaylistBatch(rows, uid, LocalDateTime.now());
+            }
+        }
+    }
+
+    /** song upsert 行：字段与单条 likeSong add 分支一致（picUrl 归一化，id 由号段填充器补） */
+    private QtLikeSong buildBatchSong(Long uid, QtLikeBatchOpDto op) {
+        LocalDateTime now = LocalDateTime.now();
+        QtLikeSong e = new QtLikeSong();
+        e.setUid(uid);
+        e.setSid(op.getSid());
+        e.setPid(normalizePid(op.getPid()));
+        e.setPlatform(op.getPlatform());
+        e.setName(op.getName());
+        e.setSinger(op.getSinger());
+        e.setAlbum(op.getAlbum());
+        e.setHash(op.getHash());
+        e.setPicUrl(normalizePicUrl(op.getPicUrl()));
+        e.setCreateTime(now);
+        e.setUpdateTime(now);
+        e.setUpdatedSeq(op.getSeq());
+        e.setUpdatedAt(now);
+        return e;
+    }
+
+    /** song 软删行的载体：只需要 sid/platform/pid/updatedSeq 四个字段 */
+    private List<QtLikeSong> buildBatchSongRows(Long uid, List<QtLikeBatchOpDto> items) {
+        List<QtLikeSong> rows = new ArrayList<>(items.size());
+        for (QtLikeBatchOpDto op : items) {
+            QtLikeSong e = new QtLikeSong();
+            e.setUid(uid);
+            e.setSid(op.getSid());
+            e.setPid(normalizePid(op.getPid()));
+            e.setPlatform(op.getPlatform());
+            e.setUpdatedSeq(op.getSeq());
+            rows.add(e);
+        }
+        return rows;
+    }
+
+    /** playlist upsert 行：字段与单条 likePlaylist add 分支一致 */
+    private QtLikePlaylist buildBatchPlaylist(Long uid, QtLikeBatchOpDto op) {
+        LocalDateTime now = LocalDateTime.now();
+        QtLikePlaylist e = new QtLikePlaylist();
+        e.setUid(uid);
+        e.setPid(op.getPid());
+        e.setPlatform(op.getPlatform());
+        e.setName(op.getName());
+        e.setPicUrl(op.getPicUrl());
+        e.setIsImport(0);
+        e.setCreateTime(now);
+        e.setUpdateTime(now);
+        e.setUpdatedSeq(op.getSeq());
+        e.setUpdatedAt(now);
+        return e;
+    }
+
+    /** playlist 软删行的载体：只需要 pid/platform/updatedSeq */
+    private QtLikePlaylist buildBatchPlaylistRow(Long uid, QtLikeBatchOpDto op) {
+        QtLikePlaylist e = new QtLikePlaylist();
+        e.setUid(uid);
+        e.setPid(op.getPid());
+        e.setPlatform(op.getPlatform());
+        e.setUpdatedSeq(op.getSeq());
+        return e;
     }
 
     // ==================== 新接口：增量拉取 ====================

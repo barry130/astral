@@ -218,7 +218,7 @@
 | GET | `/jvm` | JVM 监控（堆内存/GC/线程/JDK版本） |
 | GET | `/business` | 业务监控（序列总数/QPS/配置数） |
 
-### 5.2 统计报表 `/api/v1/stat`（admin 前端，权限 `statistics:view`）
+### 5.2 统计报表 `/api/v1/stat`（admin 前端，权限 `admin:statistics:view`）
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/overview?date=&ut=` | 设备统计概览（今日 vs 昨日） |
@@ -304,7 +304,7 @@
 ### 9.1 App 反馈 `/api/v1/app/feedback`（App 用户，satoken）
 | 方法 | URL | 作用 |
 |---|---|---|
-| POST | `/submit` | 提交反馈（type/title/content/contact；Header X-Device/X-OS/X-App-Version/X-Platform） |
+| POST | `/submit` | 提交反馈（type/title/content/contact；统一客户端系统头 X-App-Ut/X-App-Version/X-Device/X-OS，见 COMPONENTS_GUIDE.md） |
 | GET | `/my?pageNum=&pageSize=` | 我的反馈分页 |
 | GET | `/public?pageNum=&pageSize=` | 公开列表（status=published AND is_public=true） |
 | GET | `/{id}` | 详情（本人 或 published+public 可见） |

@@ -1,5 +1,6 @@
 package com.astral.feedback.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.feedback.entity.SysNotice;
 import com.astral.feedback.service.FeedbackNoticeService;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "反馈插件-管理端通知")
 @RestController
 @RequestMapping("/api/v1/admin/message")
+@RequiresPermission(value = "admin:message:view", name = "通知查看", description = "管理端收件箱/通知分页查看")
 public class AdminMessageController {
 
     @Resource
@@ -48,7 +50,7 @@ public class AdminMessageController {
         return Long.parseLong(loginId.toString());
     }
 
-    @Operation(summary = "通知分页（channel/notice_type/关键词/时间筛选）")
+    @Operation(summary = "通知分页（channel 支持多选，逗号分隔平台值；notice_type/关键词/时间筛选）")
     @GetMapping("/page")
     public Result<Page<SysNotice>> page(@RequestParam(defaultValue = "1") Integer pageNum,
                                         @RequestParam(defaultValue = "10") Integer pageSize,
@@ -61,12 +63,14 @@ public class AdminMessageController {
     }
 
     @Operation(summary = "发公告/通知（继承 qt 公告全字段 + channel/notice_type/user_id）")
+    @RequiresPermission(value = "admin:message:edit", name = "通知编辑", description = "公告/通知的发布、编辑、删除")
     @PostMapping
     public Result<SysNotice> create(@RequestBody SysNotice notice) {
         return Result.success(noticeService.create(notice));
     }
 
     @Operation(summary = "编辑通知")
+    @RequiresPermission(value = "admin:message:edit", name = "通知编辑", description = "公告/通知的发布、编辑、删除")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody SysNotice notice) {
         noticeService.update(id, notice);
@@ -74,6 +78,7 @@ public class AdminMessageController {
     }
 
     @Operation(summary = "删除通知（物理删）")
+    @RequiresPermission(value = "admin:message:edit", name = "通知编辑", description = "公告/通知的发布、编辑、删除")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         noticeService.delete(id);

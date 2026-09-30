@@ -1,5 +1,6 @@
 package com.astral.system.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.DictType;
 import com.astral.system.service.DictTypeService;
 import com.astral.common.result.Result;
@@ -16,10 +17,12 @@ import java.util.List;
 /**
  * 字典类型控制器
  * <p>提供字典类型的CRUD操作及全量查询功能</p>
+ * <p>权限：类级默认要求 {@code admin:system:dict:view}（查询类接口），写接口覆盖为 {@code admin:system:dict:edit}</p>
  */
 @Tag(name = "字典类型表")
 @RestController
 @RequestMapping("/api/v1/admin/system/dict/type")
+@RequiresPermission("admin:system:dict:view")
 @RequiredArgsConstructor
 public class DictTypeController {
 
@@ -71,6 +74,7 @@ public class DictTypeController {
      * @return 操作结果
      */
     @Operation(summary = "创建")
+    @RequiresPermission("admin:system:dict:edit")
     @PostMapping
     @CacheEvict(value = "dictType", allEntries = true)
     public Result<Void> create(@RequestBody DictType entity) {
@@ -86,6 +90,7 @@ public class DictTypeController {
      * @return 操作结果
      */
     @Operation(summary = "更新")
+    @RequiresPermission("admin:system:dict:edit")
     @PutMapping("/{id}")
     @CacheEvict(value = "dictType", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictType entity) {
@@ -101,6 +106,7 @@ public class DictTypeController {
      * @return 操作结果
      */
     @Operation(summary = "删除")
+    @RequiresPermission("admin:system:dict:edit")
     @DeleteMapping("/{id}")
     @CacheEvict(value = "dictType", allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {

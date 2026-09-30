@@ -69,6 +69,7 @@ public class StatAggregationJob {
 
             int rows = statApiHourlyMapper.incrementApi(
                     key.getBucketHour(), key.getUri(), key.getMethod(), key.getStatus(),
+                    key.getUt(), key.getAppVersion(),
                     callCount, sumMs, maxMs);
             if (rows > 0) {
                 updated++;
@@ -79,6 +80,8 @@ public class StatAggregationJob {
             bucket.setUri(key.getUri());
             bucket.setMethod(key.getMethod());
             bucket.setStatus(key.getStatus());
+            bucket.setUt(key.getUt());
+            bucket.setAppVersion(key.getAppVersion());
             bucket.setCallCount(callCount);
             bucket.setSumMs(sumMs);
             bucket.setMaxMs(maxMs);
@@ -89,6 +92,7 @@ public class StatAggregationJob {
                 // 并发建桶冲突：补一次累加
                 statApiHourlyMapper.incrementApi(
                         key.getBucketHour(), key.getUri(), key.getMethod(), key.getStatus(),
+                        key.getUt(), key.getAppVersion(),
                         callCount, sumMs, maxMs);
                 updated++;
             }

@@ -1,7 +1,9 @@
 package com.astral.system.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
-import com.astral.auth.security.PermissionChecker;
+import com.astral.auth.security.PermissionCache;
+import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.annotation.RequiresSuper;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.User;
 import com.astral.dao.entity.UserRole;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 /**
  * 用户管理控制器
  * <p>提供用户CRUD操作、用户角色查询与分配功能</p>
+ * <p>权限：查询类接口要求 {@code admin:system:user:view}，写接口与角色分配为提权面，要求超管（{@link RequiresSuper}）</p>
  */
 @Tag(name = "用户管理")
 @RestController
@@ -38,8 +41,8 @@ public class UserController {
     private final UserRoleService userRoleService;
     /** 角色服务 */
     private final RoleService roleService;
-    /** 权限校验器：管理端接口按 RBAC 权限编码校验，避免「仅登录即可调用」 */
-    private final PermissionChecker permissionChecker;
+    /** 权限缓存：用户角色关系变更后递增版本，立即失效所有用户的权限缓存 */
+    private final PermissionCache permissionCache;
 
     /**
      * 分页查询用户列表
@@ -53,12 +56,12 @@ public class UserController {
      * @return 分页用户数据
      */
     @Operation(summary = "分页查询")
+    @RequiresPermission("admin:system:user:view")
     @GetMapping("/page")
     public Result<Page<User>> page(@RequestParam(defaultValue = "1") Integer pageNum,
                                     @RequestParam(defaultValue = "10") Integer pageSize,
                                     @RequestParam(required = false) String userType,
                                     @RequestParam(required = false) String username) {
-        permissionChecker.require("system:user:view");
         Page<User> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         // 统一管理所有类型用户（后台系统用户 + 插件 App 用户）
@@ -81,9 +84,9 @@ public class UserController {
      * @return 用户实体
      */
     @Operation(summary = "根据ID查询")
+    @RequiresPermission("admin:system:user:view")
     @GetMapping("/{id}")
     public Result<User> getById(@PathVariable Long id) {
-        permissionChecker.require("system:user:view");
         return Result.success(userService.getById(id));
     }
 
@@ -94,10 +97,12 @@ public class UserController {
      * @return 操作结果
      */
     @Operation(summary = "创建")
+    @RequiresSuper
     @PostMapping
     public Result<Void> create(@Valid @RequestBody User entity) {
-        permissionChecker.requireSuper();
         userService.save(entity);
+        // 新用户可能随后被写入角色关联（sys_user_role），递增权限版本避免缓存落后
+        permissionCache.bumpVersion();
         return Result.success();
     }
 
@@ -109,9 +114,11 @@ public class UserController {
      * @return 操作结果
      */
     @Operation(summary = "更新")
+    // 仅改昵称/邮箱/手机号等资料字段：不含提权路径（userType/password/deleted 已在下方置 null），
+    // 因此按普通写权限授予，可委派给「用户管理员」角色
+    @RequiresPermission("admin:system:user:edit")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody User entity) {
-        permissionChecker.requireSuper();
         entity.setId(id);
         // 防止 mass assignment：请求体是实体，客户端可以直接塞入敏感字段。
         // 置 null 后 MyBatis-Plus 默认策略（NOT_NULL）会跳过这些列，不会被覆盖。
@@ -123,6 +130,8 @@ public class UserController {
         entity.setLoginIp(null);
         entity.setCreateTime(null);
         userService.updateById(entity);
+        // 更新用户可能伴随角色调整（sys_user_role），递增权限版本
+        permissionCache.bumpVersion();
         return Result.success();
     }
 
@@ -133,10 +142,12 @@ public class UserController {
      * @return 操作结果
      */
     @Operation(summary = "删除")
+    @RequiresSuper
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        permissionChecker.requireSuper();
         userService.removeById(id);
+        // 用户（及其角色关联）变更后，权限缓存立即失效
+        permissionCache.bumpVersion();
         return Result.success();
     }
 
@@ -148,9 +159,9 @@ public class UserController {
      * @return 用户角色列表
      */
     @Operation(summary = "获取用户角色")
+    @RequiresPermission("admin:system:user:view")
     @GetMapping("/{id}/roles")
     public Result<List<Role>> getUserRoles(@PathVariable Long id) {
-        permissionChecker.require("system:user:view");
         List<UserRole> userRoles = userRoleService.list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, id));
         if (userRoles.isEmpty()) {
             return Result.success(List.of());
@@ -170,15 +181,17 @@ public class UserController {
      * @return 操作结果
      */
     @Operation(summary = "分配用户角色")
+    // 提权类操作：给自己加角色 = 提权，只允许超级管理员执行
+    @RequiresSuper
     @PutMapping("/{id}/roles")
     public Result<Void> assignRoles(@PathVariable Long id, @RequestBody Map<String, List<Long>> body) {
-        // 提权类操作：给自己加角色 = 提权，只允许超级管理员执行
-        permissionChecker.requireSuper();
         if (userService.getById(id) == null) {
             return Result.fail("用户不存在");
         }
         // 先删后插 + 角色存在性校验，整体在一个事务里（见 UserRoleServiceImpl.assignRoles）
         userRoleService.assignRoles(id, body.get("roleIds"));
+        // 用户→角色映射已变更，递增权限版本让所有用户的权限缓存下次读取即回源
+        permissionCache.bumpVersion();
         return Result.success();
     }
 
@@ -190,9 +203,10 @@ public class UserController {
      * @return 操作结果
      */
     @Operation(summary = "封禁/解封用户")
+    // 封禁不改变账号归属与权限集合（角色不变），可委派；真正的提权入口是 /{id}/type 与 /{id}/roles
+    @RequiresPermission("admin:system:user:edit")
     @PutMapping("/{id}/status")
     public Result<Void> changeStatus(@PathVariable Long id, @RequestParam Integer status) {
-        permissionChecker.requireSuper();
         User user = userService.getById(id);
         if (user == null) {
             return Result.fail("用户不存在");
@@ -215,10 +229,10 @@ public class UserController {
      * @return 操作结果
      */
     @Operation(summary = "重置用户密码")
+    // 提权类操作：能改任意用户（含其他管理员）的密码 = 可直接接管账号
+    @RequiresSuper
     @PutMapping("/{id}/password")
     public Result<Void> resetPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        // 提权类操作：能改任意用户（含其他管理员）的密码 = 可直接接管账号
-        permissionChecker.requireSuper();
         String password = body.get("password");
         if (password == null || password.length() < 6) {
             return Result.fail("密码至少6位");
@@ -245,9 +259,9 @@ public class UserController {
      * @return 操作结果
      */
     @Operation(summary = "踢下线")
+    @RequiresPermission("admin:system:user:edit")
     @PutMapping("/{id}/kick")
     public Result<Void> kickOut(@PathVariable Long id) {
-        permissionChecker.requireSuper();
         if (userService.getById(id) == null) {
             return Result.fail("用户不存在");
         }
@@ -263,10 +277,10 @@ public class UserController {
      * @return 操作结果
      */
     @Operation(summary = "修改用户类型")
+    // 改用户类型是提权入口（APP -> ADMIN），只允许超级管理员
+    @RequiresSuper
     @PutMapping("/{id}/type")
     public Result<Void> changeType(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        // 改用户类型是提权入口（APP -> ADMIN），只允许超级管理员
-        permissionChecker.requireSuper();
         String userType = body.get("userType");
         if (userType == null || userType.isBlank()) {
             return Result.fail("用户类型不能为空");

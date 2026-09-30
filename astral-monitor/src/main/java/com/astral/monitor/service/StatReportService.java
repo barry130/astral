@@ -32,6 +32,11 @@ import java.util.Map;
  * 口径：avgDurationMs = total_duration_ms / max(visits,1)；
  * trend 无数据小时补 0（长度恒 24）；api/top failure = status >= 400。
  * </p>
+ * <p>
+ * 全维度可选过滤：平台（ut）与客户端版本（version）。
+ * 两者都遵循「不传 / 空 / all ⇒ 不限制」的约定，由 {@link #normalize(String)} 统一归一，
+ * 避免把 "all" 当成真实版本号去匹配。
+ * </p>
  */
 @Slf4j
 @Service
@@ -53,11 +58,11 @@ public class StatReportService {
     /**
      * 设备统计概览（今日 vs 昨日）
      */
-    public Map<String, DeviceOverviewDTO> getOverview(LocalDate date, String ut) {
+    public Map<String, DeviceOverviewDTO> getOverview(LocalDate date, String ut, String version) {
         Map<String, DeviceOverviewDTO> result = new HashMap<>(4);
         result.put("date", null);
-        DeviceOverviewDTO today = buildOverview(date, ut);
-        DeviceOverviewDTO yesterday = buildOverview(date.minusDays(1), ut);
+        DeviceOverviewDTO today = buildOverview(date, ut, version);
+        DeviceOverviewDTO yesterday = buildOverview(date.minusDays(1), ut, version);
         today.setDate(date.toString());
         yesterday.setDate(date.minusDays(1).toString());
         result.put("today", today);
@@ -68,14 +73,18 @@ public class StatReportService {
     /**
      * 单日概览（设备维度走 stat_device，指标维度走 stat_metric_hourly）
      */
-    private DeviceOverviewDTO buildOverview(LocalDate date, String ut) {
+    private DeviceOverviewDTO buildOverview(LocalDate date, String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
+        String versionFilter = normalize(version);
 
         DeviceOverviewDTO dto = new DeviceOverviewDTO();
-        dto.setNewDevices(statDeviceMapper.selectCount(deviceQuery(ut, w -> w.eq("first_date", date))));
-        dto.setActiveDevices(statDeviceMapper.selectCount(deviceQuery(ut, w -> w.eq("last_date", date))));
-        dto.setTotalDevices(statDeviceMapper.selectCount(deviceQuery(ut, w -> w.le("first_date", date))));
+        dto.setNewDevices(statDeviceMapper.selectCount(
+                deviceQuery(ut, versionFilter, w -> w.eq("first_date", date))));
+        dto.setActiveDevices(statDeviceMapper.selectCount(
+                deviceQuery(ut, versionFilter, w -> w.eq("last_date", date))));
+        dto.setTotalDevices(statDeviceMapper.selectCount(
+                deviceQuery(ut, versionFilter, w -> w.le("first_date", date))));
 
         QueryWrapper<StatMetricHourly> qw = new QueryWrapper<>();
         qw.select(
@@ -85,9 +94,7 @@ public class StatReportService {
                 "COALESCE(SUM(total_duration_ms), 0) AS \"totalDurationMs\"",
                 "COALESCE(SUM(error_count), 0) AS \"errorCount\"");
         qw.ge("bucket_hour", start).lt("bucket_hour", end);
-        if (!isAll(ut)) {
-            qw.eq("ut", ut);
-        }
+        applyMetricFilter(qw, ut, versionFilter);
         List<Map<String, Object>> rows = statMetricHourlyMapper.selectMaps(qw);
         Map<String, Object> row = rows.isEmpty() ? Map.of() : rows.get(0);
 
@@ -105,22 +112,23 @@ public class StatReportService {
     /**
      * 24 小时趋势（今日 vs 昨日，补零）
      */
-    public TrendDTO getTrend(String metric, LocalDate date, String ut) {
+    public TrendDTO getTrend(String metric, LocalDate date, String ut, String version) {
         String column = METRIC_COLUMNS.get(metric);
         if (column == null) {
             throw new IllegalArgumentException("不支持的指标: " + metric);
         }
+        String versionFilter = normalize(version);
         TrendDTO dto = new TrendDTO();
         dto.setHours(TrendDTO.hourLabels());
-        dto.setToday(hourlyValues(column, date, ut));
-        dto.setYesterday(hourlyValues(column, date.minusDays(1), ut));
+        dto.setToday(hourlyValues(column, date, ut, versionFilter));
+        dto.setYesterday(hourlyValues(column, date.minusDays(1), ut, versionFilter));
         return dto;
     }
 
     /**
      * 单日 24 点小时聚合（补零）
      */
-    private List<Long> hourlyValues(String column, LocalDate date, String ut) {
+    private List<Long> hourlyValues(String column, LocalDate date, String ut, String versionFilter) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
 
@@ -130,9 +138,7 @@ public class StatReportService {
                 .ge("bucket_hour", start)
                 .lt("bucket_hour", end)
                 .groupBy("EXTRACT(HOUR FROM bucket_hour)");
-        if (!isAll(ut)) {
-            qw.eq("ut", ut);
-        }
+        applyMetricFilter(qw, ut, versionFilter);
         List<Map<String, Object>> rows = statMetricHourlyMapper.selectMaps(qw);
 
         Map<Integer, Long> byHour = new HashMap<>();
@@ -147,18 +153,39 @@ public class StatReportService {
         return values;
     }
 
+    /** 小时指标桶的可选过滤：平台 + 客户端版本 */
+    private void applyMetricFilter(QueryWrapper<StatMetricHourly> qw, String ut, String versionFilter) {
+        if (!isAll(ut)) {
+            qw.eq("ut", ut);
+        }
+        if (versionFilter != null) {
+            qw.eq("app_version", versionFilter);
+        }
+    }
+
+    /**
+     * 接口调用 Top 榜（全平台全版本口径）
+     * <p>仪表盘复用此重载，语义等价于统计页「全部平台 + 全部版本」。</p>
+     */
+    public ApiTopResultDTO getApiTop(LocalDate date, int limit) {
+        return getApiTop(date, limit, null, null);
+    }
+
     /**
      * 接口调用 Top 榜（兼容旧 /api/v1/statistics/api/top 字段契约）
      * <p>
      * 返回 Top N 明细 {@code list} + 当天<b>全部</b>接口汇总 {@code summary}。
      * {@code summary} 与 limit 无关，供前端展示"总调用次数"等汇总卡片，
-     * 避免 Top10 / Top20 显示不一致。
+     * 避免 Top10 / Top20 显示不一致。两者共用同一套平台/版本过滤，
+     * 否则汇总卡片与榜单数字会对不上。
      * </p>
      */
-    public ApiTopResultDTO getApiTop(LocalDate date, int limit) {
+    public ApiTopResultDTO getApiTop(LocalDate date, int limit, String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        List<Map<String, Object>> rows = statApiHourlyMapper.selectApiTop(start, end, limit);
+        String utFilter = normalize(ut);
+        String versionFilter = normalize(version);
+        List<Map<String, Object>> rows = statApiHourlyMapper.selectApiTop(start, end, utFilter, versionFilter, limit);
         List<ApiTopDTO> list = new ArrayList<>(rows.size());
         for (Map<String, Object> row : rows) {
             ApiTopDTO dto = new ApiTopDTO();
@@ -172,7 +199,7 @@ public class StatReportService {
             list.add(dto);
         }
 
-        Map<String, Object> summaryRow = statApiHourlyMapper.selectApiSummary(start, end);
+        Map<String, Object> summaryRow = statApiHourlyMapper.selectApiSummary(start, end, utFilter, versionFilter);
         if (summaryRow == null) {
             summaryRow = Map.of();
         }
@@ -187,10 +214,12 @@ public class StatReportService {
     /**
      * 单接口 24 小时调用趋势（callCount 与 avgMs，补零）
      */
-    public Map<String, List<Long>> getApiTrend(String uri, String method, LocalDate date) {
+    public Map<String, List<Long>> getApiTrend(String uri, String method, LocalDate date,
+                                              String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        List<Map<String, Object>> rows = statApiHourlyMapper.selectApiTrend(uri, method, start, end);
+        List<Map<String, Object>> rows = statApiHourlyMapper.selectApiTrend(
+                uri, method, start, end, normalize(ut), normalize(version));
 
         Map<Integer, Map<String, Long>> byHour = new HashMap<>();
         for (Map<String, Object> row : rows) {
@@ -211,12 +240,17 @@ public class StatReportService {
 
     /**
      * 错误明细分页
+     * <p>appVersion 复用既有 drill-down 语义（明细窗口内的版本约束），不另设 version 参数。</p>
      */
     public Page<StatErrorLog> getErrorPage(long pageNum, long pageSize, String errorType,
-                                           String appVersion, String fingerprint) {
+                                           String ut, String appVersion, String fingerprint) {
         QueryWrapper<StatErrorLog> qw = new QueryWrapper<>();
+        String utFilter = normalize(ut);
         if (errorType != null && !errorType.isBlank()) {
             qw.eq("error_type", errorType);
+        }
+        if (utFilter != null) {
+            qw.eq("ut", utFilter);
         }
         if (appVersion != null && !appVersion.isBlank()) {
             qw.eq("app_version", appVersion);
@@ -231,10 +265,11 @@ public class StatReportService {
     /**
      * 错误分组汇总（按 fingerprint）
      */
-    public List<ErrorSummaryDTO> getErrorSummary(LocalDate date) {
+    public List<ErrorSummaryDTO> getErrorSummary(LocalDate date, String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        List<Map<String, Object>> rows = statErrorLogMapper.selectErrorSummary(start, end);
+        List<Map<String, Object>> rows = statErrorLogMapper.selectErrorSummary(
+                start, end, normalize(ut), normalize(version));
         List<ErrorSummaryDTO> list = new ArrayList<>(rows.size());
         for (Map<String, Object> row : rows) {
             ErrorSummaryDTO dto = new ErrorSummaryDTO();
@@ -252,19 +287,44 @@ public class StatReportService {
     }
 
     /**
-     * 设备统计查询（ut=all 不加平台过滤）
+     * 某平台下出现过的客户端版本列表（版本下拉数据源）
+     * <p>
+     * 「全部平台」时返回空列表 —— 版本必须依附于具体平台，
+     * 跨平台混列会出现「同一版本号在 iOS 与 Android 语义不同」的误导。
+     * </p>
      */
-    private QueryWrapper<StatDevice> deviceQuery(String ut, java.util.function.Consumer<QueryWrapper<StatDevice>> filter) {
+    public List<String> getVersions(String ut) {
+        if (isAll(ut)) {
+            return List.of();
+        }
+        return statDeviceMapper.selectVersionsByUt(ut.trim());
+    }
+
+    /**
+     * 设备统计查询（ut=all 不加平台过滤；version 为空不加版本过滤）
+     */
+    private QueryWrapper<StatDevice> deviceQuery(String ut, String versionFilter,
+                                                 java.util.function.Consumer<QueryWrapper<StatDevice>> filter) {
         QueryWrapper<StatDevice> qw = new QueryWrapper<>();
         filter.accept(qw);
         if (!isAll(ut)) {
             qw.eq("ut", ut);
         }
+        if (versionFilter != null) {
+            qw.eq("app_version", versionFilter);
+        }
         return qw;
     }
 
-    private static boolean isAll(String ut) {
-        return ut == null || ut.isBlank() || "all".equalsIgnoreCase(ut);
+    private static boolean isAll(String value) {
+        return value == null || value.isBlank() || "all".equalsIgnoreCase(value);
+    }
+
+    /**
+     * 可选过滤值归一：不传 / 空 / all ⇒ null（表示不加条件），否则去掉首尾空白
+     */
+    private static String normalize(String value) {
+        return isAll(value) ? null : value.trim();
     }
 
     private static long toLong(Object v) {

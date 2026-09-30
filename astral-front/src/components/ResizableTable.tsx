@@ -113,6 +113,28 @@ const estimateWidth = (title: unknown): number => {
 const isActionCol = <T,>(col: DataTableColumn<T>): boolean =>
   col.key === 'action' || /操作|action/i.test(columnTitleText(col));
 
+/**
+ * 为实例派生独一无二的存储后缀：`base#<列数>:<列签名哈希>`。
+ *
+ * 同一路径下往往挂多张 ResizableTable（Tabs 页、多区块页），旧实现全部共用
+ * `pathname` 一个 localStorage key：任何一张表保存列设置（哪怕只是把自己当前
+ * 的空 hidden 写回）都会覆盖其他表的设置，刷新后「没勾选的字段又出来了」。
+ * 这里用「完整列定义的 key 序列（含用户已隐藏的列）」做签名，同路径下列结构
+ * 不同的表各占一个 key，互不干扰；单表页面的 key 仍完全确定，刷新不变。
+ * 隐藏列不会改变签名（签名取全量列），切列设置面板不会导致 key 漂移。
+ */
+const deriveStorageSuffix = (base: string, colsWithKey: Array<{ key: ColumnKey }>): string => {
+  if (colsWithKey.length === 0) return base;
+  // djb2 字符串哈希：只依赖列 key 的稳定字符串，与列对象引用无关
+  let h = 5381;
+  for (const { key } of colsWithKey) {
+    for (let i = 0; i < key.length; i += 1) {
+      h = ((h * 33) ^ key.charCodeAt(i)) >>> 0;
+    }
+  }
+  return `${base}#${colsWithKey.length}:${h.toString(36)}`;
+};
+
 export function ResizableTable<T extends object>(props: ResizableTableProps<T>) {
   const {
     columns,
@@ -135,15 +157,19 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
   /** 表体纵向滚动高度（x 由本组件接管，忽略） */
   const scrollY = typeof scroll?.y === 'number' ? scroll.y : undefined;
 
-  const suffix = resizeKey ?? (typeof window === 'undefined' ? 'server' : window.location.pathname);
-  const widthKey = `astral:table-widths:${suffix}`;
-  const hiddenKey = `astral:table-hidden:${suffix}`;
+  const baseSuffix = resizeKey ?? (typeof window === 'undefined' ? 'server' : window.location.pathname);
 
   /** 用户拖拽出的列宽（挂载后从 localStorage 恢复） */
   const [widths, setWidths] = useState<Record<ColumnKey, number>>({});
   /** 用户隐藏的列 */
   const [hidden, setHidden] = useState<Set<ColumnKey>>(new Set());
-  const [hoverKey, setHoverKey] = useState<ColumnKey | null>(null);
+  /**
+   * 是否已从 localStorage 恢复过宽/列设置。
+   * 挂载时 initial state 是默认值（widths={} / hidden=空），若保存 effect 在恢复 setState 生效前
+   * 先跑，会把空默认值写回 localStorage，覆盖用户已保存的列设置（尤其在 dev + StrictMode 双跑 effect
+   * 时必现，表现为「列设置一刷新就回到默认」）。恢复完成前不写持久化即可根治。
+   */
+  const [hydrated, setHydrated] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -155,6 +181,15 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
     return list.map((col, index) => ({ col, key: resolveColumnKey(col, index) }));
   }, [columns]);
 
+  // ---------- 存储 key：同路径多表按列签名区分，避免互相覆盖 ----------
+  const storageSuffix = useMemo(
+    () => deriveStorageSuffix(baseSuffix, colsWithKey),
+    // baseSuffix 是 resizeKey 或 pathname（字符串常量/稳定 prop），列签名只随列定义变化
+    [baseSuffix, colsWithKey],
+  );
+  const widthKey = `astral:table-widths:${storageSuffix}`;
+  const hiddenKey = `astral:table-hidden:${storageSuffix}`;
+
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(widthKey);
@@ -163,25 +198,29 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
       if (rawHidden) setHidden(new Set(JSON.parse(rawHidden) as ColumnKey[]));
     } catch {
       /* 缓存损坏时忽略，退回自动估算 */
+    } finally {
+      // 恢复完成后才允许持久化；详见 hydrated 注释
+      setHydrated(true);
     }
   }, [widthKey, hiddenKey]);
 
   useEffect(() => {
-    if (Object.keys(widths).length === 0) return;
+    if (!hydrated || Object.keys(widths).length === 0) return;
     try {
       window.localStorage.setItem(widthKey, JSON.stringify(widths));
     } catch {
       /* 存储不可用时静默失败 */
     }
-  }, [widths, widthKey]);
+  }, [widths, widthKey, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     try {
       window.localStorage.setItem(hiddenKey, JSON.stringify(Array.from(hidden)));
     } catch {
       /* ignore */
     }
-  }, [hidden, hiddenKey]);
+  }, [hidden, hiddenKey, hydrated]);
 
   // ---------- 容器宽度：ResizeObserver 实测，决定 fill / scroll ----------
   useEffect(() => {
@@ -267,14 +306,13 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
       const titleNode: React.ReactNode = resizable ? (
         <span className="rt-th-title">
           {title}
+          {/* 手柄的显隐与颜色由 .rt-th-resize 的 :hover 规则控制（见 globals.css），
+              不再内联写死颜色——写死的 rgba 深色在暗色主题下不可见 */}
           <span
             role="separator"
             aria-label="拖拽调整列宽"
             className="rt-th-resize"
-            style={{ background: hoverKey === key ? 'rgba(24, 24, 27, 0.35)' : 'transparent' }}
             onPointerDown={(e) => startDrag(e, key)}
-            onPointerEnter={() => setHoverKey(key)}
-            onPointerLeave={() => setHoverKey(null)}
           />
         </span>
       ) : (
@@ -286,7 +324,7 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
           : effectiveWidths[key];
       return { ...col, key, width, title: titleNode };
     });
-  }, [visibleCols, effectiveWidths, mode, totalPx, resizable, hoverKey, startDrag]);
+  }, [visibleCols, effectiveWidths, mode, totalPx, resizable, startDrag]);
 
   /** 卡片模式列：同一份列定义，去掉拖拽手柄 */
   const cardColumns = useMemo<Array<DataTableColumn<T>>>(

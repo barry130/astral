@@ -1,6 +1,7 @@
 package com.astral.system.controller;
 
-import com.astral.auth.security.PermissionChecker;
+import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.annotation.RequiresSuper;
 import com.astral.common.result.Result;
 import com.astral.schema.FieldSchema;
 import com.astral.schema.SchemaCodeGenerator;
@@ -24,15 +25,15 @@ import java.util.stream.Collectors;
 /**
  * 表结构管理控制器
  * <p>提供表结构的查看、创建、删除、更新功能，以及代码生成（Entity/Mapper/Service/Controller）和建表SQL生成功能</p>
+ * <p>权限：本控制器此前被 AuthInterceptor 的前缀白名单整段放行，导致匿名可改表结构；
+ * 现查询/代码生成类接口要求 {@code admin:system:schema:view}，写接口（建表、删表、改表、生成ALTER SQL）
+ * 属于提权面，要求超管（{@link RequiresSuper}）。</p>
  */
 @Tag(name = "表结构管理")
 @RestController
 @RequestMapping("/api/v1/admin/system/table-schema")
 @RequiredArgsConstructor
 public class TableSchemaController {
-
-    /** 权限校验器：本控制器此前被 AuthInterceptor 的前缀白名单整段放行，导致匿名可改表结构 */
-    private final PermissionChecker permissionChecker;
 
     /**
      * 校验路径/请求体里的表名是否合法。
@@ -59,9 +60,9 @@ public class TableSchemaController {
      * @return 全部表结构列表
      */
     @Operation(summary = "获取所有表结构")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping
     public Result<List<TableSchema>> getAllSchemas() {
-        permissionChecker.require("system:schema:view");
         return Result.success(SchemaRegistry.getAllSchemas());
     }
 
@@ -72,9 +73,9 @@ public class TableSchemaController {
      * @return 表结构定义，不存在时返回错误
      */
     @Operation(summary = "根据表名获取表结构")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}")
     public Result<TableSchema> getSchema(@PathVariable String tableName) {
-        permissionChecker.require("system:schema:view");
         Result<?> invalid = invalidTableName(tableName);
         if (invalid != null) {
             return (Result<TableSchema>) (Result<?>) invalid;
@@ -93,9 +94,9 @@ public class TableSchemaController {
      * @return 指定模块下的表结构列表
      */
     @Operation(summary = "按模块获取表结构")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/module/{moduleName}")
     public Result<List<TableSchema>> getSchemasByModule(@PathVariable String moduleName) {
-        permissionChecker.require("system:schema:view");
         return Result.success(SchemaRegistry.getSchemasByModule(moduleName));
     }
 
@@ -105,9 +106,9 @@ public class TableSchemaController {
      * @return 全部表名列表
      */
     @Operation(summary = "获取所有表名")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/names")
     public Result<List<String>> getAllTableNames() {
-        permissionChecker.require("system:schema:view");
         return Result.success(List.copyOf(SchemaRegistry.getAllTableNames()));
     }
 
@@ -120,9 +121,9 @@ public class TableSchemaController {
      * @throws IOException 写入表结构文件时可能抛出IO异常
      */
     @Operation(summary = "创建新表结构")
+    @RequiresSuper
     @PostMapping
     public Result<TableSchema> createSchema(@RequestBody CreateTableRequest request) throws IOException {
-        permissionChecker.requireSuper();
         Result<?> invalid = invalidTableName(request.getTableName());
         if (invalid != null) {
             return (Result<TableSchema>) (Result<?>) invalid;
@@ -157,9 +158,9 @@ public class TableSchemaController {
      * @throws IOException 删除表结构文件时可能抛出IO异常
      */
     @Operation(summary = "删除表结构")
+    @RequiresSuper
     @DeleteMapping("/{tableName}")
     public Result<Void> deleteSchema(@PathVariable String tableName) throws IOException {
-        permissionChecker.requireSuper();
         if (invalidTableName(tableName) != null) {
             return Result.error("SYS013", tableName);
         }
@@ -256,9 +257,9 @@ public class TableSchemaController {
      * @return Entity代码字符串
      */
     @Operation(summary = "生成Entity代码")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}/entity")
     public Result<String> generateEntity(@PathVariable String tableName) {
-        permissionChecker.require("system:schema:view");
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             return Result.error("SYS009");
@@ -273,9 +274,9 @@ public class TableSchemaController {
      * @return Mapper代码字符串
      */
     @Operation(summary = "生成Mapper代码")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}/mapper")
     public Result<String> generateMapper(@PathVariable String tableName) {
-        permissionChecker.require("system:schema:view");
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             return Result.error("SYS009");
@@ -290,9 +291,9 @@ public class TableSchemaController {
      * @return Service代码字符串
      */
     @Operation(summary = "生成Service代码")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}/service")
     public Result<String> generateService(@PathVariable String tableName) {
-        permissionChecker.require("system:schema:view");
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             return Result.error("SYS009");
@@ -307,9 +308,9 @@ public class TableSchemaController {
      * @return ServiceImpl代码字符串
      */
     @Operation(summary = "生成ServiceImpl代码")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}/service-impl")
     public Result<String> generateServiceImpl(@PathVariable String tableName) {
-        permissionChecker.require("system:schema:view");
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             return Result.error("SYS009");
@@ -324,9 +325,9 @@ public class TableSchemaController {
      * @return Controller代码字符串
      */
     @Operation(summary = "生成Controller代码")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}/controller")
     public Result<String> generateController(@PathVariable String tableName) {
-        permissionChecker.require("system:schema:view");
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             return Result.error("SYS009");
@@ -341,9 +342,9 @@ public class TableSchemaController {
      * @return 包含各层代码的Map，key为层级名称，value为代码字符串
      */
     @Operation(summary = "生成完整代码包（Entity+Mapper+Service+Controller）")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}/full-code")
     public Result<Map<String, String>> generateFullCode(@PathVariable String tableName) {
-        permissionChecker.require("system:schema:view");
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             return Result.error("SYS009");
@@ -366,10 +367,10 @@ public class TableSchemaController {
      * @return CREATE TABLE SQL语句
      */
     @Operation(summary = "生成建表SQL")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}/sql")
     public Result<String> generateSql(@PathVariable String tableName,
                                       @RequestParam(value = "dialect", required = false) String dialect) {
-        permissionChecker.require("system:schema:view");
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             return Result.error("SYS009");
@@ -384,6 +385,7 @@ public class TableSchemaController {
      * @return 方言编码与名称列表
      */
     @Operation(summary = "获取支持的SQL方言")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/dialects")
     public Result<List<Map<String, String>>> getDialects() {
         List<Map<String, String>> dialects = Arrays.stream(SqlDialect.values())
@@ -402,11 +404,11 @@ public class TableSchemaController {
      * @throws IOException 更新表结构文件时可能抛出IO异常
      */
     @Operation(summary = "更新表结构")
+    @RequiresSuper
     @PutMapping("/{tableName}")
     public Result<Map<String, String>> updateSchema(@PathVariable String tableName,
                                                     @RequestBody TableSchema newSchema,
                                                     @RequestParam(value = "dialect", required = false) String dialect) throws IOException {
-        permissionChecker.requireSuper();
         TableSchema oldSchema = SchemaRegistry.getSchema(tableName);
         if (oldSchema == null) {
             return Result.error("SYS009");
@@ -432,11 +434,11 @@ public class TableSchemaController {
      * @return ALTER TABLE SQL语句
      */
     @Operation(summary = "生成ALTER SQL")
+    @RequiresSuper
     @PostMapping("/{tableName}/alter-sql")
     public Result<String> generateAlterSql(@PathVariable String tableName,
                                            @RequestBody TableSchema newSchema,
                                            @RequestParam(value = "dialect", required = false) String dialect) {
-        permissionChecker.requireSuper();
         TableSchema oldSchema = SchemaRegistry.getSchema(tableName);
         if (oldSchema == null) {
             return Result.error("SYS009");
@@ -451,9 +453,9 @@ public class TableSchemaController {
      * @return 表结构定义
      */
     @Operation(summary = "导出表结构JSON文件")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}/export")
     public Result<TableSchema> exportSchema(@PathVariable String tableName) {
-        permissionChecker.require("system:schema:view");
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             return Result.error("SYS009");
@@ -467,9 +469,9 @@ public class TableSchemaController {
      * @return 全部表结构列表
      */
     @Operation(summary = "批量导出所有表结构JSON")
+    @RequiresPermission("admin:system:schema:view")
     @GetMapping("/export-all")
     public Result<List<TableSchema>> exportAllSchemas() {
-        permissionChecker.require("system:schema:view");
         return Result.success(SchemaRegistry.getAllSchemas());
     }
 }

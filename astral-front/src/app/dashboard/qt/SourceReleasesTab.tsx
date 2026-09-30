@@ -4,8 +4,8 @@
  * 音源包热更新管理 Tab（SOURCE_UPDATE_DESIGN §五/§七）
  *
  * 发布渠道复用版本更新字典 qt_update_channel（stable=正式版 / beta=测试版）：
- * 正式版所有用户都能收到；测试版仅对拥有 qt_admin / qt_tester 权限（含超管）的用户投放，
- * 正式版版本号更高时所有用户都收到正式版。
+ * 正式版所有用户都能收到；测试版仅对拥有 user:qt:source:channel:beta 结果级权限（含超管）的用户可见，
+ * 服务端在「可见渠道集合」内取版本号最大者——正式包版本号更高时所有用户都收到正式包。
  *
  * 发布流程对应「先拿号 → 上传文件 → 回填 artifacts → 发布」四步：
  * 1. 新建：只填平台/渠道/准入/说明，后端生成版本号（如 2026091801）随响应返回；
@@ -20,6 +20,7 @@ import {
 import { BarChartOutlined, PlusOutlined, UploadOutlined } from '@/components/antd-compat/icons';
 import { sourceReleaseApi, qtAdminApi, QtSourceRelease, QtSourceArtifact, QtSourceStatRow, enumLabel } from '@/api/qt';
 import { fetchDictOptions, DictOption } from '@/api/dict';
+import { usePerm, QT_PERMISSIONS } from '@/lib/perm';
 import { storageApi } from '@/api/storage';
 import { ResizableTable } from '@/components/ResizableTable';
 
@@ -78,6 +79,10 @@ export default function SourceReleasesTab() {
   const [appVersions, setAppVersions] = useState<Record<number, number[]>>({});
   /** 按平台准入选择状态（key=平台码），随「适用平台」联动增删 */
   const [admission, setAdmission] = useState<Record<number, AdmissionRow>>({});
+
+  const hasPerm = usePerm();
+  // 轻听后台管理权限：必须与后端 QtAdminController 类级 @RequiresPermission("admin:qt:admin") 保持一致
+  const canEdit = hasPerm(QT_PERMISSIONS.admin);
 
   // 由数据字典派生出的下拉/标签选项（数值类将 value 转为 number 以便比较）
   const platformOpts = (dict.qt_update_platform?.length ? dict.qt_update_platform : FALLBACK_PLATFORM_OPTS)
@@ -349,30 +354,30 @@ export default function SourceReleasesTab() {
       title: '操作', key: 'action', width: 300, fixed: 'right' as const,
       render: (_: any, r: QtSourceRelease) => (
         <Space size={0} wrap>
-          <Button type="link" size="small" onClick={() => openModal(r)}>编辑</Button>
+          <Button type="link" size="small" disabled={!canEdit} onClick={() => openModal(r)}>编辑</Button>
           {r.published ? (
-            <Popconfirm title="撤回后客户端停止投递该版本，确认？" onConfirm={async () => {
+            <Popconfirm title="撤回后客户端停止投递该版本，确认？" disabled={!canEdit} onConfirm={async () => {
               const res = await sourceReleaseApi.unpublish(r.id!);
               if (res.code === 200) refreshAfter('已撤回');
-            }}><Button type="link" size="small">撤回</Button></Popconfirm>
+            }}><Button type="link" size="small" disabled={!canEdit}>撤回</Button></Popconfirm>
           ) : (
-            <Popconfirm title="发布后客户端立即可拉到该版本，确认？" onConfirm={async () => {
+            <Popconfirm title="发布后客户端立即可拉到该版本，确认？" disabled={!canEdit} onConfirm={async () => {
               const res = await sourceReleaseApi.publish(r.id!);
               if (res.code === 200) refreshAfter(`已发布 ${r.sourceVersionCode}`);
-            }}><Button type="link" size="small">发布</Button></Popconfirm>
+            }}><Button type="link" size="small" disabled={!canEdit}>发布</Button></Popconfirm>
           )}
           {!r.bad && (
-            <Popconfirm title="标坏后客户端会回退并拉黑该版本，确认？" onConfirm={async () => {
+            <Popconfirm title="标坏后客户端会回退并拉黑该版本，确认？" disabled={!canEdit} onConfirm={async () => {
               const res = await sourceReleaseApi.markBad(r.id!);
               if (res.code === 200) refreshAfter('已标记坏包');
-            }}><Button type="link" size="small" danger>标坏</Button></Popconfirm>
+            }}><Button type="link" size="small" danger disabled={!canEdit}>标坏</Button></Popconfirm>
           )}
           {!r.published && (
-            <Popconfirm title="确认删除该 release？" onConfirm={async () => {
+            <Popconfirm title="确认删除该 release？" disabled={!canEdit} onConfirm={async () => {
               const res = await sourceReleaseApi.remove(r.id!);
               if (res.code === 200) refreshAfter('已删除');
               else message.error(res.message || '删除失败');
-            }}><Button type="link" size="small" danger>删除</Button></Popconfirm>
+            }}><Button type="link" size="small" danger disabled={!canEdit}>删除</Button></Popconfirm>
           )}
         </Space>
       ),
@@ -395,7 +400,8 @@ export default function SourceReleasesTab() {
     <div>
       <div className="filter-bar" style={{ marginBottom: 12 }}>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新建 release</Button>
+          {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新建 release</Button>}
+          {!canEdit && <Tag>只读</Tag>}
           <Button icon={<BarChartOutlined />} onClick={showStats}>装机分布</Button>
           <Select
             allowClear placeholder="全部渠道" style={{ width: 140 }} value={channelFilter}
@@ -418,6 +424,7 @@ export default function SourceReleasesTab() {
         open={modal}
         onCancel={() => setModal(false)}
         onOk={submit}
+        okButtonProps={{ disabled: !canEdit }}
         width={680}
         destroyOnClose
       >
@@ -429,7 +436,7 @@ export default function SourceReleasesTab() {
             </Form.Item>
             <Form.Item
               name="channel" label="发布渠道" rules={[{ required: true }]}
-              tooltip="正式版（stable）所有用户都能收到；测试版（beta）仅对拥有 qt_admin / qt_tester 权限（含超管）的用户投放，与版本更新渠道同源"
+              tooltip="正式版（stable）所有用户都能收到；测试版（beta）仅对拥有 user:qt:source:channel:beta 权限（含超管）的用户可见，与版本更新渠道同源（正式包版本号更高时所有人都收到正式包）"
             >
               <Select options={channelOpts} style={{ width: 140 }} />
             </Form.Item>
@@ -501,14 +508,15 @@ export default function SourceReleasesTab() {
                     </Form.Item>
                     <Upload
                       showUploadList={false}
+                      disabled={!canEdit}
                       customRequest={(options) => customUpload(options, field.name)}
                     >
-                      <Button icon={<UploadOutlined />} loading={uploadingIdx === field.name} size="middle">上传</Button>
+                      <Button icon={<UploadOutlined />} loading={uploadingIdx === field.name} size="middle" disabled={!canEdit}>上传</Button>
                     </Upload>
-                    <Button type="text" danger onClick={() => remove(field.name)}>删除</Button>
+                    <Button type="text" danger disabled={!canEdit} onClick={() => remove(field.name)}>删除</Button>
                   </Space>
                 ))}
-                <Button type="dashed" onClick={() => add()} icon={<PlusOutlined />} block>添加产物条目</Button>
+                <Button type="dashed" disabled={!canEdit} onClick={() => add()} icon={<PlusOutlined />} block>添加产物条目</Button>
               </>
             )}
           </Form.List>

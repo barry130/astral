@@ -34,6 +34,9 @@ public class Role {
 
     private Integer sort;
 
+    @TableField("is_super")
+    private Integer isSuper;
+
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

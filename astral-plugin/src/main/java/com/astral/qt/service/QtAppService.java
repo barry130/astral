@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 轻听 App 公告与版本更新服务
@@ -36,19 +37,19 @@ public class QtAppService {
     }
 
     /**
-     * 获取版本更新信息
+     * 获取版本更新信息。
      *
-     * @param type    1101 安卓 / 1102 iOS / 1103 Windows
-     * @param version 客户端版本号（如 222 对应 2.2.2）
-     * @param tester  当前用户是否为测试人群（拥有 qt_admin / qt_tester 权限，含超管 *:*:*），
-     *                由控制器按请求携带的 satoken 判定，客户端不再上送 channel
-     *                <p>测试人群：取 beta 与 stable 两个渠道中高于当前版本的最新版，返回版本号更大的那个
-     *                （正式版版本号高于测试版时，正常收到正式版而不是版本号更低的测试版）</p>
-     *                <p>非测试人群：只发正式版（stable）</p>
-     *                <p>双链接直出 downloadUrl/browserUrl/isGithub（UPDATE_DESIGN.md §2.1①），
-     *                旧的 && 多链接随机逻辑已随 downloadMode 一并废弃。</p>
+     * @param type            1101 安卓 / 1102 iOS / 1103 Windows
+     * @param version         客户端版本号（如 222 对应 2.2.2）
+     * @param visibleChannels 当前用户<b>可见</b>的渠道集合，由 DataScopeResolver 按结果级权限
+     *                        （qt:update:channel:*）解析，无权限者只有 stable。
+     *                        <p>本方法在可见集合内取版本号最大者：因此正式版版本号高于测试版时，
+     *                        持有测试权限的用户收到的仍是正式版——权限只决定「能看见哪些渠道」，
+     *                        不决定「必须拿哪个版本」。</p>
+     *                        <p>双链接直出 downloadUrl/browserUrl/isGithub（UPDATE_DESIGN.md §2.1①），
+     *                        旧的 && 多链接随机逻辑已随 downloadMode 一并废弃。</p>
      */
-    public QtAppUpdate getUpdate(Long type, String version, boolean tester) {
+    public QtAppUpdate getUpdate(Long type, String version, Set<String> visibleChannels) {
         long versionCode;
         try {
             versionCode = Long.parseLong(version);
@@ -56,15 +57,15 @@ public class QtAppService {
             log.warn("[QtPlugin] 版本号格式错误: {}", version);
             return null;
         }
-        if (tester) {
-            // 测试人群：同时取 beta 与 stable 的高版本，返回版本号更大的（官版更高时正常收到正式版）
-            return pickHigher(
-                    findLatest(type, versionCode, "beta"),
-                    findLatest(type, versionCode, "stable")
-            );
+        if (visibleChannels == null || visibleChannels.isEmpty()) {
+            return null;
         }
-        // 非测试人群：只查 stable（正式版所有用户都能收到）
-        return findLatest(type, versionCode, "stable");
+        // 在可见渠道集合内取「高于当前版本且已发布」的最高版本
+        QtAppUpdate picked = null;
+        for (String channel : visibleChannels) {
+            picked = pickHigher(picked, findLatest(type, versionCode, channel));
+        }
+        return picked;
     }
 
     /**

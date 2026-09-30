@@ -68,7 +68,10 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
   };
 
   return (
-    <div className={cn('flex flex-wrap items-center justify-end gap-3 pt-3 text-sm', className)}>
+    /* 与表格之间用一条分隔线连接，让分页器成为表格的一部分而不是漂浮在下方；
+       分隔线颜色与表体行间线同源（border-border/60），
+       DataTable 已把「最后一行」的底线去掉，这里不会出现双线 */
+    <div className={cn('border-border/60 flex flex-wrap items-center justify-end gap-3 border-t py-3 text-sm', className)}>
       <span className="text-muted-foreground">
         {pagination.showTotal
           ? pagination.showTotal(total, [(current - 1) * pageSize + 1, Math.min(current * pageSize, total)])

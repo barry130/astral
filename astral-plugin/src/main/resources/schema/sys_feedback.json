@@ -81,7 +81,7 @@
       "fieldName": "device",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "设备型号",
+      "comment": "设备型号/主机名(取自请求头X-Device)",
       "length": 128
     },
     {
@@ -89,7 +89,7 @@
       "fieldName": "os",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "系统版本",
+      "comment": "操作系统及版本(取自请求头X-OS)",
       "length": 64
     },
     {
@@ -97,7 +97,7 @@
       "fieldName": "appVersion",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "App版本(如3.0.0)",
+      "comment": "客户端版本(取自请求头X-App-Version)",
       "length": 32
     },
     {
@@ -105,7 +105,7 @@
       "fieldName": "platform",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "平台(android/ios)",
+      "comment": "客户端平台(取自请求头X-App-Ut；字典stat_platform: app-android/app-ios/app-windows/web)",
       "length": 16
     },
     {

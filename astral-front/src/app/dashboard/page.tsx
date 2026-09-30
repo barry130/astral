@@ -12,6 +12,7 @@ import {
   Loader2,
   MemoryStick,
   Radio,
+  ShieldAlert,
   TrendingDown,
   TrendingUp,
   Zap,
@@ -21,6 +22,7 @@ import { monitorApi, DashboardOverviewDTO } from '@/api/monitor';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { usePerm } from '@/lib/perm';
 
 /** 轮询间隔：统计口径按天聚合，秒级刷新没有意义；系统指标 30 秒足以感知异常 */
 const REFRESH_INTERVAL_MS = 30_000;
@@ -280,6 +282,9 @@ function StatusBadge({ available }: { available: boolean | null | undefined }) {
  * </p>
  */
 export default function DashboardPage() {
+  /** 首页数据全部来自 admin:monitor:view 保护的聚合接口：无此权限时不做无意义轮询，直接给明确提示 */
+  const hasPerm = usePerm();
+  const canViewMonitor = hasPerm('admin:monitor:view');
   /** 首屏加载状态 */
   const [loading, setLoading] = useState(true);
   /** 仪表盘总览数据 */
@@ -289,6 +294,11 @@ export default function DashboardPage() {
 
   /** 组件挂载时加载数据，并设置定时刷新 */
   useEffect(() => {
+    // 无 admin:monitor:view 时不发请求：否则每 30 秒产生一次必然 403 的轮询
+    if (!canViewMonitor) {
+      setLoading(false);
+      return;
+    }
     // alive 守卫：卸载后异步回调不再 setState，同时 clearInterval 停掉轮询
     let alive = true;
     /** 轮询属后台心跳，用 silent 避免顶部加载条每 30 秒闪一次 */
@@ -311,7 +321,20 @@ export default function DashboardPage() {
       alive = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [canViewMonitor]);
+
+  if (!canViewMonitor) {
+    return (
+      <div className="my-24 flex flex-col items-center gap-3 text-center">
+        <ShieldAlert className="size-10 text-muted-foreground" />
+        <p className="text-base font-medium text-foreground">无仪表盘查看权限</p>
+        <p className="max-w-md text-sm text-muted-foreground">
+          首页展示的是系统与业务监控指标，需要 <code className="rounded bg-muted px-1">admin:monitor:view</code> 权限。
+          请联系管理员在「角色权限」中为你的角色勾选该权限。
+        </p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -333,7 +356,7 @@ export default function DashboardPage() {
   const cpuUsage = system?.cpuUsage ?? 0;
   const memoryUsage = system?.memoryUsage ?? 0;
   const diskUsage = system?.diskUsage ?? 0;
-  const activeConnections = business?.activeConnections ?? null;
+  const activeRequests = business?.activeRequests ?? 0;
 
   const successRate = Number(apiSummary?.successRate ?? 0);
   const rateTone = ratioTone(successRate, 99, 95);
@@ -398,10 +421,10 @@ export default function DashboardPage() {
 
         <GridCell className="fade-in-up stagger-4">
           <StatCard
-            label="活跃连接"
-            value={activeConnections === null ? '—' : String(activeConnections)}
+            label="并发请求"
+            value={String(activeRequests)}
             icon={<Radio />}
-            sub={activeConnections === null ? '当前不可用' : '正在处理请求的线程数'}
+            sub="此刻处理中的请求数"
           />
         </GridCell>
       </div>

@@ -7,8 +7,10 @@ import dayjs from 'dayjs';
 import {
   messageAdminApi, SysNotice,
   noticeTypeLabel, noticeChannelLabel, noticeTypeOptions, noticeChannelOptions, loadFeedbackDicts,
+  NOTICE_CHANNEL_ALL,
 } from '@/api/feedback';
 import { ResizableTable } from '@/components/ResizableTable';
+import { usePerm } from '@/lib/perm';
 
 const { Paragraph } = Typography;
 
@@ -26,6 +28,39 @@ const AUDIENCE_OPTIONS = [
   { label: '仅游客', value: 'NOT_LOGGED_IN' },
 ];
 
+/** 新建通知的缺省投放平台：等价于改造前的 channel=app（Android + iOS） */
+const DEFAULT_CHANNELS = ['app-android', 'app-ios'];
+
+/** 落库值（逗号分隔）→ 多选控件值 */
+function parseChannels(channel?: string): string[] {
+  if (!channel) return DEFAULT_CHANNELS;
+  const parts = channel.split(',').map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return DEFAULT_CHANNELS;
+  // 兼容存量遗留值：app → Android+iOS，pc → Windows
+  if (parts.includes('app')) return [...DEFAULT_CHANNELS];
+  return parts.map((p) => (p === 'pc' ? 'app-windows' : p));
+}
+
+/** 多选控件值 → 落库值；「全部平台」独占 */
+function joinChannels(selected: string[]): string {
+  if (selected.includes(NOTICE_CHANNEL_ALL)) return NOTICE_CHANNEL_ALL;
+  return selected.join(',');
+}
+
+/**
+ * 「全部平台」与具体平台互斥的取值切换：
+ * 选中 all 时只留 all；已在 all 状态下再勾具体平台时丢弃 all。
+ */
+function toggleChannel(next: string[], prev: string[]): string[] {
+  if (next.includes(NOTICE_CHANNEL_ALL) && !prev.includes(NOTICE_CHANNEL_ALL)) {
+    return [NOTICE_CHANNEL_ALL];
+  }
+  if (prev.includes(NOTICE_CHANNEL_ALL) && next.length > 1) {
+    return next.filter((v) => v !== NOTICE_CHANNEL_ALL);
+  }
+  return next;
+}
+
 /**
  * 通知管理面板（反馈插件 sys_notice）
  * <p>被 dashboard/feedback 页 Tabs 与 dashboard/message 页共用。</p>
@@ -36,7 +71,7 @@ export default function NoticeManagement() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [channelFilter, setChannelFilter] = useState<string | undefined>(undefined);
+  const [channelFilter, setChannelFilter] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
   const [keyword, setKeyword] = useState('');
 
@@ -44,11 +79,17 @@ export default function NoticeManagement() {
   const [editing, setEditing] = useState<SysNotice | null>(null);
   const [form] = Form.useForm();
 
+  const hasPerm = usePerm();
+  // 通知维护权限：必须与后端 AdminMessageController 写接口的 @RequiresPermission("admin:message:edit") 保持一致
+  // （页面可见性另由 admin:message:view 控制，此处只加写权限闸门）
+  const canEdit = hasPerm('admin:message:edit');
+
   // kw/ch/ty 可由调用方显式传入：setState 异步，紧随其后的 load 读闭包会拿到旧筛选值
   const load = useCallback((p = page, s = pageSize, kw = keyword, ch = channelFilter, ty = typeFilter) => {
     setLoading(true);
     const params: Record<string, any> = { pageNum: p, pageSize: s };
-    if (ch) params.channel = ch;
+    // 渠道多选：后端按逗号分隔解析，逐项做包含匹配（筛选用原始多值，不做 all 独占折叠）
+    if (ch.length) params.channel = ch.join(',');
     if (ty) params.noticeType = ty;
     if (kw) params.keyword = kw;
     messageAdminApi.page(params)
@@ -69,7 +110,7 @@ export default function NoticeManagement() {
     setEditing(null);
     form.resetFields();
     form.setFieldsValue({
-      channel: 'app',
+      channel: DEFAULT_CHANNELS,
       noticeType: 'announce',
       display: [4],
       isShow: 1,
@@ -95,7 +136,7 @@ export default function NoticeManagement() {
       firstLoginOnly: record.firstLoginOnly ?? 0,
       marquee: record.marquee ?? 0,
       audience: record.audience || 'ALL',
-      channel: record.channel || 'app',
+      channel: parseChannels(record.channel),
       noticeType: record.noticeType || 'announce',
       effectiveRange: record.effectiveStart && record.effectiveEnd
         ? [dayjs(record.effectiveStart), dayjs(record.effectiveEnd)] : undefined,
@@ -110,7 +151,7 @@ export default function NoticeManagement() {
       ? (values.display as number[]).reduce((acc, b) => acc | b, 0) : values.display;
     const payload: SysNotice = {
       id: editing?.id,
-      channel: values.channel,
+      channel: Array.isArray(values.channel) ? joinChannels(values.channel as string[]) : values.channel,
       noticeType: values.noticeType,
       title: values.title,
       content: values.content,
@@ -157,8 +198,18 @@ export default function NoticeManagement() {
   const columns = useMemo(() => [
     { title: 'ID', dataIndex: 'id', width: 80 },
     {
-      title: '渠道', dataIndex: 'channel', width: 80,
-      render: (v: string) => <Tag color={v === 'all' ? 'purple' : v === 'web' ? 'green' : 'blue'}>{noticeChannelLabel(v)}</Tag>,
+      title: '渠道', dataIndex: 'channel', width: 190,
+      render: (v: string) => {
+        const parts = (v || '').split(',').map((s) => s.trim()).filter(Boolean);
+        if (!parts.length) return <Tag>未指定</Tag>;
+        return (
+          <>
+            {parts.map((p) => (
+              <Tag key={p} color={p === NOTICE_CHANNEL_ALL ? 'purple' : 'blue'}>{noticeChannelLabel(p)}</Tag>
+            ))}
+          </>
+        );
+      },
     },
     {
       title: '类型', dataIndex: 'noticeType', width: 90,
@@ -183,14 +234,14 @@ export default function NoticeManagement() {
       title: '操作', key: 'action', width: 150,
       render: (_: any, record: SysNotice) => (
         <Space>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
-          <Popconfirm title="确认删除该通知?" onConfirm={() => handleDelete(record.id!)}>
-            <Button type="link" danger size="small" icon={<DeleteOutlined />}>删除</Button>
+          <Button type="link" size="small" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openEdit(record)}>编辑</Button>
+          <Popconfirm title="确认删除该通知?" disabled={!canEdit} onConfirm={() => handleDelete(record.id!)}>
+            <Button type="link" danger size="small" icon={<DeleteOutlined />} disabled={!canEdit}>删除</Button>
           </Popconfirm>
         </Space>
       ),
     },
-  ], [openEdit, handleDelete]);
+  ], [openEdit, handleDelete, canEdit]);
 
   return (
     <div>
@@ -199,12 +250,13 @@ export default function NoticeManagement() {
           <div>
             <h2 style={{ margin: 0 }}>通知管理</h2>
             <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-              统一通知 sys_notice：公告/反馈/需求通知（App/Web 渠道，广播或点对点）
+              统一通知 sys_notice：公告/反馈/需求通知（投放平台可多选，与接口统计口径一致，广播或点对点）
             </Paragraph>
           </div>
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => load()}>刷新</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>发布通知</Button>
+            {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>发布通知</Button>}
+            {!canEdit && <Tag>只读</Tag>}
           </Space>
         </div>
 
@@ -212,9 +264,11 @@ export default function NoticeManagement() {
           <Space wrap>
             <Input.Search placeholder="搜索标题/内容" allowClear style={{ width: 220 }}
               onSearch={(v) => { setKeyword(v); load(1, pageSize, v); }} />
-            <Select placeholder="渠道" allowClear style={{ width: 120 }} value={channelFilter}
-              onChange={(v) => setChannelFilter(v)}
-              options={noticeChannelOptions()} />
+            <Select mode="multiple" placeholder="渠道（可多选）" allowClear style={{ minWidth: 220 }}
+              value={channelFilter}
+              onChange={(v) => setChannelFilter((v as string[]) || [])}
+              options={noticeChannelOptions()}
+              maxTagCount="responsive" />
             <Select placeholder="类型" allowClear style={{ width: 120 }} value={typeFilter}
               onChange={(v) => setTypeFilter(v)}
               options={noticeTypeOptions()} />
@@ -244,6 +298,7 @@ export default function NoticeManagement() {
         title={editing?.id ? '编辑通知' : '发布通知'}
         open={modalOpen}
         onOk={submit}
+        okButtonProps={{ disabled: !canEdit }}
         onCancel={() => setModalOpen(false)}
         width={640}
         destroyOnClose
@@ -251,8 +306,16 @@ export default function NoticeManagement() {
         <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="channel" label="渠道" rules={[{ required: true, message: '请选择渠道' }]}>
-                <Select options={noticeChannelOptions()} />
+              <Form.Item
+                name="channel"
+                label="投放平台（可多选）"
+                extra="与接口统计的平台口径一致；选「全部平台」即不限端"
+                rules={[{ required: true, message: '请选择投放平台' }]}
+                // 兼容层不支持 normalize，「全部平台」与具体平台的互斥在这里做
+                getValueFromEvent={(next: string[]) =>
+                  toggleChannel(next || [], (form.getFieldValue('channel') as string[]) || [])}
+              >
+                <Select mode="multiple" options={noticeChannelOptions()} placeholder="选择投放平台" maxTagCount="responsive" />
               </Form.Item>
             </Col>
             <Col span={12}>

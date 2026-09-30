@@ -1,5 +1,6 @@
 package com.astral.monitor.api;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.monitor.dto.BusinessMonitorDTO;
 import com.astral.monitor.dto.DashboardOverviewDTO;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1/admin/monitor")
+@RequiresPermission(value = "admin:monitor:view", name = "系统监控", description = "系统/业务监控指标查看")
 @RequiredArgsConstructor
 public class MonitorController {
     /** 系统监控服务 */

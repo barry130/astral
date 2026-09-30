@@ -5,7 +5,6 @@ import { Card,
   Row,
   Col,
   Statistic,
-  DatePicker,
   Select,
   Spin,
   Tabs,
@@ -14,7 +13,6 @@ import { Card,
   Drawer,
   Space,
   Typography } from '@/components/antd-compat';
-import { ReloadOutlined } from '@/components/antd-compat/icons';
 import dynamic from 'next/dynamic';
 // echarts 体积大且本页非首屏，改为客户端动态加载（ssr: false 只允许在客户端组件中使用，本文件有 'use client'）
 const ReactECharts = dynamic(() => import('echarts-for-react'), {
@@ -34,9 +32,7 @@ import {
   StatErrorLogItem,
 } from '@/api/statistics';
 import { ResizableTable } from '@/components/ResizableTable';
-
-/** 平台下拉选项类型 */
-type Option = { value: string; label: string };
+import { StatFilterBar, useVersionOptions, UT_ALL, type Option } from './StatFilterBar';
 
 const { Text } = Typography;
 
@@ -64,34 +60,9 @@ const diffText = (today?: number | null, yesterday?: number | null) => {
 };
 
 export default function StatisticsPage() {
-  return (
-    <Card>
-      <Tabs
-        defaultActiveKey="device"
-        items={[
-          { key: 'device', label: '设备统计', children: <DeviceTab /> },
-          { key: 'api', label: '接口统计', children: <ApiTab /> },
-          { key: 'error', label: '错误统计', children: <ErrorTab /> },
-        ]}
-      />
-    </Card>
-  );
-}
+  /** 平台选项是全局字典，在页面级加载一次，三个 Tab 共用（避免每个 Tab 各请求一次） */
+  const [utOptions, setUtOptions] = useState<Option[]>([{ value: UT_ALL, label: '全部平台' }]);
 
-/* ============================== 设备统计 ============================== */
-
-function DeviceTab() {
-  const [loading, setLoading] = useState(false);
-  const [date, setDate] = useState<Dayjs>(dayjs());
-  const [ut, setUt] = useState('all');
-  const [metric, setMetric] = useState('pv');
-  /** 平台下拉选项（字典 stat_platform） */
-  const [utOptions, setUtOptions] = useState<Option[]>([{ value: 'all', label: '全部平台' }]);
-  const [today, setToday] = useState<DayOverview>();
-  const [yesterday, setYesterday] = useState<DayOverview>();
-  const [trend, setTrend] = useState<{ hours: string[]; today: number[]; yesterday: number[] }>();
-
-  /** 加载平台选项（字典 stat_platform，失败回退内置） */
   useEffect(() => {
     let alive = true;
     loadUtOptions().then((opts) => {
@@ -102,13 +73,56 @@ function DeviceTab() {
     };
   }, []);
 
+  return (
+    <Card>
+      <Tabs
+        defaultActiveKey="device"
+        items={[
+          { key: 'device', label: '设备统计', children: <DeviceTab utOptions={utOptions} /> },
+          { key: 'api', label: '接口统计', children: <ApiTab utOptions={utOptions} /> },
+          { key: 'error', label: '错误统计', children: <ErrorTab utOptions={utOptions} /> },
+        ]}
+      />
+    </Card>
+  );
+}
+
+/**
+ * 平台 + 版本的受控状态（三个 Tab 完全一致的联动规则）
+ * <p>切换平台必定清空版本：全部平台下版本只能为空。</p>
+ */
+function usePlatformVersion() {
+  const [ut, setUt] = useState<string>(UT_ALL);
+  const [version, setVersion] = useState('');
+  const { options: versionOptions, loading: versionLoading } = useVersionOptions(ut);
+
+  const handleUtChange = useCallback((next: string) => {
+    setUt(next);
+    setVersion('');
+  }, []);
+
+  return { ut, version, setVersion, handleUtChange, versionOptions, versionLoading };
+}
+
+/* ============================== 设备统计 ============================== */
+
+function DeviceTab({ utOptions }: { utOptions: Option[] }) {
+  const [loading, setLoading] = useState(false);
+  const [date, setDate] = useState<Dayjs>(dayjs());
+  const [metric, setMetric] = useState('pv');
+  const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } = usePlatformVersion();
+  const [today, setToday] = useState<DayOverview>();
+  const [yesterday, setYesterday] = useState<DayOverview>();
+  const [trend, setTrend] = useState<{ hours: string[]; today: number[]; yesterday: number[] }>();
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const d = date.format('YYYY-MM-DD');
+      const v = version || undefined;
       const [ov, tr] = await Promise.all([
-        statApi.getOverview(d, ut),
-        statApi.getTrend(metric, d, ut),
+        statApi.getOverview(d, ut, v),
+        statApi.getTrend(metric, d, ut, v),
       ]);
       setToday(ov.data?.today);
       setYesterday(ov.data?.yesterday);
@@ -118,7 +132,7 @@ function DeviceTab() {
     } finally {
       setLoading(false);
     }
-  }, [date, ut, metric]);
+  }, [date, ut, version, metric]);
 
   useEffect(() => {
     fetchData();
@@ -162,11 +176,18 @@ function DeviceTab() {
 
   return (
     <Spin spinning={loading}>
-      <Space className="filter-bar" style={{ marginBottom: 16 }} wrap>
-        <DatePicker value={date} onChange={(d) => d && setDate(d)} allowClear={false} />
-        <Select value={ut} onChange={setUt} style={{ width: 140 }} options={utOptions} />
-        <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
-      </Space>
+      <StatFilterBar
+        date={date}
+        onDateChange={setDate}
+        ut={ut}
+        onUtChange={handleUtChange}
+        version={version}
+        onVersionChange={setVersion}
+        utOptions={utOptions}
+        versionOptions={versionOptions}
+        versionLoading={versionLoading}
+        onRefresh={fetchData}
+      />
 
       <Row gutter={[12, 12]}>
         {rows.map((r) => (
@@ -202,17 +223,18 @@ function DeviceTab() {
 
 /* ============================== 接口统计 ============================== */
 
-function ApiTab() {
+function ApiTab({ utOptions }: { utOptions: Option[] }) {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState<Dayjs>(dayjs());
   const [limit, setLimit] = useState(10);
+  const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } = usePlatformVersion();
   const [topData, setTopData] = useState<ApiTopItem[]>([]);
   const [summary, setSummary] = useState<ApiTopSummary>({ callCount: 0, successCount: 0, failureCount: 0, successRate: '0.00' });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await statApi.getApiTop(limit, date.format('YYYY-MM-DD'));
+      const res = await statApi.getApiTop(limit, date.format('YYYY-MM-DD'), ut, version || undefined);
       setTopData(res.data?.list || []);
       setSummary(res.data?.summary || { callCount: 0, successCount: 0, failureCount: 0, successRate: '0.00' });
     } catch {
@@ -220,7 +242,7 @@ function ApiTab() {
     } finally {
       setLoading(false);
     }
-  }, [date, limit]);
+  }, [date, limit, ut, version]);
 
   useEffect(() => {
     fetchData();
@@ -289,16 +311,26 @@ function ApiTab() {
 
   return (
     <Spin spinning={loading}>
-      <Space className="filter-bar" style={{ marginBottom: 16 }} wrap>
-        <DatePicker value={date} onChange={(d) => d && setDate(d)} allowClear={false} />
-        <Select
-          value={limit}
-          onChange={setLimit}
-          style={{ width: 120 }}
-          options={[10, 20, 50].map((n) => ({ value: n, label: `Top ${n}` }))}
-        />
-        <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
-      </Space>
+      <StatFilterBar
+        date={date}
+        onDateChange={setDate}
+        ut={ut}
+        onUtChange={handleUtChange}
+        version={version}
+        onVersionChange={setVersion}
+        utOptions={utOptions}
+        versionOptions={versionOptions}
+        versionLoading={versionLoading}
+        onRefresh={fetchData}
+        extra={
+          <Select
+            value={limit}
+            onChange={setLimit}
+            style={{ width: 120 }}
+            options={[10, 20, 50].map((n) => ({ value: n, label: `Top ${n}` }))}
+          />
+        }
+      />
 
       <Row gutter={12} style={{ marginBottom: 16 }}>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}><Card size="small"><Statistic title="总调用次数" value={fmt(totalCalls)} /></Card></Col>
@@ -341,9 +373,10 @@ const ERROR_TYPE_COLORS: Record<string, string> = {
   crash: 'red',
 };
 
-function ErrorTab() {
+function ErrorTab({ utOptions }: { utOptions: Option[] }) {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState<Dayjs>(dayjs());
+  const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } = usePlatformVersion();
   const [summary, setSummary] = useState<ErrorSummaryItem[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentFingerprint, setCurrentFingerprint] = useState<string>();
@@ -351,14 +384,14 @@ function ErrorTab() {
   const fetchSummary = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await statApi.getErrorSummary(date.format('YYYY-MM-DD'));
+      const res = await statApi.getErrorSummary(date.format('YYYY-MM-DD'), ut, version || undefined);
       setSummary(res.data || []);
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, [date, ut, version]);
 
   useEffect(() => {
     fetchSummary();
@@ -395,10 +428,18 @@ function ErrorTab() {
 
   return (
     <Spin spinning={loading}>
-      <Space className="filter-bar" style={{ marginBottom: 16 }} wrap>
-        <DatePicker value={date} onChange={(d) => d && setDate(d)} allowClear={false} />
-        <Button icon={<ReloadOutlined />} onClick={fetchSummary}>刷新</Button>
-      </Space>
+      <StatFilterBar
+        date={date}
+        onDateChange={setDate}
+        ut={ut}
+        onUtChange={handleUtChange}
+        version={version}
+        onVersionChange={setVersion}
+        utOptions={utOptions}
+        versionOptions={versionOptions}
+        versionLoading={versionLoading}
+        onRefresh={fetchSummary}
+      />
 
       <ResizableTable<ErrorSummaryItem>
         rowKey="fingerprint"
@@ -412,44 +453,36 @@ function ErrorTab() {
       <ErrorDetailDrawer
         open={drawerOpen}
         fingerprint={currentFingerprint}
-        date={date}
+        ut={ut}
+        version={version}
+        utOptions={utOptions}
         onClose={() => setDrawerOpen(false)}
       />
     </Spin>
   );
 }
 
-/** 错误明细分页抽屉（同一 fingerprint） */
+/** 错误明细分页抽屉（同一 fingerprint，继承列表页的平台/版本筛选） */
 function ErrorDetailDrawer({
   open,
   fingerprint,
-  date,
+  ut,
+  version,
+  utOptions,
   onClose,
 }: {
   open: boolean;
   fingerprint?: string;
-  date: Dayjs;
+  ut: string;
+  version: string;
+  utOptions: Option[];
   onClose: () => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState<StatErrorLogItem[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNum, setPageNum] = useState(1);
-  /** 平台下拉选项（字典 stat_platform，用于平台列值→文案） */
-  const [utOptions, setUtOptions] = useState<Option[]>([{ value: 'all', label: '全部平台' }]);
   const pageSize = 10;
-
-  /** 加载平台选项（字典 stat_platform，失败回退内置） */
-  useEffect(() => {
-    if (!open) return;
-    let alive = true;
-    loadUtOptions().then((opts) => {
-      if (alive) setUtOptions(opts);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [open]);
 
   const fetchDetail = useCallback(async () => {
     if (!fingerprint || !open) return;
@@ -459,7 +492,9 @@ function ErrorDetailDrawer({
         pageNum,
         pageSize,
         fingerprint,
-        // 明细窗口放宽到日期之后一天，保证当日完整
+        // 继承列表页的平台与版本筛选，否则明细会展示其它平台的同类错误
+        ut,
+        appVersion: version || undefined,
       });
       setRecords(res.data?.records || []);
       setTotal(res.data?.total || 0);
@@ -468,11 +503,16 @@ function ErrorDetailDrawer({
     } finally {
       setLoading(false);
     }
-  }, [fingerprint, open, pageNum]);
+  }, [fingerprint, open, pageNum, ut, version]);
 
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
+
+  // 切换 fingerprint 时回到第一页，否则会停在上一组的页码上
+  useEffect(() => {
+    setPageNum(1);
+  }, [fingerprint]);
 
   const columns = [
     { title: '时间', dataIndex: 'occurTime', width: 110, render: (v: string) => (v ? dayjs(v).format('MM-DD HH:mm:ss') : '-') },

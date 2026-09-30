@@ -3,7 +3,7 @@
 本文档介绍如何将 Astral 管理后台（后端 + 前端）打包为 Docker 镜像并部署到服务器。
 
 - 后端：Spring Boot 4.1.0 / Java 25 / 端口 `27000`
-- 前端：Next.js 14（standalone）/ 端口 `3000`
+- 前端：Next.js 16.3（standalone）/ 端口 `3000`
 - 数据库：PostgreSQL（复用服务器已有实例）
 - 缓存：Redis（复用服务器已有实例）
 
@@ -32,15 +32,15 @@
 
 **本机（可选，仅本地调试）：**
 
-- JDK 25、Maven 3.9+、Node.js 20+
+- JDK 25、Maven 3.9+、Node.js 24 LTS（与前端镜像 `node:24-alpine` 保持一致）
 
 ## 部署相关文件
 
 | 路径 | 说明 |
 |------|------|
 | `deploy/docker-compose.yml` | 服务编排（backend + frontend） |
-| `astral-server/Dockerfile` | 后端多阶段构建（Java 21；BuildKit 缓存 Maven 仓库） |
-| `astral-front/Dockerfile` | 前端多阶段构建（Next.js standalone；BuildKit 缓存 npm） |
+| `astral-server/Dockerfile` | 后端多阶段构建（构建阶段 `maven:3.9-eclipse-temurin-25`；BuildKit 缓存 Maven 仓库） |
+| `astral-front/Dockerfile` | 前端多阶段构建（Next.js 16 standalone + `node:24-alpine` × 3 阶段；BuildKit 缓存 npm） |
 | `.mvn/settings.xml` | Docker 构建用 Maven 镜像（阿里云 public） |
 | `.dockerignore` | 后端构建上下文排除项 |
 | `astral-front/.dockerignore` | 前端构建上下文排除项 |

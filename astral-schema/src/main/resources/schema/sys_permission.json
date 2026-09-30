@@ -62,8 +62,17 @@
       "fieldName": "type",
       "fieldType": "Integer",
       "jdbcType": "TINYINT",
-      "comment": "类型(1-目录 2-菜单 3-按钮)",
+      "comment": "类型(1-目录 2-菜单 3-按钮 4-接口 5-数据)",
       "defaultValue": "1"
+    },
+    {
+      "columnName": "domain",
+      "fieldName": "domain",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "权限域(按插件/模块分组，如 system/qt/storage)",
+      "length": 32,
+      "defaultValue": "system"
     },
     {
       "columnName": "icon",

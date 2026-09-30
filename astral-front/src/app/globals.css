@@ -1026,15 +1026,15 @@ to{
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 6px;
-  border-radius: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   color: var(--color-text);
   transition: background var(--transition-fast);
 }
 .rt-cols-item:hover{
-  background: var(--color-bg-base);
+  background: var(--accent);
 }
 .rt-cols-name{
   overflow: hidden;
@@ -1045,6 +1045,9 @@ to{
   position: relative;
   display: block;
 }
+/* 拖拽手柄默认隐形，只在指针移上去时显形，避免表头出现一排「竖线噪音」。
+   颜色用 --color-text-tertiary（浅色 #71717a / 暗色 #8a94a1），
+   原先内联写死的 rgba(24,24,27,.35) 在暗色主题下完全不可见。 */
 .rt-th-resize{
   position: absolute;
   right: -7px;
@@ -1054,7 +1057,13 @@ to{
   cursor: col-resize;
   touch-action: none;
   border-radius: 2px;
+  background: transparent;
   transition: background var(--transition-fast);
+}
+.rt-th-resize:hover,
+.rt-th-resize:active{
+  background: var(--color-text-tertiary);
+  opacity: 0.45;
 }
 .rt-cards{
   display: flex;
@@ -1066,12 +1075,19 @@ to{
   flex-direction: column;
   gap: 10px;
 }
+/* 移动端表格卡片：与桌面表格共用同一套语义（浅边框 + 大圆角 + 极淡阴影）。
+   触屏没有 hover，改用 :active 在按下时给一层底色反馈。 */
 .rt-card{
-  padding: 12px;
+  padding: 14px;
   background: var(--color-bg-white);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.rt-card:active{
+  background: var(--color-bg-base);
+  border-color: var(--color-border);
 }
 .rt-card-head{
   display: flex;
@@ -1107,24 +1123,24 @@ to{
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
   gap: 10px 14px;
-  margin: 10px 0 0;
-  padding: 10px 0 0;
-  border-top: 1px dashed var(--color-border);
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--color-border-light);
 }
 .rt-card-item{
   min-width: 0;
   margin: 0;
 }
 .rt-card-label{
-  margin-bottom: 3px;
-  font-size: 11.5px;
+  margin-bottom: 4px;
+  font-size: 12px;
   line-height: 1.4;
   letter-spacing: 0.2px;
   color: var(--color-text-tertiary);
 }
 .rt-card-value{
   margin: 0;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--color-text);
   word-break: break-word;

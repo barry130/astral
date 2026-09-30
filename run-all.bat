@@ -70,7 +70,7 @@ del "%VERFILE%" >nul 2>&1
 rem ==================== 2. pre-checks ====================
 where npm >nul 2>nul
 if errorlevel 1 (
-    echo [WARN] npm not found - frontend needs Node.js 18+ - starting backend only
+    echo [WARN] npm not found - frontend needs Node.js 24 LTS ^(Next.js 16 requires 20.9+^) - starting backend only
     set "SKIP_FRONT=1"
 )
 

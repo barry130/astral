@@ -45,6 +45,22 @@
       "comment": "HTTP状态码"
     },
     {
+      "columnName": "ut",
+      "fieldName": "ut",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "客户端平台(取自请求头X-App-Ut，未携带为空串)",
+      "length": 16
+    },
+    {
+      "columnName": "app_version",
+      "fieldName": "appVersion",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "客户端版本(取自请求头X-App-Version，未携带为空串)",
+      "length": 32
+    },
+    {
       "columnName": "call_count",
       "fieldName": "callCount",
       "fieldType": "Long",

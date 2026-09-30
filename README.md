@@ -4,7 +4,7 @@
 
 ## 📖 项目简介
 
-Astral 是一套基于 Spring Boot 3 + Next.js 14 的全栈后台管理系统，采用前后端分离架构，内置完善的 RBAC 权限模型、操作日志审计、Sa-Token 认证与可扩展插件体系，开箱即用。
+Astral 是一套基于 Spring Boot 4.1（Java 25）+ Next.js 16 的全栈后台管理系统，采用前后端分离架构，内置完善的 RBAC 权限模型、操作日志审计、Sa-Token 认证与可扩展插件体系，开箱即用。
 
 ### 核心功能
 
@@ -28,25 +28,31 @@ Astral 是一套基于 Spring Boot 3 + Next.js 14 的全栈后台管理系统，
 
 | 层级 | 技术 |
 |------|------|
-| **后端框架** | Spring Boot 3.2.x（Java 21） |
-| **认证授权** | Sa-Token |
-| **ORM** | MyBatis-Plus 3.5.x |
-| **数据库** | PostgreSQL（当前默认，见 `application.yml`）；驱动另含 MySQL、H2 可切换 |
-| **缓存** | Redis（spring-data-redis；Redisson 仅用于可选的 Redis 序列生成器） |
-| **API 文档** | SpringDoc OpenAPI 3 |
+| **后端框架** | Spring Boot 4.1.0（Spring Framework 7.0）+ Java 25 |
+| **运行时** | JDK 25 + Tomcat 11；已开启虚拟线程（`spring.threads.virtual.enabled=true`） |
+| **认证授权** | Sa-Token 1.46（`sa-token-spring-boot4-starter` + Redis 会话，RSA 传输加密） |
+| **ORM** | MyBatis-Plus 3.5.17（`mybatis-plus-spring-boot4-starter` + `mybatis-plus-jsqlparser`） |
+| **数据库** | PostgreSQL（当前运行库，驱动 42.7.11）；MySQL 9.7 / H2 驱动已引入可切换 |
+| **数据迁移** | Flyway 12.4（`spring-boot-flyway` + `flyway-database-postgresql`，启动自动应用） |
+| **连接池** | HikariCP 7.0.2 |
+| **缓存** | Redis（spring-data-redis）；本地缓存 Caffeine 3.2.4；Redisson 3.52 仅供可选的 Redis 序列生成器 |
+| **API 文档** | SpringDoc OpenAPI 3.1（Swagger UI：`/swagger-ui.html`） |
 | **监控** | Spring Boot Actuator + Micrometer + Prometheus |
-| **工具库** | Hutool 5.8.x |
-| **前端框架** | Next.js 14 (App Router) + React 18 + TypeScript |
-| **UI 组件** | Ant Design 5 |
-| **构建工具** | Maven（后端）/ npm（前端） |
+| **工具库** | Hutool 5.8.47 |
+| **前端框架** | Next.js 16.3.6（App Router + Turbopack）+ React 19.2 + TypeScript 5.6 |
+| **UI 组件** | shadcn/ui（Radix UI）+ Tailwind CSS v4 + lucide-react |
+| **图表** | ECharts 6（echarts-for-react） |
+| **构建工具** | Maven 3.9+（后端，无 wrapper）/ npm（前端，`package-lock.json`） |
+
+> 前端已从 Ant Design 全量迁移到 shadcn/ui + Tailwind v4（Next 16 起 `next lint` 已移除，故 `package.json` 无 lint 脚本）。
 
 ## 🚀 快速开始
 
 ### 环境要求
 
-- JDK 21
-- Maven 3.6+（无 wrapper，使用系统 mvn）
-- Node.js 18+
+- JDK 25（Spring Boot 4.1 / Spring Framework 7 要求；低版本无法编译）
+- Maven 3.9+（无 wrapper，使用系统 mvn）
+- Node.js 24 LTS（与前端镜像 `node:24-alpine` 一致；Next.js 16 最低要求 20.9+）
 - PostgreSQL（当前运行库）
 - Redis（邮件验证码、Sa-Token 会话等依赖；未配置时相应功能不可用）
 
@@ -74,7 +80,7 @@ psql -c "CREATE DATABASE astral;"
 
 ```bash
 mvn -pl astral-server spring-boot:run
-# Windows 可直接运行 run-backend.bat（需先设置 JAVA_HOME 指向 JDK 21，端口 27000）
+# Windows 可直接运行 run-backend.bat（需先设置 JAVA_HOME 指向 JDK 25，端口 27000）
 ```
 
 后端默认运行在 `http://localhost:27000`。数据库结构变更由 Flyway 在启动时自动应用 `db/migration/` 下的增量脚本。qt / feedback 插件的建表由各自的初始化器幂等完成。
@@ -121,7 +127,7 @@ astral/
 ├── astral-plugin-api/         # 插件 SPI（AstralPlugin、导航扩展、注册中心接口）
 ├── astral-plugin/             # 插件核心及内置插件（qt、feedback）
 ├── astral-server/             # Web 服务（Controller、配置、入口）
-├── astral-front/              # 前端（Next.js 14 + Ant Design 5）
+├── astral-front/              # 前端（Next.js 16 + React 19 + Tailwind v4 + shadcn/ui）
 └── deploy/                    # Docker Compose 部署
 ```
 

@@ -1,6 +1,6 @@
 package com.astral.system.controller;
 
-import com.astral.auth.security.PermissionChecker;
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SysMailTemplate;
 import com.astral.system.mail.SysMailTemplateService;
@@ -18,58 +18,57 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MailTemplateController {
 
-    /** 查看权限（sys_permission: system:mail:view） */
-    private static final String PERM_VIEW = "system:mail:view";
-    /** 维护权限（sys_permission: system:mail:template:edit） */
-    private static final String PERM_EDIT = "system:mail:template:edit";
+    /** 查看权限（sys_permission: admin:system:mail:view） */
+    private static final String PERM_VIEW = "admin:system:mail:view";
+    /** 维护权限（sys_permission: admin:system:mail:template:edit） */
+    private static final String PERM_EDIT = "admin:system:mail:template:edit";
 
     private final SysMailTemplateService templateService;
-    private final PermissionChecker permissionChecker;
 
     @Operation(summary = "分页查询")
+    @RequiresPermission(PERM_VIEW)
     @GetMapping("/page")
     public Result<Page<SysMailTemplate>> page(@RequestParam(defaultValue = "1") Integer pageNum,
                                               @RequestParam(defaultValue = "10") Integer pageSize) {
-        permissionChecker.require(PERM_VIEW);
         return Result.success(templateService.page(new Page<>(pageNum, pageSize)));
     }
 
     @Operation(summary = "详情")
+    @RequiresPermission(PERM_VIEW)
     @GetMapping("/{id}")
     public Result<SysMailTemplate> getById(@PathVariable Long id) {
-        permissionChecker.require(PERM_VIEW);
         return Result.success(templateService.getById(id));
     }
 
     @Operation(summary = "新增")
+    @RequiresPermission(PERM_EDIT)
     @PostMapping
     public Result<Void> create(@RequestBody SysMailTemplate entity) {
-        permissionChecker.require(PERM_EDIT);
         templateService.save(entity);
         return Result.success();
     }
 
     @Operation(summary = "更新")
+    @RequiresPermission(PERM_EDIT)
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody SysMailTemplate entity) {
-        permissionChecker.require(PERM_EDIT);
         entity.setId(id);
         templateService.updateById(entity);
         return Result.success();
     }
 
     @Operation(summary = "删除")
+    @RequiresPermission(PERM_EDIT)
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        permissionChecker.require(PERM_EDIT);
         templateService.removeById(id);
         return Result.success();
     }
 
     @Operation(summary = "模板预览（按变量渲染）")
+    @RequiresPermission(PERM_VIEW)
     @PostMapping("/preview")
     public Result<String> preview(@RequestBody MailPreviewDto dto) {
-        permissionChecker.require(PERM_VIEW);
         SysMailTemplate tpl = templateService.getById(dto.getTemplateId());
         if (tpl == null) {
             return Result.fail("模板不存在");

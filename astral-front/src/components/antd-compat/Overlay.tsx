@@ -105,7 +105,13 @@ export function Modal({
     <Dialog open={isOpen} onOpenChange={(next) => (!next ? onCancel?.() : undefined)} modal>
       <DialogContent
         showCloseButton={false}
-        className={cn('gap-0 p-0', className)}
+        // max-h + grid-rows 是「超高表单」的通用解药：DialogContent 是 grid 容器，
+        // 不限制高度时内容多高弹窗就多高 —— 实测轻听「版本更新」表单 13 个纵向字段把弹窗撑到 1122px，
+        // 在 900px 视口里上下都被截断，且 overflow 默认 visible ⇒ 无法滚动，
+        // 底部「取消/确定」落在 top 958 处**点不到**（表单根本提交不了）。
+        // 约束为视口高度内、把 body 放进可收缩的 1fr 行，头/脚各占 auto 行 ⇒ 头脚常驻、中间滚动。
+        // 注意：不能加 overflow-hidden，否则 portal 进 dialog-content 的 Popover 弹层会被裁掉。
+        className={cn('grid-rows-[auto_minmax(0,1fr)_auto] max-h-[calc(100dvh-2rem)] gap-0 p-0', className)}
         style={{ maxWidth, zIndex: style?.zIndex, ...style, ...styles?.content }}
         onInteractOutside={(e) => {
           if (!maskClosable) e.preventDefault();
@@ -123,7 +129,11 @@ export function Modal({
             <X className="size-4" />
           </DialogPrimitive.Close>
         </div>
-        <div className="px-5 py-4" style={{ ...bodyStyle, ...styles?.body }}>
+        {/* min-w-0 必需：DialogContent 是 grid 容器，子项默认 min-width:auto ⇒ 不可收缩，
+            任何超宽内容（如大量标签的 TreeSelect）都会把 640px 的弹窗整体撑到上千像素并漏出页面。
+            加 min-w-0 后弹窗宽度由自身 maxWidth 决定，超宽内容只在内部溢出/滚动。
+            overflow-y-auto 让超高表单在弹窗内部滚动（配合上面的 max-h + 1fr 行）。 */}
+        <div className="min-w-0 overflow-y-auto px-5 py-4" style={{ ...bodyStyle, ...styles?.body }}>
           {children}
         </div>
         {resolvedFooter ? <div className="px-5 pb-4">{resolvedFooter}</div> : null}

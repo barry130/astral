@@ -81,7 +81,11 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         StpUtil.login(user.getId());
         // 将用户名存入 Sa-Token 会话，供 AuthInterceptor 直接读取，避免每次请求查库
         StpUtil.getSession().set("username", user.getUsername());
-        StpUtil.getSession().set("nickname", user.getNickname());
+        // nickname 必须兜底成空串：SaSession.dataMap 是 ConcurrentHashMap，
+        // `set(key, null)` 会在 ConcurrentHashMap.put 里直接抛 NPE
+        // （实测栈：SaSession.set:501 -> ConcurrentHashMap.putVal:1023）。
+        // 用户的 nickname 允许为空（如 App 注册只填用户名），不兜底就会整个登录 500。
+        StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         // 用户类型（ADMIN / APP）同样缓存进会话：管理端身份门禁依赖它区分
         // 「后台管理员」与「App 普通用户」，不能等到每次请求再查库
         loginUserTypeResolver.cacheCurrentUserType(user.getUserType());
@@ -156,7 +160,8 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
 
         // 刷新会话中的用户信息
         StpUtil.getSession().set("username", user.getUsername());
-        StpUtil.getSession().set("nickname", user.getNickname());
+        // 同上：nickname 为 null 会让 SaSession.set 抛 NPE，必须兜底
+        StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         loginUserTypeResolver.cacheCurrentUserType(user.getUserType());
         
         List<String> roles = stpInterface.getRoleList(userId, null);

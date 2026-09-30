@@ -43,6 +43,7 @@ import { getNavExtensions } from '@/api/plugin';
 import { menuApi, SysMenu } from '@/api/menu';
 import type { NavExtension } from '@/api/plugin';
 import { initStatTracker, trackPage } from '@/lib/statTracker';
+import { hasPermissionIn } from '@/lib/perm';
 import NoticeBell from '@/components/NoticeBell';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -113,6 +114,50 @@ const iconFor = (path: string | undefined, iconName: string | undefined, fallbac
   return fallback;
 };
 
+/** 按插件声明排序（sort 缺省按 0） */
+const byPluginSort = (a: { sort?: number }, b: { sort?: number }) => (a.sort ?? 0) - (b.sort ?? 0);
+
+/**
+ * 把插件导航项按 `NavItem.parentPath` 挂到菜单树对应父节点：
+ * - parentPath 命中现有节点（逐层按 key 找）→ 作为该节点 children，同级按 sort 排序；
+ * - parentPath 为空或**父节点不存在** → 作为顶层叶子追加（按 sort 排序）。
+ *
+ * 嵌套与否完全由插件自己声明（`NavItem.pluginPage(...)` 即挂在「插件管理」下的二级菜单），
+ * 前端不做任何硬编码塞入，也没有旧代码里那个硬编码的重复「插件管理」子项。
+ * 第二条兜底很重要：用户没有 `admin:plugin:view` 时看不到「插件管理」本身，
+ * 此时他有权访问的插件页会退到顶层展示，而不是从侧边栏消失。
+ */
+const attachPluginNav = (items: MenuItemModel[], navItems: NavExtension[]): void => {
+  const parents = new Map<string, MenuItemModel>();
+  const walk = (nodes: MenuItemModel[]) => {
+    for (const n of nodes) {
+      if (n.key) parents.set(n.key, n);
+      if (n.children && n.children.length > 0) walk(n.children);
+    }
+  };
+  walk(items);
+  const tops: MenuItemModel[] = [];
+  for (const n of [...navItems].sort(byPluginSort)) {
+    const child: MenuItemModel = {
+      key: n.path,
+      label: n.label,
+      icon: iconFor(n.path, n.icon, <Blocks />),
+      sort: n.sort ?? 0,
+    };
+    if (n.parentPath) {
+      const parent = parents.get(n.parentPath);
+      if (parent) {
+        if (!parent.children) parent.children = [];
+        parent.children.push(child);
+        parent.children.sort(byPluginSort);
+        continue;
+      }
+    }
+    tops.push(child);
+  }
+  items.push(...tops);
+};
+
 /** 标签页项接口 */
 interface TabItem {
   /** 标签页唯一标识（路由路径） */
@@ -132,6 +177,8 @@ interface MenuItemModel {
   label: string;
   icon?: ReactNode;
   disabled?: boolean;
+  /** 插件导航项的排序权重（NavItem.sort），用于同级排序 */
+  sort?: number;
   children?: MenuItemModel[];
 }
 
@@ -148,18 +195,18 @@ const menuConfig: {
   group: MenuGroup;
 }[] = [
   { key: '/dashboard', icon: <LayoutDashboard />, label: '仪表盘', group: 'overview' },
-  { key: '/dashboard/statistics', icon: <BarChart3 />, label: '数据统计', permission: 'statistics:view', group: 'overview' },
-  { key: '/dashboard/system/user', icon: <Users />, label: '用户管理', permission: 'system:user:view', group: 'system' },
-  { key: '/dashboard/system/role', icon: <ShieldCheck />, label: '角色权限', permission: 'system:role:view', group: 'system' },
-  { key: '/dashboard/system/permission', icon: <Lock />, label: '权限管理', permission: 'system:permission:view', group: 'system' },
-  { key: '/dashboard/system/dict', icon: <BookText />, label: '数据字典', permission: 'system:dict:view', group: 'system' },
-  { key: '/dashboard/system/config', icon: <Settings />, label: '系统配置', permission: 'system:config:view', group: 'system' },
-  { key: '/dashboard/system/token', icon: <KeyRound />, label: 'Token管理', permission: 'system:token:view', group: 'system' },
-  { key: '/dashboard/system/table-schema', icon: <Table2 />, label: '表结构管理', permission: 'system:schema:view', group: 'system' },
-  { key: '/dashboard/system/mail', icon: <Mail />, label: '邮箱管理', permission: 'system:mail:view', group: 'system' },
-  { key: '/dashboard/system/mail/log', icon: <PieChart />, label: '邮箱统计', permission: 'system:mail:statistics:view', group: 'system' },
-  { key: '/dashboard/log', icon: <FileText />, label: '日志管理', permission: 'log:view', group: 'ops' },
-  { key: '/dashboard/plugin', icon: <Blocks />, label: '插件管理', permission: 'plugin:view', group: 'ops' },
+  { key: '/dashboard/statistics', icon: <BarChart3 />, label: '数据统计', permission: 'admin:statistics:view', group: 'overview' },
+  { key: '/dashboard/system/user', icon: <Users />, label: '用户管理', permission: 'admin:system:user:view', group: 'system' },
+  { key: '/dashboard/system/role', icon: <ShieldCheck />, label: '角色权限', permission: 'admin:system:role:view', group: 'system' },
+  { key: '/dashboard/system/permission', icon: <Lock />, label: '权限管理', permission: 'admin:system:permission:view', group: 'system' },
+  { key: '/dashboard/system/dict', icon: <BookText />, label: '数据字典', permission: 'admin:system:dict:view', group: 'system' },
+  { key: '/dashboard/system/config', icon: <Settings />, label: '系统配置', permission: 'admin:system:config:view', group: 'system' },
+  { key: '/dashboard/system/token', icon: <KeyRound />, label: 'Token管理', permission: 'admin:system:token:view', group: 'system' },
+  { key: '/dashboard/system/table-schema', icon: <Table2 />, label: '表结构管理', permission: 'admin:system:schema:view', group: 'system' },
+  { key: '/dashboard/system/mail', icon: <Mail />, label: '邮箱管理', permission: 'admin:system:mail:view', group: 'system' },
+  { key: '/dashboard/system/mail/log', icon: <PieChart />, label: '邮箱统计', permission: 'admin:system:mail:statistics:view', group: 'system' },
+  { key: '/dashboard/log', icon: <FileText />, label: '日志管理', permission: 'admin:log:view', group: 'ops' },
+  { key: '/dashboard/plugin', icon: <Blocks />, label: '插件管理', permission: 'admin:plugin:view', group: 'ops' },
 ];
 
 /** 分组元信息：分组 key（非路由）、图标、名称、展示顺序 */
@@ -234,10 +281,20 @@ function NavGroup({
     (child) => child.key === activePath || (child.children || []).some((c) => c.key === activePath),
   );
 
+  /**
+   * 组头点击：分组自身是真实路由（如 /dashboard/plugin 被插件项挂成父级）时，
+   * 既跳转到该页面又展开子项——避免「组里只有子项、父页面反而进不去」；
+   * 纯分组（menu-group-*）只做展开/收起。
+   */
+  const isNavigateGroup = !!item.key && item.key.startsWith('/') && !item.key.startsWith(GROUP_KEY_PREFIX);
+  const headerOnClick = () => {
+    if (isNavigateGroup) onLeafClick(item);
+    onToggle();
+  };
   const header = (
     <button
       type="button"
-      onClick={onToggle}
+      onClick={headerOnClick}
       aria-expanded={open}
       className={cn(
         'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors cursor-pointer',
@@ -322,10 +379,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const userPermissions = useMemo(() => user?.permissions || [], [user?.permissions]);
   const filteredMenuConfig = useMemo(
     () =>
-      menuConfig.filter((item) => {
-        if (!item.permission) return true;
-        return userPermissions.includes(item.permission) || userPermissions.includes('*:*:*');
-      }),
+      menuConfig.filter((item) => hasPermissionIn(userPermissions, item.permission)),
     [userPermissions],
   );
 
@@ -357,7 +411,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const result: MenuItemModel[] = [];
     for (const node of tree) {
       if (node.visible === 0) continue;
-      if (node.permission && !userPermissions.includes(node.permission) && !userPermissions.includes('*:*:*')) continue;
+      if (!hasPermissionIn(userPermissions, node.permission)) continue;
       const hasChildren = !!(node.children && node.children.length > 0);
       // 无 path 的节点不能导航到 /menu-<id> 这种不存在的路由：
       // - 有子菜单的作为分组（展开即可，不跳转）
@@ -383,7 +437,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const result: TabItem[] = [];
     for (const node of tree) {
       if (node.visible === 0) continue;
-      if (node.permission && !userPermissions.includes(node.permission) && !userPermissions.includes('*:*:*')) continue;
+      if (!hasPermissionIn(userPermissions, node.permission)) continue;
       if (node.path) {
         if (seenKeys.has(node.path)) continue;
         seenKeys.add(node.path);
@@ -402,6 +456,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       .catch(() => {});
   }, []);
 
+  /**
+   * 插件导航项按登录用户权限过滤（NavItem.permission）：
+   * 插件页签的后端接口已声明权限，不过滤会出现「菜单可见、点进去全 403」。
+   */
+  const visiblePluginNavItems = useMemo(
+    () => pluginNavItems.filter((n) => hasPermissionIn(userPermissions, n.permission)),
+    [pluginNavItems, userPermissions],
+  );
+
   /** 构建侧边栏菜单和标签项，使用 useMemo 让数据就绪后自动重算并触发初始化补齐 */
   const { allTabItems, menuItems } = useMemo(() => {
     let allTabItems: TabItem[] = [];
@@ -411,20 +474,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       // 使用后端菜单配置
       const treeItems = buildMenuItemsFromTree(backendMenuTree);
       const flatItems = buildFlatTabItems(backendMenuTree);
-      // 合并插件导航项
-      const pluginManagerIdx = treeItems.findIndex((item) => item.key === '/dashboard/plugin');
-      if (pluginManagerIdx >= 0 && pluginNavItems.length > 0) {
-        const pluginNode = treeItems[pluginManagerIdx];
-        pluginNode.children = [
-          { key: '/dashboard/plugin', label: '插件管理', icon: <Blocks /> },
-          ...pluginNavItems.map((n) => ({
-            key: n.path,
-            label: n.label,
-            icon: iconFor(n.path, n.icon, <Blocks />),
-          })),
-        ];
+      // 插件导航项按 NavItem.parentPath 挂载（插件自己声明挂哪；不再塞重复的「插件管理」子项）
+      if (visiblePluginNavItems.length > 0) {
+        attachPluginNav(treeItems, visiblePluginNavItems);
       }
-      const pluginFlatItems: TabItem[] = pluginNavItems.map((n) => ({
+      const pluginFlatItems: TabItem[] = visiblePluginNavItems.map((n) => ({
         key: n.path,
         icon: iconFor(n.path, n.icon, <Blocks />),
         label: n.label,
@@ -447,20 +501,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ];
       });
 
-      // 插件导航动态挂到「插件管理」下
-      const opsGroup = fallbackMenu.find((item) => item.key === `${GROUP_KEY_PREFIX}ops`);
-      const pluginNode = opsGroup?.children?.find((item) => item.key === '/dashboard/plugin');
-      if (pluginNode) {
-        pluginNode.children = pluginNavItems.map((item) => ({
-          key: item.path,
-          label: item.label,
-          icon: iconFor(item.path, item.icon, <Blocks />),
-        }));
+      // 插件导航按 parentPath 挂载（fallback 模式同样生效；无父声明则顶层追加）
+      if (visiblePluginNavItems.length > 0) {
+        attachPluginNav(fallbackMenu, visiblePluginNavItems);
       }
 
       const fallbackFlat: TabItem[] = [
         ...filteredMenuConfig,
-        ...pluginNavItems.map((item) => ({
+        ...visiblePluginNavItems.map((item) => ({
           key: item.path,
           icon: iconFor(item.path, item.icon, <Blocks />),
           label: item.label,
@@ -472,7 +520,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     return { allTabItems, menuItems };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backendMenuTree, filteredMenuConfig, pluginNavItems]);
+  }, [backendMenuTree, filteredMenuConfig, visiblePluginNavItems]);
 
   /**
    * 菜单搜索：菜单超过 10 项后逐项翻找成本高，输入关键词时把分组树扁平成
@@ -549,21 +597,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, initialized, openTabs, allTabItems]);
 
-  /** 当前路径命中的分组默认展开（含深两层） */
+  /**
+   * 当前路径命中的分组默认展开（递归，含「本身是路由」的分组）。
+   *
+   * 旧实现只认 `menu-group-*` 前缀的顶层分组。插件项按 parentPath 挂到
+   * `/dashboard/plugin` 这类**本身就是路由**的分组下之后，旧判断永远不命中，
+   * 进该页面时分组不展开，子项（文件存储）就看不见——必须去掉前缀限制。
+   * 现在按菜单树递归收集所有「子项或孙项命中当前路径」的分组 key，
+   * 同时把 key 等于当前路径的分组也算命中（点进父页面即展开其子项）。
+   */
   useEffect(() => {
     if (siderCollapsed) return;
-    const hit = menuItems.find(
-      (item) =>
-        item.key.startsWith(GROUP_KEY_PREFIX) &&
-        ((item.children || []).some((c) => c.key === pathname) ||
-          (item.children || []).some((c) => (c.children || []).some((g) => g.key === pathname))),
-    );
-    if (hit) {
-      setOpenGroupKeys((prev) => {
-        if (prev.has(hit.key)) return prev;
-        return new Set(prev).add(hit.key);
-      });
-    }
+    const toOpen = new Set<string>();
+    const walk = (items: MenuItemModel[], acc: Set<string>) => {
+      for (const item of items) {
+        if (!item.children || item.children.length === 0) continue;
+        const childHit = item.children.some((c) => c.key === pathname);
+        const grandHit = item.children.some((c) => (c.children || []).some((g) => g.key === pathname));
+        if (childHit || grandHit || item.key === pathname) acc.add(item.key);
+        walk(item.children, acc);
+      }
+    };
+    walk(menuItems, toOpen);
+    if (toOpen.size === 0) return;
+    setOpenGroupKeys((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const k of toOpen) {
+        if (!next.has(k)) {
+          next.add(k);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
   }, [pathname, menuItems, siderCollapsed]);
 
   /** 加载中显示全屏loading */
@@ -790,26 +857,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {/* 头部 */}
         <header className="dashboard-header flex h-14 items-center gap-1 border-b border-border bg-[var(--color-bg-white)] px-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => (isMobile ? setMobileNavOpen(true) : setCollapsed(!collapsed))}
-            title={isMobile ? '打开菜单' : siderCollapsed ? '展开侧边栏' : '收起侧边栏'}
-            aria-label={isMobile ? '打开菜单' : siderCollapsed ? '展开侧边栏' : '收起侧边栏'}
-          >
-            {isMobile ? <MenuIcon /> : siderCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            title={themeMode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
-            aria-label={themeMode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
-          >
-            {themeMode === 'dark' ? <Sun /> : <Moon />}
-          </Button>
-          <NoticeBell />
-
+          {/* 面包屑：左侧（flex-1 占满剩余空间，把右侧操作区顶到最右） */}
           {showBreadcrumb && (
             <Breadcrumb className="ml-1 min-w-0 flex-1">
               <BreadcrumbList>
@@ -836,29 +884,52 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Breadcrumb>
           )}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="header-user flex cursor-pointer items-center gap-2 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-                <span
-                  className={cn(
-                    'flex items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground',
-                    isMobile ? 'size-8' : 'size-9',
-                  )}
-                >
-                  <User className="size-4" />
-                </span>
-                <span className={cn('username-text font-medium text-foreground', isMobile && 'hidden')}>
-                  {user?.username || '管理员'}
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-36">
-              <DropdownMenuItem variant="destructive" onClick={handleLogout}>
-                <LogOut />
-                退出登录
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* 右侧操作区（统一靠右）：收缩菜单栏 / 主题切换 / 通知 / 用户 */}
+          <div className={cn('flex items-center gap-1', showBreadcrumb ? '' : 'ml-auto')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => (isMobile ? setMobileNavOpen(true) : setCollapsed(!collapsed))}
+              title={isMobile ? '打开菜单' : siderCollapsed ? '展开侧边栏' : '收起侧边栏'}
+              aria-label={isMobile ? '打开菜单' : siderCollapsed ? '展开侧边栏' : '收起侧边栏'}
+            >
+              {isMobile ? <MenuIcon /> : siderCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              title={themeMode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+              aria-label={themeMode === 'dark' ? '切换到浅色模式' : '切换到深色模式'}
+            >
+              {themeMode === 'dark' ? <Sun /> : <Moon />}
+            </Button>
+            <NoticeBell />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="header-user flex cursor-pointer items-center gap-2 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                  <span
+                    className={cn(
+                      'flex items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground',
+                      isMobile ? 'size-8' : 'size-9',
+                    )}
+                  >
+                    <User className="size-4" />
+                  </span>
+                  <span className={cn('username-text font-medium text-foreground', isMobile && 'hidden')}>
+                    {user?.username || '管理员'}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-36">
+                <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                  <LogOut />
+                  退出登录
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
 
         {/* 页签条 */}

@@ -4,7 +4,7 @@
 # 测试/本地环境不激活本 profile，保持默认 application.yml，不受影响。
 #
 # 优化要点（仅 prod）：
-#   1. 虚拟线程（JDK 21）：Tomcat 请求线程 + @Async 异步池 → 降低平台线程内存占用，
+#   1. 虚拟线程（JDK 25）：Tomcat 请求线程 + @Async 异步池 → 降低平台线程内存占用，
 #      支撑高并发"等待中"请求（I/O 密集）
 #   2. 线程参数：Tomcat max-threads=40, Hikari pool=5（1核2G 上避免过度配）
 #   3. 日志降级：mybatis NoLoggingImpl + com.astral=INFO（单核上避免每 SQL stdout 开销）
@@ -23,7 +23,7 @@ server:
 spring:
   threads:
     virtual:
-      # JDK 21 虚拟线程：Tomcat 请求线程池改虚拟线程（生产开启）
+      # JDK 25 虚拟线程：Tomcat 请求线程池改虚拟线程（生产开启）
       enabled: true
 
   datasource:
@@ -49,7 +49,7 @@ spring:
 astral:
   threads:
     virtual:
-      # @Async(sequenceAsyncExecutor) 异步池改用 JDK 21 虚拟线程（生产开启）
+      # @Async(sequenceAsyncExecutor) 异步池改用 JDK 25 虚拟线程（生产开启）
       enabled: true
 
 mybatis-plus:

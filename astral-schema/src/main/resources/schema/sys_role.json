@@ -58,6 +58,14 @@
       "defaultValue": "0"
     },
     {
+      "columnName": "is_super",
+      "fieldName": "isSuper",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "是否超级管理员角色(0-否 1-是，持该角色即拥有全部权限)",
+      "defaultValue": "0"
+    },
+    {
       "columnName": "create_time",
       "fieldName": "createTime",
       "fieldType": "LocalDateTime",

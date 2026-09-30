@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
  * 统计数据接入控制器（App 端匿名上报，新路径 /api/v1/app/stat）
  * <p>旧接口 /api/v1/stat/report 保留并废弃（见 {@link StatIngestController}），App 迁移至此。</p>
  * <p>处理失败不影响客户端（恒返回 200，客户端失败即回队列重试）。IP 由服务端解析。</p>
+ * <p><b>权限</b>：匿名上报入口（AuthInterceptor 白名单 {@code /api/v1/app/stat/report}），
+ * 不标注 {@code @RequiresPermission}。</p>
  */
 @Tag(name = "统计数据接入（App）", description = "App 端匿名批量上报")
 @RestController

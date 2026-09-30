@@ -11,12 +11,14 @@ const ReactECharts = dynamic(() => import('echarts-for-react'), {
 });
 import {
   feedbackAdminApi, FEEDBACK_STATUS_COLOR,
-  feedbackStatusLabel, feedbackTypeLabel, feedbackStatusOptions, feedbackTypeOptions,
+  feedbackStatusLabel, feedbackTypeLabel, feedbackPlatformLabel,
+  feedbackStatusOptions, feedbackTypeOptions,
   loadFeedbackDicts,
   Feedback, FeedbackReply, FeedbackStat,
 } from '@/api/feedback';
 import NoticeManagement from '@/components/admin/NoticeManagement';
 import { ResizableTable } from '@/components/ResizableTable';
+import { usePerm } from '@/lib/perm';
 
 const { Text, Paragraph } = Typography;
 
@@ -32,6 +34,9 @@ const TRANSITIONS: Record<string, string[]> = {
 
 /** 反馈管理面板（Tabs 内嵌） */
 function FeedbackPanel() {
+  const hasPerm = usePerm();
+  /** 是否具备反馈维护权限（须与后端 AdminFeedbackController 上的 @RequiresPermission("admin:feedback:edit") 一致） */
+  const canEdit = hasPerm('admin:feedback:edit');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Feedback[]>([]);
   const [total, setTotal] = useState(0);
@@ -177,7 +182,7 @@ function FeedbackPanel() {
             value={v}
             style={{ width: 110 }}
             onChange={(s) => handleStatusChange(record.id!, s)}
-            disabled={targets.length === 0}
+            disabled={targets.length === 0 || !canEdit}
           >
             {/* 当前状态（disabled 仅展示中文标签），下方为可流转的目标状态 */}
             <Select.Option value={v} disabled>{feedbackStatusLabel(v)}</Select.Option>
@@ -195,7 +200,7 @@ function FeedbackPanel() {
         const onWall = !!v && record.status === 'published';
         return (
           <Space size={4}>
-            <Switch size="small" checked={!!v} onChange={(c) => handlePublicChange(record, c)} />
+            <Switch size="small" checked={!!v} disabled={!canEdit} onChange={(c) => handlePublicChange(record, c)} />
             {onWall && (
               <Tooltip title="已展示在公开墙">
                 <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 13 }} />
@@ -224,13 +229,13 @@ function FeedbackPanel() {
       render: (_: any, record: Feedback) => (
         <Space>
           <Button type="link" size="small" icon={<MessageOutlined />} onClick={() => openDetail(record)}>详情</Button>
-          <Popconfirm title="确认删除该反馈?" onConfirm={() => handleDelete(record.id!)}>
-            <Button type="link" danger size="small" icon={<DeleteOutlined />}>删除</Button>
+          <Popconfirm title="确认删除该反馈?" disabled={!canEdit} onConfirm={() => handleDelete(record.id!)}>
+            <Button type="link" danger size="small" disabled={!canEdit} icon={<DeleteOutlined />}>删除</Button>
           </Popconfirm>
         </Space>
       ),
     },
-  ], [handleStatusChange, handlePublicChange, openDetail, handleDelete]);
+  ], [handleStatusChange, handlePublicChange, openDetail, handleDelete, canEdit]);
 
   return (
     <div>
@@ -314,7 +319,7 @@ function FeedbackPanel() {
               <Text type="secondary">提交人：{detail.username || `用户${detail.userId}`}　用户ID：{detail.userId}</Text>
               <Text type="secondary">用户邮箱：{detail.email || '-'}　联系方式：{detail.contact || '-'}</Text>
               <Text type="secondary">设备：{detail.device || '-'}　系统：{detail.os || '-'}</Text>
-              <Text type="secondary">版本：{detail.appVersion || '-'}　平台：{detail.platform || '-'}　IP：{detail.ip || '-'}</Text>
+              <Text type="secondary">版本：{detail.appVersion || '-'}　平台：{feedbackPlatformLabel(detail.platform)}　IP：{detail.ip || '-'}</Text>
               <Text type="secondary">提交时间：{detail.createTime || '-'}</Text>
             </Space>
             <Divider style={{ margin: '12px 0' }}>回复记录</Divider>
@@ -339,9 +344,10 @@ function FeedbackPanel() {
                 rows={2}
                 placeholder="输入回复内容..."
                 value={replyText}
+                disabled={!canEdit}
                 onChange={(e) => setReplyText(e.target.value)}
               />
-              <Button type="primary" icon={<SendOutlined />} loading={replying} onClick={submitReply} style={{ height: 'auto' }}>回复</Button>
+              <Button type="primary" icon={<SendOutlined />} loading={replying} disabled={!canEdit} onClick={submitReply} style={{ height: 'auto' }}>回复</Button>
             </Space.Compact>
           </div>
         )}
@@ -353,16 +359,17 @@ function FeedbackPanel() {
 /**
  * 反馈插件管理页（侧边栏唯一入口 /dashboard/feedback）
  * <p>Tabs 内切换：反馈管理（sys_feedback）/ 通知管理（sys_notice）。</p>
+ * <p>两个面板的后端接口权限不同（admin:feedback:view / admin:message:view），
+ * 侧边栏入口只校验 admin:feedback:view，因此「通知管理」页签必须再按 admin:message:view 单独过滤，
+ * 否则只有反馈权限的用户点进去会整片 403。</p>
  */
 export default function FeedbackPage() {
-  return (
-    <Tabs
-      defaultActiveKey="feedback"
-      destroyInactiveTabPane
-      items={[
-        { key: 'feedback', label: '反馈管理', children: <FeedbackPanel /> },
-        { key: 'message', label: '通知管理', children: <NoticeManagement /> },
-      ]}
-    />
-  );
+  const hasPerm = usePerm();
+  const tabs = [
+    { key: 'feedback', label: '反馈管理', children: <FeedbackPanel /> },
+    ...(hasPerm('admin:message:view')
+      ? [{ key: 'message', label: '通知管理', children: <NoticeManagement /> }]
+      : []),
+  ];
+  return <Tabs defaultActiveKey="feedback" destroyInactiveTabPane items={tabs} />;
 }

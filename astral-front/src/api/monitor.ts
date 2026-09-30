@@ -49,8 +49,8 @@ export interface JvmMonitorDTO {
 export interface BusinessMonitorDTO {
   /** 序列配置数量 */
   configCount: number;
-  /** 当前活跃请求线程数；后端容器非 Tomcat 或线程池不可用时为 null */
-  activeConnections: number | null;
+  /** 当前并发处理中的 HTTP 请求数 */
+  activeRequests: number;
 }
 
 /** 数据库运行状况 */
@@ -123,7 +123,7 @@ export interface DashboardOverviewDTO {
   system: SystemMonitorDTO;
   /** JVM 运行信息（堆内存/线程数/GC/JDK 版本） */
   jvm: JvmMonitorDTO;
-  /** 业务规模（序列配置数/活跃连接数） */
+  /** 业务规模（序列配置数/并发请求数） */
   business: BusinessMonitorDTO;
   /** 今日设备与流量概览 */
   today: DayOverview;

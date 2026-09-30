@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, Button, Space, Tag, message, Popconfirm, Select } from '@/components/antd-compat';
 import { DeleteOutlined, LogoutOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
+import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
 /** Token会话实体接口 */
@@ -71,6 +72,10 @@ export default function TokenPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
   /** 按状态筛选 */
   const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined);
+
+  const hasPerm = usePerm();
+  /** 是否具备 Token 维护权限：权限码需与后端 @RequiresPermission("admin:system:token:edit") 一致 */
+  const canEdit = hasPerm('admin:system:token:edit');
 
   /** 组件挂载时加载Token列表和用户列表 */
   useEffect(() => {
@@ -146,13 +151,13 @@ export default function TokenPage() {
         <Space>
           {/* 仅对有效状态的Token显示踢出和吊销操作 */}
           {r.status === 1 && (
-            <Popconfirm title="确认踢出该用户所有会话?" onConfirm={() => handleKickOut(r.userId)}>
-              <Button type="link" danger icon={<LogoutOutlined />}>踢出</Button>
+            <Popconfirm title="确认踢出该用户所有会话?" disabled={!canEdit} onConfirm={() => handleKickOut(r.userId)}>
+              <Button type="link" danger icon={<LogoutOutlined />} disabled={!canEdit}>踢出</Button>
             </Popconfirm>
           )}
           {r.status === 1 && (
-            <Popconfirm title="确认吊销此Token?" onConfirm={() => handleRevoke(r.id)}>
-              <Button type="link" danger icon={<DeleteOutlined />}>吊销</Button>
+            <Popconfirm title="确认吊销此Token?" disabled={!canEdit} onConfirm={() => handleRevoke(r.id)}>
+              <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>吊销</Button>
             </Popconfirm>
           )}
         </Space>
@@ -169,8 +174,8 @@ export default function TokenPage() {
             <Select placeholder="状态" allowClear style={{ width: 120 }} value={selectedStatus} onChange={(v) => { setSelectedStatus(v); loadData(1, pagination.pageSize, selectedUserId, v); }} options={[{ label: '有效', value: 1 }, { label: '已吊销', value: 0 }]} />
           </Space>
           <Space>
-            <Popconfirm title="确认清理所有过期Token?" onConfirm={handleCleanExpired}>
-              <Button icon={<DeleteOutlined />}>清理过期</Button>
+            <Popconfirm title="确认清理所有过期Token?" disabled={!canEdit} onConfirm={handleCleanExpired}>
+              <Button icon={<DeleteOutlined />} disabled={!canEdit}>清理过期</Button>
             </Popconfirm>
           </Space>
         </div>

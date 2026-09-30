@@ -31,6 +31,20 @@ public interface QtLikeSyncMapper {
     Long selectUserMaxSeq(@Param("uid") Long uid);
 
     /**
+     * 取锁与取号合并为一次 DB 往返（批量接口 /like/batch 使用）：
+     * pg_advisory_xact_lock 是易变函数，CTE 引用一次、物化执行，主查询在其上取两表最大 seq。
+     * 事务提交/回滚自动释放锁，与 {@link #lockUser} 同一把用户级锁。
+     */
+    @Select("""
+            WITH locked AS (SELECT pg_advisory_xact_lock(#{uid}))
+            SELECT GREATEST(
+                COALESCE((SELECT MAX(updated_seq) FROM qt_like_song WHERE uid = #{uid}), 0),
+                COALESCE((SELECT MAX(updated_seq) FROM qt_like_playlist WHERE uid = #{uid}), 0)
+            ) FROM locked
+            """)
+    Long lockAndMaxSeq(@Param("uid") Long uid);
+
+    /**
      * 增量拉取：since 之后歌曲 + 歌单的变更（含删除事件），按 updated_seq 升序。
      * <p>deleted 列由 deleted_at 推导；type 区分 song/playlist，id 为对应 sid/pid；
      * song 行同时返回 pid（歌曲所属歌单，收藏时上送）与 pic_url（封面快照，可空），

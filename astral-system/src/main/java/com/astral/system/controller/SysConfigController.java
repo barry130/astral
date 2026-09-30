@@ -1,5 +1,6 @@
 package com.astral.system.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.SysConfig;
 import com.astral.system.service.SysConfigService;
 import com.astral.common.result.Result;
@@ -13,10 +14,12 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 系统配置控制器
  * <p>提供系统配置项的CRUD操作</p>
+ * <p>权限：类级默认要求 {@code admin:system:config:view}（查询类接口），写接口覆盖为 {@code admin:system:config:edit}</p>
  */
 @Tag(name = "系统配置")
 @RestController
 @RequestMapping("/api/v1/admin/system/config")
+@RequiresPermission("admin:system:config:view")
 @RequiredArgsConstructor
 public class SysConfigController {
 
@@ -57,6 +60,7 @@ public class SysConfigController {
      * @return 操作结果
      */
     @Operation(summary = "创建")
+    @RequiresPermission("admin:system:config:edit")
     @PostMapping
     @CacheEvict(value = "sysConfig", allEntries = true)
     public Result<Void> create(@RequestBody SysConfig entity) {
@@ -73,6 +77,7 @@ public class SysConfigController {
      * @return 操作结果
      */
     @Operation(summary = "更新")
+    @RequiresPermission("admin:system:config:edit")
     @PutMapping("/{id}")
     @CacheEvict(value = "sysConfig", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody SysConfig entity) {
@@ -89,6 +94,7 @@ public class SysConfigController {
      * @return 操作结果
      */
     @Operation(summary = "删除")
+    @RequiresPermission("admin:system:config:edit")
     @DeleteMapping("/{id}")
     @CacheEvict(value = "sysConfig", allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {

@@ -5,7 +5,7 @@ import com.astral.monitor.dto.BusinessMonitorDTO;
 /**
  * 业务监控服务接口
  * <p>
- * 提供业务级别的监控信息采集功能，包括序列配置数量、活跃连接数等指标。
+ * 提供业务级别的监控信息采集功能，包括序列配置数量、并发请求数等指标。
  * </p>
  */
 public interface BusinessMonitorService {

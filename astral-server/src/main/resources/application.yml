@@ -68,7 +68,7 @@ spring:
 
   threads:
     virtual:
-      # JDK 21 虚拟线程：Tomcat 请求线程池改虚拟线程（默认开启）
+      # JDK 25 虚拟线程：Tomcat 请求线程池改虚拟线程（默认开启）
       enabled: true
 
   cache:

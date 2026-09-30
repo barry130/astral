@@ -1,5 +1,6 @@
 package com.astral.system.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.DictData;
 import com.astral.system.service.DictDataService;
 import com.astral.common.result.Result;
@@ -12,10 +13,12 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 数据字典控制器
  * <p>提供字典数据的基础CRUD操作</p>
+ * <p>权限：类级默认要求 {@code admin:system:dict:view}（查询类接口），写接口覆盖为 {@code admin:system:dict:edit}</p>
  */
 @Tag(name = "数据字典")
 @RestController
 @RequestMapping("/api/v1/admin/system/dict")
+@RequiresPermission("admin:system:dict:view")
 @RequiredArgsConstructor
 public class DictController {
 
@@ -56,6 +59,7 @@ public class DictController {
      * @return 操作结果
      */
     @Operation(summary = "创建")
+    @RequiresPermission("admin:system:dict:edit")
     @PostMapping
     public Result<Void> create(@RequestBody DictData entity) {
         dictDataService.save(entity);
@@ -70,6 +74,7 @@ public class DictController {
      * @return 操作结果
      */
     @Operation(summary = "更新")
+    @RequiresPermission("admin:system:dict:edit")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody DictData entity) {
         entity.setId(id);
@@ -84,6 +89,7 @@ public class DictController {
      * @return 操作结果
      */
     @Operation(summary = "删除")
+    @RequiresPermission("admin:system:dict:edit")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         dictDataService.removeById(id);

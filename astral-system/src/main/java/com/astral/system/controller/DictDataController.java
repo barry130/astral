@@ -1,5 +1,6 @@
 package com.astral.system.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.DictData;
 import com.astral.dao.mapper.DictDataMapper;
 import com.astral.system.service.DictDataService;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 字典数据控制器
  * <p>提供字典数据的CRUD操作，支持按字典类型ID筛选分页查询</p>
+ * <p>权限：查询类接口要求 {@code admin:system:dict:view}，写接口要求 {@code admin:system:dict:edit}；
+ * {@code GET /byCode} 刻意<b>不做权限限制</b>（仅要求登录），原因见该方法注释。</p>
  */
 @Tag(name = "字典数据表")
 @RestController
@@ -38,6 +41,7 @@ public class DictDataController {
      * @return 分页字典数据
      */
     @Operation(summary = "分页查询")
+    @RequiresPermission("admin:system:dict:view")
     @GetMapping("/page")
     public Result<Page<DictData>> page(@RequestParam(defaultValue = "1") Integer pageNum,
                                                @RequestParam(defaultValue = "10") Integer pageSize,
@@ -58,6 +62,7 @@ public class DictDataController {
      * @return 字典数据实体
      */
     @Operation(summary = "根据ID查询")
+    @RequiresPermission("admin:system:dict:view")
     @GetMapping("/{id}")
     public Result<DictData> getById(@PathVariable Long id) {
         return Result.success(dictDataService.getById(id));
@@ -66,6 +71,13 @@ public class DictDataController {
     /**
      * 按字典类型编码(dict_code)查询启用的字典数据
      * <p>用于前端按编码拉取下拉选项，避免硬编码枚举值</p>
+     *
+     * <p><b>刻意不加权限注解</b>：这是前端 {@code fetchDictOptions} 的唯一数据源，
+     * 被插件页、存储页、统计页、反馈页、权限/角色/表结构等多个页面共用，
+     * 且前端不做失败降级。若按 {@code admin:system:dict:view} 限制，
+     * 只有其它模块权限（如仅 {@code admin:qt:admin}）的管理员会整页下拉为空。
+     * 字典内容是全局枚举文案、不含业务数据，登录即可读是既有行为，故此接口保持仅登录校验。
+     * 如需收紧，应改为「按模块拆分的枚举读取接口」，而不是给本接口加域权限。</p>
      *
      * @param code 字典类型编码，如 qt_notice_channel
      * @return 字典数据列表（按 dict_sort 升序）
@@ -83,6 +95,7 @@ public class DictDataController {
      * @return 操作结果
      */
     @Operation(summary = "创建")
+    @RequiresPermission("admin:system:dict:edit")
     @PostMapping
     @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> create(@RequestBody DictData entity) {
@@ -98,6 +111,7 @@ public class DictDataController {
      * @return 操作结果
      */
     @Operation(summary = "更新")
+    @RequiresPermission("admin:system:dict:edit")
     @PutMapping("/{id}")
     @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictData entity) {
@@ -113,6 +127,7 @@ public class DictDataController {
      * @return 操作结果
      */
     @Operation(summary = "删除")
+    @RequiresPermission("admin:system:dict:edit")
     @DeleteMapping("/{id}")
     @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> delete(@PathVariable Long id) {

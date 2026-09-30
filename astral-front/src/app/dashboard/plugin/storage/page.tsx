@@ -12,6 +12,7 @@ import {
 } from '@/components/antd-compat/icons';
 import { storageApi } from '@/api/storage';
 import { fetchDictOptions, DictOption } from '@/api/dict';
+import { usePerm } from '@/lib/perm';
 import type { StorageConfig, StorageFile, StorageFolder, StoragePageResult, StorageTask, StorageAudit, S3ProviderOptions, FolderUploadPolicy } from '@/api/storage';
 
 function fmtBytes(bytes?: number): string {
@@ -39,6 +40,10 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default function StoragePage() {
+  const hasPerm = usePerm();
+  /** 是否具备存储维护权限（须与后端 AdminStorageController 上的 @RequiresPermission("admin:storage:edit") 一致；无权限时只读） */
+  const canEdit = hasPerm('admin:storage:edit');
+
   // ==================== 数据字典（枚举值走字典，见 AGENTS.md §3） ====================
   const [dict, setDict] = useState<Record<string, DictOption[]>>({});
   const dictLabel = (code: string, value?: string) =>
@@ -533,11 +538,11 @@ export default function StoragePage() {
       title: '操作', key: 'action', width: 280,
       render: (_: any, record: StorageConfig) => (
         <Space>
-          <Button size="small" icon={<ExperimentOutlined />} onClick={() => testConfig(record)}>测试</Button>
-          <Button size="small" icon={<StarOutlined />} onClick={async () => {
+          <Button size="small" icon={<ExperimentOutlined />} disabled={!canEdit} onClick={() => testConfig(record)}>测试</Button>
+          <Button size="small" icon={<StarOutlined />} disabled={!canEdit} onClick={async () => {
             await storageApi.setDefaultConfig(record.id!); message.success('已设为默认'); loadConfigs();
           }}>设默认</Button>
-          <Button size="small" onClick={() => {
+          <Button size="small" disabled={!canEdit} onClick={() => {
             const editing = { ...record } as StorageConfig;
             const opts = parseOptions(record.providerOptions);
             // Secret 打码回显：留空即保持不变（四类密钥字段统一处理）
@@ -557,11 +562,11 @@ export default function StoragePage() {
               status: editing.status,
             });
           }}>编辑</Button>
-          <Popconfirm title="确定删除该配置？" onConfirm={async () => {
+          <Popconfirm title="确定删除该配置？" disabled={!canEdit} onConfirm={async () => {
             try { await storageApi.deleteConfig(record.id!); message.success('已删除'); loadConfigs(); }
             catch (e: any) { message.error(e.message); }
           }}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
+            <Button size="small" danger disabled={!canEdit} icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -582,13 +587,13 @@ export default function StoragePage() {
       title: '操作', key: 'action', width: 260,
       render: (_: any, record: StorageFolder) => (
         <Space>
-          <Button size="small" onClick={() => openPermissions(record)}>授权</Button>
-          <Button size="small" onClick={() => openFolderModal(record)}>编辑</Button>
-          <Popconfirm title="确定删除该文件夹？" onConfirm={async () => {
+          <Button size="small" disabled={!canEdit} onClick={() => openPermissions(record)}>授权</Button>
+          <Button size="small" disabled={!canEdit} onClick={() => openFolderModal(record)}>编辑</Button>
+          <Popconfirm title="确定删除该文件夹？" disabled={!canEdit} onConfirm={async () => {
             try { await storageApi.deleteFolder(record.id!); message.success('已删除'); loadFolders(); }
             catch (e: any) { message.error(e.message); }
           }}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
+            <Button size="small" danger disabled={!canEdit} icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -620,11 +625,11 @@ export default function StoragePage() {
               <Button size="small" icon={<EyeOutlined />} onClick={() => previewImage(record)}>预览</Button>
             </Tooltip>
           )}
-          <Popconfirm title="删除后会移除远端对象（Telegram 为异步任务），确定？" onConfirm={async () => {
+          <Popconfirm title="删除后会移除远端对象（Telegram 为异步任务），确定？" disabled={!canEdit} onConfirm={async () => {
             try { await storageApi.deleteFile(record.publicId!); message.success('已进入删除流程'); loadFiles(); }
             catch (e: any) { message.error(e.message); }
           }}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
+            <Button size="small" danger disabled={!canEdit} icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -691,8 +696,9 @@ export default function StoragePage() {
                     <Upload
                       customRequest={customUploadRequest}
                       showUploadList={false}
+                      disabled={!canEdit || !uploadFolderId}
                     >
-                      <Button type="primary" icon={<CloudUploadOutlined />} loading={uploading} disabled={!uploadFolderId}>
+                      <Button type="primary" icon={<CloudUploadOutlined />} loading={uploading} disabled={!canEdit || !uploadFolderId}>
                         上传文件
                       </Button>
                     </Upload>
@@ -707,9 +713,11 @@ export default function StoragePage() {
               children: (
                 <div>
                   <div style={{ marginBottom: 12 }}>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => openFolderModal()}>
-                      新建文件夹
-                    </Button>
+                    {canEdit && (
+                      <Button type="primary" icon={<PlusOutlined />} onClick={() => openFolderModal()}>
+                        新建文件夹
+                      </Button>
+                    )}
                   </div>
                   <PagedTable files={folders} columns={folderColumns} rowKey="id" />
                 </div>
@@ -720,9 +728,11 @@ export default function StoragePage() {
               children: (
                 <div>
                   <div style={{ marginBottom: 12 }}>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => { setConfigModal({ open: true }); configForm.resetFields(); }}>
-                      新建配置
-                    </Button>
+                    {canEdit && (
+                      <Button type="primary" icon={<PlusOutlined />} onClick={() => { setConfigModal({ open: true }); configForm.resetFields(); }}>
+                        新建配置
+                      </Button>
+                    )}
                   </div>
                   <PagedTable files={configs} columns={configColumns} rowKey="id" />
                 </div>
@@ -836,6 +846,7 @@ export default function StoragePage() {
         open={configModal.open}
         onOk={submitConfig}
         onCancel={() => setConfigModal({ open: false })}
+        okButtonProps={{ disabled: !canEdit }}
         destroyOnClose
       >
         <Form form={configForm} layout="vertical">
@@ -972,6 +983,7 @@ export default function StoragePage() {
         open={folderModal.open}
         onOk={submitFolder}
         onCancel={() => setFolderModal({ open: false })}
+        okButtonProps={{ disabled: !canEdit }}
         destroyOnClose
       >
         <Form form={folderForm} layout="vertical">
@@ -1063,6 +1075,7 @@ export default function StoragePage() {
         onCancel={() => setPermModal({ open: false, rows: [] })}
         width={640}
         okText="保存授权"
+        okButtonProps={{ disabled: !canEdit }}
       >
         <p style={{ color: '#909399' }}>
           授权为全量替换；权限集合：READ / UPLOAD / UPDATE / DELETE / MANAGE。
@@ -1085,13 +1098,13 @@ export default function StoragePage() {
               value={(row.permissions || '').split(',').filter(Boolean)}
               onChange={(v) => setPermModal((m) => ({ ...m, rows: m.rows.map((r, i) => (i === idx ? { ...r, permissions: v.join(',') } : r)) }))}
             />
-            <Button danger onClick={() => setPermModal((m) => ({ ...m, rows: m.rows.filter((_, i) => i !== idx) }))}>
+            <Button danger disabled={!canEdit} onClick={() => setPermModal((m) => ({ ...m, rows: m.rows.filter((_, i) => i !== idx) }))}>
               移除
             </Button>
           </Space>
         ))}
         <Button
-          type="dashed" block icon={<PlusOutlined />}
+          type="dashed" block icon={<PlusOutlined />} disabled={!canEdit}
           onClick={() => setPermModal((m) => ({ ...m, rows: [...m.rows, { subjectType: 'USER', subjectId: '', permissions: 'READ,UPLOAD' }] }))}
         >
           添加授权

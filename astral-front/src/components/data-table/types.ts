@@ -82,7 +82,7 @@ export interface DataTableExpandable<T> {
 export interface DataTableProps<T> {
   /** 列定义 */
   columns?: Array<DataTableColumn<T>>;
-  /** 数据源 */
+  /** 数据源（行带非空 `children` 时自动按树形渲染，与 antd 同判据） */
   dataSource?: readonly T[];
   /** 行唯一键：字段名或取值函数（与 antd 同形） */
   rowKey?: string | ((record: T) => string | number);
@@ -92,7 +92,11 @@ export interface DataTableProps<T> {
   pagination?: false | DataTablePagination;
   /** 展开行 */
   expandable?: DataTableExpandable<T>;
-  /** 初始展开所有可展开行（与 antd 同名的常用项） */
+  /**
+   * 初始展开所有可展开行（与 antd 同名的常用项）。
+   * 对**树形数据**（行带 `children`）表示展开全部层级；对 `expandable.expandedRowRender`
+   * 表示展开全部详情行——两者都会生效。
+   */
   defaultExpandAllRows?: boolean;
   /** 尺寸：small 用于嵌入面板/密集场景 */
   size?: 'small' | 'middle';

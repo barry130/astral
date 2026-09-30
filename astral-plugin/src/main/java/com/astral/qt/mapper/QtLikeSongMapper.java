@@ -1,5 +1,6 @@
 package com.astral.qt.mapper;
 
+import com.astral.qt.entity.QtLikePlaylist;
 import com.astral.qt.entity.QtLikeSong;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Insert;
@@ -72,6 +73,39 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
     int upsertActive(@Param("e") QtLikeSong e, @Param("seq") long seq, @Param("now") LocalDateTime now);
 
     /**
+     * 批量收藏单曲（/like/batch 使用）：多行 VALUES + ON CONFLICT，每行携带自己的 updated_seq
+     * （按数组顺序递增，批内后写必胜）。冲突语义与 {@link #upsertActive} 完全一致：
+     * 复活软删行、空字段 COALESCE 不覆盖、pic_url 非空才覆盖。
+     * <p>调用方必须保证 list 内 (uid, sid, platform, pid) 唯一——同一语句内同键出现两次
+     * 会触发 PG 「ON CONFLICT DO UPDATE command cannot affect row a second time」错误。
+     * id 由号段填充器对集合参数逐个自动填充（同 {@link #insertBatch}）。</p>
+     */
+    @Insert({
+            """
+            <script>
+            INSERT INTO qt_like_song
+                (id, uid, sid, pid, platform, name, singer, album, hash, pic_url, deleted_at,
+                 create_time, update_time, updated_seq, updated_at)
+            VALUES
+            <foreach item='it' index='index' collection='list' separator=','>
+                (#{it.id}, #{it.uid}, #{it.sid}, #{it.pid}, #{it.platform}, #{it.name}, #{it.singer}, #{it.album},
+                 #{it.hash}, #{it.picUrl}, NULL, #{it.createTime}, #{it.updateTime}, #{it.updatedSeq}, #{it.updatedAt})
+            </foreach>
+            ON CONFLICT (uid, sid, platform, pid) DO UPDATE SET
+                deleted_at = NULL,
+                name = COALESCE(EXCLUDED.name, qt_like_song.name),
+                singer = COALESCE(EXCLUDED.singer, qt_like_song.singer),
+                album = COALESCE(EXCLUDED.album, qt_like_song.album),
+                hash = COALESCE(EXCLUDED.hash, qt_like_song.hash),
+                pic_url = COALESCE(NULLIF(EXCLUDED.pic_url, ''), qt_like_song.pic_url),
+                updated_seq = EXCLUDED.updated_seq,
+                updated_at = EXCLUDED.updated_at,
+                update_time = EXCLUDED.update_time
+            </script>
+            """})
+    int upsertActiveBatch(@Param("list") List<QtLikeSong> list);
+
+    /**
      * 旧全量接口封面补齐（LIKE_SONG_PIC_SYNC_DESIGN.md §5.6）：
      * 仅当库中封面为空且上传值非空时更新，不覆盖已有图片、不改变软删状态；
      * 推进 seq 让其他设备感知封面补齐（D7）。
@@ -142,6 +176,79 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
             """)
     int softRemoveAllByPlaylist(@Param("uid") Long uid, @Param("pid") String pid,
                                 @Param("seq") long seq, @Param("now") LocalDateTime now);
+
+    /**
+     * 批量取消收藏单曲（带 pid，/like/batch 使用）：按 (sid, platform, pid) 逐行软删，
+     * 每行携带自己的 updated_seq（VALUES 源），幂等（已删除行不再变更）。
+     * <p>调用方必须保证 list 内 (sid, platform, pid) 唯一。</p>
+     */
+    @Update({
+            """
+            <script>
+            UPDATE qt_like_song AS l
+            SET deleted_at = #{now}, update_time = #{now}, updated_at = #{now}, updated_seq = v.seq
+            FROM (
+                VALUES
+                <foreach item='it' index='index' collection='list' separator=','>
+                    (CAST(#{it.sid} AS VARCHAR), CAST(#{it.platform} AS VARCHAR),
+                     CAST(#{it.pid} AS VARCHAR), CAST(#{it.updatedSeq} AS BIGINT))
+                </foreach>
+            ) AS v(sid, platform, pid, seq)
+            WHERE l.uid = #{uid}
+              AND l.sid = v.sid AND l.platform = v.platform AND l.pid = v.pid
+              AND l.deleted_at IS NULL
+            </script>
+            """})
+    int softRemoveByPlaylistBatch(@Param("list") List<QtLikeSong> list, @Param("uid") Long uid,
+                                  @Param("now") LocalDateTime now);
+
+    /**
+     * 批量取消收藏单曲（不带 pid，/like/batch 使用）：软删该歌曲在全部歌单下的收藏行，
+     * 每行携带自己的 updated_seq，幂等（已删除行不再变更）。
+     * <p>调用方必须保证 list 内 (sid, platform) 唯一。</p>
+     */
+    @Update({
+            """
+            <script>
+            UPDATE qt_like_song AS l
+            SET deleted_at = #{now}, update_time = #{now}, updated_at = #{now}, updated_seq = v.seq
+            FROM (
+                VALUES
+                <foreach item='it' index='index' collection='list' separator=','>
+                    (CAST(#{it.sid} AS VARCHAR), CAST(#{it.platform} AS VARCHAR), CAST(#{it.updatedSeq} AS BIGINT))
+                </foreach>
+            ) AS v(sid, platform, seq)
+            WHERE l.uid = #{uid}
+              AND l.sid = v.sid AND l.platform = v.platform
+              AND l.deleted_at IS NULL
+            </script>
+            """})
+    int softRemoveAllBatch(@Param("list") List<QtLikeSong> list, @Param("uid") Long uid,
+                           @Param("now") LocalDateTime now);
+
+    /**
+     * 批量删除歌单时级联软删成员歌曲行（/like/batch 使用）：按 (uid, pid) 定位，
+     * 每个歌单携带自己的 updated_seq，幂等（已删除行不再变更）。
+     * <p>uid 必传：pid 跨用户可能重名，绝不能只按 pid 删（同 {@link #softRemoveAllByPlaylist}）。
+     * 入参复用歌单实体（只需要 pid/updatedSeq 字段）。</p>
+     */
+    @Update({
+            """
+            <script>
+            UPDATE qt_like_song AS l
+            SET deleted_at = #{now}, update_time = #{now}, updated_at = #{now}, updated_seq = v.seq
+            FROM (
+                VALUES
+                <foreach item='it' index='index' collection='list' separator=','>
+                    (CAST(#{it.pid} AS VARCHAR), CAST(#{it.updatedSeq} AS BIGINT))
+                </foreach>
+            ) AS v(pid, seq)
+            WHERE l.uid = #{uid} AND l.pid = v.pid
+              AND l.deleted_at IS NULL
+            </script>
+            """})
+    int softRemoveAllByPlaylistBatch(@Param("list") List<QtLikePlaylist> list, @Param("uid") Long uid,
+                                     @Param("now") LocalDateTime now);
 
     /** 用户在歌曲表的最大变更序号（无记录返回 0） */
     @Select("SELECT COALESCE(MAX(updated_seq), 0) FROM qt_like_song WHERE uid = #{uid}")

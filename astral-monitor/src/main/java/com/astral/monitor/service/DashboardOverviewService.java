@@ -68,7 +68,7 @@ public class DashboardOverviewService {
         dto.setBusiness(businessMonitorService.getBusinessInfo());
 
         LocalDate today = LocalDate.now();
-        Map<String, DeviceOverviewDTO> deviceOverview = statReportService.getOverview(today, UT_ALL);
+        Map<String, DeviceOverviewDTO> deviceOverview = statReportService.getOverview(today, UT_ALL, null);
         dto.setToday(deviceOverview.get("today"));
         dto.setYesterday(deviceOverview.get("yesterday"));
 

@@ -19,6 +19,6 @@ import lombok.Data;
 public class BusinessMonitorDTO {
     /** 序列配置数量 */
     private Long configCount;
-    /** 当前活跃请求线程数（Tomcat busy threads），获取失败时为 null */
-    private Integer activeConnections;
+    /** 当前并发处理中的 HTTP 请求数 */
+    private Integer activeRequests;
 }

@@ -22,7 +22,7 @@ export default function ConfigPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   /** 可用的序列类型列表 */
   const [types, setTypes] = useState<SequenceType[]>([]);
-  /** Ant Design表单实例 */
+  /** 表单实例（antd-compat 兼容层的同名同 API 实现，非 Ant Design 依赖） */
   const [form] = Form.useForm();
 
   /** 加载所有配置数据 */

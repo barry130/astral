@@ -82,11 +82,16 @@ public class DatabaseMonitorService {
      */
     private DatabaseMonitorDTO probe(DataSource dataSource) {
         DatabaseMonitorDTO dto = new DatabaseMonitorDTO();
-        fillPoolMetrics(dto, dataSource);
 
         long start = System.nanoTime();
         try (Connection conn = dataSource.getConnection();
              Statement statement = conn.createStatement()) {
+            // 取到连接之后，池必然已初始化——此时读水位才拿得到真实值。
+            // 若放在 getConnection 之前读：Hikari 的 pool 字段是懒创建的，
+            // 池未初始化时 getHikariPoolMXBean() 返回 null，水位会整组为 null，
+            // 页面就只剩「— / 上限」。
+            fillPoolMetrics(dto, dataSource);
+
             statement.execute("SELECT 1");
             // 在关闭连接前取耗时，语义是「从池取连接 + 一次查询往返」的完整链路
             dto.setPingMs((System.nanoTime() - start) / 1_000_000);
@@ -100,6 +105,9 @@ public class DatabaseMonitorService {
         } catch (Exception e) {
             dto.setPingMs((System.nanoTime() - start) / 1_000_000);
             dto.setAvailable(false);
+            // 查询失败也补读一次水位：池可能已经建好，只是本次探测失败，
+            // 前端仍能展示「连接异常 + 池水位」而不是整块空掉
+            fillPoolMetrics(dto, dataSource);
             log.warn("数据库监控探测失败: {}", e.getMessage());
         }
         return dto;
@@ -112,12 +120,18 @@ public class DatabaseMonitorService {
     private void fillPoolMetrics(DatabaseMonitorDTO dto, DataSource dataSource) {
         dto.setPoolName(dataSource.getClass().getSimpleName());
         if (!(dataSource instanceof HikariDataSource hikari)) {
+            log.debug("数据源不是 HikariDataSource（实际 {}），本次不采集连接池水位",
+                    dataSource.getClass().getName());
             return;
         }
+        // 上限不依赖池实例，任何时刻都能读到
         dto.setMaxConnections(hikari.getMaximumPoolSize());
         HikariPoolMXBean pool = hikari.getHikariPoolMXBean();
         if (pool == null) {
-            // 池尚未初始化（如首次请求前）
+            // 池尚未初始化。这条分支原先静默返回，是「页面显示 — 、日志里却查不出原因」的
+            // 主要来源，故补一条日志；用 debug 级是因为启动竞态下会短暂出现，不该污染告警。
+            log.debug("Hikari 连接池尚未初始化，本次不采集水位（maxConnections={}）",
+                    hikari.getMaximumPoolSize());
             return;
         }
         dto.setActiveConnections(pool.getActiveConnections());

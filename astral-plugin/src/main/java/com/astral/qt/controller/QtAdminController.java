@@ -1,7 +1,9 @@
 package com.astral.qt.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
+import com.astral.qt.QtPlugin;
 import com.astral.qt.common.QtRestResp;
 import com.astral.qt.dto.QtSourceReleaseCreateDto;
 import com.astral.qt.dto.vo.QtSourceReleaseVo;
@@ -31,13 +33,16 @@ import java.util.Map;
 
 /**
  * 轻听插件管理控制器（后台 Admin）
- * <p>挂载在 /api/v1/admin/qt，由宿主 Sa-Token 管理员认证保护。</p>
+ * <p>挂载在 /api/v1/admin/qt，由宿主 Sa-Token 管理员认证保护；
+ * 并统一要求 {@code admin:qt:admin} 权限（类级声明，避免仅登录的管理员即可操作轻听数据）。</p>
  * <p>轻听 App 用户已并入宿主 sys_user（user_type='APP'），此处仅管理 APP 用户。</p>
  */
 @Slf4j
 @Tag(name = "轻听API-后台管理")
 @RestController
 @RequestMapping("/api/v1/admin/qt")
+@RequiresPermission(value = QtPlugin.PERM_ADMIN, name = "轻听管理", domain = "qt",
+        description = "轻听插件后台管理（用户/公告/版本更新/音源包/加速节点）")
 public class QtAdminController {
 
     @Resource
@@ -315,7 +320,7 @@ public class QtAdminController {
         return QtRestResp.success(sourceService.createRelease(dto));
     }
 
-    @Operation(summary = "编辑音源包（notes/appVersionCodes/artifacts 按 path 合并）")
+    @Operation(summary = "编辑音源包（platforms/channel/notes/appVersionCodes/artifacts 按 path 合并）")
     @PutMapping("/source-releases/{id}")
     public QtRestResp<Void> updateSourceRelease(@PathVariable Long id,
                                                 @RequestBody QtSourceReleaseCreateDto dto) {

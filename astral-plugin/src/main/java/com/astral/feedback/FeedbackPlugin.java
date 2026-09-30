@@ -67,9 +67,10 @@ public class FeedbackPlugin implements AstralPlugin, PluginFrontendExtension {
 
     @Override
     public List<NavItem> getNavItems() {
-        // 反馈管理与通知管理合并为一个页签（页面内 Tabs 切换），侧边栏仅保留一个入口
+        // 反馈管理与通知管理合并为一个页签（页面内 Tabs 切换），侧边栏仅保留一个入口；
+        // 插件业务页统一挂在「插件管理」下作为二级菜单（见 NavItem.PLUGIN_MANAGER_PATH）
         return List.of(
-                new NavItem("反馈管理", "/dashboard/feedback", "MessageOutlined", 210)
+                NavItem.pluginPage("反馈管理", "/dashboard/feedback", "MessageOutlined", "admin:feedback:view", 210)
         );
     }
 }

@@ -1,5 +1,6 @@
 package com.astral.plugin.core;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PluginConfigProvider;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 @Tag(name = "插件管理")
 @RestController
 @RequestMapping("/api/v1/admin/plugin")
+@RequiresPermission(value = "admin:plugin:view", name = "插件查看", description = "插件列表/导航扩展/默认配置查看")
 @RequiredArgsConstructor
 public class PluginController {
 
@@ -42,6 +44,7 @@ public class PluginController {
     }
 
     @Operation(summary = "启用插件")
+    @RequiresPermission(value = "admin:plugin:edit", name = "插件启停", description = "插件启用/禁用")
     @PostMapping("/{pluginId}/enable")
     public Result<Void> enablePlugin(@PathVariable String pluginId) {
         pluginRegistry.enablePlugin(pluginId);
@@ -49,6 +52,7 @@ public class PluginController {
     }
 
     @Operation(summary = "禁用插件")
+    @RequiresPermission(value = "admin:plugin:edit", name = "插件启停", description = "插件启用/禁用")
     @PostMapping("/{pluginId}/disable")
     public Result<Void> disablePlugin(@PathVariable String pluginId) {
         pluginRegistry.disablePlugin(pluginId);

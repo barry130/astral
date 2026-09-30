@@ -69,16 +69,16 @@ public class Feedback {
     /** 是否公开（published 时 App 才展示） */
     private Boolean isPublic;
 
-    /** 设备型号 */
+    /** 设备型号 / 主机名（取自请求头 X-Device） */
     private String device;
 
-    /** 系统版本 */
+    /** 操作系统及版本（取自请求头 X-OS） */
     private String os;
 
-    /** App 版本（如 3.0.0） */
+    /** 客户端版本（取自请求头 X-App-Version，如 3.0.0） */
     private String appVersion;
 
-    /** 平台：android | ios */
+    /** 客户端平台（取自请求头 X-App-Ut：app-android|app-ios|app-windows|web） */
     private String platform;
 
     /** 提交 IP（服务端取） */

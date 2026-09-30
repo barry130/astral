@@ -7,10 +7,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 新建音源包发布记录请求体
+ * 新建 / 编辑音源包发布记录请求体
  * <p>
  * <b>不含 sourceVersionCode / sourceVersionName</b>：这两个字段由后端按规则生成后随响应返回
  * （规则见 {@code QtSourceService#nextVersionCode}），客户端与发布脚本一律不上送。
+ * </p>
+ * <p>
+ * 编辑时 platforms / channel 也会被应用（不再忽略）：移除平台后后端同步清理该平台的准入键。
  * </p>
  */
 @Data
@@ -27,7 +30,8 @@ public class QtSourceReleaseCreateDto {
 
     /**
      * 发布渠道（可空，默认 stable）：stable 正式（所有用户可收到）/
-     * beta 测试（仅拥有 qt_admin / qt_tester 权限的用户可收到，与版本更新渠道同源语义）
+     * beta 测试（仅拥有 user:qt:source:channel:beta 权限的用户可见，与版本更新渠道同源语义；
+     * 权限只决定「可见渠道集合」，正式包版本号更高时所有用户（含有权限者）收到正式包）
      */
     private String channel;
 

@@ -1,5 +1,6 @@
 package com.astral.log.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.LoginLog;
 import com.astral.log.service.LoginLogService;
 import com.astral.common.result.Result;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "登录日志表")
 @RestController
 @RequestMapping("/api/v1/admin/log/login_log")
+@RequiresPermission(value = "admin:log:view", name = "查看日志", description = "登录日志查询")
 @RequiredArgsConstructor
 public class LoginLogController {
 

@@ -1,5 +1,6 @@
 package com.astral.storage.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.storage.dto.StorageDtos;
 import com.astral.storage.entity.*;
@@ -22,6 +23,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
  */
 @RestController
 @RequestMapping("/api/v1/admin/plugin/storage")
+@RequiresPermission(value = "admin:storage:view", name = "存储查看", description = "存储概览/配置/文件夹/文件/任务与审计查看")
 @RequiredArgsConstructor
 public class AdminStorageController {
 
@@ -56,12 +58,14 @@ public class AdminStorageController {
         return Result.success(configService.listAll());
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PostMapping("/configs")
     public Result<StorageConfigEntity> createConfig(@RequestBody StorageDtos.ConfigCreateReq req,
                                                     jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(configService.create(req, userId(request)));
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PutMapping("/configs/{id}")
     public Result<StorageConfigEntity> updateConfig(@PathVariable Long id,
                                                     @RequestBody StorageDtos.ConfigUpdateReq req,
@@ -69,18 +73,21 @@ public class AdminStorageController {
         return Result.success(configService.update(id, req, userId(request)));
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @DeleteMapping("/configs/{id}")
     public Result<Void> deleteConfig(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
         configService.delete(id, userId(request));
         return Result.success();
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PostMapping("/configs/{id}/test")
     public Result<StorageDtos.ConfigTestResp> testConfig(@PathVariable Long id,
                                                          jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(configService.test(id, userId(request)));
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PostMapping("/configs/{id}/default")
     public Result<Void> setDefaultConfig(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
         configService.setDefault(id, userId(request));
@@ -94,12 +101,14 @@ public class AdminStorageController {
         return Result.success(folderService.listAll());
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PostMapping("/folders")
     public Result<StorageFolderEntity> createFolder(@RequestBody StorageDtos.FolderCreateReq req,
                                                     jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(folderService.create(req, userId(request)));
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PutMapping("/folders/{id}")
     public Result<StorageFolderEntity> updateFolder(@PathVariable Long id,
                                                     @RequestBody StorageDtos.FolderUpdateReq req,
@@ -107,6 +116,7 @@ public class AdminStorageController {
         return Result.success(folderService.update(id, req, userId(request)));
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @DeleteMapping("/folders/{id}")
     public Result<Void> deleteFolder(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
         folderService.delete(id, userId(request));
@@ -118,6 +128,7 @@ public class AdminStorageController {
         return Result.success(folderService.listPermissions(id));
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PutMapping("/folders/{id}/permissions")
     public Result<Void> saveFolderPermissions(@PathVariable Long id,
                                               @RequestBody StorageDtos.FolderPermSaveReq req,
@@ -136,6 +147,7 @@ public class AdminStorageController {
         return Result.success(fileService.pageForAdmin(current, size, folderId, keyword));
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PutMapping("/files/{publicId}/visibility")
     public Result<StorageFileEntity> changeVisibility(@PathVariable String publicId,
                                                       @RequestParam String value,
@@ -143,6 +155,7 @@ public class AdminStorageController {
         return Result.success(fileService.changeVisibility(publicId, userId(request), value));
     }
 
+    @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @DeleteMapping("/files/{publicId}")
     public Result<Void> deleteFile(@PathVariable String publicId, jakarta.servlet.http.HttpServletRequest request) {
         fileService.requestDelete(publicId, userId(request));

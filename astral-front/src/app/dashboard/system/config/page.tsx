@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, Button, Space, Modal, Form, Input, Select, Tag, message, Popconfirm } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
+import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
 /** 系统配置实体接口 */
@@ -54,6 +55,10 @@ export default function ConfigPage() {
   const [editingConfig, setEditingConfig] = useState<SysConfig | null>(null);
   /** 表单实例 */
   const [form] = Form.useForm();
+
+  const hasPerm = usePerm();
+  /** 是否具备系统配置维护权限：权限码需与后端 @RequiresPermission("admin:system:config:edit") 一致 */
+  const canEdit = hasPerm('admin:system:config:edit');
 
   /** 组件挂载时加载数据 */
   useEffect(() => {
@@ -131,9 +136,9 @@ export default function ConfigPage() {
       render: (_: any, r: SysConfig) => (
         <Space>
           {/* 内置配置不允许编辑和删除 */}
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(r)} disabled={r.configType === 1}>编辑</Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(r.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />} disabled={r.configType === 1}>删除</Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(r)} disabled={!canEdit || r.configType === 1}>编辑</Button>
+          <Popconfirm title="确认删除?" disabled={!canEdit} onConfirm={() => handleDelete(r.id)}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit || r.configType === 1}>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -145,7 +150,7 @@ export default function ConfigPage() {
       <Card>
         <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
           <Input.Search placeholder="搜索配置名称" allowClear onSearch={(v) => loadData(1, pagination.pageSize, v)} style={{ width: 300 }} />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建配置</Button>
+          {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建配置</Button>}
         </div>
         <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'] }} />
       </Card>

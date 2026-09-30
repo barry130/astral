@@ -1,6 +1,8 @@
 package com.astral.feedback.controller;
 
 import org.springframework.beans.factory.annotation.Value;
+import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.util.ClientHeaders;
 import com.astral.common.util.ClientIp;
 import com.astral.feedback.common.FeedbackRestResp;
 import com.astral.feedback.dto.ReplyDto;
@@ -19,7 +21,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,32 +33,52 @@ import java.util.List;
 
 /**
  * 反馈插件 App 端反馈控制器
- * <p>挂载 /api/v1/app/feedback/**，由 FeedbackAuthInterceptor 鉴权（需登录）。</p>
+ * <p>挂载 /api/v1/app/feedback/**，由 FeedbackAuthInterceptor 鉴权（需登录），
+ * 并由 {@code @RequiresPermission} 做接口权限校验（App 端权限码前缀 {@code user:}）。</p>
+ * <p>
+ * 客户端信息（平台/版本/设备/系统）统一从<b>客户端系统头</b>读取，
+ * 契约与接口统计共用一套，见 {@link ClientHeaders}；未携带时按 null 落库，
+ * 不阻塞提交。
+ * </p>
  */
 @Slf4j
 @Tag(name = "反馈插件-用户反馈")
 @RestController
 @RequestMapping("/api/v1/app/feedback")
+@RequiresPermission(value = "user:feedback:view", name = "反馈查看", description = "App 端查看我的反馈/公开反馈/反馈详情与回复列表")
 public class AppFeedbackController {
 
     /** 可信代理列表（决定能否采信 X-Forwarded-For），与全站口径一致 */
     @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
     private String trustedProxies;
 
+    /** 遗留平台头名：旧版 App 只发这个头，保留兜底兼容 */
+    @Value("${astral.stat.client-legacy-platform-header:" + ClientHeaders.H_PLATFORM_LEGACY + "}")
+    private String legacyPlatformHeader;
+
     @Resource
     private FeedbackService feedbackService;
 
     @Operation(summary = "提交反馈")
+    @RequiresPermission(value = "user:feedback:submit", name = "反馈提交", description = "App 端提交反馈与追加回复")
     @PostMapping("/submit")
     public FeedbackRestResp<Feedback> submit(@Valid @RequestBody SubmitFeedbackDto dto,
-                                             @RequestHeader(value = "X-Device", required = false) String device,
-                                             @RequestHeader(value = "X-OS", required = false) String os,
-                                             @RequestHeader(value = "X-App-Version", required = false) String appVersion,
-                                             @RequestHeader(value = "X-Platform", required = false) String platform,
                                              HttpServletRequest request) {
         Long userId = currentUserId();
         String ip = clientIp(request);
-        return FeedbackRestResp.success(feedbackService.submit(userId, dto, device, os, appVersion, platform, ip));
+        // 统一系统头：X-App-Ut（平台，回退遗留 X-Platform）/ X-App-Version（版本）/
+        // X-Device（设备型号·主机名）/ X-OS（操作系统）。空值与超长在 ClientHeaders 内归一。
+        String platform = ClientHeaders.resolveUt(
+                request.getHeader(ClientHeaders.H_UT), request.getHeader(legacyPlatformHeader));
+        String appVersion = ClientHeaders.normalize(
+                request.getHeader(ClientHeaders.H_VERSION), ClientHeaders.MAX_VERSION);
+        String device = ClientHeaders.normalize(
+                request.getHeader(ClientHeaders.H_DEVICE), ClientHeaders.MAX_DEVICE);
+        String os = ClientHeaders.normalize(
+                request.getHeader(ClientHeaders.H_OS), ClientHeaders.MAX_OS);
+        return FeedbackRestResp.success(
+                feedbackService.submit(userId, dto, blankToNull(device), blankToNull(os),
+                        blankToNull(appVersion), blankToNull(platform), ip));
     }
 
     @Operation(summary = "我的反馈（分页，全部状态）")
@@ -87,6 +108,7 @@ public class AppFeedbackController {
     }
 
     @Operation(summary = "用户回复（同时通知管理员）")
+    @RequiresPermission(value = "user:feedback:submit", name = "反馈提交", description = "App 端提交反馈与追加回复")
     @PostMapping("/reply")
     public FeedbackRestResp<FeedbackReply> reply(@Valid @RequestBody ReplyDto dto) {
         return FeedbackRestResp.success(feedbackService.userReply(currentUserId(), dto));
@@ -114,15 +136,20 @@ public class AppFeedbackController {
         return Long.parseLong(uid.toString());
     }
 
-    /** 客户端IP：X-Forwarded-For 优先，回退 remoteAddr */
+    /** 空白归一为 null：sys_feedback 的这几个列允许 NULL，空串会污染「未上报」的判定 */
+    private static String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value;
+    }
+
+    /**
+     * 客户端IP：与全站口径一致走 {@link ClientIp}（可信代理白名单 + 从右往左取第一个非代理地址）。
+     * 早期实现直接采信 {@code X-Forwarded-For} 的首位，该头客户端可任意伪造。
+     */
     private String clientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isBlank() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip;
+        return ClientIp.resolve(
+                request.getHeader("X-Forwarded-For"),
+                request.getHeader("X-Real-IP"),
+                request.getRemoteAddr(),
+                trustedProxies);
     }
 }

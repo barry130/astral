@@ -19,7 +19,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  * 这些操作不影响序列号生成的主流程，可以异步执行以提高性能。
  * </p>
  * <p>
- * 线程模型（JDK 21）：
+ * 线程模型（JDK 25）：
  * <ul>
  *   <li>默认（{@code astral.threads.virtual.enabled=true}）：{@link Executors#newVirtualThreadPerTaskExecutor()}
  *       ——避免阻塞任务占平台线程，降低内存开销（1核2G 场景）</li>
@@ -33,7 +33,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 @EnableAsync
 public class AsyncConfig implements org.springframework.scheduling.annotation.AsyncConfigurer {
 
-    /** 是否启用 JDK 21 虚拟线程（默认 true：测试/本地均启用，无需 prod profile） */
+    /** 是否启用 JDK 25 虚拟线程（默认 true：测试/本地均启用，无需 prod profile） */
     @Value("${astral.threads.virtual.enabled:true}")
     private boolean virtualEnabled;
 
@@ -69,7 +69,7 @@ public class AsyncConfig implements org.springframework.scheduling.annotation.As
     @Bean(name = "sequenceAsyncExecutor")
     public Executor sequenceAsyncExecutor() {
         if (virtualEnabled) {
-            log.info("[AsyncConfig] sequenceAsyncExecutor 使用 JDK 21 虚拟线程");
+            log.info("[AsyncConfig] sequenceAsyncExecutor 使用 JDK 25 虚拟线程");
             return Executors.newVirtualThreadPerTaskExecutor();
         }
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();

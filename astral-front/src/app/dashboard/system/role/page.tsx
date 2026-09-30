@@ -1,10 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, Button, Space, Modal, Form, Input, InputNumber, Switch, Tag, message, Popconfirm, TreeSelect, Row, Col } from '@/components/antd-compat';
+import { useEffect, useState, useMemo } from 'react';
+import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Switch, Tag, message, Popconfirm, TreeSelect, Row, Col } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
+import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { fetchDictOptions, DictOption } from '@/api/dict';
+
+const { Option } = Select;
 
 /** 角色实体接口 */
 interface Role {
@@ -20,20 +24,24 @@ interface Role {
   status: number;
   /** 排序号 */
   sort: number;
+  /** 是否超级管理员角色：1=持该角色即拥有全部权限 */
+  isSuper?: number;
 }
 
-/** 权限实体接口（树形结构） */
+/** 权限实体接口（树形结构；域分组节点的 id 为空） */
 interface Permission {
-  /** 权限ID */
-  id: number;
+  /** 权限ID（域分组节点为 null） */
+  id: number | null;
   /** 权限编码 */
   permissionCode: string;
   /** 权限名称 */
   permissionName: string;
   /** 父级权限ID */
   parentId: number;
-  /** 权限类型 */
+  /** 权限类型：1目录 2菜单 3按钮 4接口 5数据 */
   type: number;
+  /** 权限域 */
+  domain?: string;
   /** 子权限列表 */
   children?: Permission[];
 }
@@ -59,8 +67,13 @@ const roleApi = {
 
 /** 权限管理API封装 */
 const permissionApi = {
-  /** 获取权限树 */
-  getTree: () => request.get('/api/v1/admin/system/permission/tree'),
+  /**
+   * 获取权限树。
+   * groupBy=domain 时按「权限域」分组返回（域节点 id 为空，仅作展示分组，
+   * 勾选域会把该域下全部权限一并选中，不会提交出非法 ID）。
+   */
+  getTree: (groupBy?: 'domain') =>
+    request.get('/api/v1/admin/system/permission/tree', { params: groupBy ? { groupBy } : {} }),
 };
 
 /**
@@ -86,16 +99,61 @@ export default function RolePage() {
   const [permissionTree, setPermissionTree] = useState<Permission[]>([]);
   /** 已选中的权限ID列表 */
   const [selectedPerms, setSelectedPerms] = useState<number[]>([]);
+  /** 权限类型字典（文案来源：数据字典 permission_type） */
+  const [typeOptions, setTypeOptions] = useState<DictOption[]>([]);
   /** 角色表单实例 */
   const [form] = Form.useForm();
 
-  /** 组件挂载时加载角色列表和权限树 */
+  const hasPerm = usePerm();
+  /** 是否具备角色维护权限：权限码需与后端 @RequiresPermission("admin:system:role:edit") 一致 */
+  const canEdit = hasPerm('admin:system:role:edit');
+
+  /** 组件挂载时加载角色列表、权限树（按域分组）与类型字典 */
   useEffect(() => {
     loadData();
-    permissionApi.getTree().then((res: any) => {
+    permissionApi.getTree('domain').then((res: any) => {
       if (res.code === 200) setPermissionTree(res.data || []);
     });
+    fetchDictOptions(['permission_type'])
+      .then((map) => setTypeOptions(map['permission_type'] || []))
+      .catch(() => {});
   }, []);
+
+  /** 权限类型文案（字典兜底为原始值） */
+  const typeLabel = (type: any): string => {
+    const key = String(type ?? '');
+    const hit = typeOptions.find((o) => String(o.value) === key);
+    return hit ? hit.label : key;
+  };
+
+  /** 权限类型标签配色：4=接口 / 5=数据（结果级权限）与菜单树类型区分 */
+  const TYPE_COLORS: Record<string, string> = {
+    '1': 'blue', '2': 'green', '3': 'orange', '4': 'purple', '5': 'magenta',
+  };
+
+  /**
+   * 权限树 → TreeSelect 节点。
+   * 域分组节点（id 为空）不产出 value：勾选它等于勾选该域下全部权限，
+   * 提交给后端的永远是真实权限 ID，不会写入非法值。
+   */
+  const toTreeNodes = (nodes: Permission[]): any[] =>
+    nodes.map((p) => ({
+      title: p.id == null
+        ? <span className="font-medium">{p.permissionName}</span>
+        : (
+          <span className="inline-flex items-center gap-1">
+            {p.permissionName}
+            <Tag color={TYPE_COLORS[String(p.type)] || 'default'}>{typeLabel(p.type)}</Tag>
+          </span>
+        ),
+      value: p.id ?? undefined,
+      key: p.id != null ? p.id : `domain-${p.permissionName}`,
+      disabled: false,
+      children: p.children?.length ? toTreeNodes(p.children) : undefined,
+    }));
+
+  /** 当前分配弹窗的树数据（域分组的 value 需为 undefined，见 toTreeNodes） */
+  const treeData = useMemo(() => toTreeNodes(permissionTree), [permissionTree, typeOptions]);
 
   /** 加载角色列表 */
   const loadData = (page = 1, size = 10) => {
@@ -183,6 +241,15 @@ export default function RolePage() {
     { title: '描述', dataIndex: 'description', key: 'description' },
     { title: '排序', dataIndex: 'sort', key: 'sort' },
     {
+      title: '超管',
+      dataIndex: 'isSuper',
+      key: 'isSuper',
+      width: 80,
+      render: (v: number) => (v === 1
+        ? <Tag color="gold">超管</Tag>
+        : <Tag color="default">普通</Tag>),
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
@@ -194,10 +261,19 @@ export default function RolePage() {
       width: 160,
       render: (_: any, r: Role) => (
         <Space>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(r)}>编辑</Button>
-          <Button type="link" icon={<SafetyOutlined />} onClick={() => handleAssignPermissions(r)}>权限</Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDelete(r.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(r)} disabled={!canEdit}>编辑</Button>
+          {/* 分配权限后端要求超管，前端不做门控 */}
+          <Button
+            type="link"
+            icon={<SafetyOutlined />}
+            disabled={r.isSuper === 1}
+            title={r.isSuper === 1 ? '超管角色默认拥有全部权限，无需分配' : undefined}
+            onClick={() => handleAssignPermissions(r)}
+          >
+            权限
+          </Button>
+          <Popconfirm title="确认删除?" disabled={!canEdit} onConfirm={() => handleDelete(r.id)}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -209,7 +285,7 @@ export default function RolePage() {
       <Card>
         <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
           <Input.Search placeholder="搜索角色" allowClear style={{ width: 300 }} />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建角色</Button>
+          {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建角色</Button>}
         </div>
         <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'] }} />
       </Card>
@@ -227,20 +303,45 @@ export default function RolePage() {
             <Col xs={{ span: 24 }} md={{ span: 12 }}><Form.Item name="sort" label="排序" initialValue={0}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item></Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}><Form.Item name="status" label="状态" valuePropName="checked" initialValue><Switch checkedChildren="启用" unCheckedChildren="禁用" /></Form.Item></Col>
           </Row>
+          <Form.Item
+            name="isSuper"
+            label="超级管理员角色"
+            initialValue={0}
+            extra="超管角色无需分配权限即拥有全部权限（后端合成 *:*:*）；仅超级管理员可创建/修改"
+          >
+            <Select style={{ width: 120 }}>
+              <Option value={0}>否</Option>
+              <Option value={1}>是</Option>
+            </Select>
+          </Form.Item>
         </Form>
       </Modal>
 
-      <Modal title="分配权限" open={permModalVisible} onOk={handleAssignPermissionsSubmit} onCancel={() => setPermModalVisible(false)} width={600}>
+      <Modal
+        title={`分配权限${targetRole ? ` - ${targetRole.roleName}` : ''}`}
+        open={permModalVisible}
+        onOk={handleAssignPermissionsSubmit}
+        onCancel={() => setPermModalVisible(false)}
+        width={640}
+      >
         <div style={{ marginTop: 16 }}>
-          <TreeSelect
-            treeData={permissionTree.map(p => ({ title: p.permissionName, value: p.id, children: p.children?.map(c => ({ title: c.permissionName, value: c.id })) }))}
-            treeCheckable
-            showCheckedStrategy="SHOW_ALL"
-            placeholder="选择权限"
-            style={{ width: '100%' }}
-            value={selectedPerms}
-            onChange={(val) => setSelectedPerms(val || [])}
-          />
+          <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, color: 'var(--muted-foreground, #888)', fontSize: 12 }}>
+            <span>按「权限域」分组；接口/数据类权限不参与左侧菜单渲染。勾选域名可全选该域权限。</span>
+            <span style={{ flexShrink: 0 }}>已选 {selectedPerms.length} 项</span>
+          </div>
+          {/* overflowX: hidden —— 弹窗内绝不出现横向滚动条；宽度问题由 TreeSelect 自身换行消化 */}
+          <div style={{ maxHeight: 420, overflowY: 'auto', overflowX: 'hidden', border: '1px solid var(--border, #e5e7eb)', borderRadius: 6, padding: 8 }}>
+            <TreeSelect
+              treeData={treeData}
+              treeCheckable
+              showCheckedStrategy="SHOW_ALL"
+              allowClear
+              placeholder="选择权限"
+              style={{ width: '100%' }}
+              value={selectedPerms}
+              onChange={(val) => setSelectedPerms(val || [])}
+            />
+          </div>
         </div>
       </Modal>
     </div>

@@ -27,6 +27,13 @@ public class StatApiHourly {
 
     private Integer status;
 
+    @Size(max = 16)
+    private String ut;
+
+    @TableField("app_version")
+    @Size(max = 32)
+    private String appVersion;
+
     @TableField("call_count")
     private Long callCount;
 

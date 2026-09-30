@@ -6,6 +6,7 @@ import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.dao.mapper.UserRoleMapper;
+import com.astral.feedback.common.NoticeChannel;
 import com.astral.feedback.entity.SysNotice;
 import com.astral.feedback.mapper.SysNoticeMapper;
 import com.astral.system.service.SysConfigService;
@@ -18,10 +19,7 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.Resource;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
@@ -63,26 +61,25 @@ public class FeedbackNoticeService {
     private UserRoleMapper userRoleMapper;
 
     /**
-     * 当前生效通知列表（App 端，公开，三展示位共用）
-     * <p>等价于 {@link #listForChannel(String, String, boolean, Long)} 传入渠道 app。</p>
+     * 当前生效通知列表（App 端：Android + iOS，公开，三展示位共用）
      *
      * @param appVersion 客户端版本码（如 300），可为空
      * @param loggedIn   是否已登录
      * @param userId     已登录时的用户ID（用于点对点过滤）
      */
     public List<SysNotice> listForApp(String appVersion, boolean loggedIn, Long userId) {
-        return listForChannel(SysNotice.CHANNEL_APP, appVersion, loggedIn, userId);
+        return listForChannel(List.of(SysNotice.CHANNEL_ANDROID, SysNotice.CHANNEL_IOS), appVersion, loggedIn, userId);
     }
 
     /**
-     * 当前生效通知列表（PC 端，公开）
+     * 当前生效通知列表（PC / 桌面端，公开）
      *
      * @param appVersion 客户端版本码（如 300），可为空
      * @param loggedIn   是否已登录
      * @param userId     已登录时的用户ID（用于点对点过滤）
      */
     public List<SysNotice> listForPc(String appVersion, boolean loggedIn, Long userId) {
-        return listForChannel(SysNotice.CHANNEL_PC, appVersion, loggedIn, userId);
+        return listForChannel(List.of(SysNotice.CHANNEL_WINDOWS), appVersion, loggedIn, userId);
     }
 
     /**
@@ -93,33 +90,35 @@ public class FeedbackNoticeService {
      * @param userId     已登录时的用户ID（用于点对点过滤）
      */
     public List<SysNotice> listForWeb(String appVersion, boolean loggedIn, Long userId) {
-        return listForChannel(SysNotice.CHANNEL_WEB, appVersion, loggedIn, userId);
+        return listForChannel(List.of(SysNotice.CHANNEL_WEB), appVersion, loggedIn, userId);
     }
 
     /**
-     * 当前生效通知列表（指定端，公开）
-     * <p>过滤链（§3.3）：is_show=1 → channel∈(指定端, all) → 时间窗 → 版本码区间 → audience → 广播或点对点 → 保留期。</p>
-     * <p>支持的端：app | pc | web，未知值按 app 处理（兼容已发布客户端不传该参数）。</p>
+     * 当前生效通知列表（指定平台集合，公开）
+     * <p>过滤链（§3.3）：is_show=1 → channel 命中 → 时间窗 → 版本码区间 → audience → 广播或点对点 → 保留期。</p>
      *
-     * @param channel    端标识：app | pc | web
+     * @param targets    待匹配平台集合，来自 {@link NoticeChannel#resolveTargets}；
+     *                   含 {@link NoticeChannel#ALL} 表示不限平台
      * @param appVersion 客户端版本码（如 300），可为空
      * @param loggedIn   是否已登录
      * @param userId     已登录时的用户ID（用于点对点过滤）
      */
-    public List<SysNotice> listForChannel(String channel, String appVersion, boolean loggedIn, Long userId) {
+    public List<SysNotice> listForChannel(List<String> targets, String appVersion, boolean loggedIn, Long userId) {
         LocalDateTime retentionFrom = retentionFrom();
         LambdaQueryWrapper<SysNotice> qw = new LambdaQueryWrapper<>();
         qw.eq(SysNotice::getIsShow, 1L);
-        qw.in(SysNotice::getChannel, Arrays.asList(normalizeChannel(channel), SysNotice.CHANNEL_ALL));
         // 保留期：announce 不受限；其余类型仅最近 N 天（N=0/空=不限）
         if (retentionFrom != null) {
             qw.and(w -> w.eq(SysNotice::getNoticeType, SysNotice.TYPE_ANNOUNCE)
                     .or().ge(SysNotice::getCreateTime, retentionFrom));
         }
         qw.orderByDesc(SysNotice::getIsTop).orderByDesc(SysNotice::getCreateTime);
+        // 渠道匹配刻意放在 Java 侧：channel 是多值逗号列，用 LIKE 会误命中（新平台值可能互为子串），
+        // 用数据库数组/分隔符函数又绑死方言；公告表数据量小，全量取回后精确匹配更稳。
         List<SysNotice> all = sysNoticeMapper.selectList(qw);
 
         return all.stream()
+                .filter(n -> NoticeChannel.matches(n.getChannel(), targets))
                 .filter(n -> inEffectiveWindow(n, LocalDateTime.now()))
                 .filter(n -> inVersionRange(n, appVersion))
                 .filter(n -> audienceMatches(n.getAudience(), loggedIn))
@@ -133,15 +132,15 @@ public class FeedbackNoticeService {
      * <p>已读状态由前端缓存判断，后端不返回 read 字段。</p>
      */
     public List<SysNotice> listMessageCenter(Long userId) {
-        return listMessageCenter(userId, SysNotice.CHANNEL_APP);
+        return listMessageCenter(userId, List.of(SysNotice.CHANNEL_ANDROID, SysNotice.CHANNEL_IOS));
     }
 
     /**
-     * 消息中心列表（指定端：app | pc | web）
+     * 消息中心列表（指定平台集合）
      * <p>在 listForChannel 基础上追加 display 含消息中心(4)。</p>
      */
-    public List<SysNotice> listMessageCenter(Long userId, String channel) {
-        return listForChannel(channel, null, userId != null, userId).stream()
+    public List<SysNotice> listMessageCenter(Long userId, List<String> targets) {
+        return listForChannel(targets, null, userId != null, userId).stream()
                 .filter(n -> hasDisplay(n.getDisplay(), DISPLAY_MESSAGE_CENTER))
                 .collect(Collectors.toList());
     }
@@ -151,14 +150,14 @@ public class FeedbackNoticeService {
      * <p>返回该用户可见消息中心条目总数；已读判定在前端缓存，清缓存=全部未读（既定决策 D6）。</p>
      */
     public long countUnread(Long userId) {
-        return countUnread(userId, SysNotice.CHANNEL_APP);
+        return countUnread(userId, List.of(SysNotice.CHANNEL_ANDROID, SysNotice.CHANNEL_IOS));
     }
 
     /**
-     * 未读数（候选总数，指定端：app | pc | web）
+     * 未读数（候选总数，指定平台集合）
      */
-    public long countUnread(Long userId, String channel) {
-        return listMessageCenter(userId, channel).size();
+    public long countUnread(Long userId, List<String> targets) {
+        return listMessageCenter(userId, targets).size();
     }
 
     /** 已读回执（本期仅记日志，不落表） */
@@ -171,13 +170,19 @@ public class FeedbackNoticeService {
 
     // ==================== 管理端 ====================
 
-    /** 通知分页（channel/notice_type/关键词/时间筛选） */
+    /**
+     * 通知分页（channel/notice_type/关键词/时间筛选）
+     *
+     * @param channel 渠道筛选，支持多选（逗号分隔平台值），兼容遗留单值 app/pc/web/all
+     */
     public Page<SysNotice> page(int pageNum, int pageSize, String channel, String noticeType,
                                 String keyword, String startDate, String endDate) {
         Page<SysNotice> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<SysNotice> qw = new LambdaQueryWrapper<>();
-        if (channel != null && !channel.isBlank()) {
-            qw.eq(SysNotice::getChannel, channel);
+        List<String> channelFilters = NoticeChannel.parseFilter(channel);
+        if (!channelFilters.isEmpty()) {
+            // 多值列没法用等值匹配；平台值之间互不为子串，用 OR LIKE 作为筛选近似（管理端筛选，非权限判定）
+            qw.and(w -> channelFilters.forEach(f -> w.or().like(SysNotice::getChannel, f)));
         }
         if (noticeType != null && !noticeType.isBlank()) {
             qw.eq(SysNotice::getNoticeType, noticeType);
@@ -195,11 +200,9 @@ public class FeedbackNoticeService {
         return sysNoticeMapper.selectPage(page, qw);
     }
 
-    /** 新增通知（公告/定向） */
+    /** 新增通知（公告/定向）；渠道归一化与校验统一走 {@link NoticeChannel} */
     public SysNotice create(SysNotice notice) {
-        if (notice.getChannel() == null || notice.getChannel().isBlank()) {
-            notice.setChannel(SysNotice.CHANNEL_APP);
-        }
+        notice.setChannel(NoticeChannel.normalizeForStore(notice.getChannel()));
         if (notice.getNoticeType() == null || notice.getNoticeType().isBlank()) {
             notice.setNoticeType(SysNotice.TYPE_ANNOUNCE);
         }
@@ -223,6 +226,12 @@ public class FeedbackNoticeService {
     /** 更新通知 */
     public void update(Long id, SysNotice notice) {
         notice.setId(id);
+        // 仅当提交了渠道才归一化：为空表示「本次不改该字段」，不能回落成默认值把原渠道冲掉
+        if (notice.getChannel() != null && !notice.getChannel().isBlank()) {
+            notice.setChannel(NoticeChannel.normalizeForStore(notice.getChannel()));
+        } else {
+            notice.setChannel(null);
+        }
         notice.setUpdateTime(LocalDateTime.now());
         sysNoticeMapper.updateById(notice);
     }
@@ -247,7 +256,7 @@ public class FeedbackNoticeService {
     public void notifyStatusChange(Long feedbackId, Long userId, String title, String noticeType, String statusName) {
         try {
             SysNotice n = new SysNotice();
-            n.setChannel(SysNotice.CHANNEL_APP);
+            n.setChannel(SysNotice.CHANNEL_MOBILE);
             n.setNoticeType(noticeType);
             n.setUserId(userId);
             n.setFeedbackId(feedbackId);
@@ -267,7 +276,7 @@ public class FeedbackNoticeService {
     public void notifyPublished(Long feedbackId, Long userId, String title, String noticeType) {
         try {
             SysNotice n = new SysNotice();
-            n.setChannel(SysNotice.CHANNEL_APP);
+            n.setChannel(SysNotice.CHANNEL_MOBILE);
             n.setNoticeType(noticeType);
             n.setUserId(userId);
             n.setFeedbackId(feedbackId);
@@ -287,7 +296,7 @@ public class FeedbackNoticeService {
     public void notifyAdminReply(Long feedbackId, Long userId, String title, String noticeType) {
         try {
             SysNotice n = new SysNotice();
-            n.setChannel(SysNotice.CHANNEL_APP);
+            n.setChannel(SysNotice.CHANNEL_MOBILE);
             n.setNoticeType(noticeType);
             n.setUserId(userId);
             n.setFeedbackId(feedbackId);
@@ -308,7 +317,7 @@ public class FeedbackNoticeService {
         try {
             for (Long adminId : adminUserIds()) {
                 SysNotice n = new SysNotice();
-                n.setChannel(SysNotice.CHANNEL_PC);
+                n.setChannel(SysNotice.CHANNEL_WINDOWS);
                 n.setNoticeType(noticeType);
                 n.setUserId(adminId);
                 n.setFeedbackId(feedbackId);
@@ -331,7 +340,7 @@ public class FeedbackNoticeService {
             String label = SysNotice.TYPE_REQUEST.equals(noticeType) ? "新需求" : "新反馈";
             for (Long adminId : adminUserIds()) {
                 SysNotice n = new SysNotice();
-                n.setChannel(SysNotice.CHANNEL_PC);
+                n.setChannel(SysNotice.CHANNEL_WINDOWS);
                 n.setNoticeType(noticeType);
                 n.setUserId(adminId);
                 n.setFeedbackId(feedbackId);
@@ -426,18 +435,6 @@ public class FeedbackNoticeService {
         } catch (NumberFormatException e) {
             return null;
         }
-    }
-
-    /** 规范化端标识：仅 app | pc | web 合法，空值或未知值回退 app */
-    public static String normalizeChannel(String channel) {
-        if (channel == null || channel.isBlank()) {
-            return SysNotice.CHANNEL_APP;
-        }
-        return switch (channel.trim().toLowerCase(Locale.ROOT)) {
-            case SysNotice.CHANNEL_PC -> SysNotice.CHANNEL_PC;
-            case SysNotice.CHANNEL_WEB -> SysNotice.CHANNEL_WEB;
-            default -> SysNotice.CHANNEL_APP;
-        };
     }
 
     private boolean inEffectiveWindow(SysNotice n, LocalDateTime now) {

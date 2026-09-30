@@ -31,9 +31,24 @@
             <artifactId>astral-log</artifactId>
         </dependency>
 
+        <!-- 插件权限声明 SPI（PermissionProvider）：启动时把插件声明的权限登记进 sys_permission。
+             astral-plugin-api 无任何依赖，不会引入环。 -->
+        <dependency>
+            <groupId>com.astral</groupId>
+            <artifactId>astral-plugin-api</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- @RequiresPermission / @RequiresSuper 的切面实现（@Aspect）。
+             astral-log 已传递引入，这里显式声明，避免依赖别人的传递依赖。
+             SB4 起 starter 名为 spring-boot-starter-aspectj。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aspectj</artifactId>
         </dependency>
 
         <dependency>

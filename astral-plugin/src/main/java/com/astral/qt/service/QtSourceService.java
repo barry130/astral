@@ -1,5 +1,6 @@
 package com.astral.qt.service;
 
+import com.astral.auth.security.DataScopeResolver;
 import com.astral.qt.common.QtException;
 import com.astral.qt.dto.QtSourceReleaseCreateDto;
 import com.astral.qt.dto.QtSourceReportDto;
@@ -22,10 +23,12 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 音源包热更新服务（SOURCE_UPDATE_DESIGN §五）
@@ -57,10 +60,10 @@ public class QtSourceService {
      * 生成 manifest（GET /api/v1/app/source/manifest）。
      * <p>
      * 渠道即测试/正式标识（复用 channel 字段，与版本更新同源语义）：
-     * channel=beta 为测试包，仅对拥有 qt_admin / qt_tester 权限（含超管 *:*:*）的用户投放；
-     * 其余（stable 正式包）对所有用户投放。客户端不再上送 channel，由服务端按版本号
-     * 从新到旧统一选取：第一个「平台匹配 + 应用版本准入命中 + 未标坏 + 人群可见」的版本即候选，
-     * 无命中则 release 为 null（客户端保持当前版本）。
+     * 调用方传入当前用户的<b>可见渠道集合</b>（stable 为基础可见，beta 需
+     * {@code user:qt:source:channel:beta} 结果级权限），本方法把不可见渠道的 release 视同不存在。
+     * 客户端不上送 channel，服务端按版本号从新到旧统一选取：第一个「平台匹配 + 应用版本准入命中
+     * + 未标坏 + 人群可见」的版本即候选，无命中则 release 为 null（客户端保持当前版本）。
      * 因此测试包版本号高于正式包时，有权限用户收到测试包、无权限用户收到最新正式包；
      * 正式包版本号更高时，所有用户（含有权限者）都收到该正式包，不会收到版本号更低的测试包。
      * hostApiVersion 不参与服务端筛选，由客户端按自身契约版本决定是否跳过（§2.3 第 3 步）。
@@ -70,10 +73,17 @@ public class QtSourceService {
      * （坏包指定了目标则用之，否则回退到候选本身），客户端据此允许降级（§2.3 第 5 步）。
      * 无权限用户对测试坏包不可感知（连同回退信号一并跳过）。
      * </p>
+     *
+     * @param visibleChannels 可见渠道集合，如 {@code [stable]} / {@code [stable, beta]}；
+     *                        为空表示没有任何可见渠道，直接返回空 manifest
      */
-    public QtSourceManifestVo buildManifest(Long platform, Long appVersionCode, Long hostApiVersion, boolean tester) {
+    public QtSourceManifestVo buildManifest(Long platform, Long appVersionCode, Long hostApiVersion,
+                                            Set<String> visibleChannels) {
         QtSourceManifestVo manifest = new QtSourceManifestVo();
         if (!QtSourceRelease.isSupportedPlatform(platform)) {
+            return manifest;
+        }
+        if (visibleChannels == null || visibleChannels.isEmpty()) {
             return manifest;
         }
         List<QtSourceRelease> published = releaseMapper.selectList(new LambdaQueryWrapper<QtSourceRelease>()
@@ -85,9 +95,9 @@ public class QtSourceService {
             if (!platformMatches(r, platform)) {
                 continue;
             }
-            // 测试包人群过滤：无 qt_admin/qt_tester 权限的用户视同不存在该测试包
+            // 渠道可见性过滤：不可见渠道的包对该用户视同不存在
             // （前置于坏包登记，回退信号对无权限用户同样不可感知）
-            if (isTestRelease(r) && !tester) {
+            if (!isChannelVisible(r, visibleChannels)) {
                 continue;
             }
             if (r.getIsBad() != null && r.getIsBad() == 1) {
@@ -114,10 +124,18 @@ public class QtSourceService {
         return manifest;
     }
 
-    /** 渠道是否为测试包（beta）；其余值（stable 及历史脏数据）一律按正式包投放 */
-    private boolean isTestRelease(QtSourceRelease release) {
-        return QtSourceRelease.CHANNEL_BETA.equalsIgnoreCase(
-                release.getChannel() == null ? "" : release.getChannel().trim());
+    /**
+     * 渠道是否对当前用户可见。
+     * <p>channel 为 beta 时需要用户可见集合包含 beta；其余值（stable 及历史脏数据）
+     * 一律按正式包处理，只要用户在 stable 基础集合内即可见——保持升级前的投放行为。</p>
+     */
+    private boolean isChannelVisible(QtSourceRelease release, Set<String> visibleChannels) {
+        String channel = release.getChannel() == null ? "" : release.getChannel().trim();
+        if (QtSourceRelease.CHANNEL_BETA.equalsIgnoreCase(channel)) {
+            return DataScopeResolver.visible(visibleChannels, QtSourceRelease.CHANNEL_BETA,
+                    QtSourceRelease.CHANNEL_STABLE);
+        }
+        return DataScopeResolver.visible(visibleChannels, channel, QtSourceRelease.CHANNEL_STABLE);
     }
 
     /** 装载结果上报（POST /api/v1/app/source/report，免认证），只做落库，失败不阻塞客户端 */
@@ -197,16 +215,29 @@ public class QtSourceService {
     }
 
     /**
-     * 编辑（notes / appVersionCodes / artifacts）。artifacts 按 path 合并：只传变更项，其余继承。
-     * sourceVersionCode / sourceVersionName / platforms / channel 不可改（忽略上送值）。
+     * 编辑（platforms / channel / notes / appVersionCodes / artifacts）。
+     * <p>
+     * platforms 与 channel 允许修改（广播错平台是常见误操作，删除重建代价高）；
+     * 移除某平台时同步清理 appVersionCodes 中该平台的准入键（否则该平台会被当成「不限制」，
+     * 与「默认全选现存版本」的预期相反）。artifacts 按 path 合并：只传变更项，其余继承。
+     * sourceVersionCode / sourceVersionName 不可改（忽略上送值）；已发布的 release 也允许编辑，
+     * 生效于客户端下次拉取 manifest 时。
+     * </p>
      */
     public void updateRelease(Long id, QtSourceReleaseCreateDto dto) {
         QtSourceRelease exist = requireRelease(id);
+        if (dto.getPlatforms() != null) {
+            exist.setPlatforms(toPlatformsCsv(validatePlatforms(dto.getPlatforms())));
+        }
+        if (dto.getChannel() != null) {
+            exist.setChannel(normalizeChannel(dto.getChannel()));
+        }
         if (dto.getNotes() != null) {
             exist.setNotes(dto.getNotes());
         }
         if (dto.getAppVersionCodes() != null) {
-            exist.setAppVersionCodes(writeJson(appVersionCodesOrDefault(dto.getAppVersionCodes())));
+            exist.setAppVersionCodes(writeJson(pruneAppVersionCodes(
+                    appVersionCodesOrDefault(dto.getAppVersionCodes()), existingPlatforms(exist))));
         }
         if (dto.getArtifacts() != null) {
             exist.setArtifacts(writeJson(mergeArtifacts(readArtifacts(exist), dto.getArtifacts())));
@@ -398,6 +429,42 @@ public class QtSourceService {
             throw new QtException("release 不存在");
         }
         return exist;
+    }
+
+    /** 当前 release 的 platforms 列表（用于 appVersionCodes 增量更新时的键清理） */
+    private List<Long> existingPlatforms(QtSourceRelease entity) {
+        List<Long> platforms = new ArrayList<>();
+        if (entity.getPlatforms() != null) {
+            for (String part : entity.getPlatforms().split(",")) {
+                if (!part.isBlank()) {
+                    platforms.add(Long.valueOf(part.trim()));
+                }
+            }
+        }
+        return platforms;
+    }
+
+    /** 移除不在当前 platforms 中的准入键（否则残留键会被当作该平台「不限制」） */
+    private Map<String, List<Long>> pruneAppVersionCodes(Map<String, List<Long>> codes, List<Long> platforms) {
+        if (codes == null || codes.isEmpty()) {
+            return new LinkedHashMap<>();
+        }
+        Set<Long> asSet = new HashSet<>(platforms);
+        Map<String, List<Long>> pruned = new LinkedHashMap<>();
+        for (Map.Entry<String, List<Long>> e : codes.entrySet()) {
+            String key = e.getKey() == null ? "" : e.getKey().trim();
+            if (key.isEmpty()) {
+                continue;
+            }
+            try {
+                if (asSet.contains(Long.valueOf(key))) {
+                    pruned.put(key, e.getValue());
+                }
+            } catch (NumberFormatException ignored) {
+                log.warn("[QtSource] appVersionCodes 含非平台键 {}，已忽略", key);
+            }
+        }
+        return pruned;
     }
 
     private List<Long> validatePlatforms(List<Long> platforms) {

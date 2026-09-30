@@ -1,5 +1,6 @@
 package com.astral.sequence.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.error.ErrorCodes;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SequenceConfig;
@@ -26,6 +27,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/admin/sequence/configs")
+@RequiresPermission("admin:sequence:view")
 @RequiredArgsConstructor
 public class SequenceConfigController {
     /** 序列配置数据访问接口 */
@@ -133,6 +135,7 @@ public class SequenceConfigController {
      * @return 创建后的配置（包含生成的 ID）
      */
     @OperateLog("创建序列配置")
+    @RequiresPermission("admin:sequence:edit")
     @PostMapping
     public Result<SequenceConfig> create(@Valid @RequestBody SequenceConfig config) {
         assertNotSystemSequence(config, "SEQ008");
@@ -157,6 +160,7 @@ public class SequenceConfigController {
      * @return 更新后的配置
      */
     @OperateLog("更新序列配置")
+    @RequiresPermission("admin:sequence:edit")
     @PutMapping("/{id}")
     public Result<SequenceConfig> update(@PathVariable Long id, @Valid @RequestBody SequenceConfig config) {
         SequenceConfig existing = sequenceConfigMapper.selectById(id);
@@ -174,6 +178,7 @@ public class SequenceConfigController {
      * @return 操作结果
      */
     @OperateLog("删除序列配置")
+    @RequiresPermission("admin:sequence:edit")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         SequenceConfig existing = sequenceConfigMapper.selectById(id);
@@ -194,6 +199,7 @@ public class SequenceConfigController {
      * @return 操作结果
      */
     @OperateLog("启用/禁用序列配置")
+    @RequiresPermission("admin:sequence:edit")
     @PutMapping("/{id}/toggle")
     public Result<Void> toggle(@PathVariable Long id, @RequestParam Boolean enabled) {
         SequenceConfig existing = sequenceConfigMapper.selectById(id);

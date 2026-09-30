@@ -1,6 +1,7 @@
 package com.astral.qt.controller;
 
 import cn.hutool.crypto.digest.DigestUtil;
+import com.astral.auth.security.DataScopeResolver;
 import com.astral.auth.security.PermissionChecker;
 import com.astral.qt.common.QtRestResp;
 import com.astral.qt.dto.QtSourceReportDto;
@@ -30,10 +31,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * 轻听 App 公共控制器
  * <p>公告与版本更新为免认证接口。</p>
+ * <p><b>权限</b>：本控制器整体落在「App 匿名公共区」（AuthInterceptor 对
+ * {@code /api/v1/app/**} 中非 {@code /user/**} 子树一律放行），游客即可访问，
+ * 因此<b>不标注</b> {@code @RequiresPermission}（接口可达性无需权限）。
+ * 版本更新/音源包的测试渠道属<b>结果级权限</b>，由 {@link DataScopeResolver}
+ * 按 token 解析可见渠道集合（{@code user:qt:update:channel:beta} / {@code user:qt:source:channel:beta}），
+ * 只决定「能看见哪些渠道」，不是「能不能调用」。</p>
  */
 @Slf4j
 @Tag(name = "轻听API-App公共")
@@ -56,6 +65,10 @@ public class QtAppController {
     @Resource
     private PermissionChecker permissionChecker;
 
+    /** 结果级权限解析器：按 token 解析可见渠道集合（stable 基础 + 授权的 beta） */
+    @Resource
+    private DataScopeResolver dataScopeResolver;
+
     @Resource
     private ObjectMapper objectMapper;
 
@@ -68,7 +81,7 @@ public class QtAppController {
         return QtRestResp.success(noticeService.listActive(version, loggedIn));
     }
 
-    @Operation(summary = "获取APP更新信息（测试版按qt_admin/qt_tester权限投放，satoken可选头识别人群）")
+    @Operation(summary = "获取APP更新信息（按 user:qt:update:channel 可见集合投放，satoken 可选头识别人群）")
     @GetMapping("/update")
     public QtRestResp<QtAppUpdate> getUpdate(@RequestParam("type") Long type,
                                              @RequestParam("version") String version,
@@ -76,9 +89,12 @@ public class QtAppController {
         if (!QtAppUpdate.isSupportedType(type)) {
             return QtRestResp.error(320, "暂不支持该类型");
         }
-        boolean tester = permissionChecker.hasAnyPermissionByToken(satoken,
-                PermissionChecker.QT_ADMIN_PERMISSION, PermissionChecker.QT_TESTER_PERMISSION);
-        return QtRestResp.success(appService.getUpdate(type, version, tester));
+        // 可见集合 = {stable} ∪ 用户被授予的渠道（如 user:qt:update:channel:beta → beta；超管为全部已登记渠道）。
+        // 权限只决定「能看见哪些渠道」，最终发哪个版本由业务在集合内按版本号最大者决定：
+        // 正式版版本号更高时，持有测试权限的用户依然收到正式版。
+        Set<String> channels = dataScopeResolver.resolveChannelsByToken(
+                satoken, PermissionChecker.QT_UPDATE_CHANNEL_SCOPE);
+        return QtRestResp.success(appService.getUpdate(type, version, channels));
     }
 
     @Operation(summary = "获取启用的GitHub加速节点列表（免认证，走后台缓存）")
@@ -106,14 +122,14 @@ public class QtAppController {
      * 音源包 manifest（§2.2）：响应体包 QtRestResp（code=200，data 为 QtSourceManifestVo），
      * 保持免认证。带 ETag/If-None-Match 协商缓存，命中直接 304，客户端零成本结束本轮检查。
      * <p>
-     * 人群语义（复用 channel 字段）：stable=正式包所有用户可收到；beta=测试包仅对拥有
-     * qt_admin / qt_tester 权限（含超管）的用户投放。客户端不再上送 channel，识别方式：
-     * 请求头带 satoken 时按 token 反查登录用户并读取其权限列表，无 token / token 失效
-     * 一律按非测试人群处理。ETag 计算混入 tester 标识，避免同一客户端登录态变化后
-     * 拿到错误命中的 304 缓存。
+     * 人群语义（复用 channel 字段）：可见渠道集合 = {stable} ∪ 用户被授予的渠道
+     * （user:qt:source:channel:beta → beta；超管为全部已登记渠道）。客户端不上送 channel，
+     * 识别方式：请求头带 satoken 时按 token 反查登录用户并解析其可见渠道集合，
+     * 无 token / token 失效一律只可见 stable。ETag 计算混入可见集合，避免同一客户端
+     * 登录态变化后拿到错误命中的 304 缓存。
      * </p>
      */
-    @Operation(summary = "音源包manifest（免认证+ETag/304，测试包按qt_admin/qt_tester权限投放）")
+    @Operation(summary = "音源包manifest（免认证+ETag/304，按 user:qt:source:channel 可见集合投放）")
     @GetMapping("/source/manifest")
     public ResponseEntity<String> sourceManifest(
             @RequestParam("platform") Long platform,
@@ -121,10 +137,10 @@ public class QtAppController {
             @RequestParam(value = "hostApiVersion", required = false) Long hostApiVersion,
             @RequestHeader(value = "satoken", required = false) String satoken,
             @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) throws Exception {
-        // 测试包人群识别：token 有效且其权限列表命中 qt_admin / qt_tester / *:*:* 之一
-        boolean tester = permissionChecker.hasAnyPermissionByToken(satoken,
-                PermissionChecker.QT_ADMIN_PERMISSION, PermissionChecker.QT_TESTER_PERMISSION);
-        QtSourceManifestVo manifest = sourceService.buildManifest(platform, appVersionCode, hostApiVersion, tester);
+        // 可见渠道集合：无权限者只有 stable，有 user:qt:source:channel:beta 者额外可见 beta
+        Set<String> channels = dataScopeResolver.resolveChannelsByToken(
+                satoken, PermissionChecker.QT_SOURCE_CHANNEL_SCOPE);
+        QtSourceManifestVo manifest = sourceService.buildManifest(platform, appVersionCode, hostApiVersion, channels);
         // ETag 必须按「不含 generatedAt」的稳定内容计算：generatedAt 每次请求都变，
         // 直接对响应体做摘要会让 If-None-Match 永远不命中。稳定拷贝按包装后的结构来
         tools.jackson.databind.node.ObjectNode data =
@@ -133,7 +149,7 @@ public class QtAppController {
         tools.jackson.databind.node.ObjectNode stable = objectMapper.createObjectNode();
         stable.put("code", 200);
         stable.set("data", data);
-        stable.put("tester", tester);
+        stable.put("channels", String.join(",", new TreeSet<>(channels)));
         String etag = "\"" + DigestUtil.md5Hex(objectMapper.writeValueAsString(stable)) + "\"";
         if (etag.equals(ifNoneMatch)) {
             return ResponseEntity.status(304).eTag(etag).build();

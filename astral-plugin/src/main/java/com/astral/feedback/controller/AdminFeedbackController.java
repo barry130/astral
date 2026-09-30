@@ -1,5 +1,6 @@
 package com.astral.feedback.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.feedback.dto.PublicDto;
 import com.astral.feedback.dto.ReplyDto;
@@ -34,6 +35,7 @@ import java.util.Map;
 @Tag(name = "反馈插件-管理端反馈")
 @RestController
 @RequestMapping("/api/v1/admin/feedback")
+@RequiresPermission(value = "admin:feedback:view", name = "反馈查看", description = "反馈分页/详情/回复列表/统计查看")
 public class AdminFeedbackController {
 
     @Resource
@@ -58,6 +60,7 @@ public class AdminFeedbackController {
     }
 
     @Operation(summary = "状态流转（校验合法流转，触发通知）")
+    @RequiresPermission(value = "admin:feedback:edit", name = "反馈编辑", description = "反馈状态流转/公开切换/删除/回复")
     @PutMapping("/{id}/status")
     public Result<Void> changeStatus(@PathVariable Long id, @Valid @RequestBody StatusDto dto) {
         feedbackService.changeStatus(id, dto);
@@ -65,6 +68,7 @@ public class AdminFeedbackController {
     }
 
     @Operation(summary = "公开切换")
+    @RequiresPermission(value = "admin:feedback:edit", name = "反馈编辑", description = "反馈状态流转/公开切换/删除/回复")
     @PutMapping("/{id}/public")
     public Result<Void> changePublic(@PathVariable Long id, @RequestBody PublicDto dto) {
         feedbackService.changePublic(id, dto);
@@ -72,6 +76,7 @@ public class AdminFeedbackController {
     }
 
     @Operation(summary = "软删")
+    @RequiresPermission(value = "admin:feedback:edit", name = "反馈编辑", description = "反馈状态流转/公开切换/删除/回复")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         feedbackService.softDelete(id);
@@ -85,6 +90,7 @@ public class AdminFeedbackController {
     }
 
     @Operation(summary = "管理端回复（同时通知提交人）")
+    @RequiresPermission(value = "admin:feedback:edit", name = "反馈编辑", description = "反馈状态流转/公开切换/删除/回复")
     @PostMapping("/reply")
     public Result<FeedbackReply> reply(@Valid @RequestBody ReplyDto dto) {
         // 管理端身份：使用当前宿主登录用户ID

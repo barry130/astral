@@ -29,18 +29,54 @@ import {
  *
  * 与 antd 的差异点，均为项目内未使用的特性，故刻意不实现：
  * 虚拟滚动、固定表头组、筛选下拉、服务端排序、单元格可编辑。
- * 已实现的能力：本地排序、展开行、行点击、省略号、对齐、列宽、
- * 空态、加载遮罩、表体纵向滚动。
+ * 已实现的能力：本地排序、展开行、**树形数据（依 `children` 字段自动识别）**、
+ * 行点击、省略号、对齐、列宽、空态、加载遮罩、表体纵向滚动。
  */
 
-/** 对齐 / 省略号 / 宽度 的单元格类名拼装 */
-function cellClass<T>(col: DataTableColumn<T>): string {
+/**
+ * 对齐 / 省略号 / 宽度 的单元格类名拼装。
+ * `numeric` 为自动识别出的数值列（见 resolveNumericColumn）：右对齐并锁定等宽数字，
+ * 保证多行数字的个位对齐——这是表格「看起来专业」的关键一条。
+ */
+function cellClass<T>(col: DataTableColumn<T>, numeric = false): string {
   return cn(
     col.align === 'center' && 'text-center',
-    col.align === 'right' && 'text-right',
+    (col.align === 'right' || numeric) && 'text-right tabular-nums',
     col.ellipsis && 'max-w-0 truncate',
     col.className,
   );
+}
+
+/**
+ * 数值列自动识别：列已显式声明 align 时不介入（尊重调用方）；
+ * 否则抽样该列前若干行的**原始值**，全为 number 才判为数值列。
+ *
+ * 之所以取原始值而非渲染结果：页面常写 `render: (v) => fmt(v)` 把数字格式化成
+ * 带千分位的字符串，按渲染结果判断会漏判。
+ * 之所以要求「全部样本都是 number」：混入任意文本就说明该列不是纯数量列
+ * （如「版本号」「编号」这类标识），此时右对齐反而难读。
+ */
+function resolveNumericColumn<T>(col: DataTableColumn<T>, rows: readonly T[]): boolean {
+  if (col.align) return false;
+  let seen = 0;
+  for (let i = 0; i < rows.length && seen < 20; i += 1) {
+    const value = resolveCellValue(rows[i], col.dataIndex);
+    if (isBlankValue(value)) continue;
+    if (typeof value !== 'number') return false;
+    seen += 1;
+  }
+  return seen > 0;
+}
+
+/**
+ * 树形子节点解析（antd 树形表格的默认字段名就是 `children`）。
+ *
+ * 空数组按「无子节点」处理：菜单/权限这类树常把叶子写成 `children: []`，
+ * 若按「有 children 就是父节点」判定，叶子行会渲染出一个点了没反应的箭头。
+ */
+function resolveChildren<T>(record: T): T[] | undefined {
+  const kids = (record as { children?: unknown }).children;
+  return Array.isArray(kids) && kids.length > 0 ? (kids as T[]) : undefined;
 }
 
 export function DataTable<T extends object>({
@@ -75,6 +111,9 @@ export function DataTable<T extends object>({
     const next = [...rows].sort(col.sorter);
     return sortOrder === 'descend' ? next.reverse() : next;
   }, [rows, columns, sortKey, sortOrder]);
+
+  /** 数值列标记（与 columns 同序）：用于表头与单元格同步右对齐 */
+  const numericCols = useMemo(() => columns.map((col) => resolveNumericColumn(col, rows)), [columns, rows]);
 
   /** 初始展开全部行：数据就绪后统一置为展开 */
   useEffect(() => {
@@ -122,6 +161,95 @@ export function DataTable<T extends object>({
   const isLoading = loading === true || (typeof loading === 'object' && loading?.spinning !== false && loading !== undefined);
   const hasExpand = !!expandable?.expandedRowRender;
 
+  /**
+   * 树形展开状态：与「展开详情行」的 innerExpanded **分开维护**。
+   * 两者语义不同（一个是层级展开、一个是行下详情面板），
+   * 共用一个 Set 时同一 key 会被两种展开互相干扰。
+   */
+  const [innerTreeExpanded, setInnerTreeExpanded] = useState<Set<string>>(new Set());
+
+  /**
+   * 是否树形数据：任一行带非空 `children` 即按树渲染（与 antd 同判据，无需额外开关）。
+   * 非树形数据仍走原来的平铺路径，因此对存量列表页零影响。
+   */
+  const hasTreeData = useMemo(() => sortedRows.some((r) => resolveChildren(r) !== undefined), [sortedRows]);
+
+  /**
+   * 树形缩进与箭头所在的列：**第一个带 dataIndex 的列**。
+   * 刻意不取「第 0 列」：列表常把拖拽手柄、选择框这类不承载数据的列排在首位
+   * （菜单管理即「拖拽 | 菜单名称 | …」），箭头落进 50px 的手柄列会被挤扁。
+   * 与 antd 一致——树形缩进作用在首个承载数据的列上。
+   */
+  const treeColumnIndex = useMemo(() => {
+    const i = columns.findIndex((c) => c.dataIndex !== undefined && c.dataIndex !== null);
+    return i >= 0 ? i : 0;
+  }, [columns]);
+
+  /**
+   * 树 key：rowKey 缺省时用「父路径 + 本层下标」。
+   * 直接用下标会在不同层级撞 key（父级第 0 个和子级第 0 个都叫 "0"），
+   * 展开其中一个会把另一个也一起展开。
+   */
+  const treeKeyOf = (record: T, index: number, parentKey: string) =>
+    rowKey === undefined ? `${parentKey}${index}/` : resolveRowKey(record, index, rowKey);
+
+  /** 初始展开全部树节点（`defaultExpandAllRows` 对树形数据同样生效） */
+  useEffect(() => {
+    if (!defaultExpandAllRows || !hasTreeData) return;
+    const keys: string[] = [];
+    const walk = (nodes: readonly T[], parentKey: string) => {
+      nodes.forEach((record, index) => {
+        const kids = resolveChildren(record);
+        if (!kids) return;
+        const key = treeKeyOf(record, index, parentKey);
+        keys.push(key);
+        walk(kids, `${key}/`);
+      });
+    };
+    walk(sortedRows, '');
+    setInnerTreeExpanded(new Set(keys));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultExpandAllRows, hasTreeData, sortedRows, rowKey]);
+
+  /**
+   * 可见行：顶层行按展开状态递归展开后的扁平序列（depth 供首列缩进用）。
+   * 非树形数据等价于 sortedRows 的逐行映射，key 与原实现完全一致
+   * （必须一致——`innerExpanded` 里存的就是 resolveRowKey 的结果）。
+   */
+  const visibleRows = useMemo(() => {
+    type TreeRow = { record: T; index: number; key: string; depth: number; hasChildren: boolean };
+    if (!hasTreeData) {
+      return sortedRows.map<TreeRow>((record, index) => ({
+        record,
+        index,
+        key: resolveRowKey(record, index, rowKey),
+        depth: 0,
+        hasChildren: false,
+      }));
+    }
+    const out: TreeRow[] = [];
+    const walk = (nodes: readonly T[], depth: number, parentKey: string) => {
+      nodes.forEach((record, index) => {
+        const kids = resolveChildren(record);
+        const key = rowKey === undefined ? `${parentKey}${index}/` : resolveRowKey(record, index, rowKey);
+        out.push({ record, index, key, depth, hasChildren: !!kids });
+        if (kids && innerTreeExpanded.has(key)) walk(kids, depth + 1, `${key}/`);
+      });
+    };
+    walk(sortedRows, 0, '');
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedRows, hasTreeData, rowKey, innerTreeExpanded]);
+
+  const toggleTree = (key: string) => {
+    setInnerTreeExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   const total = pagination ? (pagination.total ?? rows.length) : rows.length;
 
   return (
@@ -129,7 +257,8 @@ export function DataTable<T extends object>({
       <div
         className={cn(
           'relative overflow-hidden',
-          bordered && 'rounded-lg border border-border',
+          bordered &&
+            'rounded-xl border border-border bg-card shadow-[0_1px_3px_rgba(24,24,27,0.05)] dark:shadow-none',
         )}
       >
         <div className="overflow-x-auto" style={scrollY ? { maxHeight: scrollY, overflowY: 'auto' } : undefined}>
@@ -149,8 +278,11 @@ export function DataTable<T extends object>({
               ))}
             </colgroup>
 
-            <TableHeader className="sticky top-0 z-[1] bg-[var(--color-bg-base)]">
-              <TableRow className="hover:bg-transparent">
+            {/* 表头吸顶：底色必须实心，否则滚动时行内容会从表头下方透出 */}
+            <TableHeader className="sticky top-0 z-[1] bg-muted">
+              {/* hover:bg-transparent 用 important 后缀：表头行不该响应数据行的悬停底色，
+                  两者同属 hover 变体的 background-color，不加 ! 会由 Tailwind 的输出顺序决定谁生效 */}
+              <TableRow className="hover:bg-transparent!">
                 {hasExpand && <TableHead style={{ width: 40 }} />}
                 {columns.map((col, i) => {
                   const key = resolveColumnKey(col, i);
@@ -160,9 +292,9 @@ export function DataTable<T extends object>({
                     <TableHead
                       key={key}
                       className={cn(
-                        dense && 'h-8 px-2',
+                        dense && 'h-9 px-3',
                         col.align === 'center' && 'text-center',
-                        col.align === 'right' && 'text-right',
+                        (col.align === 'right' || numericCols[i]) && 'text-right',
                         col.ellipsis && 'max-w-0 truncate',
                       )}
                       aria-sort={active ? (sortOrder === 'ascend' ? 'ascending' : 'descending') : undefined}
@@ -199,14 +331,13 @@ export function DataTable<T extends object>({
 
             <TableBody>
               {sortedRows.length === 0 && !isLoading ? (
-                <TableRow className="hover:bg-transparent">
+                <TableRow className="hover:bg-transparent!">
                   <TableCell colSpan={columns.length + (hasExpand ? 1 : 0)} className="p-0">
                     {emptyText ?? <EmptyState description="暂无数据" padding={20} ariaLabel="暂无数据" />}
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedRows.map((record, index) => {
-                  const key = resolveRowKey(record, index, rowKey);
+                visibleRows.map(({ record, index, key, depth, hasChildren }) => {
                   const rowProps = onRow?.(record, index);
                   const isExpanded = expandedKeys.has(key);
                   return (
@@ -216,7 +347,7 @@ export function DataTable<T extends object>({
                         className={cn(rowProps?.className, rowProps?.onClick && 'cursor-pointer')}
                       >
                         {hasExpand && (
-                          <TableCell className={cn('pr-0', dense && 'px-2')}>
+                          <TableCell className={cn('pr-0', dense && 'px-3')}>
                             {(!expandable!.rowExpandable || expandable!.rowExpandable(record)) && (
                               <button
                                 type="button"
@@ -237,20 +368,49 @@ export function DataTable<T extends object>({
                           const value = resolveCellValue(record, col.dataIndex);
                           const rendered = col.render ? col.render(value, record, index) : (value as React.ReactNode);
                           const extra = col.onCell?.(record, index);
+                          /**
+                           * 树形缩进与展开箭头都落在**首列**（antd 树形表格的呈现方式）：
+                           * 箭头放首列内而不是单开一列，叶子多的树才不会出现一列空箭头。
+                           */
+                          const treeCell = hasTreeData && i === treeColumnIndex;
                           return (
                             <TableCell
                               key={resolveColumnKey(col, i)}
-                              className={cn(cellClass(col), dense && 'p-2', extra?.className)}
+                              className={cn(cellClass(col, numericCols[i]), dense && 'px-3 py-1.5', extra?.className)}
                               title={extra?.title ?? (col.ellipsis && typeof rendered === 'string' ? rendered : undefined)}
+                              style={treeCell && depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
                             >
+                              {treeCell &&
+                                (hasChildren ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleTree(key);
+                                    }}
+                                    aria-expanded={innerTreeExpanded.has(key)}
+                                    aria-label={innerTreeExpanded.has(key) ? '收起子菜单' : '展开子菜单'}
+                                    className="mr-1 inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm align-middle hover:bg-accent"
+                                  >
+                                    <ChevronRight
+                                      className={cn(
+                                        'size-3.5 transition-transform',
+                                        innerTreeExpanded.has(key) && 'rotate-90',
+                                      )}
+                                    />
+                                  </button>
+                                ) : (
+                                  /* 叶子行占位：与箭头等宽，保证同层文字左边缘对齐 */
+                                  <span className="mr-1 inline-block size-5 shrink-0 align-middle" aria-hidden />
+                                ))}
                               {isBlankValue(rendered) ? <span className="text-muted-foreground/60">—</span> : (rendered as React.ReactNode)}
                             </TableCell>
                           );
                         })}
                       </TableRow>
                       {hasExpand && isExpanded && (!expandable!.rowExpandable || expandable!.rowExpandable(record)) && (
-                        <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={columns.length + 1} className="bg-[var(--color-bg-base)] p-4">
+                        <TableRow className="hover:bg-transparent!">
+                          <TableCell colSpan={columns.length + 1} className="bg-muted/60 p-4">
                             {expandable!.expandedRowRender!(record, index)}
                           </TableCell>
                         </TableRow>
@@ -265,7 +425,7 @@ export function DataTable<T extends object>({
 
         {/* 加载遮罩：二次加载时保留既有数据，避免表格高度跳变 */}
         {isLoading && (
-          <div className="absolute inset-0 z-[2] flex items-start justify-center bg-background/60 pt-16">
+          <div className="bg-background/65 absolute inset-0 z-[2] flex items-start justify-center pt-16 backdrop-blur-[1px]">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         )}

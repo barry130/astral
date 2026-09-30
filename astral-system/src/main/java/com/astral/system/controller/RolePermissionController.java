@@ -1,5 +1,7 @@
 package com.astral.system.controller;
 
+import com.astral.auth.security.PermissionCache;
+import com.astral.common.annotation.RequiresSuper;
 import com.astral.dao.entity.RolePermission;
 import com.astral.system.service.RolePermissionService;
 import com.astral.common.result.Result;
@@ -15,15 +17,20 @@ import jakarta.validation.Valid;
 /**
  * 角色权限关联控制器
  * <p>提供角色权限关联关系的CRUD操作</p>
+ * <p>权限：本控制器整体属于「角色 → 权限」的提权面（读写都会暴露或改变授权关系），
+ * 全部接口要求超管（类级 {@link RequiresSuper}）。</p>
  */
 @Tag(name = "角色权限关联表")
 @RestController
 @RequestMapping("/api/v1/admin/system/role_permission")
+@RequiresSuper
 @RequiredArgsConstructor
 public class RolePermissionController {
 
     /** 角色权限关联服务 */
     private final RolePermissionService rolePermissionService;
+    /** 权限缓存：角色权限关系变更后递增版本，立即失效所有用户的权限缓存 */
+    private final PermissionCache permissionCache;
 
     /**
      * 分页查询角色权限关联列表
@@ -62,6 +69,8 @@ public class RolePermissionController {
     @PostMapping
     public Result<Void> create(@Valid @RequestBody RolePermission entity) {
         rolePermissionService.save(entity);
+        // 角色→权限映射已变更，递增权限版本让所有用户的权限缓存下次读取即回源
+        permissionCache.bumpVersion();
         return Result.success();
     }
 
@@ -77,6 +86,8 @@ public class RolePermissionController {
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody RolePermission entity) {
         entity.setId(id);
         rolePermissionService.updateById(entity);
+        // 角色→权限映射已变更，递增权限版本
+        permissionCache.bumpVersion();
         return Result.success();
     }
 
@@ -90,6 +101,8 @@ public class RolePermissionController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         rolePermissionService.removeById(id);
+        // 角色→权限映射已变更，递增权限版本
+        permissionCache.bumpVersion();
         return Result.success();
     }
 }

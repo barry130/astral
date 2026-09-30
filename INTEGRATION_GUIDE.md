@@ -39,6 +39,9 @@
 mvn clean package -DskipTests
 ```
 
+> 前置要求：**JDK 25 + Maven 3.9+**。根 `pom.xml` 的 `maven.compiler.release=25`，
+> 且依赖 Spring Boot 4.1 / Spring Framework 7，JDK 17 / 21 无法编译。
+
 生成的 jar 位于 `astral-server/target/astral-server-1.0.0.jar`
 
 ### 步骤 2：启动服务
@@ -79,6 +82,11 @@ curl -X POST http://localhost:27000/api/v1/all/sequence/next \
 ## 方案二：Maven 依赖引入
 
 如果你只需要在现有项目中集成部分功能（如序列生成）：
+
+> **宿主项目必须与 Astral 的技术栈对齐**：Spring Boot **4.1.x**（Spring Framework 7）+ **JDK 25**。
+> 用 `spring-boot-starter-parent:4.1.0` 可保证 `jakarta.*`、Spring 7 API 与托管依赖版本一致；
+> 用 JDK 17/21 或 Spring Boot 3.x 的宿主项目无法编译这些模块（`release=25` + 已移除的旧 API）。
+> 前端集成同理，见下文「前端集成」——管理台是 Next.js 16 + React 19 + Tailwind v4 + shadcn/ui。
 
 ### 步骤 1：发布到本地仓库
 
@@ -161,9 +169,17 @@ npm run dev
 
 前端通过 Next.js 的 rewrite 功能将 `/api/*` 代理到后端 `http://localhost:27000`。
 
+> 技术栈：Next.js 16.3（App Router + Turbopack，`output: 'standalone'`）+ React 19.2 + TypeScript 5.6 +
+> Tailwind CSS v4 + shadcn/ui（Radix UI）。要求 Node.js 24 LTS（最低 20.9+），包管理用 npm。
+> Next 16 已移除 `next lint`，仓库因此没有 lint 脚本，类型检查用 `npx tsc --noEmit`。
+
 ### 方式二：嵌入现有前端
 
 复制 `astral-front/src/app/dashboard/` 下的页面到你的项目中，并调整 API 调用路径。
+
+> 注意：页面依赖 Tailwind v4 的主题变量（`src/app/globals.css`）与 shadcn/ui 组件
+> （`src/components/ui/`，基于 Radix UI）。宿主项目若不用 Tailwind v4 + shadcn/ui，
+> 需要一并迁移这些基础设施，而不是只拷页面；共享的请求/字典/权限逻辑在 `src/api/`、`src/lib/`。
 
 ### Token 管理
 
@@ -171,7 +187,9 @@ npm run dev
 
 ```javascript
 axios.interceptors.request.use(config => {
-  const token = localStorage.getItem('satoken');
+  // 管理台实际用的是 'token' 这个 key（见 astral-front/src/api/client.ts），
+  // 取到后放进请求头 'satoken'（后端 sa-token.token-name 的取值）
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers['satoken'] = token;
   }
@@ -185,9 +203,12 @@ axios.interceptors.request.use(config => {
 
 ### 基础检查
 
+- [ ] JDK 25 + Maven 3.9+ 已就绪（JDK 17/21 无法编译）
+- [ ] Node.js 24 LTS 已就绪（前端）
 - [ ] 后端编译无错误：`mvn clean compile`
 - [ ] 后端服务正常启动
-- [ ] 前端服务正常启动
+- [ ] 前端服务正常启动（`npm run dev`）
+- [ ] 前端类型检查通过：`npx tsc --noEmit`
 - [ ] API 文档可访问
 
 ### 数据库检查

@@ -38,6 +38,9 @@ public class Permission {
 
     private Integer type;
 
+    @Size(max = 32)
+    private String domain;
+
     @Size(max = 64)
     private String icon;
 

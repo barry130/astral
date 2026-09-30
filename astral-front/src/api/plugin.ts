@@ -17,6 +17,8 @@ export interface NavExtension {
   path: string;
   icon: string;
   parentPath?: string;
+  /** 访问该导航项所需权限编码（空=不做权限过滤），由侧边栏按登录用户权限过滤 */
+  permission?: string;
   sort?: number;
 }
 

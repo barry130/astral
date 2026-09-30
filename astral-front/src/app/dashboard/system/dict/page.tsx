@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Card, Button, Space, Modal, Form, Input, InputNumber, Switch, Tag, message, Popconfirm, Tabs, Select } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
+import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
 /** Java类型与JDBC类型的映射关系，用于字典类型创建时自动匹配 */
@@ -134,6 +135,10 @@ export default function DictPage() {
   const [typeForm] = Form.useForm();
   /** 字典数据表单实例 */
   const [dataForm] = Form.useForm();
+
+  const hasPerm = usePerm();
+  /** 是否具备数据字典维护权限：权限码需与后端 @RequiresPermission("admin:system:dict:edit") 一致 */
+  const canEdit = hasPerm('admin:system:dict:edit');
 
   /** 组件挂载时加载字典类型列表 */
   useEffect(() => {
@@ -322,9 +327,9 @@ export default function DictPage() {
       width: 140,
       render: (_: any, r: DictType) => (
         <Space>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditType(r)}>编辑</Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDeleteType(r.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditType(r)} disabled={!canEdit}>编辑</Button>
+          <Popconfirm title="确认删除?" disabled={!canEdit} onConfirm={() => handleDeleteType(r.id)}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -366,9 +371,9 @@ export default function DictPage() {
       width: 140,
       render: (_: any, r: DictData) => (
         <Space>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditData(r)}>编辑</Button>
-          <Popconfirm title="确认删除?" onConfirm={() => handleDeleteData(r.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditData(r)} disabled={!canEdit}>编辑</Button>
+          <Popconfirm title="确认删除?" disabled={!canEdit} onConfirm={() => handleDeleteData(r.id)}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -386,7 +391,7 @@ export default function DictPage() {
               <Card>
                 <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
                   <Input.Search placeholder="搜索字典类型" allowClear style={{ width: 300 }} />
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateType}>新建类型</Button>
+                  {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateType}>新建类型</Button>}
                 </div>
                 <ResizableTable 
                   dataSource={types} 
@@ -417,7 +422,7 @@ export default function DictPage() {
               <Card>
                 <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="filter-bar">
                   <Select placeholder="选择字典类型" style={{ width: 300 }} value={selectedTypeId} onChange={handleSelectType} options={allTypes.map(t => ({ label: t.dictName, value: t.id }))} />
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateData} disabled={!selectedTypeId}>新建数据</Button>
+                  {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateData} disabled={!selectedTypeId}>新建数据</Button>}
                 </div>
                 <ResizableTable dataSource={dictData} columns={dataColumns} rowKey="id" loading={dataLoading} scroll={{ x: 'max-content' }}
                   pagination={{

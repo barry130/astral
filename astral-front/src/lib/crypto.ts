@@ -1,4 +1,5 @@
 import JSEncrypt from 'jsencrypt';
+import { clientHeaders } from '@/lib/client-info';
 
 let cachedPublicKey: string | null = null;
 
@@ -8,7 +9,11 @@ export const getPublicKey = async (): Promise<string> => {
   }
   
   try {
-    const response = await fetch('/api/v1/all/auth/public-key');
+    // 统一客户端系统头：这里用原生 fetch 而非 axios 实例，需要自己带上
+    // （契约见 lib/client-info.ts；只给 astral 请求加，对象存储直传不加）。
+    const response = await fetch('/api/v1/all/auth/public-key', {
+      headers: { ...clientHeaders() },
+    });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: 后端服务未启动或接口不可用`);
     }

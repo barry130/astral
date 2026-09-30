@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, Button, Space, Modal, Form, Input, Select, Switch, Tag, message, Popconfirm, Tabs, Divider, Typography } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, LockOutlined, LoginOutlined } from '@/components/antd-compat/icons';
 import { request, ApiResult } from '@/api/client';
+import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
 /** 用户实体接口 */
@@ -57,6 +58,12 @@ const userApi = {
   resetPassword: (id: number, password: string) => request.put(`/api/v1/admin/system/user/${id}/password`, { password }),
   /** 更新用户状态 */
   updateStatus: (id: number, status: number) => request.put(`/api/v1/admin/system/user/${id}/status`, null, { params: { status } }),
+  /**
+   * 修改用户类型（ADMIN / APP）。
+   * 必须走这个专用接口：`PUT /{id}` 会在后端把 userType 置 null 防 mass assignment，
+   * 类型字段放在普通更新里会被静默丢弃（表现为下拉框改了但保存无效）。
+   */
+  changeType: (id: number, userType: string) => request.put(`/api/v1/admin/system/user/${id}/type`, { userType }),
   /** 踢下线 */
   kickOut: (id: number) => request.put(`/api/v1/admin/system/user/${id}/kick`),
   /** 为用户分配角色 */
@@ -107,6 +114,10 @@ export default function UserPage() {
   const [passwordForm] = Form.useForm();
   /** 角色表单实例 */
   const [roleForm] = Form.useForm();
+
+  const hasPerm = usePerm();
+  /** 是否具备用户维护权限：权限码需与后端 @RequiresPermission("admin:system:user:edit") 一致 */
+  const canEdit = hasPerm('admin:system:user:edit');
 
   /** 组件挂载时加载用户列表和角色列表 */
   useEffect(() => {
@@ -167,9 +178,16 @@ export default function UserPage() {
     if (!editingUser) return;
     try {
       const values = await form.validateFields();
-      await userApi.update(editingUser.id, values);
-      message.success('保存成功');
-      setEditingUser((prev) => prev ? { ...prev, ...values } : prev);
+      // userType 不能混在普通更新里提交（后端会置 null 丢弃），必须单独走 /type 接口。
+      // 该接口是超管专属，且会踢掉目标用户会话使新类型立刻生效。
+      const { userType, ...profile } = values;
+      const typeChanged = userType && userType !== editingUser.userType;
+      await userApi.update(editingUser.id, profile);
+      if (typeChanged) {
+        await userApi.changeType(editingUser.id, userType);
+      }
+      message.success(typeChanged ? '保存成功，用户类型已变更（该用户需重新登录）' : '保存成功');
+      setEditingUser((prev) => (prev ? { ...prev, ...profile, userType } : prev));
       loadData();
     } catch (error: any) {
       if (error?.errorFields) return; // 表单校验失败
@@ -276,7 +294,7 @@ export default function UserPage() {
       dataIndex: 'status',
       key: 'status',
       render: (v: number, r: User) => (
-        <Switch checked={v === 1} onChange={(checked) => handleToggleStatus(r.id, checked)} checkedChildren="启用" unCheckedChildren="禁用" />
+        <Switch checked={v === 1} onChange={(checked) => handleToggleStatus(r.id, checked)} disabled={!canEdit} checkedChildren="启用" unCheckedChildren="禁用" />
       ),
     },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => new Date(v).toLocaleString() },
@@ -286,7 +304,7 @@ export default function UserPage() {
       width: 120,
       render: (_: any, r: User) => (
         <Space>
-          <Button type="link" icon={<EditOutlined />} onClick={() => openEdit(r)}>编辑</Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => openEdit(r)} disabled={!canEdit}>编辑</Button>
         </Space>
       ),
     },
@@ -313,7 +331,7 @@ export default function UserPage() {
           <Form.Item name="email" label="邮箱"><Input /></Form.Item>
           <Form.Item name="phone" label="手机号"><Input /></Form.Item>
           <Space>
-            <Button type="primary" onClick={handleSubmitInfo}>保存</Button>
+            <Button type="primary" onClick={handleSubmitInfo} disabled={!canEdit}>保存</Button>
           </Space>
         </Form>
       ),
@@ -326,6 +344,7 @@ export default function UserPage() {
           <Form.Item name="roleIds" label="分配角色" rules={[{ required: true, message: '请选择角色' }]}>
             <Select mode="multiple" placeholder="选择角色" options={roles.map(r => ({ label: r.roleName, value: r.id }))} />
           </Form.Item>
+          {/* 分配角色后端要求超管，前端不做门控 */}
           <Button type="primary" onClick={handleAssignRolesSubmit}>保存角色</Button>
         </Form>
       ),
@@ -340,12 +359,12 @@ export default function UserPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>{editingUser.status === 1 ? '当前状态：已启用' : '当前状态：已封禁'}</span>
               {editingUser.status === 1
-                ? <Popconfirm title="确认封禁该用户？封禁后其将被强制下线" onConfirm={() => handleToggleStatus(editingUser.id, false)}>
-                    <Button danger icon={<LockOutlined />}>封禁</Button>
+                ? <Popconfirm title="确认封禁该用户？封禁后其将被强制下线" disabled={!canEdit} onConfirm={() => handleToggleStatus(editingUser.id, false)}>
+                    <Button danger icon={<LockOutlined />} disabled={!canEdit}>封禁</Button>
                   </Popconfirm>
-                : <Button icon={<DeleteOutlined />} onClick={() => handleToggleStatus(editingUser.id, true)}>解封</Button>}
+                : <Button icon={<DeleteOutlined />} onClick={() => handleToggleStatus(editingUser.id, true)} disabled={!canEdit}>解封</Button>}
             </div>
-            <Button icon={<LoginOutlined />} onClick={handleKickOut}>踢下线</Button>
+            <Button icon={<LoginOutlined />} onClick={handleKickOut} disabled={!canEdit}>踢下线</Button>
           </Space>
 
           <Divider />
@@ -354,13 +373,14 @@ export default function UserPage() {
             <Form.Item name="password" label="新密码" rules={[{ required: true, min: 6, message: '密码至少6位' }]}>
               <Input.Password />
             </Form.Item>
+            {/* 重置密码后端要求超管，前端不做门控 */}
             <Button icon={<KeyOutlined />} onClick={handleResetPasswordSubmit}>重置密码</Button>
           </Form>
 
           <Divider />
           <Typography.Title level={5} type="danger">危险操作</Typography.Title>
-          <Popconfirm title="确认删除该用户?" onConfirm={() => handleDelete(editingUser.id)}>
-            <Button danger icon={<DeleteOutlined />}>删除该用户</Button>
+          <Popconfirm title="确认删除该用户?" disabled={!canEdit} onConfirm={() => handleDelete(editingUser.id)}>
+            <Button danger icon={<DeleteOutlined />} disabled={!canEdit}>删除该用户</Button>
           </Popconfirm>
         </div>
       ),
@@ -392,7 +412,7 @@ export default function UserPage() {
               onChange={(v) => { setTypeFilter(v || ''); loadData(1, pagination.pageSize, search, v || ''); }}
             />
           </div>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建用户</Button>
+          {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建用户</Button>}
         </div>
         <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, onChange: (p, ps) => loadData(p, ps, search), showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'] }} />
       </Card>

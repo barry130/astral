@@ -1,10 +1,22 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Switch, Tag, Popconfirm, message } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, MenuOutlined, HolderOutlined } from '@/components/antd-compat/icons';
 import { menuApi, SysMenu } from '@/api/menu';
+import { getNavExtensions, NavExtension } from '@/api/plugin';
+import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { fetchDictOptions, DictOption } from '@/api/dict';
+
+/**
+ * 菜单类型字典编码（文案来自数据字典 menu_type，禁止前端硬编码）。
+ *
+ * ⚠️ 不要复用 `permission_type`：`sys_menu.type`（0目录/1菜单/2按钮）与
+ * `sys_permission.type`（1目录/2菜单/3按钮/4接口/5数据）是**两套错开一位**的枚举，
+ * 同一个「目录」一个是 0、一个是 1，复用会把标签渲染错。
+ */
+const MENU_TYPE_DICT = 'menu_type';
 
 const iconOptions = [
   'DashboardOutlined', 'ApiOutlined', 'BarChartOutlined', 'ClusterOutlined',
@@ -43,13 +55,30 @@ const getDescendantIds = (tree: SysMenu[], id: number): Set<number> => {
   return set;
 };
 
+/**
+ * 展示用菜单行：sys_menu 真实行 + 插件声明产生的「虚拟行」。
+ *
+ * 插件导航项（`PluginFrontendExtension.NavItem`）是代码里声明的，不落 sys_menu 表。
+ * 如果菜单管理只展示表数据，管理员会以为「轻听/反馈/文件存储这些入口漏登记了」，
+ * 于是手工再建一条 —— 结果侧边栏出现重复入口。这里把它们合并进来只读展示：
+ * id 取负数（不可能与真实主键冲突，真实 id 由全局序列保证 ≥ 1），标「插件声明」，
+ * 禁止编辑/删除/拖拽（改了也不会生效，下次启动仍以插件声明为准）。
+ */
+type DisplayMenu = SysMenu & { pluginDeclared?: boolean };
+
 export default function MenuPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SysMenu[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<SysMenu | null>(null);
   const [form] = Form.useForm();
+  const [typeOptions, setTypeOptions] = useState<DictOption[]>([]);
+  const [pluginNavItems, setPluginNavItems] = useState<NavExtension[]>([]);
   const dragIdRef = useRef<number | null>(null);
+
+  const hasPerm = usePerm();
+  /** 是否具备菜单维护权限：权限码需与后端 @RequiresPermission("admin:system:menu:edit") 一致 */
+  const canEdit = hasPerm('admin:system:menu:edit');
 
   const loadData = () => {
     setLoading(true);
@@ -58,7 +87,61 @@ export default function MenuPage() {
     }).finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    fetchDictOptions([MENU_TYPE_DICT])
+      .then((map) => setTypeOptions(map[MENU_TYPE_DICT] || []))
+      .catch(() => {});
+    // 插件声明的导航项：只读合并展示（失败不影响菜单管理主流程）
+    getNavExtensions()
+      .then((items) => setPluginNavItems(items || []))
+      .catch(() => {});
+  }, []);
+
+  /**
+   * 展示用树 = sys_menu 树 + 插件声明虚拟行（只读）。
+   * 深拷贝后再挂虚拟行：`data` 仍是纯粹的数据库视图，拖拽/编辑只作用于它，
+   * 避免虚拟行混进 `menuApi.update` 的入参（负数 id 打过去必然 404/500）。
+   */
+  const displayData = useMemo<DisplayMenu[]>(() => {
+    if (pluginNavItems.length === 0) return data as DisplayMenu[];
+    const clone = structuredClone(data) as DisplayMenu[];
+    const byPath = new Map<string, DisplayMenu>();
+    const walk = (nodes: DisplayMenu[]) => {
+      for (const n of nodes) {
+        if (n.path) byPath.set(n.path, n);
+        if (n.children && n.children.length > 0) walk(n.children as DisplayMenu[]);
+      }
+    };
+    walk(clone);
+
+    const tops: DisplayMenu[] = [];
+    pluginNavItems.forEach((n, i) => {
+      const parent = n.parentPath ? byPath.get(n.parentPath) : undefined;
+      const virtual: DisplayMenu = {
+        id: -(i + 1),
+        name: n.label,
+        path: n.path,
+        icon: n.icon || '',
+        permission: n.permission || '',
+        type: 1,
+        visible: 1,
+        sort: n.sort ?? 0,
+        parentId: parent ? parent.id : 0,
+        children: [],
+        pluginDeclared: true,
+      };
+      if (parent) {
+        if (!parent.children) parent.children = [];
+        (parent.children as DisplayMenu[]).push(virtual);
+      } else {
+        tops.push(virtual);
+      }
+    });
+    tops.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+    clone.push(...tops);
+    return clone;
+  }, [data, pluginNavItems]);
 
   /** 父菜单下拉选项：展示中文名，带层级缩进 */
   const buildParentOptions = (excludeId?: number) => {
@@ -104,9 +187,12 @@ export default function MenuPage() {
 
   /** 拖拽落下：同父级重排，跨父级则移动并改 parentId */
   const handleDrop = async (targetId: number) => {
+    if (!canEdit) return; // 无菜单维护权限时不响应拖拽排序
+    if (targetId < 0) return; // 插件声明虚拟行不能作为落点
     const dragId = dragIdRef.current;
     dragIdRef.current = null;
     if (!dragId || dragId === targetId) return;
+    if (dragId < 0) return; // 插件声明虚拟行不能拖动
     const src = findNodeContext(data, dragId);
     const tgt = findNodeContext(data, targetId);
     if (!src || !tgt) return;
@@ -141,9 +227,22 @@ export default function MenuPage() {
       title: '拖拽',
       key: 'drag',
       width: 50,
-      render: () => <HolderOutlined style={{ color: '#999', cursor: 'move' }} />,
+      render: (_: unknown, record: DisplayMenu) =>
+        record.pluginDeclared
+          ? <span className="text-muted-foreground">—</span>
+          : <HolderOutlined style={{ color: '#999', cursor: 'move' }} />,
     },
-    { title: '菜单名称', dataIndex: 'name', key: 'name' },
+    {
+      title: '菜单名称',
+      dataIndex: 'name',
+      key: 'name',
+      render: (v: string, record: DisplayMenu) => (
+        <span className="inline-flex items-center gap-1.5">
+          <span>{v}</span>
+          {record.pluginDeclared && <Tag color="purple" style={{ marginInlineEnd: 0 }}>插件声明</Tag>}
+        </span>
+      ),
+    },
     { title: '图标', dataIndex: 'icon', key: 'icon', render: (v: string) => v || '-' },
     { title: '路由', dataIndex: 'path', key: 'path', render: (v: string) => v ? <Tag>{v}</Tag> : '-' },
     { title: '权限', dataIndex: 'permission', key: 'permission', render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '-' },
@@ -154,11 +253,13 @@ export default function MenuPage() {
     },
     {
       title: '操作', key: 'action', width: 160,
-      render: (_: any, record: SysMenu) => (
+      render: (_: unknown, record: DisplayMenu) => record.pluginDeclared ? (
+        <span className="text-xs text-muted-foreground">插件代码声明，只读</span>
+      ) : (
         <Space>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
-          <Popconfirm title="确认删除？" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />}>删除</Button>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={!canEdit}>编辑</Button>
+          <Popconfirm title="确认删除？" disabled={!canEdit} onConfirm={() => handleDelete(record.id)}>
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} disabled={!canEdit}>删除</Button>
           </Popconfirm>
         </Space>
       ),
@@ -169,19 +270,19 @@ export default function MenuPage() {
     <div>
       <Card
         title={<><MenuOutlined /> 菜单管理</>}
-        extra={<Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新增菜单</Button>}
+        extra={canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新增菜单</Button>}
       >
         <ResizableTable
           columns={columns}
-          dataSource={data}
+          dataSource={displayData}
           rowKey="id"
           loading={loading}
           scroll={{ x: 'max-content' }}
           pagination={false}
           defaultExpandAllRows
-          onRow={(record) => ({
-            draggable: true,
-            style: { cursor: 'move' },
+          onRow={(record: DisplayMenu) => ({
+            draggable: canEdit && !record.pluginDeclared,
+            style: { cursor: canEdit && !record.pluginDeclared ? 'move' : 'default' },
             onDragStart: () => { dragIdRef.current = record.id; },
             onDragOver: (e: React.DragEvent) => e.preventDefault(),
             onDrop: () => handleDrop(record.id),
@@ -222,14 +323,14 @@ export default function MenuPage() {
               <InputNumber />
             </Form.Item>
             <Form.Item name="visible" label="可见" valuePropName="checked">
-              <Switch />
+              <Switch disabled={!canEdit} />
             </Form.Item>
             <Form.Item name="type" label="类型">
-              <Select style={{ width: 120 }} options={[
-                { value: 0, label: '目录' },
-                { value: 1, label: '菜单' },
-                { value: 2, label: '按钮' },
-              ]} />
+              {/* 文案统一走数据字典 menu_type，前端不再硬编码「目录/菜单/按钮」 */}
+              <Select
+                style={{ width: 120 }}
+                options={typeOptions.map((o) => ({ value: Number(o.value), label: o.label }))}
+              />
             </Form.Item>
           </Space>
         </Form>

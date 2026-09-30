@@ -79,7 +79,7 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
     @Override
     public List<NavItem> getNavItems() {
         return List.of(
-                new NavItem("序列管理", "/dashboard/sequence", "ApiOutlined", 100)
+                NavItem.pluginPage("序列管理", "/dashboard/sequence", "ApiOutlined", "admin:sequence:view", 100)
         );
     }
 

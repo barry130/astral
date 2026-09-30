@@ -1,5 +1,6 @@
 package com.astral.sequence.controller;
 
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.SequenceStatistics;
 import com.astral.sequence.service.SequenceStatisticsService;
 import com.astral.common.result.Result;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "序列统计表")
 @RestController
 @RequestMapping("/api/v1/admin/sequence/statistics")
+@RequiresPermission("admin:sequence:view")
 @RequiredArgsConstructor
 public class SequenceStatisticsController {
 
@@ -57,6 +59,7 @@ public class SequenceStatisticsController {
      * @return 操作结果
      */
     @Operation(summary = "创建")
+    @RequiresPermission("admin:sequence:edit")
     @PostMapping
     public Result<Void> create(@RequestBody SequenceStatistics entity) {
         sequenceStatisticsService.save(entity);
@@ -71,6 +74,7 @@ public class SequenceStatisticsController {
      * @return 操作结果
      */
     @Operation(summary = "更新")
+    @RequiresPermission("admin:sequence:edit")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody SequenceStatistics entity) {
         entity.setId(id);
@@ -85,6 +89,7 @@ public class SequenceStatisticsController {
      * @return 操作结果
      */
     @Operation(summary = "删除")
+    @RequiresPermission("admin:sequence:edit")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         sequenceStatisticsService.removeById(id);

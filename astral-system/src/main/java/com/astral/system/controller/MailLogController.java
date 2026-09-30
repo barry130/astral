@@ -1,6 +1,6 @@
 package com.astral.system.controller;
 
-import com.astral.auth.security.PermissionChecker;
+import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SysMailLog;
 import com.astral.system.mail.SysMailLogService;
@@ -19,13 +19,13 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class MailLogController {
 
-    /** 邮箱统计查看权限（sys_permission: system:mail:statistics:view） */
-    private static final String PERM_VIEW = "system:mail:statistics:view";
+    /** 邮箱统计查看权限（sys_permission: admin:system:mail:statistics:view） */
+    private static final String PERM_VIEW = "admin:system:mail:statistics:view";
 
     private final SysMailLogService logService;
-    private final PermissionChecker permissionChecker;
 
     @Operation(summary = "分页查询")
+    @RequiresPermission(PERM_VIEW)
     @GetMapping("/page")
     public Result<Page<SysMailLog>> page(@RequestParam(defaultValue = "1") Integer pageNum,
                                          @RequestParam(defaultValue = "10") Integer pageSize,
@@ -37,14 +37,13 @@ public class MailLogController {
                                          @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime start,
                                          @RequestParam(required = false)
                                          @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime end) {
-        permissionChecker.require(PERM_VIEW);
         return Result.success(logService.pageWithFilter(pageNum, pageSize, accountId, pluginId, toEmail, status, start, end));
     }
 
     @Operation(summary = "统计概览")
+    @RequiresPermission(PERM_VIEW)
     @GetMapping("/statistics")
     public Result<Object> statistics() {
-        permissionChecker.require(PERM_VIEW);
         return Result.success(logService.statistics());
     }
 }

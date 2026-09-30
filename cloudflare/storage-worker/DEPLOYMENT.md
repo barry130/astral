@@ -30,7 +30,7 @@
 - [ ] Telegram Bot 已创建，频道已建，Bot 已设为频道管理员（勾选「发布消息」「删除消息」）；
 - [ ] Cloudflare 账号（免费版即可，无需绑卡）；
 - [ ] 后端能编译出 `astral-server-1.0.0.jar`，数据库表由 Flyway 自动创建（已并入初始化基线脚本）；
-- [ ] 本机装有 Node.js 18+（用 wrangler 部署时需要；纯 Dashboard 部署可不用）。
+- [ ] 本机装有 Node.js 24 LTS（用 wrangler 部署时需要；纯 Dashboard 部署可不用）。
 
 ---
 

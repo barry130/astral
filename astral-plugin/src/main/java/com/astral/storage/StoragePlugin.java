@@ -67,7 +67,7 @@ public class StoragePlugin implements AstralPlugin, PluginFrontendExtension {
     @Override
     public List<NavItem> getNavItems() {
         return List.of(
-                new NavItem("文件存储", "/dashboard/plugin/storage", "CloudUploadOutlined", 220)
+                NavItem.pluginPage("文件存储", "/dashboard/plugin/storage", "CloudUploadOutlined", "admin:storage:view", 220)
         );
     }
 }
