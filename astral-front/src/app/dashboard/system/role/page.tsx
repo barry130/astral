@@ -5,6 +5,7 @@ import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Switch, T
 import { PlusOutlined, EditOutlined, DeleteOutlined, SafetyOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
 import { usePerm } from '@/lib/perm';
+import { PermissionSideTag } from '@/lib/permission-side';
 import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, DictOption } from '@/api/dict';
 
@@ -142,6 +143,7 @@ export default function RolePage() {
         ? <span className="font-medium">{p.permissionName}</span>
         : (
           <span className="inline-flex items-center gap-1">
+            <PermissionSideTag code={p.permissionCode} />
             {p.permissionName}
             <Tag color={TYPE_COLORS[String(p.type)] || 'default'}>{typeLabel(p.type)}</Tag>
           </span>

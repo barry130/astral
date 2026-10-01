@@ -5,16 +5,15 @@ import com.astral.common.constant.PermissionType;
 import com.astral.dao.entity.Permission;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.RolePermission;
-import com.astral.dao.entity.User;
 import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.PermissionMapper;
 import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.RolePermissionMapper;
-import com.astral.dao.mapper.UserMapper;
 import com.astral.dao.mapper.UserRoleMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,14 +30,17 @@ import java.util.List;
  * <b>范围权限（{@code type=DATA}，如 beta 渠道资格）不在此列</b>——那是投放资格，
  * 只能由管理员按人/按角色授予。</p>
  *
- * <p><b>与 Flyway 分工</b>：{@code V20261001005} 负责存量数据一次性收敛（建角色/授权/回填），
- * 本类每次启动做同样的幂等收敛，负责增量与自愈（例如角色被误删、授权被清空）。
+ * <p><b>与 Flyway 分工</b>：{@code V20261001005} 负责存量数据一次性收敛（建角色/授权/回填用户），
+ * 已随 2026-10-01 上线执行完毕；本类每次启动只做轻量收敛（补角色、按前缀同步接口权限），
+ * 负责「角色被误删、授权被清空、注解新增 user: 权限」这类增量自愈，
+ * <b>不再逐个回填存量用户</b>——曾经的逐用户 selectCount 循环在百万级用户下拖慢启动数分钟
+ * （healthcheck 误判的主要元凶），且存量已收敛、新注册走 {@link #assignToUser(Long)}，无此必要。
  * 两者都幂等，重复执行不会产生重复授权（唯一约束 {@code uk_sys_role_permission} /
  * {@code uk_sys_user_role} 兜底）。</p>
  *
  * <p><b>角色可移除</b>：这是普通角色（{@code is_super=0}），管理员在角色管理页把
  * APP_USER 从某用户身上摘掉（或直接停用/删除该角色）后，该用户的 App 端接口即 403——
- * 这是预期行为，属「权限收紧」，本类只在**启动时**回填，不会在运行期把用户刚摘掉的角色塞回去。
+ * 这是预期行为，属「权限收紧」，启动时不会把用户刚摘掉的角色塞回去。
  * 唯一例外是用户明确要求的「新注册 App 用户自动分配」：见 {@link #assignToUser(Long)}。</p>
  */
 @Slf4j
@@ -56,7 +58,6 @@ public class AppUserRoleService {
     private final RoleMapper roleMapper;
     private final PermissionMapper permissionMapper;
     private final RolePermissionMapper rolePermissionMapper;
-    private final UserMapper userMapper;
     private final UserRoleMapper userRoleMapper;
     private final PermissionCache permissionCache;
 
@@ -134,35 +135,6 @@ public class AppUserRoleService {
     }
 
     /**
-     * 幂等：把所有 {@code user_type='APP'} 的存量用户纳入 APP_USER（追加，不替换既有角色）。
-     *
-     * @return 本次新增的用户-角色关联条数
-     */
-    public int backfillAppUsers() {
-        Long roleId = ensureRole();
-        List<User> appUsers = userMapper.selectList(
-                new QueryWrapper<User>().eq("user_type", USER_TYPE_APP));
-        int linked = 0;
-        for (User u : appUsers) {
-            Long exists = userRoleMapper.selectCount(new QueryWrapper<UserRole>()
-                    .eq("user_id", u.getId())
-                    .eq("role_id", roleId));
-            if (exists != null && exists > 0) {
-                continue;
-            }
-            UserRole link = new UserRole();
-            link.setUserId(u.getId());
-            link.setRoleId(roleId);
-            userRoleMapper.insert(link);
-            linked++;
-        }
-        if (linked > 0) {
-            permissionCache.bumpVersion();
-        }
-        return linked;
-    }
-
-    /**
      * 幂等：把 APP_USER 分配给指定用户。
      *
      * <p>运行期唯一会「自动发角色」的入口：App 端注册成功后调用，保证新用户开箱即用；
@@ -182,7 +154,14 @@ public class AppUserRoleService {
         UserRole link = new UserRole();
         link.setUserId(userId);
         link.setRoleId(roleId);
-        userRoleMapper.insert(link);
+        try {
+            userRoleMapper.insert(link);
+        } catch (DuplicateKeyException e) {
+            // 并发注册或存量数据已存在该关联：uk_sys_user_role 唯一约束兜底，视为幂等成功。
+            // 2026-10-01 序列事故期间曾因取号撞主键把注册整个打断，这里不再让兜底场景升级为失败。
+            log.info("[AppUserRole] 用户 {} 的 {} 关联已存在（唯一约束兜底），跳过", userId, ROLE_CODE);
+            return;
+        }
         permissionCache.bumpVersion();
         log.info("[AppUserRole] 已为用户 {} 分配默认角色 {}", userId, ROLE_CODE);
     }

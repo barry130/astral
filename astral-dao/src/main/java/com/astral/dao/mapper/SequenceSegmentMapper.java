@@ -52,4 +52,32 @@ public interface SequenceSegmentMapper extends BaseMapper<SequenceSegment> {
             "ON CONFLICT (biz_key) DO NOTHING")
     int insertSegment(@Param("bizKey") String bizKey, @Param("minValue") long minValue,
                       @Param("maxValue") long maxValue, @Param("step") int step);
+
+    /**
+     * 查询业务表当前最大主键值（启动时高水位对齐用）。
+     * 表名先经 {@code [A-Za-z0-9_]+} 白名单校验再以 ${} 拼接，来源为 SchemaRegistry 的
+     * schema JSON（系统内部元数据，非请求输入）。
+     *
+     * @param tableName 表名（已通过标识符校验）
+     * @return MAX(id)，空表返回 0
+     */
+    @Select("SELECT COALESCE(MAX(id), 0) FROM ${tableName}")
+    Long selectMaxId(@Param("tableName") String tableName);
+
+    /**
+     * 判断表是否存在于当前 schema。高水位对齐前的探测：
+     * 避免对「已登记 schema JSON 但物理表尚未建」的表每次启动报 missing relation 刷屏。
+     */
+    @Select("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = #{tableName}")
+    int countTableInCurrentSchema(@Param("tableName") String tableName);
+
+    /**
+     * 抬高号段上限（只升不降）。启动高水位对齐专用：
+     * 调用时机在全部生成器实例化之前，无并发持有旧内存缓冲，故不动 version。
+     *
+     * @return 影响行数（0 = 无需对齐，或已被并发抬高）
+     */
+    @Update("UPDATE sequence_segment SET max_value = #{newMaxValue}, update_time = CURRENT_TIMESTAMP " +
+            "WHERE biz_key = #{bizKey} AND max_value < #{newMaxValue}")
+    int raiseMaxValue(@Param("bizKey") String bizKey, @Param("newMaxValue") long newMaxValue);
 }

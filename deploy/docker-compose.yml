@@ -49,6 +49,12 @@ services:
       STORAGE_DOWNLOAD_SIGNING_KEY_V1: "${STORAGE_DOWNLOAD_SIGNING_KEY_V1:-}"
       # ---- 时区 ----
       TZ: Asia/Shanghai
+      # ---- CORS 跨域白名单（当前生产为「跨域直连」形态：web.canace.cn 直连 astral.canace.cn）----
+      # 后端默认只放行 http://localhost:3000（2026-09-28 由 * 收紧：allowCredentials=true 下
+      # 通配等于对任意站点开放带凭据跨域）。生产必须在 deploy/.env 显式列出全部前端域名，
+      # 漏一个该域名登录即报「无法连接到服务器」（OPTIONS 预检 403 Invalid CORS request）。
+      # 注意：compose 只透传 environment: 里引用到的变量——只写 .env 不写这里不生效（踩过）。
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-http://localhost:3000}"
     # Linux 下让容器可通过 host.docker.internal 访问宿主机上的 PostgreSQL/Redis
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -60,7 +66,11 @@ services:
       - astral-net
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:27000/actuator/health"]
-      interval: 30s
+      # start_period 内的失败不计入判定：冷启动要跑 Flyway 迁移 + Spring 全量装配，
+      # 1核2G 机器实测 ~60-90s。此前无 start_period + interval 30s 会在 ~90s 误判 unhealthy，
+      # 依赖 service_healthy 的 frontend 因此停在 Created 状态（每次部署「报错但过一会成功」）。
+      start_period: 300s
+      interval: 15s
       timeout: 5s
       retries: 3
 
@@ -72,10 +82,12 @@ services:
       network: host
       args:
         BACKEND_URL: http://backend:27000
-        # 默认留空: 浏览器走同源相对路径 /api, 由 Next.js 服务端 rewrites 转发到 backend 容器。
-        # 同源请求没有 Mixed Content / CORS 问题, 是 HTTPS(反向代理) 部署的唯一推荐形态;
-        # 如需浏览器直连后端, 可在服务器 deploy/.env 中覆盖, 但只能是 https:// 地址,
-        # http:// 会被 HTTPS 页面以 Mixed Content 拦截(表现为"无法连接到服务器")
+        # 生产（CI 镜像）当前为「跨域直连」形态：GitHub 仓库变量 NEXT_PUBLIC_API_URL
+        # 设为 https://astral.canace.cn，浏览器直连后端域，须同步维护后端 CORS 白名单
+        # （backend 的 CORS_ALLOWED_ORIGINS 与 .env.example）。
+        # 本地构建留空则回到同源形态：浏览器走相对路径 /api，由 Next.js 服务端 rewrites
+        # 转发到 backend 容器，无跨域 / Mixed Content 问题。
+        # 切换形态需重建前端镜像（该值构建时内联进静态资源，重启容器不会变）。
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     container_name: astral-frontend
     restart: unless-stopped

@@ -6,6 +6,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@/co
 import { request } from '@/api/client';
 import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, DictOption } from '@/api/dict';
+import { PermissionSideTag, SIDE_META, sideOfCode } from '@/lib/permission-side';
 
 const { Option } = Select;
 
@@ -29,6 +30,7 @@ export default function PermissionPage() {
   const [typeOptions, setTypeOptions] = useState<DictOption[]>([]);
   const [domainFilter, setDomainFilter] = useState<string | undefined>(undefined);
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
+  const [sideFilter, setSideFilter] = useState<string | undefined>(undefined);
   const [keyword, setKeyword] = useState('');
   const [form] = Form.useForm();
 
@@ -74,12 +76,13 @@ export default function PermissionPage() {
     return Array.from(set).sort();
   }, [permissions]);
 
-  /** 过滤 + 按「域 → 类型 → 权限码」排序，同域权限天然聚在一起 */
+  /** 过滤 + 按「域 → 端 → 类型 → 权限码」排序，同域权限天然聚在一起 */
   const dataSource = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
     return permissions
       .filter((p) => (domainFilter ? domainOf(p) === domainFilter : true))
       .filter((p) => (typeFilter ? String(p.type) === typeFilter : true))
+      .filter((p) => (sideFilter ? sideOfCode(p.permissionCode) === sideFilter : true))
       .filter((p) => {
         if (!kw) return true;
         return String(p.permissionCode || '').toLowerCase().includes(kw)
@@ -88,11 +91,14 @@ export default function PermissionPage() {
       .sort((a, b) => {
         const d = domainOf(a).localeCompare(domainOf(b));
         if (d !== 0) return d;
+        const sa = sideOfCode(a.permissionCode) ?? 'zz';
+        const sb = sideOfCode(b.permissionCode) ?? 'zz';
+        if (sa !== sb) return sa.localeCompare(sb);
         const t = (a.type ?? 0) - (b.type ?? 0);
         if (t !== 0) return t;
         return String(a.permissionCode || '').localeCompare(String(b.permissionCode || ''));
       });
-  }, [permissions, domainFilter, typeFilter, keyword]);
+  }, [permissions, domainFilter, typeFilter, sideFilter, keyword]);
 
   const handleAdd = () => {
     setEditingPermission(null);
@@ -139,6 +145,12 @@ export default function PermissionPage() {
       dataIndex: 'domain',
       width: 110,
       render: (_: any, record: any) => <Tag color="cyan">{domainOf(record)}</Tag>,
+    },
+    {
+      title: '端',
+      dataIndex: 'permissionCode',
+      width: 90,
+      render: (_: any, record: any) => <PermissionSideTag code={record.permissionCode} />,
     },
     { title: '权限编码', dataIndex: 'permissionCode', width: 260 },
     { title: '权限名称', dataIndex: 'permissionName' },
@@ -197,6 +209,17 @@ export default function PermissionPage() {
             {domainOptions.map((d) => <Option key={d} value={d}>{d}</Option>)}
           </Select>
           <Select
+            placeholder="端"
+            allowClear
+            style={{ width: 110 }}
+            value={sideFilter}
+            onChange={(v: string | undefined) => setSideFilter(v)}
+          >
+            {Object.entries(SIDE_META).map(([value, meta]) => (
+              <Option key={value} value={value}>{meta.label}</Option>
+            ))}
+          </Select>
+          <Select
             placeholder="类型"
             allowClear
             style={{ width: 120 }}
@@ -225,7 +248,7 @@ export default function PermissionPage() {
       >
         <Form form={form} layout="vertical">
           <Form.Item name="permissionCode" label="权限编码" rules={[{ required: true }]}
-            extra="规范：域:资源:操作[:范围]，如 admin:system:user:view、user:qt:update:channel:beta。全小写；范围段用于结果级权限">
+            extra="规范：端:域:资源:操作[:范围]，端=admin(管理端)/user(用户端)/all(通用)，如 admin:system:user:view、user:qt:update:channel:beta。全小写；范围段用于结果级权限">
             <Input placeholder="如: admin:system:user:view" />
           </Form.Item>
           <Form.Item name="permissionName" label="权限名称" rules={[{ required: true }]}>

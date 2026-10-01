@@ -1,6 +1,7 @@
 package com.astral.sequence.plugin;
 
 import com.astral.dao.entity.SequenceConfig;
+import com.astral.dao.entity.SequenceSegment;
 import com.astral.dao.mapper.SequenceConfigMapper;
 import com.astral.dao.mapper.SequenceSegmentMapper;
 import com.astral.plugin.api.AstralPlugin;
@@ -28,6 +29,8 @@ import java.util.List;
  *   <li>{@code astral.plugins.sequence.enabled} 开关已移除，插件始终注册</li>
  *   <li>管理端禁用操作返回 PLUGIN002 错误</li>
  *   <li>启动时为每张使用 INPUT 主键的业务表初始化独立序列（业务键 = 表名_id，预留段规避种子/历史数据冲突）</li>
+ *   <li>启动时做高水位对齐：max_value ≥ 表 MAX(id)+step，防迁移显式插主键埋雷（见
+ *       {@link #alignHighWatermark(String, String)}）</li>
  * </ul>
  */
 @Slf4j
@@ -172,6 +175,41 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
             } catch (Exception e) {
                 log.warn("[SequencePlugin] 登记序列配置冲突：{} - {}", bizKey, e.getMessage());
             }
+        }
+
+        // 高水位对齐（幂等、只升不降；详见方法 javadoc）
+        alignHighWatermark(bizKey, tableName);
+    }
+
+    /**
+     * 高水位对齐：若表 MAX(id) 已越过号段上限（迁移用 COALESCE(MAX(id),0)+ROW_NUMBER() 显式
+     * 插主键、手工修数都可能造成），把 max_value 抬到 MAX(id)+step，确保运行时发号不与存量
+     * 主键相撞。这是 V20261001005 撞主键事故（sys_user_role id=2295961 DuplicateKey）的
+     * 系统性防御；生产存量已于 2026-10-01 手工对齐修复，此后由本方法每次启动自动维持。
+     *
+     * <p>调用时机在全部生成器实例化之前（插件启动阶段），无内存缓冲需要失效，故不动 version。
+     * 表名来自 SchemaRegistry 的 schema JSON（系统内部元数据），仍做标识符白名单校验防御；
+     * 单表失败只告警不阻断启动，下次启动自动重试。</p>
+     */
+    private void alignHighWatermark(String bizKey, String tableName) {
+        try {
+            if (!tableName.matches("[A-Za-z0-9_]+")
+                    || segmentMapper.countTableInCurrentSchema(tableName) == 0) {
+                return;
+            }
+            SequenceSegment segment = segmentMapper.selectByBizKey(bizKey);
+            if (segment == null) {
+                return;
+            }
+            long tableMax = segmentMapper.selectMaxId(tableName);
+            long aligned = tableMax + segment.getStep();
+            if (segment.getMaxValue() < aligned && segmentMapper.raiseMaxValue(bizKey, aligned) > 0) {
+                log.warn("[SequencePlugin] 高水位对齐：{} (表={}) max_value {} -> {}（表 MAX(id)={} 已越过号段，"
+                        + "多为迁移显式插入主键所致）",
+                        bizKey, tableName, segment.getMaxValue(), aligned, tableMax);
+            }
+        } catch (Exception e) {
+            log.warn("[SequencePlugin] 高水位对齐失败（不影响启动，下次启动重试）：{} - {}", bizKey, e.getMessage());
         }
     }
 }
