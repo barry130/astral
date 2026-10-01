@@ -23,7 +23,7 @@
     "@radix-ui/react-tooltip": "^1.2.16",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/react-syntax-highlighter": "^15.5.13",
-    "axios": "^1.7.9",
+    "axios": "^1.15.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
