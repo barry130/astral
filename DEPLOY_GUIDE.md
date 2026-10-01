@@ -44,7 +44,8 @@
 | `.mvn/settings.xml` | Docker 构建用 Maven 镜像（阿里云 public） |
 | `.dockerignore` | 后端构建上下文排除项 |
 | `astral-front/.dockerignore` | 前端构建上下文排除项 |
-| `.github/workflows/docker-publish.yml` | （可选）CI：push 到 `master` 自动构建并推送镜像到腾讯云 TCR 个人版 |
+| `.cnb.yml` | （可选）CI：CNB 云原生构建，push 到 `master` 按改动路径自动构建并推送镜像到腾讯云 TCR 个人版 |
+| `.cnb/web_trigger.yml` | （可选）CI：分支详情页「构建并推送镜像」手动按钮（全量重建） |
 | `deploy/docker-compose.registry.yml` | （可选）overlay：服务镜像改为从私有仓库 pull，服务器不本地构建 |
 | `deploy/update.sh` | （可选）服务器一键更新：pull + 重建 + 清理旧镜像 |
 
@@ -72,9 +73,9 @@ vi .env      # 填入数据库、Redis 的真实地址与密码
 | `STORAGE_UPLOAD_TICKET_KEY` | `openssl rand -base64 48` 生成 | 文件存储：上传凭证 HMAC 密钥，需与 Worker Secret 一致 |
 | `STORAGE_ORIGIN_SHARED_SECRET` | 同上（另生成） | 文件存储：Worker 回调鉴权密钥，需与 Worker Secret 一致 |
 | `STORAGE_DOWNLOAD_SIGNING_KEY_V1` | 同上（另生成） | 文件存储：下载地址签名密钥，需与 Worker Secret 一致 |
-| `NEXT_PUBLIC_API_URL` | 留空（推荐）或 `https://<你的API域名>` | 浏览器访问 API 的基地址（构建时内联）。**改用 CI 构建镜像后本项在 `.env` 中不再生效**，需改为 GitHub 仓库变量，见下文「CI 构建 + 服务器 pull 更新」 |
+| `NEXT_PUBLIC_API_URL` | 留空（推荐）或 `https://<你的API域名>` | 浏览器访问 API 的基地址（构建时内联）。**改用 CI 构建镜像后本项在 `.env` 中不再生效**，需写进 `.cnb.yml` 前端流水线的构建参数（`--build-arg`），见下文「CI 构建 + 服务器 pull 更新」 |
 | `REGISTRY` | `ccr.ccs.tencentyun.com/tcb-100008754513-winj` | （可选）镜像仓库前缀，只到命名空间；配合 `docker-compose.registry.yml` 使用 |
-| `TAG` | `latest` 或 `20260926-a1b2c3d` | （可选）镜像 tag，兼作回滚开关 |
+| `TAG` | `latest` 或 `20260926-a1b2c3d4` | （可选）镜像 tag，兼作回滚开关 |
 
 > `SPRING_DATASOURCE_*` 与 `REDIS_PASSWORD` 在 compose 中使用 `:?` 断言：未在 `.env` 填写时 `docker compose` 会**直接报错并提示缺哪个变量**，不会用占位值静默启动。`QT_PLUGIN_ENABLED`、`TZ` 已在 compose 中固定为 `true` / `Asia/Shanghai`。
 >
@@ -198,36 +199,52 @@ docker compose up -d --build
 
 ## CI 构建 + 服务器 pull 更新（可选，推荐）
 
-适用场景：镜像由 GitHub Actions 构建并推送到 **腾讯云 TCR 个人版**（`ccr.ccs.tencentyun.com`），服务器只负责 `pull` 和起容器。
+适用场景：镜像由 **CNB 云原生构建**（[cnb.cool](https://cnb.cool)，腾讯出品的云原生构建平台）自动构建并推送到 **腾讯云 TCR 个人版**（`ccr.ccs.tencentyun.com`），服务器只负责 `pull` 和起容器。
 
-选它而不是 ghcr.io 的原因：国内服务器拉 `ghcr.io` 慢且易断（实测首次 `pull` 15 分钟未完成），而 TCR 与服务器同区，可走**内网地址**拉取，快且免公网流量。
+构建平台为什么选 CNB（迭代记录）：
+
+- ~~GitHub Actions~~：构建机在海外，推送镜像到腾讯云 TCR 走跨境链路（约 100KB/s，300MB 要 50 分钟）——已弃用，workflow 已删除
+- ~~ghcr.io~~：国内服务器拉取慢且易断（实测首次 `pull` 15 分钟未完成）
+- ~~TCR 企业版云构建 / CODING CI / 自建 runner~~：收费、改造量大或依赖服务器常开，均不合适
+- **CNB**：构建机在国内，与 TCR 同属腾讯云、推送走快速链路；免费额度足够个人项目（构建约 160 核时/月，以官方说明为准）
 
 > **TCR 仓库默认私有**：服务器需要**先 `docker login` 一次**（凭证持久化在 `/root/.docker/config.json`，之后 `update.sh` 自动复用），或者把仓库改成公开。镜像名形如 `ccr.ccs.tencentyun.com/tcb-100008754513-winj/astral-backend:<tag>`。
 >
-> 仍想用 ghcr.io 也可以：把 workflow 里的 `REGISTRY_HOST` / `IMAGE_PREFIX` / 登录凭证换回 ghcr.io，`deploy/.env` 的 `REGISTRY` 同步改为 `ghcr.io/<用户名>`。
+> 仍想换回 ghcr.io 也可以：改 `.cnb.yml` 里的 `REGISTRY_HOST` / `IMAGE_PREFIX` / 登录凭证，`deploy/.env` 的 `REGISTRY` 同步改为 `ghcr.io/<用户名>`。
 
 相比「本机 `docker save` 全量 `tar.gz` → `scp` → `docker load`」，这种方式**每次只传输发生变化的镜像层**（改后端≈jar 层，改前端≈`.next` 层），基础镜像层不再重复搬运；服务器也不再需要完整源码，只保留 `deploy/` 目录即可。
 
 ### 一次性配置
 
-1. 提交 `.github/workflows/docker-publish.yml`、`deploy/docker-compose.registry.yml`、`deploy/update.sh`
-2. 在 **Settings → Secrets and variables → Actions → Secrets** 添加两个仓库密钥（[直达链接](https://github.com/barry130/astral/settings/secrets/actions)）：
+1. 提交 `.cnb.yml`、`.cnb/web_trigger.yml`、`deploy/docker-compose.registry.yml`、`deploy/update.sh`
+2. **注册 CNB 并创建仓库**：在 [cnb.cool](https://cnb.cool) 注册后创建空仓库 `astral`（不要初始化 README），把本仓库推上去（推送方式见第 5 步）
+3. **创建密钥仓库存 TCR 凭证**：CNB 再建一个类型为「密钥仓库」的私有仓库（当前用的是 `canace/secrets-astral`），在其网页端新建文件 `tcr-envs.yml`（仓库根）：
 
-   | Secret | 取值 |
-   |---|---|
-   | `TCR_USERNAME` | 腾讯云控制台「容器镜像服务 → 个人版 → 访问凭证」里的登录用户名（一般是腾讯云账号 UIN 或子账号，以控制台给出的 `docker login` 指令为准） |
-   | `TCR_PASSWORD` | 同一页面设置/查看的固定密码 |
+   ```yaml
+   TCR_USERNAME: <TCR 访问凭证用户名>
+   TCR_PASSWORD: <TCR 访问凭证密码>
+   ```
 
-   > 未配置这两个 Secret 时 workflow **不会报红**：只打一条 warning 并跳过推送，配置好后重跑即可。
-3. 确认命名空间 `tcb-100008754513-winj` 下有两个镜像仓库：`astral-backend`、`astral-frontend`（TCR 个人版通常在推送时自动创建；若报 `repository not found`，去控制台手动新建同名仓库）
-4. **Actions → docker-publish → Run workflow** 手动触发一次（直接 push 到 `master` 也会自动触发）。成功后到 TCR 控制台的「镜像仓库」页面能看到两个镜像，每个镜像有两个 tag：`latest` 与「日期-短SHA」如 `20260927-d2585de`（后者用于精确发布/回滚）
-5. 服务器登录 TCR（仓库默认私有），凭证会持久化，只需一次：
+   取值见腾讯云控制台「容器镜像服务 → 个人版 → 访问凭证」（以控制台给出的 `docker login` 指令为准）。密钥仓库只能网页编辑、不能 git clone；默认允许本人（管理员/负责人）触发的流水线引用。**凭证绝不能明文写进 `.cnb.yml`**。
+4. `.cnb.yml` 的 `imports` 已指向密钥仓库文件：`https://cnb.cool/canace/secrets-astral/-/blob/main/tcr-envs.yml`（若日后换仓库名/默认分支，同步改这里；换凭证直接去密钥仓库网页编辑该文件）
+5. **配置双推 remote**（本机一次性；之后 `git push` 同时推 GitHub 与 CNB，两边流水线各跑各的）：
+
+   ```bash
+   git remote set-url --add --push origin https://github.com/barry130/astral.git
+   git remote set-url --add --push origin https://cnb.cool/canace/astral.git
+   ```
+
+   GitHub 那条照旧需要代理；CNB 走国内直连，不开代理也能推。代理没开时 GitHub 那条会失败，但 CNB 可能已经推上去了，以 git 输出为准。
+6. **开启自动触发**：CNB 仓库「设置」里勾选**允许自动触发（云原生构建）**，否则 push 不会触发构建
+7. **首次推送验证**：`git push`。master 在 CNB 属于新分支，必定触发两条流水线全量构建（后端、前端并行）。成功后 TCR 控制台「镜像仓库」里能看到两个镜像，各有两个 tag：`latest` 与「日期-短SHA」如 `20261001-1a2b3c4d`（后者用于精确发布/回滚）。命名空间 `tcb-100008754513-winj` 下的仓库通常在推送时自动创建，若报 `repository not found` 去控制台手动新建
+   - 之后每次 push 按**改动路径**过滤：动 `astral-front/**` 只重建前端，动后端模块只重建后端，互不连坐；手动全量构建用 master 分支详情页的「构建并推送镜像」按钮
+8. 服务器登录 TCR（仓库默认私有），凭证会持久化，只需一次：
 
    ```bash
    echo "<访问凭证密码>" | docker login ccr.ccs.tencentyun.com -u <腾讯云账号> --password-stdin
    ```
 
-6. 服务器 `deploy/.env` 补两行：`REGISTRY=ccr.ccs.tencentyun.com/tcb-100008754513-winj`、`TAG=latest`
+9. 服务器 `deploy/.env` 补两行：`REGISTRY=ccr.ccs.tencentyun.com/tcb-100008754513-winj`、`TAG=latest`
 
 ### 每次更新
 
@@ -237,7 +254,7 @@ git pull                    # ① 必须先更新仓库本身：compose 文件 /
 cd deploy
 chmod +x update.sh          # 首次执行一次
 ./update.sh                 # ② 拉取镜像 + 重建容器 + 清理 7 天前的旧镜像
-./update.sh 20260926-a1b2c3d   # 指定 CI 产出的日期 tag 精确发布
+./update.sh 20260926-a1b2c3d4   # 指定 CI 产出的日期 tag 精确发布
 ```
 
 > ⚠️ `./update.sh` 只负责「拉镜像 + 重建容器」，它读取的是服务器上**已有的** compose 文件。
@@ -313,9 +330,9 @@ docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
 
 ### 关键注意点
 
-- **构建期参数搬到 CI**：改成 pull 之后 `docker-compose.yml` 里的 `build.args` 不再生效，`NEXT_PUBLIC_API_URL` 必须在 GitHub 仓库 **Settings → Secrets and variables → Actions → Variables** 里设置（留空即走同源 `/api` + Next rewrites）
-- **CPU 架构必须匹配**：GitHub runner 产出 `linux/amd64`。服务器若是 ARM（aarch64），需在 workflow 中打开 `platforms: linux/arm64`，否则容器报 `exec format error` 起不来
-- **Actions 额度**：本仓库是 public，Actions 分钟数不限（Free 计划只对私有仓库计 2000 分钟/月）；workflow 已用 `concurrency` 取消同分支旧构建、用 `paths` 过滤无关提交。首次实测：两个镜像合计约 4.5 分钟
+- **构建期参数搬到 CI**：改成 pull 之后 `docker-compose.yml` 里的 `build.args` 不再生效，`NEXT_PUBLIC_API_URL` 需写进 `.cnb.yml` 前端流水线的 `docker build`（加 `--build-arg NEXT_PUBLIC_API_URL=...`；留空即走同源 `/api` + Next rewrites，当前默认留空）
+- **CPU 架构必须匹配**：CNB 构建节点产出 `linux/amd64`。服务器若是 ARM（aarch64），需在 `.cnb.yml` 的 `docker build` 命令加 `--platform linux/arm64`，否则容器报 `exec format error` 起不来
+- **CNB 额度与并发**：免费额度以官方文档为准（构建约 160 核时/月）；`.cnb.yml` 已用 `lock.cancel-in-progress` 取消同镜像的在途构建（后端/前端互不取消）、用 `ifModify` 按改动路径过滤。构建机在国内，推送 TCR 不再走跨境链路；首次构建要拉基础镜像和依赖会稍慢，Docker 层缓存仅在当前构建节点有效、命中率不稳定，属正常现象
 - **磁盘回收**：每次 pull 都会留下旧镜像，`update.sh` 已带 7 天回收；手动回收用 `docker image prune -af --filter "until=168h"`
 - **自动更新（仅建议测试环境）**：cron 每 10 分钟执行 `update.sh`；或用 watchtower：
 
@@ -327,7 +344,7 @@ docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
   ```
 
   watchtower 不遵守 compose 的 `depends_on` 健康检查顺序；且自动更新会把 Flyway 迁移静默推上线，生产环境建议固定日期 tag + 人工执行 `update.sh`
-- **换镜像仓库 / 走内网加速**：拉起地址由 `deploy/.env` 的 `REGISTRY` 决定。服务器与 registry 同区时，把 `REGISTRY` 换成控制台给出的**内网地址**（仓库路径不变，可直接换）；要整体换回 ghcr.io 或换阿里云 ACR，则需同时改 workflow 的 `REGISTRY_HOST` / `IMAGE_PREFIX` / 登录凭证
+- **换镜像仓库 / 走内网加速**：拉起地址由 `deploy/.env` 的 `REGISTRY` 决定。服务器与 registry 同区时，把 `REGISTRY` 换成控制台给出的**内网地址**（仓库路径不变，可直接换）；要整体换回 ghcr.io 或换阿里云 ACR，则需同时改 `.cnb.yml` 的 `REGISTRY_HOST` / `IMAGE_PREFIX` 与密钥仓库里的登录凭证
 
 ### 从 tar.gz 镜像包迁移到本方案
 
@@ -354,7 +371,7 @@ docker images | grep -Ei 'astral|deploy'
 docker inspect astral-backend astral-frontend --format '{{ .Name }} <- {{ .Config.Image }} ({{ .Image }})'
 
 # 4) 前端构建期内联地址：NEXT_PUBLIC_API_URL 若在 .env 里非空，
-#    必须先把它配到 GitHub 仓库 Variables 并重跑 CI，否则新镜像会退回同源 /api 行为
+#    必须先把它写进 .cnb.yml 前端构建参数并重跑 CI，否则新镜像会退回同源 /api 行为
 grep -n 'NEXT_PUBLIC_API_URL' .env
 ```
 
@@ -380,7 +397,7 @@ docker compose -f docker-compose.yml -f docker-compose.registry.yml pull
 docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-build
 ```
 
-首次建议把 `TAG` 钉死成具体日期 tag（如 `20260927-358e7ba`）而不是 `latest`，排查最省事。compose 只会 **recreate 容器**，不会动卷——日志里应出现 `Recreated`，而不应出现 `Creating volume`。
+首次建议把 `TAG` 钉死成具体日期 tag（如 `20260927-358e7ba1`）而不是 `latest`，排查最省事。compose 只会 **recreate 容器**，不会动卷——日志里应出现 `Recreated`，而不应出现 `Creating volume`。
 
 #### 验证
 

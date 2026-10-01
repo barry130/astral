@@ -1,0 +1,10 @@
+# 手动触发构建的按钮（显示在分支详情页）。
+# 点击后向该分支派发 web_trigger_publish 事件，由 .cnb.yml 中
+# master.web_trigger_publish 下的流水线响应 → 后端 + 前端全量重建并推送。
+# reg 限定只在 master 分支详情页出现，避免在其他分支上误发 latest。
+branch:
+  - reg: '^master$'
+    buttons:
+      - name: 构建并推送镜像
+        description: 后端 + 前端全量重建，推送到腾讯云 TCR（latest + 日期-短SHA 双 tag）
+        event: web_trigger_publish

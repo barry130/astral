@@ -15,7 +15,7 @@
 #   ./update.sh 20260919-ab12cd3     # 回滚到旧版本（注意：数据库迁移不会跟着回滚）
 #
 # 不要用 `docker compose up -d --build` 走这条路：
-# 服务器只 pull 不构建，构建统一由 GitHub Actions 完成。
+# 服务器只 pull 不构建，构建统一由 CNB 云原生构建（cnb.cool）完成。
 # ============================================
 set -euo pipefail
 

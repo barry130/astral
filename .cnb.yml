@@ -1,0 +1,119 @@
+# ============================================================================
+# CNB 云原生构建：自动构建后端 / 前端镜像并推送到腾讯云 TCR 个人版
+#
+# 取代原 GitHub Actions（.github/workflows/docker-publish.yml，已删除）：
+#   - 构建机在国内（腾讯云），推送 ccr.ccs.tencentyun.com 不再走跨境慢速链路
+#   - push 到 master 自动触发，按改动路径过滤（后端/前端互不连坐）
+#   - 分支详情页按钮手动触发（.cnb/web_trigger.yml）＝ 后端+前端全量重建
+#   - tag 规则不变：latest + 日期-短SHA（如 20261001-1a2b3c4d，后者用于回滚）
+#   - 服务器侧（deploy/update.sh、docker-compose.registry.yml）完全不变
+#
+# 一次性配置（详见 DEPLOY_GUIDE.md「CI 构建 + 服务器 pull 更新」）：
+#   ① CNB 注册并创建同名仓库 astral，本仓库推送上去
+#   ② 密钥仓库 canace/secrets-astral 已建好：根目录文件 tcr-envs.yml 存
+#      TCR_USERNAME / TCR_PASSWORD（只能网页编辑，不能 git clone；换凭证去网页改）
+#   ③ 下方 imports 指向该文件；若换仓库名/默认分支，同步改这里
+#   ④ CNB 仓库设置勾选「允许自动触发」（否则 push 不触发构建）
+#
+# 凭证绝不能明文写进本文件——只能放密钥仓库，经 imports 注入。
+# ============================================================================
+
+# ---- 可复用片段（YAML 锚点；`.` 开头的顶层键不会当作分支配置执行） ----
+
+# services: docker = 挂载 dind，脚本里直接用 docker build / docker push
+# imports = 密钥仓库文件，注入 TCR_USERNAME / TCR_PASSWORD（canace/secrets-astral）
+.docker-pipeline: &docker-pipeline
+  services:
+    - docker
+  imports: https://cnb.cool/canace/secrets-astral/-/blob/main/tcr-envs.yml
+  env:
+    REGISTRY_HOST: ccr.ccs.tencentyun.com
+    IMAGE_PREFIX: ccr.ccs.tencentyun.com/tcb-100008754513-winj
+
+.backend-stages: &backend-stages
+  - name: tcr 登录
+    script: echo "$TCR_PASSWORD" | docker login "$REGISTRY_HOST" -u "$TCR_USERNAME" --password-stdin
+  - name: 生成发布 tag（日期-短SHA，兼作回滚锚点）
+    script: echo -n "$IMAGE_PREFIX/astral-backend:$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"
+    exports:
+      info: IMAGE_URL
+  - name: docker build（后端，上下文=仓库根）
+    script: docker build -f astral-server/Dockerfile -t "$IMAGE_URL" -t "$IMAGE_PREFIX/astral-backend:latest" .
+  - name: docker push（双 tag；第二个 tag 复用刚上传的层，几乎零开销）
+    script: |
+      docker push "$IMAGE_URL"
+      docker push "$IMAGE_PREFIX/astral-backend:latest"
+
+.frontend-stages: &frontend-stages
+  - name: tcr 登录
+    script: echo "$TCR_PASSWORD" | docker login "$REGISTRY_HOST" -u "$TCR_USERNAME" --password-stdin
+  - name: 生成发布 tag（日期-短SHA，兼作回滚锚点）
+    script: echo -n "$IMAGE_PREFIX/astral-frontend:$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"
+    exports:
+      info: IMAGE_URL
+  - name: docker build（前端，上下文=astral-front）
+    script: >-
+      docker build -f astral-front/Dockerfile
+      --build-arg NEXT_PUBLIC_API_URL=https://astral.canace.cn
+      -t "$IMAGE_URL" -t "$IMAGE_PREFIX/astral-frontend:latest" astral-front
+  - name: docker push（双 tag；第二个 tag 复用刚上传的层，几乎零开销）
+    script: |
+      docker push "$IMAGE_URL"
+      docker push "$IMAGE_PREFIX/astral-frontend:latest"
+
+# ---- 构建配置 ----
+master:
+  push:
+    # ifNewBranch: 首次把 master 推上 CNB 时属于新分支，ifModify 没有比对基准，
+    # 用它保证首次推送必定全量构建；之后每次 push 走 ifModify 路径过滤。
+    - name: backend 镜像
+      <<: *docker-pipeline
+      lock:
+        key: backend-image
+        cancel-in-progress: true
+      ifNewBranch: true
+      ifModify:
+        - pom.xml
+        - .mvn/**
+        - astral-common/**
+        - astral-schema/**
+        - astral-dao/**
+        - astral-log/**
+        - astral-auth/**
+        - astral-system/**
+        - astral-monitor/**
+        - astral-sequence/**
+        - astral-plugin-api/**
+        - astral-plugin/**
+        - astral-server/**
+        - .cnb.yml
+      stages: *backend-stages
+
+    - name: frontend 镜像
+      <<: *docker-pipeline
+      lock:
+        key: frontend-image
+        cancel-in-progress: true
+      ifNewBranch: true
+      ifModify:
+        - astral-front/**
+        - .cnb.yml
+      stages: *frontend-stages
+
+  # 手动触发（master 分支详情页按钮，见 .cnb/web_trigger.yml）：
+  # 全量重建，不做路径过滤。web_trigger 事件没有文件变更基准，
+  # ifModify 在该事件下本来就不生效，这里干脆不写。
+  web_trigger_publish:
+    - name: backend 镜像（手动全量）
+      <<: *docker-pipeline
+      lock:
+        key: backend-image
+        cancel-in-progress: true
+      stages: *backend-stages
+
+    - name: frontend 镜像（手动全量）
+      <<: *docker-pipeline
+      lock:
+        key: frontend-image
+        cancel-in-progress: true
+      stages: *frontend-stages
