@@ -135,8 +135,15 @@ export default function MailTemplatePage() {
       </Modal>
 
       <Modal title="模板预览" open={previewVisible} footer={null} width={520} onCancel={() => setPreviewVisible(false)}>
-        <div style={{ border: '1px solid #eee', borderRadius: 8, overflow: 'hidden' }}
-          dangerouslySetInnerHTML={{ __html: previewHtml }} />
+        {/* 模板正文是可写内容，曾用 dangerouslySetInnerHTML 直插 DOM：编辑者在正文埋脚本即可
+            打到仅持查看权限的管理员会话（存储型 XSS）。改 sandbox iframe 渲染——
+            无 allow-* 令牌时不执行脚本、不提交表单、不同源访问父页，样式/图片正常预览。 */}
+        <iframe
+          title="模板预览"
+          srcDoc={previewHtml}
+          sandbox=""
+          style={{ width: '100%', height: 360, border: '1px solid #eee', borderRadius: 8, background: '#fff' }}
+        />
       </Modal>
     </div>
   );

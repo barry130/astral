@@ -129,7 +129,7 @@ curl http://localhost:27000/api/v1/admin/system/user/list \
 ### 默认管理员
 
 - 用户名：`admin`
-- 密码：`admin`（BCrypt 存储，种子 SQL 写入；生产环境登录后请立即修改）
+- 初始密码与用户名相同（BCrypt 存储，种子 SQL 写入；生产环境登录后请立即修改）
 
 ---
 
