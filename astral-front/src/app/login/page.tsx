@@ -126,8 +126,6 @@ export default function LoginPage() {
           </div>
         </form>
 
-        <div className="mt-6 text-center text-xs text-muted-foreground">默认账号: admin / admin</div>
-
         <div className="mt-3 text-center">
           <a
             onClick={() => router.push('/')}

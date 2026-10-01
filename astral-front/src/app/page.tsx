@@ -218,7 +218,7 @@ export default function HomePage() {
       {/* 页脚 */}
       <footer className="landing-footer">
         <p>Astral Management System · Spring Boot 4.1 + Next.js 16</p>
-        <p className="landing-footer-secondary">默认账号 admin / admin · 详见项目 README</p>
+        <p className="landing-footer-secondary">详见项目 README</p>
       </footer>
     </div>
   );

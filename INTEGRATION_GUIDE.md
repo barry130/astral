@@ -226,7 +226,7 @@ axios.interceptors.request.use(config => {
 
 ### 安全检查
 
-- [ ] 修改默认管理员密码（admin/admin）
+- [ ] 修改初始管理员密码（初始密码与用户名相同，见 README「初始账号」）
 - [ ] 配置 HTTPS
 - [ ] 敏感信息使用环境变量
 
