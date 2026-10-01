@@ -44,7 +44,7 @@
 | `.mvn/settings.xml` | Docker 构建用 Maven 镜像（阿里云 public） |
 | `.dockerignore` | 后端构建上下文排除项 |
 | `astral-front/.dockerignore` | 前端构建上下文排除项 |
-| `.cnb.yml` | （可选）CI：CNB 云原生构建，push 到 `master` 按改动路径自动构建并推送镜像到腾讯云 TCR 个人版 |
+| `.cnb.yml` | （可选）CI：CNB 云原生构建，push 到 `master` 按改动路径自动构建并推送镜像到 CNB Docker 制品库（`docker.cnb.cool`） |
 | `.cnb/web_trigger.yml` | （可选）CI：分支详情页「构建并推送镜像」手动按钮（全量重建） |
 | `deploy/docker-compose.registry.yml` | （可选）overlay：服务镜像改为从私有仓库 pull，服务器不本地构建 |
 | `deploy/update.sh` | （可选）服务器一键更新：pull + 重建 + 清理旧镜像 |
@@ -74,7 +74,7 @@ vi .env      # 填入数据库、Redis 的真实地址与密码
 | `STORAGE_ORIGIN_SHARED_SECRET` | 同上（另生成） | 文件存储：Worker 回调鉴权密钥，需与 Worker Secret 一致 |
 | `STORAGE_DOWNLOAD_SIGNING_KEY_V1` | 同上（另生成） | 文件存储：下载地址签名密钥，需与 Worker Secret 一致 |
 | `NEXT_PUBLIC_API_URL` | 留空（推荐）或 `https://<你的API域名>` | 浏览器访问 API 的基地址（构建时内联）。**改用 CI 构建镜像后本项在 `.env` 中不再生效**，需写进 `.cnb.yml` 前端流水线的构建参数（`--build-arg`），见下文「CI 构建 + 服务器 pull 更新」 |
-| `REGISTRY` | `ccr.ccs.tencentyun.com/tcb-100008754513-winj` | （可选）镜像仓库前缀，只到命名空间；配合 `docker-compose.registry.yml` 使用 |
+| `REGISTRY` | `docker.cnb.cool/canace/astral` | （可选）镜像仓库前缀，只到命名空间；配合 `docker-compose.registry.yml` 使用 |
 | `TAG` | `latest` 或 `20260926-a1b2c3d4` | （可选）镜像 tag，兼作回滚开关 |
 
 > `SPRING_DATASOURCE_*` 与 `REDIS_PASSWORD` 在 compose 中使用 `:?` 断言：未在 `.env` 填写时 `docker compose` 会**直接报错并提示缺哪个变量**，不会用占位值静默启动。`QT_PLUGIN_ENABLED`、`TZ` 已在 compose 中固定为 `true` / `Asia/Shanghai`。
@@ -199,35 +199,27 @@ docker compose up -d --build
 
 ## CI 构建 + 服务器 pull 更新（可选，推荐）
 
-适用场景：镜像由 **CNB 云原生构建**（[cnb.cool](https://cnb.cool)，腾讯出品的云原生构建平台）自动构建并推送到 **腾讯云 TCR 个人版**（`ccr.ccs.tencentyun.com`），服务器只负责 `pull` 和起容器。
+适用场景：镜像由 **CNB 云原生构建**（[cnb.cool](https://cnb.cool)，腾讯出品的云原生构建平台）自动构建并推送到 **CNB 自带 Docker 制品库**（`docker.cnb.cool`，随代码仓库 `canace/astral` 托管），服务器只负责 `pull` 和起容器。
 
-构建平台为什么选 CNB（迭代记录）：
+构建与仓库方案选型（迭代记录）：
 
 - ~~GitHub Actions~~：构建机在海外，推送镜像到腾讯云 TCR 走跨境链路（约 100KB/s，300MB 要 50 分钟）——已弃用，workflow 已删除
 - ~~ghcr.io~~：国内服务器拉取慢且易断（实测首次 `pull` 15 分钟未完成）
 - ~~TCR 企业版云构建 / CODING CI / 自建 runner~~：收费、改造量大或依赖服务器常开，均不合适
-- **CNB**：构建机在国内，与 TCR 同属腾讯云、推送走快速链路；免费额度足够个人项目（构建约 160 核时/月，以官方说明为准）
+- ~~CNB 构建 + TCR 个人版~~：能用，但 TCR 凭证要经密钥仓库 imports 注入，多一套凭证管道；个人版共享实例也没有额外收益——已改为直推 CNB 制品库
+- **CNB 构建 + CNB 制品库**：CI 内置触发者凭证，`services: [docker]` 后直接 push，**零凭证配置**；对象存储免费 100GiB（重复基础镜像去重计容量），个人项目用不满
 
-> **TCR 仓库默认私有**：服务器需要**先 `docker login` 一次**（凭证持久化在 `/root/.docker/config.json`，之后 `update.sh` 自动复用），或者把仓库改成公开。镜像名形如 `ccr.ccs.tencentyun.com/tcb-100008754513-winj/astral-backend:<tag>`。
+> **代码仓是私有仓，镜像随之私有**：服务器需要**先 `docker login` 一次**（凭证持久化在 `/root/.docker/config.json`，之后 `update.sh` 自动复用），或者把仓库改成公开（镜像即可匿名拉取）。镜像名形如 `docker.cnb.cool/canace/astral/astral-backend:<tag>`。
 >
-> 仍想换回 ghcr.io 也可以：改 `.cnb.yml` 里的 `REGISTRY_HOST` / `IMAGE_PREFIX` / 登录凭证，`deploy/.env` 的 `REGISTRY` 同步改为 `ghcr.io/<用户名>`。
+> 仍想换回 TCR / ghcr.io 也可以：改 `.cnb.yml` 里的 `IMAGE_PREFIX` 与登录方式（TCR 需恢复密钥仓库 imports），`deploy/.env` 的 `REGISTRY` 同步改。
 
 相比「本机 `docker save` 全量 `tar.gz` → `scp` → `docker load`」，这种方式**每次只传输发生变化的镜像层**（改后端≈jar 层，改前端≈`.next` 层），基础镜像层不再重复搬运；服务器也不再需要完整源码，只保留 `deploy/` 目录即可。
 
 ### 一次性配置
 
 1. 提交 `.cnb.yml`、`.cnb/web_trigger.yml`、`deploy/docker-compose.registry.yml`、`deploy/update.sh`
-2. **注册 CNB 并创建仓库**：在 [cnb.cool](https://cnb.cool) 注册后创建空仓库 `astral`（不要初始化 README），把本仓库推上去（推送方式见第 5 步）
-3. **创建密钥仓库存 TCR 凭证**：CNB 再建一个类型为「密钥仓库」的私有仓库（当前用的是 `canace/secrets-astral`），在其网页端新建文件 `tcr-envs.yml`（仓库根）：
-
-   ```yaml
-   TCR_USERNAME: <TCR 访问凭证用户名>
-   TCR_PASSWORD: <TCR 访问凭证密码>
-   ```
-
-   取值见腾讯云控制台「容器镜像服务 → 个人版 → 访问凭证」（以控制台给出的 `docker login` 指令为准）。密钥仓库只能网页编辑、不能 git clone；默认允许本人（管理员/负责人）触发的流水线引用。**凭证绝不能明文写进 `.cnb.yml`**。
-4. `.cnb.yml` 的 `imports` 已指向密钥仓库文件：`https://cnb.cool/canace/secrets-astral/-/blob/main/tcr-envs.yml`（若日后换仓库名/默认分支，同步改这里；换凭证直接去密钥仓库网页编辑该文件）
-5. **配置双推 remote**（本机一次性；之后 `git push` 同时推 GitHub 与 CNB，两边流水线各跑各的）：
+2. **注册 CNB 并创建仓库**：在 [cnb.cool](https://cnb.cool) 注册后创建空仓库 `astral`（不要初始化 README），把本仓库推上去（推送方式见第 3 步）
+3. **配置双推 remote**（本机一次性；之后 `git push` 同时推 GitHub 与 CNB，两边流水线各跑各的）：
 
    ```bash
    git remote set-url --add --push origin https://github.com/barry130/astral.git
@@ -235,16 +227,17 @@ docker compose up -d --build
    ```
 
    GitHub 那条照旧需要代理；CNB 走国内直连，不开代理也能推。代理没开时 GitHub 那条会失败，但 CNB 可能已经推上去了，以 git 输出为准。
-6. **开启自动触发**：CNB 仓库「设置」里勾选**允许自动触发（云原生构建）**，否则 push 不会触发构建
-7. **首次推送验证**：`git push`。master 在 CNB 属于新分支，必定触发两条流水线全量构建（后端、前端并行）。成功后 TCR 控制台「镜像仓库」里能看到两个镜像，各有两个 tag：`latest` 与「日期-短SHA」如 `20261001-1a2b3c4d`（后者用于精确发布/回滚）。命名空间 `tcb-100008754513-winj` 下的仓库通常在推送时自动创建，若报 `repository not found` 去控制台手动新建
+4. **开启自动触发**：CNB 仓库「设置」里勾选**允许自动触发（云原生构建）**，否则 push 不会触发构建
+5. **首次推送验证**：`git push`。master 在 CNB 属于新分支，必定触发两条流水线全量构建（后端、前端并行）。成功后在 CNB 仓库「制品」页能看到两个镜像，各有两个 tag：`latest` 与「日期-短SHA」如 `20261001-1a2b3c4d`（后者用于精确发布/回滚）。制品路径与仓库路径一致（`docker.cnb.cool/canace/astral/astral-backend` 等），首次 push 自动创建，无需手动建仓
    - 之后每次 push 按**改动路径**过滤：动 `astral-front/**` 只重建前端，动后端模块只重建后端，互不连坐；手动全量构建用 master 分支详情页的「构建并推送镜像」按钮
-8. 服务器登录 TCR（仓库默认私有），凭证会持久化，只需一次：
+6. 服务器登录 CNB 制品库（私有仓的镜像需要鉴权），凭证会持久化，只需一次。
+   CNB 访问令牌在「头像 → 设置 → 访问令牌」创建，**需勾选 `registry-package` 读权限**（拉镜像最低要求），用户名固定填 `cnb`：
 
    ```bash
-   echo "<访问凭证密码>" | docker login ccr.ccs.tencentyun.com -u <腾讯云账号> --password-stdin
+   echo "<CNB访问令牌>" | docker login docker.cnb.cool -u cnb --password-stdin
    ```
 
-9. 服务器 `deploy/.env` 补两行：`REGISTRY=ccr.ccs.tencentyun.com/tcb-100008754513-winj`、`TAG=latest`
+7. 服务器 `deploy/.env` 补两行：`REGISTRY=docker.cnb.cool/canace/astral`、`TAG=latest`
 
 ### 每次更新
 
@@ -332,7 +325,7 @@ docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
 
 - **构建期参数搬到 CI**：改成 pull 之后 `docker-compose.yml` 里的 `build.args` 不再生效，`NEXT_PUBLIC_API_URL` 需写进 `.cnb.yml` 前端流水线的 `docker build`（加 `--build-arg NEXT_PUBLIC_API_URL=...`；留空即走同源 `/api` + Next rewrites，当前默认留空）
 - **CPU 架构必须匹配**：CNB 构建节点产出 `linux/amd64`。服务器若是 ARM（aarch64），需在 `.cnb.yml` 的 `docker build` 命令加 `--platform linux/arm64`，否则容器报 `exec format error` 起不来
-- **CNB 额度与并发**：免费额度以官方文档为准（构建约 160 核时/月，计费 = 核数 × 耗时）；`.cnb.yml` 流水线已显式降配 4 核 8G（默认 8 核 16G，核时消耗减半），并已用 `lock.cancel-in-progress` 取消同镜像的在途构建（后端/前端互不取消）、用 `ifModify` 按改动路径过滤。构建机在国内，推送 TCR 不再走跨境链路；首次构建要拉基础镜像和依赖会稍慢，Docker 层缓存仅在当前构建节点有效、命中率不稳定，属正常现象
+- **CNB 额度与并发**：免费额度以官方文档为准（构建约 160 核时/月，计费 = 核数 × 耗时；镜像存储走对象存储 100GiB 免费额度）；`.cnb.yml` 流水线已显式降配 4 核 8G（默认 8 核 16G，核时消耗减半），并已用 `lock.cancel-in-progress` 取消同镜像的在途构建（后端/前端互不取消）、用 `ifModify` 按改动路径过滤。构建机与制品库都在国内，推送/拉取不走跨境链路；首次构建要拉基础镜像和依赖会稍慢，Docker 层缓存仅在当前构建节点有效、命中率不稳定，属正常现象
 - **磁盘回收**：每次 pull 都会留下旧镜像，`update.sh` 已带 7 天回收；手动回收用 `docker image prune -af --filter "until=168h"`
 - **自动更新（仅建议测试环境）**：cron 每 10 分钟执行 `update.sh`；或用 watchtower：
 
@@ -344,13 +337,13 @@ docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
   ```
 
   watchtower 不遵守 compose 的 `depends_on` 健康检查顺序；且自动更新会把 Flyway 迁移静默推上线，生产环境建议固定日期 tag + 人工执行 `update.sh`
-- **换镜像仓库 / 走内网加速**：拉起地址由 `deploy/.env` 的 `REGISTRY` 决定。服务器与 registry 同区时，把 `REGISTRY` 换成控制台给出的**内网地址**（仓库路径不变，可直接换）；要整体换回 ghcr.io 或换阿里云 ACR，则需同时改 `.cnb.yml` 的 `REGISTRY_HOST` / `IMAGE_PREFIX` 与密钥仓库里的登录凭证
+- **换镜像仓库**：拉起地址由 `deploy/.env` 的 `REGISTRY` 决定；要整体换回 ghcr.io、腾讯云 TCR 或阿里云 ACR，需同时改 `.cnb.yml` 的 `IMAGE_PREFIX` 与推送登录方式（CNB 制品库免登录，外部仓库需要把凭证放进密钥仓库经 imports 注入，**绝不能明文写进 `.cnb.yml`**）
 
 ### 从 tar.gz 镜像包迁移到本方案
 
 现状：服务器上跑的是本机 `docker save` 打包、`docker load` 装载的镜像，再 `docker compose up -d` 起容器。
 
-迁移**不需要改 `docker-compose.yml`**，只是给服务补上 `image:`，让容器改用从 TCR 拉取的镜像。数据卷、端口、`deploy/.env`、数据库里的 Flyway 历史全部沿用。
+迁移**不需要改 `docker-compose.yml`**，只是给服务补上 `image:`，让容器改用从镜像仓库拉取的镜像。数据卷、端口、`deploy/.env`、数据库里的 Flyway 历史全部沿用。
 
 > **最关键的一条**：必须在**原来的 compose 工作目录、原来的项目名下**操作。
 > `deploy/docker-compose.yml` 的卷是 `backend-data` / `backend-logs`，compose 会给它们加项目名前缀（默认 = 首个 compose 文件所在目录名，通常是 `deploy`）。换个目录跑会新建一套空卷 → RSA 密钥对重新生成、日志丢失。
@@ -386,11 +379,12 @@ git pull                         # 服务器有仓库时；否则 scp 三个文�
 #   deploy/docker-compose.registry.yml、deploy/update.sh、deploy/.env.example
 
 # 给 .env 补两行（不要覆盖原有内容）
-printf 'REGISTRY=ccr.ccs.tencentyun.com/tcb-100008754513-winj\nTAG=latest\n' >> .env
+printf 'REGISTRY=docker.cnb.cool/canace/astral\nTAG=latest\n' >> .env
 chmod +x update.sh
 
-# 登录一次 TCR（仓库默认私有；凭证持久化在 /root/.docker/config.json，之后 update.sh 自动复用）
-echo '<访问凭证密码>' | docker login ccr.ccs.tencentyun.com -u <腾讯云账号> --password-stdin
+# 登录一次 CNB 制品库（私有仓镜像需要鉴权；凭证持久化在 /root/.docker/config.json，之后 update.sh 自动复用）
+# 访问令牌在 cnb.cool「设置 → 访问令牌」创建，需勾选 registry-package 读权限
+echo '<CNB访问令牌>' | docker login docker.cnb.cool -u cnb --password-stdin
 
 # 首次迁移先手动两条命令，把「清理旧镜像」留到验证之后
 docker compose -f docker-compose.yml -f docker-compose.registry.yml pull
@@ -405,7 +399,7 @@ docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-b
 docker compose -f docker-compose.yml -f docker-compose.registry.yml ps
 docker compose -f docker-compose.yml -f docker-compose.registry.yml logs --tail=200 backend | grep -Ei 'Started AstralApplication|flyway|ERROR'
 curl -fsS http://localhost:27000/actuator/health
-docker inspect astral-backend --format '{{ .Config.Image }}'   # 应变为 ccr.ccs.tencentyun.com/tcb-100008754513-winj/astral-backend:...
+docker inspect astral-backend --format '{{ .Config.Image }}'   # 应变为 docker.cnb.cool/canace/astral/astral-backend:...
 ```
 
 确认无误后再回收旧镜像与归档：

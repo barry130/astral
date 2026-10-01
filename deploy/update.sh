@@ -3,11 +3,13 @@
 # 服务器侧一键更新：拉取 CI 构建好的镜像并重建容器
 #
 # 前提：
-#   1) 先登录一次镜像仓库（腾讯云 TCR 个人版默认私有）。凭证会持久化到 /root/.docker/config.json，
-#      之后 ./update.sh 自动复用，不需要每次登录：
-#        echo '<访问凭证密码>' | docker login ccr.ccs.tencentyun.com -u <腾讯云账号> --password-stdin
-#      若你已把仓库设为「公开」，可跳过本步
-#   2) deploy/.env 已设置 REGISTRY（如 ccr.ccs.tencentyun.com/tcb-100008754513-winj）
+#   1) 先登录一次镜像仓库（代码仓 canace/astral 是私有仓，镜像随之私有）。
+#      凭证会持久化到 /root/.docker/config.json，之后 ./update.sh 自动复用，
+#      不需要每次登录。CNB 访问令牌在 cnb.cool「设置 → 访问令牌」创建，
+#      需勾选 registry-package 读权限：
+#        echo '<CNB访问令牌>' | docker login docker.cnb.cool -u cnb --password-stdin
+#      若把代码仓设为「公开」，镜像可匿名拉取，可跳过本步
+#   2) deploy/.env 已设置 REGISTRY（如 docker.cnb.cool/canace/astral）
 #
 # 用法：
 #   ./update.sh                      # 用 deploy/.env 里的 TAG（默认 latest）

@@ -1,27 +1,29 @@
 # ============================================================================
-# CNB 云原生构建：自动构建后端 / 前端镜像并推送到腾讯云 TCR 个人版
+# CNB 云原生构建：自动构建后端 / 前端镜像并推送到 CNB 自带 Docker 制品库
+# （docker.cnb.cool，随代码仓库托管，不再单独推腾讯云 TCR）
 #
 # 取代原 GitHub Actions（.github/workflows/docker-publish.yml，已删除）：
-#   - 构建机在国内（腾讯云），推送 ccr.ccs.tencentyun.com 不再走跨境慢速链路
-#   - push 到 master 自动触发，按改动路径过滤（后端/前端互不连坐）
+#   - 构建机在国内（腾讯云），push 到 master 自动触发，按改动路径过滤（后端/前端互不连坐）
 #   - 分支详情页按钮手动触发（.cnb/web_trigger.yml）＝ 后端+前端全量重建
 #   - tag 规则不变：latest + 日期-短SHA（如 20261001-1a2b3c4d，后者用于回滚）
-#   - 服务器侧（deploy/update.sh、docker-compose.registry.yml）完全不变
+#   - 服务器侧（deploy/update.sh、docker-compose.registry.yml）结构不变，
+#     仅 deploy/.env 的 REGISTRY 换成 docker.cnb.cool/canace/astral
+#
+# 推送免登录：services: docker 会自动 docker login 到 CNB 制品库，
+# 凭证即流水线触发者的访问令牌，无需 imports 密钥仓库（原 TCR 凭证管道已删）。
+#
+# 服务器拉取：astral 是私有仓，镜像随之私有——服务器需登录一次：
+#   echo '<CNB访问令牌>' | docker login docker.cnb.cool -u cnb --password-stdin
+#   令牌需勾选 registry-package 读权限（详见 DEPLOY_GUIDE.md）。
 #
 # 一次性配置（详见 DEPLOY_GUIDE.md「CI 构建 + 服务器 pull 更新」）：
 #   ① CNB 注册并创建同名仓库 astral，本仓库推送上去
-#   ② 密钥仓库 canace/secrets-astral 已建好：根目录文件 tcr-envs.yml 存
-#      TCR_USERNAME / TCR_PASSWORD（只能网页编辑，不能 git clone；换凭证去网页改）
-#   ③ 下方 imports 指向该文件；若换仓库名/默认分支，同步改这里
-#   ④ CNB 仓库设置勾选「允许自动触发」（否则 push 不触发构建）
-#
-# 凭证绝不能明文写进本文件——只能放密钥仓库，经 imports 注入。
+#   ② CNB 仓库设置勾选「允许自动触发」（否则 push 不触发构建）
 # ============================================================================
 
 # ---- 可复用片段（YAML 锚点；`.` 开头的顶层键不会当作分支配置执行） ----
 
-# services: docker = 挂载 dind，脚本里直接用 docker build / docker push
-# imports = 密钥仓库文件，注入 TCR_USERNAME / TCR_PASSWORD（canace/secrets-astral）
+# services: docker = 挂载 dind（并自动登录 docker.cnb.cool），脚本里直接 build / push
 # runner 显式降配：默认 8 核(16G)对这个项目的构建是浪费——计费按「核数 × 耗时」算核时，
 # 4 核(8G) 跑 Maven / Next 构建足够（GHA ubuntu-latest 也才 4 核），核时消耗直接减半。
 # 钉死 amd64 与服务器架构一致；仓库无 LFS / 子模块，关掉省拉取开销。
@@ -34,14 +36,10 @@
     submodules: false
   services:
     - docker
-  imports: https://cnb.cool/canace/secrets-astral/-/blob/main/tcr-envs.yml
   env:
-    REGISTRY_HOST: ccr.ccs.tencentyun.com
-    IMAGE_PREFIX: ccr.ccs.tencentyun.com/tcb-100008754513-winj
+    IMAGE_PREFIX: docker.cnb.cool/canace/astral
 
 .backend-stages: &backend-stages
-  - name: tcr 登录
-    script: echo "$TCR_PASSWORD" | docker login "$REGISTRY_HOST" -u "$TCR_USERNAME" --password-stdin
   - name: 生成发布 tag（日期-短SHA，兼作回滚锚点）
     script: echo -n "$IMAGE_PREFIX/astral-backend:$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"
     exports:
@@ -54,8 +52,6 @@
       docker push "$IMAGE_PREFIX/astral-backend:latest"
 
 .frontend-stages: &frontend-stages
-  - name: tcr 登录
-    script: echo "$TCR_PASSWORD" | docker login "$REGISTRY_HOST" -u "$TCR_USERNAME" --password-stdin
   - name: 生成发布 tag（日期-短SHA，兼作回滚锚点）
     script: echo -n "$IMAGE_PREFIX/astral-frontend:$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"
     exports:

@@ -6,5 +6,5 @@ branch:
   - reg: '^master$'
     buttons:
       - name: 构建并推送镜像
-        description: 后端 + 前端全量重建，推送到腾讯云 TCR（latest + 日期-短SHA 双 tag）
+        description: 后端 + 前端全量重建，推送到 CNB 制品库（latest + 日期-短SHA 双 tag）
         event: web_trigger_publish
