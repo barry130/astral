@@ -110,6 +110,15 @@
       "length": 64
     },
     {
+      "columnName": "source",
+      "fieldName": "source",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "错误来源：client=客户端上报 / server=服务端自身异常",
+      "length": 16,
+      "defaultValue": "client"
+    },
+    {
       "columnName": "occur_time",
       "fieldName": "occurTime",
       "fieldType": "LocalDateTime",
@@ -128,15 +137,22 @@
   "indexes": [
     {
       "indexName": "idx_stat_error_occur_time",
-      "columns": ["occur_time"]
+      "columns": [
+        "occur_time"
+      ]
     },
     {
       "indexName": "idx_stat_error_type",
-      "columns": ["error_type"]
+      "columns": [
+        "error_type"
+      ]
     },
     {
       "indexName": "idx_stat_error_fp_time",
-      "columns": ["fingerprint", "occur_time"]
+      "columns": [
+        "fingerprint",
+        "occur_time"
+      ]
     }
   ]
 }

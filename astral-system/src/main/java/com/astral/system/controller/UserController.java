@@ -11,6 +11,10 @@ import com.astral.system.service.RoleService;
 import com.astral.system.service.UserRoleService;
 import com.astral.system.service.UserService;
 import com.astral.common.result.Result;
+import com.astral.common.util.CsvExportUtil;
+import com.astral.common.util.PasswordPolicy;
+import org.springframework.http.ResponseEntity;
+import java.util.List;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -75,6 +79,40 @@ public class UserController {
         }
         wrapper.orderByDesc(User::getCreateTime);
         return Result.success(userService.page(page, wrapper));
+    }
+
+    /**
+     * 导出用户 CSV（与分页查询同一套过滤条件与权限）
+     * <p>导出量按当前全量数据（不分页），字段不含密码散列。</p>
+     */
+    @Operation(summary = "导出CSV")
+    @RequiresPermission("admin:system:user:view")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCsv(@RequestParam(required = false) String userType,
+                                            @RequestParam(required = false) String username) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        if (userType != null && !userType.isBlank()) {
+            wrapper.eq(User::getUserType, userType);
+        }
+        if (username != null && !username.isBlank()) {
+            wrapper.and(w -> w.like(User::getUsername, username)
+                    .or().like(User::getNickname, username)
+                    .or().like(User::getEmail, username));
+        }
+        wrapper.orderByDesc(User::getCreateTime);
+        List<User> users = userService.list(wrapper);
+        byte[] csv = CsvExportUtil.build(
+                new String[]{"ID", "用户名", "昵称", "邮箱", "状态", "用户类型", "封禁/注销理由",
+                        "最后登录IP", "最后登录时间", "密码更新时间", "创建时间"},
+                users, u -> new Object[]{u.getId(), u.getUsername(), u.getNickname(), u.getEmail(),
+                        u.getStatus() != null && u.getStatus() == 1 ? "正常" : "禁用",
+                        u.getUserType(), u.getStatusReason(), u.getLoginIp(),
+                        u.getLoginTime(), u.getPwdUpdateTime(), u.getCreateTime()});
+        String filename = "users-" + java.time.LocalDate.now() + ".csv";
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename*=UTF-8''" + filename)
+                .header("Content-Type", "text/csv;charset=UTF-8")
+                .body(csv);
     }
 
     /**
@@ -206,14 +244,26 @@ public class UserController {
     // 封禁不改变账号归属与权限集合（角色不变），可委派；真正的提权入口是 /{id}/type 与 /{id}/roles
     @RequiresPermission("admin:system:user:edit")
     @PutMapping("/{id}/status")
-    public Result<Void> changeStatus(@PathVariable Long id, @RequestParam Integer status) {
-        User user = userService.getById(id);
-        if (user == null) {
+    public Result<Void> changeStatus(@PathVariable Long id, @RequestParam Integer status,
+                                     @RequestParam(required = false) String reason) {
+        if (userService.getById(id) == null) {
             return Result.fail("用户不存在");
         }
-        user.setStatus(status == null ? 1 : status);
-        user.setUpdateTime(LocalDateTime.now());
-        userService.updateById(user);
+        // 封禁理由：封禁时必填落库（用户管理页展示），解封时清空
+        if (status != null && status == 0) {
+            if (reason == null || reason.isBlank()) {
+                return Result.fail("封禁时必须填写理由");
+            }
+        }
+        // 只 patch 状态相关列：绝不能把 getById 出来的实体（password 是哈希）整个塞回
+        // updateById —— UserServiceImpl.updateById 会把非空 password 当新明文再哈希一次，
+        // 落库成 BCrypt(BCrypt(明文))，用户从此无法登录（实测踩坑）。
+        User patch = new User();
+        patch.setId(id);
+        patch.setStatus(status == null ? 1 : status);
+        patch.setStatusReason(status != null && status == 0 ? reason.trim() : "");
+        patch.setUpdateTime(LocalDateTime.now());
+        userService.updateById(patch);
         // 封禁时踢下线
         if (status != null && status == 0) {
             StpUtil.kickout(id);
@@ -234,17 +284,18 @@ public class UserController {
     @PutMapping("/{id}/password")
     public Result<Void> resetPassword(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String password = body.get("password");
-        if (password == null || password.length() < 6) {
-            return Result.fail("密码至少6位");
-        }
         User user = userService.getById(id);
         if (user == null) {
             return Result.fail("用户不存在");
         }
+        // 密码强度策略（失败抛 IllegalArgumentException -> 400 文案）；
         // 传明文交给 UserServiceImpl.updateById 统一 BCrypt 一次：这里再 hashpw 会被
         // updateById 对非空 password 再哈希，落库成 BCrypt(BCrypt(明文))，登录 checkpw 必败
+        PasswordPolicy.validateOrThrow(password, user.getUsername());
         user.setPassword(password);
         user.setPwdUpdateTime(LocalDateTime.now());
+        // 管理员重置的密码视为临时口令：目标用户下次管理端登录必须自行修改
+        user.setMustChangePassword(1);
         user.setUpdateTime(LocalDateTime.now());
         userService.updateById(user);
         // 重置密码后踢下线，强制重新登录
@@ -288,13 +339,15 @@ public class UserController {
         if (!"ADMIN".equals(userType) && !"APP".equals(userType)) {
             return Result.fail("不支持的用户类型");
         }
-        User user = userService.getById(id);
-        if (user == null) {
+        if (userService.getById(id) == null) {
             return Result.fail("用户不存在");
         }
-        user.setUserType(userType);
-        user.setUpdateTime(LocalDateTime.now());
-        userService.updateById(user);
+        // 同 changeStatus：只 patch userType，避免把 password 哈希带回 updateById 被二次哈希
+        User patch = new User();
+        patch.setId(id);
+        patch.setUserType(userType);
+        patch.setUpdateTime(LocalDateTime.now());
+        userService.updateById(patch);
         // 类型变了，会话里缓存的 userType 立即失效，否则降级（ADMIN->APP）不会立刻生效
         StpUtil.kickout(id);
         return Result.success();

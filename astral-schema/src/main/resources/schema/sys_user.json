@@ -115,6 +115,38 @@
       "comment": "密码更新时间"
     },
     {
+      "columnName": "totp_secret",
+      "fieldName": "totpSecret",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "TOTP 密钥（Base32），NULL=未绑定",
+      "length": 128
+    },
+    {
+      "columnName": "totp_enabled",
+      "fieldName": "totpEnabled",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "是否启用 TOTP 二次验证：1=是",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "must_change_password",
+      "fieldName": "mustChangePassword",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "是否强制改密：1=下次管理端登录必须修改",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "status_reason",
+      "fieldName": "statusReason",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "最近一次封禁/注销理由",
+      "length": 255
+    },
+    {
       "columnName": "create_time",
       "fieldName": "createTime",
       "fieldType": "LocalDateTime",

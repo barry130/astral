@@ -1,0 +1,102 @@
+{
+  "tableName": "sys_alert_rule",
+  "tableComment": "告警规则（指标阈值+冷却时间）",
+  "moduleName": "monitor",
+  "className": "AlertRule",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isRequired": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "name",
+      "fieldName": "name",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "规则名称",
+      "length": 64,
+      "isRequired": true,
+      "isUnique": true
+    },
+    {
+      "columnName": "metric",
+      "fieldName": "metric",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "指标：SERVER_ERROR_COUNT/CLIENT_ERROR_COUNT/HTTP_5XX_COUNT",
+      "length": 32,
+      "isRequired": true
+    },
+    {
+      "columnName": "threshold",
+      "fieldName": "threshold",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "触发阈值（窗口内 >= 触发）",
+      "isRequired": true
+    },
+    {
+      "columnName": "window_minutes",
+      "fieldName": "windowMinutes",
+      "fieldType": "Integer",
+      "jdbcType": "INT",
+      "comment": "统计窗口（分钟）",
+      "isRequired": true,
+      "defaultValue": "5"
+    },
+    {
+      "columnName": "channel_id",
+      "fieldName": "channelId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "通知渠道ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "cooldown_minutes",
+      "fieldName": "cooldownMinutes",
+      "fieldType": "Integer",
+      "jdbcType": "INT",
+      "comment": "冷却时间（分钟）",
+      "isRequired": true,
+      "defaultValue": "30"
+    },
+    {
+      "columnName": "enabled",
+      "fieldName": "enabled",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "是否启用：1=是",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "last_fired_at",
+      "fieldName": "lastFiredAt",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "上次触发时间"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

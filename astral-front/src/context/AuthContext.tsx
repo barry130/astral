@@ -11,8 +11,8 @@ interface AuthContextType {
   userInfo: LoginResponse | null;
   /** 是否已登录 */
   isLogin: boolean;
-  /** 登录方法 */
-  login: (username: string, password: string) => Promise<void>;
+  /** 登录方法（totpCode：启用二次验证的账号传入；成功返回登录响应，供调用方读取 mustChangePassword） */
+  login: (username: string, password: string, totpCode?: string) => Promise<LoginResponse>;
   /** 登出方法 */
   logout: () => Promise<void>;
   /** 加载状态（初始化时检查登录状态） */
@@ -54,15 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /** 用户登录：调用API，成功后保存token和用户信息 */
-  const login = async (username: string, password: string) => {
-    const res = await authApi.login({ username, password });
+  const login = async (username: string, password: string, totpCode?: string) => {
+    const res = await authApi.login({ username, password, totpCode });
     if (res.code === 200) {
       const token = res.data.token;
       localStorage.setItem('token', token);
       setUser(res.data);
-    } else {
-      throw new Error(res.message);
+      return res.data;
     }
+    throw new Error(res.message);
   };
 
   /** 用户登出：调用API清理服务端session，清除本地token和用户信息 */

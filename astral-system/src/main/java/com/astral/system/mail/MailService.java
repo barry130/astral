@@ -20,6 +20,19 @@ public interface MailService {
      */
     void send(String pluginId, String toEmail, String templateCode, Map<String, String> variables);
 
+    /**
+     * 系统内部告警邮件直发（告警渠道用）
+     *
+     * <p>不走插件授权/模板/每日额度：告警由服务端自身触发、量小且有冷却，
+     * 授权链路反而会让「告警发不出去」成为常态。正文为纯文本（按 
+ 换行）。</p>
+     *
+     * @param toEmail 收件邮箱（告警渠道配置里指定）
+     * @param subject 邮件主题
+     * @param textBody 纯文本正文
+     */
+    void sendSystemAlert(String toEmail, String subject, String textBody);
+
     /** 后台测试发送：使用指定账户向指定邮箱发送一封测试邮件 */
     void testSend(Long accountId, String toEmail);
 

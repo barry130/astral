@@ -1,6 +1,7 @@
 package com.astral.system.service.impl;
 
 import cn.hutool.crypto.digest.BCrypt;
+import com.astral.common.util.PasswordPolicy;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.system.service.UserService;
@@ -25,8 +26,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public boolean save(User entity) {
-        // 对密码进行BCrypt加密，避免明文存储
+        // 密码强度策略 + BCrypt 加密（策略失败抛 IllegalArgumentException，由全局异常处理器返回 400 文案）
         if (StringUtils.hasText(entity.getPassword())) {
+            PasswordPolicy.validateOrThrow(entity.getPassword(), entity.getUsername());
             entity.setPassword(BCrypt.hashpw(entity.getPassword()));
         }
         return super.save(entity);
@@ -41,8 +43,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public boolean updateById(User entity) {
-        // 仅当提供了新密码时才加密（避免覆盖已有密码）
+        // 仅当提供了新密码时才加密（避免覆盖已有密码）；策略同 save
         if (StringUtils.hasText(entity.getPassword())) {
+            PasswordPolicy.validateOrThrow(entity.getPassword(), entity.getUsername());
             entity.setPassword(BCrypt.hashpw(entity.getPassword()));
         }
         return super.updateById(entity);

@@ -297,8 +297,12 @@ public class StatReportService {
      * <p>appVersion 复用既有 drill-down 语义（明细窗口内的版本约束），不另设 version 参数。</p>
      */
     public Page<StatErrorLog> getErrorPage(long pageNum, long pageSize, String errorType,
-                                           String ut, String appVersion, String fingerprint) {
+                                           String source, String ut, String appVersion, String fingerprint) {
         QueryWrapper<StatErrorLog> qw = new QueryWrapper<>();
+        String sourceFilter = normalize(source);
+        if (sourceFilter != null) {
+            qw.eq("source", sourceFilter);
+        }
         String utFilter = normalize(ut);
         if (errorType != null && !errorType.isBlank()) {
             qw.eq("error_type", errorType);
@@ -319,16 +323,16 @@ public class StatReportService {
     /**
      * 错误分组汇总（按 fingerprint）
      */
-    public List<ErrorSummaryDTO> getErrorSummary(LocalDate date, String ut, String version) {
-        return cached("err:" + date + ":" + keyPart(ut) + ":" + keyPart(version),
-                () -> getErrorSummaryDirect(date, ut, version));
+    public List<ErrorSummaryDTO> getErrorSummary(LocalDate date, String source, String ut, String version) {
+        return cached("err:" + date + ":" + keyPart(source) + ":" + keyPart(ut) + ":" + keyPart(version),
+                () -> getErrorSummaryDirect(date, source, ut, version));
     }
 
-    private List<ErrorSummaryDTO> getErrorSummaryDirect(LocalDate date, String ut, String version) {
+    private List<ErrorSummaryDTO> getErrorSummaryDirect(LocalDate date, String source, String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
         List<Map<String, Object>> rows = statErrorLogMapper.selectErrorSummary(
-                start, end, normalize(ut), normalize(version));
+                start, end, normalize(source), normalize(ut), normalize(version));
         List<ErrorSummaryDTO> list = new ArrayList<>(rows.size());
         for (Map<String, Object> row : rows) {
             ErrorSummaryDTO dto = new ErrorSummaryDTO();

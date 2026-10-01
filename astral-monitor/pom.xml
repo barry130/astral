@@ -26,6 +26,12 @@
             <artifactId>astral-dao</artifactId>
         </dependency>
 
+        <!-- 告警渠道 EMAIL 直发复用 MailService（system 模块）；system 不反向依赖 monitor，无环 -->
+        <dependency>
+            <groupId>com.astral</groupId>
+            <artifactId>astral-system</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

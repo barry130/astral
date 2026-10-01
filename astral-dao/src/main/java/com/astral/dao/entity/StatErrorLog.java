@@ -54,6 +54,9 @@ public class StatErrorLog {
     @Size(max = 64)
     private String ip;
 
+    @Size(max = 16)
+    private String source;
+
     @TableField("occur_time")
     private LocalDateTime occurTime;
 

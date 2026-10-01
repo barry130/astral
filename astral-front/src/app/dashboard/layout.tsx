@@ -923,6 +923,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-36">
+                <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
+                  <User />
+                  个人中心
+                </DropdownMenuItem>
                 <DropdownMenuItem variant="destructive" onClick={handleLogout}>
                   <LogOut />
                   退出登录

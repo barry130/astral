@@ -223,6 +223,7 @@ public class StatIngestService {
 
         com.astral.dao.entity.StatErrorLog errorLog = new com.astral.dao.entity.StatErrorLog();
         errorLog.setFingerprint(fingerprint);
+        errorLog.setSource("client");
         errorLog.setErrorType(event.getErrorType() != null ? event.getErrorType() : "js");
         errorLog.setMessage(truncate(event.getMessage(), 1024));
         errorLog.setStack(stack);

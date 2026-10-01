@@ -1,9 +1,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Table, Tag, Tabs, message } from '@/components/antd-compat';
-import { FileTextOutlined, SecurityScanOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@/components/antd-compat/icons';
+import { Button, Card, Space, Table, Tag, Tabs, message } from '@/components/antd-compat';
+import { DownloadOutlined, FileTextOutlined, SecurityScanOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@/components/antd-compat/icons';
 import { logApi, OperateLog, LoginLog } from '@/api/log';
+import { clientHeaders } from '@/lib/client-info';
+
+/**
+ * CSV 导出（fetch 直连）：
+ * axios 响应拦截器面向 Result 包装体，二进制流不兼容（会走 result.code 分支被拒），
+ * 与「对象存储预签名直传」一样属于约定的 fetch 例外，需手动带 satoken 与客户端系统头。
+ */
+const exportCsv = async (url: string, filename: string) => {
+  const headers: Record<string, string> = { ...clientHeaders() };
+  const token = localStorage.getItem('token');
+  if (token) headers['satoken'] = token;
+  const resp = await fetch(url, { headers });
+  if (!resp.ok) throw new Error(`导出失败（${resp.status}）`);
+  const blob = await resp.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
 
 /**
  * 日志管理页面组件
@@ -125,6 +145,15 @@ export default function LogPage() {
                 </span>
               ),
               children: (
+                <div>
+                <div style={{ marginBottom: 8, textAlign: 'right' }}>
+                  <Button icon={<DownloadOutlined />} onClick={() => {
+                    exportCsv('/api/v1/admin/log/operate_log/export',
+                      `operate-logs-${new Date().toISOString().slice(0, 10)}.csv`)
+                      .then(() => message.success('已导出'))
+                      .catch((e) => message.error(e.message || '导出失败'));
+                  }}>导出 CSV</Button>
+                </div>
                 <Table
                   dataSource={operateLogs}
                   columns={operateColumns}
@@ -141,6 +170,7 @@ export default function LogPage() {
                   }}
                   scroll={{ x: 'max-content' }}
                 />
+                </div>
               ),
             },
             {
@@ -152,6 +182,15 @@ export default function LogPage() {
                 </span>
               ),
               children: (
+                <div>
+                <div style={{ marginBottom: 8, textAlign: 'right' }}>
+                  <Button icon={<DownloadOutlined />} onClick={() => {
+                    exportCsv('/api/v1/admin/log/login_log/export',
+                      `login-logs-${new Date().toISOString().slice(0, 10)}.csv`)
+                      .then(() => message.success('已导出'))
+                      .catch((e) => message.error(e.message || '导出失败'));
+                  }}>导出 CSV</Button>
+                </div>
                 <Table
                   dataSource={loginLogs}
                   columns={loginColumns}
@@ -168,6 +207,7 @@ export default function LogPage() {
                   }}
                   scroll={{ x: 'max-content' }}
                 />
+                </div>
               ),
             },
           ]}

@@ -8,6 +8,7 @@ import com.astral.qt.common.QtException;
 import com.astral.qt.common.QtRestResp;
 import com.astral.qt.dto.QtAvatarTicketReqDto;
 import com.astral.qt.dto.QtChangePwByEmailDto;
+import com.astral.qt.dto.QtDeactivateDto;
 import com.astral.qt.dto.QtCoverTicketReqDto;
 import com.astral.qt.dto.QtLikeBatchDto;
 import com.astral.qt.dto.QtLikePlaylistActionDto;
@@ -216,6 +217,16 @@ public class QtAppUserController {
     @PostMapping("/changePass")
     public QtRestResp<User> changePwByEmail(@Valid @RequestBody QtChangePwByEmailDto dto) {
         return QtRestResp.success(userService.changePwByEmail(dto));
+    }
+
+    @Operation(summary = "自助注销账号（凭密码确认，注销后停用+匿名化+全端下线）")
+    @RequiresPermission(value = "user:profile:deactivate", name = "自助注销",
+            description = "App 用户注销自己的账号（停用+匿名化）")
+    @PostMapping("/deactivate")
+    public QtRestResp<Void> deactivate(@RequestHeader(value = "satoken", required = false) String satoken,
+                                       @Valid @RequestBody QtDeactivateDto dto) {
+        userService.deactivate(currentUserId(satoken), dto.getPassword());
+        return QtRestResp.success();
     }
 
     @Operation(summary = "用户签到")

@@ -76,7 +76,13 @@ client.interceptors.response.use(
       }
     }
     if (error.response?.data?.message) {
-      return Promise.reject(new Error(error.response.data.message));
+      const err = new Error(error.response.data.message);
+      // 业务错误码透传（如 AUTH010 需要动态验证码）：登录页等场景按码做特殊交互
+      const errCode = error.response?.data?.errorCode;
+      if (errCode) {
+        (err as Error & { errorCode?: string }).errorCode = errCode;
+      }
+      return Promise.reject(err);
     }
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
       return Promise.reject(new Error('无法连接到服务器，请检查后端服务是否启动'));

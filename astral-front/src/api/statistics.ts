@@ -168,14 +168,15 @@ export const statApi = {
     pageNum?: number;
     pageSize?: number;
     errorType?: string;
+    source?: string;
     ut?: string;
     appVersion?: string;
     fingerprint?: string;
   }) => request.get<PageResult<StatErrorLogItem>>('/api/v1/admin/stat/error/page', { params }),
 
-  /** 错误分组汇总 */
-  getErrorSummary: (date?: string, ut: string = 'all', version?: string) =>
-    request.get<ErrorSummaryItem[]>('/api/v1/admin/stat/error/summary', { params: { date, ut, version } }),
+  /** 错误分组汇总（source：'' 全部 / 'client' 客户端 / 'server' 服务端） */
+  getErrorSummary: (date?: string, source: string = '', ut: string = 'all', version?: string) =>
+    request.get<ErrorSummaryItem[]>('/api/v1/admin/stat/error/summary', { params: { date, source, ut, version } }),
 
   /**
    * 某平台下出现过的版本列表（版本下拉数据源）

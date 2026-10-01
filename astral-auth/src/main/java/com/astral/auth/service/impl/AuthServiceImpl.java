@@ -8,6 +8,7 @@ import com.astral.auth.dto.LoginRequest;
 import com.astral.auth.dto.LoginResponse;
 import com.astral.auth.security.LoginUserTypeResolver;
 import com.astral.auth.security.RsaKeyManager;
+import com.astral.auth.security.TotpUtil;
 import com.astral.auth.service.AuthService;
 import com.astral.auth.service.UserLoginMarker;
 import com.astral.common.error.ErrorCodes;
@@ -80,7 +81,25 @@ public class AuthServiceImpl implements AuthService {
             rsaKeyManager.recordLoginFailure(request.getUsername());
             throw new BusinessException("AUTH002");
         }
-        
+
+        // 禁用账号不得登录（此前 status 只在管理页切换，登录链路从未校验，
+        // 封禁后重新登录即可绕过 —— AUTH006 一直无人触发就是这个问题）
+        if (user.getStatus() != null && user.getStatus() == 0) {
+            throw new BusinessException("AUTH006");
+        }
+
+        // TOTP 二次验证：启用的账号必须携带动态码；未携带返回 AUTH010 让前端补录，
+        // 错误返回 AUTH011。TOTP 在密码校验之后，避免动态码先于密码泄露尝试
+        if (user.getTotpEnabled() != null && user.getTotpEnabled() == 1) {
+            String totpCode = request.getTotpCode();
+            if (totpCode == null || totpCode.isBlank()) {
+                throw new BusinessException("AUTH010");
+            }
+            if (!TotpUtil.verify(totpCode, user.getTotpSecret())) {
+                throw new BusinessException("AUTH011");
+            }
+        }
+
 rsaKeyManager.resetLoginFailures(request.getUsername());
 
         StpUtil.login(user.getId());
@@ -117,6 +136,7 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         response.setRoles(roles != null ? roles : Collections.emptyList());
         response.setPermissions(permissions != null ? permissions : Collections.emptyList());
         response.setUserType(user.getUserType());
+        response.setMustChangePassword(user.getMustChangePassword());
         return response;
     }
 

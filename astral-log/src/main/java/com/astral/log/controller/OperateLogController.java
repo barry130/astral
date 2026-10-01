@@ -5,6 +5,8 @@ import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.OperateLog;
 import com.astral.log.service.OperateLogService;
 import com.astral.common.result.Result;
+import com.astral.common.util.CsvExportUtil;
+import org.springframework.http.ResponseEntity;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,6 +43,27 @@ public class OperateLogController {
                                                @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<OperateLog> page = new Page<>(PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize));
         return Result.success(operateLogService.page(page));
+    }
+
+    /**
+     * 导出操作日志 CSV（最近 1 万条，避免全表导出拖垮 1C2G 服务器）
+     */
+    @Operation(summary = "导出CSV")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCsv() {
+        Page<OperateLog> page = operateLogService.page(
+                new Page<>(1, 10000, false));
+        byte[] csv = CsvExportUtil.build(
+                new String[]{"ID", "用户ID", "用户名", "模块", "操作类型", "请求方法", "请求URL",
+                        "IP", "状态", "耗时(ms)", "错误信息", "时间"},
+                page.getRecords(), r -> new Object[]{r.getId(), r.getUserId(), r.getUsername(),
+                        r.getModule(), r.getOperateType(), r.getRequestMethod(), r.getRequestUrl(),
+                        r.getIp(), r.getStatus(), r.getExecuteTime(), r.getErrorMsg(), r.getCreateTime()});
+        String filename = "operate-logs-" + java.time.LocalDate.now() + ".csv";
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename*=UTF-8''" + filename)
+                .header("Content-Type", "text/csv;charset=UTF-8")
+                .body(csv);
     }
 
     /**

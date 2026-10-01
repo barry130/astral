@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, Button, Space, Modal, Form, Input, Select, Switch, Tag, message, Popconfirm, Tabs, Divider, Typography } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, LockOutlined, LoginOutlined } from '@/components/antd-compat/icons';
 import { request, ApiResult } from '@/api/client';
+import { clientHeaders } from '@/lib/client-info';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
@@ -23,6 +24,8 @@ interface User {
   avatar?: string;
   /** 状态：1启用/0禁用 */
   status: number;
+  /** 封禁/注销理由 */
+  statusReason?: string;
   /** 用户类型：ADMIN 管理端 / APP 轻听App */
   userType?: string;
   /** 密码（仅创建时需要） */
@@ -56,8 +59,9 @@ const userApi = {
   delete: (id: number) => request.delete(`/api/v1/admin/system/user/${id}`),
   /** 重置用户密码 */
   resetPassword: (id: number, password: string) => request.put(`/api/v1/admin/system/user/${id}/password`, { password }),
-  /** 更新用户状态 */
-  updateStatus: (id: number, status: number) => request.put(`/api/v1/admin/system/user/${id}/status`, null, { params: { status } }),
+  /** 更新用户状态（封禁时 reason 必填，后端校验；解封传空） */
+  updateStatus: (id: number, status: number, reason?: string) =>
+    request.put(`/api/v1/admin/system/user/${id}/status`, null, { params: { status, reason: reason || undefined } }),
   /**
    * 修改用户类型（ADMIN / APP）。
    * 必须走这个专用接口：`PUT /{id}` 会在后端把 userType 置 null 防 mass assignment，
@@ -108,6 +112,10 @@ export default function UserPage() {
   const [userRoles, setUserRoles] = useState<number[]>([]);
   /** 用户表单实例 */
   const [form] = Form.useForm();
+  /** 封禁理由弹窗 */
+  const [banModalOpen, setBanModalOpen] = useState(false);
+  const [banTargetId, setBanTargetId] = useState<number | null>(null);
+  const [banReason, setBanReason] = useState('');
   /** 新建用户表单实例 */
   const [createForm] = Form.useForm();
   /** 密码表单实例 */
@@ -236,14 +244,58 @@ export default function UserPage() {
     }
   };
 
-  /** 切换用户启用/禁用状态 */
-  const handleToggleStatus = async (id: number, checked: boolean) => {
+  /** 解封（无需理由） */
+  const handleUnban = async (id: number) => {
     try {
-      await userApi.updateStatus(id, checked ? 1 : 0);
-      message.success(checked ? '已启用' : '已禁用');
+      await userApi.updateStatus(id, 1);
+      message.success('已启用');
       loadData();
     } catch (error: any) {
       message.error(error.message);
+    }
+  };
+
+  /** 请求封禁：打开理由弹窗（封禁必填理由，后端强校验） */
+  const requestBan = (id: number) => {
+    setBanTargetId(id);
+    setBanReason('');
+    setBanModalOpen(true);
+  };
+
+  /** 提交封禁 */
+  const handleBanSubmit = async () => {
+    if (banTargetId == null) return;
+    if (!banReason.trim()) {
+      message.error('封禁必须填写理由');
+      return;
+    }
+    try {
+      await userApi.updateStatus(banTargetId, 0, banReason.trim());
+      message.success('已封禁并强制下线');
+      setBanModalOpen(false);
+      loadData();
+    } catch (error: any) {
+      message.error(error.message);
+    }
+  };
+
+  /** 导出用户 CSV（fetch 直连：axios 拦截器面向 Result 包装，二进制流绕行，同预签名直传） */
+  const handleExport = async () => {
+    try {
+      const headers: Record<string, string> = { ...clientHeaders() };
+      const token = localStorage.getItem('token');
+      if (token) headers['satoken'] = token;
+      const resp = await fetch('/api/v1/admin/system/user/export', { headers });
+      if (!resp.ok) throw new Error(`导出失败（${resp.status}）`);
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `users-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      message.success('已导出');
+    } catch (error: any) {
+      message.error(error.message || '导出失败');
     }
   };
 
@@ -294,7 +346,13 @@ export default function UserPage() {
       dataIndex: 'status',
       key: 'status',
       render: (v: number, r: User) => (
-        <Switch checked={v === 1} onChange={(checked) => handleToggleStatus(r.id, checked)} disabled={!canEdit} checkedChildren="启用" unCheckedChildren="禁用" />
+        <Switch
+          checked={v === 1}
+          onChange={(checked) => (checked ? handleUnban(r.id) : requestBan(r.id))}
+          disabled={!canEdit}
+          checkedChildren="启用"
+          unCheckedChildren="禁用"
+        />
       ),
     },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => new Date(v).toLocaleString() },
@@ -359,11 +417,12 @@ export default function UserPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>{editingUser.status === 1 ? '当前状态：已启用' : '当前状态：已封禁'}</span>
               {editingUser.status === 1
-                ? <Popconfirm title="确认封禁该用户？封禁后其将被强制下线" disabled={!canEdit} onConfirm={() => handleToggleStatus(editingUser.id, false)}>
-                    <Button danger icon={<LockOutlined />} disabled={!canEdit}>封禁</Button>
-                  </Popconfirm>
-                : <Button icon={<DeleteOutlined />} onClick={() => handleToggleStatus(editingUser.id, true)} disabled={!canEdit}>解封</Button>}
+                ? <Button danger icon={<LockOutlined />} disabled={!canEdit} onClick={() => requestBan(editingUser.id)}>封禁</Button>
+                : <Button icon={<DeleteOutlined />} onClick={() => handleUnban(editingUser.id)} disabled={!canEdit}>解封</Button>}
             </div>
+            {editingUser.status === 0 && (
+              <div style={{ color: '#cf1322' }}>封禁/注销理由：{editingUser.statusReason || '-'}</div>
+            )}
             <Button icon={<LoginOutlined />} onClick={handleKickOut} disabled={!canEdit}>踢下线</Button>
           </Space>
 
@@ -412,7 +471,10 @@ export default function UserPage() {
               onChange={(v) => { setTypeFilter(v || ''); loadData(1, pagination.pageSize, search, v || ''); }}
             />
           </div>
-          {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建用户</Button>}
+          <Space>
+            <Button icon={<DeleteOutlined />} onClick={handleExport}>导出 CSV</Button>
+            {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建用户</Button>}
+          </Space>
         </div>
         <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, onChange: (p, ps) => loadData(p, ps, search), showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'] }} />
       </Card>
@@ -429,7 +491,13 @@ export default function UserPage() {
           <Form.Item name="username" label="用户名" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="password" label="密码" rules={[{ required: true, min: 6, message: '密码至少6位' }]}>
+          <Form.Item name="password" label="密码"
+                     rules={[
+                       { required: true },
+                       { min: 8, message: '密码至少 8 位' },
+                       { pattern: /^(?=.*[a-zA-Z])(?=.*\d)\S+$/, message: '必须同时包含字母和数字' },
+                     ]}
+                     extra="至少 8 位，须同时包含字母和数字">
             <Input.Password />
           </Form.Item>
           <Form.Item name="nickname" label="昵称"><Input /></Form.Item>
@@ -447,6 +515,28 @@ export default function UserPage() {
         onCancel={() => setEditVisible(false)}
       >
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={editTabItems} />
+      </Modal>
+
+      {/* 封禁理由弹窗（封禁必填理由，后端强校验） */}
+      <Modal
+        title="封禁用户"
+        open={banModalOpen}
+        onOk={handleBanSubmit}
+        okText="确认封禁"
+        okButtonProps={{ danger: true }}
+        onCancel={() => setBanModalOpen(false)}
+      >
+        <div style={{ marginTop: 16 }}>
+          <div style={{ marginBottom: 8 }}>封禁后该用户将被强制下线且无法登录。请填写封禁理由（用户管理列表可见）：</div>
+          <Input.TextArea
+            rows={3}
+            value={banReason}
+            onChange={(e) => setBanReason(e.target.value)}
+            placeholder="例如：违规使用 / 刷量 / 安全事件"
+            maxLength={200}
+            showCount
+          />
+        </div>
       </Modal>
     </div>
   );

@@ -111,4 +111,20 @@ public interface StatApiHourlyMapper extends BaseMapper<StatApiHourly> {
                                              @Param("end") LocalDateTime end,
                                              @Param("ut") String ut,
                                              @Param("appVersion") String appVersion);
+
+    /**
+     * 统计时间窗内指定状态码区间的请求总数（告警引擎 HTTP_5XX_COUNT 用）
+     *
+     * @param start 窗口起点（含）
+     * @param end   窗口终点（不含）
+     * @param minStatus 状态码下界（含），如 500
+     * @param maxStatus 状态码上界（含），如 599
+     */
+    @Select("SELECT COALESCE(SUM(call_count), 0) FROM stat_api_hourly " +
+            "WHERE bucket_hour >= #{start} AND bucket_hour < #{end} " +
+            "AND status >= #{minStatus} AND status <= #{maxStatus}")
+    Long sumCallsByStatusRange(@Param("start") LocalDateTime start,
+                               @Param("end") LocalDateTime end,
+                               @Param("minStatus") int minStatus,
+                               @Param("maxStatus") int maxStatus);
 }

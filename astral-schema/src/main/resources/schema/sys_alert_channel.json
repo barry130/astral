@@ -1,0 +1,76 @@
+{
+  "tableName": "sys_alert_channel",
+  "tableComment": "告警通知渠道（EMAIL/WEBHOOK）",
+  "moduleName": "monitor",
+  "className": "AlertChannel",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isRequired": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "name",
+      "fieldName": "name",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "渠道名称",
+      "length": 64,
+      "isRequired": true,
+      "isUnique": true
+    },
+    {
+      "columnName": "type",
+      "fieldName": "type",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "渠道类型：EMAIL/WEBHOOK",
+      "length": 20,
+      "isRequired": true
+    },
+    {
+      "columnName": "config",
+      "fieldName": "config",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "渠道配置（JSON，结构随 type）"
+    },
+    {
+      "columnName": "enabled",
+      "fieldName": "enabled",
+      "fieldType": "Integer",
+      "jdbcType": "TINYINT",
+      "comment": "是否启用：1=是",
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "备注",
+      "length": 255
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

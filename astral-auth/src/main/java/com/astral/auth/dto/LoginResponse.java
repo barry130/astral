@@ -26,4 +26,6 @@ public class LoginResponse {
     private List<String> permissions;
     /** 用户类型：ADMIN 管理端 / APP 轻听 App 端（前端据此区分入口，后端据此做管理端身份门禁） */
     private String userType;
+    /** 是否需要强制改密：1=是（管理端登录后必须先修改密码）；0/缺省=否 */
+    private Integer mustChangePassword;
 }

@@ -113,12 +113,13 @@ public class StatReportController {
             @RequestParam(defaultValue = "1") long pageNum,
             @RequestParam(defaultValue = "20") long pageSize,
             @RequestParam(required = false) String errorType,
+            @RequestParam(required = false) String source,
             @RequestParam(defaultValue = "all") String ut,
             @RequestParam(required = false) String appVersion,
             @RequestParam(required = false) String fingerprint) {
         return Result.success(statReportService.getErrorPage(
                 PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize),
-                errorType, ut, appVersion, fingerprint));
+                errorType, source, ut, appVersion, fingerprint));
     }
 
     /**
@@ -129,10 +130,11 @@ public class StatReportController {
     @GetMapping("/error/summary")
     public Result<List<ErrorSummaryDTO>> errorSummary(
             @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false) String source,
             @RequestParam(defaultValue = "all") String ut,
             @RequestParam(required = false) String version) {
         LocalDate d = date != null ? date : LocalDate.now();
-        return Result.success(statReportService.getErrorSummary(d, ut, version));
+        return Result.success(statReportService.getErrorSummary(d, source, ut, version));
     }
 
     /**

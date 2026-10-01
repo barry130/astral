@@ -58,6 +58,20 @@ public class User {
     @TableField("pwd_update_time")
     private LocalDateTime pwdUpdateTime;
 
+    @TableField("totp_secret")
+    @Size(max = 128)
+    private String totpSecret;
+
+    @TableField("totp_enabled")
+    private Integer totpEnabled;
+
+    @TableField("must_change_password")
+    private Integer mustChangePassword;
+
+    @TableField("status_reason")
+    @Size(max = 255)
+    private String statusReason;
+
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

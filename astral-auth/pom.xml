@@ -57,6 +57,12 @@
             <version>1.46.0</version>
         </dependency>
 
+        <!-- 登录失败限流的 Redis 计数（LoginFailureStore）：与 Sa-Token 会话共用同一 Redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-crypto</artifactId>

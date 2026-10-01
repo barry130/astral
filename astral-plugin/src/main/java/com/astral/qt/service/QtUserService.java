@@ -19,6 +19,7 @@ import com.astral.qt.dto.vo.QtDataVo;
 import com.astral.qt.dto.vo.QtUserInfoVo;
 import com.astral.system.mail.MailService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -90,6 +91,40 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
             Long.class);
 
     // ==================== 登录/注册（统一走宿主 sys_user + Sa-Token） ====================
+
+    /**
+     * 用户自助注销
+     *
+     * <p>注销 = 停用（status=0，理由「用户自助注销」）+ 匿名化（昵称改「已注销用户」、
+     * 邮箱/手机/头像/设备标识清空）+ 全端下线。不可自助恢复，需管理员解封。</p>
+     * <p>NOT_NULL 更新策略下 updateById 跳过 null 字段，清空列必须 lambdaUpdate 显式 set。</p>
+     *
+     * @param userId   当前登录用户
+     * @param password 登录密码（注销属高危操作，必须凭密码确认）
+     */
+    public void deactivate(Long userId, String password) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new QtException("用户不存在");
+        }
+        if (password == null || password.isBlank() || !BCrypt.checkpw(password, user.getPassword())) {
+            throw new QtException("密码不正确");
+        }
+        if (user.getStatus() != null && user.getStatus() == 0) {
+            throw new QtException("账号已注销");
+        }
+        userMapper.update(null, new LambdaUpdateWrapper<User>()
+                .eq(User::getId, userId)
+                .set(User::getStatus, 0)
+                .set(User::getStatusReason, "用户自助注销")
+                .set(User::getNickname, "已注销用户")
+                .set(User::getEmail, null)
+                .set(User::getPhone, null)
+                .set(User::getAvatar, null)
+                .set(User::getDeviceId, null)
+                .set(User::getUpdateTime, java.time.LocalDateTime.now()));
+        StpUtil.kickout(userId);
+    }
 
     public QtUserInfoVo login(QtLoginDto dto) {
         User user = userMapper.selectOne(

@@ -5,6 +5,8 @@ import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.LoginLog;
 import com.astral.log.service.LoginLogService;
 import com.astral.common.result.Result;
+import com.astral.common.util.CsvExportUtil;
+import org.springframework.http.ResponseEntity;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,6 +41,27 @@ public class LoginLogController {
                                                @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<LoginLog> page = new Page<>(PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize));
         return Result.success(loginLogService.page(page));
+    }
+
+    /**
+     * 导出登录日志 CSV（最近 1 万条）
+     */
+    @Operation(summary = "导出CSV")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCsv() {
+        Page<LoginLog> page = loginLogService.page(
+                new Page<>(1, 10000, false));
+        byte[] csv = CsvExportUtil.build(
+                new String[]{"ID", "用户ID", "用户名", "登录类型", "IP", "归属地", "浏览器", "操作系统",
+                        "状态", "消息", "登录时间"},
+                page.getRecords(), r -> new Object[]{r.getId(), r.getUserId(), r.getUsername(),
+                        r.getLoginType(), r.getIp(), r.getLocation(), r.getBrowser(), r.getOs(),
+                        r.getStatus(), r.getMsg(), r.getLoginTime()});
+        String filename = "login-logs-" + java.time.LocalDate.now() + ".csv";
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename*=UTF-8''" + filename)
+                .header("Content-Type", "text/csv;charset=UTF-8")
+                .body(csv);
     }
 
     /**

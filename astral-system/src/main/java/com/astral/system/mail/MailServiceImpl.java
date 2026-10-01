@@ -221,6 +221,15 @@ public class MailServiceImpl implements MailService {
         }
     }
 
+    @Override
+    public void sendSystemAlert(String toEmail, String subject, String textBody) {
+        String html = "<div style=\"font-family:sans-serif;padding:24px;white-space:pre-wrap;\">"
+                + textBody.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                + "</div>";
+        // pluginId=system、scene=alert：只影响 sys_mail_log 里的归属标记，不走授权/额度
+        sendWithAccount(toEmail, subject, html, "system", "alert");
+    }
+
     /** 失效启用账户缓存：MailAccountController 的 create/update/delete/toggle 后调用 */
     @Override
     public void evictAccountCache() {

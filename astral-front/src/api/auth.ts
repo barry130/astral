@@ -6,6 +6,8 @@ export interface LoginRequest {
   username: string;
   /** 密码 */
   password: string;
+  /** TOTP 动态验证码：启用二次验证的账号必填（缺失时后端返回 errorCode=AUTH010） */
+  totpCode?: string;
 }
 
 /** 登录响应数据接口（字段与后端 LoginResponse.java 保持一致） */
@@ -24,6 +26,8 @@ export interface LoginResponse {
   roles: string[];
   /** 用户权限编码列表 */
   permissions: string[];
+  /** 是否需要强制改密：1=是（管理端登录后必须先到个人中心修改密码） */
+  mustChangePassword?: number;
 }
 
 /** 认证相关API接口 */

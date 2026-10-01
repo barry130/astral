@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, User, Lock, ShieldCheck } from 'lucide-react';
+import { Loader2, User, Lock, ShieldCheck, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuth } from '@/context/AuthContext';
@@ -15,7 +15,9 @@ export default function LoginPage() {
   const [publicKeyLoading, setPublicKeyLoading] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string }>({});
+  const [totpCode, setTotpCode] = useState('');
+  const [needTotp, setNeedTotp] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string; totpCode?: string }>({});
   const { login, isLogin, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -49,12 +51,20 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const encryptedPassword = await encryptPassword(password);
-      await login(username, encryptedPassword);
+      const encryptedTotp = needTotp && totpCode.trim() ? totpCode.trim() : undefined;
+      const data = await login(username, encryptedPassword, encryptedTotp);
       clearPublicKeyCache();
       toast.success('登录成功');
-      router.push('/dashboard');
+      // 强制改密账号：登录后必须先到个人中心改密码（后端 must_change_password=1）
+      router.push(data?.mustChangePassword === 1 ? '/dashboard/profile?force=1' : '/dashboard');
     } catch (error: any) {
-      toast.error(error.message || '登录失败');
+      // AUTH010 = 该账号启用了 TOTP 二次验证，展开动态码输入框
+      if (error?.errorCode === 'AUTH010') {
+        setNeedTotp(true);
+        toast.info('该账号已启用动态验证码，请输入验证器 App 中的 6 位动态码');
+      } else {
+        toast.error(error.message || '登录失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -114,6 +124,24 @@ export default function LoginPage() {
               </div>
               {fieldErrors.password && <p className="text-xs text-destructive">{fieldErrors.password}</p>}
             </div>
+
+            {needTotp && (
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="h-11 rounded-[10px] pl-10"
+                    placeholder="动态验证码（6 位）"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value)}
+                    autoComplete="one-time-code"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">来自验证器 App（Google Authenticator 等），30 秒刷新</p>
+              </div>
+            )}
 
             <Button
               type="submit"

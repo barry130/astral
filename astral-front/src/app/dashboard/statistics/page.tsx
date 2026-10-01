@@ -394,6 +394,8 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState<Dayjs>(dayjs());
   const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } = usePlatformVersion();
+  /** 错误来源筛选：''=全部 / client=客户端上报 / server=服务端自身异常 */
+  const [source, setSource] = useState<string>('');
   const [summary, setSummary] = useState<ErrorSummaryItem[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentFingerprint, setCurrentFingerprint] = useState<string>();
@@ -402,7 +404,7 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
   const fetchSummary = useCallback(async (isAlive: () => boolean = () => true) => {
     setLoading(true);
     try {
-      const res = await statApi.getErrorSummary(date.format('YYYY-MM-DD'), ut, version || undefined);
+      const res = await statApi.getErrorSummary(date.format('YYYY-MM-DD'), source, ut, version || undefined);
       if (!isAlive()) return;
       setSummary(res.data || []);
     } catch {
@@ -410,7 +412,7 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
     } finally {
       if (isAlive()) setLoading(false);
     }
-  }, [date, ut, version]);
+  }, [date, source, ut, version]);
 
   useEffect(() => {
     let alive = true;
@@ -463,6 +465,19 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
         versionOptions={versionOptions}
         versionLoading={versionLoading}
         onRefresh={() => { void fetchSummary(); }}
+        extra={
+          <Select
+            value={source}
+            onChange={(v) => setSource(v ? String(v) : '')}
+            style={{ width: 140 }}
+            allowClear
+            placeholder="全部来源"
+            options={[
+              { value: 'server', label: '服务端异常' },
+              { value: 'client', label: '客户端上报' },
+            ]}
+          />
+        }
       />
 
       <ResizableTable<ErrorSummaryItem>
@@ -479,6 +494,7 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
         fingerprint={currentFingerprint}
         ut={ut}
         version={version}
+        source={source}
         utOptions={utOptions}
         onClose={() => setDrawerOpen(false)}
       />
@@ -486,12 +502,13 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
   );
 }
 
-/** 错误明细分页抽屉（同一 fingerprint，继承列表页的平台/版本筛选） */
+/** 错误明细分页抽屉（同一 fingerprint，继承列表页的来源/平台/版本筛选） */
 function ErrorDetailDrawer({
   open,
   fingerprint,
   ut,
   version,
+  source,
   utOptions,
   onClose,
 }: {
@@ -499,6 +516,7 @@ function ErrorDetailDrawer({
   fingerprint?: string;
   ut: string;
   version: string;
+  source: string;
   utOptions: Option[];
   onClose: () => void;
 }) {
@@ -517,7 +535,8 @@ function ErrorDetailDrawer({
         pageNum,
         pageSize,
         fingerprint,
-        // 继承列表页的平台与版本筛选，否则明细会展示其它平台的同类错误
+        // 继承列表页的来源/平台/版本筛选，否则明细会展示其它维度的同类错误
+        source: source || undefined,
         ut,
         appVersion: version || undefined,
       });
@@ -529,7 +548,7 @@ function ErrorDetailDrawer({
     } finally {
       if (isAlive()) setLoading(false);
     }
-  }, [fingerprint, open, pageNum, ut, version]);
+  }, [fingerprint, open, pageNum, source, ut, version]);
 
   useEffect(() => {
     let alive = true;
@@ -554,6 +573,12 @@ function ErrorDetailDrawer({
     },
     { title: '信息', dataIndex: 'message', ellipsis: true },
     { title: '页面', dataIndex: 'page', width: 150, ellipsis: true },
+    {
+      title: '来源',
+      dataIndex: 'source',
+      width: 90,
+      render: (v?: string) => <Tag color={v === 'server' ? 'red' : 'blue'}>{v === 'server' ? '服务端' : '客户端'}</Tag>,
+    },
     { title: '平台', dataIndex: 'ut', width: 100, render: (v?: string) => utLabel(utOptions, v) },
     { title: '版本', dataIndex: 'appVersion', width: 80 },
     { title: 'IP 地址', dataIndex: 'ip', width: 130, render: (v?: string) => (v ? <Text code>{v}</Text> : '-') },

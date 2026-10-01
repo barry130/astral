@@ -14,7 +14,6 @@ import java.security.*;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
@@ -23,20 +22,16 @@ public class RsaKeyManager {
     private PublicKey publicKey;
     private PrivateKey privateKey;
 
-    private final ConcurrentHashMap<String, FailureRecord> loginFailures = new ConcurrentHashMap<>();
-    private static final int MAX_FAILURES = 5;
-    private static final long LOCK_DURATION_MS = 15 * 60 * 1000;
-    private static final long FAILURE_WINDOW_MS = 15 * 60 * 1000;
+    /** 登录失败计数 / 锁定：Redis 存储（内存兜底），见 {@link LoginFailureStore} */
+    private final LoginFailureStore loginFailureStore;
+
+    public RsaKeyManager(LoginFailureStore loginFailureStore) {
+        this.loginFailureStore = loginFailureStore;
+    }
 
     /** 密钥文件路径，可通过配置覆盖 */
     @Value("${astral.auth.rsa-key-path:./data/rsa-key.pair}")
     private String keyPath;
-
-    private static class FailureRecord {
-        int count;
-        long lastFailureTime;
-        long lockUntil;
-    }
 
     @PostConstruct
     public void init() throws Exception {
@@ -105,56 +100,18 @@ public class RsaKeyManager {
     }
 
     public void recordLoginFailure(String username) {
-        loginFailures.compute(username, (key, record) -> {
-            long now = System.currentTimeMillis();
-            if (record == null) {
-                record = new FailureRecord();
-            }
-            if (now - record.lastFailureTime > FAILURE_WINDOW_MS) {
-                record.count = 0;
-            }
-            record.count++;
-            record.lastFailureTime = now;
-            if (record.count >= MAX_FAILURES) {
-                record.lockUntil = now + LOCK_DURATION_MS;
-            }
-            return record;
-        });
+        loginFailureStore.recordFailure(username);
     }
 
     public void resetLoginFailures(String username) {
-        loginFailures.remove(username);
+        loginFailureStore.reset(username);
     }
 
     public boolean isAccountLocked(String username) {
-        FailureRecord record = loginFailures.get(username);
-        if (record == null) {
-            return false;
-        }
-        long now = System.currentTimeMillis();
-        if (record.lockUntil > 0 && now < record.lockUntil) {
-            return true;
-        }
-        if (now - record.lastFailureTime > FAILURE_WINDOW_MS) {
-            loginFailures.remove(username);
-            return false;
-        }
-        return false;
+        return loginFailureStore.isLocked(username);
     }
 
     public int getRemainingFailures(String username) {
-        FailureRecord record = loginFailures.get(username);
-        if (record == null) {
-            return MAX_FAILURES;
-        }
-        long now = System.currentTimeMillis();
-        if (record.lockUntil > 0 && now < record.lockUntil) {
-            return 0;
-        }
-        if (now - record.lastFailureTime > FAILURE_WINDOW_MS) {
-            loginFailures.remove(username);
-            return MAX_FAILURES;
-        }
-        return Math.max(0, MAX_FAILURES - record.count);
+        return loginFailureStore.remainingFailures(username);
     }
 }

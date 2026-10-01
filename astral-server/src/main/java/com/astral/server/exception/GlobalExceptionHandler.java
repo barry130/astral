@@ -2,6 +2,8 @@ package com.astral.server.exception;
 
 import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
+import com.astral.monitor.service.ServerErrorRecorder;
+import org.springframework.beans.factory.ObjectProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +42,17 @@ public class GlobalExceptionHandler {
     /** 业务异常默认状态码：业务规则被违反属于客户端问题 */
     private static final HttpStatus DEFAULT_BUSINESS_STATUS = HttpStatus.BAD_REQUEST;
 
+    /**
+     * 服务端异常登记器（可选注入：astral.stat.enabled=false 时无该 Bean）。
+     * 兜底 500 异步登记进 stat_error_log(source=server)，管理台「错误统计」
+     * 与告警规则（SERVER_ERROR_COUNT）才能看见后端自身的故障。
+     */
+    private final ObjectProvider<ServerErrorRecorder> serverErrorRecorder;
+
+    public GlobalExceptionHandler(ObjectProvider<ServerErrorRecorder> serverErrorRecorder) {
+        this.serverErrorRecorder = serverErrorRecorder;
+    }
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<Result<?>> handleBusinessException(BusinessException e) {
         HttpStatus status = mapBusinessStatus(e.getErrorCode());
@@ -70,8 +83,8 @@ public class GlobalExceptionHandler {
             return DEFAULT_BUSINESS_STATUS;
         }
         return switch (errorCode) {
-            // 未登录 / 凭据错误 / Token 失效
-            case "AUTH001", "AUTH002", "AUTH004", "AUTH005", "AUTH006", "AUTH007" -> HttpStatus.UNAUTHORIZED;
+            // 未登录 / 凭据错误 / Token 失效（AUTH010/011 = 登录需补 TOTP 动态码，同属凭据未齐）
+            case "AUTH001", "AUTH002", "AUTH004", "AUTH005", "AUTH006", "AUTH007", "AUTH010", "AUTH011" -> HttpStatus.UNAUTHORIZED;
             // 账号锁定 / 限流类：语义上属于「稍后再试」
             case "AUTH003", "AUTH008", "STORAGE007", "STORAGE026" -> HttpStatus.TOO_MANY_REQUESTS;
             // 权限不足
@@ -190,8 +203,17 @@ public class GlobalExceptionHandler {
 
     /** 兜底：固定文案 + 500，绝不回传异常细节 */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Result<?>> handleException(Exception e) {
+    public ResponseEntity<Result<?>> handleException(Exception e, jakarta.servlet.http.HttpServletRequest request) {
         log.error("Unexpected error", e);
+        // 登记（异步、绝不抛出）：page 维度记 METHOD + URI，供错误统计页与告警规则消费
+        try {
+            ServerErrorRecorder recorder = serverErrorRecorder.getIfAvailable();
+            if (recorder != null) {
+                recorder.recordAsync(e, request.getRequestURI(), request.getMethod());
+            }
+        } catch (Exception ignored) {
+            // 登记链路自身的任何异常都不影响错误响应
+        }
         Result<?> body = Result.error("COMMON001");
         body.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);

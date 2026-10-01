@@ -1,0 +1,104 @@
+{
+  "tableName": "sys_alert_record",
+  "tableComment": "告警触发记录",
+  "moduleName": "monitor",
+  "className": "AlertRecord",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isRequired": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "rule_id",
+      "fieldName": "ruleId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "规则ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "rule_name",
+      "fieldName": "ruleName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "规则名称快照",
+      "length": 64
+    },
+    {
+      "columnName": "channel_id",
+      "fieldName": "channelId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "渠道ID"
+    },
+    {
+      "columnName": "channel_name",
+      "fieldName": "channelName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "渠道名称快照",
+      "length": 64
+    },
+    {
+      "columnName": "title",
+      "fieldName": "title",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "告警标题",
+      "length": 256
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "告警内容"
+    },
+    {
+      "columnName": "metric_value",
+      "fieldName": "metricValue",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "触发时指标值"
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "发送状态：SUCCESS/FAIL",
+      "length": 16,
+      "isRequired": true
+    },
+    {
+      "columnName": "error_msg",
+      "fieldName": "errorMsg",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "失败原因",
+      "length": 512
+    },
+    {
+      "columnName": "fired_at",
+      "fieldName": "firedAt",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "触发时间；标 INSERT 填充以触发 SequenceMetaObjectHandler 主键取号（本表无 create_time 列）",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_alert_record_fired_at",
+      "columns": [
+        "fired_at"
+      ]
+    }
+  ]
+}
