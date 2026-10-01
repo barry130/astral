@@ -209,9 +209,9 @@ docker compose up -d --build
 - ~~CNB 构建 + TCR 个人版~~：能用，但 TCR 凭证要经密钥仓库 imports 注入，多一套凭证管道；个人版共享实例也没有额外收益——已改为直推 CNB 制品库
 - **CNB 构建 + CNB 制品库**：CI 内置触发者凭证，`services: [docker]` 后直接 push，**零凭证配置**；对象存储免费 100GiB（重复基础镜像去重计容量），个人项目用不满
 
-> **代码仓是私有仓，镜像随之私有**：服务器需要**先 `docker login` 一次**（凭证持久化在 `/root/.docker/config.json`，之后 `update.sh` 自动复用），或者把仓库改成公开（镜像即可匿名拉取）。镜像名形如 `docker.cnb.cool/canace/astral/astral-backend:<tag>`。
+> **仓库可见性决定镜像是否要登录**：仓库 `canace/astral` 当前为**公开**，镜像可匿名拉取，服务器**无需 `docker login`**。若日后改回私有仓，服务器需先登录一次（CNB 访问令牌勾 `registry-package` 读权限、用户名 `cnb`，凭证持久化在 `/root/.docker/config.json`）。镜像名形如 `docker.cnb.cool/canace/astral/astral-backend:<tag>`。
 >
-> 仍想换回 TCR / ghcr.io 也可以：改 `.cnb.yml` 里的 `IMAGE_PREFIX` 与登录方式（TCR 需恢复密钥仓库 imports），`deploy/.env` 的 `REGISTRY` 同步改。
+> 注意别带无效令牌：CNB 对带过期/无效令牌的请求连公开制品也会拒绝——要么有效登录，要么不登录（`docker logout docker.cnb.cool` 可清）。仍想换回 TCR / ghcr.io 也可以：改 `.cnb.yml` 里的 `IMAGE_PREFIX` 与登录方式（TCR 需恢复密钥仓库 imports），`deploy/.env` 的 `REGISTRY` 同步改。
 
 相比「本机 `docker save` 全量 `tar.gz` → `scp` → `docker load`」，这种方式**每次只传输发生变化的镜像层**（改后端≈jar 层，改前端≈`.next` 层），基础镜像层不再重复搬运；服务器也不再需要完整源码，只保留 `deploy/` 目录即可。
 
@@ -230,12 +230,7 @@ docker compose up -d --build
 4. **开启自动触发**：CNB 仓库「设置」里勾选**允许自动触发（云原生构建）**，否则 push 不会触发构建
 5. **首次推送验证**：`git push`。master 在 CNB 属于新分支，必定触发两条流水线全量构建（后端、前端并行）。成功后在 CNB 仓库「制品」页能看到两个镜像，各有两个 tag：`latest` 与「日期-短SHA」如 `20261001-1a2b3c4d`（后者用于精确发布/回滚）。制品路径与仓库路径一致（`docker.cnb.cool/canace/astral/astral-backend` 等），首次 push 自动创建，无需手动建仓
    - 之后每次 push 按**改动路径**过滤：动 `astral-front/**` 只重建前端，动后端模块只重建后端，互不连坐；手动全量构建用 master 分支详情页的「构建并推送镜像」按钮
-6. 服务器登录 CNB 制品库（私有仓的镜像需要鉴权），凭证会持久化，只需一次。
-   CNB 访问令牌在「头像 → 设置 → 访问令牌」创建，**需勾选 `registry-package` 读权限**（拉镜像最低要求），用户名固定填 `cnb`：
-
-   ```bash
-   echo "<CNB访问令牌>" | docker login docker.cnb.cool -u cnb --password-stdin
-   ```
+6. 服务器无需登录：仓库当前为公开仓，`docker pull docker.cnb.cool/canace/astral/astral-backend` 可匿名拉取。（若改回私有仓再执行一次登录：`echo "<CNB访问令牌>" | docker login docker.cnb.cool -u cnb --password-stdin`，令牌需勾选 `registry-package` 读权限）
 
 7. 服务器 `deploy/.env` 补两行：`REGISTRY=docker.cnb.cool/canace/astral`、`TAG=latest`
 
@@ -382,9 +377,9 @@ git pull                         # 服务器有仓库时；否则 scp 三个文�
 printf 'REGISTRY=docker.cnb.cool/canace/astral\nTAG=latest\n' >> .env
 chmod +x update.sh
 
-# 登录一次 CNB 制品库（私有仓镜像需要鉴权；凭证持久化在 /root/.docker/config.json，之后 update.sh 自动复用）
-# 访问令牌在 cnb.cool「设置 → 访问令牌」创建，需勾选 registry-package 读权限
-echo '<CNB访问令牌>' | docker login docker.cnb.cool -u cnb --password-stdin
+# 仓库当前为公开仓，镜像可匿名拉取，无需登录。若日后改回私有仓再执行：
+#   echo '<CNB访问令牌>' | docker login docker.cnb.cool -u cnb --password-stdin
+#   （令牌在 cnb.cool「设置 → 访问令牌」创建，需勾选 registry-package 读权限）
 
 # 首次迁移先手动两条命令，把「清理旧镜像」留到验证之后
 docker compose -f docker-compose.yml -f docker-compose.registry.yml pull
