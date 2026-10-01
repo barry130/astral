@@ -295,7 +295,9 @@ export function DataTable<T extends object>({
                         dense && 'h-9 px-3',
                         col.align === 'center' && 'text-center',
                         (col.align === 'right' || numericCols[i]) && 'text-right',
-                        col.ellipsis && 'max-w-0 truncate',
+                        // 表头不参与省略：ellipsis 列在 table-layout:auto 下若表头也 max-w-0，
+                        // min-content 归零，列会被其它不可收缩的列挤压到只剩一个字
+                        // （参数管理页「配置值」实测）。省略只作用于正文单元格。
                       )}
                       aria-sort={active ? (sortOrder === 'ascend' ? 'ascending' : 'descending') : undefined}
                     >

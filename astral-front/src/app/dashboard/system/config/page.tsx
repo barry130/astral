@@ -125,7 +125,7 @@ export default function ConfigPage() {
   const columns = [
     { title: '配置名称', dataIndex: 'configName', key: 'configName' },
     { title: '配置键', dataIndex: 'configKey', key: 'configKey', render: (v: string) => <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: 3, fontSize: 12 }}>{v}</code> },
-    { title: '配置值', dataIndex: 'configValue', key: 'configValue', ellipsis: true },
+    { title: '配置值', dataIndex: 'configValue', key: 'configValue', width: 200, ellipsis: true },
     { title: '类型', dataIndex: 'configType', key: 'configType', render: (v: number) => <Tag color={v === 1 ? 'blue' : 'orange'}>{v === 1 ? '内置' : '自定义'}</Tag> },
     { title: '描述', dataIndex: 'description', key: 'description' },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => new Date(v).toLocaleString() },
