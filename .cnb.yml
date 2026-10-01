@@ -22,7 +22,16 @@
 
 # services: docker = 挂载 dind，脚本里直接用 docker build / docker push
 # imports = 密钥仓库文件，注入 TCR_USERNAME / TCR_PASSWORD（canace/secrets-astral）
+# runner 显式降配：默认 8 核(16G)对这个项目的构建是浪费——计费按「核数 × 耗时」算核时，
+# 4 核(8G) 跑 Maven / Next 构建足够（GHA ubuntu-latest 也才 4 核），核时消耗直接减半。
+# 钉死 amd64 与服务器架构一致；仓库无 LFS / 子模块，关掉省拉取开销。
 .docker-pipeline: &docker-pipeline
+  runner:
+    tags: cnb:arch:amd64
+    cpus: 4
+  git:
+    lfs: false
+    submodules: false
   services:
     - docker
   imports: https://cnb.cool/canace/secrets-astral/-/blob/main/tcr-envs.yml

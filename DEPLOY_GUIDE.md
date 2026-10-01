@@ -332,7 +332,7 @@ docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
 
 - **构建期参数搬到 CI**：改成 pull 之后 `docker-compose.yml` 里的 `build.args` 不再生效，`NEXT_PUBLIC_API_URL` 需写进 `.cnb.yml` 前端流水线的 `docker build`（加 `--build-arg NEXT_PUBLIC_API_URL=...`；留空即走同源 `/api` + Next rewrites，当前默认留空）
 - **CPU 架构必须匹配**：CNB 构建节点产出 `linux/amd64`。服务器若是 ARM（aarch64），需在 `.cnb.yml` 的 `docker build` 命令加 `--platform linux/arm64`，否则容器报 `exec format error` 起不来
-- **CNB 额度与并发**：免费额度以官方文档为准（构建约 160 核时/月）；`.cnb.yml` 已用 `lock.cancel-in-progress` 取消同镜像的在途构建（后端/前端互不取消）、用 `ifModify` 按改动路径过滤。构建机在国内，推送 TCR 不再走跨境链路；首次构建要拉基础镜像和依赖会稍慢，Docker 层缓存仅在当前构建节点有效、命中率不稳定，属正常现象
+- **CNB 额度与并发**：免费额度以官方文档为准（构建约 160 核时/月，计费 = 核数 × 耗时）；`.cnb.yml` 流水线已显式降配 4 核 8G（默认 8 核 16G，核时消耗减半），并已用 `lock.cancel-in-progress` 取消同镜像的在途构建（后端/前端互不取消）、用 `ifModify` 按改动路径过滤。构建机在国内，推送 TCR 不再走跨境链路；首次构建要拉基础镜像和依赖会稍慢，Docker 层缓存仅在当前构建节点有效、命中率不稳定，属正常现象
 - **磁盘回收**：每次 pull 都会留下旧镜像，`update.sh` 已带 7 天回收；手动回收用 `docker image prune -af --filter "until=168h"`
 - **自动更新（仅建议测试环境）**：cron 每 10 分钟执行 `update.sh`；或用 watchtower：
 
