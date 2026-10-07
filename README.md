@@ -1,6 +1,6 @@
 # Astral 后台管理系统
 
-企业级后台管理系统，提供用户管理、角色权限、菜单管理、数据字典、系统配置、Token 管理、日志审计、邮件服务、插件体系、序列生成、表结构管理、全端统计等核心功能，并内置「轻听音乐」（qt）与「反馈」（feedback）业务插件。
+企业级后台管理系统，提供用户管理、角色权限、菜单管理、数据字典、系统配置、Token 管理、日志审计、邮件/短信服务、站内通知、告警管理、插件体系、对象存储、序列生成、表结构管理、全端统计等核心功能，并内置「轻听音乐」（qt）、「反馈」（feedback）与「对象存储」（storage）业务插件。
 
 ## 📖 项目简介
 
@@ -14,12 +14,17 @@ Astral 是一套基于 Spring Boot 4.1（Java 25）+ Next.js 16 的全栈后台�
 - 📋 **数据字典**：字典类型/数据管理，支持前端联动
 - ⚙️ **系统配置**：动态配置项管理
 - 🎫 **Token 管理**：在线会话查看、吊销、踢人、清理过期
+- 🧑‍💼 **个人中心**：管理端自助修改资料与密码（登录即可，无需权限码）
 - 📧 **邮件服务**：多账户、模板、发送日志、插件发送授权
+- 💬 **短信服务**：多渠道服务商、模板、发送日志
+- 🔔 **站内通知**：通知规则/事件（`sys_notify_rule`）、站内信门户（收件箱、未读数、已读回执）
 - 📝 **日志管理**：操作日志、登录日志，AOP 异步记录
 - 🔌 **插件体系**：SPI 扩展 + 插件注册中心 + 前端导航注入，可在管理页启停
 - 🎵 **轻听音乐插件（qt）**：App 用户体系、版本更新、打卡、收藏（`/api/v1/app/**`；公告由 feedback 插件统一提供）
 - 💬 **反馈插件（feedback）**：用户反馈、管理员回复、站内消息通知
-- 📊 **全端统计**：客户端上报采集、访问量/设备/接口指标、错误日志聚合
+- 🗄️ **对象存储插件（storage）**：存储配置/文件/授权文件夹管理，浏览器/客户端预签名直传（Telegram Bot API、Cloudflare Worker、S3 兼容对象存储等渠道），签名 URL 下载
+- 📊 **全端统计**：App 匿名批量上报采集、六类统计报表（访问量/设备/接口指标/错误日志等）
+- 🚨 **告警管理**：告警渠道（邮件/Webhook）、规则、触发记录，后台引擎周期评估阈值
 - 🔢 **序列生成**：5 种算法（Snowflake、号段、Redis、数据库、内存）
 - 🗂️ **表结构管理**：查看/新建/编辑表结构、生成代码、生成 SQL、导出 JSON
 - 📈 **系统监控**：CPU/内存/JVM 指标、Prometheus 集成
@@ -83,7 +88,7 @@ mvn -pl astral-server spring-boot:run
 # Windows 可直接运行 run-backend.bat（需先设置 JAVA_HOME 指向 JDK 25，端口 27000）
 ```
 
-后端默认运行在 `http://localhost:27000`。数据库结构变更由 Flyway 在启动时自动应用 `db/migration/` 下的增量脚本。qt / feedback 插件的建表由各自的初始化器幂等完成。
+后端默认运行在 `http://localhost:27000`。数据库结构变更由 Flyway 在启动时自动应用 `db/migration/` 下的增量脚本。qt / feedback 插件的建表由各自的初始化器幂等完成；storage 等新模块的表结构已由 Flyway 迁移接管。
 
 ### 4. 启动前端
 
@@ -125,10 +130,13 @@ astral/
 ├── astral-system/             # 系统管理（用户/角色/权限/菜单/字典/配置/Token/表结构/邮件）
 ├── astral-sequence/           # 序列生成核心（5 种生成器，系统必需插件）
 ├── astral-plugin-api/         # 插件 SPI（AstralPlugin、导航扩展、注册中心接口）
-├── astral-plugin/             # 插件核心及内置插件（qt、feedback）
+├── astral-plugin/             # 插件核心及内置插件（qt、feedback、storage）
 ├── astral-server/             # Web 服务（Controller、配置、入口）
 ├── astral-front/              # 前端（Next.js 16 + React 19 + Tailwind v4 + shadcn/ui）
-└── deploy/                    # Docker Compose 部署
+├── cloudflare/                # Cloudflare Worker（storage 直传回执等）
+├── deploy/                    # Docker Compose 部署（本地构建 / Registry 拉取 / 一键更新）
+├── docs/                      # 补充文档（备份、代码评审、编码规范）
+└── scripts/                   # 打包、schema 生成等辅助脚本
 ```
 
 ## 📡 API 模块
@@ -149,6 +157,11 @@ astral/
 | 邮件模板 | `/api/v1/admin/system/mail/template` | 模板管理 |
 | 邮件日志 | `/api/v1/admin/system/mail/log` | 发送记录 |
 | 邮件插件授权 | `/api/v1/admin/system/mail/plugin-auth` | 插件发送授权 |
+| 短信服务商 | `/api/v1/admin/system/sms/provider` | 短信渠道账户管理 |
+| 短信模板 | `/api/v1/admin/system/sms/template` | 短信模板管理 |
+| 短信日志 | `/api/v1/admin/system/sms/log` | 发送记录 |
+| 通知规则 | `/api/v1/admin/system/notify` | 通知规则/事件管理 |
+| 站内信门户 | `/api/v1/all/notify/inapp` | 个人收件箱、未读数、已读回执 |
 
 ### 认证（astral-auth）
 
@@ -157,6 +170,7 @@ astral/
 | 登录 | `POST /api/v1/all/auth/login` | 用户名密码登录（RSA 加密传输） |
 | 登出 | `POST /api/v1/all/auth/logout` | 退出登录 |
 | 用户信息 | `GET /api/v1/all/auth/info` | 获取当前用户信息 |
+| 个人中心 | `/api/v1/admin/profile` | 管理端自助修改资料与密码 |
 
 ### 日志（astral-log）
 
@@ -179,6 +193,9 @@ astral/
 | 模块 | 路径 | 说明 |
 |------|------|------|
 | 系统监控 | `/api/v1/admin/monitor/**` | CPU/内存/JVM/数据库/Redis/业务指标 |
+| 告警管理 | `/api/v1/admin/alert/**` | 告警渠道（邮件/Webhook）、规则、触发记录 |
+| 统计报表 | `/api/v1/admin/stat/**` | 六类统计报表接口 |
+| App 统计上报 | `/api/v1/app/stat/**` | 客户端匿名批量上报 |
 
 ### 插件与其他
 
@@ -187,6 +204,10 @@ astral/
 | 插件管理 | `/api/v1/admin/plugin` | 插件列表、启停、导航扩展 |
 | 轻听音乐 App | `/api/v1/app/user/**` `/api/v1/app/**` | App 端接口（Bearer Token） |
 | 轻听音乐后台 | `/api/v1/admin/qt/**` | 管理端（宿主 Sa-Token） |
+| 反馈 | `/api/v1/admin/feedback` `/api/v1/app/feedback` | 用户反馈与管理员回复 |
+| 站内消息 | `/api/v1/admin/message` `/api/v1/app/message` | 反馈插件的消息通知 |
+| 存储管理 | `/api/v1/admin/plugin/storage/**` | 存储配置/文件/授权文件夹管理 |
+| 直传凭证 | `/api/v1/all/storage/**` | 用户端换取短时上传凭证、Worker 回执登记 |
 
 ## ⚙️ 配置说明
 
@@ -215,6 +236,15 @@ astral:
       enabled: ${QT_PLUGIN_ENABLED:true}
     feedback:
       enabled: ${FEEDBACK_PLUGIN_ENABLED:true}
+    storage:
+      enabled: ${STORAGE_PLUGIN_ENABLED:true}
+      # 单文件上限（字节）：公共 Bot API 下载上限 20MiB，超过将无法再次下载
+      max-file-size-bytes: ${STORAGE_MAX_FILE_SIZE:20971520}
+      upload-ticket-ttl-seconds: 600
+      # 三把 HMAC 密钥全部经环境变量注入，禁止写入仓库
+      upload-ticket-key: ${STORAGE_UPLOAD_TICKET_KEY:}
+      origin-shared-secret: ${STORAGE_ORIGIN_SHARED_SECRET:}
+      download-signing-key: ${STORAGE_DOWNLOAD_SIGNING_KEY_V1:}
 
   sequence:
     default-type: segment    # 默认号段模式
@@ -271,7 +301,7 @@ cp .env.example .env     # 填写数据库 / Redis 真实连接信息
 docker compose up -d --build
 ```
 
-`deploy/` 内含 `docker-compose.yml`（前端 3000 / 后端 27000，PostgreSQL 与 Redis 复用服务器已有实例）；
+`deploy/` 内含 `docker-compose.yml`（前端 3000 / 后端 27000，PostgreSQL 与 Redis 复用服务器已有实例）、`docker-compose.registry.yml`（从镜像仓库拉取的 overlay）、`update.sh`（一键拉取镜像并重建）与 `nginx-reverse-proxy.example.conf`（反向代理示例）；
 更多细节见 [DEPLOY_GUIDE.md](DEPLOY_GUIDE.md)。
 
 ## 📚 详细文档
@@ -283,6 +313,7 @@ docker compose up -d --build
 | [插件开发指南](PLUGIN_GUIDE.md) | 插件 SPI、建表、导航扩展 |
 | [部署指南](DEPLOY_GUIDE.md) | Docker Compose 与环境变量 |
 | [接口文档](API.md) | 全量 Controller 接口清单 |
+| [存储需求说明书](STORAGE_REQUIREMENTS.md) | 对象存储插件的需求与设计（多渠道直传、签名 URL） |
 
 ## 🤝 贡献指南
 
