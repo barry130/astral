@@ -6,6 +6,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.astral.auth.dto.LoginRequest;
 import com.astral.auth.dto.LoginResponse;
+import com.astral.auth.security.AuthCookieWriter;
 import com.astral.auth.security.LoginDevice;
 import com.astral.auth.security.LoginUserTypeResolver;
 import com.astral.auth.security.RsaKeyManager;
@@ -53,6 +54,10 @@ public class AuthServiceImpl implements AuthService {
     /** 登录/活跃标记：把最后登录时间与 IP 落回 sys_user（App 端此前从未回写，login_time 全 NULL） */
     @Autowired
     private UserLoginMarker userLoginMarker;
+
+    /** 管理端认证 Cookie 读写器：登录下发 HttpOnly Cookie + CSRF 令牌，登出清理 */
+    @Autowired
+    private AuthCookieWriter authCookieWriter;
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -140,12 +145,26 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         response.setPermissions(permissions != null ? permissions : Collections.emptyList());
         response.setUserType(user.getUserType());
         response.setMustChangePassword(user.getMustChangePassword());
+
+        // 管理端令牌改由 HttpOnly Cookie 承载（此前存 localStorage，任一前端 XSS 即可窃取）。
+        // 响应体里的 token 字段保留 —— 原生/第三方调用方（如脚本、Swagger 调试）仍可按头使用。
+        jakarta.servlet.http.HttpServletResponse httpResponse = AuthCookieWriter.currentResponse();
+        if (httpResponse != null) {
+            response.setCsrfToken(authCookieWriter.writeLoginCookies(
+                    httpResponse, token, StpUtil.getTokenTimeout()));
+        }
         return response;
     }
 
     @Override
     public void logout() {
         StpUtil.logout();
+        // 清掉 HttpOnly 认证 Cookie 与 CSRF Cookie：浏览器端必须真的「登出」，
+        // 否则客户端仍会被自动带上 Cookie，表现为「登出了但刷新又进去了」
+        jakarta.servlet.http.HttpServletResponse httpResponse = AuthCookieWriter.currentResponse();
+        if (httpResponse != null) {
+            authCookieWriter.clearCookies(httpResponse);
+        }
     }
 
     /**

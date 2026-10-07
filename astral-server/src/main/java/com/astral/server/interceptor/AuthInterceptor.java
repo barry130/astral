@@ -2,9 +2,11 @@ package com.astral.server.interceptor;
 
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
+import com.astral.auth.security.AuthCookieWriter;
 import com.astral.auth.security.LoginUserTypeResolver;
 import com.astral.auth.service.UserLoginMarker;
 import com.astral.common.result.Result;
+import com.astral.common.web.CsrfTokenSupport;
 import com.astral.qt.common.QtRestResp;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,6 +47,9 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     /** 登录/活跃标记：滑动续期发生时回写 sys_user.login_time/login_ip */
     private final UserLoginMarker userLoginMarker;
+
+    /** 管理端认证 Cookie 读写器：滑动续期时同步延长 Cookie，避免会话还在、Cookie 先过期 */
+    private final AuthCookieWriter authCookieWriter;
 
     /**
      * 管理端接口要求的 user_type，默认 {@code ADMIN}。
@@ -131,6 +136,16 @@ public class AuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // 3.8 CSRF 双提交校验：仅针对「管理端区 + 凭据实际来自 Cookie」的请求。
+        //     管理台令牌已改由 HttpOnly Cookie 承载，浏览器会自动带上它，
+        //     跨站页面因此能借用户身份发出写请求（CSRF）。校验 Cookie 与请求头是否一致即可拦住：
+        //     跨站读不到 Cookie 值，伪造不出匹配的头。
+        //     仍然走 satoken 请求头的调用方（轻听 App、脚本、Swagger）不受影响 —— 显式携带凭据
+        //     天然不存在 CSRF，强制它们参与双提交会打断已发布的客户端。
+        if (requiresCsrfCheck(request) && !passCsrfCheck(request, response)) {
+            return false;
+        }
+
         // 4. Qt 用户区：校验 satoken 有效性，401 返回 QtRestResp 结构（App 客户端历史约定）
         if (uri.startsWith(QT_USER_PREFIX_NEW)) {
             Long userId = resolveUserId(token);
@@ -208,6 +223,51 @@ public class AuthInterceptor implements HandlerInterceptor {
     }
 
     /**
+     * 是否需要做 CSRF 双提交校验。
+     *
+     * <p>两个条件同时成立才校验：</p>
+     * <ol>
+     *   <li>请求方法非只读（GET/HEAD/OPTIONS/TRACE 不产生副作用，放行）；</li>
+     *   <li>凭据来自 Cookie —— 只要带了 {@code satoken} 请求头就说明是显式调用方，直接豁免。</li>
+     * </ol>
+     *
+     * <p>第二步的豁免不能省：轻听 App 与脚本同域也可能被浏览器顺带带上 Cookie，
+     * 按「有没有头」而不是「有没有 Cookie」判断，才不会误伤既有调用方。</p>
+     */
+    private boolean requiresCsrfCheck(HttpServletRequest request) {
+        if (CsrfTokenSupport.isSafeMethod(request.getMethod())) {
+            return false;
+        }
+        String headerToken = request.getHeader(TOKEN_HEADER);
+        if (headerToken != null && !headerToken.isBlank()) {
+            return false;
+        }
+        // 没有头也没 Cookie：未认证请求，交给后面的登录校验去 401，这里不重复拦
+        return CsrfTokenSupport.readCookie(request, TOKEN_HEADER) != null;
+    }
+
+    /** 双提交校验：Cookie 与请求头必须同时存在且相等（常量时间比较） */
+    private boolean passCsrfCheck(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        String cookieCsrf = CsrfTokenSupport.readCookie(request, CsrfTokenSupport.CSRF_COOKIE);
+        String headerCsrf = request.getHeader(CsrfTokenSupport.CSRF_HEADER);
+        if (cookieCsrf != null && !cookieCsrf.isBlank()
+                && CsrfTokenSupport.constantTimeEquals(cookieCsrf, headerCsrf)) {
+            return true;
+        }
+
+        log.warn("CSRF 校验失败: uri={}, method={}, cookie存在={}, header存在={}",
+                request.getRequestURI(), request.getMethod(),
+                cookieCsrf != null, headerCsrf != null);
+
+        response.setContentType("application/json;charset=UTF-8");
+        response.setStatus(403);
+        Result<?> result = Result.error("AUTH013");
+        result.setCode(403);
+        response.getWriter().write(objectMapper.writeValueAsString(result));
+        return false;
+    }
+
+    /**
      * Token 滑动续期：剩余有效期不足阈值时续满（任何异常不影响请求）。
      *
      * <p>续期发生 = 用户仍活跃，同步回写 {@code sys_user.login_time/login_ip}，
@@ -227,6 +287,12 @@ public class AuthInterceptor implements HandlerInterceptor {
             if (remain > 0 && remain < renewThreshold) {
                 StpUtil.renewTimeout(token, tokenTimeout);
                 userLoginMarker.mark(Long.parseLong(loginId.toString()), request);
+                // Cookie 承载方：会话续到 3 天，Cookie 也得跟着延，否则 Cookie 先到期，
+                // 浏览器不再带凭据 —— 表现为「一直活跃却突然要重新登录」
+                HttpServletResponse httpResponse = AuthCookieWriter.currentResponse();
+                if (httpResponse != null && CsrfTokenSupport.readCookie(request, TOKEN_HEADER) != null) {
+                    authCookieWriter.refreshCookies(httpResponse, token, tokenTimeout);
+                }
                 log.debug("token 已自动续期: remain={}s -> {}s", remain, tokenTimeout);
             }
         } catch (Exception e) {

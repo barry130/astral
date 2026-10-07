@@ -16,5 +16,15 @@
     <description>Common utilities and constants</description>
 
     <!-- 本模块只提供 Result / ErrorCode / BusinessException / RateLimit 等纯工具与常量，
-         源码仅依赖 java.*，不引入 Spring 与 hutool（此前声明会把 Spring Web 传递到所有模块） -->
+         源码仅依赖 java.* + Servlet API（CsrfTokenSupport 需要读写 Cookie）。
+         刻意不引入 Spring / spring-boot-starter-web：Servlet API 由容器（Tomcat）与
+         各调用方（astral-auth/astral-server 已通过 starter-web 传递引入）提供，
+         在这里声明为 provided 不会传染 Spring 到所有模块。 -->
+    <dependencies>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
 </project>

@@ -224,7 +224,18 @@ astral:
 sa-token:
   token-name: satoken
   timeout: 259200            # Token 有效期 3 天
+  is-read-header: true       # 轻听 App / 脚本：显式 satoken 请求头
+  is-read-cookie: true       # 管理台：HttpOnly Cookie（防 XSS 窃取，写请求需带 X-CSRF-Token）
+
+# 管理端认证 Cookie（仅管理台；轻听 App 走请求头不受影响）
+astral:
+  auth:
+    cookie-secure: false     # 生产 HTTPS 必须 true（application-prod.yml 默认已 true），本地 http 开发须 false
+    cookie-same-site: Strict # 前后端拆到不同站点时才需放宽为 None（此时 cookie-secure 必须 true）
 ```
+
+> **认证模型**：管理台令牌存 HttpOnly Cookie，JS 读不到；代价是需 CSRF 双提交防护
+> （`astral_csrf` Cookie ↔ `X-CSRF-Token` 头）。详见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md#token-管理httponly-cookie--csrf-双提交)。
 
 ### 启用 Redis 序列生成器
 

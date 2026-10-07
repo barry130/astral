@@ -22,7 +22,7 @@
 
 ## 二、安全发现（按严重度排序）
 
-### 2.1 🔴 高 — 邮箱验证码可暴力枚举 → 任意账号接管（**未修复，2026-10-07 决定暂缓**）
+### 2.1 🔴 高 — 邮箱验证码可暴力枚举 → 任意账号接管（**已修（PR #4，2026-10-07）**）
 
 - `astral-plugin\src\main\java\com\astral\qt\service\QtUserService.java:343`（`getValidCode`）：直接把验证码
   从 Redis `get` 出来返回，**没有任何尝试次数计数**；验证码是 **6 位纯数字**（`QtUserService.java:312`），
@@ -129,12 +129,31 @@
 | 1 | `requestDelete` 在 `@Transactional` 内做网络 I/O，事务期间占用数据库连接 | `StorageFileService` | 未修（低） |
 | 2 | RSA 私钥文件 `./data/rsa-key.pair` 未收紧文件权限；解密未显式指定 padding（默认 PKCS1，登录传输场景可接受；RSA 2048 合规） | `RsaKeyManager.java:68` | 未修（低） |
 | 3 | `LoginFailureStore` 按 username 原样拼 key，未归一大小写/空白（与登录判定口径一致即可） | `LoginFailureStore.java:48` | 未修（次要） |
-| 4 | 前端 token 存 `localStorage`，XSS 场景可被窃取（行业通用取舍） | `astral-front\src\api\client.ts:35` | 保持 |
+| 4 | 前端 token 存 `localStorage`，XSS 场景可被窃取（行业通用取舍） | `astral-front\src\api\client.ts:35` | **已修**（HttpOnly Cookie + CSRF 双提交，见 §2.10） |
 | 5 | Worker `handleUpload` 用 `request.formData()`，实际会把整个请求体物化进 Worker 内存，与注释「正文不驻留内存」不符（20MB 上限双保险兜底） | `cloudflare\storage-worker\worker.js` | 未修（低，建议对齐注释） |
 | 6 | `StorageConfigService.java:61` 自建 `ObjectMapper`（未复用全局配置） | `StorageConfigService.java:61` | 未修（次要） |
 | 7 | `FeedbackService` 状态流转用 `updateById(全实体)` 回写，并发覆盖窗口小 | `FeedbackService.java` | 未修（低） |
 | 8 | 默认可信代理含全部私网段；若后端直接暴露给内网客户端，XFF 伪造仍可能（当前 nginx 同机部署下正确） | `ClientIp.java:26-27` | 保持 |
 | 9 | qt 邮件验证码存放于 Redis（key `qt:email:code:`，`QtUserService.java:91`），**不存在** `qt_email_code` 物理表 | —— | 见 §3 说明 |
+
+
+### 2.10 ✅ 已修 — 管理台令牌存 `localStorage`，任一前端 XSS 即可窃取
+
+- 原状：`astral-front\src\api\client.ts:35` 把 `satoken` 存 `localStorage`，并手动放进请求头。
+  令牌是长效凭据（3 天，滑动续期），一旦页面存在任意 XSS，攻击者一行 `localStorage.getItem('token')`
+  即可导出并在任意机器上冒用该会话 —— 前面 2.2 的头像存储型 XSS 正是这类放大器。
+- 修法：**令牌改由 HttpOnly Cookie 承载**（`AuthCookieWriter`），JS 完全读不到；前端删掉所有
+  `localStorage` 令牌读写，改为 `withCredentials: true` 让浏览器自动携带。
+- 代价与配套：Cookie 会被浏览器自动带上，跨站发起的写请求因此带上了用户凭据 —— 即 CSRF。
+  补 **双提交校验**（`CsrfTokenSupport` + `AuthInterceptor.requiresCsrfCheck`）：
+  登录下发非 HttpOnly 的 `astral_csrf` Cookie，前端回填 `X-CSRF-Token` 头，服务端常量时间比对，
+  不一致返回 403 `AUTH013`。
+- 兼容性：Sa-Token 打开 `is-read-cookie`（双读，头优先）。**轻听 App / 脚本 / Swagger 等显式带
+  `satoken` 头的调用方一律豁免 CSRF 校验** —— 判定依据是「有没有请求头」而非「有没有 Cookie」，
+  避免误伤同域下被浏览器顺带带上 Cookie 的非浏览器调用方；登录响应体也保留 `token` 字段。
+- 部署约束（缺一即表现为「登录成功却立刻被弹回登录页」）：生产 `AUTH_COOKIE_SECURE=true`；
+  前后端同源（Next.js rewrites 已满足）；拆域时 `AUTH_COOKIE_SAME_SITE=None` + `Secure`。
+  已同步进 `deploy/nginx-reverse-proxy.example.conf` 与 `INTEGRATION_GUIDE.md`。
 
 ---
 
@@ -196,6 +215,16 @@
 3. **随缘**：事务内网络 I/O、RSA 私钥文件权限、Worker 注释与实现对齐、`UserController.getById` 出参置 null。
 
 > §2.2（头像存储型 XSS）已通过**删除零引用旧接口**闭环，不再是待办；直传链路 `/avatar/ticket` + `/avatar/complete` 由 storage `upload_policy` 参数化管控大小/类型/次数。
+
+### 第二轮已修（2026-10-07，PR #4）
+
+| 项 | 改动文件 |
+|---|---|
+| 验证码枚举 + `changePass` 限流 | `QtUserService.java`、`QtAppUserController.java` |
+| 登录锁定无限续期 | `LoginFailureStore.java` |
+| 管理台令牌 localStorage → HttpOnly Cookie（+ CSRF 双提交） | `AuthCookieWriter.java`（新增）、`CsrfTokenSupport.java`（新增）、`AuthInterceptor.java`、`AuthServiceImpl.java`、`application.yml`、`application-prod.yml`、`astral-front/src/api/client.ts`、`astral-front/src/context/AuthContext.tsx` |
+
+> 头像上传（§2.2）本轮**未按原计划加白名单 + magic 校验**——该接口已由 PR #5 整体下线，改动随之作废，攻击面随接口消失。
 
 ---
 

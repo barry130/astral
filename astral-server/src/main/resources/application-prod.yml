@@ -52,6 +52,12 @@ astral:
       # @Async(sequenceAsyncExecutor) 异步池改用 JDK 25 虚拟线程（生产开启）
       enabled: true
 
+  auth:
+    # 生产走 HTTPS（deploy/ 下的 Caddy / nginx 终结 TLS），认证 Cookie 必须带 Secure，
+    # 否则明文链路下 Cookie 可被中间人截获，HttpOnly 的意义也就没了。
+    # 若生产确实是纯 http 内网裸跑，把它显式改成 false，否则登录后 Cookie 不会落地。
+    cookie-secure: ${AUTH_COOKIE_SECURE:true}
+
 mybatis-plus:
   configuration:
     # 生产静默 SQL 日志：每条 SQL + 参数打印到 stdout 在单核上是无谓开销

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, Button, Space, Modal, Form, Input, Select, Switch, Tag, message, Popconfirm, Tabs, Divider, Typography } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, LockOutlined, LoginOutlined } from '@/components/antd-compat/icons';
-import { request, ApiResult } from '@/api/client';
+import { request, ApiResult, readCsrfToken } from '@/api/client';
 import { clientHeaders } from '@/lib/client-info';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
@@ -282,10 +282,12 @@ export default function UserPage() {
   /** 导出用户 CSV（fetch 直连：axios 拦截器面向 Result 包装，二进制流绕行，同预签名直传） */
   const handleExport = async () => {
     try {
+      // 认证凭据走 HttpOnly Cookie（浏览器自动携带）；写语义请求必须回填 CSRF 头，
+      // 否则被后端双提交校验拦下。见 src/api/client.ts 的 readCsrfToken。
       const headers: Record<string, string> = { ...clientHeaders() };
-      const token = localStorage.getItem('token');
-      if (token) headers['satoken'] = token;
-      const resp = await fetch('/api/v1/admin/system/user/export', { headers });
+      const csrf = readCsrfToken();
+      if (csrf) headers['X-CSRF-Token'] = csrf;
+      const resp = await fetch('/api/v1/admin/system/user/export', { headers, credentials: 'same-origin' });
       if (!resp.ok) throw new Error(`导出失败（${resp.status}）`);
       const blob = await resp.blob();
       const a = document.createElement('a');

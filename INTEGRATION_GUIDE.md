@@ -61,12 +61,17 @@ java -jar astral-server/target/astral-server-1.0.0.jar
 > 直接传明文会校验失败。前端（astral-front 的 `src/lib/crypto.ts`）已自动处理加密。
 
 ```bash
-# 登录（password 需 RSA 加密）
+# 登录（password 需 RSA 加密）：管理台会收到 Set-Cookie: satoken=... 与 astral_csrf=...
+# 非浏览器调用方（curl / App / 脚本）从响应体的 data.token 取令牌
 curl -X POST http://localhost:27000/api/v1/all/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"<RSA-encrypted-base64>"}'
+  -d '{"username":"admin","password":"<RSA-encrypted-base64>"}' \
+  -c cookies.txt
 
-# 获取用户列表
+# 浏览器/管理台：凭 Cookie 自动认证，无需带头
+curl http://localhost:27000/api/v1/admin/system/user/list -b cookies.txt
+
+# 非浏览器调用方：显式带 satoken 请求头（此路径豁免 CSRF 双提交校验）
 curl http://localhost:27000/api/v1/admin/system/user/list \
   -H "satoken: <your-token>"
 
@@ -76,6 +81,9 @@ curl -X POST http://localhost:27000/api/v1/all/sequence/next \
   -H "satoken: <your-token>" \
   -d '{"bizKey":"order_id"}'
 ```
+
+> 写方法（POST/PUT/DELETE）走 Cookie 时还需回填 `X-CSRF-Token: <astral_csrf 的值>`，
+> 否则被双提交校验拦下（403 / `AUTH013`）。走 `satoken` 头的请求不需要。
 
 ---
 
@@ -181,21 +189,52 @@ npm run dev
 > （`src/components/ui/`，基于 Radix UI）。宿主项目若不用 Tailwind v4 + shadcn/ui，
 > 需要一并迁移这些基础设施，而不是只拷页面；共享的请求/字典/权限逻辑在 `src/api/`、`src/lib/`。
 
-### Token 管理
+### Token 管理（HttpOnly Cookie + CSRF 双提交）
 
-前端登录成功后，将 Token 存储在 localStorage，通过 Axios 拦截器自动携带：
+管理台的认证令牌由后端写入 **HttpOnly Cookie**（`satoken`），前端不接触令牌明文：
+
+- 登录成功 → 后端 `Set-Cookie: satoken=<token>; HttpOnly; Secure; SameSite=Strict`；
+- 后续请求 → 浏览器自动携带该 Cookie，**不需要任何前端代码**；
+- 登出 → 调后端 `/api/v1/all/auth/logout`，由后端清除 Cookie（前端删不掉 HttpOnly Cookie）。
+
+> 为什么不用 localStorage：令牌存 localStorage 时，任何一个前端 XSS 都能直接读走它；
+> HttpOnly Cookie 让 JS 完全读不到，把「XSS 能偷令牌」降级成「XSS 只能借当前会话作恶」，
+> 且后者可被 CSP 与操作审计继续压制。
+
+**代价与配套：凭据自动携带 ⇒ 跨站写请求也会带上它（CSRF）。** 因此补了双提交校验：
+
+1. 登录时后端额外下发一枚**非 HttpOnly** 的 `astral_csrf` Cookie（JS 读得到）；
+2. 前端把它的值回填到 `X-CSRF-Token` 请求头；
+3. 后端对「凭据来自 Cookie 且方法非只读」的请求校验两者一致，不一致返回 403（`AUTH013`）。
+
+前端所需的一切只有两件事（见 `astral-front/src/api/client.ts`）：
 
 ```javascript
-axios.interceptors.request.use(config => {
-  // 管理台实际用的是 'token' 这个 key（见 astral-front/src/api/client.ts），
-  // 取到后放进请求头 'satoken'（后端 sa-token.token-name 的取值）
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers['satoken'] = token;
-  }
+const client = axios.create({
+  withCredentials: true,   // Cookie 跨源部署时也需要带上；同源部署无影响
+});
+
+client.interceptors.request.use((config) => {
+  // CSRF 令牌从 Cookie 读出后回填请求头（后端双提交校验要求两者一致）
+  const matched = document.cookie.match(/(?:^|;\s*)astral_csrf=([^;]*)/);
+  if (matched) config.headers['X-CSRF-Token'] = decodeURIComponent(matched[1]);
   return config;
 });
 ```
+
+**例外：轻听 App（qt-uniappx / qt-pc）与脚本、Swagger 等第三方调用方仍走 `satoken` 请求头。**
+
+原生/桌面客户端没有 Cookie 容器，Header 又是显式携带（不存在 CSRF），后端对这类请求
+自动豁免双提交校验 —— 判定依据是「有没有 `satoken` 请求头」，不是「有没有 Cookie」。
+管理端登录接口的响应体里也保留了 `token` 字段，供这类调用方取用。
+
+**部署要求（三条，缺一会表现为「登录成功却立刻又被弹回登录页」）：**
+
+| 项 | 要求 | 说明 |
+|---|---|---|
+| `AUTH_COOKIE_SECURE` | 生产 `true`（prod profile 默认已是），本地 http 开发设 `false` | `Secure` Cookie 只在 HTTPS 下落地 |
+| 同源 | 前端与后端同域（Next.js rewrites 代理 `/api` 即满足） | `SameSite=Strict` 的 Cookie 只在同站请求中携带 |
+| 拆域场景 | 把 `AUTH_COOKIE_SAME_SITE` 改成 `None`，且 `cookie-secure=true` | 跨站 Cookie 必须 `None` + `Secure`，否则浏览器直接拒收 |
 
 ---
 
