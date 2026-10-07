@@ -1,6 +1,7 @@
 package com.astral.qt.service;
 
 import com.astral.auth.security.DataScopeResolver;
+import com.astral.dao.entity.DictData;
 import com.astral.qt.common.QtException;
 import com.astral.qt.dto.QtSourceReleaseCreateDto;
 import com.astral.qt.dto.QtSourceReportDto;
@@ -11,6 +12,7 @@ import com.astral.qt.entity.QtSourceRelease;
 import com.astral.qt.entity.QtSourceReport;
 import com.astral.qt.mapper.QtSourceReleaseMapper;
 import com.astral.qt.mapper.QtSourceReportMapper;
+import com.astral.system.service.DictDataService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,6 +44,12 @@ import java.util.Set;
  * app_version_codes / artifacts 两列以 TEXT 存 JSON（见 qt-schema.sql 注释），
  * 序列化统一在本层用 Jackson 完成，实体字段保持 String。
  * </p>
+ * <p>
+ * <b>产物继承与数据字典的联动</b>：artifacts 是「当前生效全集」，新建/编辑时会继承上一版未提交的
+ * path。若某 path 已在字典 {@code qt_source_artifact_path} 里被<b>停用</b>（status=0，如单包时代的
+ * chain.json / source-bundle.js），继承时会把它摘掉——否则废弃产物会一代代静默传递下去，
+ * 让新建 release 的产物数越滚越多。显式提交的废弃 path 仍然保留（保证历史版本可编辑）。
+ * </p>
  */
 @Slf4j
 @Service
@@ -49,7 +58,11 @@ public class QtSourceService {
 
     private final QtSourceReleaseMapper releaseMapper;
     private final QtSourceReportMapper reportMapper;
+    private final DictDataService dictDataService;
     private final ObjectMapper objectMapper;
+
+    /** 产物 path 白名单字典（启用的出现在前端下拉，停用的不再被继承） */
+    private static final String DICT_ARTIFACT_PATH = "qt_source_artifact_path";
 
     /** 版本号生成串行锁：单实例内保证「拿号」互斥，(code, channel) 唯一索引是最后一道防线 */
     private static final Object VERSION_LOCK = new Object();
@@ -190,6 +203,8 @@ public class QtSourceService {
     /**
      * 新建 release：生成版本号 / 版本名（§5.5），artifacts 未提交的 path 自动继承上一版。
      * <p>请求体不含 sourceVersionCode / sourceVersionName，由本方法生成后随响应返回。</p>
+     * <p>继承时已在字典 {@code qt_source_artifact_path} 停用的 path 会被摘掉（见类注释），
+     * 因此「新建时只填 meta/play」不会再把单包时代的 chain.json / source-bundle.js 带进来。</p>
      */
     public QtSourceReleaseVo createRelease(QtSourceReleaseCreateDto dto) {
         List<Long> platforms = validatePlatforms(dto.getPlatforms());
@@ -203,13 +218,15 @@ public class QtSourceService {
             entity.setChannel(normalizeChannel(dto.getChannel()));
             entity.setNotes(dto.getNotes());
             entity.setAppVersionCodes(writeJson(appVersionCodesOrDefault(dto.getAppVersionCodes())));
-            entity.setArtifacts(writeJson(mergeArtifacts(readArtifacts(latestRelease(entity.getChannel())), dto.getArtifacts())));
+            entity.setArtifacts(writeJson(mergeArtifacts(readArtifacts(latestRelease(entity.getChannel())),
+                    dto.getArtifacts(), Boolean.TRUE.equals(dto.getReplaceArtifacts()))));
             entity.setRollbackTo(dto.getRollbackTo());
             entity.setIsBad(0);
             entity.setIsPublished(0);
             releaseMapper.insert(entity);
-            log.info("[QtSource] 新建音源包 release: code={} name={} channel={} platforms={}",
-                    code, entity.getSourceVersionName(), entity.getChannel(), entity.getPlatforms());
+            log.info("[QtSource] 新建音源包 release: code={} name={} channel={} platforms={} artifacts={}",
+                    code, entity.getSourceVersionName(), entity.getChannel(), entity.getPlatforms(),
+                    entity.getArtifacts());
             return toVo(entity, true);
         }
     }
@@ -219,7 +236,9 @@ public class QtSourceService {
      * <p>
      * platforms 与 channel 允许修改（广播错平台是常见误操作，删除重建代价高）；
      * 移除某平台时同步清理 appVersionCodes 中该平台的准入键（否则该平台会被当成「不限制」，
-     * 与「默认全选现存版本」的预期相反）。artifacts 按 path 合并：只传变更项，其余继承。
+     * 与「默认全选现存版本」的预期相反）。artifacts 按 path 合并：只传变更项，其余继承；
+     * 若 {@code replaceArtifacts=true}，则以本次提交为「当前生效全集」，未提交的 path 会被删除
+     * （管理端编辑弹窗回传整集时用它，让弹窗里的「删除」按钮真正生效）。
      * sourceVersionCode / sourceVersionName 不可改（忽略上送值）；已发布的 release 也允许编辑，
      * 生效于客户端下次拉取 manifest 时。
      * </p>
@@ -240,7 +259,8 @@ public class QtSourceService {
                     appVersionCodesOrDefault(dto.getAppVersionCodes()), existingPlatforms(exist))));
         }
         if (dto.getArtifacts() != null) {
-            exist.setArtifacts(writeJson(mergeArtifacts(readArtifacts(exist), dto.getArtifacts())));
+            exist.setArtifacts(writeJson(mergeArtifacts(readArtifacts(exist), dto.getArtifacts(),
+                    Boolean.TRUE.equals(dto.getReplaceArtifacts()))));
         }
         exist.setUpdateTime(LocalDateTime.now());
         releaseMapper.updateById(exist);
@@ -383,14 +403,34 @@ public class QtSourceService {
      * 提交的 path 覆盖 / 新增（url 缺省继承上一版；version 缺省时，url 与上一版相同则保持原
      * version，变了才 +1——支持前端把编辑弹窗里的全集原样回传而不误伤未改动文件），
      * 未提交的 path 原样继承。结果始终保持「当前生效的全集」。
+     * <p>
+     * 两条例外：
+     * <ul>
+     *   <li>{@code replace=true}：本次提交即全集，上一版未提交的 path 不再继承（删除生效）；</li>
+     *   <li>继承时跳过已在字典 {@code qt_source_artifact_path} 停用的 path——废弃产物（单包时代的
+     *       chain.json / source-bundle.js）不再一代代传下去。显式提交的 path 不受此限，
+     *       以免历史版本无法编辑。字典不可用（查不到或异常）时不做任何过滤，行为与旧版一致。</li>
+     * </ul>
+     * </p>
      */
     private List<QtSourceArtifactVo> mergeArtifacts(List<QtSourceArtifactVo> previous,
-                                                     List<QtSourceArtifactVo> submitted) {
+                                                     List<QtSourceArtifactVo> submitted,
+                                                     boolean replace) {
         Map<String, QtSourceArtifactVo> merged = new LinkedHashMap<>();
+        Set<String> deprecated = deprecatedArtifactPaths();
+        if (previous != null && !replace) {
+            for (QtSourceArtifactVo a : previous) {
+                if (a.getPath() != null && !a.getPath().isBlank() && !deprecated.contains(a.getPath())) {
+                    merged.put(a.getPath(), a);
+                }
+            }
+        }
+        // replace 时 merged 只用于查旧值（继承 url/version），不承载未提交项
+        Map<String, QtSourceArtifactVo> oldByPath = new LinkedHashMap<>();
         if (previous != null) {
             for (QtSourceArtifactVo a : previous) {
                 if (a.getPath() != null && !a.getPath().isBlank()) {
-                    merged.put(a.getPath(), a);
+                    oldByPath.put(a.getPath(), a);
                 }
             }
         }
@@ -399,7 +439,7 @@ public class QtSourceService {
                 if (s.getPath() == null || s.getPath().isBlank()) {
                     throw new QtException("artifacts 条目的 path 不能为空");
                 }
-                QtSourceArtifactVo old = merged.get(s.getPath());
+                QtSourceArtifactVo old = replace ? oldByPath.get(s.getPath()) : merged.get(s.getPath());
                 QtSourceArtifactVo mergedItem = new QtSourceArtifactVo();
                 mergedItem.setPath(s.getPath());
                 if (s.getUrl() != null && !s.getUrl().isBlank()) {
@@ -421,6 +461,30 @@ public class QtSourceService {
             }
         }
         return new ArrayList<>(merged.values());
+    }
+
+    /**
+     * 已在字典 {@code qt_source_artifact_path} 停用（status=0）的产物 path 集合。
+     * <p>查询失败一律返回空集：产物继承是发布主链路，不能因为字典读取异常而阻塞建单，
+     * 最坏结果只是退化成「和旧版一样继续继承」。</p>
+     */
+    private Set<String> deprecatedArtifactPaths() {
+        try {
+            List<DictData> disabled = dictDataService.listDisabledByCode(DICT_ARTIFACT_PATH);
+            if (disabled == null || disabled.isEmpty()) {
+                return Collections.emptySet();
+            }
+            Set<String> paths = new HashSet<>();
+            for (DictData d : disabled) {
+                if (d.getDictValue() != null && !d.getDictValue().isBlank()) {
+                    paths.add(d.getDictValue().trim());
+                }
+            }
+            return paths;
+        } catch (Exception e) {
+            log.warn("[QtSource] 读取字典 {} 停用项失败，跳过废弃产物过滤: {}", DICT_ARTIFACT_PATH, e.getMessage());
+            return Collections.emptySet();
+        }
     }
 
     private QtSourceRelease requireRelease(Long id) {

@@ -148,6 +148,12 @@ export interface QtSourceRelease {
   channel?: string;
   notes?: string;
   artifacts?: QtSourceArtifact[];
+  /**
+   * artifacts 提交语义（仅请求体用，响应不回传）：
+   * true = 本次 artifacts 即「当前生效全集」，上一版有、本次未提交的 path 会被删除；
+   * 缺省 / false = 按 path 合并（未提交项继承上一版，即「只发变更文件」的增量语义）。
+   */
+  replaceArtifacts?: boolean;
   rollbackTo?: number | null;
   bad?: boolean;
   published?: boolean;
@@ -179,7 +185,10 @@ export const sourceReleaseApi = {
   create: (data: QtSourceRelease): Promise<ApiResult<QtSourceRelease>> =>
     request.post('/api/v1/admin/qt/source-releases', data),
 
-  /** 编辑：artifacts 按 path 合并，只传变更项，其余自动继承上一版 */
+  /**
+   * 编辑：默认 artifacts 按 path 合并，只传变更项，其余自动继承上一版；
+   * 传 replaceArtifacts=true 时以本次 artifacts 为全集（未提交的 path 被删除）。
+   */
   update: (id: number, data: QtSourceRelease): Promise<ApiResult<void>> =>
     request.put(`/api/v1/admin/qt/source-releases/${id}`, data),
 

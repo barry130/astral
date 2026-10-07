@@ -24,4 +24,19 @@ public interface DictDataMapper extends BaseMapper<DictData> {
     @Select("SELECT d.* FROM sys_dict_data d INNER JOIN sys_dict_type t ON d.dict_type_id = t.id " +
             "WHERE t.dict_code = #{code} AND d.status = 1 ORDER BY d.dict_sort ASC, d.id ASC")
     List<DictData> selectByDictCode(@Param("code") String code);
+
+    /**
+     * 按字典类型编码(dict_code)查询<b>已停用</b>的字典数据，按 dict_sort 升序
+     * <p>
+     * 与 {@link #selectByDictCode} 互补：停用项不会出现在前端下拉里，但服务端需要知道
+     * 「哪些取值已经废弃」，才能在继承历史数据时把废弃项摘掉（如音源包单包时代的
+     * chain.json / source-bundle.js）。
+     * </p>
+     *
+     * @param code 字典类型编码，如 qt_source_artifact_path
+     * @return 已停用（status=0）的字典数据列表
+     */
+    @Select("SELECT d.* FROM sys_dict_data d INNER JOIN sys_dict_type t ON d.dict_type_id = t.id " +
+            "WHERE t.dict_code = #{code} AND d.status = 0 ORDER BY d.dict_sort ASC, d.id ASC")
+    List<DictData> selectDisabledByDictCode(@Param("code") String code);
 }

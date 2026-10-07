@@ -11,8 +11,14 @@
  * 1. 新建：只填平台/渠道/准入/说明，后端生成版本号（如 2026091801）随响应返回；
  * 2. 把变更文件上传到 source/<版本号>/ 目录（图床/存储页），拿到永久地址；
  * 3. 编辑该 release，按 path 填 {path, url}（version 留空自动 +1；url 可手填永久直链
- *    或行内上传生成，上传会覆盖手填值），未填的 path 继承上一版；
+ *    或行内上传生成，上传会覆盖手填值）；
  * 4. 点「发布」。
+ *
+ * artifacts 语义（与后端 QtSourceService#mergeArtifacts 对齐）：
+ *  - 编辑：提交 replaceArtifacts=true，弹窗里的列表就是「当前生效全集」，删掉的行保存后即消失；
+ *  - 新建：不送该标志，按 path 增量合并，未提交的 path 继承上一版（「只发变更文件」）；
+ *  - 两个方向都只认字典 qt_source_artifact_path 里仍启用的 path：已停用的旧单包产物
+ *    （chain.json / source-bundle.js）既不会被继承，也不会被提交，保存后自动从该版本消失。
  */
 import { useEffect, useState } from 'react';
 import {
@@ -93,6 +99,14 @@ export default function SourceReleasesTab() {
     .map((o) => ({ value: Number(o.value), label: o.label }));
   const channelOpts = dict.qt_update_channel?.length ? dict.qt_update_channel : FALLBACK_CHANNEL_OPTS;
   const pathOpts = dict.qt_source_artifact_path || [];
+  /**
+   * 字典里仍启用的产物 path。字典未拉到（pathOpts 为空）时不做判断——否则会把所有行
+   * 误标成「已停用」。不在集合中的行属于已停用/未登记的 path（如单包时代的 chain.json、
+   * source-bundle.js），后端继承时会自动摘掉它们，这里给用户一个显式提示。
+   */
+  const enabledPaths = new Set(pathOpts.map((o) => String(o.value)));
+  const isDeprecatedPath = (p?: string): boolean =>
+    !!p && pathOpts.length > 0 && !enabledPaths.has(p);
   const resultOpts = dict.qt_source_report_result || [];
   const stateOpts = dict.qt_source_release_state || [];
 
@@ -107,6 +121,8 @@ export default function SourceReleasesTab() {
 
   /** 监听「适用平台」：准入选择行随其联动 */
   const watchedPlatforms: number[] = Form.useWatch('platforms', form) || [];
+  /** 监听产物行：用于标出「已从字典停用」的历史 path（这些行不会被继承到新版本） */
+  const watchedArtifacts: ArtifactRow[] = Form.useWatch('artifacts', form) || [];
 
   const load = (p = page) => {
     setLoading(true);
@@ -226,6 +242,11 @@ export default function SourceReleasesTab() {
     }
     const artifacts: QtSourceArtifact[] = (values.artifacts || [])
       .filter((a: ArtifactRow) => a.path)
+      // 已停用的 path（单包时代的 chain.json / source-bundle.js）不再提交：两端客户端都只认
+      // meta/play，这些条目纯属历史垃圾。后端对「显式提交」的停用 path 是保留的（为了能编辑
+      // 历史版本），所以清理必须由这里做——否则编辑弹窗原样回传，保存多少次都还是 4 条。
+      // 字典没拉到（pathOpts 为空）时 isDeprecatedPath 恒为 false，不会误删任何行。
+      .filter((a: ArtifactRow) => !isDeprecatedPath(a.path))
       .map((a: ArtifactRow) => ({
         path: a.path!,
         url: a.url?.trim() || undefined,
@@ -237,11 +258,15 @@ export default function SourceReleasesTab() {
       notes: values.notes,
       appVersionCodes,
       artifacts,
+      // 编辑弹窗回传的就是「当前生效全集」，所以声明为替换语义：弹窗里删掉的条目
+      // 才会真正消失（否则后端按 path 合并会把删掉的项继承回来）。
+      // 新建不送该标志：保持「只填变更文件、其余继承上一版」的增量语义。
+      ...(values.id != null ? { replaceArtifacts: true } : {}),
     };
     try {
       if (values.id != null) {
         const res = await sourceReleaseApi.update(values.id, body);
-        if (res.code === 200) refreshAfter('已保存（artifacts 按 path 合并，未提交项继承上一版）');
+        if (res.code === 200) refreshAfter('已保存（产物以本次列表为准，删除的条目不再保留）');
       } else {
         const res = await sourceReleaseApi.create(body);
         if (res.code === 200) {
@@ -488,25 +513,36 @@ export default function SourceReleasesTab() {
             </Paragraph>
           </Form.Item>
           <Paragraph type="secondary" style={{ marginBottom: 8 }}>
-            产物按 path 合并：只填本次变更的文件（地址可手填永久直链，也可行内上传——上传成功会覆盖手填值；版本号由后端按 url 是否变化维护），
-            其余文件自动继承上一版——这就是「只发 chain」。path 选项来自数据字典 qt_source_artifact_path，可在字典管理里扩展。
+            产物是「当前生效全集」。<b>编辑</b>时以本列表为准：删掉的行保存后即从该版本移除（未列出的 path 不再继承）；
+            <b>新建</b>时按 path 增量合并——只填本次变更的文件，其余自动继承上一版，这就是「只发 chain」。
+            地址可手填永久直链，也可行内上传（上传成功会覆盖手填值）；版本号由后端按 url 是否变化维护。
+            标为「已停用」的 path（字典 qt_source_artifact_path 里 status=0，如单包时代的 chain.json /
+            source-bundle.js）不会再被继承，也不会再提交——保存后即从该版本移除，无需手工删除。
           </Paragraph>
           <Form.List name="artifacts">
             {(fields, { add, remove }) => (
               <>
-                {fields.map((field) => (
+                {fields.map((field) => {
+                  const current = watchedArtifacts[field.name]?.path;
+                  const deprecated = isDeprecatedPath(current);
+                  // 已停用的 path 不在字典下拉里，补一条只读选项，否则 Select 只显示裸值、看不出状态
+                  const rowOpts = deprecated
+                    ? [...pathOpts, { value: current!, label: `${current}（已停用）` }]
+                    : pathOpts;
+                  return (
                   <Space key={field.key} align="baseline" style={{ display: 'flex', marginBottom: 4 }}>
                     <Form.Item name={[field.name, 'path']} noStyle>
                       <Select
                         showSearch
                         placeholder="选择产物 path"
                         style={{ width: 200 }}
-                        options={(pathOpts.length ? pathOpts : [
+                        options={(rowOpts.length ? rowOpts : [
                           { value: 'meta-bundle.js', label: 'meta-bundle.js' },
                           { value: 'play-bundle.js', label: 'play-bundle.js' },
                         ])}
                       />
                     </Form.Item>
+                    {deprecated && <Tag color="warning" style={{ marginRight: 0 }}>已停用，保存后移除</Tag>}
                     <Form.Item
                       name={[field.name, 'url']}
                       noStyle
@@ -535,7 +571,8 @@ export default function SourceReleasesTab() {
                     </Upload>
                     <Button type="text" danger disabled={!canEdit} onClick={() => remove(field.name)}>删除</Button>
                   </Space>
-                ))}
+                  );
+                })}
                 <Button type="dashed" disabled={!canEdit} onClick={() => add()} icon={<PlusOutlined />} block>添加产物条目</Button>
               </>
             )}

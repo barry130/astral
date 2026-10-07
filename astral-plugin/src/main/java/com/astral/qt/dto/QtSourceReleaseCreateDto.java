@@ -42,8 +42,22 @@ public class QtSourceReleaseCreateDto {
      * 本次提交的产物条目（可空）。
      * <p>服务端按 path 合并到上一版之上：未提交的 path 自动继承上一版（url 与 version 不变），
      * 提交的 path 若 version 为空则自动取「上一版该 path 的 version + 1」。这就是「只发 chain」的实现方式。</p>
+     * <p>继承时，上一版里<b>已在数据字典 qt_source_artifact_path 停用</b>的 path 会被摘掉（不再继承），
+     * 避免已废弃的旧单包产物（chain.json / source-bundle.js）无限传递到新版本。</p>
      */
     private List<QtSourceArtifactVo> artifacts;
+
+    /**
+     * artifacts 提交语义（可空，缺省 false = 增量合并）。
+     * <p>
+     * true = 本次 {@link #artifacts} 即「当前生效全集」：上一版有、本次未提交的 path 会被<b>删除</b>。
+     * 前端编辑弹窗回传整集时用它，让弹窗里的「删除」按钮真正生效（否则删掉的条目会被继承回来）。
+     * false / 缺省 = 按 path 合并（「只发 chain」的增量语义）。
+     * </p>
+     * <p>注意：{@code replaceArtifacts=true} 且 {@link #artifacts} 为 null 时按「未提交」处理，仍走合并，
+     * 避免「先拿号」的建单请求（不送 artifacts）把上一版产物清空。</p>
+     */
+    private Boolean replaceArtifacts;
 
     /** 指定回退到的版本号（可空） */
     private Long rollbackTo;

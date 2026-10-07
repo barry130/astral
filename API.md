@@ -303,8 +303,8 @@
 | POST | `/github-accels/probe` | 探测节点可用性 |
 | GET | `/source-releases` | 音源包列表 |
 | GET | `/source-releases/stats` | 音源包统计 |
-| POST | `/source-releases` | 新增音源包 |
-| PUT | `/source-releases/{id}` | 更新音源包 |
+| POST | `/source-releases` | 新增音源包（artifacts 按 path 增量合并，未提交项继承上一版；已在字典 `qt_source_artifact_path` 停用的 path 不再继承） |
+| PUT | `/source-releases/{id}` | 更新音源包（同上；请求体带 `replaceArtifacts=true` 时本次 artifacts 即当前生效全集，未提交的 path 会被删除） |
 | POST | `/source-releases/{id}/publish` | 发布 |
 | POST | `/source-releases/{id}/unpublish` | 取消发布 |
 | POST | `/source-releases/{id}/bad` | 标记异常 |

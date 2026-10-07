@@ -19,4 +19,9 @@ public class DictDataServiceImpl extends ServiceImpl<DictDataMapper, DictData> i
     public List<DictData> listByCode(String code) {
         return baseMapper.selectByDictCode(code);
     }
+
+    @Override
+    public List<DictData> listDisabledByCode(String code) {
+        return baseMapper.selectDisabledByDictCode(code);
+    }
 }
