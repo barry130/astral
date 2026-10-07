@@ -214,6 +214,9 @@ public class QtAppUserController {
     }
 
     @Operation(summary = "通过邮箱验证码重置密码")
+    // 免登录接口，且验证码是 6 位纯数字：不加限流即可在有效期内暴力枚举并重置任意账号密码。
+    // 邮箱维度的失败次数封顶在 service 层（QtUserService.recordCodeFailure），此处按 IP 挡住跨邮箱扫描。
+    @RateLimit(key = "ip", limit = 5, duration = 60, message = "验证码尝试过于频繁，请60秒后再试")
     @PostMapping("/changePass")
     public QtRestResp<User> changePwByEmail(@Valid @RequestBody QtChangePwByEmailDto dto) {
         return QtRestResp.success(userService.changePwByEmail(dto));
