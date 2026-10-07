@@ -321,8 +321,8 @@ public class QtMediaService {
 
     /**
      * 旧文件回收（UPDATE_DESIGN.md §11）：业务字段已被新 URL 覆盖后，尽力删除旧 storage 文件。
-     * 仅识别 TELEGRAM 永久链形态（可提取 publicId）；旧 /files/qt-upload 本地文件与
-     * 对象存储公开 URL 不在此回收（本地目录按容量策略清理，公开 URL 无 publicId 可查）。
+     * 仅识别 TELEGRAM 永久链形态（可提取 publicId）；对象存储公开 URL 不在此回收
+     * （公开 URL 无 publicId 可查）。
      */
     private void recycleOldFile(String oldUrl, Long uid) {
         if (oldUrl == null || oldUrl.isBlank()) {

@@ -37,17 +37,18 @@
   2. `changePass` 与登录口径对齐：加 IP 限流 `@RateLimit`，并把校验失败接入 `LoginFailureStore` 同款锁定；
   3. 验证码位数/TTL 可按风控收紧（如 6 位 / 5 分钟），并要求失败重发走同一限流。
 
-### 2.2 🟠 中 — 存储型 XSS：头像上传无扩展名白名单 + 同源公开静态服务（**未修复，2026-10-07 决定暂缓**）
+### 2.2 🟠 中 — 存储型 XSS：头像上传无扩展名白名单 + 同源公开静态服务（**已修：接口整体下线，2026-10-07**）
 
-- `astral-plugin\src\main\java\com\astral\qt\service\QtUserService.java:413-441`（`upload`）：仅要求已登录，
-  **扩展名直接取原始文件名小写、无白名单、无内容/magic 校验**，文件名由服务端生成（因此**不构成路径遍历**）。
-- `astral-plugin\src\main\java\com\astral\qt\config\QtWebConfig.java:31-34`：`/files/qt-upload/**` → `./data/qt-upload/`
-  **公开静态服务**，且该路径**在 `/api/v1` 之外**，`AuthInterceptor` 完全不覆盖（`WebMvcConfig` 只拦 `/api/v1/**`）。
-- **后果**：上传 `.html` / `.svg` 后可在**站点同源**下被直接渲染执行——这正是 `AuthInterceptor.java:95-96`
-  注释里自己描述并已修掉的同类问题（「匿名上传 + 同源静态目录 = 存储型 XSS」），头像链路留下了同款载体。
-- **修复建议**：扩展名白名单（`jpg/png/webp/gif`）+ `ImageIO` magic 字节校验；storage 插件已有现成实现
-  `StorageFileService.detectImageMime`（`StorageFileService.java:431-449`）可直接复用；或改为 `Content-Disposition: attachment`
-  / 独立无凭据域承载。
+- 原始问题：`QtUserService.upload`（`/api/v1/app/user/upload`）仅取原始文件名小写扩展名，**无白名单、无 magic 校验**；
+  `QtWebConfig` 把 `/files/qt-upload/**` → `./data/qt-upload/` 作为**公开静态服务**，且该路径在 `/api/v1` 之外，
+  `AuthInterceptor` 完全不覆盖。上传 `.html` / `.svg` 后可在**站点同源**下渲染执行。
+- **处理方式（用户决策）**：该接口在三个客户端（qt-pc / qt-uniappx / astral-front）**零引用**，
+  直传链路（`/avatar/ticket` + `/avatar/complete`，走 storage 文件夹策略 `upload_policy`）已完全取代它。
+  故**直接删除**，不做加固：
+  - 删除 `QtAppUserController.upload`（`/upload`）与 `QtUserService.upload`；
+  - 删除 `QtWebConfig`（其唯一职责就是映射上述静态目录）与孤儿 DTO `QtDataVo`；
+  - 清理 `QtMediaService` 中引用旧 `/files/qt-upload` 的注释。
+- **结论**：攻击面随接口一同消失，优于「加白名单 + magic」的加固方案（后者仍需维护一条与直传链路重复的旧路径）。
 
 ### 2.3 🟠 中 — 存储 Worker 下载与永久链接同样允许 SVG inline
 
@@ -141,7 +142,7 @@
 
 | # | 约束 | 结论 | 依据 |
 |---|---|---|---|
-| 1 | 接口路径三层前缀 `admin/app/all` | ✅ 合规 | `admin` / `app` / `all` 均正确落位；`/files/qt-upload/**` 是静态资源映射而非 API，不计入三层 |
+| 1 | 接口路径三层前缀 `admin/app/all` | ✅ 合规 | `admin` / `app` / `all` 均正确落位（原 `/files/qt-upload/**` 静态映射已于本次清理一并删除） |
 | 2 | 新建表纳入表结构管理 + 对应 schema JSON | ✅ 合规（**一处曾误判，已澄清**） | 插件表 schema JSON 齐全（qt_app_update / qt_github_accel / qt_like_* / qt_user* / qt_source_* / sys_feedback* / sys_storage_*）；**审阅中曾把 `qt_email_code` 判为「有表无 JSON」，复核后确认是误判**：全仓库不存在 `CREATE TABLE qt_email_code`，运行期验证码只存 Redis（`QtUserService.java:91`）；当时看到的 8 行 `COMMENT ON COLUMN qt_email_code.*` 是历史残留（被 `ResourceDatabasePopulator.setContinueOnError(true)` 静默吞掉），本轮已清理 |
 | 3 | 前端枚举值走数据字典 | ✅ 基本合规 | 抽查 storage / feedback 渠道枚举均走 `fetchDictOptions` / 字典表 |
 | 4 | shadcn/ui + 请求统一走 `src/api/client.ts` | ✅ 合规 | `src\api\client.ts` 为唯一出口（仅对象存储预签名直传走原生 `fetch`，符合规范例外） |
@@ -179,6 +180,7 @@
 | `clientIp` 口径统一 | `astral-plugin\src\main\java\com\astral\qt\service\QtMediaService.java` |
 | 清理 `qt_email_code` 残留注释 | `astral-plugin\src\main\resources\sql\qt-schema.sql` |
 | 启动日志表名修正 | `astral-plugin\src\main\java\com\astral\qt\config\QtSchemaInitializer.java` |
+| 下线零引用头像上传接口（§2.2 攻击面消除） | `astral-plugin\src\main\java\com\astral\qt\controller\QtAppUserController.java`、`...\service\QtUserService.java`、`...\config\QtWebConfig.java`（删除）、`...\dto\vo\QtDataVo.java`（删除） |
 
 编译校验：`mvn -pl astral-plugin -am compile -DskipTests` → **BUILD SUCCESS**（JDK 25 / Maven 3.9.6）。
 
@@ -190,9 +192,10 @@
 ### 待办（按优先级）
 
 1. **立即**：`changePass` 验证码尝试限制 + 接口限流/失败锁定（账号接管风险，§2.1）。
-2. **立即**：头像上传扩展名白名单 + magic 校验，复用 `StorageFileService.detectImageMime`（§2.2）。
-3. **短期**：Worker 下载/永久链接禁止 SVG inline + 收敛签名 URL 的 CORS（§2.3）。
-4. **随缘**：事务内网络 I/O、RSA 私钥文件权限、Worker 注释与实现对齐、`UserController.getById` 出参置 null。
+2. **短期**：Worker 下载/永久链接禁止 SVG inline + 收敛签名 URL 的 CORS（§2.3）。
+3. **随缘**：事务内网络 I/O、RSA 私钥文件权限、Worker 注释与实现对齐、`UserController.getById` 出参置 null。
+
+> §2.2（头像存储型 XSS）已通过**删除零引用旧接口**闭环，不再是待办；直传链路 `/avatar/ticket` + `/avatar/complete` 由 storage `upload_policy` 参数化管控大小/类型/次数。
 
 ---
 

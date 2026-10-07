@@ -21,7 +21,6 @@ import com.astral.qt.dto.QtUpdateUserDto;
 import com.astral.qt.dto.QtUploadCompleteReqDto;
 import com.astral.qt.dto.QtUserDakaDto;
 import com.astral.qt.dto.vo.QtDakaDaysAndCodeVo;
-import com.astral.qt.dto.vo.QtDataVo;
 import com.astral.qt.dto.vo.QtLikeChangesVo;
 import com.astral.qt.dto.vo.QtLikePageVo;
 import com.astral.qt.dto.vo.QtLikeSeqVo;
@@ -43,7 +42,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -148,13 +146,6 @@ public class QtAppUserController {
     @PostMapping("/register")
     public QtRestResp<QtUserInfoVo> register(@Valid @RequestBody QtRegisterDto dto) {
         return QtRestResp.success(userService.register(dto));
-    }
-
-    @Operation(summary = "上传头像")
-    @RequiresPermission(value = "user:profile:edit", name = "用户资料编辑", description = "App 端修改本人资料、头像上传与直传回执")
-    @PostMapping("/upload")
-    public QtRestResp<QtDataVo<String>> upload(@RequestParam("avatar") MultipartFile file) {
-        return QtRestResp.success(userService.upload(file));
     }
 
     // ==================== 媒体直传（UPDATE_DESIGN.md §5，文件不经过 Astral 服务器） ====================
