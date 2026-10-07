@@ -17,7 +17,6 @@ import com.astral.qt.dto.QtLoginDto;
 import com.astral.qt.dto.QtRegisterDto;
 import com.astral.qt.dto.QtSendEmailDto;
 import com.astral.qt.dto.QtUpdateUserDto;
-import com.astral.qt.dto.vo.QtDataVo;
 import com.astral.qt.dto.vo.QtUserInfoVo;
 import com.astral.system.notify.NotifyEventRegistry;
 import com.astral.system.mail.MailService;
@@ -30,12 +29,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -45,7 +39,7 @@ import java.util.UUID;
 
 /**
  * 轻听用户服务
- * <p>登录 / 注册 / 邮箱验证码 / 更新资料 / 邮箱重置密码 / 头像上传。</p>
+ * <p>登录 / 注册 / 邮箱验证码 / 更新资料 / 邮箱重置密码。</p>
  * <p>用户已并入宿主 {@code sys_user}（user_type='APP'），鉴权统一走 Sa-Token，
  * 不再自建 qt_user / qt_user_token 表。</p>
  */
@@ -407,36 +401,4 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         return userMapper.selectById(userId);
     }
 
-    // ==================== 文件上传 ====================
-
-    /**
-     * 头像上传：默认存本地 ./data/qt-upload/avatar/，返回可访问 CDN/baseUrl 前缀。
-     * 若部署环境挂了 Nginx/CDN，通过配置重写 qt.file.base-url 覆盖返回前缀。
-     */
-    public QtDataVo<String> upload(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new QtException("上传文件为空");
-        }
-        String original = file.getOriginalFilename() == null ? "avatar.bin" : file.getOriginalFilename();
-        String ext = "";
-        int dot = original.lastIndexOf('.');
-        if (dot >= 0) {
-            ext = original.substring(dot).toLowerCase();
-        }
-        String fileName = System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8) + ext;
-
-        try {
-            Path dir = Paths.get("data", "qt-upload", "avatar").toAbsolutePath().normalize();
-            Files.createDirectories(dir);
-            Path target = dir.resolve(fileName);
-            file.transferTo(target.toFile());
-            log.info("[QtPlugin] 头像上传成功: {}", target);
-            String url = "/files/qt-upload/avatar/" + fileName;
-            QtDataVo<String> vo = new QtDataVo<>(url);
-            return vo;
-        } catch (IOException e) {
-            log.error("[QtPlugin] 头像上传失败", e);
-            throw new QtException("上传图片解析出错");
-        }
-    }
 }

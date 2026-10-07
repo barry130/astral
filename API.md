@@ -259,7 +259,6 @@
 | POST | `/logout` | 退出登录 |
 | POST | `/email` | 发送邮箱验证码 |
 | POST | `/register` | 注册（邮箱+验证码） |
-| POST | `/upload` | 上传头像（multipart `avatar`） |
 | POST | `/update` | 更新用户信息 |
 | POST | `/changePass` | 邮箱验证码重置密码 |
 | POST | `/daka` | 用户签到 |

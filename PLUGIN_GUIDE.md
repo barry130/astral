@@ -201,7 +201,7 @@ public boolean isRequired() {
 | 关注点 | 实现位置 |
 |---|---|
 | 插件定义与导航 | `com.astral.qt.QtPlugin` |
-| App 用户与认证 | `com.astral.qt.service.QtUserService`、`QtWebConfig` |
+| App 用户与认证 | `com.astral.qt.service.QtUserService` |
 | Controller | `com.astral.qt.controller` |
 | Mapper 注册 | `com.astral.qt.config.QtMapperConfig` |
 | 数据库资源 | `resources/sql/qt-schema.sql`、`resources/schema/qt_*.json` |
