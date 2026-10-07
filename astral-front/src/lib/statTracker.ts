@@ -4,7 +4,7 @@
  * 生成匿名设备ID，采集 launcher / show / hide / page 事件，
  * 攒批 10s 或满 50 条上报；hide 时持久化队列防丢。
  *
- * 接口：POST /api/v1/stat/report（匿名、免登录）
+ * 接口：POST /api/v1/app/stat/report（匿名、免登录）
  */
 'use client';
 
@@ -179,7 +179,7 @@ async function flush() {
   if (pendingEvents.length === 0) return;
   const batch = pendingEvents.splice(0, BATCH_LIMIT);
   try {
-    await fetch('/api/v1/stat/report', {
+    await fetch('/api/v1/app/stat/report', {
       method: 'POST',
       // 统一客户端系统头：本处不经 axios 实例，需要自己带上（契约见 lib/client-info.ts）。
       // 事件体里的 ut 只进 stat_device/stat_metric/stat_error；请求头这一路才是
@@ -289,7 +289,7 @@ export function initStatTracker() {
       const blob = new Blob([JSON.stringify({ events: pendingEvents.splice(0) })], {
         type: 'application/json',
       });
-      navigator.sendBeacon('/api/v1/stat/report', blob);
+      navigator.sendBeacon('/api/v1/app/stat/report', blob);
     }
   };
   window.addEventListener('beforeunload', onBeforeUnload);

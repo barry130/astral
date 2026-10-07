@@ -126,7 +126,7 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
             </span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="end" className="w-[340px] p-2">
+        <PopoverContent align="end" className="w-[340px] max-w-[calc(100vw-2rem)] p-2">
           <div className="flex items-center justify-between px-1 pb-2">
             <span className="text-sm font-semibold">消息通知（{unread.length} 未读）</span>
             {unread.length > 0 && (

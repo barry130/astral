@@ -1,0 +1,112 @@
+{
+  "tableName": "sys_sms_provider",
+  "tableComment": "短信供应商",
+  "moduleName": "system",
+  "className": "SysSmsProvider",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "provider_name",
+      "fieldName": "providerName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "供应商名称",
+      "length": 64
+    },
+    {
+      "columnName": "provider_type",
+      "fieldName": "providerType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "供应商类型(MOCK/ALIYUN)",
+      "length": 16
+    },
+    {
+      "columnName": "access_key",
+      "fieldName": "accessKey",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "访问密钥ID",
+      "length": 128
+    },
+    {
+      "columnName": "access_secret",
+      "fieldName": "accessSecret",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "访问密钥Secret",
+      "length": 256
+    },
+    {
+      "columnName": "sign_name",
+      "fieldName": "signName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "短信签名",
+      "length": 64
+    },
+    {
+      "columnName": "region",
+      "fieldName": "region",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "地域(如cn-hangzhou)",
+      "length": 32
+    },
+    {
+      "columnName": "endpoint",
+      "fieldName": "endpoint",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "API网关地址",
+      "length": 128
+    },
+    {
+      "columnName": "enabled",
+      "fieldName": "enabled",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "是否启用(1是0否)"
+    },
+    {
+      "columnName": "weight",
+      "fieldName": "weight",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "选择权重"
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "备注",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

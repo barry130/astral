@@ -9,6 +9,8 @@ import com.astral.dao.mapper.SysMailAccountMapper;
 import com.astral.dao.mapper.SysMailLogMapper;
 import com.astral.dao.mapper.SysMailPluginAuthMapper;
 import com.astral.dao.mapper.SysMailTemplateMapper;
+import com.astral.system.notify.NotifyChannel;
+import com.astral.system.notify.NotifyEventRegistry;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -179,26 +181,29 @@ public class MailServiceImpl implements MailService {
     }
 
     @Override
-    public void send(String pluginId, String toEmail, String templateCode, Map<String, String> variables) {
+    public void send(String pluginId, String toEmail, String sceneCode, Map<String, String> variables) {
         // 1. 插件发信授权校验（缓存 60s，插件授权写操作主动失效）
         SysMailPluginAuth auth = pluginAuthCache.get(pluginId, k -> pluginAuthMapper.selectOne(
                 new LambdaQueryWrapper<SysMailPluginAuth>().eq(SysMailPluginAuth::getPluginId, k)));
         if (auth == null || auth.getEnabled() == null || auth.getEnabled() != 1) {
             throw new BusinessException("MAIL003", pluginId);
         }
-        // 2. 场景白名单校验
-        if (auth.getAllowedScenes() != null && !auth.getAllowedScenes().isBlank()) {
-            List<String> allowed = parseJsonArray(auth.getAllowedScenes());
-            if (!allowed.contains(templateCode)) {
-                throw new BusinessException("MAIL006", templateCode);
-            }
+        // 2. 场景白名单校验（fail-closed）：授权未配置 allowed_scenes = 一律拒绝。
+        //    空白语义从「全部允许」反转为「全部拒绝」——授权的价值在于明示范围，缺省不猜；
+        //    插件侧不再自带硬编码白名单，能发什么完全由这张表决定。
+        String allowedRaw = auth.getAllowedScenes();
+        if (allowedRaw == null || allowedRaw.isBlank()) {
+            throw new BusinessException("MAIL018", pluginId);
         }
-        // 3. 模板校验（缓存 60s）
+        List<String> allowed = parseJsonArray(allowedRaw);
+        if (!allowed.contains(sceneCode)) {
+            throw new BusinessException("MAIL006", sceneCode);
+        }
+        // 3. 模板解析（缓存 60s）：参数是场景码，优先按 scene 绑定解析，未命中回退 template_code
         //    必须先于「占额度」：模板不存在属于参数错误，不该白扣一次发信配额。
-        SysMailTemplate tpl = templateCache.get(templateCode, k -> templateMapper.selectOne(
-                new LambdaQueryWrapper<SysMailTemplate>().eq(SysMailTemplate::getTemplateCode, k)));
+        SysMailTemplate tpl = templateCache.get(sceneCode, this::resolveTemplate);
         if (tpl == null) {
-            throw new BusinessException("MAIL002", templateCode);
+            throw new BusinessException("MAIL002", sceneCode);
         }
         // 4. 渲染主题与正文（渲染失败同样发生在占额度之前，不会消耗配额）
         String subject = render(tpl.getSubject(), variables);
@@ -214,7 +219,7 @@ public class MailServiceImpl implements MailService {
         // 6. 选择启用账户并发送（失败自动重试下一个）
         //    发送失败要回补额度，否则「无可用账户 / SMTP 全部失败」会把用户当天的验证码配额吃掉。
         try {
-            sendWithAccount(toEmail, subject, content, pluginId, templateCode);
+            sendWithAccount(toEmail, subject, content, pluginId, sceneCode);
         } catch (RuntimeException e) {
             refundQuota(pluginId, toEmail);
             throw e;
@@ -223,11 +228,43 @@ public class MailServiceImpl implements MailService {
 
     @Override
     public void sendSystemAlert(String toEmail, String subject, String textBody) {
+        // 告警邮件模板化：命中 systemAlert 场景绑定的模板则按 ${title}/${content} 渲染，
+        // 未绑定模板时回退内置样式直发（告警是系统自身触发的低频事件，不查授权、不占额度）。
+        SysMailTemplate tpl = templateCache.get(NotifyEventRegistry.SYSTEM_ALERT, this::resolveTemplate);
+        if (tpl != null) {
+            Map<String, String> vars = Map.of("title", subject == null ? "" : subject,
+                    "content", textBody == null ? "" : textBody);
+            String renderedSubject = render(tpl.getSubject(), vars);
+            String content = renderAdmin(tpl.getContent(), vars);
+            sendWithAccount(toEmail,
+                    renderedSubject == null || renderedSubject.isBlank() ? subject : renderedSubject,
+                    content, "system", NotifyEventRegistry.SYSTEM_ALERT);
+            return;
+        }
         String html = "<div style=\"font-family:sans-serif;padding:24px;white-space:pre-wrap;\">"
                 + textBody.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 + "</div>";
         // pluginId=system、scene=alert：只影响 sys_mail_log 里的归属标记，不走授权/额度
-        sendWithAccount(toEmail, subject, html, "system", "alert");
+        sendWithAccount(toEmail, subject, html, "system", NotifyEventRegistry.SYSTEM_ALERT);
+    }
+
+    /**
+     * 模板解析：参数是事件码，优先按 {@code sys_mail_template.scene} × EMAIL 渠道绑定解析
+     * （scene+channel 唯一索引保证至多一条，orderBy 兜底防御），未命中再按 {@code template_code}
+     * 直查——兼容只建了模板、没填 scene 的存量数据与老调用方。
+     */
+    private SysMailTemplate resolveTemplate(String sceneOrCode) {
+        List<SysMailTemplate> byScene = templateMapper.selectList(
+                new LambdaQueryWrapper<SysMailTemplate>()
+                        .eq(SysMailTemplate::getScene, sceneOrCode)
+                        .eq(SysMailTemplate::getChannel, NotifyChannel.EMAIL)
+                        .orderByDesc(SysMailTemplate::getUpdateTime)
+                        .last("LIMIT 1"));
+        if (!byScene.isEmpty()) {
+            return byScene.get(0);
+        }
+        return templateMapper.selectOne(new LambdaQueryWrapper<SysMailTemplate>()
+                .eq(SysMailTemplate::getTemplateCode, sceneOrCode));
     }
 
     /** 失效启用账户缓存：MailAccountController 的 create/update/delete/toggle 后调用 */
@@ -265,6 +302,36 @@ public class MailServiceImpl implements MailService {
             saveLog(acc.getId(), "system", "test", toEmail, subject, content, 0, e.getMessage());
             throw new BusinessException("MAIL005", e.getMessage());
         }
+    }
+
+    @Override
+    public void testSendTemplate(Long templateId, Long accountId, String toEmail, Map<String, String> variables) {
+        if (toEmail == null || toEmail.isBlank()) {
+            throw new BusinessException("MAIL014");
+        }
+        SysMailTemplate tpl = templateMapper.selectById(templateId);
+        if (tpl == null) {
+            throw new BusinessException("MAIL002", templateId);
+        }
+        // 管理端试发与预览同语义：变量值由管理员显式提供，不做 HTML 转义（如原样输出链接）
+        String subject = renderAdmin(tpl.getSubject(), variables);
+        String content = renderAdmin(tpl.getContent(), variables);
+        String scene = tpl.getScene() != null && !tpl.getScene().isBlank() ? tpl.getScene() : "test";
+        if (accountId != null) {
+            SysMailAccount acc = accountMapper.selectById(accountId);
+            if (acc == null || acc.getEnabled() == null || acc.getEnabled() != 1) {
+                throw new BusinessException("MAIL001");
+            }
+            try {
+                doSend(acc, toEmail, subject, content);
+                saveLog(acc.getId(), "system", scene, toEmail, subject, content, 1, null);
+            } catch (Exception e) {
+                saveLog(acc.getId(), "system", scene, toEmail, subject, content, 0, e.getMessage());
+                throw new BusinessException("MAIL005", e.getMessage());
+            }
+            return;
+        }
+        sendWithAccount(toEmail, subject, content, "system", scene);
     }
 
     private void sendWithAccount(String toEmail, String subject, String content,
@@ -380,6 +447,26 @@ public class MailServiceImpl implements MailService {
             }
         }
         return sb.toString();
+    }
+
+    /**
+     * 管理端渲染（预览/试发用）：与 {@link #render} 同规则但不做 HTML 转义——
+     * 变量值由管理员显式提供，需要原样输出（如正文里的链接）。
+     */
+    private String renderAdmin(String template, Map<String, String> variables) {
+        if (template == null) {
+            return "";
+        }
+        String result = template;
+        if (variables != null) {
+            for (Map.Entry<String, String> e : variables.entrySet()) {
+                if (e.getKey() == null) {
+                    continue;
+                }
+                result = result.replace("${" + e.getKey() + "}", e.getValue() == null ? "" : e.getValue());
+            }
+        }
+        return result;
     }
 
     private void saveLog(Long accountId, String pluginId, String scene, String toEmail,

@@ -62,6 +62,14 @@
       "length": 64
     },
     {
+      "columnName": "channel",
+      "fieldName": "channel",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "投递渠道(NotifyChannel注册值, 如EMAIL)",
+      "length": 16
+    },
+    {
       "columnName": "remark",
       "fieldName": "remark",
       "fieldType": "String",

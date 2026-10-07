@@ -23,7 +23,7 @@ import java.util.Set;
  * <ul>
  *   <li><b>宿主管理区</b>（/api/v1/** 除 Qt 用户区外）：未登录返回 {@code Result} 结构 401（AUTH001），
  *       登录后把 userId/username 写入 request 属性（供限流拦截器与控制器使用）</li>
- *   <li><b>Qt 用户区</b>（/api/v1/user/**、/api/v1/app/user/**）：未携带/无效 satoken 返回
+ *   <li><b>Qt 用户区</b>（/api/v1/app/user/**）：未携带/无效 satoken 返回
  *       {@code QtRestResp} 结构 401（“登录状态已失效”，与历史 App 客户端约定一致），
  *       登录后把 userId/username 写入 request 属性</li>
  *   <li><b>Token 自动续期</b>：任何 /api/** 请求只要携带有效 satoken（含匿名接口如 /api/v1/app/update），
@@ -64,8 +64,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     /** satoken 请求头名（与 sa-token.token-name 一致） */
     private static final String TOKEN_HEADER = "satoken";
 
-    /** Qt 用户区前缀：旧 /api/v1/user 与新 /api/v1/app/user，401 返回 QtRestResp 结构 */
-    private static final String QT_USER_PREFIX_OLD = "/api/v1/user/";
+    /** Qt 用户区前缀：/api/v1/app/user，401 返回 QtRestResp 结构 */
     private static final String QT_USER_PREFIX_NEW = "/api/v1/app/user/";
 
     /** App 匿名公共区前缀：/api/v1/app/** 中非 user 区（如 /api/v1/app/update、/api/v1/app/stat/report）免认证 */
@@ -90,24 +89,17 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     /** 免认证路径白名单（合并原宿主 WebMvcConfig excludes 与 qt 插件 PUBLIC_PATHS） */
     private static final Set<String> PUBLIC_PATHS = Set.of(
-            // 宿主认证（旧 /api/v1/auth 与新 /api/v1/all/auth）
-            "/api/v1/auth/public-key", "/api/v1/auth/login", "/api/v1/auth/logout",
+            // 宿主认证（/api/v1/all/auth）
             "/api/v1/all/auth/public-key", "/api/v1/all/auth/login", "/api/v1/all/auth/logout",
-            // 轻听用户端免认证（旧 /api/v1/user 与新 /api/v1/app/user）
+            // 轻听用户端免认证（/api/v1/app/user）
             // 注意：upload 已从白名单移除 —— 匿名上传 + 同源静态目录 = 存储型 XSS，
             // 头像上传属于「登录后才该做的事」，客户端请先登录再上传。
-            "/api/v1/user/login",
-            "/api/v1/user/register",
-            "/api/v1/user/email",
-            "/api/v1/user/changePass",
-            "/api/v1/user/refresh",
             "/api/v1/app/user/login",
             "/api/v1/app/user/register",
             "/api/v1/app/user/email",
             "/api/v1/app/user/changePass",
             "/api/v1/app/user/refresh",
             // 全端统计：匿名上报入口放行
-            "/api/v1/stat/report",
             "/api/v1/app/stat/report"
     );
 
@@ -140,7 +132,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         // 4. Qt 用户区：校验 satoken 有效性，401 返回 QtRestResp 结构（App 客户端历史约定）
-        if (uri.startsWith(QT_USER_PREFIX_OLD) || uri.startsWith(QT_USER_PREFIX_NEW)) {
+        if (uri.startsWith(QT_USER_PREFIX_NEW)) {
             Long userId = resolveUserId(token);
             if (userId == null) {
                 response.setContentType("application/json;charset=UTF-8");

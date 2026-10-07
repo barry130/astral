@@ -294,7 +294,7 @@ export default function QtAdminPage() {
         <div>
           <h2 style={{ margin: 0 }}>轻听 API 管理</h2>
           <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-            面向 qt-uniappx 的音乐 App 后端：签到/收藏/公告/版本更新（astral-plugin 内置 Qt 插件）
+            面向 qt-uniappx 的音乐 App 后端：签到/收藏/版本更新（astral-plugin 内置 Qt 插件；公告统一走 feedback 插件）
           </Paragraph>
         </div>
         <div className="page-toolbar">

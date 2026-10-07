@@ -37,4 +37,10 @@ public interface TokenService {
      * 清理所有过期的Token
      */
     void cleanExpiredTokens();
+
+    /**
+     * 全端会话重置：吊销所有在线 Token（含操作者本人），所有人重新登录。
+     * <p>用于会话模型变更后的存量清理、安全事件应急等场景。</p>
+     */
+    void revokeAllTokens();
 }

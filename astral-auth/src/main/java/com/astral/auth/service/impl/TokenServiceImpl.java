@@ -113,6 +113,9 @@ public class TokenServiceImpl implements TokenService {
                         .token(tokenValue)
                         .expireTime(expireTime)
                         .loginIp(loginIp)
+                        // is-share=false 后同账号每端/每设备一个 token，device 由登录时写入；
+                        // 改前发行的旧 token 无 device 记录，返回 null 由前端兜底展示
+                        .device(StpUtil.getLoginDeviceByToken(tokenValue))
                         .status(1)
                         .createTime(createTime)
                         .build());
@@ -198,6 +201,29 @@ public class TokenServiceImpl implements TokenService {
                 }
             } catch (Exception ignored) {
                 // Token可能已经被清理，忽略异常
+            }
+        }
+    }
+
+    /**
+     * 全端会话重置：吊销所有在线 Token
+     * <p>遍历Sa-Token中所有登录Token逐个吊销（语义等同逐 token logout），
+     * 用于会话模型变更后的存量清理与安全事件应急。操作者本人的会话也会被吊销。</p>
+     */
+    @Override
+    public void revokeAllTokens() {
+        SaTokenDao dao = StpUtil.getStpLogic().getSaTokenDao();
+        List<String> allKeys = dao.searchData("", "", 0, -1, true);
+
+        String tokenPrefix = StpUtil.getStpLogic().getTokenName() + ":login:token:";
+        for (String key : allKeys) {
+            if (!key.startsWith(tokenPrefix)) {
+                continue;
+            }
+            try {
+                StpUtil.logoutByTokenValue(key.substring(tokenPrefix.length()));
+            } catch (Exception ignored) {
+                // Token可能已经被并发清理，忽略异常
             }
         }
     }

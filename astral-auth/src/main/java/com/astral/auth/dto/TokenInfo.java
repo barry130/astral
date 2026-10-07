@@ -35,6 +35,12 @@ public class TokenInfo {
     /** 登录IP地址 */
     private String loginIp;
 
+    /**
+     * 登录设备标识（登录时 SaLoginModel.setDevice 写入，如 ADMIN / APP）。
+     * is-share=false 后同账号每端一个 token，靠它区分；改前发行的旧 token 无此记录，为 null。
+     */
+    private String device;
+
     /** 状态：1-有效 */
     private Integer status;
 

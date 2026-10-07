@@ -10,6 +10,7 @@ import java.util.Map;
  *
  * <p>config 为 TEXT 列存 JSON：
  * EMAIL → {@code {"to": "收件邮箱"}}；
+ * SMS → {@code {"phone": "手机号"}}；
  * WEBHOOK → {@code {"url": "...", "secret": "可选", "header": "可选，默认 X-Astral-Alert"}}。
  * 解析失败返回空 Map，由调用方按「缺必填项」报错，避免 JSON 异常直接 500。</p>
  */
@@ -44,7 +45,9 @@ public class AlertConfigParser {
                     ? "EMAIL 渠道 config 缺少 to（收件邮箱）" : null;
             case AlertEngine.CHANNEL_WEBHOOK -> config.get("url") == null || config.get("url").isBlank()
                     ? "WEBHOOK 渠道 config 缺少 url" : null;
-            default -> "不支持的渠道类型：" + type + "（仅 EMAIL / WEBHOOK）";
+            case AlertEngine.CHANNEL_SMS -> config.get("phone") == null || config.get("phone").isBlank()
+                    ? "SMS 渠道 config 缺少 phone（手机号）" : null;
+            default -> "不支持的渠道类型：" + type + "（仅 EMAIL / SMS / WEBHOOK）";
         };
     }
 }

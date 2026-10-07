@@ -8,7 +8,7 @@
 
 ## 1. 认证鉴权 `astral-auth`
 
-### 1.1 账号认证 `/api/v1/auth`
+### 1.1 账号认证 `/api/v1/all/auth`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/public-key` | 获取 RSA 公钥（登录密码加密用） |
@@ -218,7 +218,7 @@
 | GET | `/jvm` | JVM 监控（堆内存/GC/线程/JDK版本） |
 | GET | `/business` | 业务监控（序列总数/QPS/配置数） |
 
-### 5.2 统计报表 `/api/v1/stat`（admin 前端，权限 `admin:statistics:view`）
+### 5.2 统计报表 `/api/v1/admin/stat`（admin 前端，权限 `admin:statistics:view`）
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/overview?date=&ut=` | 设备统计概览（今日 vs 昨日） |
@@ -228,7 +228,7 @@
 | GET | `/error/page?pageNum=&pageSize=&errorType=&appVersion=&fingerprint=` | 错误明细分页 |
 | GET | `/error/summary?date=` | 错误分组汇总（按 fingerprint） |
 
-### 5.3 统计上报 `/api/v1/stat`（App 匿名，单批≤200）
+### 5.3 统计上报 `/api/v1/app/stat`（App 匿名，单批≤200）
 | 方法 | URL | 作用 |
 |---|---|---|
 | POST | `/report` | 匿名批量上报统计事件（恒返回200，失败不影响客户端） |
@@ -250,7 +250,7 @@
 
 ## 7. 轻听插件 `astral-plugin / qt`
 
-### 8.1 App 用户 `/api/v1/user`（App 用户，satoken）
+### 8.1 App 用户 `/api/v1/app/user`（App 用户，satoken）
 | 方法 | URL | 作用 |
 |---|---|---|
 | POST | `/login` | 登录（返回 token+用户信息） |
@@ -265,37 +265,43 @@
 | POST | `/daka` | 用户签到 |
 | GET | `/dakaInfo` | 连续签到天数+总积分 |
 | GET | `/dakaInfoByMonth?time=` | 某年某月签到详情 |
-| GET | `/getLikeList` | 用户收藏歌单+歌曲 |
-| POST | `/uploadLikeList` | 同步收藏歌单+歌曲 |
+| POST | `/deactivate` | 注销账号 |
+| GET | `/like/changes?since=` | 增量拉取收藏变更 |
+| GET | `/like/list?page=&size=` | 全量分页拉取收藏 |
+| POST | `/like/song` | 收藏/取消收藏单曲 |
+| POST | `/like/playlist` | 收藏/取消收藏歌单 |
+| POST | `/like/batch` | 批量收藏/取消（单批≤200） |
 
-### 8.2 App 公告 `/api/v1/user/notice`（⚠️ 已废弃，迁至反馈插件 `/api/v1/app/message/**`）
+### 8.2 App 公共 `/api/v1/app`（免认证）
 | 方法 | URL | 作用 |
 |---|---|---|
-| GET | `/center` | 消息中心列表 |
-| GET | `/unread/count` | 未读数 |
-| POST | `/read` | 批量标记已读 |
-
-### 8.3 App 公共 `/api/v1/app`（免认证）
-| 方法 | URL | 作用 |
-|---|---|---|
-| GET | `/notice?version=&satoken=` | 生效中的公告（按版本/登录人群过滤） |
 | GET | `/update?type=&version=&channel=` | APK 更新信息（type=1101/1102） |
 | GET | `/version/check?type=&version=&versionName=` | 校验是否官方版本 |
+| GET | `/github/accels` | GitHub 加速节点列表 |
+| GET | `/source/manifest?platform=` | 音源包清单 |
+| POST | `/source/report` | 音源包可用性上报 |
 
-### 8.4 管理端 `/api/v1/qingting/admin`（宿主管理员）
+### 8.3 管理端 `/api/v1/admin/qt`（宿主管理员）
 | 方法 | URL | 作用 |
 |---|---|---|
-| GET | `/overview` | 概览统计（用户/签到/公告/更新数） |
+| GET | `/overview` | 概览统计（用户/签到/更新数） |
 | GET | `/users?pageNum=&pageSize=&keyword=` | App 用户分页 |
 | PUT | `/users/{id}/state?state=` | 封禁/解封 |
-| GET | `/notices` | 公告列表 |
-| POST | `/notices` | 新增公告 |
-| PUT | `/notices/{id}` | 更新公告 |
-| DELETE | `/notices/{id}` | 删除公告 |
 | GET | `/updates` | 版本更新列表 |
 | POST | `/updates` | 新增版本更新 |
 | PUT | `/updates/{id}` | 更新版本 |
 | DELETE | `/updates/{id}` | 删除版本 |
+| GET/POST/PUT/DELETE | `/github-accels[/{id}]` | 加速节点 CRUD |
+| POST | `/github-accels/cache/evict` | 失效加速节点缓存 |
+| POST | `/github-accels/probe` | 探测节点可用性 |
+| GET | `/source-releases` | 音源包列表 |
+| GET | `/source-releases/stats` | 音源包统计 |
+| POST | `/source-releases` | 新增音源包 |
+| PUT | `/source-releases/{id}` | 更新音源包 |
+| POST | `/source-releases/{id}/publish` | 发布 |
+| POST | `/source-releases/{id}/unpublish` | 取消发布 |
+| POST | `/source-releases/{id}/bad` | 标记异常 |
+| DELETE | `/source-releases/{id}` | 删除音源包 |
 
 ---
 

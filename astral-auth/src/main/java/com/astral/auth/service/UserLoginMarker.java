@@ -3,6 +3,8 @@ package com.astral.auth.service;
 import com.astral.common.util.ClientIp;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
+import cn.dev33.satoken.session.SaSession;
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * 用户登录/活跃标记：把最后活跃时间与来源 IP 落回 {@code sys_user.login_time / login_ip}。
@@ -25,7 +28,7 @@ import java.time.LocalDateTime;
  * <ul>
  *   <li>管理端登录：{@code AuthServiceImpl.login}</li>
  *   <li>App 登录 / 注册自动登录：{@code QtUserService.login / register}</li>
- *   <li>App 显式刷新 token：{@code /api/v1/user/refresh}、{@code /api/v1/app/user/refresh}
+ *   <li>App 显式刷新 token：{@code /api/v1/app/user/refresh}
  *       （客户端通常在启动时调用，是「用户回来了」的直接信号）</li>
  *   <li>Token 滑动续期：{@code AuthInterceptor.renewIfNeeded}（剩余有效期不足 1 天时触发，
  *       约 2 天最多一次，覆盖「未重新登录但持续使用」的用户）</li>
@@ -59,6 +62,36 @@ public class UserLoginMarker {
     /** 标记用户活跃，IP 从给定请求解析（request 为 null 时只更新时间） */
     public void mark(Long userId, HttpServletRequest request) {
         mark(userId, resolveIp(request));
+    }
+
+    /**
+     * 解析当前请求的客户端真实 IP（可信代理白名单口径；无请求上下文时返回 null）。
+     * <p>供 token 会话 {@link #stampTokenSession} 等调用方与 sys_user 回写共用同一次解析。</p>
+     */
+    public String currentClientIp() {
+        return resolveIp(currentRequest());
+    }
+
+    /**
+     * 把本次登录的 IP/时间盖到当前 token 会话上：Token 管理页的「登录IP / 创建时间」
+     * 两列读取的是 <b>token 会话</b>（{@code StpUtil.getTokenSessionByToken}）而非用户会话，
+     * 登录方必须显式盖章，否则该 token 在页面上恒显示「—」（App 登录此前即漏在此）。
+     * <p>与宿主 {@code AuthServiceImpl.login} 的口径一致：IP 无法解析（null/空白）时跳过
+     * loginIp（会话 set(null) 会在 ConcurrentHashMap 上抛 NPE），loginTime 恒写。</p>
+     */
+    public void stampTokenSession(String ip) {
+        try {
+            SaSession tokenSession = StpUtil.getTokenSession();
+            if (hasRealIp(ip)) {
+                tokenSession.set("loginIp", ip);
+            }
+            // loginTime 存 ISO-8601 字符串而不是裸 LocalDateTime：会话持久化在 Redis 里，
+            // java.time 的序列化形态随 Jackson 版本漂移，字符串不参与格式协商（同 AuthServiceImpl）
+            tokenSession.set("loginTime", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        } catch (Exception e) {
+            // 旁路遥测：失败不影响登录主流程
+            log.warn("写入 token 会话 loginIp/loginTime 失败: {}", e.getMessage());
+        }
     }
 
     /** 核心：白名单局部更新 login_time（必写）与 login_ip（解析成功才写） */

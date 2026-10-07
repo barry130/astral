@@ -265,7 +265,7 @@ export default function SequencePage() {
   const historyColumns = [
     { title: '业务键', dataIndex: 'bizKey', key: 'bizKey', render: (v: string) => <Tag color="blue">{v}</Tag> },
     { title: '类型', dataIndex: 'sequenceType', key: 'sequenceType', render: (v: string) => <Tag>{v}</Tag> },
-    { title: '序列号', dataIndex: 'sequenceValue', key: 'sequenceValue', render: (v: number) => <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: 3, fontSize: 12 }}>{v}</code> },
+    { title: '序列号', dataIndex: 'sequenceValue', key: 'sequenceValue', render: (v: number) => <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{v}</code> },
     { title: '时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => new Date(v).toLocaleString() },
   ];
 
@@ -306,11 +306,11 @@ export default function SequencePage() {
   ], [canEditConfig]);
 
   return (
-    <div style={{ background: '#f5f5f5', minHeight: '100%' }}>
-      <div style={{ 
-        background: '#fff', 
-        padding: '16px 24px 0', 
-        borderBottom: '1px solid #e8e8e8',
+    <div style={{ background: 'var(--color-bg-base)', minHeight: '100%' }}>
+      <div style={{
+        background: 'var(--color-bg-white)',
+        padding: '16px 24px 0',
+        borderBottom: '1px solid var(--color-border)',
         position: 'sticky',
         top: 64,
         zIndex: 100
@@ -406,9 +406,9 @@ export default function SequencePage() {
                           <div style={{ fontWeight: 500 }}>{result.type}</div>
                         </Col>
                       </Row>
-                      <div style={{ 
-                        background: '#f5f5f5', 
-                        padding: 16, 
+                      <div style={{
+                        background: 'var(--color-bg-base)',
+                        padding: 16,
                         borderRadius: 8,
                         fontSize: 24,
                         fontWeight: 600,

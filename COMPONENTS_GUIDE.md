@@ -378,7 +378,7 @@ astral-server (Web 层, 入口)
 |------|------|------|----------|
 | GET | `/api/v1/admin/plugin` | 插件列表 | ✅ |
 | GET | `/api/v1/admin/plugin/nav-extensions` | 前端导航扩展 | ✅ |
-| * | `/api/v1/user/**`、`/api/v1/app/**` | 轻听音乐 App 端（qt 插件 Bearer 拦截器接管） | Bearer Token |
+| * | `/api/v1/app/**` | 轻听音乐 App 端（qt 插件 Bearer 拦截器接管） | Bearer Token |
 
 ---
 
@@ -401,7 +401,7 @@ Sa-Token 认证拦截器作用于 `/api/**`，排除项（见 `astral-server` �
 
 - `/api/v1/all/auth/public-key`、`/api/v1/all/auth/login`、`/api/v1/all/auth/logout` — 登录相关
 - `/api/v1/admin/system/table-schema/**` — 表结构查看
-- `/api/v1/user/**`、`/api/v1/app/**` — 轻听音乐 App 端（qt 插件自行校验 APP 用户）
+- `/api/v1/app/**` — 轻听音乐 App 端（qt 插件自行校验 APP 用户）
 - `/swagger-ui/**`、`/v3/api-docs/**`、`/doc.html` — API 文档
 
 如需添加新的白名单路径，编辑 `astral-server/src/main/java/com/astral/server/config/WebMvcConfig.java`。

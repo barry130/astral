@@ -44,7 +44,7 @@ import java.util.Set;
 public final class NoticeChannel {
 
     /** 「不限平台」哨兵：命中即对所有平台可见 */
-    public static final String ALL = "all";
+    public static final String ALL = com.astral.common.constant.NoticeConstants.CHANNEL_ALL;
 
     /** 平台取值（与 stat_platform 字典、X-App-Ut 同源）；顺序 = 字典 sort，输出稳定 */
     public static final List<String> PLATFORMS = List.of(

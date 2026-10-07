@@ -73,7 +73,9 @@ interface ResizableTableProps<T> {
   className?: string;
   /**
    * 兼容签名：antd Table 的 onChange（分页/筛选/排序变化）。
-   * 本项目页面统一通过 pagination.onChange 处理翻页，此项仅用于兼容既有写法，不产生行为。
+   * 翻页时以 antd 形状回抛 `({ current, pageSize }, undefined, undefined)`。
+   * 注意与 pagination.onChange 是两条并存入口（组件内合流，见 resolvedPagination），
+   * 页面只应使用其一，同时传会双触发。
    */
   /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   onChange?: (...args: any[]) => void;
@@ -153,9 +155,26 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
     dataSource,
     rowKey,
     onRow,
+    onChange: onTableChange,
   } = props;
   /** 表体纵向滚动高度（x 由本组件接管，忽略） */
   const scrollY = typeof scroll?.y === 'number' ? scroll.y : undefined;
+
+  /**
+   * 分页统一出口：DataTable 的分页器只认 pagination.onChange（见 TablePagination），
+   * 而不少页面沿用 antd 习惯把 onChange 直接写在表格标签上——不在这里合流的话，
+   * 这些页面的分页器就是死的（点了翻页没反应）。
+   */
+  const resolvedPagination =
+    pagination
+      ? {
+          ...pagination,
+          onChange: (page: number, pageSize: number) => {
+            pagination.onChange?.(page, pageSize);
+            onTableChange?.({ current: page, pageSize }, undefined, undefined);
+          },
+        }
+      : pagination;
 
   const baseSuffix = resizeKey ?? (typeof window === 'undefined' ? 'server' : window.location.pathname);
 
@@ -415,7 +434,7 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
           columns={cardColumns}
           rowKey={rowKey}
           loading={loading}
-          pagination={pagination}
+          pagination={resolvedPagination}
         />
       </div>
     );
@@ -441,7 +460,7 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
         dataSource={dataSource}
         rowKey={rowKey}
         loading={loading}
-        pagination={pagination}
+        pagination={resolvedPagination}
         size={size}
         scrollY={scrollY}
         expandable={expandable}

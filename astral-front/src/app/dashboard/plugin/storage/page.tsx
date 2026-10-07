@@ -648,7 +648,7 @@ export default function StoragePage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div>
           <h2 style={{ margin: 0 }}>文件存储</h2>
           <p style={{ color: '#909399', margin: '4px 0 0' }}>

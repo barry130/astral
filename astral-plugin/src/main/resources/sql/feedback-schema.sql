@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS sys_notice (
     -- 新增维度
     channel          VARCHAR(64) NOT NULL DEFAULT 'app-android,app-ios', -- 逗号分隔平台集合：app-android|app-ios|app-windows|web，或 all=不限平台
     notice_type      VARCHAR(16) NOT NULL DEFAULT 'announce', -- announce公告|feedback反馈|request需求
+    scene            VARCHAR(64),                          -- 站内信业务场景（站内信模板/事件注册表 scene）；广播公告为空
     user_id          BIGINT,                               -- NULL=广播；有值=点对点
     feedback_id      BIGINT,                               -- 关联 sys_feedback.id
     -- 继承 qt_app_notice 投放能力（原 type 更名 display）
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS sys_notice (
     version_min      BIGINT,                               -- 版本码（如 300）
     version_max      BIGINT,
     audience         VARCHAR(16) NOT NULL DEFAULT 'ALL',
+    read_time        TIMESTAMP,                            -- 站内信已读时间（NULL=未读）；广播公告已读仍由客户端缓存判定
     create_time      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -72,6 +74,7 @@ CREATE INDEX IF NOT EXISTS idx_notice_type ON sys_notice(notice_type);
 CREATE INDEX IF NOT EXISTS idx_notice_user ON sys_notice(user_id);
 CREATE INDEX IF NOT EXISTS idx_notice_show ON sys_notice(is_show, is_top);
 CREATE INDEX IF NOT EXISTS idx_notice_create_time ON sys_notice(create_time);
+CREATE INDEX IF NOT EXISTS idx_sys_notice_user_read ON sys_notice(user_id, read_time);
 
 -- 字段注释（幂等，启动可重复执行）
 COMMENT ON COLUMN sys_feedback.id IS '主键ID';
@@ -98,6 +101,7 @@ COMMENT ON COLUMN sys_feedback_reply.reply_time IS '回复时间';
 COMMENT ON COLUMN sys_notice.id IS '主键ID';
 COMMENT ON COLUMN sys_notice.channel IS '渠道(app/web/all)';
 COMMENT ON COLUMN sys_notice.notice_type IS '类型(announce公告/feedback反馈/request需求)';
+COMMENT ON COLUMN sys_notice.scene IS '站内信业务场景(站内信模板/事件注册表scene,公告为空)';
 COMMENT ON COLUMN sys_notice.user_id IS '点对点目标用户ID(NULL=广播)';
 COMMENT ON COLUMN sys_notice.feedback_id IS '关联反馈ID';
 COMMENT ON COLUMN sys_notice.display IS '展示位掩码(1开屏/2通告栏/4消息中心,可叠加)';
@@ -114,17 +118,6 @@ COMMENT ON COLUMN sys_notice.effective_end IS '失效时间(空不限)';
 COMMENT ON COLUMN sys_notice.version_min IS '生效版本码下限(如300)';
 COMMENT ON COLUMN sys_notice.version_max IS '生效版本码上限';
 COMMENT ON COLUMN sys_notice.audience IS '可见人群(ALL/LOGGED_IN/NOT_LOGGED_IN)';
+COMMENT ON COLUMN sys_notice.read_time IS '站内信已读时间(NULL=未读;广播公告不用,App 端已读在前端缓存)';
 COMMENT ON COLUMN sys_notice.create_time IS '创建时间';
 COMMENT ON COLUMN sys_notice.update_time IS '更新时间';
-
--- 8. qt_app_notice 存量一次性迁移到 sys_notice（幂等，可重复执行）
-INSERT INTO sys_notice (id, channel, notice_type, user_id, feedback_id, display, title, content, url,
-                        is_show, is_top, dialog_closable, first_login_only, marquee,
-                        effective_start, effective_end, version_min, version_max, audience,
-                        create_time, update_time)
-SELECT id, 'app', 'announce', NULL, NULL, type, title, content, url,
-       is_show, is_top, dialog_closable, first_login_only, marquee,
-       effective_start, effective_end, version_min, version_max, audience,
-       create_time, update_time
-FROM qt_app_notice
-WHERE NOT EXISTS (SELECT 1 FROM sys_notice s WHERE s.id = qt_app_notice.id);

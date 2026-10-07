@@ -2,6 +2,7 @@ package com.astral.qt.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.astral.auth.service.UserLoginMarker;
+import com.astral.common.annotation.RateLimit;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.User;
 import com.astral.qt.common.QtException;
@@ -19,11 +20,9 @@ import com.astral.qt.dto.QtSendEmailDto;
 import com.astral.qt.dto.QtUpdateUserDto;
 import com.astral.qt.dto.QtUploadCompleteReqDto;
 import com.astral.qt.dto.QtUserDakaDto;
-import com.astral.qt.dto.QtUploadLikeListDto;
 import com.astral.qt.dto.vo.QtDakaDaysAndCodeVo;
 import com.astral.qt.dto.vo.QtDataVo;
 import com.astral.qt.dto.vo.QtLikeChangesVo;
-import com.astral.qt.dto.vo.QtLikeListVo;
 import com.astral.qt.dto.vo.QtLikePageVo;
 import com.astral.qt.dto.vo.QtLikeSeqVo;
 import com.astral.qt.dto.vo.QtUploadCompleteVo;
@@ -35,6 +34,7 @@ import com.astral.qt.service.QtMediaService;
 import com.astral.qt.service.QtUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.astral.log.annotation.LoginLog;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -53,7 +53,7 @@ import java.util.List;
  * <p>接口权限：登录后的业务接口由 {@code @RequiresPermission} 校验 App 端权限码
  * （{@code user:profile:*} / {@code user:like:*} / {@code user:daka:*}）；
  * 登录/注册/验证码/改密/刷新 token 属免认证白名单，logout 仅注销自身会话，均不设权限要求。</p>
- * <p>旧路径 /api/v1/user/** 保留并废弃（见 {@link QtUserController}），App 请迁移至此。</p>
+ * <p>旧路径 /api/v1/user/** 已删除（客户端已全部迁移至此），不再提供兼容。</p>
  */
 @Slf4j
 @Tag(name = "轻听API-用户(App)")
@@ -77,7 +77,14 @@ public class QtAppUserController {
     @Resource
     private QtMediaService mediaService;
 
+    /**
+     * 登录防爆破三件套与管理端对齐：IP 限流（@RateLimit）、失败锁定（service 层 LoginFailureStore）、
+     * 登录日志（@LoginLog → sys_login_log）。明文密码依赖 HTTPS 传输（与行业惯例一致），
+     * RSA 传输加密待客户端具备加密能力后再启用。
+     */
     @Operation(summary = "用户登录")
+    @RateLimit(key = "ip", limit = 5, duration = 60, message = "登录尝试过于频繁，请60秒后再试")
+    @LoginLog("轻听App账号密码登录")
     @PostMapping("/login")
     public QtRestResp<QtUserInfoVo> login(@Valid @RequestBody QtLoginDto dto) {
         return QtRestResp.success(userService.login(dto));
@@ -136,6 +143,8 @@ public class QtAppUserController {
     }
 
     @Operation(summary = "用户注册")
+    @RateLimit(key = "ip", limit = 5, duration = 60, message = "注册尝试过于频繁，请60秒后再试")
+    @LoginLog("轻听App注册自动登录")
     @PostMapping("/register")
     public QtRestResp<QtUserInfoVo> register(@Valid @RequestBody QtRegisterDto dto) {
         return QtRestResp.success(userService.register(dto));
@@ -253,33 +262,7 @@ public class QtAppUserController {
         return QtRestResp.success(dakaService.getDakaInfoByMonth(currentUserId(satoken), time));
     }
 
-    /**
-     * @deprecated 旧全量拉取（LIKE_SYNC_DESIGN.md §3）。新客户端请用
-     *              {@link #getLikePage}（全量分页）或 {@link #getLikeChanges}（增量）。
-     */
-    @Deprecated
-    @Operation(summary = "获取用户收藏歌单+歌曲", deprecated = true)
-    @RequiresPermission(value = "user:like:view", name = "收藏查看", description = "App 端拉取收藏歌单/歌曲（全量、分页、增量）")
-    @GetMapping("/getLikeList")
-    public QtRestResp<QtLikeListVo> getLikeList(@RequestHeader(value = "satoken", required = false) String satoken) {
-        return QtRestResp.success(likeService.getLikeList(currentUserId(satoken)));
-    }
-
-    /**
-     * @deprecated 旧全量同步（LIKE_SYNC_DESIGN.md §3）。新客户端请用
-     *              {@link #likeSong} / {@link #likePlaylist}（单条收藏）。
-     */
-    @Deprecated
-    @Operation(summary = "同步收藏歌单+歌曲", deprecated = true)
-    @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")
-    @PostMapping("/uploadLikeList")
-    public QtRestResp<Void> uploadLikeList(@RequestHeader(value = "satoken", required = false) String satoken,
-                                           @Valid @RequestBody QtUploadLikeListDto dto) {
-        likeService.uploadLikeList(currentUserId(satoken), dto);
-        return QtRestResp.success();
-    }
-
-    // ==================== 收藏同步新接口（LIKE_SYNC_DESIGN.md §2） ====================
+    // ==================== 收藏同步接口（LIKE_SYNC_DESIGN.md §2） ====================
 
     @Operation(summary = "收藏/取消收藏单曲")
     @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")

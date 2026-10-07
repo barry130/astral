@@ -8,6 +8,17 @@ const CLIENT_VERSION = require('./package.json').version;
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // echarts 6 的 ESM lib 内部存在循环依赖 (chart/tree/treeAction.js 等 → helper/roamHelper.js)，
+  // Turbopack 对循环依赖中函数声明绑定的初始化不符合 ESM 规范，模块求值期会炸
+  // "registerRoamActionSimply is not a function"（feedback/statistics 页白屏，刷新无解）。
+  // 整仓没有任何直接 import echarts 子路径的代码，唯一入口 echarts-for-react require 根导出，
+  // 把根导出别名到单文件 UMD 产物（dist/echarts.js）即可整图绕开循环，且与全量引入等价。
+  turbopack: {
+    resolveAlias: {
+      // ⚠️ 必须是相对路径：Turbopack 的 resolveAlias 不支持 Windows 绝对路径（"windows imports are not implemented yet"）
+      echarts: './node_modules/echarts/dist/echarts.js',
+    },
+  },
   env: {
     NEXT_PUBLIC_CLIENT_VERSION: CLIENT_VERSION,
   },

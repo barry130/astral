@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * <p><b>窗口容器的容量约束</b>：key 里含客户端 IP，而 IP 是攻击者可控的维度
  * （轮换 IP 即可产生无限多 key）。因此窗口容器必须带<b>过期淘汰 + 硬上限</b>，
- * 否则在 2C2G 这类小内存机器上，刷 {@code /api/v1/auth/login} 就能把堆撑爆。
+ * 否则在 2C2G 这类小内存机器上，刷 {@code /api/v1/all/auth/login} 就能把堆撑爆。
  * 这里用 Caffeine：{@code expireAfterAccess} 按窗口期淘汰，{@code maximumSize} 兜底。</p>
  */
 @Slf4j

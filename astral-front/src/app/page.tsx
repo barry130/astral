@@ -76,7 +76,7 @@ const PLUGINS: PluginCard[] = [
   {
     icon: <Mic />,
     title: '轻听音乐（qt）',
-    desc: 'App 用户体系、公告、版本更新、打卡、收藏，提供 /api/v1/app/** 开放接口',
+    desc: 'App 用户体系、版本更新、打卡、收藏，提供 /api/v1/app/** 开放接口（公告由 feedback 插件统一提供）',
     href: '/lightlisten',
     action: '了解轻听',
     public: true,

@@ -99,7 +99,7 @@ Spring 的 `@Async` 是**靠代理实现的**：只有「外部 Bean 调用代�
 
 - `X-Forwarded-For` 是客户端可任意伪造的。**绝不能无条件采信**做 IP / 审计 / 限速来源。
 - 统一走 `com.astral.common.util.ClientIp.resolve(xff, xRealIp, remoteAddr, trustedProxies)`：只信任 `trustedProxies`（默认回环 + 私有网段）之内的跳，从右往左取第一个非可信地址。
-  - 【已修】`AuthServiceImpl`、`RateLimitInterceptor`、`OperateLogAspect`、`LoginLogAspect`、`StatIngestController`、`AppStatController`、`AppFeedbackController`、`QtMediaService`、`StorageUserController` 全部收敛到该工具。新代码**禁止**再手写 IP 解析。
+  - 【已修】`AuthServiceImpl`、`RateLimitInterceptor`、`OperateLogAspect`、`LoginLogAspect`、`AppStatController`、`AppFeedbackController`、`QtMediaService`、`StorageUserController` 全部收敛到该工具。新代码**禁止**再手写 IP 解析。
 - CORS：默认 `*` 配 `allowCredentials=true` 是非法组合，会污染凭据。`application.yml` 已把 `*` 改为 `http://localhost:3000`，新增跨域来源走配置。
 
 ### 3.5 模板/日志注入【禁止】

@@ -38,11 +38,13 @@ import {
  * `numeric` 为自动识别出的数值列（见 resolveNumericColumn）：右对齐并锁定等宽数字，
  * 保证多行数字的个位对齐——这是表格「看起来专业」的关键一条。
  */
-function cellClass<T>(col: DataTableColumn<T>, numeric = false): string {
+function cellClass<T>(col: DataTableColumn<T>, numeric = false, fixedLayout = false): string {
   return cn(
     col.align === 'center' && 'text-center',
     (col.align === 'right' || numeric) && 'text-right tabular-nums',
-    col.ellipsis && 'max-w-0 truncate',
+    // max-w-0 是 table-layout:auto 下的收缩 hack（让省略列可被压缩）；
+    // fixed 布局下列宽由 colgroup 决定，max-w-0 会把列压瘪，只留 truncate
+    col.ellipsis && (fixedLayout ? 'truncate' : 'max-w-0 truncate'),
     col.className,
   );
 }
@@ -252,6 +254,14 @@ export function DataTable<T extends object>({
 
   const total = pagination ? (pagination.total ?? rows.length) : rows.length;
 
+  /**
+   * 全列显式宽 → 固定布局（colgroup 是硬约束）。
+   * ellipsis 列的收缩 hack（max-w-0）只在 auto 布局下需要——fixed 下它会反过来
+   * 把列压瘪（宽屏 fill 模式百分比列宽 + max-w-0，配置键实测只剩表头宽），
+   * 固定布局里省略只需 truncate，列宽由 <col> 保证。
+   */
+  const isFixedLayout = columns.length > 0 && columns.every((c) => c.width !== undefined);
+
   return (
     <div className={cn('relative', className)}>
       <div
@@ -262,7 +272,18 @@ export function DataTable<T extends object>({
         )}
       >
         <div className="overflow-x-auto" style={scrollY ? { maxHeight: scrollY, overflowY: 'auto' } : undefined}>
-          <Table>
+          <Table
+            className={
+              // 所有列都声明了宽度时启用固定布局：table-layout:auto 下 <col> 宽度只是建议，
+              // 浏览器会按单元格内容再分配——内容长的列（如描述）抢宽，省略号列被挤到只剩
+              // 几像素（系统配置页「配置值」声明 200px 实测只分到 71px）。fixed 布局下
+              // colgroup 宽度是硬约束，超宽内容按各列自身的 ellipsis/wrap 策略处理。
+              // rt-body-wrap：底座 TableCell 自带 whitespace-nowrap，fixed 下非 ellipsis
+              // 单元格的超宽文本会溢出画到相邻单元格上（表结构管理「注释」压到「类名」芯片
+              // 实测），globals.css 里对该标记表格做单行裁切（不折行、不压邻格）。
+              isFixedLayout ? 'table-fixed rt-body-wrap' : undefined
+            }
+          >
             {/* 列宽：fill 模式由 ResizableTable 传百分比，scroll 模式传 px */}
             <colgroup>
               {hasExpand && <col style={{ width: 40 }} />}
@@ -378,7 +399,7 @@ export function DataTable<T extends object>({
                           return (
                             <TableCell
                               key={resolveColumnKey(col, i)}
-                              className={cn(cellClass(col, numericCols[i]), dense && 'px-3 py-1.5', extra?.className)}
+                              className={cn(cellClass(col, numericCols[i], isFixedLayout), dense && 'px-3 py-1.5', extra?.className)}
                               title={extra?.title ?? (col.ellipsis && typeof rendered === 'string' ? rendered : undefined)}
                               style={treeCell && depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
                             >

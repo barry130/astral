@@ -5,7 +5,7 @@ import com.astral.common.util.ClientHeaders;
 import com.astral.feedback.common.FeedbackRestResp;
 import com.astral.feedback.common.NoticeChannel;
 import com.astral.feedback.dto.ReadAckDto;
-import com.astral.feedback.entity.SysNotice;
+import com.astral.dao.entity.SysNotice;
 import com.astral.feedback.service.FeedbackNoticeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 /**
  * 服务端异常登记器
  *
- * <p>此前 stat_error_log 只收客户端上报（StatIngestController 的 error 事件），
+ * <p>此前 stat_error_log 只收客户端上报（AppStatController 的 error 事件），
  * 服务端自身的 500 只进应用日志，管理台「错误统计」里完全看不见后端炸了没。
  * {@code GlobalExceptionHandler} 的兜底 500 处理器调用本类把异常同步登记进
  * 同一张表，来源标为 {@code server}，与客户端错误共用指纹分组与清理策略。</p>

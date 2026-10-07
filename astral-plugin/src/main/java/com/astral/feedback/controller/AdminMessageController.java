@@ -2,12 +2,13 @@ package com.astral.feedback.controller;
 
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
-import com.astral.feedback.entity.SysNotice;
+import com.astral.dao.entity.SysNotice;
 import com.astral.feedback.service.FeedbackNoticeService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -65,14 +66,14 @@ public class AdminMessageController {
     @Operation(summary = "发公告/通知（继承 qt 公告全字段 + channel/notice_type/user_id）")
     @RequiresPermission(value = "admin:message:edit", name = "通知编辑", description = "公告/通知的发布、编辑、删除")
     @PostMapping
-    public Result<SysNotice> create(@RequestBody SysNotice notice) {
+    public Result<SysNotice> create(@RequestBody @Valid SysNotice notice) {
         return Result.success(noticeService.create(notice));
     }
 
     @Operation(summary = "编辑通知")
     @RequiresPermission(value = "admin:message:edit", name = "通知编辑", description = "公告/通知的发布、编辑、删除")
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody SysNotice notice) {
+    public Result<Void> update(@PathVariable Long id, @RequestBody @Valid SysNotice notice) {
         noticeService.update(id, notice);
         return Result.success();
     }

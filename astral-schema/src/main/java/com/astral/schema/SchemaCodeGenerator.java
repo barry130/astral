@@ -51,6 +51,13 @@ public class SchemaCodeGenerator {
         sb.append("package ").append(packageName).append(";\n\n");
         sb.append("import com.baomidou.mybatisplus.annotation.*;\n");
         sb.append("import com.fasterxml.jackson.annotation.JsonProperty;\n");
+        // 字段声明了 jsonFormat 时按该格式收发日期（如 "yyyy-MM-dd HH:mm:ss"）：用于兼容已发布客户端
+        // 发送的非 ISO 时间字符串，否则 Jackson 无法反序列化到 LocalDateTime（详见 CODING_GUIDE §3.6）。
+        boolean hasJsonFormat = schema.getFields().stream()
+                .anyMatch(f -> f.getJsonFormat() != null && !f.getJsonFormat().isBlank());
+        if (hasJsonFormat) {
+            sb.append("import com.fasterxml.jackson.annotation.JsonFormat;\n");
+        }
         // 实体 String 字段若对应库表 VARCHAR(N)，生成 @Size(max=N)：入参超长时由 Bean Validation
         // 拦截为 400（COMMON002），避免打到 DB 触发 value too long 的未捕获 500（详见 CODING_GUIDE §3.6）。
         // max 严格等于 schema 里声明的 length（即 DDL 宽度），绝不改小，否则会误杀合法长值。
@@ -99,6 +106,9 @@ public class SchemaCodeGenerator {
             }
             if (Boolean.TRUE.equals(field.getIsJsonIgnore())) {
                 sb.append("    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)\n");
+            }
+            if (field.getJsonFormat() != null && !field.getJsonFormat().isBlank()) {
+                sb.append("    @JsonFormat(pattern = \"").append(field.getJsonFormat()).append("\")\n");
             }
             boolean hasColumnName = !field.getColumnName().equals(field.getFieldName());
             // 自动填充策略：优先使用 schema 中声明的，否则按字段名约定

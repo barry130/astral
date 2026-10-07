@@ -1,0 +1,104 @@
+{
+  "tableName": "sys_notify_rule",
+  "tableComment": "事件订阅规则",
+  "moduleName": "system",
+  "className": "SysNotifyRule",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "rule_name",
+      "fieldName": "ruleName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "规则名称",
+      "length": 64
+    },
+    {
+      "columnName": "event_code",
+      "fieldName": "eventCode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "事件码",
+      "length": 64
+    },
+    {
+      "columnName": "channel",
+      "fieldName": "channel",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "投递渠道(EMAIL/SMS/INAPP)",
+      "length": 16
+    },
+    {
+      "columnName": "template_id",
+      "fieldName": "templateId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "模板ID"
+    },
+    {
+      "columnName": "recipient_type",
+      "fieldName": "recipientType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "收件人类型(FIXED/PAYLOAD_FIELD)",
+      "length": 16
+    },
+    {
+      "columnName": "recipient_value",
+      "fieldName": "recipientValue",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "收件人取值",
+      "length": 128
+    },
+    {
+      "columnName": "platform",
+      "fieldName": "platform",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "INAPP平台定向(默认all)",
+      "length": 64
+    },
+    {
+      "columnName": "enabled",
+      "fieldName": "enabled",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "是否启用(1是0否)"
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "备注",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

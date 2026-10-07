@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, Button, Space, Tag, message, Popconfirm, Select } from '@/components/antd-compat';
-import { DeleteOutlined, LogoutOutlined } from '@/components/antd-compat/icons';
+import { DeleteOutlined, LogoutOutlined, RollbackOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
@@ -21,6 +21,8 @@ interface Token {
   expireTime: string;
   /** 登录IP */
   loginIp: string;
+  /** 登录端标识（ADMIN=管理端 / APP=轻听App；is-share:false 之前的旧会话为空） */
+  device?: string;
   /** 状态：1有效/0已吊销 */
   status: number;
   /** 创建时间 */
@@ -46,6 +48,8 @@ const tokenApi = {
   kickOut: (userId: number) => request.put(`/api/v1/admin/system/token/user/${userId}/kick`),
   /** 清理所有过期Token */
   cleanExpired: () => request.delete('/api/v1/admin/system/token/expired'),
+  /** 全端会话重置（吊销所有在线 Token，所有人含操作者本人重新登录，需超管） */
+  revokeAll: () => request.put('/api/v1/admin/system/token/revoke-all'),
 };
 
 /** 用户管理API封装（用于获取用户列表筛选） */
@@ -76,6 +80,8 @@ export default function TokenPage() {
   const hasPerm = usePerm();
   /** 是否具备 Token 维护权限：权限码需与后端 @RequiresPermission("admin:system:token:edit") 一致 */
   const canEdit = hasPerm('admin:system:token:edit');
+  /** 全端会话重置属全局高危操作，与后端 @RequiresSuper 对齐 */
+  const isSuper = hasPerm('*:*:*');
 
   /** 组件挂载时加载Token列表和用户列表 */
   useEffect(() => {
@@ -134,12 +140,31 @@ export default function TokenPage() {
     }
   };
 
+  /** 全端会话重置：吊销所有在线 Token，操作者本人也会被登出 */
+  const handleRevokeAll = async () => {
+    try {
+      await tokenApi.revokeAll();
+      message.success('已重置全部会话，请重新登录');
+      window.location.href = '/login';
+    } catch (error: any) {
+      message.error(error.message);
+    }
+  };
+
+  /** 登录端标识渲染：ADMIN/APP 上色，旧会话（无 device 记录）显示「未记录」 */
+  const renderDevice = (v?: string) => {
+    if (v === 'ADMIN') return <Tag color="blue">管理端</Tag>;
+    if (v === 'APP') return <Tag color="green">App</Tag>;
+    return <Tag>未记录</Tag>;
+  };
+
   /** 表格列定义 */
   const columns = [
     { title: '用户ID', dataIndex: 'userId', key: 'userId', width: 80 },
     { title: '用户', dataIndex: 'username', key: 'username' },
     { title: 'Token', dataIndex: 'token', key: 'token', ellipsis: true, render: (v: string) => `${v.substring(0, 20)}...` },
     { title: '登录IP', dataIndex: 'loginIp', key: 'loginIp' },
+    { title: '登录端', dataIndex: 'device', key: 'device', width: 90, render: (v: string) => renderDevice(v) },
     { title: '过期时间', dataIndex: 'expireTime', key: 'expireTime', render: (v: string) => v ? new Date(v).toLocaleString() : '-' },
     { title: '状态', dataIndex: 'status', key: 'status', render: (v: number) => <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '有效' : '已吊销'}</Tag> },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => v ? new Date(v).toLocaleString() : '-' },
@@ -176,6 +201,13 @@ export default function TokenPage() {
           <Space>
             <Popconfirm title="确认清理所有过期Token?" disabled={!canEdit} onConfirm={handleCleanExpired}>
               <Button icon={<DeleteOutlined />} disabled={!canEdit}>清理过期</Button>
+            </Popconfirm>
+            <Popconfirm
+              title="全端会话重置会吊销所有在线Token，所有人（包括你自己）都需要重新登录，确认执行？"
+              disabled={!isSuper}
+              onConfirm={handleRevokeAll}
+            >
+              <Button danger icon={<RollbackOutlined />} disabled={!isSuper}>全端会话重置</Button>
             </Popconfirm>
           </Space>
         </div>

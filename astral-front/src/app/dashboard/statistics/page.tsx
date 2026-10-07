@@ -604,7 +604,7 @@ function ErrorDetailDrawer({
             <div>
               <p><b>机型：</b>{r.model || '-'} / {r.os || '-'}</p>
               {r.stack ? (
-                <pre style={{ maxHeight: 240, overflow: 'auto', background: '#f6f6f6', padding: 8, fontSize: 12 }}>
+                <pre style={{ maxHeight: 240, overflow: 'auto', background: 'var(--color-bg-base)', padding: 8, fontSize: 12 }}>
                   {r.stack}
                 </pre>
               ) : null}

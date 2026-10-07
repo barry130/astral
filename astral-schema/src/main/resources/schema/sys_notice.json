@@ -1,0 +1,251 @@
+{
+  "tableName": "sys_notice",
+  "tableComment": "统一通知表(qt_app_notice超集,宿主与插件共用)",
+  "moduleName": "system",
+  "className": "SysNotice",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "channel",
+      "fieldName": "channel",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "投放平台(逗号分隔:app-android/app-ios/app-windows/web,或all=不限平台)",
+      "isRequired": true,
+      "defaultValue": "app-android,app-ios",
+      "length": 64
+    },
+    {
+      "columnName": "notice_type",
+      "fieldName": "noticeType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "类型(announce公告/feedback反馈/request需求)",
+      "isRequired": true,
+      "defaultValue": "announce",
+      "length": 16
+    },
+    {
+      "columnName": "scene",
+      "fieldName": "scene",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "站内信业务场景(站内信模板/事件注册表scene,公告为空)",
+      "length": 64
+    },
+    {
+      "columnName": "user_id",
+      "fieldName": "userId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "点对点目标用户ID(NULL=广播)"
+    },
+    {
+      "columnName": "feedback_id",
+      "fieldName": "feedbackId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "关联反馈ID(sys_feedback.id)"
+    },
+    {
+      "columnName": "display",
+      "fieldName": "display",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "展示位掩码(1开屏/2通告栏/4消息中心,可叠加)",
+      "isRequired": true,
+      "defaultValue": "4"
+    },
+    {
+      "columnName": "title",
+      "fieldName": "title",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "标题",
+      "isRequired": true,
+      "length": 128
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "内容",
+      "length": 65535
+    },
+    {
+      "columnName": "url",
+      "fieldName": "url",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "点击跳转链接",
+      "length": 512
+    },
+    {
+      "columnName": "is_show",
+      "fieldName": "isShow",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "是否启用(0隐藏 1展示)",
+      "isRequired": true,
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "is_top",
+      "fieldName": "isTop",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "是否置顶(0否 1是)",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "dialog_closable",
+      "fieldName": "dialogClosable",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "开屏弹窗是否可关闭",
+      "isRequired": true,
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "first_login_only",
+      "fieldName": "firstLoginOnly",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "仅首次登录弹出",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "marquee",
+      "fieldName": "marquee",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "通告栏是否跑马灯",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "effective_start",
+      "fieldName": "effectiveStart",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "生效时间(空不限)",
+      "jsonFormat": "yyyy-MM-dd HH:mm:ss"
+    },
+    {
+      "columnName": "effective_end",
+      "fieldName": "effectiveEnd",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "失效时间(空不限)",
+      "jsonFormat": "yyyy-MM-dd HH:mm:ss"
+    },
+    {
+      "columnName": "version_min",
+      "fieldName": "versionMin",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "生效版本码下限(如300)"
+    },
+    {
+      "columnName": "version_max",
+      "fieldName": "versionMax",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "生效版本码上限"
+    },
+    {
+      "columnName": "audience",
+      "fieldName": "audience",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "可见人群(ALL/LOGGED_IN/NOT_LOGGED_IN)",
+      "isRequired": true,
+      "defaultValue": "ALL",
+      "length": 16
+    },
+    {
+      "columnName": "read_time",
+      "fieldName": "readTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "站内信已读时间(NULL=未读;广播公告不用,App 端已读在前端缓存)"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT",
+      "jsonFormat": "yyyy-MM-dd HH:mm:ss"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE",
+      "jsonFormat": "yyyy-MM-dd HH:mm:ss"
+    }
+  ],
+  "nonDbFields": [
+    {
+      "fieldName": "read",
+      "fieldType": "Boolean",
+      "comment": "消息中心是否已读（前端缓存判断，后端不落库；此字段仅作扩展预留）"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_notice_channel",
+      "columns": [
+        "channel"
+      ]
+    },
+    {
+      "indexName": "idx_notice_type",
+      "columns": [
+        "notice_type"
+      ]
+    },
+    {
+      "indexName": "idx_notice_user",
+      "columns": [
+        "user_id"
+      ]
+    },
+    {
+      "indexName": "idx_notice_show",
+      "columns": [
+        "is_show",
+        "is_top"
+      ]
+    },
+    {
+      "indexName": "idx_notice_create_time",
+      "columns": [
+        "create_time"
+      ]
+    },
+    {
+      "indexName": "idx_sys_notice_user_read",
+      "columns": [
+        "user_id",
+        "read_time"
+      ]
+    }
+  ]
+}

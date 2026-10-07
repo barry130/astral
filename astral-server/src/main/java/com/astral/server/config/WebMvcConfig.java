@@ -33,7 +33,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
             registry.addInterceptor(metricInterceptor)
                     .addPathPatterns("/api/**")
                     .excludePathPatterns(
-                            "/api/v1/stat/report",
                             "/api/v1/app/stat/report",
                             "/swagger-ui/**",
                             "/v3/api-docs/**",
@@ -47,7 +46,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
-                        "/api/v1/auth/public-key",
+                        "/api/v1/all/auth/public-key",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",

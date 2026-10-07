@@ -15,36 +15,6 @@ import java.util.List;
 @Mapper
 public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
 
-    /** 批量软删除（旧全量接口使用），同时写入 updated_seq/updated_at 纳入多端增量同步 */
-    @Update({"""
-            <script>
-            UPDATE qt_like_song
-            SET deleted_at = #{time}, update_time = #{time}, updated_seq = #{seq}, updated_at = #{time}
-            WHERE uid = #{uid} AND deleted_at IS NULL
-              AND (sid, platform) IN
-              <foreach item='it' index='index' collection='tuples' open='(' separator=',' close=')'>
-                (#{it.id}, #{it.platform})
-              </foreach>
-            </script>
-            """})
-    int softDelete(@Param("tuples") List<QtSongTuple> tuples, @Param("time") LocalDateTime time,
-                   @Param("uid") Long uid, @Param("seq") long seq);
-
-    /** 批量插入新增收藏（旧全量接口使用），id/seq/时间由调用方显式填充 */
-    @Insert({"""
-            <script>
-            INSERT INTO qt_like_song
-                (id, uid, sid, pid, platform, name, singer, album, hash, pic_url, deleted_at,
-                 create_time, update_time, updated_seq, updated_at)
-            VALUES
-            <foreach item='it' index='index' collection='list' separator=','>
-                (#{it.id}, #{it.uid}, #{it.sid}, #{it.pid}, #{it.platform}, #{it.name}, #{it.singer}, #{it.album},
-                 #{it.hash}, #{it.picUrl}, NULL, #{it.createTime}, #{it.updateTime}, #{it.updatedSeq}, #{it.updatedAt})
-            </foreach>
-            </script>
-            """})
-    int insertBatch(@Param("list") List<QtLikeSong> list);
-
     /**
      * 收藏单曲：按 (uid, sid, platform, pid) 全量唯一键 upsert（uk_like_song_key_pid）。
      * 同一歌曲可收藏到多个歌单（每个歌单一行，pid='' 表示不归属具体歌单）。
@@ -78,7 +48,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
      * 复活软删行、空字段 COALESCE 不覆盖、pic_url 非空才覆盖。
      * <p>调用方必须保证 list 内 (uid, sid, platform, pid) 唯一——同一语句内同键出现两次
      * 会触发 PG 「ON CONFLICT DO UPDATE command cannot affect row a second time」错误。
-     * id 由号段填充器对集合参数逐个自动填充（同 {@link #insertBatch}）。</p>
+     * id 由号段填充器对集合参数逐个自动填充。</p>
      */
     @Insert({
             """
@@ -104,40 +74,6 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
             </script>
             """})
     int upsertActiveBatch(@Param("list") List<QtLikeSong> list);
-
-    /**
-     * 旧全量接口封面补齐（LIKE_SONG_PIC_SYNC_DESIGN.md §5.6）：
-     * 仅当库中封面为空且上传值非空时更新，不覆盖已有图片、不改变软删状态；
-     * 推进 seq 让其他设备感知封面补齐（D7）。
-     * <p>调用方必须保证 list 内 (sid, platform, pid) 唯一且 picUrl 非空——
-     * VALUES 源行重复或全 NULL 会让 PG 的类型推断/多源行匹配产生不确定结果。</p>
-     */
-    @Update({"""
-            <script>
-            UPDATE qt_like_song AS l
-            SET pic_url = v.pic_url,
-                update_time = #{now},
-                updated_at = #{now},
-                updated_seq = #{seq}
-            FROM (
-                VALUES
-                <foreach item='it' index='index' collection='list' separator=','>
-                    (CAST(#{it.sid} AS VARCHAR), CAST(#{it.platform} AS VARCHAR),
-                     CAST(#{it.pid} AS VARCHAR), CAST(#{it.picUrl} AS VARCHAR))
-                </foreach>
-            ) AS v(sid, platform, pid, pic_url)
-            WHERE l.uid = #{uid}
-              AND l.sid = v.sid
-              AND l.platform = v.platform
-              AND l.pid = v.pid
-              AND l.deleted_at IS NULL
-              AND (l.pic_url IS NULL OR l.pic_url = '')
-              AND v.pic_url IS NOT NULL
-              AND v.pic_url &lt;&gt; ''
-            </script>
-            """})
-    int backfillPicUrl(@Param("list") List<QtLikeSong> list, @Param("uid") Long uid,
-                       @Param("seq") long seq, @Param("now") LocalDateTime now);
 
     /**
      * 取消收藏单曲（带 pid）：仅软删除该歌曲在指定歌单下的收藏行，推进 seq（幂等）。
@@ -253,9 +189,4 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
     /** 用户在歌曲表的最大变更序号（无记录返回 0） */
     @Select("SELECT COALESCE(MAX(updated_seq), 0) FROM qt_like_song WHERE uid = #{uid}")
     Long selectMaxSeq(@Param("uid") Long uid);
-
-    class QtSongTuple {
-        public String id;
-        public String platform;
-    }
 }

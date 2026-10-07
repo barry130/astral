@@ -147,8 +147,11 @@ export default function PermissionPage() {
       render: (_: any, record: any) => <Tag color="cyan">{domainOf(record)}</Tag>,
     },
     {
+      // 显式 key：与下一列同 dataIndex（permissionCode），不写 key 会让两列派生出
+      // 相同的 React key（resolveColumnKey 回退到 dataIndex），表头/表体报重复 key 警告
       title: '端',
       dataIndex: 'permissionCode',
+      key: 'side',
       width: 90,
       render: (_: any, record: any) => <PermissionSideTag code={record.permissionCode} />,
     },

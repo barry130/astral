@@ -16,7 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * <p>
  * preHandle 记录起始时间，afterCompletion 交给 {@link ApiMetricCollector}
  * 内存累加（uri、method、status、耗时、客户端平台、客户端版本），由定时任务每分钟落库。
- * 自身仅写内存，开销纳秒级；/api/v1/stat/report 已在注册处排除（防自举）。
+ * 自身仅写内存，开销纳秒级；/api/v1/app/stat/report 已在注册处排除（防自举）。
  * 开关：astral.stat.enabled（关闭时本拦截器不注册，见 WebMvcConfig）。
  * </p>
  * <p>

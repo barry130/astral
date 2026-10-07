@@ -209,6 +209,8 @@ to{
 }
 .login-box{
   width: 420px;
+  /* 手机视口钳制：<452px 时按视口收缩，避免固定 420px + padding 把输入框裁出屏幕 */
+  max-width: calc(100vw - 32px);
   padding: 48px 40px;
   background: var(--color-bg-white);
   border: 1px solid var(--color-border);
@@ -216,6 +218,20 @@ to{
   box-shadow: var(--shadow-lg);
   position: relative;
   z-index: 1;
+}
+@media (max-width: 480px) {
+  .login-box{
+    padding: 36px 20px;
+    border-radius: 12px;
+  }
+}
+/* Tabs 标签条横向滚动（窄屏放不下全部 tab 时滑动而非溢出/挤压），滚动条隐藏 */
+.tabs-scroll{
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs-scroll::-webkit-scrollbar{
+  display: none;
 }
 .login-title{
   font-size: 30px;
@@ -1065,6 +1081,16 @@ to{
   background: var(--color-text-tertiary);
   opacity: 0.45;
 }
+/* table-fixed 表格（DataTable 全列显式宽时启用）的非省略单元格改单行裁切：
+   底座 TableCell 自带 whitespace-nowrap，fixed 布局列宽是硬约束，
+   超宽文本会溢出画到相邻单元格上（表结构管理「注释」压「类名」芯片实测）；
+   放开换行又会把 ID/时间这类内容拆成多行（用户要求表格行保持单行）——
+   折中：单行 + 溢出省略号，既不压邻格也不折行。
+   ellipsis 列已是 .truncate（含 max-w-0 收缩），被 :not 排除维持原状。 */
+table.rt-body-wrap td:not(.truncate){
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .rt-cards{
   display: flex;
   flex-direction: column;
@@ -1094,9 +1120,12 @@ to{
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  /* 窄卡（手机）放不下「标题+操作组」同行时让操作组换行，标题不再被压成竖排 */
+  flex-wrap: wrap;
 }
 .rt-card-titles{
-  flex: 1 1 auto;
+  /* flex-basis 160px：剩余空间不足以同时容纳标题与操作组时整体换行 */
+  flex: 1 1 160px;
   min-width: 0;
 }
 .rt-card-title{
@@ -1118,6 +1147,9 @@ to{
   display: flex;
   align-items: center;
   gap: 6px;
+  /* 操作组自身也可换行（超窄卡 / 多按钮），且换行后保持右对齐 */
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 .rt-card-grid{
   display: grid;

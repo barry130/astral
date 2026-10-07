@@ -10,7 +10,8 @@
  * 发布流程对应「先拿号 → 上传文件 → 回填 artifacts → 发布」四步：
  * 1. 新建：只填平台/渠道/准入/说明，后端生成版本号（如 2026091801）随响应返回；
  * 2. 把变更文件上传到 source/<版本号>/ 目录（图床/存储页），拿到永久地址；
- * 3. 编辑该 release，按 path 填 {path, url}（version 留空自动 +1），未填的 path 继承上一版；
+ * 3. 编辑该 release，按 path 填 {path, url}（version 留空自动 +1；url 可手填永久直链
+ *    或行内上传生成，上传会覆盖手填值），未填的 path 继承上一版；
  * 4. 点「发布」。
  */
 import { useEffect, useState } from 'react';
@@ -50,7 +51,10 @@ const FALLBACK_STATE_LABEL: Record<string, string> = {
   unpublished: '未发布', published: '已发布', bad: '坏包',
 };
 
-/** artifacts 编辑行：path 从数据字典下拉选择，url 由行内上传生成（永久地址） */
+/**
+ * artifacts 编辑行：path 从数据字典下拉选择；url 既可行内上传生成（永久地址），
+ * 也可手填已有的永久直链（上传成功会覆盖手填值）。
+ */
 type ArtifactRow = { path?: string; url?: string };
 
 /** 按平台准入编辑行：unlimited=不限制（提交时省略该平台键）；touched=已显式设置过，晚到的版本列表不再自动全选 */
@@ -430,7 +434,7 @@ export default function SourceReleasesTab() {
       >
         <Form form={form} layout="vertical">
           <Form.Item name="id" hidden><Input /></Form.Item>
-          <Space size="large" style={{ display: 'flex' }}>
+          <Space size="large" wrap style={{ display: 'flex' }}>
             <Form.Item name="platforms" label="适用平台" rules={[{ required: true, message: '至少选一个平台' }]}>
               <Select mode="multiple" options={platformOpts} style={{ minWidth: 220 }} placeholder="可多选，一个包服务多平台" />
             </Form.Item>
@@ -484,7 +488,7 @@ export default function SourceReleasesTab() {
             </Paragraph>
           </Form.Item>
           <Paragraph type="secondary" style={{ marginBottom: 8 }}>
-            产物按 path 合并：只填本次变更的文件（上传后自动填入永久地址，版本号由后端按 url 是否变化维护），
+            产物按 path 合并：只填本次变更的文件（地址可手填永久直链，也可行内上传——上传成功会覆盖手填值；版本号由后端按 url 是否变化维护），
             其余文件自动继承上一版——这就是「只发 chain」。path 选项来自数据字典 qt_source_artifact_path，可在字典管理里扩展。
           </Paragraph>
           <Form.List name="artifacts">
@@ -498,13 +502,29 @@ export default function SourceReleasesTab() {
                         placeholder="选择产物 path"
                         style={{ width: 200 }}
                         options={(pathOpts.length ? pathOpts : [
-                          { value: 'chain.json', label: 'chain.json' },
-                          { value: 'source-bundle.js', label: 'source-bundle.js' },
+                          { value: 'meta-bundle.js', label: 'meta-bundle.js' },
+                          { value: 'play-bundle.js', label: 'play-bundle.js' },
                         ])}
                       />
                     </Form.Item>
-                    <Form.Item name={[field.name, 'url']} noStyle>
-                      <Input placeholder="上传后自动填入永久地址" style={{ width: 280 }} readOnly />
+                    <Form.Item
+                      name={[field.name, 'url']}
+                      noStyle
+                      // 手填与上传共用同一格：上传成功会覆盖当前值（customUpload 里
+                      // setFieldValue 直接写回）。客户端只认 https 直链（明文 http
+                      // 两端都拒），所以这里做前缀校验而不是放任任意字符串进 artifacts。
+                      rules={[{
+                        validator: (_, v: string | undefined) => {
+                          const s = (v ?? '').trim();
+                          if (s.length === 0) return Promise.resolve();
+                          if (!/^https:\/\//.test(s)) {
+                            return Promise.reject(new Error('产物地址必须是 https:// 直链（客户端拒绝明文 http）'));
+                          }
+                          return Promise.resolve();
+                        },
+                      }]}
+                    >
+                      <Input placeholder="永久直链：可手填，上传后自动覆盖" style={{ width: 280 }} allowClear />
                     </Form.Item>
                     <Upload
                       showUploadList={false}

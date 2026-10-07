@@ -16,7 +16,6 @@ import {
   loadFeedbackDicts,
   Feedback, FeedbackReply, FeedbackStat,
 } from '@/api/feedback';
-import NoticeManagement from '@/components/admin/NoticeManagement';
 import { ResizableTable } from '@/components/ResizableTable';
 import { usePerm } from '@/lib/perm';
 
@@ -234,7 +233,7 @@ function FeedbackPanel() {
     },
     { title: '用户邮箱', dataIndex: 'email', width: 170, ellipsis: true, render: (v: string) => v || '-' },
     { title: '联系方式', dataIndex: 'contact', width: 150, ellipsis: true, render: (v: string) => v || '-' },
-    { title: '时间', dataIndex: 'createTime', width: 170, render: (v: string) => v || '-' },
+    { title: '时间', dataIndex: 'createTime', width: 170, render: (v: string) => (v ? new Date(v).toLocaleString() : '-') },
     {
       title: '操作', key: 'action', width: 160, fixed: 'right' as const,
       render: (_: any, record: Feedback) => (
@@ -369,18 +368,9 @@ function FeedbackPanel() {
 
 /**
  * 反馈插件管理页（侧边栏唯一入口 /dashboard/feedback）
- * <p>Tabs 内切换：反馈管理（sys_feedback）/ 通知管理（sys_notice）。</p>
- * <p>两个面板的后端接口权限不同（admin:feedback:view / admin:message:view），
- * 侧边栏入口只校验 admin:feedback:view，因此「通知管理」页签必须再按 admin:message:view 单独过滤，
- * 否则只有反馈权限的用户点进去会整片 403。</p>
+ * <p>通知管理（sys_notice）已上移到「消息中心」页的「通知管理」页签——
+ * 消息中心同时具备查询与发布能力后，反馈页不再保留通知页签，避免两处维护同一张表。</p>
  */
 export default function FeedbackPage() {
-  const hasPerm = usePerm();
-  const tabs = [
-    { key: 'feedback', label: '反馈管理', children: <FeedbackPanel /> },
-    ...(hasPerm('admin:message:view')
-      ? [{ key: 'message', label: '通知管理', children: <NoticeManagement /> }]
-      : []),
-  ];
-  return <Tabs defaultActiveKey="feedback" destroyInactiveTabPane items={tabs} />;
+  return <FeedbackPanel />;
 }

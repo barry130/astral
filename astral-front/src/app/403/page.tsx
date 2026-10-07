@@ -13,7 +13,7 @@ export default function ForbiddenPage() {
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      background: '#f5f5f5'
+      background: 'var(--color-bg-base)'
     }}>
       <Result
         status="403"

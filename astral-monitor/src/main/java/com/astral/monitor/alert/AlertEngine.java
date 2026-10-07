@@ -35,7 +35,8 @@ import java.util.Set;
  *   <li>{@code HTTP_5XX_COUNT}：窗口内 5xx 请求数（stat_api_hourly.status&gt;=500 求和）</li>
  * </ul>
  *
- * <p>渠道两种：EMAIL（复用 MailService 直发，不走插件授权/额度）与
+ * <p>渠道三种：EMAIL（复用 MailService 直发，不走插件授权/额度）、
+ * SMS（复用通知中心 SmsService 的系统告警事件，走短信供应商池）、
  * WEBHOOK（JDK HttpClient POST JSON，可选自定义请求头密钥，钉钉/飞书自定义机器人
  * 可用各自的加密/签名方式时再扩展 format 字段）。</p>
  *
@@ -56,6 +57,7 @@ public class AlertEngine {
             METRIC_SERVER_ERROR, METRIC_CLIENT_ERROR, METRIC_HTTP_5XX);
 
     public static final String CHANNEL_EMAIL = "EMAIL";
+    public static final String CHANNEL_SMS = "SMS";
     public static final String CHANNEL_WEBHOOK = "WEBHOOK";
 
     private final AlertRuleMapper alertRuleMapper;
@@ -65,6 +67,8 @@ public class AlertEngine {
     private final StatApiHourlyMapper statApiHourlyMapper;
     /** 可选：astral-mail 属 system 模块，未装配时 EMAIL 渠道降级记 FAIL */
     private final ObjectProvider<MailService> mailServiceProvider;
+    /** 可选：SMS 渠道走通知中心短信服务（复用系统告警事件模板），未装配时降级记 FAIL */
+    private final ObjectProvider<com.astral.system.notify.SmsService> smsServiceProvider;
 
     /** 渠道配置解析器（JSON 容错），引擎与测试接口共用 */
     private final AlertConfigParser configParser = new AlertConfigParser();
@@ -204,6 +208,7 @@ public class AlertEngine {
         Map<String, String> config = configParser.parse(channel.getConfig());
         switch (type) {
             case CHANNEL_EMAIL -> deliverEmail(config, title, content);
+            case CHANNEL_SMS -> deliverSms(config, title, content);
             case CHANNEL_WEBHOOK -> deliverWebhook(config, title, content);
             default -> throw new IllegalArgumentException("不支持的渠道类型：" + channel.getType());
         }
@@ -219,6 +224,18 @@ public class AlertEngine {
             throw new IllegalStateException("邮件服务不可用");
         }
         mailService.sendSystemAlert(to.trim(), title, content);
+    }
+
+    private void deliverSms(Map<String, String> config, String title, String content) {
+        String phone = config.get("phone");
+        if (phone == null || phone.isBlank()) {
+            throw new IllegalArgumentException("SMS 渠道缺少 phone 手机号");
+        }
+        com.astral.system.notify.SmsService smsService = smsServiceProvider.getIfAvailable();
+        if (smsService == null) {
+            throw new IllegalStateException("短信服务不可用");
+        }
+        smsService.sendSystemAlert(phone.trim(), title, content);
     }
 
     private void deliverWebhook(Map<String, String> config, String title, String content) throws Exception {

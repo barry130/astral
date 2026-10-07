@@ -4,7 +4,6 @@ import { request, ApiResult } from './client';
 export interface QtOverview {
   userCount: number;
   dakaCount: number;
-  noticeCount: number;
   updateCount: number;
 }
 

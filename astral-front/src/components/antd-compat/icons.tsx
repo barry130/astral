@@ -29,12 +29,14 @@ import {
   Eraser,
   Eye,
   File,
+  FileCheck,
   FileText,
   FlaskConical,
   Folder,
   GripVertical,
   History,
   Home,
+  Megaphone,
   Image as ImageGlyph,
   Inbox,
   Info,
@@ -61,10 +63,12 @@ import {
   Server,
   Settings,
   ShieldCheck,
+  Smartphone,
   SquarePen,
   Star,
   Trash2,
   Upload,
+  UploadCloud,
   User,
   Wrench,
   X,
@@ -113,6 +117,7 @@ export const ExclamationCircleOutlined = wrap(AlertCircle, 'ExclamationCircleOut
 export const ExperimentOutlined = wrap(FlaskConical, 'ExperimentOutlined');
 export const EyeOutlined = wrap(Eye, 'EyeOutlined');
 export const FileOutlined = wrap(File, 'FileOutlined');
+export const FileDoneOutlined = wrap(FileCheck, 'FileDoneOutlined');
 export const FileTextOutlined = wrap(FileText, 'FileTextOutlined');
 export const FolderOutlined = wrap(Folder, 'FolderOutlined');
 export const HistoryOutlined = wrap(History, 'HistoryOutlined');
@@ -141,9 +146,13 @@ export const SearchOutlined = wrap(Search, 'SearchOutlined');
 export const SecurityScanOutlined = wrap(ScanSearch, 'SecurityScanOutlined');
 export const SendOutlined = wrap(Send, 'SendOutlined');
 export const SettingOutlined = wrap(Settings, 'SettingOutlined');
+export const NotificationOutlined = wrap(Megaphone, 'NotificationOutlined');
+export const MobileOutlined = wrap(Smartphone, 'MobileOutlined');
 export const StarOutlined = wrap(Star, 'StarOutlined');
 export const ToolOutlined = wrap(Wrench, 'ToolOutlined');
 export const UploadOutlined = wrap(Upload, 'UploadOutlined');
+export const ExportOutlined = wrap(UploadCloud, 'ExportOutlined');
+export const ImportOutlined = wrap(Download, 'ImportOutlined');
 export const UserOutlined = wrap(User, 'UserOutlined');
 export const CloudServerOutlined = wrap(Server, 'CloudServerOutlined');
 
@@ -174,6 +183,7 @@ export const ANTD_ICON_MAP: Record<string, LucideIcon> = {
   ExclamationCircleOutlined,
   ExperimentOutlined,
   EyeOutlined,
+  FileDoneOutlined,
   FileOutlined,
   FileTextOutlined,
   FolderOutlined,
@@ -191,6 +201,7 @@ export const ANTD_ICON_MAP: Record<string, LucideIcon> = {
   MailOutlined,
   MenuOutlined,
   MessageOutlined,
+  MobileOutlined,
   MinusOutlined,
   PencilOutlined,
   PictureOutlined,
@@ -205,6 +216,9 @@ export const ANTD_ICON_MAP: Record<string, LucideIcon> = {
   SettingOutlined,
   StarOutlined,
   ToolOutlined,
+  ExportOutlined,
+  ImportOutlined,
+  NotificationOutlined,
   UploadOutlined,
   UserOutlined,
 };

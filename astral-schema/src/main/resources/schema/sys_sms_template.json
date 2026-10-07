@@ -1,0 +1,104 @@
+{
+  "tableName": "sys_sms_template",
+  "tableComment": "短信模板(供应商模板映射)",
+  "moduleName": "system",
+  "className": "SysSmsTemplate",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "template_code",
+      "fieldName": "templateCode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "模板编码",
+      "length": 64
+    },
+    {
+      "columnName": "template_name",
+      "fieldName": "templateName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "模板名称",
+      "length": 64
+    },
+    {
+      "columnName": "event_code",
+      "fieldName": "eventCode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "绑定通知事件码(NotifyEventRegistry)",
+      "length": 64
+    },
+    {
+      "columnName": "provider_template_code",
+      "fieldName": "providerTemplateCode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "供应商侧模板编码(如SMS_123456789)",
+      "length": 64
+    },
+    {
+      "columnName": "sign_name",
+      "fieldName": "signName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "短信签名(空回退供应商)",
+      "length": 64
+    },
+    {
+      "columnName": "content_sample",
+      "fieldName": "contentSample",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "供应商备案正文留档"
+    },
+    {
+      "columnName": "audit_status",
+      "fieldName": "auditStatus",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "报备审核状态(字典notify_sms_audit_status)"
+    },
+    {
+      "columnName": "audit_remark",
+      "fieldName": "auditRemark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "审核备注",
+      "length": 256
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "备注",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

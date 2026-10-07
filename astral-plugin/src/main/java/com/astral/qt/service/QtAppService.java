@@ -1,9 +1,6 @@
 package com.astral.qt.service;
 
-import com.astral.qt.dto.vo.QtDataVo;
-import com.astral.qt.entity.QtAppNotice;
 import com.astral.qt.entity.QtAppUpdate;
-import com.astral.qt.mapper.QtAppNoticeMapper;
 import com.astral.qt.mapper.QtAppUpdateMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -18,14 +15,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 轻听 App 公告与版本更新服务
+ * 轻听 App 版本更新服务
  */
 @Slf4j
 @Service
 public class QtAppService {
-
-    @Resource
-    private QtAppNoticeMapper noticeMapper;
 
     @Resource
     private QtAppUpdateMapper updateMapper;
@@ -42,16 +36,6 @@ public class QtAppService {
             .maximumSize(16)
             .expireAfterWrite(Duration.ofSeconds(60))
             .build();
-
-    /** 获取展示中的公告列表 */
-    public QtDataVo<List<QtAppNotice>> getNotice() {
-        List<QtAppNotice> list = noticeMapper.selectList(
-                new LambdaQueryWrapper<QtAppNotice>()
-                        .eq(QtAppNotice::getIsShow, 1)
-                        .orderByDesc(QtAppNotice::getCreateTime)
-        );
-        return new QtDataVo<>(list);
-    }
 
     /**
      * 获取版本更新信息。

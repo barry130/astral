@@ -1,0 +1,94 @@
+{
+  "tableName": "sys_sms_log",
+  "tableComment": "短信发送日志",
+  "moduleName": "system",
+  "className": "SysSmsLog",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "provider_id",
+      "fieldName": "providerId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "供应商ID"
+    },
+    {
+      "columnName": "plugin_id",
+      "fieldName": "pluginId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "调用插件ID",
+      "length": 64
+    },
+    {
+      "columnName": "scene",
+      "fieldName": "scene",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "事件码",
+      "length": 64
+    },
+    {
+      "columnName": "phone",
+      "fieldName": "phone",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "手机号",
+      "length": 32
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "发送内容留档"
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "状态(1成功0失败)"
+    },
+    {
+      "columnName": "error_msg",
+      "fieldName": "errorMsg",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "失败原因",
+      "length": 512
+    },
+    {
+      "columnName": "send_time",
+      "fieldName": "sendTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "发送时间"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ]
+}

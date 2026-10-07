@@ -217,7 +217,7 @@ export default function AlertPage() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div className="space-y-1.5">
                 <CardTitle>通知渠道</CardTitle>
-                <CardDescription>告警触达方式；EMAIL 复用系统邮箱发信账户，WEBHOOK 通用 JSON POST</CardDescription>
+                <CardDescription>告警触达方式；EMAIL 复用系统邮箱发信账户（文案可在邮箱管理「邮件模板」的 systemAlert 场景模板中自定义），SMS 走系统短信供应商（需在短信模板绑定 systemAlert 事件），WEBHOOK 通用 JSON POST</CardDescription>
               </div>
               {canEditChannel && <Button onClick={() => openChannelDialog()} className="gap-1.5"><Plus className="size-4" />新建渠道</Button>}
             </CardHeader>
@@ -388,7 +388,7 @@ export default function AlertPage() {
           <DialogHeader>
             <DialogTitle>{editingChannel ? '编辑渠道' : '新建渠道'}</DialogTitle>
             <DialogDescription>
-              EMAIL 配置 {"{ \"to\": \"邮箱\" }"}；WEBHOOK 配置 {"{ \"url\": \"…\", \"secret\": \"可选\" }"}
+              EMAIL 配置 {"{ \"to\": \"邮箱\" }"}；SMS 配置 {"{ \"phone\": \"手机号\" }"}；WEBHOOK 配置 {"{ \"url\": \"…\", \"secret\": \"可选\" }"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -400,12 +400,14 @@ export default function AlertPage() {
               <Label>类型</Label>
               <Select value={channelForm.type} onValueChange={(v) => setChannelForm({
                 ...channelForm, type: v,
-                config: v === 'EMAIL' ? '{\n  "to": ""\n}' : '{\n  "url": ""\n}',
+                config: v === 'EMAIL' ? '{\n  "to": ""\n}'
+                  : v === 'SMS' ? '{\n  "phone": ""\n}' : '{\n  "url": ""\n}',
               })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="WEBHOOK">WEBHOOK（通用 JSON POST）</SelectItem>
                   <SelectItem value="EMAIL">EMAIL（系统邮箱）</SelectItem>
+                  <SelectItem value="SMS">SMS（系统短信）</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -503,6 +505,7 @@ function configSummary(channel: AlertChannel): string {
   try {
     const obj = JSON.parse(channel.config);
     if (channel.type === 'EMAIL') return String(obj.to || '');
+    if (channel.type === 'SMS') return String(obj.phone || '');
     if (channel.type === 'WEBHOOK') return String(obj.url || '');
     return channel.config;
   } catch {

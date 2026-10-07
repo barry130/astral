@@ -57,6 +57,15 @@ V{yyyyMMddNNN}__{下划线小写描述}.sql    例：V20260915001__add_user_avat
 - 破坏性操作（删列/改类型/清数据）先在本地验证，并在脚本头部注释写明影响；
 - 真实凭据不进脚本。
 
+| 20261002001 | `V20261002001__mail_scene_registry.sql` | 邮件模板按 `scene`（事件码）× channel 绑定，唯一索引 + 存量模板回填 scene | 执行 |
+| 20261002002 | `V20261002002__notify_channel_failclosed.sql` | 通知渠道 fail-closed 收口 | 执行 |
+| 20261002003 | `V20261002003__sms_channel.sql` | 短信渠道（provider/template/log 表 + 字典 + 权限） | 执行 |
+| 20261002004 | `V20261002004__inapp_notice.sql` | 阶段③过渡表 `sys_announcement` / `sys_notify_inapp`（**已被 20261002006 废弃删除**） | 执行 |
+| 20261002005 | `V20261002005__notify_rule.sql` | 事件订阅规则表 `sys_notify_rule` | 执行 |
+| 20261002006 | `V20261002006__unify_notice.sql` | 阶段⑤统一通知存储：`sys_notice` 增 `read_time`/`scene` 列 + `idx_sys_notice_user_read`；废弃 `sys_announcement` 并释放其序列/字典；菜单「邮箱管理」更名「消息中心」 | 执行 |
+| 20261002007 | `V20261002007__feedback_rule_notify.sql` | 阶段⑥：反馈插件 5 个通知规则化，种子 5 模板 + 5 规则 | 执行 |
+| 20261006001 | `V20261006001__qt_source_artifact_dict.sql` | 音源包产物路径字典 | 执行 |
+
 ## 新增一个变更的流程
 
 1. 本地写好 `V{yyyyMMddNNN}__xxx.sql` 并验证（本地库跑一次启动即应用）；
@@ -77,4 +86,6 @@ FROM astral.flyway_schema_history ORDER BY installed_rank;
   原 V1-V4 合并为本目录 `V20260914001__init.sql`（存量库基线化、不再执行），原 V5 重新编号为 20260914003，
   旧跟踪表由 V2 脚本在存量库上删除；
 - 插件自建表（qt/feedback 的 `*SchemaInitializer` 启动幂等建表）不受 Flyway 影响，维持原样；
+  注意：插件 Initializer 是 `@PostConstruct`，**晚于 Flyway**，因此任何动到插件表的迁移都必须先判表存在
+  （`IF to_regclass('...') IS NULL THEN RETURN;`，见 `V20261001008`），否则全新空库会因表不存在启动中止；
 - `spring.sql.init.mode: never` 维持不变，避免任何双轨执行。

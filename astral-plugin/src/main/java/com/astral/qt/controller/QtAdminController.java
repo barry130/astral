@@ -7,11 +7,9 @@ import com.astral.qt.QtPlugin;
 import com.astral.qt.common.QtRestResp;
 import com.astral.qt.dto.QtSourceReleaseCreateDto;
 import com.astral.qt.dto.vo.QtSourceReleaseVo;
-import com.astral.qt.entity.QtAppNotice;
 import com.astral.qt.entity.QtAppUpdate;
 import com.astral.qt.entity.QtGithubAccel;
 import com.astral.qt.dto.vo.QtGithubAccelProbeVo;
-import com.astral.qt.mapper.QtAppNoticeMapper;
 import com.astral.qt.mapper.QtAppUpdateMapper;
 import com.astral.qt.service.QtAppService;
 import com.astral.qt.service.QtGithubAccelService;
@@ -43,7 +41,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/admin/qt")
 @RequiresPermission(value = QtPlugin.PERM_ADMIN, name = "轻听管理", domain = "qt",
-        description = "轻听插件后台管理（用户/公告/版本更新/音源包/加速节点）")
+        description = "轻听插件后台管理（用户/版本更新/音源包/加速节点）")
 public class QtAdminController {
 
     @Resource
@@ -51,9 +49,6 @@ public class QtAdminController {
 
     @Resource
     private QtUserDakaMapper qtDakaMapper;
-
-    @Resource
-    private QtAppNoticeMapper qtNoticeMapper;
 
     @Resource
     private QtAppUpdateMapper qtUpdateMapper;
@@ -78,7 +73,6 @@ public class QtAdminController {
         map.put("userCount", userMapper.selectCount(
                 new LambdaQueryWrapper<User>().eq(User::getUserType, "APP")));
         map.put("dakaCount", qtDakaMapper.selectCount(null));
-        map.put("noticeCount", qtNoticeMapper.selectCount(null));
         map.put("updateCount", qtUpdateMapper.selectCount(null));
         return QtRestResp.success(map);
     }
@@ -108,47 +102,6 @@ public class QtAdminController {
         user.setStatus(state == null ? 1 : state);
         user.setUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
-        return QtRestResp.success();
-    }
-
-    @Operation(summary = "公告列表")
-    @GetMapping("/notices")
-    public QtRestResp<Page<QtAppNotice>> notices(@RequestParam(defaultValue = "1") Integer pageNum,
-                                                  @RequestParam(defaultValue = "10") Integer pageSize) {
-        Page<QtAppNotice> page = new Page<>(pageNum, pageSize);
-        return QtRestResp.success(qtNoticeMapper.selectPage(page,
-                new LambdaQueryWrapper<QtAppNotice>().orderByDesc(QtAppNotice::getCreateTime)));
-    }
-
-    @Operation(summary = "新增公告")
-    @PostMapping("/notices")
-    public QtRestResp<QtAppNotice> createNotice(@RequestBody QtAppNotice notice) {
-        if (notice.getIsShow() == null) notice.setIsShow(1L);
-        if (notice.getType() == null) notice.setType(0L);
-        if (notice.getIsTop() == null) notice.setIsTop(0L);
-        if (notice.getDialogClosable() == null) notice.setDialogClosable(1L);
-        if (notice.getFirstLoginOnly() == null) notice.setFirstLoginOnly(0L);
-        if (notice.getMarquee() == null) notice.setMarquee(0L);
-        if (notice.getAudience() == null || notice.getAudience().isBlank()) notice.setAudience("ALL");
-        notice.setCreateTime(LocalDateTime.now());
-        notice.setUpdateTime(LocalDateTime.now());
-        qtNoticeMapper.insert(notice);
-        return QtRestResp.success(notice);
-    }
-
-    @Operation(summary = "更新公告")
-    @PutMapping("/notices/{id}")
-    public QtRestResp<Void> updateNotice(@PathVariable Long id, @RequestBody QtAppNotice notice) {
-        notice.setId(id);
-        notice.setUpdateTime(LocalDateTime.now());
-        qtNoticeMapper.updateById(notice);
-        return QtRestResp.success();
-    }
-
-    @Operation(summary = "删除公告")
-    @DeleteMapping("/notices/{id}")
-    public QtRestResp<Void> deleteNotice(@PathVariable Long id) {
-        qtNoticeMapper.deleteById(id);
         return QtRestResp.success();
     }
 

@@ -35,6 +35,9 @@ public class SysMailTemplate {
     @Size(max = 64)
     private String scene;
 
+    @Size(max = 16)
+    private String channel;
+
     @Size(max = 256)
     private String remark;
 

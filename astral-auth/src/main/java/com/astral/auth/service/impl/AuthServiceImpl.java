@@ -6,6 +6,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.astral.auth.dto.LoginRequest;
 import com.astral.auth.dto.LoginResponse;
+import com.astral.auth.security.LoginDevice;
 import com.astral.auth.security.LoginUserTypeResolver;
 import com.astral.auth.security.RsaKeyManager;
 import com.astral.auth.security.TotpUtil;
@@ -102,7 +103,9 @@ public class AuthServiceImpl implements AuthService {
 
 rsaKeyManager.resetLoginFailures(request.getUsername());
 
-        StpUtil.login(user.getId());
+        // device=ADMIN：is-share=false 下每次登录都是新 token，按「账号 × 端」隔离会话——
+        // 管理端登出/被踢不影响同账号的 App 会话（反之亦然）
+        StpUtil.login(user.getId(), LoginDevice.ADMIN);
         // 将用户名存入 Sa-Token 会话，供 AuthInterceptor 直接读取，避免每次请求查库
         StpUtil.getSession().set("username", user.getUsername());
         // nickname 必须兜底成空串：SaSession.dataMap 是 ConcurrentHashMap，

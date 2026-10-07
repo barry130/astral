@@ -87,4 +87,18 @@ public class TokenController {
         tokenService.cleanExpiredTokens();
         return Result.success();
     }
+
+    /**
+     * 全端会话重置：吊销所有在线 Token，所有人（含操作者本人）重新登录。
+     * <p>用于会话模型变更后的存量清理、安全事件应急。属全局高危操作，要求超管。</p>
+     *
+     * @return 操作结果
+     */
+    @Operation(summary = "全端会话重置（吊销所有在线Token，所有人重新登录）")
+    @PutMapping("/revoke-all")
+    @RequiresSuper
+    public Result<Void> revokeAll() {
+        tokenService.revokeAllTokens();
+        return Result.success();
+    }
 }

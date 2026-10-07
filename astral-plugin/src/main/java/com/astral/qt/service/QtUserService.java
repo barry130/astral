@@ -7,6 +7,8 @@ import cn.hutool.crypto.digest.BCrypt;
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.User;
 import com.astral.auth.registry.AppUserRoleService;
+import com.astral.auth.security.LoginDevice;
+import com.astral.auth.security.RsaKeyManager;
 import com.astral.auth.service.UserLoginMarker;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.qt.common.QtException;
@@ -17,6 +19,7 @@ import com.astral.qt.dto.QtSendEmailDto;
 import com.astral.qt.dto.QtUpdateUserDto;
 import com.astral.qt.dto.vo.QtDataVo;
 import com.astral.qt.dto.vo.QtUserInfoVo;
+import com.astral.system.notify.NotifyEventRegistry;
 import com.astral.system.mail.MailService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -50,7 +53,7 @@ import java.util.UUID;
 @Service
 public class QtUserService extends ServiceImpl<UserMapper, User> {
 
-    private static final String EMAIL_BODY_CHANGE_PW = "changePasswordByEmail";
+    private static final String EMAIL_BODY_CHANGE_PW = NotifyEventRegistry.QT_PASSWORD_RESET_CODE;
     private static final String USER_TYPE_APP = "APP";
 
     @Resource
@@ -58,6 +61,13 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    /**
+     * 登录失败计数 / 账号锁定（Redis 为主、内存兜底）：App 登录此前无任何防爆破手段，
+     * 拉齐到与管理端登录同一套 LoginFailureStore（5 次失败锁 15 分钟）。
+     */
+    @Resource
+    private RsaKeyManager rsaKeyManager;
 
     @Resource
     private MailService mailService;
@@ -127,6 +137,9 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
     }
 
     public QtUserInfoVo login(QtLoginDto dto) {
+        if (rsaKeyManager.isAccountLocked(dto.getUsername())) {
+            throw new QtException("登录失败次数过多，账号已被锁定，请15分钟后再试");
+        }
         User user = userMapper.selectOne(
                 new LambdaQueryWrapper<User>()
                         .eq(User::getUserType, USER_TYPE_APP)
@@ -135,16 +148,21 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
                         .last("LIMIT 1")
         );
         if (user == null) {
+            rsaKeyManager.recordLoginFailure(dto.getUsername());
             throw new QtException("当前用户名或邮箱不存在");
         }
         if (!BCrypt.checkpw(dto.getPassword(), user.getPassword())) {
+            rsaKeyManager.recordLoginFailure(dto.getUsername());
             throw new QtException("密码不正确");
         }
         if (user.getStatus() == null || user.getStatus() != 1) {
             throw new QtException("当前账号已被封锁，无法登录");
         }
 
-        StpUtil.login(user.getId());
+        rsaKeyManager.resetLoginFailures(dto.getUsername());
+        // device=APP：is-share=false 下每次登录都是新 token，按「账号 × 端」隔离会话——
+        // App 登出/被踢不影响同账号的管理端会话（反之亦然），同端多台设备也互不牵连
+        StpUtil.login(user.getId(), LoginDevice.APP);
         // 将用户名/昵称写入 Sa-Token 会话，与宿主一致
         StpUtil.getSession().set("username", user.getUsername());
         // nickname 必须兜底成空串：SaSession.dataMap 是 ConcurrentHashMap，
@@ -154,8 +172,11 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         String token = StpUtil.getTokenValue();
 
+        // Token 管理页展示的登录IP/创建时间读自 token 会话：App 登录此前漏盖，页面上恒显示「—」
+        String loginIp = userLoginMarker.currentClientIp();
+        userLoginMarker.stampTokenSession(loginIp);
         // 回写最后登录时间与来源 IP（App 用户 login_time 此前恒为 NULL，无法做不活跃筛选）
-        userLoginMarker.mark(user.getId());
+        userLoginMarker.mark(user.getId(), loginIp);
 
         QtUserInfoVo vo = new QtUserInfoVo();
         vo.setToken(token);
@@ -204,14 +225,16 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         // 否则注册响应里的 permissions 是空的，客户端首次启动就判定「无权限」。
         appUserRoleService.assignToUser(user.getId());
 
-        StpUtil.login(user.getId());
+        StpUtil.login(user.getId(), LoginDevice.APP);
         StpUtil.getSession().set("username", user.getUsername());
         // 同上：注册时 nickname 常为空，直接 set(null) 会 NPE 导致注册接口 500
         StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         String token = StpUtil.getTokenValue();
 
-        // 注册自动登录同样视为一次登录：回写 login_time/login_ip
-        userLoginMarker.mark(user.getId());
+        // 注册自动登录同样视为一次登录：盖 token 会话（登录IP/时间）+ 回写 login_time/login_ip
+        String loginIp = userLoginMarker.currentClientIp();
+        userLoginMarker.stampTokenSession(loginIp);
+        userLoginMarker.mark(user.getId(), loginIp);
 
         QtUserInfoVo vo = new QtUserInfoVo();
         vo.setToken(token);
@@ -264,6 +287,9 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
     // ==================== 邮箱验证码 ====================
 
     public void sendEmail(QtSendEmailDto dto) {
+        // 能发什么事件由系统侧发信授权 fail-closed 控制（allowed_scenes 留空=全拒，见 MailServiceImpl.send），
+        // 插件侧不再自带白名单。注意 body 同时用作验证码 Redis 存储键，changePwByEmail 只认
+        // EMAIL_BODY_CHANGE_PW 这个键——授权里多勾的事件只会白耗配额，不会产生可用验证码。
         User user = userMapper.selectOne(
                 new LambdaQueryWrapper<User>()
                         .eq(User::getUserType, USER_TYPE_APP)

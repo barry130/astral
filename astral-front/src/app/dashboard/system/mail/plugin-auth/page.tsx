@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Button, Space, Modal, Form, Input, InputNumber, Tag, message, Popconfirm, Switch } from '@/components/antd-compat';
+import { Card, Button, Space, Modal, Form, Input, InputNumber, Tag, message, Popconfirm, Switch, Select } from '@/components/antd-compat';
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@/components/antd-compat/icons';
-import { mailApi, MailPluginAuth } from '@/api/mail';
+import { mailApi, MailPluginAuth, NotifyEventDef } from '@/api/mail';
 import { usePerm, MAIL_PERMISSIONS } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
@@ -13,11 +13,13 @@ export default function MailPluginAuthPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<MailPluginAuth | null>(null);
   const [form] = Form.useForm();
+  /** 事件注册表（代码注册，后端 /notify/event/list 只读下发） */
+  const [events, setEvents] = useState<NotifyEventDef[]>([]);
   const hasPerm = usePerm();
   /** 是否具备发信授权维护权限（无权限时隐藏维护按钮） */
   const canEdit = hasPerm(MAIL_PERMISSIONS.pluginAuthEdit);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); loadEvents(); }, []);
 
   const loadData = () => {
     setLoading(true);
@@ -26,16 +28,29 @@ export default function MailPluginAuthPage() {
       .finally(() => setLoading(false));
   };
 
+  const loadEvents = () => {
+    mailApi.notifyEventList()
+      .then((res: any) => { if (res.code === 200) setEvents(res.data || []); })
+      .catch(() => { /* 事件列表加载失败不阻塞页面 */ });
+  };
+
+  const sceneOptions = events.map((s) => ({ label: `${s.name}（${s.code}）`, value: s.code }));
+  const sceneLabelOf = (code: string) => {
+    const def = events.find((s) => s.code === code);
+    return def ? `${def.name}（${code}）` : code;
+  };
+
   const handleCreate = () => {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ dailyLimit: 5, enabled: 1 });
+    form.setFieldsValue({ dailyLimit: 5, enabled: 1, allowedScenes: [] });
     setModalVisible(true);
   };
 
   const handleEdit = (r: MailPluginAuth) => {
     setEditing(r);
-    form.setFieldsValue(r);
+    // allowed_scenes 存量是逗号分隔字符串，多选控件需要数组
+    form.setFieldsValue({ ...r, allowedScenes: r.allowedScenes ? r.allowedScenes.split(',').map((s) => s.trim()).filter(Boolean) : [] });
     setModalVisible(true);
   };
 
@@ -48,6 +63,8 @@ export default function MailPluginAuthPage() {
   const handleSubmit = async () => {
     const values = await form.validateFields();
     values.enabled = values.enabled ? 1 : 0;
+    // 存储格式与存量一致：逗号分隔；空数组 = 不限场景
+    values.allowedScenes = (values.allowedScenes || []).join(',');
     try {
       if (editing?.id) await mailApi.pluginAuthUpdate(editing.id, values);
       else await mailApi.pluginAuthCreate(values);
@@ -63,7 +80,9 @@ export default function MailPluginAuthPage() {
     { title: '每日上限', dataIndex: 'dailyLimit', key: 'dailyLimit', render: (v: number) => v > 0 ? v : '不限制' },
     {
       title: '允许场景', dataIndex: 'allowedScenes', key: 'allowedScenes',
-      render: (v?: string) => v ? v.split(',').map((s) => <Tag key={s} color="blue">{s}</Tag>) : <Tag>全部</Tag>,
+      render: (v?: string) => v
+        ? v.split(',').map((s) => s.trim()).filter(Boolean).map((s) => <Tag key={s} color="blue">{sceneLabelOf(s)}</Tag>)
+        : <Tag color="red">未配置（禁止发信）</Tag>,
     },
     { title: '状态', dataIndex: 'enabled', key: 'enabled', render: (v: number) => <Tag color={v === 1 ? 'green' : 'default'}>{v === 1 ? '启用' : '停用'}</Tag> },
     {
@@ -104,8 +123,8 @@ export default function MailPluginAuthPage() {
           <Form.Item name="dailyLimit" label="每日发送上限" tooltip="0 表示不限制">
             <InputNumber min={0} max={10000} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="allowedScenes" label="允许场景" tooltip="逗号分隔，留空表示全部">
-            <Input placeholder="changePasswordByEmail,registerVerify" />
+          <Form.Item name="allowedScenes" label="允许事件" tooltip="只能从系统注册的事件里选；fail-closed：留空 = 该插件一律禁止发信">
+            <Select mode="multiple" options={sceneOptions} placeholder="不选 = 禁止发信（fail-closed）" allowClear maxTagCount="responsive" />
           </Form.Item>
           <Form.Item name="enabled" label="启用" valuePropName="checked">
             <Switch checkedChildren="启用" unCheckedChildren="停用" />

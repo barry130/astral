@@ -11,7 +11,8 @@ import java.util.List;
 /**
  * 轻听（App）后端 API 插件
  * <p>
- * 参考 qt 后端项目，为 qt-uniappx 前端提供完整用户 / 签到 / 收藏 / 公告 / 版本更新 API。
+ * 参考 qt 后端项目，为 qt-uniappx 前端提供完整用户 / 签到 / 收藏 / 版本更新 API
+ * （公告统一由 feedback 插件 sys_notice 提供，见 /api/v1/app/message/**）。
  * 默认开启（astral.plugins.qt.enabled=true，允许在插件管理页禁用）。
  * </p>
  */
@@ -45,12 +46,12 @@ public class QtPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
 
     @Override
     public String getDescription() {
-        return "轻听音乐 App 后端 API：用户登录注册、邮箱验证码、签到、收藏歌单/歌曲同步、App公告与版本更新";
+        return "轻听音乐 App 后端 API：用户登录注册、邮箱验证码、签到、收藏歌单/歌曲同步、版本更新";
     }
 
     @Override
     public List<String> getApiPrefixes() {
-        return List.of("/api/v1/app/user", "/api/v1/app", "/api/v1/admin/qt", "/api/v1/user");
+        return List.of("/api/v1/app/user", "/api/v1/app", "/api/v1/admin/qt");
     }
 
     @Override
@@ -72,7 +73,7 @@ public class QtPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
     public List<PermissionDef> getPermissions() {
         return List.of(
                 new PermissionDef(PERM_ADMIN, "轻听管理", "qt", TYPE_API,
-                        "轻听插件后台管理（用户/公告/版本更新/音源包/加速节点）"),
+                        "轻听插件后台管理（用户/版本更新/音源包/加速节点）"),
                 new PermissionDef(PERM_UPDATE_CHANNEL_BETA, "轻听测试版接收资格(版本更新)", "qt", TYPE_DATA,
                         "可看到 beta 渠道的版本更新；正式版版本号更高时仍收到正式版"),
                 new PermissionDef(PERM_SOURCE_CHANNEL_BETA, "轻听测试版接收资格(音源包)", "qt", TYPE_DATA,

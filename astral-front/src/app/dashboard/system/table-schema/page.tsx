@@ -462,9 +462,9 @@ export default function TableSchemaPage() {
 
   /** 表格列定义 */
   const columns = [
-    { title: '表名', dataIndex: 'tableName', key: 'tableName', render: (v: string) => <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: 3, fontSize: 12 }}>{v}</code> },
+    { title: '表名', dataIndex: 'tableName', key: 'tableName', width: 264, render: (v: string) => <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{v}</code> },
     { title: '注释', dataIndex: 'tableComment', key: 'tableComment' },
-    { title: '类名', dataIndex: 'className', key: 'className', render: (v: string) => <Tag color="blue">{v}</Tag> },
+    { title: '类名', dataIndex: 'className', width: 216, render: (v: string) => <Tag color="blue">{v}</Tag> },
     { title: '模块', dataIndex: 'moduleName', key: 'moduleName', render: (v: string) => {
       const colors: Record<string, string> = { system: 'green', sequence: 'orange', log: 'purple' };
       return <Tag color={colors[v] || 'default'}>{v}</Tag>;

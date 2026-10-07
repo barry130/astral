@@ -137,7 +137,9 @@ sa-token:
   timeout: 259200
   active-timeout: -1
   is-concurrent: true
-  is-share: true
+  # is-share=false：每次登录产生独立 token（配合登录点的 device 参数实现「账号 × 端」会话隔离，
+  # 见 com.astral.auth.security.LoginDevice）。改前发行的旧 token 仍然有效到自然过期。
+  is-share: false
   token-style: uuid
   is-log: false
   is-read-header: true

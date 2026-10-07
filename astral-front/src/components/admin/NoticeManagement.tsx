@@ -196,7 +196,7 @@ export default function NoticeManagement() {
 
   // 用 useMemo 固定列引用，否则每次渲染新建数组会让 ResizableTable 内的列 useMemo 全部失效
   const columns = useMemo(() => [
-    { title: 'ID', dataIndex: 'id', width: 80 },
+    { title: 'ID', dataIndex: 'id', width: 96 },
     {
       title: '渠道', dataIndex: 'channel', width: 230,
       render: (v: string) => {
@@ -229,7 +229,7 @@ export default function NoticeManagement() {
       title: '启用', dataIndex: 'isShow', width: 70,
       render: (v: number) => v === 1 ? <Tag color="green">是</Tag> : <Tag color="red">否</Tag>,
     },
-    { title: '时间', dataIndex: 'createTime', width: 170, render: (v: string) => v || '-' },
+    { title: '时间', dataIndex: 'createTime', width: 170, render: (v: string) => (v ? new Date(v).toLocaleString() : '-') },
     {
       title: '操作', key: 'action', width: 150,
       render: (_: any, record: SysNotice) => (
@@ -264,7 +264,7 @@ export default function NoticeManagement() {
           <Space wrap>
             <Input.Search placeholder="搜索标题/内容" allowClear style={{ width: 220 }}
               onSearch={(v) => { setKeyword(v); load(1, pageSize, v); }} />
-            <Select mode="multiple" placeholder="渠道（可多选）" allowClear style={{ minWidth: 220 }}
+            <Select mode="multiple" placeholder="渠道（可多选）" allowClear style={{ width: 260 }}
               value={channelFilter}
               onChange={(v) => setChannelFilter((v as string[]) || [])}
               options={noticeChannelOptions()}
@@ -305,7 +305,7 @@ export default function NoticeManagement() {
       >
         <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item
                 name="channel"
                 label="投放平台（可多选）"
@@ -318,7 +318,7 @@ export default function NoticeManagement() {
                 <Select mode="multiple" options={noticeChannelOptions()} placeholder="选择投放平台" maxTagCount="responsive" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="noticeType" label="类型" rules={[{ required: true, message: '请选择类型' }]}>
                 <Select options={noticeTypeOptions()} />
               </Form.Item>
@@ -338,12 +338,12 @@ export default function NoticeManagement() {
           </Form.Item>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="url" label="跳转链接">
                 <Input placeholder="点击后跳转链接（可选）" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="userId" label="目标用户ID（留空=广播）">
                 <InputNumber style={{ width: '100%' }} placeholder="广播则留空" />
               </Form.Item>
@@ -351,12 +351,12 @@ export default function NoticeManagement() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="effectiveRange" label="生效时间区间（留空=长期）">
                 <DatePicker.RangePicker showTime format="YYYY-MM-DD HH:mm:ss" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="audience" label="可见用户人群">
                 <Select options={AUDIENCE_OPTIONS} />
               </Form.Item>
@@ -364,26 +364,26 @@ export default function NoticeManagement() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="versionMin" label="生效版本码下限"><InputNumber style={{ width: '100%' }} placeholder="如 300（3.0.0），可选" /></Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="versionMax" label="生效版本码上限"><InputNumber style={{ width: '100%' }} placeholder="如 399，可选" /></Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
-            <Col span={8}>
+            <Col xs={24} sm={8}>
               <Form.Item name="isShow" label="是否启用" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
                 <Switch checkedChildren="启用" unCheckedChildren="停用" />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} sm={8}>
               <Form.Item name="isTop" label="是否置顶" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
                 <Switch checkedChildren="置顶" unCheckedChildren="普通" />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col xs={24} sm={8}>
               <Form.Item name="marquee" label="通告栏跑马灯" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
                 <Switch checkedChildren="滚动" unCheckedChildren="静止" />
               </Form.Item>
@@ -391,12 +391,12 @@ export default function NoticeManagement() {
           </Row>
 
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="dialogClosable" label="开屏弹窗可关闭" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
                 <Switch checkedChildren="可关闭" unCheckedChildren="不可关闭" />
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col xs={24} md={12}>
               <Form.Item name="firstLoginOnly" label="仅首次登录弹出" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
                 <Switch checkedChildren="仅首次" unCheckedChildren="每次" />
               </Form.Item>

@@ -145,7 +145,7 @@ export default function MailAccountPage() {
         onOk={handleSubmit} onCancel={() => setModalVisible(false)} destroyOnClose>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="accountName" label="账户名称" rules={[{ required: true }]}><Input placeholder="如：轻听官方邮箱" /></Form.Item>
-          <Space style={{ display: 'flex' }}>
+          <Space wrap style={{ display: 'flex' }}>
             <Form.Item name="smtpHost" label="SMTP服务器" rules={[{ required: true }]} style={{ flex: 1 }}>
               <Input placeholder="smtp.exmail.qq.com" />
             </Form.Item>
@@ -162,11 +162,11 @@ export default function MailAccountPage() {
           >
             <Input.Password placeholder={editing ? '留空表示不修改' : undefined} />
           </Form.Item>
-          <Space style={{ display: 'flex' }}>
+          <Space wrap style={{ display: 'flex' }}>
             <Form.Item name="fromAddr" label="发件地址" rules={[{ required: true }]} style={{ flex: 1 }}><Input placeholder="noreply@example.com" /></Form.Item>
             <Form.Item name="fromName" label="发件显示名"><Input placeholder="轻听APP" /></Form.Item>
           </Space>
-          <Space style={{ display: 'flex' }}>
+          <Space wrap style={{ display: 'flex' }}>
             <Form.Item name="sslEnable" label="SSL" rules={[{ required: true }]}>
               <Select options={[{ label: '启用', value: 1 }, { label: '停用', value: 0 }]} style={{ width: 120 }} />
             </Form.Item>

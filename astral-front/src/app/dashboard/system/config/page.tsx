@@ -123,12 +123,14 @@ export default function ConfigPage() {
 
   /** 表格列定义 */
   const columns = [
-    { title: '配置名称', dataIndex: 'configName', key: 'configName' },
-    { title: '配置键', dataIndex: 'configKey', key: 'configKey', render: (v: string) => <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: 3, fontSize: 12 }}>{v}</code> },
+    // 全列显式 width：DataTable 在所有列都有宽度时启用 table-layout:fixed，列宽成为硬约束
+    // （auto 布局下内容长的「描述」会把「配置值」挤到只剩几十px，实测 71px）
+    { title: '配置名称', dataIndex: 'configName', key: 'configName', width: 160 },
+    { title: '配置键', dataIndex: 'configKey', key: 'configKey', width: 240, ellipsis: true, render: (v: string) => <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{v}</code> },
     { title: '配置值', dataIndex: 'configValue', key: 'configValue', width: 200, ellipsis: true },
-    { title: '类型', dataIndex: 'configType', key: 'configType', render: (v: number) => <Tag color={v === 1 ? 'blue' : 'orange'}>{v === 1 ? '内置' : '自定义'}</Tag> },
-    { title: '描述', dataIndex: 'description', key: 'description' },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => new Date(v).toLocaleString() },
+    { title: '类型', dataIndex: 'configType', key: 'configType', width: 90, render: (v: number) => <Tag color={v === 1 ? 'blue' : 'orange'}>{v === 1 ? '内置' : '自定义'}</Tag> },
+    { title: '描述', dataIndex: 'description', key: 'description', width: 300 },
+    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: string) => new Date(v).toLocaleString() },
     {
       title: '操作',
       key: 'action',

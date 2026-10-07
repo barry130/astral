@@ -697,7 +697,18 @@ function SelectBase({
         </div>
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-40 p-1">
+      {/* 下拉宽度随最长选项生长（antd popupMatchSelectWidth=false 的默认近似）：
+          下限取触发器宽（窄选择器不缩）、上限钳在视口内，选项放不下时换行——
+          固定等于触发器宽 + truncate 会把「PAYLOAD_FIELD（事件字段）」这类长标签截断。
+          宽度钳制走内联 style：Tailwind 任意值类对 max(var(...)) 的编译不可靠 */}
+      <PopoverContent
+        align="start"
+        className="w-auto p-1"
+        style={{
+          minWidth: 'max(var(--radix-popover-trigger-width, 10rem), 10rem)',
+          maxWidth: 'min(420px, calc(100vw - 2rem))',
+        }}
+      >
         {(showSearch || mode === 'tags') && (
           <div className="mb-1 border-b border-border pb-1">
             <input
@@ -736,7 +747,7 @@ function SelectBase({
                     option.disabled && 'cursor-not-allowed opacity-40',
                   )}
                 >
-                  <span className="truncate">{option.label ?? String(option.value)}</span>
+                  <span className="whitespace-normal break-words">{option.label ?? String(option.value)}</span>
                   {active ? <Check className="size-3.5 shrink-0 text-primary" /> : null}
                 </button>
               );
@@ -1117,7 +1128,14 @@ export function AutoComplete({
           />
         </span>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-1">
+      <PopoverContent
+        align="start"
+        className="w-auto p-1"
+        style={{
+          minWidth: 'max(var(--radix-popover-trigger-width, 10rem), 10rem)',
+          maxWidth: 'min(420px, calc(100vw - 2rem))',
+        }}
+      >
         <div className="max-h-56 overflow-y-auto">
           {visible.map((o, i) => (
             <button
@@ -1129,7 +1147,7 @@ export function AutoComplete({
                 onSelect?.(v, o);
                 setOpen(false);
               }}
-              className="w-full cursor-pointer truncate rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+              className="w-full cursor-pointer whitespace-normal break-words rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
             >
               {o.label ?? String(o.value)}
             </button>

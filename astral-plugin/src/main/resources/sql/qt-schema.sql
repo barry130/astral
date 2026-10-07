@@ -5,51 +5,6 @@
 --       故不再单独建 qt_user / qt_user_token 表。
 -- ============================================
 
-CREATE TABLE IF NOT EXISTS qt_app_notice (
-    id BIGINT PRIMARY KEY,
-    type BIGINT NOT NULL DEFAULT 0,
-    url VARCHAR(512),
-    uid VARCHAR(64),
-    title VARCHAR(128),
-    content VARCHAR(65535),
-    is_show BIGINT NOT NULL DEFAULT 1,
-    is_top BIGINT NOT NULL DEFAULT 0,
-    dialog_closable BIGINT NOT NULL DEFAULT 1,
-    first_login_only BIGINT NOT NULL DEFAULT 0,
-    marquee BIGINT NOT NULL DEFAULT 0,
-    effective_start TIMESTAMP,
-    effective_end TIMESTAMP,
-    version_min BIGINT,
-    version_max BIGINT,
-    audience VARCHAR(16) NOT NULL DEFAULT 'ALL',
-    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_qt_notice_show ON qt_app_notice(is_show);
-
--- 已有表（旧结构）补列：幂等，兼容已存在的数据表
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS content VARCHAR(65535);
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS is_top BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS dialog_closable BIGINT NOT NULL DEFAULT 1;
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS first_login_only BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS marquee BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS effective_start TIMESTAMP;
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS effective_end TIMESTAMP;
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS version_min BIGINT;
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS version_max BIGINT;
--- 旧结构历史表类型迁移：VARCHAR -> BIGINT（版本号，非语义化版本名）
-ALTER TABLE qt_app_notice ALTER COLUMN version_min TYPE BIGINT USING (NULLIF(version_min, '')::BIGINT);
-ALTER TABLE qt_app_notice ALTER COLUMN version_max TYPE BIGINT USING (NULLIF(version_max, '')::BIGINT);
-ALTER TABLE qt_app_notice ADD COLUMN IF NOT EXISTS audience VARCHAR(16) NOT NULL DEFAULT 'ALL';
-
-CREATE TABLE IF NOT EXISTS qt_app_notice_read (
-    id BIGINT PRIMARY KEY,
-    notice_id BIGINT NOT NULL DEFAULT 0,
-    user_id BIGINT NOT NULL DEFAULT 0,
-    read_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uk_qt_notice_read ON qt_app_notice_read(notice_id, user_id);
-
 CREATE TABLE IF NOT EXISTS qt_app_update (
     id BIGINT PRIMARY KEY,
     version_code BIGINT NOT NULL,
@@ -175,28 +130,6 @@ DROP INDEX IF EXISTS uk_like_song_key;
 CREATE UNIQUE INDEX IF NOT EXISTS uk_like_song_key_pid ON qt_like_song(uid, sid, platform, pid);
 
 -- 字段注释（幂等，启动可重复执行）
-COMMENT ON COLUMN qt_app_notice.id IS '主键ID';
-COMMENT ON COLUMN qt_app_notice.type IS '展示渠道位掩码(1-开屏弹窗 2-通告栏 4-消息中心,可叠加)';
-COMMENT ON COLUMN qt_app_notice.url IS '点击后跳转链接';
-COMMENT ON COLUMN qt_app_notice.uid IS '预留用户ID(历史字段)';
-COMMENT ON COLUMN qt_app_notice.title IS '公告标题';
-COMMENT ON COLUMN qt_app_notice.content IS '公告正文(可承载富文本)';
-COMMENT ON COLUMN qt_app_notice.is_show IS '是否启用(0-隐藏 1-展示)';
-COMMENT ON COLUMN qt_app_notice.is_top IS '是否置顶(0-否 1-是)';
-COMMENT ON COLUMN qt_app_notice.dialog_closable IS '开屏弹窗是否可关闭(仅type含开屏生效)';
-COMMENT ON COLUMN qt_app_notice.first_login_only IS '仅首次登录弹出(仅type含开屏生效)';
-COMMENT ON COLUMN qt_app_notice.marquee IS '通告栏是否跑马灯滚动(仅type含通告栏生效)';
-COMMENT ON COLUMN qt_app_notice.effective_start IS '生效时间(为空不限制)';
-COMMENT ON COLUMN qt_app_notice.effective_end IS '失效时间(为空不限制)';
-COMMENT ON COLUMN qt_app_notice.version_min IS '生效APP版本号下限(版本号,如300对应3.0.0)';
-COMMENT ON COLUMN qt_app_notice.version_max IS '生效APP版本号上限(版本号)';
-COMMENT ON COLUMN qt_app_notice.audience IS '可见人群(ALL全部/LOGGED_IN仅登录/NOT_LOGGED_IN仅游客)';
-COMMENT ON COLUMN qt_app_notice.create_time IS '创建时间';
-COMMENT ON COLUMN qt_app_notice.update_time IS '更新时间';
-COMMENT ON COLUMN qt_app_notice_read.id IS '主键ID';
-COMMENT ON COLUMN qt_app_notice_read.notice_id IS '公告ID';
-COMMENT ON COLUMN qt_app_notice_read.user_id IS '用户ID';
-COMMENT ON COLUMN qt_app_notice_read.read_time IS '已读时间';
 COMMENT ON COLUMN qt_app_update.id IS '主键ID';
 COMMENT ON COLUMN qt_app_update.version_code IS '版本号';
 COMMENT ON COLUMN qt_app_update.type IS '客户端平台类型(1101-Android 1102-iOS 1103-Windows)';
@@ -244,14 +177,6 @@ COMMENT ON COLUMN qt_like_song.updated_seq IS '用户收藏变更序号(多端�
 COMMENT ON COLUMN qt_like_song.updated_at IS '收藏状态变更时间';
 COMMENT ON COLUMN qt_like_song.create_time IS '创建时间';
 COMMENT ON COLUMN qt_like_song.update_time IS '更新时间';
-COMMENT ON COLUMN qt_email_code.id IS '主键ID';
-COMMENT ON COLUMN qt_email_code.email IS '邮箱';
-COMMENT ON COLUMN qt_email_code.body IS '功能标识';
-COMMENT ON COLUMN qt_email_code.code IS '验证码';
-COMMENT ON COLUMN qt_email_code.expire_time IS '过期时间';
-COMMENT ON COLUMN qt_email_code.used IS '是否使用(0-未使用 1-已使用)';
-COMMENT ON COLUMN qt_email_code.create_time IS '创建时间';
-COMMENT ON COLUMN qt_email_code.update_time IS '更新时间';
 COMMENT ON COLUMN qt_github_accel.id IS '主键ID';
 COMMENT ON COLUMN qt_github_accel.name IS '节点名称(如ghfast)';
 COMMENT ON COLUMN qt_github_accel.prefix_url IS '加速前缀(最终地址=前缀+原始链接直接拼接)';

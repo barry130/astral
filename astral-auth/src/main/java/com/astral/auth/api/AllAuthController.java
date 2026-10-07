@@ -16,7 +16,6 @@ import java.util.Map;
 
 /**
  * 认证控制器（通用路径 /api/v1/all/auth，管理端与 App 端共用）。
- * <p>旧接口 /api/v1/auth/** 保留并标记废弃，App 端迁移到 /api/v1/all/auth/**。</p>
  */
 @RestController
 @RequestMapping("/api/v1/all/auth")

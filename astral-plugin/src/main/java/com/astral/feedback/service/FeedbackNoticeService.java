@@ -1,21 +1,17 @@
 package com.astral.feedback.service;
 
-import com.astral.dao.entity.Role;
-import com.astral.dao.entity.User;
-import com.astral.dao.entity.UserRole;
-import com.astral.dao.mapper.RoleMapper;
-import com.astral.dao.mapper.UserMapper;
-import com.astral.dao.mapper.UserRoleMapper;
+import com.astral.common.constant.NoticeConstants;
 import com.astral.feedback.common.NoticeChannel;
-import com.astral.feedback.entity.SysNotice;
-import com.astral.feedback.mapper.SysNoticeMapper;
+import com.astral.system.notify.NotifyEventRegistry;
+import com.astral.system.notify.NotifyPublisher;
+import com.astral.dao.entity.SysNotice;
+import com.astral.dao.mapper.SysNoticeMapper;
 import com.astral.system.service.SysConfigService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.Resource;
@@ -23,6 +19,7 @@ import jakarta.annotation.Resource;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -70,14 +67,9 @@ public class FeedbackNoticeService {
     @Resource
     private SysConfigService sysConfigService;
 
+    /** 通知触发走平台事件发布器（订阅规则决定收件人/渠道/文案，本类只声明事件与上下文） */
     @Resource
-    private UserMapper userMapper;
-
-    @Resource
-    private RoleMapper roleMapper;
-
-    @Resource
-    private UserRoleMapper userRoleMapper;
+    private NotifyPublisher notifyPublisher;
 
     /**
      * 当前生效通知列表（App 端：Android + iOS，公开，三展示位共用）
@@ -87,7 +79,7 @@ public class FeedbackNoticeService {
      * @param userId     已登录时的用户ID（用于点对点过滤）
      */
     public List<SysNotice> listForApp(String appVersion, boolean loggedIn, Long userId) {
-        return listForChannel(List.of(SysNotice.CHANNEL_ANDROID, SysNotice.CHANNEL_IOS), appVersion, loggedIn, userId);
+        return listForChannel(List.of(NoticeConstants.CHANNEL_ANDROID, NoticeConstants.CHANNEL_IOS), appVersion, loggedIn, userId);
     }
 
     /**
@@ -98,7 +90,7 @@ public class FeedbackNoticeService {
      * @param userId     已登录时的用户ID（用于点对点过滤）
      */
     public List<SysNotice> listForPc(String appVersion, boolean loggedIn, Long userId) {
-        return listForChannel(List.of(SysNotice.CHANNEL_WINDOWS), appVersion, loggedIn, userId);
+        return listForChannel(List.of(NoticeConstants.CHANNEL_WINDOWS), appVersion, loggedIn, userId);
     }
 
     /**
@@ -109,7 +101,7 @@ public class FeedbackNoticeService {
      * @param userId     已登录时的用户ID（用于点对点过滤）
      */
     public List<SysNotice> listForWeb(String appVersion, boolean loggedIn, Long userId) {
-        return listForChannel(List.of(SysNotice.CHANNEL_WEB), appVersion, loggedIn, userId);
+        return listForChannel(List.of(NoticeConstants.CHANNEL_WEB), appVersion, loggedIn, userId);
     }
 
     /**
@@ -144,7 +136,7 @@ public class FeedbackNoticeService {
             qw.eq(SysNotice::getIsShow, 1L);
             // 保留期：announce 不受限；其余类型仅最近 N 天（N=0/空=不限）
             if (retentionFrom != null) {
-                qw.and(w -> w.eq(SysNotice::getNoticeType, SysNotice.TYPE_ANNOUNCE)
+                qw.and(w -> w.eq(SysNotice::getNoticeType, NoticeConstants.TYPE_ANNOUNCE)
                         .or().ge(SysNotice::getCreateTime, retentionFrom));
             }
             qw.orderByDesc(SysNotice::getIsTop).orderByDesc(SysNotice::getCreateTime);
@@ -163,7 +155,7 @@ public class FeedbackNoticeService {
      * <p>已读状态由前端缓存判断，后端不返回 read 字段。</p>
      */
     public List<SysNotice> listMessageCenter(Long userId) {
-        return listMessageCenter(userId, List.of(SysNotice.CHANNEL_ANDROID, SysNotice.CHANNEL_IOS));
+        return listMessageCenter(userId, List.of(NoticeConstants.CHANNEL_ANDROID, NoticeConstants.CHANNEL_IOS));
     }
 
     /**
@@ -181,7 +173,7 @@ public class FeedbackNoticeService {
      * <p>返回该用户可见消息中心条目总数；已读判定在前端缓存，清缓存=全部未读（既定决策 D6）。</p>
      */
     public long countUnread(Long userId) {
-        return countUnread(userId, List.of(SysNotice.CHANNEL_ANDROID, SysNotice.CHANNEL_IOS));
+        return countUnread(userId, List.of(NoticeConstants.CHANNEL_ANDROID, NoticeConstants.CHANNEL_IOS));
     }
 
     /**
@@ -244,7 +236,7 @@ public class FeedbackNoticeService {
     public SysNotice create(SysNotice notice) {
         notice.setChannel(NoticeChannel.normalizeForStore(notice.getChannel()));
         if (notice.getNoticeType() == null || notice.getNoticeType().isBlank()) {
-            notice.setNoticeType(SysNotice.TYPE_ANNOUNCE);
+            notice.setNoticeType(NoticeConstants.TYPE_ANNOUNCE);
         }
         if (notice.getDisplay() == null) {
             notice.setDisplay(DISPLAY_MESSAGE_CENTER);
@@ -284,185 +276,80 @@ public class FeedbackNoticeService {
         evictNoticeCache();
     }
 
-    // ==================== 通知触发（异步） ====================
+    /**
+     * 管理端收件箱（顶栏铃铛数据源）：广播 + 发给当前管理员的点对点，不按渠道过滤。
+     * <p>统一通知存储后点对点行即 user_id 指向的行；只取 is_show=1，最近 50 条。</p>
+     */
+    public List<SysNotice> listAdminInbox(Long adminId) {
+        return sysNoticeMapper.selectList(new LambdaQueryWrapper<SysNotice>()
+                .eq(SysNotice::getIsShow, 1L)
+                .and(w -> w.isNull(SysNotice::getUserId).or().eq(SysNotice::getUserId, adminId))
+                .orderByDesc(SysNotice::getIsTop)
+                .orderByDesc(SysNotice::getCreateTime)
+                .last("limit 50"));
+    }
+
+    // ==================== 通知触发（异步，经订阅规则投递） ====================
 
     /**
-     * 反馈状态变更通知提交人
+     * 反馈状态变更通知提交人。
+     * <p>文案在「消息中心-邮箱模板」（事件 {@link NotifyEventRegistry#FEEDBACK_STATUS_CHANGED}
+     * 渠道 INAPP）维护；收件人/平台由订阅规则决定，本方法只发事件。</p>
      *
-     * @param feedbackId  反馈ID
-     * @param userId      提交人
-     * @param title       反馈标题
-     * @param noticeType  通知类型（feedback/request）
-     * @param statusName  状态名（中文）
+     * @param feedbackId 反馈ID
+     * @param userId     提交人
+     * @param title      反馈标题
+     * @param noticeType 通知类型（feedback/request，App 端消息中心标签）
+     * @param statusName 状态名（中文）
      */
-    @Async
     public void notifyStatusChange(Long feedbackId, Long userId, String title, String noticeType, String statusName) {
-        try {
-            SysNotice n = new SysNotice();
-            n.setChannel(SysNotice.CHANNEL_MOBILE);
-            n.setNoticeType(noticeType);
-            n.setUserId(userId);
-            n.setFeedbackId(feedbackId);
-            n.setDisplay(DISPLAY_MESSAGE_CENTER);
-            n.setTitle("您的反馈「" + title + "」" + statusName);
-            n.setContent("您的反馈「" + title + "」状态已更新为「" + statusName + "」。");
-            n.setAudience("ALL");
-            sysNoticeMapper.insert(fillDefault(n));
-            log.info("[FeedbackPlugin] 状态变更通知已生成 feedbackId={}, userId={}", feedbackId, userId);
-            evictNoticeCache();
-        } catch (Exception e) {
-            log.warn("[FeedbackPlugin] 状态变更通知生成失败: {}", e.getMessage());
-        }
+        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_STATUS_CHANGED, Map.of(
+                "feedbackId", String.valueOf(feedbackId),
+                "userId", String.valueOf(userId),
+                "feedbackTitle", nullToEmpty(title),
+                "statusName", nullToEmpty(statusName),
+                "noticeType", nullToEmpty(noticeType)));
     }
 
-    /** 反馈已公开发布通知提交人 */
-    @Async
+    /** 反馈已公开发布通知提交人（事件 {@link NotifyEventRegistry#FEEDBACK_PUBLISHED}） */
     public void notifyPublished(Long feedbackId, Long userId, String title, String noticeType) {
-        try {
-            SysNotice n = new SysNotice();
-            n.setChannel(SysNotice.CHANNEL_MOBILE);
-            n.setNoticeType(noticeType);
-            n.setUserId(userId);
-            n.setFeedbackId(feedbackId);
-            n.setDisplay(DISPLAY_MESSAGE_CENTER);
-            n.setTitle("您的反馈「" + title + "」已公开发布");
-            n.setContent("您的反馈已通过审核并公开发布，其他用户可以在「公开」列表中看到。");
-            n.setAudience("ALL");
-            sysNoticeMapper.insert(fillDefault(n));
-            log.info("[FeedbackPlugin] 公开发布通知已生成 feedbackId={}, userId={}", feedbackId, userId);
-            evictNoticeCache();
-        } catch (Exception e) {
-            log.warn("[FeedbackPlugin] 公开发布通知生成失败: {}", e.getMessage());
-        }
+        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_PUBLISHED, Map.of(
+                "feedbackId", String.valueOf(feedbackId),
+                "userId", String.valueOf(userId),
+                "feedbackTitle", nullToEmpty(title),
+                "noticeType", nullToEmpty(noticeType)));
     }
 
-    /** 管理员回复通知提交人 */
-    @Async
+    /** 管理员回复通知提交人（事件 {@link NotifyEventRegistry#FEEDBACK_ADMIN_REPLIED}） */
     public void notifyAdminReply(Long feedbackId, Long userId, String title, String noticeType) {
-        try {
-            SysNotice n = new SysNotice();
-            n.setChannel(SysNotice.CHANNEL_MOBILE);
-            n.setNoticeType(noticeType);
-            n.setUserId(userId);
-            n.setFeedbackId(feedbackId);
-            n.setDisplay(DISPLAY_MESSAGE_CENTER);
-            n.setTitle("您的反馈「" + title + "」有新回复");
-            n.setContent("管理员回复了您的反馈，点击查看详情。");
-            n.setAudience("ALL");
-            sysNoticeMapper.insert(fillDefault(n));
-            log.info("[FeedbackPlugin] 管理员回复通知已生成 feedbackId={}, userId={}", feedbackId, userId);
-            evictNoticeCache();
-        } catch (Exception e) {
-            log.warn("[FeedbackPlugin] 管理员回复通知生成失败: {}", e.getMessage());
-        }
+        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_ADMIN_REPLIED, Map.of(
+                "feedbackId", String.valueOf(feedbackId),
+                "userId", String.valueOf(userId),
+                "feedbackTitle", nullToEmpty(title),
+                "noticeType", nullToEmpty(noticeType)));
     }
 
-    /** 用户回复通知管理端（群发给所有 ADMIN 角色用户，每人一条点对点） */
-    @Async
+    /** 用户回复通知管理端（群发给 ADMIN 角色，事件 {@link NotifyEventRegistry#FEEDBACK_USER_REPLIED}） */
     public void notifyUserReply(Long feedbackId, String title, String noticeType) {
-        try {
-            for (Long adminId : adminUserIds()) {
-                SysNotice n = new SysNotice();
-                n.setChannel(SysNotice.CHANNEL_WINDOWS);
-                n.setNoticeType(noticeType);
-                n.setUserId(adminId);
-                n.setFeedbackId(feedbackId);
-                n.setDisplay(DISPLAY_MESSAGE_CENTER);
-                n.setTitle("用户在反馈「" + title + "」中回复");
-                n.setContent("用户回复了反馈「" + title + "」，请及时处理。");
-                n.setAudience("ALL");
-                sysNoticeMapper.insert(fillDefault(n));
-            }
-            evictNoticeCache();
-            log.info("[FeedbackPlugin] 用户回复通知已群发 ADMIN 角色 feedbackId={}", feedbackId);
-        } catch (Exception e) {
-            log.warn("[FeedbackPlugin] 用户回复通知生成失败: {}", e.getMessage());
-        }
+        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_USER_REPLIED, Map.of(
+                "feedbackId", String.valueOf(feedbackId),
+                "feedbackTitle", nullToEmpty(title),
+                "noticeType", nullToEmpty(noticeType)));
     }
 
-    /** 新反馈/需求提交通知管理端（群发给所有 ADMIN 角色用户） */
-    @Async
+    /** 新反馈/需求提交通知管理端（群发给 ADMIN 角色，事件 {@link NotifyEventRegistry#FEEDBACK_NEW_SUBMISSION}） */
     public void notifyNewFeedback(Long feedbackId, String title, String noticeType) {
-        try {
-            String label = SysNotice.TYPE_REQUEST.equals(noticeType) ? "新需求" : "新反馈";
-            for (Long adminId : adminUserIds()) {
-                SysNotice n = new SysNotice();
-                n.setChannel(SysNotice.CHANNEL_WINDOWS);
-                n.setNoticeType(noticeType);
-                n.setUserId(adminId);
-                n.setFeedbackId(feedbackId);
-                n.setDisplay(DISPLAY_MESSAGE_CENTER);
-                n.setTitle(label + "「" + title + "」已提交");
-                n.setContent("用户提交了" + label + "「" + title + "」，请及时处理。");
-                n.setAudience("ALL");
-                sysNoticeMapper.insert(fillDefault(n));
-            }
-            evictNoticeCache();
-            log.info("[FeedbackPlugin] 新反馈通知已群发 ADMIN 角色 feedbackId={}", feedbackId);
-        } catch (Exception e) {
-            log.warn("[FeedbackPlugin] 新反馈通知生成失败: {}", e.getMessage());
-        }
+        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_NEW_SUBMISSION, Map.of(
+                "feedbackId", String.valueOf(feedbackId),
+                "feedbackTitle", nullToEmpty(title),
+                "noticeType", nullToEmpty(noticeType)));
     }
 
-    /**
-     * 管理端收件箱（顶栏铃铛数据源）
-     * <p>与 App 端消息中心的差异：不按 channel 过滤（app/pc/web/all 全可见）、
-     * 忽略版本码区间（那是 App 客户端概念）；其余过滤链一致：
-     * is_show=1 → 生效时间窗 → audience → 广播或点对点 → display 含消息中心(4) → 保留期。</p>
-     *
-     * @param adminUserId 当前管理端登录用户ID（点对点通知按此过滤）
-     */
-    public List<SysNotice> listAdminInbox(Long adminUserId) {
-        LocalDateTime retentionFrom = retentionFrom();
-        LambdaQueryWrapper<SysNotice> qw = new LambdaQueryWrapper<>();
-        qw.eq(SysNotice::getIsShow, 1L);
-        if (retentionFrom != null) {
-            qw.and(w -> w.eq(SysNotice::getNoticeType, SysNotice.TYPE_ANNOUNCE)
-                    .or().ge(SysNotice::getCreateTime, retentionFrom));
-        }
-        qw.orderByDesc(SysNotice::getIsTop).orderByDesc(SysNotice::getCreateTime);
-        return sysNoticeMapper.selectList(qw).stream()
-                .filter(n -> inEffectiveWindow(n, LocalDateTime.now()))
-                .filter(n -> audienceMatches(n.getAudience(), true))
-                .filter(n -> n.getUserId() == null || (adminUserId != null && adminUserId.equals(n.getUserId())))
-                .filter(n -> hasDisplay(n.getDisplay(), DISPLAY_MESSAGE_CENTER))
-                .collect(Collectors.toList());
-    }
-
-    /** 查询所有启用且未删除的 ADMIN 角色用户ID（管理侧通知的群发对象） */
-    private List<Long> adminUserIds() {
-        Role role = roleMapper.selectOne(new LambdaQueryWrapper<Role>()
-                .eq(Role::getRoleCode, ROLE_CODE_ADMIN).last("limit 1"));
-        if (role == null) {
-            log.warn("[FeedbackPlugin] 未找到角色编码 {}，跳过管理侧通知", ROLE_CODE_ADMIN);
-            return List.of();
-        }
-        List<Long> userIds = userRoleMapper.selectList(new LambdaQueryWrapper<UserRole>()
-                        .eq(UserRole::getRoleId, role.getId()))
-                .stream().map(UserRole::getUserId).distinct().collect(Collectors.toList());
-        if (userIds.isEmpty()) {
-            return List.of();
-        }
-        // 仅通知启用且未删除的账号
-        return userMapper.selectList(new LambdaQueryWrapper<User>()
-                        .in(User::getId, userIds)
-                        .eq(User::getStatus, 1)
-                        .eq(User::getDeleted, 0))
-                .stream().map(User::getId).collect(Collectors.toList());
+    private static String nullToEmpty(String v) {
+        return v == null ? "" : v;
     }
 
     // ==================== 私有工具 ====================
-
-    private SysNotice fillDefault(SysNotice n) {
-        n.setIsShow(1L);
-        n.setIsTop(0L);
-        n.setDialogClosable(1L);
-        n.setFirstLoginOnly(0L);
-        n.setMarquee(0L);
-        n.setCreateTime(LocalDateTime.now());
-        n.setUpdateTime(LocalDateTime.now());
-        return n;
-    }
 
     /** 计算保留期起始时间；配置为 0/空/解析失败 = 不限（返回 null） */
     private LocalDateTime retentionFrom() {

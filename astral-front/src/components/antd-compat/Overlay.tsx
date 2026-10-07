@@ -212,7 +212,10 @@ export function Drawer({
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             className,
           )}
-          style={{ ...(isVertical ? { height: size } : { width: size }), ...style }}
+          style={{
+            ...(isVertical ? { height: size, maxHeight: '100%' } : { width: size, maxWidth: '100%' }),
+            ...style,
+          }}
           onInteractOutside={(e) => {
             if (!maskClosable) e.preventDefault();
           }}
@@ -317,7 +320,7 @@ function TabsBase({
 
   return (
     <div className={cn('w-full', className)} style={style}>
-      <div role="tablist" className="flex items-center gap-1 border-b border-border">
+      <div role="tablist" className="tabs-scroll flex items-center gap-1 border-b border-border">
         {list.map((tab) => {
           const on = tab.key === active?.key;
           return (
@@ -329,7 +332,7 @@ function TabsBase({
               disabled={tab.disabled}
               onClick={() => select(tab.key)}
               className={cn(
-                'relative cursor-pointer whitespace-nowrap text-sm transition-colors',
+                'relative shrink-0 cursor-pointer whitespace-nowrap text-sm transition-colors',
                 size === 'small' ? 'px-2.5 py-1.5' : 'px-3.5 py-2',
                 tab.disabled && 'cursor-not-allowed opacity-40',
                 card

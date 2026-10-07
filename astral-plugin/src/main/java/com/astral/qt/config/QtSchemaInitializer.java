@@ -32,7 +32,7 @@ public class QtSchemaInitializer {
             populator.setIgnoreFailedDrops(true);
             populator.addScript(new ClassPathResource("sql/qt-schema.sql"));
             populator.execute(jdbcTemplate.getDataSource());
-            log.info("[QtPlugin] 轻听表结构初始化完成（qt_app_notice/update/daka/like_*/email_code）");
+            log.info("[QtPlugin] 轻听表结构初始化完成（qt_app_update/qt_daka/qt_like_*/qt_source_*）");
         } catch (Exception e) {
             log.error("[QtPlugin] 轻听表结构初始化失败", e);
             throw e;

@@ -15,7 +15,7 @@ import java.nio.file.Paths;
  * 轻听插件 Web 配置
  * <ul>
  *   <li>认证拦截已合并进宿主全局 {@code com.astral.server.interceptor.AuthInterceptor}
- *       （/api/v1/user/**、/api/v1/app/user/** 由统一拦截器按 QtRestResp 结构处理 401，
+ *       （/api/v1/app/user/** 由统一拦截器按 QtRestResp 结构处理 401，
  *       免认证白名单见其 PUBLIC_PATHS），本配置不再注册插件级拦截器</li>
  *   <li>开放本地头像静态资源映射：/files/qt-upload/** → ./data/qt-upload/</li>
  * </ul>

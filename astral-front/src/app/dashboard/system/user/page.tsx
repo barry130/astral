@@ -450,7 +450,7 @@ export default function UserPage() {
     <div>
       <Card>
         <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {/* 必须写回 search 状态，否则翻页时 loadData(p, ps, search) 传回空串、丢失搜索条件 */}
             <Input.Search
               placeholder="搜索用户名"

@@ -30,6 +30,7 @@ import {
   Lock,
   PieChart,
   Inbox,
+  BellRing,
   Search,
   Sun,
   Moon,
@@ -86,6 +87,7 @@ const iconMap: Record<string, ReactNode> = {
   BlockOutlined: <Blocks />,
   MailOutlined: <Mail />,
   InboxOutlined: <Inbox />,
+  BellOutlined: <BellRing />,
   MenuOutlined: <MenuIcon />,
   CustomerServiceOutlined: <Headphones />,
   SearchOutlined: <Search />,
@@ -354,12 +356,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   /** 视口是否处于移动端（≤768px）：驱动侧边栏抽屉模式与头部/内容区留白 */
   const [isMobile, setIsMobile] = useState(false);
+  /** 视口是否处于平板带（769–1024px）：内容区偏窄，进入时自动把侧边栏收拢成图标栏（仍可手动展开） */
+  const [isTablet, setIsTablet] = useState(false);
   /** 移动端侧边栏抽屉是否展开 */
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
     const apply = () => setIsMobile(mq.matches);
+    apply();
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 769px) and (max-width: 1024px)');
+    const apply = () => {
+      setIsTablet(mq.matches);
+      // 只在「进入平板带」时收拢一次，不劫持用户在带内的手动展开/收起
+      if (mq.matches) setCollapsed(true);
+    };
     apply();
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);

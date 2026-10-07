@@ -7,13 +7,10 @@ import com.astral.qt.common.QtRestResp;
 import com.astral.qt.dto.QtSourceReportDto;
 import com.astral.qt.dto.vo.QtGithubAccelVo;
 import com.astral.qt.dto.vo.QtSourceManifestVo;
-import com.astral.qt.entity.QtAppNotice;
 import com.astral.qt.entity.QtAppUpdate;
-import com.astral.qt.service.QtAppNoticeService;
 import com.astral.qt.service.QtAppService;
 import com.astral.qt.service.QtGithubAccelService;
 import com.astral.qt.service.QtSourceService;
-import cn.dev33.satoken.stp.StpUtil;
 import tools.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,7 +33,7 @@ import java.util.TreeSet;
 
 /**
  * 轻听 App 公共控制器
- * <p>公告与版本更新为免认证接口。</p>
+ * <p>版本更新、音源包、GitHub 加速节点等公共接口免认证（公告请走反馈插件统一通知 /api/v1/app/message/**）。</p>
  * <p><b>权限</b>：本控制器整体落在「App 匿名公共区」（AuthInterceptor 对
  * {@code /api/v1/app/**} 中非 {@code /user/**} 子树一律放行），游客即可访问，
  * 因此<b>不标注</b> {@code @RequiresPermission}（接口可达性无需权限）。
@@ -54,9 +51,6 @@ public class QtAppController {
     private QtAppService appService;
 
     @Resource
-    private QtAppNoticeService noticeService;
-
-    @Resource
     private QtGithubAccelService accelService;
 
     @Resource
@@ -71,15 +65,6 @@ public class QtAppController {
 
     @Resource
     private ObjectMapper objectMapper;
-
-    @Operation(summary = "获取生效中的APP公告（按生效时间/版本/登录人群过滤）")
-    @GetMapping("/notice")
-    public QtRestResp<List<QtAppNotice>> getNotice(
-            @RequestParam(value = "version", required = false) String version,
-            @RequestHeader(value = "satoken", required = false) String satoken) {
-        boolean loggedIn = satoken != null && StpUtil.getLoginIdByToken(satoken) != null;
-        return QtRestResp.success(noticeService.listActive(version, loggedIn));
-    }
 
     @Operation(summary = "获取APP更新信息（按 user:qt:update:channel 可见集合投放，satoken 可选头识别人群）")
     @GetMapping("/update")

@@ -60,4 +60,11 @@ public class FieldSchema {
     private String isAutoFill;
     /** MyBatis-Plus主键策略类型（AUTO/INPUT/ASSIGN_ID等） */
     private String mybatisPlusIdType;
+    /**
+     * Jackson 日期格式（可选）
+     * <p>非空时为该字段生成 {@code @JsonFormat(pattern = "值")}。仅用于「线上已存在客户端按固定格式收发日期」
+     * 这类不能改用 ISO-8601 的兼容场景（例如管理端公告表单以 {@code yyyy-MM-dd HH:mm:ss} 提交时间）。
+     * 默认留空，走 Jackson 默认的 ISO-8601。</p>
+     */
+    private String jsonFormat;
 }
