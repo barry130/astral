@@ -32,45 +32,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /** 加载状态，初始化时为true以检查已有登录状态 */
   const [loading, setLoading] = useState(true);
 
-  /** 组件挂载时检查localStorage中是否有token，若有则验证用户信息 */
+  /**
+   * 组件挂载时恢复登录态。
+   *
+   * 认证令牌存在 HttpOnly Cookie（`satoken`）里，JS 读不到 —— 也就不需要
+   * 「先判断有没有 token 再请求」：有没有凭据由浏览器决定，直接问一次 /info，
+   * 401 就说明未登录（拦截器只在 /dashboard 前缀下跳登录页，不会把落地页访客弹走）。
+   */
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      authApi.getUserInfo()
-        .then((res) => {
-          if (res.code === 200) {
-            // 类型已与后端对齐，无需再用 as any 掩盖
-            setUser(res.data);
-          }
-        })
-        .catch(() => {
-          // token无效或过期，清除本地存储
-          localStorage.removeItem('token');
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    authApi.getUserInfo()
+      .then((res) => {
+        if (res.code === 200) {
+          // 类型已与后端对齐，无需再用 as any 掩盖
+          setUser(res.data);
+        }
+      })
+      .catch(() => {
+        // 未登录 / 令牌过期：Cookie 由后端在登出或过期时处理，前端无需（也无法）清理
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  /** 用户登录：调用API，成功后保存token和用户信息 */
+  /**
+   * 用户登录：调用API，成功后保存用户信息。
+   *
+   * 令牌由后端写入 HttpOnly `satoken` Cookie，响应体里的 token 字段仅作兼容保留；
+   * 前端不再接触令牌明文 —— 这正是本次改造的目的（此前存 localStorage，XSS 可直接读走）。
+   */
   const login = async (username: string, password: string, totpCode?: string) => {
     const res = await authApi.login({ username, password, totpCode });
     if (res.code === 200) {
-      const token = res.data.token;
-      localStorage.setItem('token', token);
       setUser(res.data);
       return res.data;
     }
     throw new Error(res.message);
   };
 
-  /** 用户登出：调用API清理服务端session，清除本地token和用户信息 */
+  /** 用户登出：调用API清理服务端session（后端同时清除认证 Cookie），再清空本地用户信息 */
   const logout = async () => {
     try {
       await authApi.logout();
     } finally {
-      localStorage.removeItem('token');
       setUser(null);
     }
   };

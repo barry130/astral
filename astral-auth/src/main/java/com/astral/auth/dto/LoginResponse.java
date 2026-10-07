@@ -28,4 +28,11 @@ public class LoginResponse {
     private String userType;
     /** 是否需要强制改密：1=是（管理端登录后必须先修改密码）；0/缺省=否 */
     private Integer mustChangePassword;
+    /**
+     * 管理端 CSRF 令牌（双提交用）。
+     *
+     * <p>仅管理端登录返回非空：令牌已由服务端同时写入非 HttpOnly 的 {@code astral_csrf} Cookie，
+     * 前端把它原样回填到 {@code X-CSRF-Token} 请求头即可。轻听 App 走请求头认证，恒为 null。</p>
+     */
+    private String csrfToken;
 }

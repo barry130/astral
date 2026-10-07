@@ -98,6 +98,14 @@ astral:
     # token 自动续期阈值（秒）：剩余有效期低于该值时，任何携带有效 satoken 的请求都会把有效期
     # 续满 sa-token.timeout（滑动续期，活跃用户不掉线）。0 = 关闭自动续期
     token-renew-threshold: 86400
+    # 管理端认证 Cookie 是否带 Secure（仅 HTTPS 下发）。
+    # 本地 http 开发必须为 false，否则浏览器直接丢弃 Cookie，表现为「登录成功但立刻又回登录页」；
+    # 生产（HTTPS）必须为 true。
+    cookie-secure: ${AUTH_COOKIE_SECURE:false}
+    # 管理端认证 Cookie 的 SameSite：严格模式让跨站请求带不上凭据，是 CSRF 的第一道闸。
+    # 同源前端（Next.js rewrite 代理 /api）不受影响；若生产把前端与后端拆到不同站点，
+    # 才需要放宽成 None（此时 cookie-secure 必须为 true）。
+    cookie-same-site: ${AUTH_COOKIE_SAME_SITE:Strict}
 
   plugins:
     enabled: true
@@ -142,7 +150,10 @@ sa-token:
   is-share: false
   token-style: uuid
   is-log: false
+  # 双读：请求头（轻听 App、脚本、Swagger 等显式携带方）+ Cookie（管理台，HttpOnly 防 XSS 窃取）。
+  # 头优先，浏览器不会把 Cookie 自动带进跨站请求以外的场景，两者互不干扰。
   is-read-header: true
+  is-read-cookie: true
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml

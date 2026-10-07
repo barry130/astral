@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 轻听用户服务
@@ -80,10 +81,13 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
     @Resource
     private UserLoginMarker userLoginMarker;
 
-    private static final Duration CODE_TTL = Duration.ofMinutes(10);
+    private static final Duration CODE_TTL = Duration.ofMinutes(5);
     private static final Duration RATE_TTL = Duration.ofSeconds(60);
     private static final String CODE_KEY = "qt:email:code:";
     private static final String RATE_KEY = "qt:email:ratelimit:";
+    /** 验证码失败次数：达到上限即作废当前验证码，必须重新发送才能再试 */
+    private static final String CODE_FAIL_KEY = "qt:email:codefail:";
+    private static final int MAX_CODE_FAILURES = 5;
 
     /**
      * 比对占位令牌后删除频控 key：只有 key 里存的还是「本次占位写入的令牌」才删。
@@ -348,11 +352,17 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
             throw new QtException("当前邮箱还未注册");
         }
 
+        String codeKey = CODE_KEY + dto.getEmail() + ":" + EMAIL_BODY_CHANGE_PW;
         String code = getValidCode(dto.getEmail(), EMAIL_BODY_CHANGE_PW);
         if (code == null) {
             throw new QtException("当前邮箱验证码不存在或已失效");
         }
+        // 验证码只有 6 位数字（10^6），不计数就能在有效期内并发枚举并重置任意账号密码。
+        // 失败次数与 IP 限流是两层防护：前者按邮箱维度封顶总尝试次数，后者挡住跨邮箱扫描。
         if (!code.equals(dto.getCode())) {
+            if (recordCodeFailure(codeKey)) {
+                throw new QtException("验证码错误次数过多，请重新获取验证码");
+            }
             throw new QtException("当前验证码不正确");
         }
 
@@ -360,11 +370,36 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         user.setUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
 
-        // 验证码一次性失效，注销该用户所有会话
-        stringRedisTemplate.delete(CODE_KEY + dto.getEmail() + ":" + EMAIL_BODY_CHANGE_PW);
+        // 验证码一次性失效（连同失败计数），注销该用户所有会话
+        stringRedisTemplate.delete(List.of(codeKey, codeFailKey(codeKey)));
         StpUtil.kickout(user.getId());
 
         return user;
+    }
+
+    /**
+     * 记一次验证码比对失败，返回是否已达上限。
+     * <p>计数 key 与验证码同生命周期（首次失败时对齐验证码剩余 TTL），
+     * 达到 {@value MAX_CODE_FAILURES} 次即删除验证码，强制重新发送才能继续尝试。</p>
+     */
+    private boolean recordCodeFailure(String codeKey) {
+        String failKey = codeFailKey(codeKey);
+        Long count = stringRedisTemplate.opsForValue().increment(failKey);
+        if (count != null && count == 1L) {
+            Long codeTtl = stringRedisTemplate.getExpire(codeKey, TimeUnit.SECONDS);
+            stringRedisTemplate.expire(failKey,
+                    codeTtl != null && codeTtl > 0 ? Duration.ofSeconds(codeTtl) : CODE_TTL);
+        }
+        if (count != null && count >= MAX_CODE_FAILURES) {
+            stringRedisTemplate.delete(List.of(codeKey, failKey));
+            log.warn("[QtPlugin] 邮箱验证码尝试次数超限，验证码已作废: key={}", codeKey);
+            return true;
+        }
+        return false;
+    }
+
+    private static String codeFailKey(String codeKey) {
+        return CODE_FAIL_KEY + codeKey.substring(CODE_KEY.length());
     }
 
     public User updateUser(Long userId, QtUpdateUserDto dto) {

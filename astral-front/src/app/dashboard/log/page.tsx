@@ -5,17 +5,22 @@ import { Button, Card, Space, Table, Tag, Tabs, message } from '@/components/ant
 import { DownloadOutlined, FileTextOutlined, SecurityScanOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@/components/antd-compat/icons';
 import { logApi, OperateLog, LoginLog } from '@/api/log';
 import { clientHeaders } from '@/lib/client-info';
+import { readCsrfToken } from '@/api/client';
 
 /**
  * CSV 导出（fetch 直连）：
  * axios 响应拦截器面向 Result 包装体，二进制流不兼容（会走 result.code 分支被拒），
- * 与「对象存储预签名直传」一样属于约定的 fetch 例外，需手动带 satoken 与客户端系统头。
+ * 与「对象存储预签名直传」一样属于约定的 fetch 例外，需手动带客户端系统头与 CSRF 头。
+ *
+ * 认证凭据不再手动携带：它是 HttpOnly Cookie，浏览器同源请求自动带上
+ * （这也是为什么这里不能加 `credentials: 'omit'`）。但正因为凭据是自动携带的，
+ * 写语义的请求必须回填 CSRF 头，否则会被后端的双提交校验拦下。
  */
 const exportCsv = async (url: string, filename: string) => {
   const headers: Record<string, string> = { ...clientHeaders() };
-  const token = localStorage.getItem('token');
-  if (token) headers['satoken'] = token;
-  const resp = await fetch(url, { headers });
+  const csrf = readCsrfToken();
+  if (csrf) headers['X-CSRF-Token'] = csrf;
+  const resp = await fetch(url, { headers, credentials: 'same-origin' });
   if (!resp.ok) throw new Error(`导出失败（${resp.status}）`);
   const blob = await resp.blob();
   const a = document.createElement('a');

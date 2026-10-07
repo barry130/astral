@@ -14,9 +14,30 @@ export interface ApiRequestConfig extends AxiosRequestConfig {
 const isSilent = (config?: AxiosRequestConfig): boolean =>
   Boolean((config as ApiRequestConfig | undefined)?.silent);
 
+/**
+ * CSRF 双提交令牌的 Cookie 名 / 请求头名。
+ *
+ * 认证令牌由后端写在 HttpOnly Cookie（`satoken`）里，浏览器自动携带 —— JS 读不到，
+ * XSS 也就偷不走。代价是「跨站发起的写请求也会自动带上凭据」，于是需要双提交校验：
+ * 后端下发一枚非 HttpOnly 的 `astral_csrf` Cookie，前端读出后原样回填请求头，
+ * 两者一致才放行（契约见后端 com.astral.common.web.CsrfTokenSupport）。
+ */
+const CSRF_COOKIE = 'astral_csrf';
+const CSRF_HEADER = 'X-CSRF-Token';
+
+/** 读取 CSRF 令牌（SSR 阶段返回空串，交由同源请求的 Cookie 自洽） */
+export function readCsrfToken(): string {
+  if (typeof document === 'undefined') return '';
+  const matched = document.cookie.match(new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]*)`));
+  return matched ? decodeURIComponent(matched[1]) : '';
+}
+
 const client = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
+  // 认证靠 Cookie，跨源部署（NEXT_PUBLIC_API_URL 指向别的域名）时必须带上凭据。
+  // 同源部署（默认，走 Next.js rewrites）下该选项不影响任何行为。
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -31,11 +52,11 @@ client.interceptors.request.use(
     for (const [name, value] of Object.entries(clientHeaders())) {
       config.headers.set(name, value);
     }
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.set('satoken', token);
-      }
+    // CSRF 令牌回填：后端对「凭据来自 Cookie」的写请求校验它，
+    // 跨站页面读不到这枚 Cookie，因此伪造不出匹配的头。
+    const csrfToken = readCsrfToken();
+    if (csrfToken) {
+      config.headers.set(CSRF_HEADER, csrfToken);
     }
     if (!isSilent(config)) {
       beginRequest();
@@ -70,8 +91,15 @@ client.interceptors.response.use(
       endRequest();
     }
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      // 令牌在 HttpOnly Cookie 里，前端删不掉也不需要删：
+      // 跳转登录页会重新走一次登录流程，登录成功时后端覆盖 Cookie。
+      // 登出请走后端 /logout（会清 Cookie），不要只做前端清理。
+      //
+      // 只在「确定已登录过」的页面上跳转：令牌不再能从 localStorage 判断存在性，
+      // 无差别 401 跳转会让落地页（/、/lightlisten）的匿名访客也被弹到登录页。
+      // 需要登录态的页面自己做了守卫（dashboard 布局、/imgbed），这里只兜底
+      // 「已进入受保护区但在途 token 失效」的会话中途踢出。
+      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
         window.location.href = '/login';
       }
     }

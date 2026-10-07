@@ -38,9 +38,10 @@ public class LoginFailureStore {
     private StringRedisTemplate redisTemplate;
 
     private static class FailureRecord {
-        int count;
-        long lastFailureTime;
-        long lockUntil;
+        /** 失败次数（锁定期间不再累加，见 recordInMemory）；变更需同步线程可见 */
+        volatile int count;
+        volatile long lastFailureTime;
+        volatile long lockUntil;
     }
 
     /** 记录一次登录失败；满 {@value MAX_FAILURES} 次落锁定标记 */
@@ -48,6 +49,11 @@ public class LoginFailureStore {
         String key = FAIL_KEY + username;
         try {
             if (redisTemplate != null) {
+                // 锁定期内不计入失败：否则对已锁定账号持续失败会在 FAIL_KEY 的滑动窗口里
+                // 反复把计数推回 MAX_FAILURES，等价于把 15 分钟锁无限续期（内存兜底同理）。
+                if (Boolean.TRUE.equals(redisTemplate.hasKey(LOCK_KEY + username))) {
+                    return;
+                }
                 Long count = redisTemplate.opsForValue().increment(key);
                 if (count != null && count == 1) {
                     redisTemplate.expire(key, Duration.ofSeconds(FAILURE_WINDOW_SEC));
@@ -109,7 +115,7 @@ public class LoginFailureStore {
         return remainingInMemory(username);
     }
 
-    // ---------- 内存兜底（语义与旧 RsaKeyManager 内 Map 一致） ----------
+    // ---------- 内存兜底（语义与 Redis 主路径一致） ----------
 
     private void recordInMemory(String username) {
         memoryFallback.compute(username, (key, record) -> {
@@ -117,8 +123,17 @@ public class LoginFailureStore {
             if (record == null) {
                 record = new FailureRecord();
             }
+            // 锁定期内不计入失败：与 Redis 主路径的 hasKey 提前返回对齐，
+            // 否则锁定期内的失败会累加 count，锁定到期后又立刻锁死（锁无法自然解除）。
+            if (record.lockUntil > 0 && now < record.lockUntil) {
+                return record;
+            }
+            // 窗口过期 = 重新计时，count 与 lockUntil 必须一并清空。
+            // 只清 count 时，以小于窗口期的频率持续失败即可让 count 永不归零、
+            // 每次都刷新 lockUntil，用极低频率永久锁死任意账号（对公开用户名即 DoS）。
             if (now - record.lastFailureTime > FAILURE_WINDOW_SEC * 1000) {
                 record.count = 0;
+                record.lockUntil = 0;
             }
             record.count++;
             record.lastFailureTime = now;
@@ -135,14 +150,9 @@ public class LoginFailureStore {
             return false;
         }
         long now = System.currentTimeMillis();
-        if (record.lockUntil > 0 && now < record.lockUntil) {
-            return true;
-        }
-        if (now - record.lastFailureTime > FAILURE_WINDOW_SEC * 1000) {
-            memoryFallback.remove(username);
-            return false;
-        }
-        return false;
+        // 锁定有效期与失败计数窗口解耦：窗口内即使又有失败，也只累加 count，
+        // 不延长已确定的 lockUntil（见 recordInMemory）。
+        return record.lockUntil > 0 && now < record.lockUntil;
     }
 
     private int remainingInMemory(String username) {
@@ -153,10 +163,6 @@ public class LoginFailureStore {
         long now = System.currentTimeMillis();
         if (record.lockUntil > 0 && now < record.lockUntil) {
             return 0;
-        }
-        if (now - record.lastFailureTime > FAILURE_WINDOW_SEC * 1000) {
-            memoryFallback.remove(username);
-            return MAX_FAILURES;
         }
         return Math.max(0, MAX_FAILURES - record.count);
     }

@@ -1,7 +1,9 @@
 # Astral 全项目接口文档
 
 > 整理自 `astral` 仓库全部 Controller。基础路径 `http://localhost:27000`，前缀 `/api/v1`。
-> 认证：管理端接口走宿主 Sa-Token（`satoken` 头，管理员）；App 接口走插件自身鉴权（`satoken` 头，App 用户）。
+> 认证：**管理台（浏览器）** 凭 HttpOnly Cookie `satoken` 自动认证，写请求需回填 `X-CSRF-Token`；
+> **轻听 App / 脚本 / Swagger 等非浏览器调用方** 走 `satoken` 请求头（该路径豁免 CSRF 校验）。
+> 两种方式都由宿主 Sa-Token 解析，详见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md#token-管理httponly-cookie--csrf-双提交)。
 > 返回包装：管理端宿主 `Result<T>{code,msg,data}`；反馈/轻听 App 端用各自 `FeedbackRestResp`/`QtRestResp{code,msg,data}`。
 
 ---
@@ -12,9 +14,12 @@
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/public-key` | 获取 RSA 公钥（登录密码加密用） |
-| POST | `/login` | 用户名密码登录（RSA 密文密码，限流 5次/60s，成功返回 token+用户信息） |
-| POST | `/logout` | 登出，使当前 token 失效 |
+| POST | `/login` | 用户名密码登录（RSA 密文密码，限流 5次/60s，成功返回 token+用户信息，并 Set-Cookie 下发 HttpOnly `satoken` 与 `astral_csrf`） |
+| POST | `/logout` | 登出，使当前 token 失效并清除认证 Cookie |
 | GET | `/info` | 获取当前登录用户信息（含角色/权限列表） |
+
+> 浏览器调用方：登录后凭 Cookie 自动认证；`POST`/`PUT`/`DELETE` 需带 `X-CSRF-Token`（值取自非 HttpOnly 的 `astral_csrf` Cookie），
+> 缺失或不匹配返回 403 `AUTH013`。带了 `satoken` 请求头的请求不参与该校验。
 
 ### 1.2 Token 管理 `/api/v1/system/token`
 | 方法 | URL | 作用 |
