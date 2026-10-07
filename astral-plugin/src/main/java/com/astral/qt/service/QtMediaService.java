@@ -342,19 +342,21 @@ public class QtMediaService {
         }
     }
 
-    /** 登记来源 IP（X-Forwarded-For 第一段 → X-Real-IP → remoteAddr，项目既有取法） */
+    /**
+     * 登记来源 IP。
+     * <p>必须走 {@link ClientIp#resolve}（带可信代理白名单），不能无条件取 XFF 第一段：
+     * 该头客户端可任意伪造，直接采信会让 uploader_ip 失去取证价值，也让按 IP 的风控形同虚设。
+     * 与 {@code StorageUserController}/{@code AppFeedbackController} 同口径——只有直连方本身是
+     * 可信代理时才采信转发头，并从右往左取第一个非可信跳。</p>
+     */
     private String clientIp(HttpServletRequest request) {
         if (request == null) {
             return null;
         }
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        String real = request.getHeader("X-Real-IP");
-        if (real != null && !real.isBlank()) {
-            return real.trim();
-        }
-        return request.getRemoteAddr();
+        return ClientIp.resolve(
+                request.getHeader("X-Forwarded-For"),
+                request.getHeader("X-Real-IP"),
+                request.getRemoteAddr(),
+                trustedProxies);
     }
 }

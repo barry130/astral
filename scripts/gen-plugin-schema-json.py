@@ -222,7 +222,7 @@ tables['sys_storage_file'] = {
     ],
     'indexes': [
         {'indexName': 'idx_storage_file_folder', 'columns': ['folder_id']},
-        {'indexName': 'idx_storage_file_upload', 'columns': ['upload_id']},
+        {'indexName': 'uq_storage_file_upload', 'columns': ['upload_id'], 'isUnique': True},
         {'indexName': 'idx_storage_file_status', 'columns': ['status']},
         {'indexName': 'uk_storage_file_public_id', 'columns': ['public_id'], 'isUnique': True},
     ],

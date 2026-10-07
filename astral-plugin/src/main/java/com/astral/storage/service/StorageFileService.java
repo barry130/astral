@@ -154,6 +154,9 @@ public class StorageFileService {
         if (req.uploadId() == null || req.uploadId().isBlank()) {
             throw new BusinessException("STORAGE008");
         }
+        // 先取事务级咨询锁：幂等判断（查→插）必须在锁内，否则并发重复回调两个事务
+        // 都会读到「不存在」而各插一行。表上 uq_storage_file_upload 唯一索引是最后一道防线。
+        fileMapper.lockUploadKey("storage-upload:" + req.uploadId());
         // 幂等：同一 uploadId 重复回调返回已有记录
         StorageFileEntity existing = fileMapper.selectOne(new LambdaQueryWrapper<StorageFileEntity>()
                 .eq(StorageFileEntity::getUploadId, req.uploadId())
@@ -212,6 +215,8 @@ public class StorageFileService {
         if (uploadId == null || uploadId.isBlank()) {
             throw new BusinessException("STORAGE008");
         }
+        // 同 registerFromCallback：幂等判断在事务级咨询锁内执行，消除「先查后插」竞态
+        fileMapper.lockUploadKey("storage-upload:" + uploadId);
         // 幂等：同一 uploadId 重复回执返回已有记录
         StorageFileEntity existing = fileMapper.selectOne(new LambdaQueryWrapper<StorageFileEntity>()
                 .eq(StorageFileEntity::getUploadId, uploadId)
@@ -631,22 +636,57 @@ public class StorageFileService {
 
     // ==================== Worker 删除任务协同 ====================
 
+    /**
+     * 删除任务租约时长（分钟）：任务被拉取置 RUNNING 后，超过该时长仍未 ack，
+     * 视为 Worker 拉取后崩溃/超时，按一次失败回收（走与 ack 失败相同的退避重试 / DEAD 判定）。
+     * Worker 单次 cron 远小于该值，正常执行不会被误回收。
+     */
+    private static final long DELETE_TASK_LEASE_MINUTES = 10;
+
     /** 拉取待执行的远端删除任务并标记 RUNNING（Worker 定时拉取） */
     @Transactional(rollbackFor = Exception.class)
     public List<StorageDtos.WorkerTaskView> pullDeleteTasks(int limit) {
         LocalDateTime now = LocalDateTime.now();
+        // 1. 回收租约过期的 RUNNING 任务：原实现拉取即置 RUNNING 且无任何回收路径，
+        //    Worker 拉取后崩溃不 ack，任务会永久卡在 RUNNING、文件永远停留 DELETING。
+        //    这里把过期租约当作一次失败处理，复用 ack 失败的指数退避与 MAX_DELETE_RETRY→DEAD 逻辑，
+        //    避免「每次崩溃都无限重来」。
+        List<StorageTaskEntity> stale = taskMapper.selectList(new LambdaQueryWrapper<StorageTaskEntity>()
+                .eq(StorageTaskEntity::getTaskType, StorageTaskEntity.TYPE_DELETE_REMOTE)
+                .eq(StorageTaskEntity::getStatus, StorageTaskEntity.STATUS_RUNNING)
+                .lt(StorageTaskEntity::getUpdateTime, now.minusMinutes(DELETE_TASK_LEASE_MINUTES))
+                .last("LIMIT 100"));
+        for (StorageTaskEntity task : stale) {
+            log.warn("[Storage] 删除任务租约过期回收: taskId={}, runningSince={}", task.getId(), task.getUpdateTime());
+            ackDeleteTask(task.getId(), false, "lease expired: worker did not ack within "
+                    + DELETE_TASK_LEASE_MINUTES + " minutes");
+        }
+
+        // 2. 拉取可执行的 PENDING 任务
         List<StorageTaskEntity> tasks = taskMapper.selectList(new LambdaQueryWrapper<StorageTaskEntity>()
                 .eq(StorageTaskEntity::getTaskType, StorageTaskEntity.TYPE_DELETE_REMOTE)
                 .eq(StorageTaskEntity::getStatus, StorageTaskEntity.STATUS_PENDING)
                 .and(w -> w.isNull(StorageTaskEntity::getNextRetryTime)
                         .or().le(StorageTaskEntity::getNextRetryTime, now))
                 .last("LIMIT " + Math.max(1, Math.min(limit, 50))));
-        return tasks.stream().map(task -> {
-            task.setStatus(StorageTaskEntity.STATUS_RUNNING);
-            task.setUpdateTime(now);
-            taskMapper.updateById(task);
-            return toTaskView(task);
-        }).toList();
+
+        // 3. 条件认领（CAS）：只有仍为 PENDING 的行才能被置 RUNNING，
+        //    并发拉取（多个 cron 实例重叠）时同一任务不会被两边同时领走。
+        List<StorageDtos.WorkerTaskView> claimed = new java.util.ArrayList<>();
+        for (StorageTaskEntity task : tasks) {
+            int rows = taskMapper.update(null,
+                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<StorageTaskEntity>()
+                            .eq(StorageTaskEntity::getId, task.getId())
+                            .eq(StorageTaskEntity::getStatus, StorageTaskEntity.STATUS_PENDING)
+                            .set(StorageTaskEntity::getStatus, StorageTaskEntity.STATUS_RUNNING)
+                            .set(StorageTaskEntity::getUpdateTime, now));
+            if (rows == 1) {
+                task.setStatus(StorageTaskEntity.STATUS_RUNNING);
+                task.setUpdateTime(now);
+                claimed.add(toTaskView(task));
+            }
+        }
+        return claimed;
     }
 
     /** Worker 删除确认：成功归档；失败按指数退避重试，超过上限转 DEAD */

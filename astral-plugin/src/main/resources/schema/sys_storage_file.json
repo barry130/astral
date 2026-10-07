@@ -188,10 +188,11 @@
       ]
     },
     {
-      "indexName": "idx_storage_file_upload",
+      "indexName": "uq_storage_file_upload",
       "columns": [
         "upload_id"
-      ]
+      ],
+      "isUnique": true
     },
     {
       "indexName": "idx_storage_file_status",
