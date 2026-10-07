@@ -16,10 +16,13 @@
 | GET | `/public-key` | 获取 RSA 公钥（登录密码加密用） |
 | POST | `/login` | 用户名密码登录（RSA 密文密码，限流 5次/60s，成功返回 token+用户信息，并 Set-Cookie 下发 HttpOnly `satoken` 与 `astral_csrf`） |
 | POST | `/logout` | 登出，使当前 token 失效并清除认证 Cookie |
-| GET | `/info` | 获取当前登录用户信息（含角色/权限列表） |
+| GET | `/info` | 获取当前登录用户信息（含角色/权限列表；响应体额外带 `csrfToken`，见下） |
 
-> 浏览器调用方：登录后凭 Cookie 自动认证；`POST`/`PUT`/`DELETE` 需带 `X-CSRF-Token`（值取自非 HttpOnly 的 `astral_csrf` Cookie），
-> 缺失或不匹配返回 403 `AUTH013`。带了 `satoken` 请求头的请求不参与该校验。
+> 浏览器调用方：登录后凭 Cookie 自动认证；`POST`/`PUT`/`DELETE` 需带 `X-CSRF-Token`，缺失或不匹配返回 403 `AUTH013`。
+> 令牌取值有两处，按顺序回退：**同源部署**读非 HttpOnly 的 `astral_csrf` Cookie；**跨域直连部署**下该 Cookie
+> 属于 API 域、页面读不到，改从登录响应体与 `GET /info` 响应体的 `csrfToken` 字段取（前端缓存在内存即可）。
+> 凡走 Cookie 凭据的登录用户都会拿到该值（不限于管理员）——网页端普通用户的 `/imgbed` 写操作同样需要它。
+> 带了 `satoken` 请求头的请求不参与该校验。
 
 ### 1.2 Token 管理 `/api/v1/system/token`
 | 方法 | URL | 作用 |

@@ -32,8 +32,17 @@ import java.time.Duration;
 @Component
 public class AuthCookieWriter {
 
+    /** Sa-Token 令牌名（{@code sa-token.token-name}）：Cookie 与请求头同名 */
+    public static final String TOKEN_NAME = "satoken";
+
     /** 承载 Sa-Token 令牌的 Cookie 名（与 sa-token.token-name 同名，便于排查） */
-    public static final String TOKEN_COOKIE = "satoken";
+    public static final String TOKEN_COOKIE = TOKEN_NAME;
+
+    /** 显式携带令牌的请求头名：带它的调用方豁免 CSRF 双提交校验 */
+    public static final String TOKEN_HEADER = TOKEN_NAME;
+
+    /** CSRF Cookie 的兜底有效期（秒）：与登录缺省一致（3 天） */
+    private static final long DEFAULT_CSRF_MAX_AGE = Duration.ofDays(3).toSeconds();
 
     private final boolean secure;
     private final String sameSite;
@@ -47,10 +56,33 @@ public class AuthCookieWriter {
 
     /** 登录成功后写入认证 Cookie 与 CSRF Cookie；返回本次生成的 CSRF 令牌（回传给前端） */
     public String writeLoginCookies(HttpServletResponse response, String token, long timeoutSeconds) {
-        long maxAge = timeoutSeconds > 0 ? timeoutSeconds : Duration.ofDays(3).toSeconds();
+        long maxAge = timeoutSeconds > 0 ? timeoutSeconds : DEFAULT_CSRF_MAX_AGE;
         CsrfTokenSupport.writeCookie(response, TOKEN_COOKIE, token, true, secure, sameSite, "/", maxAge);
         String csrf = CsrfTokenSupport.newToken();
         // CSRF Cookie 必须让前端读得到（HttpOnly=false），否则回填不了请求头
+        CsrfTokenSupport.writeCookie(response, CsrfTokenSupport.CSRF_COOKIE, csrf, false, secure, sameSite, "/", maxAge);
+        return csrf;
+    }
+
+    /**
+     * 读出当前请求的 CSRF 令牌；Cookie 不存在时<b>补发一枚</b>并返回。
+     *
+     * <p>为什么需要「补发」：令牌由登录响应写入 Cookie，但前端能否读到它取决于部署形态 ——
+     * 前后端<b>跨域直连</b>（如 web.canace.cn 直连 astral.canace.cn）时，Cookie 的域是 API 域，
+     * 前端页面所在域的 {@code document.cookie} <b>看不到它</b>，于是拿不到值、回填不了请求头，
+     * 所有写请求都会被双提交校验拦成 403（AUTH013），而只读请求照常可用 —— 现象就是
+     * 「能看不能改」。本方法让服务端把值随响应体交给前端（前端缓存在内存里），
+     * 既不改双提交的安全模型（跨站页面依然读不到响应体），也不依赖任何域名配置。</p>
+     *
+     * <p>不重新生成已有令牌：并发在途的请求各自带着旧值发出的头，换值会让其中一部分撞上校验失败。</p>
+     */
+    public String ensureCsrfToken(HttpServletRequest request, HttpServletResponse response, long maxAgeSeconds) {
+        String existing = CsrfTokenSupport.readCookie(request, CsrfTokenSupport.CSRF_COOKIE);
+        if (existing != null && !existing.isBlank()) {
+            return existing;
+        }
+        String csrf = CsrfTokenSupport.newToken();
+        long maxAge = maxAgeSeconds > 0 ? maxAgeSeconds : DEFAULT_CSRF_MAX_AGE;
         CsrfTokenSupport.writeCookie(response, CsrfTokenSupport.CSRF_COOKIE, csrf, false, secure, sameSite, "/", maxAge);
         return csrf;
     }
@@ -96,7 +128,7 @@ public class AuthCookieWriter {
     }
 
     /** 从当前请求上下文取请求（拿不到返回 null） */
-    private static HttpServletRequest currentRequest() {
+    public static HttpServletRequest currentRequest() {
         ServletRequestAttributes attrs = currentAttributes();
         return attrs != null ? attrs.getRequest() : null;
     }

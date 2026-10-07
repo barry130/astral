@@ -25,11 +25,68 @@ const isSilent = (config?: AxiosRequestConfig): boolean =>
 const CSRF_COOKIE = 'astral_csrf';
 const CSRF_HEADER = 'X-CSRF-Token';
 
-/** 读取 CSRF 令牌（SSR 阶段返回空串，交由同源请求的 Cookie 自洽） */
+/**
+ * 内存中的 CSRF 令牌缓存。
+ *
+ * 为什么不能只读 Cookie：令牌写在 `astral_csrf` Cookie 里，但**跨域直连**部署
+ * （如 web.canace.cn 直连 astral.canace.cn）时该 Cookie 属于 API 域，页面所在域的
+ * `document.cookie` 根本看不到它 —— 于是回填不了请求头，所有写请求被后端双提交校验
+ * 拦成 403（AUTH013），只读请求却一切正常，表现为「能看不能改」。
+ * 后端因此在登录与 `/api/v1/all/auth/info` 的响应体里一并返回该令牌，前端缓存在内存。
+ * 这不削弱双提交模型：跨站页面同样读不到我们的响应体。
+ */
+let csrfTokenCache = '';
+
+/** 写入令牌缓存（登录、拉取用户信息成功后调用） */
+export function setCsrfToken(token?: string | null): void {
+  csrfTokenCache = typeof token === 'string' ? token : '';
+}
+
+/** 清空令牌缓存（登出时调用，避免下次登录前带着过期指纹） */
+export function clearCsrfToken(): void {
+  csrfTokenCache = '';
+}
+
+/**
+ * 读取 CSRF 令牌：优先 Cookie（同源部署，值最新），读不到时回退内存缓存（跨域直连）。
+ * SSR 阶段两者皆空，返回空串（服务端渲染不发写请求）。
+ */
 export function readCsrfToken(): string {
-  if (typeof document === 'undefined') return '';
-  const matched = document.cookie.match(new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]*)`));
-  return matched ? decodeURIComponent(matched[1]) : '';
+  if (typeof document !== 'undefined') {
+    const matched = document.cookie.match(new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]*)`));
+    if (matched && matched[1]) {
+      return decodeURIComponent(matched[1]);
+    }
+  }
+  return csrfTokenCache;
+}
+
+/** 请求配置上的内部标记：AUTH013 已刷新重试过一次，避免死循环 */
+interface CsrfRetryConfig extends ApiRequestConfig {
+  __csrfRetried?: boolean;
+}
+
+/**
+ * 拉取一次有效令牌并写入缓存，返回「令牌是否真的变了」。
+ *
+ * `/api/v1/all/auth/info` 是安全方法（GET 不参与双提交校验），后端会在响应体里带上当前
+ * 有效令牌，因此刷新它不会再次触发 AUTH013。
+ *
+ * 返回值是**自限开关**：令牌没变说明重放也是同一个 403（例如服务端与会话不匹配，
+ * 该重新登录而不是重试），调用方据此放弃重放 —— 这样无论 axios 是否保留自定义配置键，
+ * 都不可能重试打转。
+ */
+async function refreshCsrfToken(): Promise<boolean> {
+  const before = readCsrfToken();
+  try {
+    const info = await client.get('/api/v1/all/auth/info', { silent: true } as ApiRequestConfig);
+    setCsrfToken(info?.data?.csrfToken);
+  } catch {
+    // 刷新失败（未登录 / 网络异常）：不重放，交给通用错误处理给出准确提示
+    return false;
+  }
+  const after = readCsrfToken();
+  return Boolean(after) && after !== before;
 }
 
 const client = axios.create({
@@ -85,10 +142,21 @@ client.interceptors.response.use(
     }
     return Promise.reject(new Error(result.message || '请求失败'));
   },
-  (error) => {
+  async (error) => {
     // 成功与失败都要归还计数，否则泄漏会让加载指示永久常驻
     if (!isSilent(error.config)) {
       endRequest();
+    }
+    const errorCode = error.response?.data?.errorCode;
+    // 双提交校验失败（AUTH013）：多半是跨域直连下 Cookie 读不到、令牌缓存又为空。
+    // 刷新一次令牌，只有确实拿到新值才重放原请求（见 refreshCsrfToken 的自限说明）；
+    // 拿不到就落回下面的通用处理，把后端原始 message 交给调用方，而不是 axios 的英文原文。
+    const retryConfig = error.config as CsrfRetryConfig | undefined;
+    if (errorCode === 'AUTH013' && retryConfig && !retryConfig.__csrfRetried) {
+      retryConfig.__csrfRetried = true;
+      if (await refreshCsrfToken()) {
+        return client.request(retryConfig);
+      }
     }
     if (error.response?.status === 401) {
       // 令牌在 HttpOnly Cookie 里，前端删不掉也不需要删：

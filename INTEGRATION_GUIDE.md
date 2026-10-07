@@ -82,8 +82,10 @@ curl -X POST http://localhost:27000/api/v1/all/sequence/next \
   -d '{"bizKey":"order_id"}'
 ```
 
-> 写方法（POST/PUT/DELETE）走 Cookie 时还需回填 `X-CSRF-Token: <astral_csrf 的值>`，
-> 否则被双提交校验拦下（403 / `AUTH013`）。走 `satoken` 头的请求不需要。
+> 写方法（POST/PUT/DELETE）走 Cookie 时还需回填 `X-CSRF-Token`：同源部署取自 `astral_csrf` Cookie，
+> 跨域直连部署读不到该 Cookie，改取登录响应体 / `GET /api/v1/all/auth/info` 的 `csrfToken` 字段
+> （任何走 Cookie 凭据的登录用户都会拿到，不限管理员）。
+> 缺失或不匹配会被双提交校验拦下（403 / `AUTH013`）。走 `satoken` 头的请求不需要。
 
 ---
 
@@ -203,9 +205,13 @@ npm run dev
 
 **代价与配套：凭据自动携带 ⇒ 跨站写请求也会带上它（CSRF）。** 因此补了双提交校验：
 
-1. 登录时后端额外下发一枚**非 HttpOnly** 的 `astral_csrf` Cookie（JS 读得到）；
+1. 登录时后端额外下发一枚**非 HttpOnly** 的 `astral_csrf` Cookie（JS 读得到），并把同一个值随**响应体**的 `csrfToken` 字段一并返回；
 2. 前端把它的值回填到 `X-CSRF-Token` 请求头；
 3. 后端对「凭据来自 Cookie 且方法非只读」的请求校验两者一致，不一致返回 403（`AUTH013`）。
+
+**为什么令牌要同时走 Cookie 和响应体**：Cookie 能不能被前端读到取决于部署形态。同源部署（Next.js rewrites 代理）下读得到；**跨域直连**部署（如 `web.canace.cn` 直连 `astral.canace.cn`）下 `astral_csrf` 属于 API 域，页面所在域的 `document.cookie` **看不到它**，于是回填不了请求头 —— 所有写请求被 403（`AUTH013`）拦下，而只读请求（GET 是安全方法，豁免校验）一切正常，现象正是「能看不能改」。响应体里的 `csrfToken` 就是给这种部署形态用的：跨站页面同样读不到响应体，双提交的安全模型不变。
+
+`GET /api/v1/all/auth/info` 也会返回该令牌，因此页面刷新后能自动拿回凭据，无需重新登录。这里**不按 `user_type` 过滤**：双提交校验的触发条件是「凭据来自 Cookie 且方法非只读」，与是不是管理员无关 —— 网页端的普通用户（APP）同样用 Cookie 登录，`/imgbed` 的删除、改可见性都是写请求，只给管理员发令牌会让这批用户刷新后必然撞 403。
 
 前端所需的一切只有两件事（见 `astral-front/src/api/client.ts`）：
 
@@ -214,13 +220,18 @@ const client = axios.create({
   withCredentials: true,   // Cookie 跨源部署时也需要带上；同源部署无影响
 });
 
+// 令牌优先取自 Cookie（同源部署），读不到时回退内存缓存（跨域直连，来自响应体 csrfToken）
+let csrfTokenCache = '';
+
 client.interceptors.request.use((config) => {
-  // CSRF 令牌从 Cookie 读出后回填请求头（后端双提交校验要求两者一致）
   const matched = document.cookie.match(/(?:^|;\s*)astral_csrf=([^;]*)/);
-  if (matched) config.headers['X-CSRF-Token'] = decodeURIComponent(matched[1]);
+  const csrf = matched && matched[1] ? decodeURIComponent(matched[1]) : csrfTokenCache;
+  if (csrf) config.headers['X-CSRF-Token'] = csrf;
   return config;
 });
 ```
+
+> 收到 403 `AUTH013` 时，前端会先拉一次 `/api/v1/all/auth/info` 刷新令牌缓存，再重放原请求（只重试一次）。
 
 **例外：轻听 App（qt-uniappx / qt-pc）与脚本、Swagger 等第三方调用方仍走 `satoken` 请求头。**
 
@@ -235,6 +246,10 @@ client.interceptors.request.use((config) => {
 | `AUTH_COOKIE_SECURE` | 生产 `true`（prod profile 默认已是），本地 http 开发设 `false` | `Secure` Cookie 只在 HTTPS 下落地 |
 | 同源 | 前端与后端同域（Next.js rewrites 代理 `/api` 即满足） | `SameSite=Strict` 的 Cookie 只在同站请求中携带 |
 | 拆域场景 | 把 `AUTH_COOKIE_SAME_SITE` 改成 `None`，且 `cookie-secure=true` | 跨站 Cookie 必须 `None` + `Secure`，否则浏览器直接拒收 |
+
+> **跨域直连（前后端不同子域，如 `web.canace.cn` → `astral.canace.cn`）**：认证 Cookie 能正常携带
+> （同站），但 `astral_csrf` 属于 API 域、页面 `document.cookie` 读不到 —— 这正是 `csrfToken`
+> 随响应体下发的原因，无需额外配置；前端按上文从响应体取令牌即可。
 
 ---
 

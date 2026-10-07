@@ -28,6 +28,13 @@ export interface LoginResponse {
   permissions: string[];
   /** 是否需要强制改密：1=是（管理端登录后必须先到个人中心修改密码） */
   mustChangePassword?: number;
+  /**
+   * 管理端 CSRF 双提交令牌（仅管理端返回）。
+   *
+   * 后端同时把它写在非 HttpOnly 的 `astral_csrf` Cookie 里，但**跨域直连**部署时
+   * 页面所在域读不到 API 域的 Cookie，因此响应体里也带一份，由 client.ts 缓存在内存。
+   */
+  csrfToken?: string;
 }
 
 /** 认证相关API接口 */

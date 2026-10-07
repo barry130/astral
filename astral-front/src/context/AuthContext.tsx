@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authApi, LoginResponse } from '@/api/auth';
+import { setCsrfToken, clearCsrfToken } from '@/api/client';
 
 /** 认证上下文类型定义 */
 interface AuthContextType {
@@ -44,11 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((res) => {
         if (res.code === 200) {
           // 类型已与后端对齐，无需再用 as any 掩盖
+          // 顺带接住后端随 /info 下发的 CSRF 令牌：跨域直连部署下页面读不到 API 域的
+          // astral_csrf Cookie，没有这一步所有写请求都会被 403（AUTH013）拦下。
+          setCsrfToken(res.data?.csrfToken);
           setUser(res.data);
         }
       })
       .catch(() => {
         // 未登录 / 令牌过期：Cookie 由后端在登出或过期时处理，前端无需（也无法）清理
+        clearCsrfToken();
         setUser(null);
       })
       .finally(() => setLoading(false));
@@ -63,6 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string, totpCode?: string) => {
     const res = await authApi.login({ username, password, totpCode });
     if (res.code === 200) {
+      // 登录响应体里的 csrfToken 是管理端写请求的必备凭据（见 client.ts 的说明）
+      setCsrfToken(res.data?.csrfToken);
       setUser(res.data);
       return res.data;
     }
@@ -74,6 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.logout();
     } finally {
+      // 令牌与 CSRF 指纹一同失效，缓存里的旧值不能再留给下一次会话
+      clearCsrfToken();
       setUser(null);
     }
   };

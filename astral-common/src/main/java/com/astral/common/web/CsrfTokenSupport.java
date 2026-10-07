@@ -24,6 +24,14 @@ import java.util.Base64;
  * <p>跨站页面读不到 Cookie 值（同源策略），因此伪造不出匹配的头，写请求会被拦下。
  * 令牌本身是随机串、与会话凭据解耦，不做服务端存储。</p>
  *
+ * <p><b>令牌为什么还要随响应体下发一份</b>：Cookie 能否被前端读到取决于部署形态。
+ * 同源部署（Next.js rewrites 代理）下读得到；<b>跨域直连</b>部署（如 {@code web.canace.cn}
+ * 直连 {@code astral.canace.cn}）下本 Cookie 属于 API 域，页面所在域的 {@code document.cookie}
+ * 看不到它 —— 前端拿不到值就回填不了请求头，所有写请求被 403（AUTH013）拦下，而只读请求
+ * 正常，表现为「能看不能改」。因此登录与 {@code /api/v1/all/auth/info} 的响应体里
+ * 也带上该值（见 {@code LoginResponse.csrfToken}）。这不削弱双提交模型：跨站页面同样
+ * 读不到我们的响应体。</p>
+ *
  * <p><b>为什么只对管理端区生效</b>：轻听 App 客户端（qt-uniappx / qt-pc）与其它第三方调用方
  * 仍然走 {@code satoken} 请求头（Header 是显式携带，不存在 CSRF），强制它们参与双提交
  * 会直接打断已发布的客户端。</p>
