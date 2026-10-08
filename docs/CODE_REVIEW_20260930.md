@@ -2,7 +2,7 @@
 
 > 审阅日期：2026-09-30
 > 审阅范围：`F:/qtMusic/astral`（后端 11 个 Maven 模块 + 前端 `astral-front`）
-> 技术栈：Spring Boot 4.1.0 / Spring Framework 7.0.8 / JDK 25（虚拟线程已开启）/ MyBatis-Plus 3.5.17 / PostgreSQL / Redis(Lettuce) / Sa-Token 1.46 / Next.js 16.3.6 + React 19.2
+> 技术栈：Spring Boot 4.1.0 / Spring Framework 7.0.8 / JDK 25（虚拟线程已开启）/ MyBatis-Plus 3.5.17 / PostgreSQL / Redis(Lettuce) / Sa-Token 1.46 / Next.js 16.3.8 + React 19.2
 > 说明：`com.astral.dao.entity.*` 为代码生成产物，`target/`、`node_modules/` 不在审阅范围。
 
 ---

@@ -44,7 +44,7 @@ Astral 是一套基于 Spring Boot 4.1（Java 25）+ Next.js 16 的全栈后台�
 | **API 文档** | SpringDoc OpenAPI 3.1（Swagger UI：`/swagger-ui.html`） |
 | **监控** | Spring Boot Actuator + Micrometer + Prometheus |
 | **工具库** | Hutool 5.8.47 |
-| **前端框架** | Next.js 16.3.6（App Router + Turbopack）+ React 19.2 + TypeScript 5.6 |
+| **前端框架** | Next.js 16.3.8（App Router + Turbopack）+ React 19.2 + TypeScript 5.6 |
 | **UI 组件** | shadcn/ui（Radix UI）+ Tailwind CSS v4 + lucide-react |
 | **图表** | ECharts 6（echarts-for-react） |
 | **构建工具** | Maven 3.9+（后端，无 wrapper）/ npm（前端，`package-lock.json`） |
