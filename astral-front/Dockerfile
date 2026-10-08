@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # 多阶段构建: Next.js 16 standalone
 #
-# 【前端版本】Next.js 16.3.6 + React 19 + Tailwind CSS v4 + shadcn/ui（已移除 antd）。
+# 【前端版本】Next.js 16.3.8 + React 19 + Tailwind CSS v4 + shadcn/ui（已移除 antd）。
 #   Next 16 默认使用 Turbopack 构建；`next lint` 已在 16 中移除，故 package.json 无 lint 脚本。
 #
 # 【Node 版本，勿随意改】三个阶段统一 node:24-alpine（Active LTS，支持到 2028-04）。

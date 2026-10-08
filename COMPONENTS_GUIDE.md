@@ -438,7 +438,7 @@ Sa-Token 认证拦截器作用于 `/api/**`，排除项（见 `astral-server` �
 
 | 功能 | 技术 | 版本 |
 |------|------|------|
-| 框架 | Next.js（App Router，默认 Turbopack 构建，`output: 'standalone'`） | 16.3.6 |
+| 框架 | Next.js（App Router，默认 Turbopack 构建，`output: 'standalone'`） | 16.3.8 |
 | UI 运行时 | React / React DOM | 19.2 |
 | 语言 | TypeScript | 5.6 |
 | 样式 | Tailwind CSS（`@tailwindcss/postcss`）+ `tw-animate-css` | 4.3 |
