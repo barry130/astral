@@ -5,9 +5,12 @@ import com.astral.dao.entity.DictData;
 import com.astral.dao.mapper.DictDataMapper;
 import com.astral.system.service.DictDataService;
 import com.astral.common.result.Result;
+import com.astral.common.util.PatchValues;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
+import java.time.LocalDateTime;
 import java.util.List;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -117,8 +120,20 @@ public class DictDataController {
     @PutMapping("/{id}")
     @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictData entity) {
-        entity.setId(id);
-        dictDataService.updateById(entity);
+        // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
+        // 「清空样式类/描述」等保存后仍是旧值。白名单逐列显式 set，可空列原样写入（含 null）。
+        dictDataService.update(new LambdaUpdateWrapper<DictData>()
+                .eq(DictData::getId, id)
+                .set(DictData::getDictTypeId, entity.getDictTypeId())
+                .set(DictData::getDictLabel, entity.getDictLabel())
+                .set(DictData::getDictValue, entity.getDictValue())
+                .set(DictData::getDictSort, PatchValues.orDefault(entity.getDictSort(), 0))
+                .set(DictData::getCssClass, PatchValues.blankToNull(entity.getCssClass()))
+                .set(DictData::getListClass, PatchValues.blankToNull(entity.getListClass()))
+                .set(DictData::getIsDefault, PatchValues.orDefault(entity.getIsDefault(), 0))
+                .set(DictData::getStatus, PatchValues.orDefault(entity.getStatus(), 1))
+                .set(DictData::getDescription, PatchValues.blankToNull(entity.getDescription()))
+                .set(DictData::getUpdateTime, LocalDateTime.now()));
         return Result.success();
     }
 

@@ -9,7 +9,9 @@ import com.astral.dao.entity.RolePermission;
 import com.astral.dao.mapper.RolePermissionMapper;
 import com.astral.system.service.PermissionService;
 import com.astral.common.result.Result;
+import com.astral.common.util.PatchValues;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 @Tag(name = "权限管理")
@@ -72,11 +75,25 @@ public class PermissionController {
     @RequiresSuper
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody Permission entity) {
-        entity.setId(id);
-        // 防止 mass assignment：时间列不可由客户端改写
-        entity.setCreateTime(null);
-        entity.setUpdateTime(null);
-        permissionService.updateById(entity);
+        // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
+        // 「把 method/icon/domain 清空」「父级改成顶级」保存后都不生效（前端提示成功、库里没变）。
+        // 这里白名单逐列显式 set：可空列原样写入（含 null），非空列回落默认值；
+        // 顺带满足 mass assignment 要求——create_time/update_time 不在白名单里，客户端改不动。
+        LambdaUpdateWrapper<Permission> update = new LambdaUpdateWrapper<Permission>()
+                .eq(Permission::getId, id)
+                .set(Permission::getPermissionCode, entity.getPermissionCode())
+                .set(Permission::getPermissionName, entity.getPermissionName())
+                .set(Permission::getUrl, PatchValues.blankToNull(entity.getUrl()))
+                .set(Permission::getMethod, PatchValues.blankToNull(entity.getMethod()))
+                .set(Permission::getDomain, PatchValues.blankToNull(entity.getDomain()))
+                .set(Permission::getIcon, PatchValues.blankToNull(entity.getIcon()))
+                // 表单「留空表示顶级」：parent_id 是 NOT NULL DEFAULT 0
+                .set(Permission::getParentId, PatchValues.orDefault(entity.getParentId(), 0L))
+                .set(Permission::getType, PatchValues.orDefault(entity.getType(), 1))
+                .set(Permission::getSort, PatchValues.orDefault(entity.getSort(), 0))
+                .set(Permission::getStatus, PatchValues.orDefault(entity.getStatus(), 1))
+                .set(Permission::getUpdateTime, LocalDateTime.now());
+        permissionService.update(update);
         // 权限定义（含 status）变化会影响所有人的可见权限，递增权限版本
         permissionCache.bumpVersion();
         return Result.success();

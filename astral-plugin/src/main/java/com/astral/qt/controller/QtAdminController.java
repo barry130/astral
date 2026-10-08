@@ -17,7 +17,9 @@ import com.astral.qt.service.QtSourceService;
 
 import com.astral.qt.mapper.QtUserDakaMapper;
 import com.astral.qt.service.QtDakaService;
+import com.astral.common.util.PatchValues;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -145,22 +147,40 @@ public class QtAdminController {
         if (exist == null) {
             return QtRestResp.error("版本信息不存在");
         }
-        if (update.getDownloadUrl() == null) update.setDownloadUrl(exist.getDownloadUrl());
-        if (update.getBrowserUrl() == null) update.setBrowserUrl(exist.getBrowserUrl());
-        if (update.getIsGithub() == null) update.setIsGithub(exist.getIsGithub());
-        String err = validateUpdateLinks(update);
+        // null = 本次没提交（保持原值），空串 = 显式清空（写 NULL，列本身可空）
+        String downloadUrl = PatchValues.orCurrent(update.getDownloadUrl(), exist.getDownloadUrl());
+        String browserUrl = PatchValues.orCurrent(update.getBrowserUrl(), exist.getBrowserUrl());
+        Long isGithub = PatchValues.orDefault(update.getIsGithub(), exist.getIsGithub());
+        String err = validateUpdateLinks(downloadUrl, browserUrl, isGithub);
         if (err != null) {
             return QtRestResp.error(300, err);
         }
-        // downloadMode 已废弃，后台不再维护：显式清空传值，避免旧客户端残留
-        update.setDownloadMode(null);
-        update.setId(id);
-        if (update.getType() == null) update.setType(exist.getType());
-        if (!QtAppUpdate.isSupportedType(update.getType())) {
+        Long type = PatchValues.orDefault(update.getType(), exist.getType());
+        if (!QtAppUpdate.isSupportedType(type)) {
             return QtRestResp.error(300, "平台类型不支持(1101-Android 1102-iOS 1103-Windows)");
         }
-        update.setUpdateTime(LocalDateTime.now());
-        qtUpdateMapper.updateById(update);
+        // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
+        // 「清空版本说明/更新类型/文件大小/md5」保存后都还是旧值。白名单逐列显式 set。
+        // fileSize 用原值写入（含 null）：整表单提交时 null 就是「清空」，文件大小列可空。
+        qtUpdateMapper.update(null, new LambdaUpdateWrapper<QtAppUpdate>()
+                .eq(QtAppUpdate::getId, id)
+                .set(QtAppUpdate::getVersionCode, PatchValues.orDefault(update.getVersionCode(), exist.getVersionCode()))
+                .set(QtAppUpdate::getType, type)
+                .set(QtAppUpdate::getVersionName, PatchValues.orCurrent(update.getVersionName(), exist.getVersionName()))
+                .set(QtAppUpdate::getVersionInfo, PatchValues.orCurrent(update.getVersionInfo(), exist.getVersionInfo()))
+                .set(QtAppUpdate::getUpdateType, PatchValues.orCurrent(update.getUpdateType(), exist.getUpdateType()))
+                .set(QtAppUpdate::getDownloadUrl, downloadUrl)
+                .set(QtAppUpdate::getBrowserUrl, browserUrl)
+                .set(QtAppUpdate::getChannel, PatchValues.orDefault(update.getChannel(), exist.getChannel()))
+                // download_mode 已废弃，后台不再维护：这里显式清成空串，避免旧客户端读到残留值。
+                // 该列是 NOT NULL DEFAULT 'app'，写不了 NULL，updateById(null) 又会被跳过（原实现因此没清掉）
+                .set(QtAppUpdate::getDownloadMode, "")
+                .set(QtAppUpdate::getIsGithub, isGithub)
+                .set(QtAppUpdate::getIsForce, PatchValues.orDefault(update.getIsForce(), exist.getIsForce()))
+                .set(QtAppUpdate::getIsPublished, PatchValues.orDefault(update.getIsPublished(), exist.getIsPublished()))
+                .set(QtAppUpdate::getFileSize, update.getFileSize())
+                .set(QtAppUpdate::getMd5, PatchValues.orCurrent(update.getMd5(), exist.getMd5()))
+                .set(QtAppUpdate::getUpdateTime, LocalDateTime.now()));
         appService.evictUpdateCache();
         return QtRestResp.success();
     }
@@ -170,13 +190,16 @@ public class QtAdminController {
      * downloadUrl 与 browserUrl 至少填一个；isGithub=1 时 downloadUrl 必填。
      */
     private String validateUpdateLinks(QtAppUpdate update) {
-        boolean hasDirect = update.getDownloadUrl() != null && !update.getDownloadUrl().isBlank();
-        boolean hasBrowser = update.getBrowserUrl() != null && !update.getBrowserUrl().isBlank();
+        return validateUpdateLinks(update.getDownloadUrl(), update.getBrowserUrl(), update.getIsGithub());
+    }
+
+    private String validateUpdateLinks(String downloadUrl, String browserUrl, Long isGithub) {
+        boolean hasDirect = downloadUrl != null && !downloadUrl.isBlank();
+        boolean hasBrowser = browserUrl != null && !browserUrl.isBlank();
         if (!hasDirect && !hasBrowser) {
             return "直链下载与浏览器下载至少填一个";
         }
-        Long github = update.getIsGithub();
-        if (github != null && github == 1L && !hasDirect) {
+        if (isGithub != null && isGithub == 1L && !hasDirect) {
             return "GitHub 下载必须填写直链下载地址";
         }
         return null;
@@ -212,15 +235,20 @@ public class QtAdminController {
     @Operation(summary = "编辑GitHub加速节点（自动刷新缓存）")
     @PutMapping("/github-accels/{id}")
     public QtRestResp<Void> updateGithubAccel(@PathVariable Long id, @RequestBody QtGithubAccel accel) {
-        if (accel.getPrefixUrl() != null && accel.getPrefixUrl().isBlank()) {
+        // prefix_url 是 NOT NULL 列，整表单提交必带；这里不再容忍 null，避免白名单写入撞非空约束
+        if (accel.getPrefixUrl() == null || accel.getPrefixUrl().isBlank()) {
             return QtRestResp.error(300, "加速前缀不能为空");
         }
-        if (accel.getPrefixUrl() != null) {
-            accel.setPrefixUrl(QtGithubAccelService.normalizePrefix(accel.getPrefixUrl()));
-        }
-        accel.setId(id);
-        accel.setUpdateTime(LocalDateTime.now());
-        githubAccelService.updateById(accel);
+        // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
+        // 「清空备注」保存后仍是旧值。白名单逐列显式 set，可空列原样写入（含 null）。
+        githubAccelService.update(new LambdaUpdateWrapper<QtGithubAccel>()
+                .eq(QtGithubAccel::getId, id)
+                .set(QtGithubAccel::getName, PatchValues.blankToNull(accel.getName()))
+                .set(QtGithubAccel::getPrefixUrl, QtGithubAccelService.normalizePrefix(accel.getPrefixUrl()))
+                .set(QtGithubAccel::getIsShow, PatchValues.orDefault(accel.getIsShow(), 1L))
+                .set(QtGithubAccel::getSort, PatchValues.orDefault(accel.getSort(), 0L))
+                .set(QtGithubAccel::getRemark, PatchValues.blankToNull(accel.getRemark()))
+                .set(QtGithubAccel::getUpdateTime, LocalDateTime.now()));
         githubAccelService.refreshCache();
         return QtRestResp.success();
     }

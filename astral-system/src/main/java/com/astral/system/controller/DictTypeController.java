@@ -4,7 +4,9 @@ import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.DictType;
 import com.astral.system.service.DictTypeService;
 import com.astral.common.result.Result;
+import com.astral.common.util.PatchValues;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -94,8 +97,18 @@ public class DictTypeController {
     @PutMapping("/{id}")
     @CacheEvict(cacheNames = {"dictType", "dictData"}, allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictType entity) {
-        entity.setId(id);
-        dictTypeService.updateById(entity);
+        // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
+        // 「把数据类型长度清空」保存后仍是旧值。白名单逐列显式 set，可空列原样写入（含 null）。
+        dictTypeService.update(new LambdaUpdateWrapper<DictType>()
+                .eq(DictType::getId, id)
+                .set(DictType::getDictCode, entity.getDictCode())
+                .set(DictType::getDictName, entity.getDictName())
+                .set(DictType::getDataType, PatchValues.blankToNull(entity.getDataType()))
+                .set(DictType::getJdbcType, PatchValues.blankToNull(entity.getJdbcType()))
+                .set(DictType::getDataLength, entity.getDataLength())
+                .set(DictType::getDescription, PatchValues.blankToNull(entity.getDescription()))
+                .set(DictType::getStatus, PatchValues.orDefault(entity.getStatus(), 1))
+                .set(DictType::getUpdateTime, LocalDateTime.now()));
         return Result.success();
     }
 

@@ -2,15 +2,18 @@ package com.astral.system.service.impl;
 
 import com.astral.common.error.ErrorCodes;
 import com.astral.common.exception.BusinessException;
+import com.astral.common.util.PatchValues;
 import com.astral.dao.entity.SysMenu;
 import com.astral.dao.mapper.SysMenuMapper;
 import com.astral.system.service.SysMenuService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -73,10 +76,24 @@ public class SysMenuServiceImpl implements SysMenuService {
                 throw new BusinessException("SYS014", newParentId);
             }
         }
-        menu.setId(id);
-        menu.setParentId(newParentId);
-        sysMenuMapper.updateById(menu);
-        return menu;
+        // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
+        // 编辑弹窗里「清空图标」保存后不会生效。白名单逐列显式 set。
+        // 注意本入口既是整表单提交，也被拖拽排序用局部 payload（只带 sort/parentId）调用，
+        // 因此未提交（null）的列一律回落 existing（保持原值），只有空串才算「清空」。
+        LambdaUpdateWrapper<SysMenu> update = new LambdaUpdateWrapper<SysMenu>()
+                .eq(SysMenu::getId, id)
+                .set(SysMenu::getParentId, newParentId)
+                .set(SysMenu::getName, PatchValues.orDefault(menu.getName(), existing.getName()))
+                .set(SysMenu::getIcon, PatchValues.orCurrent(menu.getIcon(), existing.getIcon()))
+                .set(SysMenu::getPath, PatchValues.orCurrent(menu.getPath(), existing.getPath()))
+                .set(SysMenu::getPermission, PatchValues.orCurrent(menu.getPermission(), existing.getPermission()))
+                .set(SysMenu::getSort, PatchValues.orDefault(menu.getSort(), existing.getSort()))
+                .set(SysMenu::getVisible, PatchValues.orDefault(menu.getVisible(), existing.getVisible()))
+                .set(SysMenu::getType, PatchValues.orDefault(menu.getType(), existing.getType()))
+                .set(SysMenu::getUpdateTime, LocalDateTime.now());
+        sysMenuMapper.update(null, update);
+        // 回读库中最新行：入参可能是局部 payload（拖拽排序只带 sort/parentId），原样回显会缺字段
+        return sysMenuMapper.selectById(id);
     }
 
     @Override

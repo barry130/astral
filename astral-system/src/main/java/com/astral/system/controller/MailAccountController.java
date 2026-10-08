@@ -80,9 +80,10 @@ public class MailAccountController {
         if (entity.getPassword() != null && entity.getPassword().isBlank()) {
             throw new BusinessException("MAIL007");
         }
-        // 白名单 + 按需更新。不能用 updateById(entity)：实测 MP 3.5.17 即便字段被显式置 null
-        // 也会写进 SET 子句（见 AGENTS §5 / RoleController.update 同款说明），直调 API 即可把
-        // 任意未传字段写坏；这里逐字段判 null，只写真正传了的。
+        // 白名单 + 按需更新。不能用 updateById(entity)：客户端传什么就写什么（mass assignment），
+        // 直调 API 即可把任意字段写坏；「靠置 null 来剥离字段」同样不成立 —— MP 默认
+        // updateStrategy=NOT_NULL，updateById 会跳过显式置 null 的字段（见 AGENTS §5）。
+        // 因此只允许白名单字段，并逐字段判 null，只写真正传了的。
         var wrapper = accountService.lambdaUpdate().eq(SysMailAccount::getId, id);
         if (entity.getAccountName() != null) {
             wrapper.set(SysMailAccount::getAccountName, entity.getAccountName());

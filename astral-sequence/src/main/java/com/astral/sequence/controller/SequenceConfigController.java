@@ -3,6 +3,7 @@ package com.astral.sequence.controller;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.error.ErrorCodes;
 import com.astral.common.result.Result;
+import com.astral.common.util.PatchValues;
 import com.astral.dao.entity.SequenceConfig;
 import com.astral.dao.entity.SequenceStatistics;
 import com.astral.dao.mapper.SequenceConfigMapper;
@@ -10,6 +11,7 @@ import com.astral.dao.mapper.SequenceStatisticsMapper;
 import com.astral.log.annotation.OperateLog;
 import com.astral.sequence.service.GeneratorFactory;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -169,9 +172,21 @@ public class SequenceConfigController {
     public Result<SequenceConfig> update(@PathVariable Long id, @Valid @RequestBody SequenceConfig config) {
         SequenceConfig existing = sequenceConfigMapper.selectById(id);
         assertNotSystemSequence(existing, "SEQ008");
+        // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
+        // 「清空前缀/后缀/日期格式」保存后仍是旧值。白名单逐列显式 set，可空列原样写入（含 null）。
+        sequenceConfigMapper.update(null, new LambdaUpdateWrapper<SequenceConfig>()
+                .eq(SequenceConfig::getId, id)
+                .set(SequenceConfig::getBizKey, config.getBizKey())
+                .set(SequenceConfig::getSequenceType, config.getSequenceType())
+                .set(SequenceConfig::getStep, PatchValues.orDefault(config.getStep(), 1000))
+                .set(SequenceConfig::getDateFormat, PatchValues.blankToNull(config.getDateFormat()))
+                .set(SequenceConfig::getPrefix, PatchValues.blankToNull(config.getPrefix()))
+                .set(SequenceConfig::getSuffix, PatchValues.blankToNull(config.getSuffix()))
+                .set(SequenceConfig::getMinValue, PatchValues.orDefault(config.getMinValue(), 1L))
+                .set(SequenceConfig::getEnabled, PatchValues.orDefault(config.getEnabled(), Boolean.TRUE))
+                .set(SequenceConfig::getDescription, PatchValues.blankToNull(config.getDescription()))
+                .set(SequenceConfig::getUpdateTime, LocalDateTime.now()));
         config.setId(id);
-        config.setUpdateTime(java.time.LocalDateTime.now());
-        sequenceConfigMapper.updateById(config);
         generatorFactory.evictConfigCache();
         return Result.success(config);
     }

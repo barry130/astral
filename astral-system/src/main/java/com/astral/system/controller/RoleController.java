@@ -115,9 +115,9 @@ public class RoleController {
             throw new BusinessException("SYS003");
         }
         // 白名单 + 按需更新：只允许改这几个字段，且只写客户端真正传了的字段。
-        // 不能用 updateById(entity) —— 实测 MP 3.5.17 会生成
-        //   UPDATE sys_role SET role_name=?, is_super=?, update_time=? WHERE id=?
-        // 即便 is_super 置 null 也会被写进 SET 子句（等于给持有 admin:system:role:edit 的人留了自封超管的后门）；
+        // 不能用 updateById(entity)：它会写客户端传上来的所有字段，持有 admin:system:role:edit 的人
+        // PUT {"isSuper":1} 就能自封超管（mass assignment）；「靠置 null 剥离」也不成立 ——
+        // MP 默认 updateStrategy=NOT_NULL，updateById 会跳过显式置 null 的字段，is_super 根本写不成 null；
         // 而「先查后覆盖」也不可靠（读会被会话缓存命中，拿到的可能是旧值）。
         // 因此统一走 lambdaUpdate 白名单；且必须逐字段判 null，否则未传的字段会被写成
         // NULL 而撞上 status 的 not-null 约束（局部更新场景，前端只传改动字段）。

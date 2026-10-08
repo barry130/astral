@@ -8,6 +8,7 @@ import com.astral.dao.entity.SysNotice;
 import com.astral.dao.mapper.SysNoticeMapper;
 import com.astral.system.service.SysConfigService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -235,6 +236,19 @@ public class FeedbackNoticeService {
     /** 新增通知（公告/定向）；渠道归一化与校验统一走 {@link NoticeChannel} */
     public SysNotice create(SysNotice notice) {
         notice.setChannel(NoticeChannel.normalizeForStore(notice.getChannel()));
+        applyNotNullDefaults(notice);
+        notice.setCreateTime(LocalDateTime.now());
+        notice.setUpdateTime(LocalDateTime.now());
+        sysNoticeMapper.insert(notice);
+        evictNoticeCache();
+        return notice;
+    }
+
+    /**
+     * 非空列的空值回落（create / update 共用）。
+     * <p>这些列库里虽有 DEFAULT，但显式写 NULL 仍会撞非空约束，所以送 SQL 前先回落默认值。</p>
+     */
+    private static void applyNotNullDefaults(SysNotice notice) {
         if (notice.getNoticeType() == null || notice.getNoticeType().isBlank()) {
             notice.setNoticeType(NoticeConstants.TYPE_ANNOUNCE);
         }
@@ -249,24 +263,49 @@ public class FeedbackNoticeService {
         if (notice.getAudience() == null || notice.getAudience().isBlank()) {
             notice.setAudience("ALL");
         }
-        notice.setCreateTime(LocalDateTime.now());
-        notice.setUpdateTime(LocalDateTime.now());
-        sysNoticeMapper.insert(notice);
-        evictNoticeCache();
-        return notice;
     }
 
-    /** 更新通知 */
+    /**
+     * 更新通知：编辑表单提交什么就写什么（清空即写 NULL）。
+     * <p>用白名单 {@link LambdaUpdateWrapper} 逐字段 set，而不是整实体 {@code updateById}，原因有二：</p>
+     * <ul>
+     *   <li><b>可空列要能清空</b>：版本码区间（{@code version_min}/{@code version_max}）、生效时间、
+     *       {@code url}/{@code user_id} 被表单清空时必须真的写回 NULL。MyBatis-Plus 的 {@code updateById}
+     *       默认 {@code updateStrategy = FieldStrategy.NOT_NULL}（{@code GlobalConfig.DbConfig}），
+     *       生成 SQL 时经 {@code TableFieldInfo#convertIf} 包一层 {@code <if test="x != null">}，
+     *       显式置 null 的列会被整条跳过 —— 于是「之前填过的版本号清不掉」，保存看似成功实则没生效。</li>
+     *   <li>整实体更新还留了 mass assignment 面（客户端可塞 {@code scene}/{@code feedback_id}/{@code read_time}
+     *       等非表单字段），详见 docs/CODING_GUIDE.md「不要整实体 updateById」。</li>
+     * </ul>
+     * <p>{@code channel} 提交为空仍表示「本次不改该字段」；{@code scene}/{@code feedback_id}/{@code read_time}
+     * 由站内信与反馈事件写入、编辑表单不提交，故不在白名单内。</p>
+     */
     public void update(Long id, SysNotice notice) {
-        notice.setId(id);
+        applyNotNullDefaults(notice);
+        LambdaUpdateWrapper<SysNotice> uw = new LambdaUpdateWrapper<SysNotice>()
+                .eq(SysNotice::getId, id);
         // 仅当提交了渠道才归一化：为空表示「本次不改该字段」，不能回落成默认值把原渠道冲掉
         if (notice.getChannel() != null && !notice.getChannel().isBlank()) {
-            notice.setChannel(NoticeChannel.normalizeForStore(notice.getChannel()));
-        } else {
-            notice.setChannel(null);
+            uw.set(SysNotice::getChannel, NoticeChannel.normalizeForStore(notice.getChannel()));
         }
-        notice.setUpdateTime(LocalDateTime.now());
-        sysNoticeMapper.updateById(notice);
+        uw.set(SysNotice::getNoticeType, notice.getNoticeType())
+                .set(SysNotice::getTitle, notice.getTitle())
+                .set(SysNotice::getContent, notice.getContent())
+                .set(SysNotice::getUrl, notice.getUrl())
+                .set(SysNotice::getUserId, notice.getUserId())
+                .set(SysNotice::getDisplay, notice.getDisplay())
+                .set(SysNotice::getAudience, notice.getAudience())
+                .set(SysNotice::getIsShow, notice.getIsShow())
+                .set(SysNotice::getIsTop, notice.getIsTop())
+                .set(SysNotice::getDialogClosable, notice.getDialogClosable())
+                .set(SysNotice::getFirstLoginOnly, notice.getFirstLoginOnly())
+                .set(SysNotice::getMarquee, notice.getMarquee())
+                .set(SysNotice::getEffectiveStart, notice.getEffectiveStart())
+                .set(SysNotice::getEffectiveEnd, notice.getEffectiveEnd())
+                .set(SysNotice::getVersionMin, notice.getVersionMin())
+                .set(SysNotice::getVersionMax, notice.getVersionMax())
+                .set(SysNotice::getUpdateTime, LocalDateTime.now());
+        sysNoticeMapper.update(null, uw);
         evictNoticeCache();
     }
 

@@ -87,8 +87,9 @@ public class SmsProviderController {
         }
         validate(entity, id);
         // accessSecret 三态：null = 不修改；空串 = 显式拒绝（会冲掉已存密钥）；非空 = 覆盖。
-        // 白名单按需更新：MP 3.5.17 updateById 即便字段显式置 null 也会写进 SET 子句，
-        // 直调 API 会把未传字段写坏（MailAccountController 同款约束）。
+        // 白名单按需更新：updateById 会写客户端传上来的所有字段（mass assignment），
+        // 直调 API 会把未传字段写坏；「置 null 剥离」也不成立 —— MP 默认 NOT_NULL 策略会跳过
+        // 显式置 null 的字段（MailAccountController / RoleController.update 同款约束）。
         if (entity.getAccessSecret() != null && entity.getAccessSecret().isBlank()) {
             throw new BusinessException("MAIL007");
         }
