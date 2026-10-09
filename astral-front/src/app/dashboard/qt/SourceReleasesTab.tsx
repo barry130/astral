@@ -50,6 +50,13 @@ const FALLBACK_PLATFORM_OPTS = [
   { value: 1105, label: 'macOS' },
 ];
 
+/**
+ * 新建发布单的默认适用平台。刻意只默认 Windows（1103）：平台是「哪些客户端能收到这个包」，
+ * 而一个音源包通常先只出 Windows 产物；勾上 Linux/macOS 却没上传对应产物，会把不完整的包
+ * 分发给这两个端。需要多平台时由发布人手动勾选（后端 QtSourceRelease 已支持 1104/1105）。
+ */
+const DEFAULT_PLATFORMS = [1103];
+
 const FALLBACK_CHANNEL_OPTS = [
   { value: 'stable', label: '正式版' },
   { value: 'beta', label: '测试版' },
@@ -219,11 +226,11 @@ export default function SourceReleasesTab() {
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ platforms: [1103], channel: 'stable', hostApiVersion: 1, artifacts: [] });
+      form.setFieldsValue({ platforms: [...DEFAULT_PLATFORMS], channel: 'stable', hostApiVersion: 1, artifacts: [] });
       // 新建默认：已选平台各自全选现存版本（用户自行删除不需要的）
       setAdmission(() => {
         const adm: Record<number, AdmissionRow> = {};
-        for (const p of [1103]) {
+        for (const p of DEFAULT_PLATFORMS) {
           const codes = appVersions[p] || [];
           adm[p] = { unlimited: !codes.length, codes: [...codes] };
         }

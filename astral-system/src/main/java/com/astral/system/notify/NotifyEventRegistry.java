@@ -79,7 +79,7 @@ public final class NotifyEventRegistry {
                             new NotifyEventField("feedbackTitle", "反馈标题")),
                     List.of(NotifyChannel.INAPP), null),
             new NotifyEventDef(FEEDBACK_NEW_SUBMISSION, "新反馈/需求提交通知",
-                    "feedback 插件触发：新反馈/需求提交后群发管理员。订阅规则收件人建议 ROLE=ADMIN（按角色展开全部启用用户），平台建议 app-windows（仅管理端可见）",
+                    "feedback 插件触发：新反馈/需求提交后群发管理员。订阅规则收件人建议 ROLE=ADMIN（按角色展开全部启用用户）；本事件只在管理端站内信呈现，平台填 app-windows 或 web 均可（管理端不按客户端平台过滤）",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
                     List.of(NotifyChannel.INAPP), null),

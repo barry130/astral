@@ -24,7 +24,8 @@ import java.util.regex.Pattern;
  *       <td>32</td><td>{@code stat_api_hourly.app_version}</td><td>{@code sys_feedback.app_version}</td></tr>
  *   <tr><td>{@code X-Device}</td><td>设备型号 / 主机名</td><td>{@code Pixel 6} / {@code iPhone 15 Pro} / {@code DESKTOP-ABC}</td>
  *       <td>128</td><td>—</td><td>{@code sys_feedback.device}</td></tr>
- *   <tr><td>{@code X-OS}</td><td>操作系统及版本</td><td>{@code Android 14} / {@code iOS 18.2} / {@code Windows 11 Pro 23H2}</td>
+ *   <tr><td>{@code X-OS}</td><td>操作系统及版本</td>
+ *       <td>{@code Android 14} / {@code iOS 18.2} / {@code Windows 11 Pro 23H2} / {@code Ubuntu 24.04.1 LTS} / {@code macOS 15.1}</td>
  *       <td>64</td><td>—</td><td>{@code sys_feedback.os}</td></tr>
  * </table>
  *

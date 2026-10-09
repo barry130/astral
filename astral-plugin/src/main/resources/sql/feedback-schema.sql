@@ -45,7 +45,7 @@ CREATE INDEX IF NOT EXISTS idx_reply_user ON sys_feedback_reply(user_id);
 CREATE TABLE IF NOT EXISTS sys_notice (
     id               BIGINT PRIMARY KEY,                   -- 序列 sys_notice_id
     -- 新增维度
-    channel          VARCHAR(64) NOT NULL DEFAULT 'app-android,app-ios', -- 逗号分隔平台集合：app-android|app-ios|app-windows|web，或 all=不限平台
+    channel          VARCHAR(64) NOT NULL DEFAULT 'app-android,app-ios', -- 逗号分隔平台集合：app-android|app-ios|app-windows|app-linux|app-macos|web，或 all=不限平台
     notice_type      VARCHAR(16) NOT NULL DEFAULT 'announce', -- announce公告|feedback反馈|request需求
     scene            VARCHAR(64),                          -- 站内信业务场景（站内信模板/事件注册表 scene）；广播公告为空
     user_id          BIGINT,                               -- NULL=广播；有值=点对点
