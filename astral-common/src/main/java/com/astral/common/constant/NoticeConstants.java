@@ -29,6 +29,12 @@ public class NoticeConstants {
     /** Windows 客户端 */
     public static final String CHANNEL_WINDOWS = ClientHeaders.UT_WINDOWS;
 
+    /** Linux 客户端 */
+    public static final String CHANNEL_LINUX = ClientHeaders.UT_LINUX;
+
+    /** macOS 客户端 */
+    public static final String CHANNEL_MACOS = ClientHeaders.UT_MACOS;
+
     /** Web 端 */
     public static final String CHANNEL_WEB = ClientHeaders.UT_WEB;
 

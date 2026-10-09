@@ -108,6 +108,8 @@ export const FALLBACK_UT_OPTIONS = [
   { value: 'app-android', label: 'Android' },
   { value: 'app-ios', label: 'iOS' },
   { value: 'app-windows', label: 'Windows' },
+  { value: 'app-linux', label: 'Linux' },
+  { value: 'app-macos', label: 'macOS' },
   { value: 'web', label: 'Web' },
 ];
 

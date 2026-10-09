@@ -533,11 +533,11 @@ public class QtSourceService {
 
     private List<Long> validatePlatforms(List<Long> platforms) {
         if (platforms == null || platforms.isEmpty()) {
-            throw new QtException("至少选择一个适用平台（1101/1102/1103）");
+            throw new QtException("至少选择一个适用平台（1101/1102/1103/1104/1105）");
         }
         for (Long p : platforms) {
             if (!QtSourceRelease.isSupportedPlatform(p)) {
-                throw new QtException("平台类型不支持(1101-Android 1102-iOS 1103-Windows)");
+                throw new QtException("平台类型不支持(1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS)");
             }
         }
         return platforms;

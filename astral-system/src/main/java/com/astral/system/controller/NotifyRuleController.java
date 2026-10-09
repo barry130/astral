@@ -119,7 +119,8 @@ public class NotifyRuleController {
      */
 
     private static final java.util.Set<String> KNOWN_PLATFORMS = java.util.Set.of(
-            "all", "app-android", "app-ios", "app-windows", "web", "app", "pc");
+            "all", "app-android", "app-ios", "app-windows", "app-linux", "app-macos",
+            "web", "app", "pc");
 
     private void validateRule(SysNotifyRule entity, Long id) {
         if (entity.getRuleName() == null || entity.getRuleName().isBlank()) {

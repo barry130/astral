@@ -49,7 +49,7 @@ export interface FeedbackReply {
 /** 统一通知实体 */
 export interface SysNotice {
   id?: number;
-  /** 投放平台：逗号分隔（app-android / app-ios / app-windows / web），或 all=不限平台 */
+  /** 投放平台：逗号分隔（app-android / app-ios / app-windows / app-linux / app-macos / web），或 all=不限平台 */
   channel?: string;
   /** announce | feedback | request */
   noticeType?: string;
@@ -294,6 +294,8 @@ const NOTICE_CHANNEL_TEXT_FALLBACK: Record<string, string> = {
   'app-android': 'Android',
   'app-ios': 'iOS',
   'app-windows': 'Windows',
+  'app-linux': 'Linux',
+  'app-macos': 'macOS',
   web: 'Web',
   all: '全部平台',
   app: 'App（旧）',
@@ -307,6 +309,8 @@ const FEEDBACK_PLATFORM_TEXT_FALLBACK: Record<string, string> = {
   'app-android': 'Android',
   'app-ios': 'iOS',
   'app-windows': 'Windows',
+  'app-linux': 'Linux',
+  'app-macos': 'macOS',
   web: 'Web',
   android: 'Android',
   ios: 'iOS',

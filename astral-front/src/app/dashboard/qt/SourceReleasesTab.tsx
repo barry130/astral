@@ -46,6 +46,8 @@ const FALLBACK_PLATFORM_OPTS = [
   { value: 1101, label: '安卓' },
   { value: 1102, label: 'iOS' },
   { value: 1103, label: 'Windows' },
+  { value: 1104, label: 'Linux' },
+  { value: 1105, label: 'macOS' },
 ];
 
 const FALLBACK_CHANNEL_OPTS = [

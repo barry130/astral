@@ -65,6 +65,8 @@ V{yyyyMMddNNN}__{下划线小写描述}.sql    例：V20260915001__add_user_avat
 | 20261002006 | `V20261002006__unify_notice.sql` | 阶段⑤统一通知存储：`sys_notice` 增 `read_time`/`scene` 列 + `idx_sys_notice_user_read`；废弃 `sys_announcement` 并释放其序列/字典；菜单「邮箱管理」更名「消息中心」 | 执行 |
 | 20261002007 | `V20261002007__feedback_rule_notify.sql` | 阶段⑥：反馈插件 5 个通知规则化，种子 5 模板 + 5 规则 | 执行 |
 | 20261006001 | `V20261006001__qt_source_artifact_dict.sql` | 音源包产物路径字典 | 执行 |
+| 20261007001 | `V20261007001__storage_file_upload_id_unique.sql` | `sys_storage_file.upload_id` 建唯一索引，堵住并发重复登记（两条登记路径都是「先查后插」，原普通索引在数据库层不设防）。先清理存量重复：同一 `upload_id` 保留 `id` 最大的一行，其余置 `upload_id=NULL` + `status='DELETED'`（**不产生远端删除任务**——重复行指向同一远端对象，误删会让保留行变死链）。配套代码 `StorageFileMapper#lockUploadKey` 取 `pg_advisory_xact_lock` 串行化同一 uploadId 的幂等检查 | 执行 |
+| 20261008001 | `V20261008001__platform_linux_macos.sql` | 平台字典新增 Linux(`app-linux`) / macOS(`app-macos`) 与更新类型 1104/1105（qt-pc 由 Windows 单平台扩为三平台）：① `stat_platform` 加两行 sort4/5 并把 web 顺延 sort6；② `qt_update_platform` 加 `1104`/`1105`；③ `notice_channel` 加两行 sort4/5 并把 web→6、all→7。三处一律 `MAX(id)+ROW_NUMBER()` 动态取号 + `dict_type_id+dict_value` 的 `NOT EXISTS` 守卫（写死 id 的教训见 20261001007 / 20260930006）。配套代码侧 `QtAppUpdate`/`QtSourceRelease`/`ClientHeaders`/`NoticeChannel`/`NoticeConstants` 与前端兜底文案表已同批放开 | 执行 |
 
 ## 新增一个变更的流程
 

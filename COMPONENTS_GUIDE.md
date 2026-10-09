@@ -169,7 +169,7 @@ curl http://localhost:27000/api/v1/admin/system/user/list \
 
 筛选参数约定：
 
-- `ut`：平台（`app-android` / `app-ios` / `app-windows` / `web`）；**不传、空、`all` 均表示不加平台过滤**
+- `ut`：平台（`app-android` / `app-ios` / `app-windows` / `app-linux` / `app-macos` / `web`）；**不传、空、`all` 均表示不加平台过滤**
 - `version`：客户端版本；同样遵循「不传 / 空 / `all` ⇒ 不限制」
 - 版本下拉只在选定具体平台后才有数据：全部平台时 `/versions` 返回空数组，前端把版本置空并禁用。
 
@@ -181,17 +181,17 @@ curl http://localhost:27000/api/v1/admin/system/user/list \
 
 | 请求头 | 含义 | 取值 | 上限 | 接口统计落库 | 反馈落库 |
 |--------|------|------|------|--------------|----------|
-| `X-App-Ut` | 客户端平台 | `app-android` / `app-ios` / `app-windows` / `web` | 16 | `stat_api_hourly.ut` | `sys_feedback.platform` |
+| `X-App-Ut` | 客户端平台 | `app-android` / `app-ios` / `app-windows` / `app-linux` / `app-macos` / `web` | 16 | `stat_api_hourly.ut` | `sys_feedback.platform` |
 | `X-App-Version` | 客户端版本 | 语义化版本，如 `1.1.0` / `3.0.1` | 32 | `stat_api_hourly.app_version` | `sys_feedback.app_version` |
 | `X-Device` | 设备型号 / 主机名 | `Pixel 6` / `iPhone 15 Pro` / `DESKTOP-ABC` / `Chrome 131` | 128 | — | `sys_feedback.device` |
-| `X-OS` | 操作系统及版本 | `Android 14` / `iOS 18.2` / `Windows 11 Pro 23H2 (22631)` | 64 | — | `sys_feedback.os` |
+| `X-OS` | 操作系统及版本 | `Android 14` / `iOS 18.2` / `Windows 11 Pro 23H2 (22631)` / `Ubuntu 24.04.1 LTS` / `macOS 15.1` | 64 | — | `sys_feedback.os` |
 
 各端的实际取值：
 
 | 端 | `X-App-Ut` | `X-App-Version` | `X-Device` | `X-OS` |
 |----|-----------|-----------------|-----------|--------|
 | qt-uniappx（Android/iOS） | `app-android` / `app-ios` | `manifest.json` 的 `versionName` | `getDeviceInfo().deviceModel` | `osName + " " + osVersion` |
-| qt-pc（Windows） | `app-windows` | `CARGO_PKG_VERSION`（= `app.config.json` 的 `version.name`） | `%COMPUTERNAME%` | 注册表 `CurrentVersion` 的 ProductName + DisplayVersion + BuildNumber |
+| qt-pc（Windows / Linux / macOS） | `app-windows` / `app-linux` / `app-macos`（按 `target_os` 三选一） | `CARGO_PKG_VERSION`（= `app.config.json` 的 `version.name`） | `%COMPUTERNAME%` / `hostname` | Windows：注册表 `CurrentVersion` 的 ProductName + DisplayVersion + BuildNumber；Linux：`/etc/os-release` 的 PRETTY_NAME（如 `Ubuntu 24.04.1 LTS`）；macOS：`sw_vers` 的 `-productName` + `-productVersion`（如 `macOS 15.1`）；都取不到时退化为 `linux` / `macos` |
 | astral-front（管理台） | `web` | `package.json` 的 `version`（构建期注入） | 浏览器及大版本 | UA 推断的操作系统 |
 
 实现位置（改契约时必须四处同步）：
@@ -203,7 +203,7 @@ curl http://localhost:27000/api/v1/admin/system/user/list \
 
 约定与注意事项：
 
-- **平台值走 `stat_platform` 字典**（`app-android` / `app-ios` / `app-windows` / `web`），
+- **平台值走 `stat_platform` 字典**（`app-android` / `app-ios` / `app-windows` / `app-linux` / `app-macos` / `web`），
   反馈页与统计页的下拉/展示共用这一份字典，不要另造取值。
 - **`ut` 做白名单校验**：这四个头都是客户端可伪造的，而 `ut` / `app_version` 直接参与
   `stat_api_hourly` 的分组与唯一键。未知 `ut` 一律归空串（等价于「未携带」），

@@ -40,7 +40,7 @@ public class QtAppService {
     /**
      * 获取版本更新信息。
      *
-     * @param type            1101 安卓 / 1102 iOS / 1103 Windows
+     * @param type            1101 安卓 / 1102 iOS / 1103 Windows / 1104 Linux / 1105 macOS
      * @param version         客户端版本号（如 222 对应 2.2.2）
      * @param visibleChannels 当前用户<b>可见</b>的渠道集合，由 DataScopeResolver 按结果级权限
      *                        （qt:update:channel:*）解析，无权限者只有 stable。
@@ -76,7 +76,7 @@ public class QtAppService {
      * <p><b>注意</b>：本方法<b>不过滤</b> is_published —— 未发布版本仅用于本地版本测试，
      * 也应通过"官方校验"，本地测试版本不被判为"非官方版本"。</p>
      *
-     * @param type        1101 安卓 / 1102 iOS / 1103 Windows
+     * @param type        1101 安卓 / 1102 iOS / 1103 Windows / 1104 Linux / 1105 macOS
      * @param version     客户端版本号（如 222 对应 2.2.2）
      * @param versionName 客户端版本名称（如 2.2.2）
      */

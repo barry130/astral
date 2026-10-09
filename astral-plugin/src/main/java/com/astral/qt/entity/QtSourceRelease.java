@@ -32,10 +32,14 @@ public class QtSourceRelease {
     public static final Long PLATFORM_IOS = 1102L;
     /** 平台：Windows 桌面端 */
     public static final Long PLATFORM_WINDOWS = 1103L;
+    /** 平台：Linux 桌面端 */
+    public static final Long PLATFORM_LINUX = 1104L;
+    /** 平台：macOS 桌面端 */
+    public static final Long PLATFORM_MACOS = 1105L;
 
     /** 全部受支持的平台（与 qt_app_update 同源） */
     private static final List<Long> SUPPORTED_PLATFORMS =
-            Arrays.asList(PLATFORM_ANDROID, PLATFORM_IOS, PLATFORM_WINDOWS);
+            Arrays.asList(PLATFORM_ANDROID, PLATFORM_IOS, PLATFORM_WINDOWS, PLATFORM_LINUX, PLATFORM_MACOS);
 
     /** 渠道：正式版 */
     public static final String CHANNEL_STABLE = "stable";
@@ -45,7 +49,7 @@ public class QtSourceRelease {
     /**
      * 判断平台是否受支持
      *
-     * @param platform 平台（1101/1102/1103）
+     * @param platform 平台（1101/1102/1103/1104/1105）
      * @return 受支持返回 true
      */
     public static boolean isSupportedPlatform(Long platform) {

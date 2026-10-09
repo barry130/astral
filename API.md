@@ -362,6 +362,6 @@
 > 状态机：`pending提出 → received已接收 → resolved已解决 → published已发布`；任意状态→`deprecated已废弃`；已废弃可转回任意状态。
 > 通知类型：`issue` 反馈映射为 `feedback`，`request` 反馈映射为 `request`。
 > 通知渠道 `channel`：**逗号分隔的投放平台集合**，取值与 `stat_platform` 同源
-> （`app-android` / `app-ios` / `app-windows` / `web`），另有 `all` = 不限平台。
+> （`app-android` / `app-ios` / `app-windows` / `app-linux` / `app-macos` / `web`），另有 `all` = 不限平台。
 > 分页的 `channel` 参数支持多选（逗号分隔，逐项「包含」匹配）；
 > 存量遗留值 `app` / `pc` 仍可提交，落库时分别归一为 `app-android,app-ios` / `app-windows`。

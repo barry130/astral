@@ -126,7 +126,7 @@ public class QtAdminController {
         update.setId(null);
         if (update.getType() == null) update.setType(QtAppUpdate.TYPE_ANDROID);
         if (!QtAppUpdate.isSupportedType(update.getType())) {
-            return QtRestResp.error(300, "平台类型不支持(1101-Android 1102-iOS 1103-Windows)");
+            return QtRestResp.error(300, "平台类型不支持(1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS)");
         }
         if (update.getChannel() == null || update.getChannel().isBlank()) update.setChannel("stable");
         if (update.getIsGithub() == null) update.setIsGithub(0L);
@@ -157,7 +157,7 @@ public class QtAdminController {
         }
         Long type = PatchValues.orDefault(update.getType(), exist.getType());
         if (!QtAppUpdate.isSupportedType(type)) {
-            return QtRestResp.error(300, "平台类型不支持(1101-Android 1102-iOS 1103-Windows)");
+            return QtRestResp.error(300, "平台类型不支持(1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS)");
         }
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「清空版本说明/更新类型/文件大小/md5」保存后都还是旧值。白名单逐列显式 set。
