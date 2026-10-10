@@ -19,10 +19,10 @@
       "fieldName": "channel",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "投放平台(逗号分隔:app-android/app-ios/app-windows/web,或all=不限平台)",
+      "comment": "投放平台(逗号分隔:app-android/app-ios/app-windows/app-linux/app-macos/app-harmony/web,或all=不限平台)",
       "isRequired": true,
       "defaultValue": "app-android,app-ios",
-      "length": 64
+      "length": 96
     },
     {
       "columnName": "notice_type",

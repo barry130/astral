@@ -48,12 +48,13 @@ const FALLBACK_PLATFORM_OPTS = [
   { value: 1103, label: 'Windows' },
   { value: 1104, label: 'Linux' },
   { value: 1105, label: 'macOS' },
+  { value: 1106, label: 'HarmonyOS' },
 ];
 
 /**
  * 新建发布单的默认适用平台。刻意只默认 Windows（1103）：平台是「哪些客户端能收到这个包」，
- * 而一个音源包通常先只出 Windows 产物；勾上 Linux/macOS 却没上传对应产物，会把不完整的包
- * 分发给这两个端。需要多平台时由发布人手动勾选（后端 QtSourceRelease 已支持 1104/1105）。
+ * 而一个音源包通常先只出 Windows 产物；勾上 Linux/macOS/鸿蒙却没上传对应产物，会把不完整的包
+ * 分发给这些端。需要多平台时由发布人手动勾选（后端 QtSourceRelease 已支持 1104/1105/1106）。
  */
 const DEFAULT_PLATFORMS = [1103];
 

@@ -45,7 +45,7 @@ CREATE INDEX IF NOT EXISTS idx_reply_user ON sys_feedback_reply(user_id);
 CREATE TABLE IF NOT EXISTS sys_notice (
     id               BIGINT PRIMARY KEY,                   -- 序列 sys_notice_id
     -- 新增维度
-    channel          VARCHAR(64) NOT NULL DEFAULT 'app-android,app-ios', -- 逗号分隔平台集合：app-android|app-ios|app-windows|app-linux|app-macos|web，或 all=不限平台
+    channel          VARCHAR(96) NOT NULL DEFAULT 'app-android,app-ios', -- 逗号分隔平台集合：app-android|app-ios|app-windows|app-linux|app-macos|app-harmony|web，或 all=不限平台（全选拼接 67 字符，留余量取 96）
     notice_type      VARCHAR(16) NOT NULL DEFAULT 'announce', -- announce公告|feedback反馈|request需求
     scene            VARCHAR(64),                          -- 站内信业务场景（站内信模板/事件注册表 scene）；广播公告为空
     user_id          BIGINT,                               -- NULL=广播；有值=点对点
@@ -99,7 +99,7 @@ COMMENT ON COLUMN sys_feedback_reply.user_id IS '发送者ID(用户/管理员均
 COMMENT ON COLUMN sys_feedback_reply.content IS '回复内容';
 COMMENT ON COLUMN sys_feedback_reply.reply_time IS '回复时间';
 COMMENT ON COLUMN sys_notice.id IS '主键ID';
-COMMENT ON COLUMN sys_notice.channel IS '渠道(app/web/all)';
+COMMENT ON COLUMN sys_notice.channel IS '投放平台(逗号分隔:app-android/app-ios/app-windows/app-linux/app-macos/app-harmony/web,或all=不限平台)';
 COMMENT ON COLUMN sys_notice.notice_type IS '类型(announce公告/feedback反馈/request需求)';
 COMMENT ON COLUMN sys_notice.scene IS '站内信业务场景(站内信模板/事件注册表scene,公告为空)';
 COMMENT ON COLUMN sys_notice.user_id IS '点对点目标用户ID(NULL=广播)';

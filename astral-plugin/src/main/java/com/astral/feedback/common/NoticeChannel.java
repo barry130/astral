@@ -13,7 +13,7 @@ import java.util.Set;
  * 通知渠道（sys_notice.channel）取值与匹配规则。
  *
  * <p><b>值域与统计平台同源</b>：平台部分直接复用 {@link ClientHeaders} 的常量
- * （{@code app-android} / {@code app-ios} / {@code app-windows} / {@code app-linux} / {@code app-macos} / {@code web}），
+ * （{@code app-android} / {@code app-ios} / {@code app-windows} / {@code app-linux} / {@code app-macos} / {@code app-harmony} / {@code web}），
  * 也就是 {@code stat_platform} 字典的取值 —— 通知投放维度与接口统计/反馈的平台口径
  * 完全一致；额外的 {@value #ALL} 是本表独有的「不限平台」哨兵，<b>不得写进
  * {@code stat_platform} 字典</b>（那会让它在统计筛选里变成一个真实平台）。</p>
@@ -34,6 +34,7 @@ import java.util.Set;
  *   <tr><td>qt-pc（Tauri 桌面端）</td><td>{@code pc}</td><td>{@code app-windows}</td></tr>
  *   <tr><td>qt-pc（Tauri 桌面端，Linux）</td><td>—</td><td>{@code app-linux}</td></tr>
  *   <tr><td>qt-pc（Tauri 桌面端，macOS）</td><td>—</td><td>{@code app-macos}</td></tr>
+ *   <tr><td>qt-uniappx（鸿蒙原生包）</td><td>—</td><td>{@code app-harmony}</td></tr>
  *   <tr><td>Web / H5</td><td>{@code web}</td><td>{@code web}（新老同值）</td></tr>
  *   <tr><td>任意端</td><td>{@code all}</td><td>{@code all}（不限平台）</td></tr>
  * </table>
@@ -55,6 +56,7 @@ public final class NoticeChannel {
             ClientHeaders.UT_WINDOWS,
             ClientHeaders.UT_LINUX,
             ClientHeaders.UT_MACOS,
+            ClientHeaders.UT_HARMONY,
             ClientHeaders.UT_WEB);
 
     /** 遗留渠道值：App（Android + iOS 合并端） */
@@ -71,8 +73,16 @@ public final class NoticeChannel {
      */
     public static final List<String> DEFAULT_TARGETS = MOBILE_APP;
 
-    /** 落库列宽（与 sys_notice.channel 一致），最长合法值 {@code app-android,app-ios,app-windows,app-linux,app-macos,web} = 55 */
-    public static final int MAX_STORED_LENGTH = 64;
+    /**
+     * 落库列宽（与 {@code sys_notice.channel} 一致）。
+     * <p>最长合法值 = {@code PLATFORMS} 全选后逗号拼接：
+     * {@code app-android,app-ios,app-windows,app-linux,app-macos,app-harmony,web} = 67。
+     * 加入 {@code app-harmony} 前是 55，原本的 64 已不够用，故
+     * {@code V20261009001__platform_harmony.sql} 把列宽一并抬到 96 留余量。
+     * <b>再加平台时务必同步抬列宽</b>，否则全选投放会在落库时被截断成半个平台名
+     * （PostgreSQL 对超长 VARCHAR 是直接报错 22001，不会静默截断，但仍须先抬）。</p>
+     */
+    public static final int MAX_STORED_LENGTH = 96;
 
     private NoticeChannel() {
     }

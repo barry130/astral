@@ -78,7 +78,7 @@ public class Feedback {
     /** 客户端版本（取自请求头 X-App-Version，如 3.0.0） */
     private String appVersion;
 
-    /** 客户端平台（取自请求头 X-App-Ut：app-android|app-ios|app-windows|app-linux|app-macos|web） */
+    /** 客户端平台（取自请求头 X-App-Ut：app-android|app-ios|app-windows|app-linux|app-macos|app-harmony|web） */
     private String platform;
 
     /** 提交 IP（服务端取） */

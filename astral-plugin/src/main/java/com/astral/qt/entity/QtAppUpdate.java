@@ -26,15 +26,17 @@ public class QtAppUpdate {
     public static final Long TYPE_LINUX = 1104L;
     /** 平台：macOS 桌面端 */
     public static final Long TYPE_MACOS = 1105L;
+    /** 平台：HarmonyOS（qt-uniappx 鸿蒙原生包） */
+    public static final Long TYPE_HARMONY = 1106L;
 
     /** 全部受支持的平台 */
     private static final List<Long> SUPPORTED_TYPES =
-            Arrays.asList(TYPE_ANDROID, TYPE_IOS, TYPE_WINDOWS, TYPE_LINUX, TYPE_MACOS);
+            Arrays.asList(TYPE_ANDROID, TYPE_IOS, TYPE_WINDOWS, TYPE_LINUX, TYPE_MACOS, TYPE_HARMONY);
 
     /**
      * 判断平台类型是否受支持
      *
-     * @param type 平台类型（1101/1102/1103/1104/1105）
+     * @param type 平台类型（1101/1102/1103/1104/1105/1106）
      * @return 受支持返回true
      */
     public static boolean isSupportedType(Long type) {
@@ -47,7 +49,7 @@ public class QtAppUpdate {
     /** 版本号，如 222 对应 2.2.2 */
     private Long versionCode;
 
-    /** 客户端平台类型：1101 安卓 / 1102 iOS / 1103 Windows / 1104 Linux / 1105 macOS */
+    /** 客户端平台类型：1101 安卓 / 1102 iOS / 1103 Windows / 1104 Linux / 1105 macOS / 1106 鸿蒙 */
     private Long type;
 
     private String versionName;

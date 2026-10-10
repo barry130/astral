@@ -66,8 +66,8 @@
       "fieldName": "platform",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "INAPP平台定向(默认all)",
-      "length": 64
+      "comment": "INAPP平台定向(逗号分隔:app-android/app-ios/app-windows/app-linux/app-macos/app-harmony/web,或all=不限平台)",
+      "length": 96
     },
     {
       "columnName": "enabled",

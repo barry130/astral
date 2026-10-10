@@ -38,7 +38,7 @@ public class SysNotifyRule {
     @Size(max = 128)
     private String recipientValue;
 
-    @Size(max = 64)
+    @Size(max = 96)
     private String platform;
 
     private Integer enabled;

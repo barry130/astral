@@ -24,7 +24,7 @@ public class QtSourceReleaseVo {
     /** 音源包版本名（yyyy.MM.dd.N，后端派生，仅展示） */
     private String sourceVersionName;
 
-    /** 适用平台（1101 安卓 / 1102 iOS / 1103 Windows / 1104 Linux / 1105 macOS） */
+    /** 适用平台（1101 安卓 / 1102 iOS / 1103 Windows / 1104 Linux / 1105 macOS / 1106 鸿蒙） */
     private List<Long> platforms;
 
     /** 需要的宿主契约版本 */

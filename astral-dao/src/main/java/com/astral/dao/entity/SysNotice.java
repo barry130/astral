@@ -18,7 +18,7 @@ public class SysNotice {
     @TableId(type = IdType.INPUT)
     private Long id;
 
-    @Size(max = 64)
+    @Size(max = 96)
     private String channel;
 
     @TableField("notice_type")

@@ -9,7 +9,7 @@ import lombok.Data;
 @Data
 public class QtSourceReportDto {
 
-    /** 客户端平台（1101/1102/1103/1104/1105） */
+    /** 客户端平台（1101/1102/1103/1104/1105/1106） */
     private Long platform;
 
     /** 客户端应用版本号 */

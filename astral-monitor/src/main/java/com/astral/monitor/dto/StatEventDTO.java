@@ -28,7 +28,7 @@ public class StatEventDTO {
     @Size(max = 64)
     private String deviceId;
 
-    /** 平台：app-android | app-ios | app-windows | app-linux | app-macos | web */
+    /** 平台：app-android | app-ios | app-windows | app-linux | app-macos | app-harmony | web */
     @NotBlank
     @Size(max = 16)
     private String ut;

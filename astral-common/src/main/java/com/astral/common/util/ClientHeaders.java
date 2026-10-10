@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
  *   <caption>头 → 取值 → 落库列</caption>
  *   <tr><th>头名</th><th>含义</th><th>取值</th><th>上限</th><th>统计落库</th><th>反馈落库</th></tr>
  *   <tr><td>{@code X-App-Ut}</td><td>客户端平台</td>
- *       <td>{@code app-android} / {@code app-ios} / {@code app-windows} / {@code app-linux} / {@code app-macos} / {@code web}</td>
+ *       <td>{@code app-android} / {@code app-ios} / {@code app-windows} / {@code app-linux} / {@code app-macos} / {@code app-harmony} / {@code web}</td>
  *       <td>16</td><td>{@code stat_api_hourly.ut}</td><td>{@code sys_feedback.platform}</td></tr>
  *   <tr><td>{@code X-App-Version}</td><td>客户端版本号</td><td>语义化版本，如 {@code 1.1.0}</td>
  *       <td>32</td><td>{@code stat_api_hourly.app_version}</td><td>{@code sys_feedback.app_version}</td></tr>
@@ -96,12 +96,14 @@ public final class ClientHeaders {
     public static final String UT_LINUX = "app-linux";
     /** macOS 桌面端（qt-pc） */
     public static final String UT_MACOS = "app-macos";
+    /** HarmonyOS App（qt-uniappx 鸿蒙原生包） */
+    public static final String UT_HARMONY = "app-harmony";
     /** Web / H5（管理台 astral-front、轻听 Web 版） */
     public static final String UT_WEB = "web";
 
     /** 允许上报的平台集合；不在此列的值一律归空串 */
     public static final Set<String> UT_VALUES =
-            Set.of(UT_ANDROID, UT_IOS, UT_WINDOWS, UT_LINUX, UT_MACOS, UT_WEB);
+            Set.of(UT_ANDROID, UT_IOS, UT_WINDOWS, UT_LINUX, UT_MACOS, UT_HARMONY, UT_WEB);
 
     /** 遗留 {@code X-Platform} 值 → 统一 {@code X-App-Ut} 值的映射（含已是新值的情况，做幂等） */
     private static final Map<String, String> LEGACY_PLATFORM_MAP = Map.ofEntries(
@@ -110,11 +112,13 @@ public final class ClientHeaders {
             Map.entry("windows", UT_WINDOWS),
             Map.entry("linux", UT_LINUX),
             Map.entry("macos", UT_MACOS),
+            Map.entry("harmony", UT_HARMONY),
             Map.entry(UT_ANDROID, UT_ANDROID),
             Map.entry(UT_IOS, UT_IOS),
             Map.entry(UT_WINDOWS, UT_WINDOWS),
             Map.entry(UT_LINUX, UT_LINUX),
             Map.entry(UT_MACOS, UT_MACOS),
+            Map.entry(UT_HARMONY, UT_HARMONY),
             Map.entry(UT_WEB, UT_WEB));
 
     private ClientHeaders() {

@@ -35,6 +35,9 @@ public class NoticeConstants {
     /** macOS 客户端 */
     public static final String CHANNEL_MACOS = ClientHeaders.UT_MACOS;
 
+    /** HarmonyOS 客户端 */
+    public static final String CHANNEL_HARMONY = ClientHeaders.UT_HARMONY;
+
     /** Web 端 */
     public static final String CHANNEL_WEB = ClientHeaders.UT_WEB;
 

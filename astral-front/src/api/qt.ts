@@ -140,7 +140,7 @@ export interface QtSourceRelease {
   sourceVersionCode?: number;
   /** 版本名（yyyy.MM.dd.N，后端派生） */
   sourceVersionName?: string;
-  /** 适用平台（1101/1102/1103/1104/1105） */
+  /** 适用平台（1101/1102/1103/1104/1105/1106） */
   platforms: number[];
   /** 按平台准入的应用版本号（平台缺省或空数组=不限制） */
   appVersionCodes?: Record<string, number[]>;
