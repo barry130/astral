@@ -70,6 +70,8 @@ public class QtAppController {
     @GetMapping("/update")
     public QtRestResp<QtAppUpdate> getUpdate(@RequestParam("type") Long type,
                                              @RequestParam("version") String version,
+                                             // 架构为可选参数：不上送（旧客户端）也能用，只是拿不到按架构挑选的那一份
+                                             @RequestParam(value = "arch", required = false) String arch,
                                              @RequestHeader(value = "satoken", required = false) String satoken) {
         if (!QtAppUpdate.isSupportedType(type)) {
             return QtRestResp.error(320, "暂不支持该类型");
@@ -79,7 +81,7 @@ public class QtAppController {
         // 正式版版本号更高时，持有测试权限的用户依然收到正式版。
         Set<String> channels = dataScopeResolver.resolveChannelsByToken(
                 satoken, PermissionChecker.QT_UPDATE_CHANNEL_SCOPE);
-        return QtRestResp.success(appService.getUpdate(type, version, channels));
+        return QtRestResp.success(appService.getUpdate(type, version, channels, arch));
     }
 
     @Operation(summary = "获取启用的GitHub加速节点列表（免认证，走后台缓存）")
@@ -93,8 +95,9 @@ public class QtAppController {
     public QtRestResp<QtAppUpdate> checkVersion(
             @RequestParam("type") Long type,
             @RequestParam("version") String version,
-            @RequestParam("versionName") String versionName) {
-        QtAppUpdate official = appService.getOfficialVersion(type, version, versionName);
+            @RequestParam("versionName") String versionName,
+            @RequestParam(value = "arch", required = false) String arch) {
+        QtAppUpdate official = appService.getOfficialVersion(type, version, versionName, arch);
         if (official == null) {
             return QtRestResp.error(321, "非官方版本");
         }

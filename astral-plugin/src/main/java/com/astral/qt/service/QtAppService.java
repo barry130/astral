@@ -1,6 +1,7 @@
 package com.astral.qt.service;
 
 import com.astral.qt.entity.QtAppUpdate;
+import com.astral.qt.entity.QtAppUpdateArtifact;
 import com.astral.qt.mapper.QtAppUpdateMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -23,6 +24,10 @@ public class QtAppService {
 
     @Resource
     private QtAppUpdateMapper updateMapper;
+
+    /** 版本产物（一版本多包：Windows x64/x86/arm64…） */
+    @Resource
+    private QtAppUpdateArtifactService artifactService;
 
     /**
      * 版本更新表按平台维度的进程内缓存（key=type，TTL 60s）。
@@ -120,6 +125,7 @@ public class QtAppService {
     /** 后台版本更新 CRUD 后调用：失效全平台版本缓存（QtAdminController 写接口） */
     public void evictUpdateCache() {
         updateCache.invalidateAll();
+        artifactService.evictAll();
     }
 
     /** 取两个更新中版本号更大的一个（相同版本号时优先 beta；任一为空则取另一个） */
@@ -127,5 +133,75 @@ public class QtAppService {
         if (a == null) return b;
         if (b == null) return a;
         return a.getVersionCode() >= b.getVersionCode() ? a : b;
+    }
+
+    // ==================== 一版本多产物（UPDATE_ARTIFACT_DESIGN） ====================
+
+    /**
+     * 获取版本更新信息（多产物版）：在 {@link #getUpdate} 的基础上按客户端架构挑选产物。
+     * <p>命中产物时把它的 downloadUrl / browserUrl / md5 / fileSize 覆盖到主表同名字段上，
+     * 这样「不会读 artifacts 的旧客户端」天然拿到正确架构的包（对用户最友好：
+     * 旧 qt-uniappx / 未升级的 qt-pc 不会因为改了后端数据结构就下错包）。
+     * 没命中任何产物时保持主表原值（旧数据的 download_url 还在，仍是兜底）。</p>
+     * <p>artifacts 全量清单始终下发：客户端可以在服务端挑不中时自行按 platform/arch 挑。</p>
+     *
+     * @param arch 客户端 CPU 架构（x64 / x86 / arm64…），移动端传 null 或空
+     */
+    public QtAppUpdate getUpdate(Long type, String version, Set<String> visibleChannels, String arch) {
+        QtAppUpdate picked = getUpdate(type, version, visibleChannels);
+        return attachArtifacts(picked, type, arch);
+    }
+
+    /** 官方版本校验的多产物版（语义同 {@link #getUpdate(Long, String, Set, String)}） */
+    public QtAppUpdate getOfficialVersion(Long type, String version, String versionName, String arch) {
+        QtAppUpdate official = getOfficialVersion(type, version, versionName);
+        return attachArtifacts(official, type, arch);
+    }
+
+    /**
+     * 给一条更新附上产物清单，并把「命中的那一条」的值提升为主表字段。
+     * <p>查不到产物清单时（旧数据）什么都不动：主表 download_url 仍是那唯一一个包。</p>
+     */
+    private QtAppUpdate attachArtifacts(QtAppUpdate update, Long type, String arch) {
+        if (update == null) {
+            return null;
+        }
+        Long updateId = update.getId();
+        if (updateId == null) {
+            return update;
+        }
+        List<QtAppUpdateArtifact> all = artifactService.listByUpdateId(update.getId());
+        if (all == null || all.isEmpty()) {
+            return update;
+        }
+        update.setArtifacts(artifactService.toVos(updateId));
+        QtAppUpdateArtifact hit = artifactService.select(updateId, type, arch);
+        if (hit == null) {
+            return update;
+        }
+        if (hit.getDownloadUrl() != null && !hit.getDownloadUrl().isBlank()) {
+            update.setDownloadUrl(hit.getDownloadUrl());
+            update.setIsGithub(hit.getIsGithub() == null ? 0L : hit.getIsGithub());
+        }
+        if (hit.getBrowserUrl() != null && !hit.getBrowserUrl().isBlank()) {
+            update.setBrowserUrl(hit.getBrowserUrl());
+        }
+        update.setMd5(hit.getMd5());
+        update.setFileSize(hit.getFileSize());
+        return update;
+    }
+
+    /** 后台用：给列表里的每条版本附上产物清单（不挑选、不覆盖主表字段） */
+    public List<QtAppUpdate> attachArtifacts(List<QtAppUpdate> updates) {
+        if (updates == null || updates.isEmpty()) {
+            return updates;
+        }
+        for (QtAppUpdate u : updates) {
+            if (u == null || u.getId() == null) {
+                continue;
+            }
+            u.setArtifacts(artifactService.toVos(u.getId()));
+        }
+        return updates;
     }
 }

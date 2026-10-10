@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.astral.qt.dto.vo.QtAppUpdateArtifactVo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -84,6 +85,15 @@ public class QtAppUpdate {
 
     /** 安装包 MD5，可选 */
     private String md5;
+
+    /**
+     * 产物清单（非表字段，UPDATE_ARTIFACT_DESIGN）：该版本下的全部安装包明细。
+     * <p>服务端已按客户端上送的 platform + arch 把命中的那一条写回上面的
+     * downloadUrl / browserUrl / md5 / fileSize；artifacts 是完整备查清单，
+     * 客户端在服务端挑不中（或自己知道该下哪个）时可自行挑选。</p>
+     */
+    @TableField(exist = false)
+    private List<QtAppUpdateArtifactVo> artifacts;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

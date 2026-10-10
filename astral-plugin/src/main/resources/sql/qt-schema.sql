@@ -37,6 +37,27 @@ ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS is_published SMALLINT NOT NUL
 ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS file_size BIGINT;
 ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS md5 VARCHAR(64);
 
+-- 版本更新「一版本多产物」（UPDATE_ARTIFACT_DESIGN.md）：
+-- 一个版本（type + version_code）可对应多个安装包（Windows 三架构 x64/x86/arm64、
+-- macOS x86_64/aarch64、Linux deb 与 AppImage 等）。产物明细下沉到子表，
+-- 主表 download_url/browser_url/file_size/md5 保留为「单产物时代的兜底值」，
+-- 客户端按自身 platform + arch 命中子表对应行；命中不到时回退主表（兼容旧版本数据）。
+CREATE TABLE IF NOT EXISTS qt_app_update_artifact (
+    id BIGINT PRIMARY KEY,
+    update_id BIGINT NOT NULL,
+    platform BIGINT,
+    arch VARCHAR(16),
+    download_url VARCHAR(1024),
+    browser_url VARCHAR(512),
+    is_github BIGINT NOT NULL DEFAULT 0,
+    file_size BIGINT,
+    md5 VARCHAR(64),
+    sort BIGINT NOT NULL DEFAULT 0,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_qt_update_artifact ON qt_app_update_artifact(update_id, platform);
+
 -- GitHub 加速前缀配置表（UPDATE_DESIGN.md §1.2，多行，探测顺序按 sort 升序）
 CREATE TABLE IF NOT EXISTS qt_github_accel (
     id          BIGINT PRIMARY KEY,
@@ -144,6 +165,18 @@ COMMENT ON COLUMN qt_app_update.is_published IS '是否发布(1-已发布App端�
 COMMENT ON COLUMN qt_app_update.create_time IS '创建时间';
 COMMENT ON COLUMN qt_app_update.update_time IS '更新时间';
 COMMENT ON COLUMN qt_user_daka.id IS '主键ID';
+COMMENT ON COLUMN qt_app_update_artifact.id IS '主键ID';
+COMMENT ON COLUMN qt_app_update_artifact.update_id IS '所属版本ID（qt_app_update.id）';
+COMMENT ON COLUMN qt_app_update_artifact.platform IS '平台（1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS 1106-HarmonyOS；空=不限）';
+COMMENT ON COLUMN qt_app_update_artifact.arch IS 'CPU架构（x64/x86/arm64/arm64ec/ppc64le 等，大小写不敏感；空=不限）';
+COMMENT ON COLUMN qt_app_update_artifact.download_url IS '直链下载地址';
+COMMENT ON COLUMN qt_app_update_artifact.browser_url IS '浏览器下载地址（可空，桌面端兜底）';
+COMMENT ON COLUMN qt_app_update_artifact.is_github IS '直链是否为GitHub链接（1-是参与加速拼接 0-否）';
+COMMENT ON COLUMN qt_app_update_artifact.file_size IS '安装包大小（字节）';
+COMMENT ON COLUMN qt_app_update_artifact.md5 IS '安装包MD5';
+COMMENT ON COLUMN qt_app_update_artifact.sort IS '排序（小的在前，用于同平台兜底取第一条）';
+COMMENT ON COLUMN qt_app_update_artifact.create_time IS '创建时间';
+COMMENT ON COLUMN qt_app_update_artifact.update_time IS '更新时间';
 COMMENT ON COLUMN qt_user_daka.uid IS '用户ID';
 COMMENT ON COLUMN qt_user_daka.data IS '打卡日期';
 COMMENT ON COLUMN qt_user_daka.integral IS '积分';

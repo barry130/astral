@@ -8,7 +8,9 @@ import com.astral.qt.common.QtRestResp;
 import com.astral.qt.dto.QtSourceReleaseCreateDto;
 import com.astral.qt.dto.vo.QtSourceReleaseVo;
 import com.astral.qt.entity.QtAppUpdate;
+import com.astral.qt.entity.QtAppUpdateArtifact;
 import com.astral.qt.entity.QtGithubAccel;
+import com.astral.qt.service.QtAppUpdateArtifactService;
 import com.astral.qt.dto.vo.QtGithubAccelProbeVo;
 import com.astral.qt.mapper.QtAppUpdateMapper;
 import com.astral.qt.service.QtAppService;
@@ -58,6 +60,10 @@ public class QtAdminController {
     /** App 端版本更新读取走进程内缓存，后台写完必须失效 */
     @Resource
     private QtAppService appService;
+
+    /** 版本产物（一版本多包）读写：App 端挑_product 与后台维护共用 */
+    @Resource
+    private QtAppUpdateArtifactService artifactService;
 
     @Resource
     private QtDakaService dakaService;
@@ -112,16 +118,81 @@ public class QtAdminController {
     public QtRestResp<Page<QtAppUpdate>> updates(@RequestParam(defaultValue = "1") Integer pageNum,
                                                   @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<QtAppUpdate> page = new Page<>(pageNum, pageSize);
-        return QtRestResp.success(qtUpdateMapper.selectPage(page,
-                new LambdaQueryWrapper<QtAppUpdate>().orderByDesc(QtAppUpdate::getVersionCode)));
+        Page<QtAppUpdate> result = qtUpdateMapper.selectPage(page,
+                new LambdaQueryWrapper<QtAppUpdate>().orderByDesc(QtAppUpdate::getVersionCode));
+        // 列表页要展示「该版本有几个产物」，所以每条都附上产物清单（只读，不挑选）
+        return QtRestResp.success((Page<QtAppUpdate>) result.setRecords(
+                appService.attachArtifacts(result.getRecords())));
+    }
+
+    @Operation(summary = "某版本的产物列表（一版本多包：Windows x64/x86/arm64…）")
+    @GetMapping("/updates/{id}/artifacts")
+    public QtRestResp<List<QtAppUpdateArtifact>> listUpdateArtifacts(@PathVariable Long id) {
+        if (qtUpdateMapper.selectById(id) == null) {
+            return QtRestResp.error(300, "版本信息不存在");
+        }
+        return QtRestResp.success(artifactService.listByUpdateId(id));
+    }
+
+    /**
+     * 整组保存某版本的产物（全量覆盖：传什么就是什么，空数组 = 清空）。
+     * <p>写完顺带把第一条产物回填到主表 download_url / browser_url / md5 / file_size：
+     * 主表这四个字段是「旧客户端 + 未上送 arch」的兜底值，不回填会让老版本 app
+     * 在改成多产物后拿不到地址。</p>
+     */
+    @Operation(summary = "保存某版本的产物列表（全量覆盖）")
+    @PutMapping("/updates/{id}/artifacts")
+    public QtRestResp<List<QtAppUpdateArtifact>> saveUpdateArtifacts(
+            @PathVariable Long id, @RequestBody List<QtAppUpdateArtifact> items) {
+        QtAppUpdate exist = qtUpdateMapper.selectById(id);
+        if (exist == null) {
+            return QtRestResp.error(300, "版本信息不存在");
+        }
+        List<QtAppUpdateArtifact> saved;
+        try {
+            saved = artifactService.replaceAll(id, items);
+        } catch (IllegalArgumentException e) {
+            return QtRestResp.error(300, e.getMessage());
+        }
+        syncLegacyFields(exist, saved.isEmpty() ? null : saved.get(0));
+        appService.evictUpdateCache();
+        return QtRestResp.success(saved);
+    }
+
+    /**
+     * 把兜底产物写回主表同名字段，保证不上送 arch 的旧客户端仍能拿到下载地址
+     * （产物被清空时不覆盖，保留最后一次留下的地址，避免把已发布版本变成无链接状态）。
+     */
+    private void syncLegacyFields(QtAppUpdate exist, QtAppUpdateArtifact fallback) {
+        if (fallback == null) {
+            return;
+        }
+        qtUpdateMapper.update(null, new LambdaUpdateWrapper<QtAppUpdate>()
+                .eq(QtAppUpdate::getId, exist.getId())
+                .set(fallback.getDownloadUrl() != null && !fallback.getDownloadUrl().isBlank(),
+                        QtAppUpdate::getDownloadUrl, fallback.getDownloadUrl())
+                .set(QtAppUpdate::getBrowserUrl, fallback.getBrowserUrl())
+                .set(QtAppUpdate::getIsGithub, fallback.getIsGithub() == null ? 0L : fallback.getIsGithub())
+                .set(QtAppUpdate::getMd5, fallback.getMd5())
+                .set(QtAppUpdate::getFileSize, fallback.getFileSize())
+                .set(QtAppUpdate::getUpdateTime, LocalDateTime.now()));
     }
 
     @Operation(summary = "新增版本更新")
     @PostMapping("/updates")
     public QtRestResp<QtAppUpdate> createUpdate(@RequestBody QtAppUpdate update) {
-        String err = validateUpdateLinks(update);
-        if (err != null) {
-            return QtRestResp.error(300, err);
+        // 多产物版本：下载地址由 artifacts 逐条提供，主表可以不填直链（保存后由兜底产物回填）
+        List<QtAppUpdateArtifact> artifacts = artifactService.fromVos(update.getArtifacts());
+        if (artifacts.isEmpty()) {
+            String err = validateUpdateLinks(update);
+            if (err != null) {
+                return QtRestResp.error(300, err);
+            }
+        } else {
+            String err = artifactService.validate(artifacts);
+            if (err != null) {
+                return QtRestResp.error(300, err);
+            }
         }
         update.setId(null);
         if (update.getType() == null) update.setType(QtAppUpdate.TYPE_ANDROID);
@@ -135,6 +206,12 @@ public class QtAdminController {
         update.setCreateTime(LocalDateTime.now());
         update.setUpdateTime(LocalDateTime.now());
         qtUpdateMapper.insert(update);
+        // 表单可以带产物一起提交（Windows 三架构一次性建好）：插入前已校验，这里只负责落库与回填兜底字段
+        if (!artifacts.isEmpty()) {
+            List<QtAppUpdateArtifact> saved = artifactService.replaceAll(update.getId(), artifacts);
+            syncLegacyFields(update, saved.isEmpty() ? null : saved.get(0));
+        }
+        update.setArtifacts(artifactService.toVos(update.getId()));
         appService.evictUpdateCache();
         return QtRestResp.success(update);
     }

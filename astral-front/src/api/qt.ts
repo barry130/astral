@@ -41,6 +41,31 @@ export interface QtUpdate {
   isPublished?: number;
   fileSize?: number;
   md5?: string;
+  /**
+   * 产物清单（一版本多包：Windows x64/x86/arm64）。
+   * 后端已按请求方的 platform + arch 挑好并写回 downloadUrl 等主表字段，
+   * 这里保留全量清单供后台展示与排查。
+   */
+  artifacts?: QtUpdateArtifact[];
+}
+
+/** 版本更新产物（UPDATE_ARTIFACT_DESIGN）：同一版本下的一个安装包 */
+export interface QtUpdateArtifact {
+  id?: number;
+  /** 所属版本 ID（保存时以路径参数为准，不读该字段） */
+  updateId?: number;
+  /** 平台：1101 安卓 / 1102 iOS / 1103 Windows / 1104 Linux / 1105 macOS / 1106 鸿蒙；空 = 不限 */
+  platform?: number | null;
+  /** CPU 架构：x64 / x86 / arm64；空 = 不限 */
+  arch?: string;
+  downloadUrl?: string;
+  browserUrl?: string;
+  /** 直链是否为 GitHub 链接：1=是（参与加速拼接） 0=否 */
+  isGithub?: number;
+  fileSize?: number;
+  md5?: string;
+  /** 排序（小的在前，保存时按数组顺序重写） */
+  sort?: number;
 }
 
 /** GitHub 加速节点（UPDATE_DESIGN.md） */
@@ -124,6 +149,14 @@ export const qtAdminApi = {
 
   deleteUpdate: (id: number): Promise<ApiResult<void>> =>
     request.delete(`/api/v1/admin/qt/updates/${id}`),
+
+  /** 某版本的产物列表（一版本多包） */
+  artifacts: (id: number): Promise<ApiResult<QtUpdateArtifact[]>> =>
+    request.get(`/api/v1/admin/qt/updates/${id}/artifacts`),
+
+  /** 整组保存产物（全量覆盖：传什么就是什么，空数组 = 清空） */
+  saveArtifacts: (id: number, items: QtUpdateArtifact[]): Promise<ApiResult<QtUpdateArtifact[]>> =>
+    request.put(`/api/v1/admin/qt/updates/${id}/artifacts`, items),
 };
 
 /** 音源包产物条目（artifacts 是「当前生效全集」，客户端按 path 比 version 决定要不要重下） */

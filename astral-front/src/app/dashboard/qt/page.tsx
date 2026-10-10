@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Row, Col, Statistic, Tabs, Tag, Button, Input,
-  Form, Modal, Space, message, Switch, Popconfirm, Typography, Select } from '@/components/antd-compat';
+  Form, Modal, Space, message, Switch, Popconfirm, Typography, Select, Divider } from '@/components/antd-compat';
 import {
   UserOutlined, CalendarOutlined, CloudDownloadOutlined,
   ReloadOutlined, PlusOutlined, ExperimentOutlined, ClearOutlined,
+  DeleteOutlined,
 } from '@/components/antd-compat/icons';
 import {
-  qtAdminApi, githubAccelApi, QtOverview, QtUpdate, QtPage,
+  qtAdminApi, githubAccelApi, QtOverview, QtUpdate, QtPage, QtUpdateArtifact,
   QtGithubAccel, QtGithubAccelProbe, enumLabel,
 } from '@/api/qt';
 import { fetchDictOptions } from '@/api/dict';
@@ -55,6 +56,15 @@ export default function QtAdminPage() {
   const updateTypeOpts = useMemo(() => dict.qt_update_type || [], [dict]);
   const updateChannelOpts = useMemo(() => dict.qt_update_channel || [], [dict]);
   const updatePublishOpts = useMemo(() => (dict.qt_update_publish || []).map((o) => ({ value: Number(o.value), label: o.label })), [dict]);
+  /** 产物架构（qt_update_arch）：x64 / x86 / arm64，字典缺失时的兜底 */
+  const updateArchOpts: { value: string; label: string }[] = useMemo(() => {
+    const fromDict = dict.qt_update_arch || [];
+    return fromDict.length ? fromDict : [
+      { value: 'x64', label: 'x64' },
+      { value: 'x86', label: 'x86' },
+      { value: 'arm64', label: 'arm64' },
+    ];
+  }, [dict]);
   // 发布状态：优先字典「qt_update_publish」，字典缺失时用固定映射兜底，绝不展示原始码值 0/1
   const publishStateLabel = useCallback((v: number | undefined | null): string => {
     const fromDict = enumLabel(updatePublishOpts, v);
@@ -102,14 +112,27 @@ export default function QtAdminPage() {
     loadAccels(1);
     fetchDictOptions([
       'qt_update_platform', 'qt_update_type', 'qt_update_channel', 'qt_update_publish',
+      'qt_update_arch',
     ]).then(setDict).catch(() => {});
   }, []);
 
   // ==================== 版本更新 ====================
+  /**
+   * 打开版本弹窗。编辑时要单独拉取产物清单：
+   * 分页接口返回的 QtUpdate 里只有「按当前请求挑好的那一条」，产物全集要走
+   * GET /updates/{id}/artifacts，否则编辑 Windows 三架构版本时会只看到一份产物、
+   * 保存即把另外两份删掉（该接口是全量覆盖语义）。
+   */
   const openUpdateModal = useCallback((record?: QtUpdate) => {
-    if (record) {
-      updateForm.setFieldsValue(record);
+    if (record?.id != null) {
+      updateForm.resetFields();
+      updateForm.setFieldsValue({ ...record, artifacts: [] });
       setUpdateIsEdit(true);
+      qtAdminApi.artifacts(record.id).then((res) => {
+        if (res.code === 200) {
+          updateForm.setFieldValue('artifacts', res.data || []);
+        }
+      }).catch(() => {});
     } else {
       updateForm.resetFields();
       setUpdateIsEdit(false);
@@ -120,15 +143,22 @@ export default function QtAdminPage() {
   const submitUpdate = async () => {
     const values = await updateForm.validateFields();
     const editing = values.id != null;
+    // 产物单独走全量覆盖接口：更新版本信息的 PUT 只认主表字段，
+    // 把 artifacts 塞进请求体也不会被处理（白名单逐列 set）。
+    const artifacts: QtUpdateArtifact[] | undefined = values.artifacts;
     try {
-      const res = editing
-        ? await qtAdminApi.updateUpdate(values.id, values)
-        : await qtAdminApi.createUpdate(values);
-      if (res.code === 200) {
-        message.success(editing ? '版本信息已更新' : '版本信息已创建');
-        setUpdateModal(false);
-        loadUpdates();
+      if (editing) {
+        await qtAdminApi.updateUpdate(values.id, values);
+        if (artifacts) {
+          await qtAdminApi.saveArtifacts(values.id, artifacts);
+        }
+        message.success('版本信息已更新');
+      } else {
+        await qtAdminApi.createUpdate(values);
+        message.success('版本信息已创建');
       }
+      setUpdateModal(false);
+      loadUpdates();
     } catch (error: any) {
       message.error(error.message || '操作失败');
     }
@@ -247,9 +277,10 @@ export default function QtAdminPage() {
       render: (v: string) => <Tag color="purple">{enumLabel(updateChannelOpts, v)}</Tag>,
     },
     {
-      title: '下载链接', width: 148, ellipsis: true,
+      title: '下载链接', width: 178, ellipsis: true,
       render: (_: any, r: QtUpdate) => (
         <Space size={4} wrap>
+          {(r.artifacts?.length ?? 0) > 0 && <Tag color="geekblue">产物 {r.artifacts?.length}</Tag>}
           {r.downloadUrl && <Tag color="blue">直链</Tag>}
           {r.browserUrl && <Tag color="cyan">浏览器</Tag>}
           {r.isGithub === 1 && <Tag color="purple">GitHub加速</Tag>}
@@ -457,38 +488,141 @@ export default function QtAdminPage() {
             </Col>
           </Row>
           <Form.Item name="versionInfo" label="更新说明"><Input.TextArea rows={3} placeholder="更新内容说明" /></Form.Item>
-          <Form.Item
-            name="downloadUrl"
-            label="直链下载链接"
-            dependencies={['browserUrl']}
-            rules={[
-              ({ getFieldValue }) => ({
-                validator(_: unknown, value: string) {
-                  if (value || getFieldValue('browserUrl')) return Promise.resolve();
-                  return Promise.reject(new Error('直链下载与浏览器下载至少填一个'));
-                },
-              }),
-            ]}
-          >
-            <Input placeholder="直链下载地址，GitHub 时填原始 release 链接" />
-          </Form.Item>
-          <Form.Item
-            name="browserUrl"
-            label="浏览器下载链接"
-            dependencies={['downloadUrl']}
-            rules={[
-              ({ getFieldValue }) => ({
-                validator(_: unknown, value: string) {
-                  if (value || getFieldValue('downloadUrl')) return Promise.resolve();
-                  return Promise.reject(new Error('直链下载与浏览器下载至少填一个'));
-                },
-              }),
-            ]}
-          >
-            <Input placeholder="浏览器下载地址（两个链接都填时 App 端展示两个按钮）" />
-          </Form.Item>
+
+          {/* ============ 产物清单（一版本多包：Windows x64/x86/arm64…） ============
+               服务端按请求方的 platform + arch 挑产物，挑中后把地址写回主表同名字段；
+               主表「直链 / 浏览器」两个字段同时保留，作为不上送 arch 的旧客户端兜底。 */}
+          <Form.List name="artifacts">
+            {(fields, { add, remove }) => (
+              <div>
+                <Divider orientation="left">
+                  产物清单（{fields.length}）
+                  {fields.length > 0 && <Tag>App 按「平台+架构」自动挑选</Tag>}
+                </Divider>
+                {fields.length === 0 && (
+                  <div>
+                    <Form.Item
+                      name="downloadUrl"
+                      label="直链下载链接"
+                      dependencies={['browserUrl']}
+                      rules={[
+                        ({ getFieldValue }) => ({
+                          validator(_: unknown, value: string) {
+                            if (value || getFieldValue('browserUrl')) return Promise.resolve();
+                            return Promise.reject(new Error('直链下载与浏览器下载至少填一个'));
+                          },
+                        }),
+                      ]}
+                    >
+                      <Input placeholder="直链下载地址，GitHub 时填原始 release 链接" />
+                    </Form.Item>
+                    <Form.Item
+                      name="browserUrl"
+                      label="浏览器下载链接"
+                      dependencies={['downloadUrl']}
+                      rules={[
+                        ({ getFieldValue }) => ({
+                          validator(_: unknown, value: string) {
+                            if (value || getFieldValue('downloadUrl')) return Promise.resolve();
+                            return Promise.reject(new Error('直链下载与浏览器下载至少填一个'));
+                          },
+                        }),
+                      ]}
+                    >
+                      <Input placeholder="浏览器下载地址（两个链接都填时 App 端展示两个按钮）" />
+                    </Form.Item>
+                    <Paragraph type="secondary">
+                      未配置产物时使用上面的单条下载地址（旧口径）。Windows / macOS 请为每种架构各加一条产物。
+                    </Paragraph>
+                  </div>
+                )}
+                {fields.map((field) => (
+                  <div key={field.key} className="rounded-md border border-border p-3 mb-3">
+                    <Row gutter={[12, 0]}>
+                      <Col xs={{ span: 24 }} md={{ span: 8 }}>
+                        {/* 平台默认带当前版本的平台：产物与版本同平台是绝大多数情况，
+                            不同平台（如一个 Win+Mac 混合包）可显式改选。 */}
+                        <Form.Item name={[field.name, 'platform']} label="平台" style={{ marginBottom: 8 }}>
+                          <Select options={updatePlatformOpts as any} placeholder="默认同版本平台" allowClear />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={{ span: 24 }} md={{ span: 8 }}>
+                        <Form.Item name={[field.name, 'arch']} label="架构" style={{ marginBottom: 8 }}>
+                          <Select options={updateArchOpts as any} placeholder="不限架构" allowClear />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={{ span: 24 }} md={{ span: 8 }}>
+                        <Form.Item
+                          name={[field.name, 'isGithub']}
+                          label="GitHub 直链"
+                          valuePropName="checked"
+                          getValueFromEvent={(checked: boolean) => checked ? 1 : 0}
+                          getValueProps={(v: number) => ({ checked: v === 1 })}
+                          style={{ marginBottom: 8 }}
+                        >
+                          <Switch checkedChildren="GitHub" unCheckedChildren="普通" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={{ span: 24 }} md={{ span: 12 }}>
+                        <Form.Item
+                          name={[field.name, 'downloadUrl']}
+                          label="直链下载链接"
+                          style={{ marginBottom: 8 }}
+                          rules={[
+                            ({ getFieldValue }) => ({
+                              validator(_: unknown, value: string) {
+                                if (value || getFieldValue(['artifacts', field.name, 'browserUrl'])) {
+                                  return Promise.resolve();
+                                }
+                                return Promise.reject(new Error('直链与浏览器至少填一个'));
+                              },
+                            }),
+                          ]}
+                        >
+                          <Input placeholder="必填其一" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={{ span: 24 }} md={{ span: 12 }}>
+                        <Form.Item name={[field.name, 'browserUrl']} label="浏览器下载链接" style={{ marginBottom: 8 }}>
+                          <Input placeholder="可选" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={{ span: 24 }} md={{ span: 12 }}>
+                        <Form.Item name={[field.name, 'fileSize']} label="包大小(字节)" style={{ marginBottom: 0 }}>
+                          <Input type="number" placeholder="可选" />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={{ span: 24 }} md={{ span: 12 }}>
+                        <Form.Item name={[field.name, 'md5']} label="MD5" style={{ marginBottom: 0 }}>
+                          <Input placeholder="可选" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Button
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                      disabled={!canEdit}
+                      onClick={() => remove(field.name)}
+                    >
+                      删除该产物
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  block
+                  icon={<PlusOutlined />}
+                  disabled={!canEdit}
+                  onClick={() => add({ platform: updateForm.getFieldValue('type'), isGithub: 0 })}
+                >
+                  添加产物
+                </Button>
+              </div>
+            )}
+          </Form.List>
           <Paragraph type="secondary" style={{ marginBottom: 0 }}>
             「下载方式」字段已废弃：App 端按双链接并存展示按钮，不再按模式二选一。
+            平台 / 架构留空 = 不限，兜底给所有客户端（旧客户端不上送架构，只会命中不限架构的产物）。
           </Paragraph>
         </Form>
       </Modal>

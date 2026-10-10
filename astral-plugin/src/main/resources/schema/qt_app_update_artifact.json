@@ -1,0 +1,113 @@
+{
+  "tableName": "qt_app_update_artifact",
+  "tableComment": "轻听App版本更新产物表(一版本多包:Windows x64/x86/arm64)",
+  "moduleName": "qt",
+  "className": "QtAppUpdateArtifact",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "update_id",
+      "fieldName": "updateId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "所属版本ID(qt_app_update.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "platform",
+      "fieldName": "platform",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "平台(1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS 1106-HarmonyOS;空=不限)"
+    },
+    {
+      "columnName": "arch",
+      "fieldName": "arch",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "CPU架构(x64/x86/arm64等,大小写不敏感;空=不限)",
+      "length": 16
+    },
+    {
+      "columnName": "download_url",
+      "fieldName": "downloadUrl",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "直链下载地址",
+      "length": 1024
+    },
+    {
+      "columnName": "browser_url",
+      "fieldName": "browserUrl",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "浏览器下载地址(可空,桌面端兜底)",
+      "length": 512
+    },
+    {
+      "columnName": "is_github",
+      "fieldName": "isGithub",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "直链是否为GitHub链接(1-是参与加速拼接 0-否)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "file_size",
+      "fieldName": "fileSize",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "安装包大小(字节)"
+    },
+    {
+      "columnName": "md5",
+      "fieldName": "md5",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "安装包MD5",
+      "length": 64
+    },
+    {
+      "columnName": "sort",
+      "fieldName": "sort",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "排序(小的在前,用于同平台兜底取第一条)",
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_qt_update_artifact",
+      "columns": [
+        "update_id",
+        "platform"
+      ]
+    }
+  ]
+}
