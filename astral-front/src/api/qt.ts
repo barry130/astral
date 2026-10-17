@@ -23,7 +23,11 @@ export interface QtUserInfo {
 export interface QtUpdate {
   id?: number;
   versionCode?: number;
-  type?: number;
+  /**
+   * 适用平台（逗号分隔，如 "1101,1106"）：1101 安卓 / 1102 iOS / 1103 Windows /
+   * 1104 Linux / 1105 macOS / 1106 鸿蒙。一行承载多个平台（与公告 channel 同款方案）。
+   */
+  platforms?: string;
   versionName?: string;
   versionInfo?: string;
   updateType?: string;

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Row, Col, Statistic, Tabs, Tag, Button, Input,
-  Form, Modal, Space, message, Switch, Popconfirm, Typography, Select, Divider } from '@/components/antd-compat';
+  Form, Modal, Space, message, Switch, Popconfirm, Typography, Select, Divider,
+  Alert } from '@/components/antd-compat';
 import {
   UserOutlined, CalendarOutlined, CloudDownloadOutlined,
   ReloadOutlined, PlusOutlined, ExperimentOutlined, ClearOutlined,
@@ -19,6 +20,24 @@ import SourceReleasesTab from './SourceReleasesTab';
 
 const { Paragraph } = Typography;
 
+/**
+ * 版本「平台」是逗号分隔的多值列（platforms，与公告 channel 同款方案）：
+ * 表单里用多选数组，提交时拼成 CSV，回填时拆回数组。
+ */
+function parsePlatforms(csv?: string | null): number[] {
+  return (csv || '')
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+}
+
+function joinPlatforms(list?: Array<number | string> | null): string {
+  const nums = (list || [])
+    .map((v) => Number(v))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return Array.from(new Set(nums)).join(',');
+}
+
 export default function QtAdminPage() {
   const [overview, setOverview] = useState<QtOverview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -31,6 +50,8 @@ export default function QtAdminPage() {
   const [updateModal, setUpdateModal] = useState(false);
   const [updateIsEdit, setUpdateIsEdit] = useState(false);
   const [updateForm] = Form.useForm();
+  /** 监听「平台」多选：勾选多个平台时提示这一条版本会同时投放给几个平台 */
+  const watchedUpdatePlatforms: number[] = Form.useWatch('platforms', updateForm) || [];
 
   // GitHub 加速节点（UPDATE_DESIGN.md）
   const [accels, setAccels] = useState<QtGithubAccel[]>([]);
@@ -126,7 +147,10 @@ export default function QtAdminPage() {
   const openUpdateModal = useCallback((record?: QtUpdate) => {
     if (record?.id != null) {
       updateForm.resetFields();
-      updateForm.setFieldsValue({ ...record, artifacts: [] });
+      // 「平台」在表单里是数组字段（多选），库里是逗号分隔 CSV：回填时拆开。
+      // 编辑态控件禁用——PUT /updates/{id} 会按白名单写 platforms，但换平台意味着
+      // 这个版本要发给另一批客户端，语义上应当新增一条而不是改旧的。
+      updateForm.setFieldsValue({ ...record, platforms: parsePlatforms(record.platforms), artifacts: [] });
       setUpdateIsEdit(true);
       qtAdminApi.artifacts(record.id).then((res) => {
         if (res.code === 200) {
@@ -146,21 +170,28 @@ export default function QtAdminPage() {
     // 产物单独走全量覆盖接口：更新版本信息的 PUT 只认主表字段，
     // 把 artifacts 塞进请求体也不会被处理（白名单逐列 set）。
     const artifacts: QtUpdateArtifact[] | undefined = values.artifacts;
+    // 「平台」是数组字段：提交前拼成 CSV（同一行承载多平台，不再拆成多行）
+    const platforms = joinPlatforms(values.platforms);
     try {
       if (editing) {
-        await qtAdminApi.updateUpdate(values.id, values);
+        await qtAdminApi.updateUpdate(values.id, { ...values, platforms });
         if (artifacts) {
           await qtAdminApi.saveArtifacts(values.id, artifacts);
         }
         message.success('版本信息已更新');
       } else {
-        await qtAdminApi.createUpdate(values);
-        message.success('版本信息已创建');
+        // 表单里的 platforms 是数组，请求体要 CSV：解构掉再用拼好的值覆盖
+        const { id: _id, platforms: _platforms, ...rest } = values;
+        const res = await qtAdminApi.createUpdate({ ...rest, platforms });
+        if (res.code === 200) {
+          message.success('版本信息已创建');
+        }
       }
       setUpdateModal(false);
       loadUpdates();
     } catch (error: any) {
-      message.error(error.message || '操作失败');
+      // validateFields 失败时抛出的是 { values, errorFields } 普通对象，没有 message 字段
+      message.error(error?.message || '操作失败');
     }
   };
 
@@ -263,8 +294,19 @@ export default function QtAdminPage() {
     { title: 'ID', dataIndex: 'id', width: 104 },
     { title: '版本号', dataIndex: 'versionCode', width: 104 },
     {
-      title: '平台', dataIndex: 'type', width: 100,
-      render: (t: number) => <Tag color={t === 1101 ? 'blue' : 'green'}>{enumLabel(updatePlatformOpts, t)}</Tag>,
+      title: '平台', dataIndex: 'platforms', width: 160,
+      // platforms 是逗号分隔多值列：逐值渲染标签，一行可同时挂多个平台
+      render: (v: string) => {
+        const list = parsePlatforms(v);
+        if (list.length === 0) return <Tag>不限</Tag>;
+        return (
+          <Space size={4} wrap>
+            {list.map((p) => (
+              <Tag key={p} color={p === 1101 ? 'blue' : 'green'}>{enumLabel(updatePlatformOpts, p)}</Tag>
+            ))}
+          </Space>
+        );
+      },
     },
     { title: '版本名', dataIndex: 'versionName', width: 116 },
     { title: '更新说明', dataIndex: 'versionInfo', width: 176, ellipsis: true },
@@ -421,8 +463,17 @@ export default function QtAdminPage() {
         okButtonProps={{ disabled: !canEdit }}
         destroyOnClose
       >
-        <Form form={updateForm} layout="vertical" initialValues={{ type: 1101, channel: 'stable', isGithub: 0, isForce: 0, isPublished: 0, updateType: '1' }}>
+        <Form form={updateForm} layout="vertical" initialValues={{ platforms: [1101], channel: 'stable', isGithub: 0, isForce: 0, isPublished: 0, updateType: '1' }}>
           <Form.Item name="id" hidden><Input /></Form.Item>
+          {!updateIsEdit && watchedUpdatePlatforms.length > 1 && (
+            <Alert
+              type="info"
+              showIcon
+              message={`该版本将同时投放给 ${watchedUpdatePlatforms.length} 个平台`}
+              description="版本号、更新说明、是否强更等对所有勾选平台共用（同一行记录）；下载地址按产物清单里的「平台 + 架构」分别下发。"
+              style={{ marginBottom: 12 }}
+            />
+          )}
           {/* 两列排布：原先 13 个字段纵向堆叠达 995px，超出屏幕高度，
               现在压到约 8 行（超高时弹窗内部滚动，见antd-compat Modal 的 max-h 处理） */}
           <Row gutter={[16, 0]}>
@@ -435,8 +486,24 @@ export default function QtAdminPage() {
               <Form.Item name="versionName" label="版本名称"><Input placeholder="如 2.3.0" /></Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
-              <Form.Item name="type" label="平台" rules={[{ required: true, message: '请选择平台' }]}>
-                <Select options={updatePlatformOpts as any} placeholder="请选择平台" />
+              {/* 平台多选：同一版本号可一次投放给多个平台（platforms 是逗号分隔多值列，
+                  与公告 channel 同款方案）。编辑态禁用——换平台等于换受众，请新增一条。 */}
+              <Form.Item
+                name="platforms"
+                label="平台"
+                rules={[
+                  { required: true, message: '请选择平台' },
+                  { type: 'array', message: '请选择平台' },
+                ]}
+                extra={updateIsEdit ? '编辑时不可改平台，如需换平台请删除后重新新增' : '可多选：该版本会同时投放给所有勾选平台'}
+              >
+                <Select
+                  mode="multiple"
+                  options={updatePlatformOpts as any}
+                  placeholder="可多选，如安卓 + 鸿蒙"
+                  allowClear
+                  disabled={updateIsEdit}
+                />
               </Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
@@ -613,7 +680,12 @@ export default function QtAdminPage() {
                   block
                   icon={<PlusOutlined />}
                   disabled={!canEdit}
-                  onClick={() => add({ platform: updateForm.getFieldValue('type'), isGithub: 0 })}
+                  onClick={() => {
+                    // 「平台」是多选数组，产物默认带第一个平台；留空则该产物对同版本所有平台生效
+                    const picked = updateForm.getFieldValue('platforms');
+                    const first = Array.isArray(picked) ? picked[0] : picked;
+                    add({ platform: first, isGithub: 0 });
+                  }}
                 >
                   添加产物
                 </Button>

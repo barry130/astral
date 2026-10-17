@@ -23,12 +23,13 @@
       "isRequired": true
     },
     {
-      "columnName": "type",
-      "fieldName": "type",
-      "fieldType": "Long",
-      "jdbcType": "BIGINT",
-      "comment": "客户端平台类型(1101-Android 1102-iOS 1103-Windows)",
-      "isRequired": true
+      "columnName": "platforms",
+      "fieldName": "platforms",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "适用平台(逗号分隔,1101安卓/1102iOS/1103Windows/1104Linux/1105macOS/1106鸿蒙)",
+      "isRequired": true,
+      "length": 64
     },
     {
       "columnName": "version_name",
@@ -146,10 +147,10 @@
   ],
   "indexes": [
     {
-      "indexName": "idx_qt_update_type",
+      "indexName": "idx_qt_update_version",
       "columns": [
-        "type",
-        "version_code"
+        "version_code",
+        "channel"
       ]
     }
   ]

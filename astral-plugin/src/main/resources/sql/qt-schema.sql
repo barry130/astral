@@ -8,7 +8,7 @@
 CREATE TABLE IF NOT EXISTS qt_app_update (
     id BIGINT PRIMARY KEY,
     version_code BIGINT NOT NULL,
-    type BIGINT NOT NULL,
+    platforms VARCHAR(64) NOT NULL DEFAULT '',
     version_name VARCHAR(64),
     version_info VARCHAR(512),
     update_type VARCHAR(32),
@@ -24,11 +24,16 @@ CREATE TABLE IF NOT EXISTS qt_app_update (
     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_qt_update_type ON qt_app_update(type, version_code);
+CREATE INDEX IF NOT EXISTS idx_qt_update_version ON qt_app_update(version_code, channel);
 
 -- 已有表（旧结构）补列：幂等，兼容已存在的数据表
 ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS channel VARCHAR(16) NOT NULL DEFAULT 'stable';
 ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS download_mode VARCHAR(16) NOT NULL DEFAULT 'app';
+-- 版本更新「一版本多平台」（与 sys_notice.channel 同款方案）：
+-- 一行承载多个平台，platforms 是逗号分隔的平台号（如 '1101,1106'），匹配在 Java 侧精确拆分，
+-- 不用 SQL LIKE（平台号互为子串会误命中）。旧单值 type 列已由 Flyway V20261011001 迁移并删除，
+-- 这里不再补 type 列；全新库由上面的 CREATE 直接建 platforms。
+ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS platforms VARCHAR(64) NOT NULL DEFAULT '';
 -- 版本更新下载改造(UPDATE_DESIGN.md)：双链接 + GitHub 加速
 ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS browser_url VARCHAR(512);
 ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS is_github BIGINT NOT NULL DEFAULT 0;
@@ -38,7 +43,7 @@ ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS file_size BIGINT;
 ALTER TABLE qt_app_update ADD COLUMN IF NOT EXISTS md5 VARCHAR(64);
 
 -- 版本更新「一版本多产物」（UPDATE_ARTIFACT_DESIGN.md）：
--- 一个版本（type + version_code）可对应多个安装包（Windows 三架构 x64/x86/arm64、
+-- 一个版本（platforms + version_code）可对应多个安装包（Windows 三架构 x64/x86/arm64、
 -- macOS x86_64/aarch64、Linux deb 与 AppImage 等）。产物明细下沉到子表，
 -- 主表 download_url/browser_url/file_size/md5 保留为「单产物时代的兜底值」，
 -- 客户端按自身 platform + arch 命中子表对应行；命中不到时回退主表（兼容旧版本数据）。
@@ -153,7 +158,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_like_song_key_pid ON qt_like_song(uid, sid,
 -- 字段注释（幂等，启动可重复执行）
 COMMENT ON COLUMN qt_app_update.id IS '主键ID';
 COMMENT ON COLUMN qt_app_update.version_code IS '版本号';
-COMMENT ON COLUMN qt_app_update.type IS '客户端平台类型(1101-Android 1102-iOS 1103-Windows)';
+COMMENT ON COLUMN qt_app_update.platforms IS '适用平台(逗号分隔,1101安卓/1102iOS/1103Windows/1104Linux/1105macOS/1106鸿蒙)';
 COMMENT ON COLUMN qt_app_update.version_name IS '版本名称';
 COMMENT ON COLUMN qt_app_update.version_info IS '版本信息';
 COMMENT ON COLUMN qt_app_update.update_type IS '更新提示方式(1-弹窗 2-红点 3-无提示)';

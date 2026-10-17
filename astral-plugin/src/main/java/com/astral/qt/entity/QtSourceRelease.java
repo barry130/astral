@@ -39,7 +39,7 @@ public class QtSourceRelease {
     /** 平台：HarmonyOS（qt-uniappx 鸿蒙原生包） */
     public static final Long PLATFORM_HARMONY = 1106L;
 
-    /** 全部受支持的平台（与 qt_app_update 同源） */
+    /** 全部受支持的平台（与 qt_app_update.platforms 同源） */
     private static final List<Long> SUPPORTED_PLATFORMS =
             Arrays.asList(PLATFORM_ANDROID, PLATFORM_IOS, PLATFORM_WINDOWS, PLATFORM_LINUX, PLATFORM_MACOS,
                     PLATFORM_HARMONY);

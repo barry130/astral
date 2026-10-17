@@ -148,6 +148,13 @@ public class QtAdminController {
         if (exist == null) {
             return QtRestResp.error(300, "版本信息不存在");
         }
+        // 覆盖保存前先按「新清单」核对多平台覆盖：删掉某平台唯一的产物后，
+        // 该平台客户端会挑不中产物，回退到主表直链（可能拿到别的平台的包）
+        String coverageErr = validatePlatformCoverage(exist.getPlatforms(), items,
+                exist.getDownloadUrl(), exist.getBrowserUrl());
+        if (coverageErr != null) {
+            return QtRestResp.error(300, coverageErr);
+        }
         List<QtAppUpdateArtifact> saved;
         try {
             saved = artifactService.replaceAll(id, items);
@@ -195,9 +202,21 @@ public class QtAdminController {
             }
         }
         update.setId(null);
-        if (update.getType() == null) update.setType(QtAppUpdate.TYPE_ANDROID);
-        if (!QtAppUpdate.isSupportedType(update.getType())) {
-            return QtRestResp.error(300, "平台类型不支持(1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS 1106-HarmonyOS)");
+        // 平台多选：前端送逗号分隔 CSV（与公告 channel 同款），这里校验并归一（去重/去空/保持顺序）
+        String platforms = update.getPlatforms() == null || update.getPlatforms().isBlank()
+                ? String.valueOf(QtAppUpdate.PLATFORM_ANDROID)
+                : update.getPlatforms();
+        String platformErr = validatePlatformsCsv(platforms);
+        if (platformErr != null) {
+            return QtRestResp.error(300, platformErr);
+        }
+        update.setPlatforms(QtAppUpdate.toPlatformsCsv(QtAppUpdate.parsePlatforms(platforms)));
+        // 勾了多个平台时，每个平台都得有能落地的包：产物是按平台分条维护的，
+        // 只给安卓加了产物却勾上鸿蒙，鸿蒙客户端会挑不中产物而回退主表直链（下到安卓包）
+        String coverageErr = validatePlatformCoverage(update.getPlatforms(), artifacts,
+                update.getDownloadUrl(), update.getBrowserUrl());
+        if (coverageErr != null) {
+            return QtRestResp.error(300, coverageErr);
         }
         if (update.getChannel() == null || update.getChannel().isBlank()) update.setChannel("stable");
         if (update.getIsGithub() == null) update.setIsGithub(0L);
@@ -232,9 +251,18 @@ public class QtAdminController {
         if (err != null) {
             return QtRestResp.error(300, err);
         }
-        Long type = PatchValues.orDefault(update.getType(), exist.getType());
-        if (!QtAppUpdate.isSupportedType(type)) {
-            return QtRestResp.error(300, "平台类型不支持(1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS 1106-HarmonyOS)");
+        // 平台多选：null = 本次没提交（保持原值），空串 = 显式清空（下面会兜底为必填校验失败）
+        String platforms = PatchValues.orCurrent(update.getPlatforms(), exist.getPlatforms());
+        String platformErr = validatePlatformsCsv(platforms);
+        if (platformErr != null) {
+            return QtRestResp.error(300, platformErr);
+        }
+        String normalizedPlatforms = QtAppUpdate.toPlatformsCsv(QtAppUpdate.parsePlatforms(platforms));
+        // 改平台时同样要保证每个平台都有包可下（产物挂在库里的子表上，用现存的清单判定）
+        String coverageErr = validatePlatformCoverage(normalizedPlatforms,
+                artifactService.listByUpdateId(id), downloadUrl, browserUrl);
+        if (coverageErr != null) {
+            return QtRestResp.error(300, coverageErr);
         }
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「清空版本说明/更新类型/文件大小/md5」保存后都还是旧值。白名单逐列显式 set。
@@ -242,7 +270,7 @@ public class QtAdminController {
         qtUpdateMapper.update(null, new LambdaUpdateWrapper<QtAppUpdate>()
                 .eq(QtAppUpdate::getId, id)
                 .set(QtAppUpdate::getVersionCode, PatchValues.orDefault(update.getVersionCode(), exist.getVersionCode()))
-                .set(QtAppUpdate::getType, type)
+                .set(QtAppUpdate::getPlatforms, normalizedPlatforms)
                 .set(QtAppUpdate::getVersionName, PatchValues.orCurrent(update.getVersionName(), exist.getVersionName()))
                 .set(QtAppUpdate::getVersionInfo, PatchValues.orCurrent(update.getVersionInfo(), exist.getVersionInfo()))
                 .set(QtAppUpdate::getUpdateType, PatchValues.orCurrent(update.getUpdateType(), exist.getUpdateType()))
@@ -421,5 +449,116 @@ public class QtAdminController {
     public QtRestResp<Void> deleteSourceRelease(@PathVariable Long id) {
         sourceService.deleteRelease(id);
         return QtRestResp.success();
+    }
+
+    // ==================== 平台校验（一行多平台：platforms 逗号分隔） ====================
+
+    /**
+     * 校验 platforms CSV：至少一个平台，且全部是受支持平台。
+     *
+     * <p>「一行多平台」改造后，同一版本号发多个平台只是一行里的 platforms 多几个值，
+     * 不再由服务端拆成多行（旧 {@code POST /updates/batch} 多行批量接口已随之删除，
+     * 前端统一走 {@code POST /updates}）。产物不再按平台拆成多份复制，全部挂在同一行下、
+     * 各自带自己的 platform，命中逻辑交给
+     * {@code QtAppUpdateArtifactService#select(updateId, platform, arch)}；
+     * 但「每个平台是否都有包可下」仍需单独把关，见 {@link #validatePlatformCoverage}。</p>
+     *
+     * @param platforms 逗号分隔平台号（如 "1101,1106"）
+     * @return 错误文案；通过返回 null
+     */
+    private String validatePlatformsCsv(String platforms) {
+        List<Long> list = QtAppUpdate.parsePlatforms(platforms);
+        if (list.isEmpty()) {
+            return "至少选择一个平台(1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS 1106-HarmonyOS)";
+        }
+        for (Long platform : list) {
+            if (!QtAppUpdate.isSupportedPlatform(platform)) {
+                return "平台类型不支持(" + platform
+                        + ")，可选 1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS 1106-HarmonyOS";
+            }
+        }
+        // platforms 列宽 64：当前 6 个平台全选也只有 29 字符，这里只是防止未来平台号变长后写溢出
+        if (QtAppUpdate.toPlatformsCsv(list).length() > QtAppUpdate.PLATFORMS_MAX_LENGTH) {
+            return "平台列表过长（platforms 列上限 " + QtAppUpdate.PLATFORMS_MAX_LENGTH + " 字符）";
+        }
+        return null;
+    }
+
+    /**
+     * 多平台发布时的「每个平台都得有包」校验。
+     *
+     * <p>一行多平台把版本元信息（版本号/说明/强更）合并了，但下载地址仍是<b>按平台分条</b>维护的：
+     * 产物行自带 platform，命中逻辑是 {@code QtAppUpdateArtifactService#select}。于是
+     * 「勾了安卓 + 鸿蒙、却只给安卓加了产物」会静默出错——鸿蒙客户端挑不中产物，回退到主表
+     * download_url，装上一个安卓包。旧的多行批量接口靠「逐平台拆产物 + 逐平台校验」拦住了这种情况，
+     * 改成一行后必须由这里补上。</p>
+     *
+     * <p>判定：某平台既没有「专属产物（platform 相同）」也没有「不限平台产物（platform 为空）」时，
+     * 要求主表直链/浏览器链接至少填一个作为兜底（与 {@code validateUpdateLinks} 同口径）；
+     * 主表也没地址就直接报错，并点名是哪个平台。</p>
+     *
+     * @param platformsCsv 已归一的 platforms CSV
+     * @param artifacts    本次提交的产物（已过 artifactService.validate）
+     * @param downloadUrl  主表兜底直链
+     * @param browserUrl   主表兜底浏览器链接
+     * @return 错误文案；通过返回 null
+     */
+    private String validatePlatformCoverage(String platformsCsv, List<QtAppUpdateArtifact> artifacts,
+                                            String downloadUrl, String browserUrl) {
+        boolean hasFallback = (downloadUrl != null && !downloadUrl.isBlank())
+                || (browserUrl != null && !browserUrl.isBlank());
+        if (hasFallback) {
+            // 主表有兜底地址，任何平台都至少能下到一个包（旧口径允许这样）
+            return null;
+        }
+        boolean hasGeneric = false;
+        for (QtAppUpdateArtifact a : artifacts) {
+            if (a != null && a.getPlatform() == null) {
+                hasGeneric = true;
+                break;
+            }
+        }
+        if (hasGeneric) {
+            return null;
+        }
+        for (Long platform : QtAppUpdate.parsePlatforms(platformsCsv)) {
+            boolean covered = false;
+            for (QtAppUpdateArtifact a : artifacts) {
+                if (a != null && platform.equals(a.getPlatform())) {
+                    covered = true;
+                    break;
+                }
+            }
+            if (!covered) {
+                return platformLabel(platform) + "：缺少下载地址（请为该平台添加产物，或填写主表直链/浏览器链接作为兜底）";
+            }
+        }
+        return null;
+    }
+
+    /** 平台码 → 中文名（仅用于拼错误提示，避免用户看到 1101 这种裸码值）；未知码值原样返回 */
+    private String platformLabel(Long platform) {
+        if (platform == null) {
+            return "不限平台";
+        }
+        if (QtAppUpdate.PLATFORM_ANDROID.equals(platform)) {
+            return "安卓";
+        }
+        if (QtAppUpdate.PLATFORM_IOS.equals(platform)) {
+            return "iOS";
+        }
+        if (QtAppUpdate.PLATFORM_WINDOWS.equals(platform)) {
+            return "Windows";
+        }
+        if (QtAppUpdate.PLATFORM_LINUX.equals(platform)) {
+            return "Linux";
+        }
+        if (QtAppUpdate.PLATFORM_MACOS.equals(platform)) {
+            return "macOS";
+        }
+        if (QtAppUpdate.PLATFORM_HARMONY.equals(platform)) {
+            return "鸿蒙";
+        }
+        return String.valueOf(platform);
     }
 }

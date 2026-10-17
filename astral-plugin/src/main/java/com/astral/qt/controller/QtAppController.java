@@ -73,7 +73,7 @@ public class QtAppController {
                                              // 架构为可选参数：不上送（旧客户端）也能用，只是拿不到按架构挑选的那一份
                                              @RequestParam(value = "arch", required = false) String arch,
                                              @RequestHeader(value = "satoken", required = false) String satoken) {
-        if (!QtAppUpdate.isSupportedType(type)) {
+        if (!QtAppUpdate.isSupportedPlatform(type)) {
             return QtRestResp.error(320, "暂不支持该类型");
         }
         // 可见集合 = {stable} ∪ 用户被授予的渠道（如 user:qt:update:channel:beta → beta；超管为全部已登记渠道）。

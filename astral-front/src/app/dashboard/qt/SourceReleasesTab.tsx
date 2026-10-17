@@ -159,8 +159,13 @@ export default function SourceReleasesTab() {
       if (res.code !== 200) return;
       const grouped: Record<number, number[]> = {};
       for (const u of res.data.records || []) {
-        if (u.type == null || u.versionCode == null) continue;
-        (grouped[u.type] = grouped[u.type] || []).push(u.versionCode);
+        if (u.platforms == null || u.versionCode == null) continue;
+        // platforms 是逗号分隔多值列：一个版本可同时投放多个平台，每个平台都要收进准入候选
+        for (const raw of String(u.platforms).split(',')) {
+          const p = Number(raw.trim());
+          if (!Number.isFinite(p) || p <= 0) continue;
+          (grouped[p] = grouped[p] || []).push(u.versionCode);
+        }
       }
       for (const k of Object.keys(grouped)) {
         grouped[Number(k)] = Array.from(new Set(grouped[Number(k)])).sort((a, b) => b - a);

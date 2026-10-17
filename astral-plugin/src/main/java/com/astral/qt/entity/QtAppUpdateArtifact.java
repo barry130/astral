@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 
 /**
  * 版本更新产物（UPDATE_ARTIFACT_DESIGN）
- * <p>一个版本（qt_app_update.type + version_code）可以对应多个安装包：Windows 三架构
+ * <p>一个版本（qt_app_update.platforms + version_code）可以对应多个安装包：Windows 三架构
  * （x64 / x86 / arm64）、macOS x86_64 / aarch64、Linux deb 与 AppImage 等。版本本身
  * （版本号、更新说明、是否强更）留在主表，下载相关的字段下沉到本表按「平台 + 架构」分行。</p>
  * <p><b>匹配语义</b>：platform / arch 都允许为空 = 不限。命中优先级依次为
