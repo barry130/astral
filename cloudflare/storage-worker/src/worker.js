@@ -21,7 +21,8 @@
  *  - ASTRAL_ORIGIN_BASE_URL           Astral 后端公网 https 地址
  *
  * HMAC 规范串（必须与 com.astral.storage.security.StorageHmac 一致）：
- *  - Worker→Astral：`METHOD\nPATH\nTIMESTAMP\nNONCE`
+ *  - Worker→Astral：`METHOD\nPATH\nTIMESTAMP\nNONCE`，其中 PATH **不含 query string**
+ *    （Astral 用 request.getRequestURI() 拼接，永远不带 query；带 query 的路径必须先剥离再签名）
  *  - 下载签名：      `GET\n/f/{publicId}/{contentVersion}\n{expiresEpoch}\n{keyVersion}`
  *  - 上传凭证：      sig = b64url(HMAC(ticketKey, payloadB64))，ticket = payloadB64 + "." + sig
  */
@@ -91,13 +92,30 @@ function sanitizeFilename(name) {
   return cleaned.length > 200 ? cleaned.slice(-200) : cleaned;
 }
 
+/** 日志里的异常文本可能含 Bot Token（Telegram URL）或凭证 query，必须先脱敏 */
+function safeError(error) {
+  return String(error?.message || error || 'unknown error')
+    .replace(/bot[^/\s]+/g, 'bot***')
+    .replace(/([?&](?:ticket|token|s|signature)=)[^&\s]+/gi, '$1***');
+}
+
 // ==================== Worker → Astral 服务身份 ====================
+
+/**
+ * 规范串里的 PATH 必须与 Astral 的 request.getRequestURI() 完全一致：**不含 query**。
+ * Astral 侧 StorageWorkerAuthInterceptor 用 getRequestURI() 拼接规范串，
+ * 因此带 `?limit=10` 的删除任务拉取若把 query 签进去，签名必然不匹配（STORAGE017）。
+ */
+function canonicalPath(path) {
+  const query = path.indexOf('?');
+  return query === -1 ? path : path.slice(0, query);
+}
 
 async function originHeaders(env, method, path) {
   const key = await hmacKey(env.STORAGE_ORIGIN_SHARED_SECRET);
   const timestamp = String(Math.floor(Date.now() / 1000));
   const nonce = crypto.randomUUID();
-  const canonical = `${method}\n${path}\n${timestamp}\n${nonce}`;
+  const canonical = `${method}\n${canonicalPath(path)}\n${timestamp}\n${nonce}`;
   const signature = b64UrlEncode(await hmacSignBytes(key, new TextEncoder().encode(canonical)));
   return {
     'X-Storage-Origin-Timestamp': timestamp,
@@ -340,8 +358,27 @@ async function handleHealth(env) {
 /** 拉取删除任务 → deleteMessage → 确认 */
 async function processDeleteTasks(env) {
   const resp = await astralFetch(env, '/api/v1/all/storage/worker/tasks/delete?limit=10');
-  const json = await resp.json().catch(() => ({}));
-  if (resp.status !== 200 || json.code !== 200 || !Array.isArray(json.data)) return;
+  // 先取原始文本再解析：resp.json() 遇到非 JSON 会抛异常，被 catch 成 {} 后
+  // 只剩「HTTP 200 code n/a」这种查不出原因的日志（ASTRAL_ORIGIN_BASE_URL 指错、
+  // 被前置代理/静态站点接走返回 HTML 时就是这样）。
+  const raw = await resp.text().catch(() => '');
+  let json = {};
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    // 非 JSON 响应，json 保持 {}，下面把 content-type 和正文片段带进原因里
+  }
+  if (resp.status !== 200 || json.code !== 200 || !Array.isArray(json.data)) {
+    // 静默 return 曾让签名不匹配（STORAGE017）在线上完全不可见，必须留下原因
+    const contentType = resp.headers.get('content-type') || 'n/a';
+    const preview = safeError(raw).replace(/\s+/g, ' ').slice(0, 200) || '<empty>';
+    return { ok: false, reason: `astral pull rejected: HTTP ${resp.status} code ${json.code ?? 'n/a'}${json.message ? ' ' + json.message : ''} content-type=${contentType} body=${preview}` };
+  }
+  let deleted = 0;
+  let failed = 0;
+  // 只报「10/10 失败」等于没报：Telegram 拒绝删除的原因（机器人不是频道管理员、
+  // 消息超过 48 小时、chat_id/message_id 不对）全在 description 里，必须带出来。
+  let firstError = null;
   for (const task of json.data) {
     let success = false;
     let errorMessage = null;
@@ -355,13 +392,19 @@ async function processDeleteTasks(env) {
       success = Boolean(delJson.ok);
       if (!success) errorMessage = delJson.description || 'telegram delete failed';
     } catch (e) {
-      errorMessage = String(e);
+      errorMessage = safeError(e);
     }
     await astralFetch(env, `/api/v1/all/storage/worker/tasks/${task.taskId}/ack`, {
       method: 'POST',
       body: JSON.stringify({ success, errorMessage }),
     });
+    if (success) deleted++;
+    else {
+      failed++;
+      if (!firstError) firstError = `taskId=${task.taskId} chatId=${task.chatId} messageId=${task.messageId} ${errorMessage}`;
+    }
   }
+  return { ok: true, pulled: json.data.length, deleted, failed, firstError };
 }
 
 // ==================== 入口 ====================
@@ -392,6 +435,12 @@ export default {
   },
 
   async scheduled(event, env) {
-    await processDeleteTasks(env);
+    const result = await processDeleteTasks(env);
+    if (result && result.ok === false) {
+      // wrangler tail 可见：拉取被拒（如 STORAGE017 签名不匹配）不再静默
+      console.error(`Telegram delete task poll failed: ${result.reason}`);
+    } else if (result && result.failed) {
+      console.error(`Telegram delete tasks failed: ${result.failed}/${result.pulled}${result.firstError ? ` — ${result.firstError}` : ''}`);
+    }
   },
 };

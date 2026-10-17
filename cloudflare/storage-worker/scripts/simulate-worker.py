@@ -56,10 +56,19 @@ def encode_command(*args):
     return out
 
 
+def canonical_path(path: str) -> str:
+    """规范串里的 PATH 必须与 Astral 的 request.getRequestURI() 一致：**不含 query**。
+
+    StorageWorkerAuthInterceptor 用 getRequestURI() 拼规范串，它永远不带 query string；
+    若把 `?limit=10` 签进去，签名必然不匹配（STORAGE017）。Worker 与服务器版均按此约定。
+    """
+    return path.split('?', 1)[0]
+
+
 def sign_origin(secret: str, method: str, path: str) -> dict:
     ts = str(int(time.time()))
     nonce = uuid.uuid4().hex
-    canonical = f"{method}\n{path}\n{ts}\n{nonce}"
+    canonical = f"{method}\n{canonical_path(path)}\n{ts}\n{nonce}"
     sig = b64url(hmac.new(secret.encode(), canonical.encode(), hashlib.sha256).digest())
     return {
         'X-Storage-Origin-Timestamp': ts,
@@ -148,7 +157,17 @@ def main():
     assert resp.get('errorCode') == 'STORAGE017', f'错误签名未被拒绝: {resp}'
     print('[6] 错误签名防护验证通过（STORAGE017）')
 
-    print('\n全部模拟通过：Worker → Astral 上传回调与下载回源契约正常。')
+    # 7. 删除任务拉取：**带 query 的路径必须按去掉 query 的规范串签名**
+    #    Astral 用 request.getRequestURI() 拼规范串（永远不含 query），
+    #    早期 Worker 把 `?limit=10` 一起签进去，导致线上删除任务拉取恒定 400 STORAGE017 且静默无日志。
+    poll_path = '/api/v1/all/storage/worker/tasks/delete?limit=10'
+    status, resp = http('GET', base + poll_path, None,
+                        sign_origin(args.origin_secret, 'GET', poll_path))
+    assert status == 200 and resp.get('code') == 200, f'删除任务拉取失败: {status} {resp}'
+    assert isinstance(resp.get('data'), list), f'删除任务返回结构异常: {resp}'
+    print(f"[7] 删除任务拉取成功（query 不参与签名）: {len(resp['data'])} 条待处理")
+
+    print('\n全部模拟通过：Worker → Astral 上传回调、下载回源与删除任务拉取契约正常。')
 
 
 if __name__ == '__main__':

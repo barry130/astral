@@ -33,6 +33,9 @@ Cloudflare Worker 承担所有文件流量：浏览器把文件直传 Worker，W
 
 - HMAC 规范串：`METHOD\nPATH\nTIMESTAMP\nNONCE`（Worker→Astral）与
   `GET\n/f/{publicId}/{contentVersion}\n{expiresEpoch}\n{keyVersion}`（下载签名）。
+  **PATH 不含 query string**：Astral 侧 `StorageWorkerAuthInterceptor` 用 `request.getRequestURI()` 拼规范串，
+  它永远不带 query。带 query 的路径（如删除任务拉取 `/worker/tasks/delete?limit=10`）必须先剥离再签名，
+  否则签名恒定不匹配（STORAGE017 / HTTP 400）。
   任何修改必须同步 `com.astral.storage.security.StorageHmac` 并更新固定测试向量。
 - 上传凭证：`base64url(payload).sig`，payload 含 uploadId/configId/folderId/chatId/maxSize/mime/exp。
 - 缓存：仅 `visibility=PUBLIC` 进共享边缘缓存（s-maxage=300）；私有文件 no-store。
