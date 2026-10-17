@@ -1,0 +1,80 @@
+name: astral-telegram-gateway
+services:
+  telegram-storage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # 容器内部端口必须与下面映射的右侧一致（38787:8787 → 8787）。
+      # .env 里若误设 PORT，会顶掉 Dockerfile 的默认值，让宿主机映射指向空端口，
+      # 表现为 curl: (52) Empty reply from server；这里显式钉死（environment 优先级高于 env_file）。
+      PORT: "8787"
+      HOST: "0.0.0.0"
+    ports:
+      - "38787:8787"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    pids_limit: 64
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 可选：Cloudflare Tunnel 连接器 —— 远程管理隧道（README 方案 C2）。
+  # 即 Dashboard → Networking → Tunnels 建出来的那种，用 token 连接。
+  # 用 `docker compose --profile tunnel up -d` 启用；不加 profile 时本服务不启动。
+  #
+  # 公开主机名（Public Hostname）在 Dashboard 里配：Service URL 填
+  #   http://telegram-storage:8787
+  # （cloudflared 与 telegram-storage 同属本 Compose 网络，服务名可直接解析；
+  #   容器内端口恒为 8787，不是宿主端口 38787。）
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles:
+      - tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      # 值来自 Dashboard 该隧道 Overview → Add a replica / 安装命令里的 eyJ... 串。
+      # 只从项目目录的 .env 插值；不要写进命令行或日志。
+      TUNNEL_TOKEN: "${TUNNEL_TOKEN:-}"
+    depends_on:
+      - telegram-storage
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 备选：本地管理（locally-managed）隧道（README 方案 C3）——凭证与配置都是本机文件，
+  # 不挂在 Zero Trust 组织下。准备步骤：cloudflared tunnel login / create / route dns，
+  # 再把 config.yml 与凭证 <UUID>.json 放进本目录的 cloudflared/ 子目录。
+  # 用 `docker compose --profile tunnel-local up -d` 启用。
+  cloudflared-local:
+    image: cloudflare/cloudflared:latest
+    profiles:
+      - tunnel-local
+    restart: unless-stopped
+    # 必须显式给 --config：容器内默认路径下没有凭证，不给会直接启动失败。
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      # 目录内含 config.yml 与隧道凭证 <UUID>.json，两者都等同隧道运行凭证，务必保密。
+      - ./cloudflared:/etc/cloudflared:ro
+    depends_on:
+      - telegram-storage
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

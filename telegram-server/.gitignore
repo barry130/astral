@@ -1,0 +1,5 @@
+# 部署密钥：Bot Token、三个 HMAC 密钥、可选的 TUNNEL_TOKEN
+.env
+
+# 本地管理隧道的运行凭证（config.yml + <UUID>.json），等同隧道通行证，绝不入库
+cloudflared/
