@@ -49,6 +49,9 @@ public final class NotifyEventRegistry {
     /** 反馈插件：用户在反馈中回复，群发管理员 */
     public static final String FEEDBACK_USER_REPLIED = "feedbackUserReplied";
 
+    /** 管理员调整用户角色后通知该用户（仅站内信）。 */
+    public static final String USER_ROLES_CHANGED = "userRolesChanged";
+
     private static final List<NotifyEventDef> EVENTS = List.of(
             new NotifyEventDef(QT_PASSWORD_RESET_CODE, "找回密码验证码",
                     "轻听客户端邮箱验证码（修改密码/找回密码）。插件 qt 调用，验证码有效期 10 分钟",
@@ -73,7 +76,7 @@ public final class NotifyEventRegistry {
                             new NotifyEventField("feedbackTitle", "反馈标题")),
                     List.of(NotifyChannel.INAPP), null),
             new NotifyEventDef(FEEDBACK_ADMIN_REPLIED, "管理员回复通知",
-                    "feedback 插件触发：管理员回复反馈时通知提交人",
+                    "feedback 插件触发：管理员回复反馈时通知提交人，站内信使用全部平台",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("userId", "提交人用户ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
@@ -84,10 +87,17 @@ public final class NotifyEventRegistry {
                             new NotifyEventField("feedbackTitle", "反馈标题")),
                     List.of(NotifyChannel.INAPP), null),
             new NotifyEventDef(FEEDBACK_USER_REPLIED, "用户回复反馈通知",
-                    "feedback 插件触发：用户在反馈中回复后群发管理员。收件人与平台建议同上",
+                    "feedback 插件触发：用户在反馈中回复后群发管理员。收件人建议 ROLE=ADMIN，站内信使用全部平台",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
-                    List.of(NotifyChannel.INAPP), null));
+                    List.of(NotifyChannel.INAPP), null),
+            new NotifyEventDef(USER_ROLES_CHANGED, "用户角色变更通知",
+                    "管理员增加或移除用户角色后通知该用户；事务提交成功后触发，相同角色重复保存不触发。收件人建议 PAYLOAD_FIELD=userId",
+                    List.of(new NotifyEventField("userId", "角色变更的用户ID"),
+                            new NotifyEventField("addedRoles", "本次增加的角色名称，无则为空"),
+                            new NotifyEventField("removedRoles", "本次移除的角色名称，无则为空"),
+                            new NotifyEventField("changeSummary", "角色权限变更说明")),
+                    List.of(NotifyChannel.INAPP), "announce"));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -128,5 +138,10 @@ public final class NotifyEventRegistry {
                     .filter(s -> !s.isEmpty())
                     .toList();
         }
+    }
+
+    /** 反馈双方的回复通知跨平台可见，平台定向统一为 all。 */
+    public static boolean isFeedbackReply(String eventCode) {
+        return FEEDBACK_ADMIN_REPLIED.equals(eventCode) || FEEDBACK_USER_REPLIED.equals(eventCode);
     }
 }

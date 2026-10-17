@@ -6,6 +6,8 @@ import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.UserRoleMapper;
 import com.astral.system.service.UserRoleService;
+import com.astral.system.notify.UserRoleChangeNotifier;
+import java.io.Serializable;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ import java.util.Objects;
 public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> implements UserRoleService {
 
     private final RoleMapper roleMapper;
+    private final UserRoleChangeNotifier roleChangeNotifier;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -51,6 +54,9 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
             }
         }
 
+        List<Long> before = list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId))
+                .stream().map(UserRole::getRoleId).toList();
+
         // 2) 清空 + 写入必须同一事务：中途失败会让用户角色被清空且无法自愈
         remove(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId));
 
@@ -64,5 +70,45 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
             }
             saveBatch(rows);
         }
+        roleChangeNotifier.notifyChange(userId, before, distinct);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean save(UserRole entity) {
+        boolean saved = super.save(entity);
+        if (saved) {
+            roleChangeNotifier.notifyChange(entity.getUserId(), List.of(), List.of(entity.getRoleId()));
+        }
+        return saved;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateById(UserRole entity) {
+        UserRole before = getById(entity.getId());
+        boolean updated = super.updateById(entity);
+        if (updated && before != null) {
+            // 重新读取以兼容局部更新：未传字段由 MyBatis-Plus 保留原值。
+            UserRole after = getById(entity.getId());
+            if (Objects.equals(before.getUserId(), after.getUserId())) {
+                roleChangeNotifier.notifyChange(after.getUserId(), List.of(before.getRoleId()), List.of(after.getRoleId()));
+            } else {
+                roleChangeNotifier.notifyChange(before.getUserId(), List.of(before.getRoleId()), List.of());
+                roleChangeNotifier.notifyChange(after.getUserId(), List.of(), List.of(after.getRoleId()));
+            }
+        }
+        return updated;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean removeById(Serializable id) {
+        UserRole before = getById(id);
+        boolean removed = super.removeById(id);
+        if (removed && before != null) {
+            roleChangeNotifier.notifyChange(before.getUserId(), List.of(before.getRoleId()), List.of());
+        }
+        return removed;
     }
 }

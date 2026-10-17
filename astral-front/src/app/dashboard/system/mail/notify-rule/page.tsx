@@ -6,19 +6,24 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined, CheckCircleOu
 import { notifyRuleApi, SysNotifyRule, NotifyPublishResult } from '@/api/notify';
 import { mailApi, MailTemplate, NotifyEventDef } from '@/api/mail';
 import { smsApi, SmsTemplate } from '@/api/sms';
-import { noticeChannelOptions } from '@/api/feedback';
+import { loadFeedbackDicts, noticeChannelOptions, noticeChannelLabel, NOTICE_CHANNEL_ALL } from '@/api/feedback';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
 const CHANNEL_COLORS: Record<string, string> = { EMAIL: 'blue', SMS: 'green', INAPP: 'purple' };
+const FEEDBACK_REPLY_EVENTS = new Set(['feedbackAdminReplied', 'feedbackUserReplied']);
 
 export default function NotifyRulePage() {
   const [loading, setLoading] = useState(false);
+  const [, setDictReady] = useState(false);
   const [data, setData] = useState<SysNotifyRule[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<SysNotifyRule | null>(null);
   const [form] = Form.useForm();
+  const selectedEventCode = Form.useWatch('eventCode', form);
+  const selectedChannel = Form.useWatch('channel', form);
+  const recipientType = Form.useWatch('recipientType', form);
 
   const [events, setEvents] = useState<NotifyEventDef[]>([]);
   const [mailTemplates, setMailTemplates] = useState<MailTemplate[]>([]);
@@ -34,7 +39,11 @@ export default function NotifyRulePage() {
   const hasPerm = usePerm();
   const canEdit = hasPerm('admin:system:notify:rule:edit');
 
-  useEffect(() => { loadData(); loadRefs(); }, []);
+  useEffect(() => {
+    loadData();
+    loadRefs();
+    loadFeedbackDicts().then(() => setDictReady(true)).catch(() => {});
+  }, []);
 
   const loadData = (page = 1, size = 10) => {
     setLoading(true);
@@ -59,7 +68,7 @@ export default function NotifyRulePage() {
   /** 当前表单 (事件, 渠道) 下合法的模板选项 */
   const templateOptions = (): { label: string; value: number }[] => {
     const eventCode = form.getFieldValue('eventCode');
-    const channel = form.getFieldValue('channel');
+    const channel = selectedChannel;
     if (!eventCode || !channel) return [];
     if (channel === 'SMS') {
       return smsTemplates
@@ -80,7 +89,8 @@ export default function NotifyRulePage() {
 
   const handleEdit = (r: SysNotifyRule) => {
     setEditing(r);
-    form.setFieldsValue({ ...r, platform: r.platform ? r.platform.split(',') : undefined });
+    form.setFieldsValue({ ...r, platform: FEEDBACK_REPLY_EVENTS.has(r.eventCode || '')
+      ? [NOTICE_CHANNEL_ALL] : r.platform ? r.platform.split(',') : undefined });
     setModalVisible(true);
   };
 
@@ -92,7 +102,11 @@ export default function NotifyRulePage() {
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
-    if (Array.isArray(values.platform)) values.platform = values.platform.join(',');
+    if (values.channel === 'INAPP' && FEEDBACK_REPLY_EVENTS.has(values.eventCode)) {
+      values.platform = NOTICE_CHANNEL_ALL;
+    } else if (Array.isArray(values.platform)) {
+      values.platform = values.platform.includes(NOTICE_CHANNEL_ALL) ? NOTICE_CHANNEL_ALL : values.platform.join(',');
+    }
     try {
       if (editing?.id) await notifyRuleApi.update(editing.id, values);
       else await notifyRuleApi.create(values);
@@ -140,6 +154,8 @@ export default function NotifyRulePage() {
       render: (v: string) => <Tag color={CHANNEL_COLORS[v] || 'default'}>{v}</Tag>,
     },
     { title: '模板ID', dataIndex: 'templateId', key: 'templateId', width: 90, render: (v: number) => <code>{v}</code> },
+    { title: '平台', dataIndex: 'platform', key: 'platform',
+      render: (v: string, r: SysNotifyRule) => r.channel === 'INAPP' ? noticeChannelLabel(v || NOTICE_CHANNEL_ALL) : '-' },
     {
       title: '收件人', key: 'recipient', width: 200, ellipsis: true,
       render: (_: any, r: SysNotifyRule) => r.recipientType === 'PAYLOAD_FIELD'
@@ -167,7 +183,6 @@ export default function NotifyRulePage() {
     },
   ];
 
-  const selectedEventCode = form.getFieldValue('eventCode');
   const selectedDef = eventDefOf(selectedEventCode);
   const channelOptions = (selectedDef?.channels || ['EMAIL']).map((c) => ({ label: c, value: c }));
 
@@ -204,7 +219,8 @@ export default function NotifyRulePage() {
               placeholder="选择系统事件"
               showSearch
               optionFilterProp="label"
-              onSelect={() => form.setFieldsValue({ channel: undefined, templateId: undefined })}
+              onSelect={(code) => form.setFieldsValue({ channel: undefined, templateId: undefined,
+                platform: FEEDBACK_REPLY_EVENTS.has(code) ? [NOTICE_CHANNEL_ALL] : undefined })}
             />
           </Form.Item>
           <Form.Item name="channel" label="投递渠道" tooltip="限该事件声明的渠道" rules={[{ required: true }]}>
@@ -223,20 +239,21 @@ export default function NotifyRulePage() {
             </Form.Item>
             <Form.Item
               name="recipientValue" label="收件人取值"
-              tooltip={form.getFieldValue('recipientType') === 'PAYLOAD_FIELD' ? '事件 payload 字段名'
-                : form.getFieldValue('recipientType') === 'ROLE' ? '角色编码（如 ADMIN）' : '邮箱/手机号/用户ID'}
+              tooltip={recipientType === 'PAYLOAD_FIELD' ? '事件 payload 字段名'
+                : recipientType === 'ROLE' ? '角色编码（如 ADMIN）' : '邮箱/手机号/用户ID'}
               rules={[{ required: true }]}
             >
-              <Input style={{ width: 240 }} placeholder={form.getFieldValue('recipientType') === 'PAYLOAD_FIELD' ? '如 userId（字段名）'
-                : form.getFieldValue('recipientType') === 'ROLE' ? '如 ADMIN' : '如 me@example.com'} />
+              <Input style={{ width: 240 }} placeholder={recipientType === 'PAYLOAD_FIELD' ? '如 userId（字段名）'
+                : recipientType === 'ROLE' ? '如 ADMIN' : '如 me@example.com'} />
             </Form.Item>
           </Space>
-          {form.getFieldValue('channel') === 'INAPP' && (
+          {selectedChannel === 'INAPP' && (
             <Form.Item
               name="platform" label="平台定向（站内信）"
-              tooltip="落统一通知表的 channel；选「全部平台」即不限端。管理端通知建议只选 Windows（不推用户手机）"
+              tooltip={FEEDBACK_REPLY_EVENTS.has(selectedEventCode) ? '反馈回复通知统一使用全部平台，收件人仍由规则决定' : '选「全部平台」即不限端，收件人仍由规则决定'}
             >
-              <Select mode="multiple" allowClear options={noticeChannelOptions()} placeholder="默认全部平台" maxTagCount="responsive" />
+              <Select mode="multiple" allowClear options={noticeChannelOptions()} placeholder="默认全部平台" maxTagCount="responsive"
+                disabled={FEEDBACK_REPLY_EVENTS.has(selectedEventCode)} />
             </Form.Item>
           )}
           <Form.Item name="enabled" label="启用">

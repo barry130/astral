@@ -195,13 +195,10 @@ public class QtAppService {
         if (hit == null) {
             return update;
         }
-        if (hit.getDownloadUrl() != null && !hit.getDownloadUrl().isBlank()) {
-            update.setDownloadUrl(hit.getDownloadUrl());
-            update.setIsGithub(hit.getIsGithub() == null ? 0L : hit.getIsGithub());
-        }
-        if (hit.getBrowserUrl() != null && !hit.getBrowserUrl().isBlank()) {
-            update.setBrowserUrl(hit.getBrowserUrl());
-        }
+        // 命中产物后整体替换链接，避免残留其他平台/架构的主表兜底地址。
+        update.setDownloadUrl(hit.getDownloadUrl());
+        update.setBrowserUrl(hit.getBrowserUrl());
+        update.setIsGithub(hit.getIsGithub() == null ? 0L : hit.getIsGithub());
         update.setMd5(hit.getMd5());
         update.setFileSize(hit.getFileSize());
         return update;

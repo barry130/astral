@@ -10,14 +10,14 @@ public interface PluginFrontendExtension {
 
     class NavItem {
         /**
-         * 插件业务页的约定父级：管理端「插件管理」页的路由（对应宿主 {@code sys_menu.path}）。
+         * 插件业务页的约定父级：管理端「插件管理」目录的标识（对应宿主 {@code sys_menu.path}）。
          * 插件声明的导航项按约定都挂在这下面作为**二级菜单**，不要各写各的字面量。
          *
          * <p>父节点在某个用户的菜单树里不可见时（例如该用户没有 {@code admin:plugin:view}，
          * 看不到「插件管理」本身），前端会把该项**退回顶层展示而不是丢弃**——
          * 所以挂在这里不会让「只有 admin:qt:admin 的管理员」连轻听入口都看不到。</p>
          */
-        public static final String PLUGIN_MANAGER_PATH = "/dashboard/plugin";
+        public static final String PLUGIN_MANAGER_PATH = "/dashboard/group/plugin";
 
         /**
          * 声明一个「插件管理」下的二级导航项，等价于
@@ -34,8 +34,8 @@ public interface PluginFrontendExtension {
         /**
          * 父级菜单的路由路径（对应宿主 sys_menu 的 path）。
          * null / 空 = 顶层菜单项；非空 = 挂到该 path 对应的菜单节点下作为二级菜单。
-         * 前端侧边栏按此字段嵌套（<b>不再无条件把所有插件项堆到 /dashboard/plugin</b>，
-         * 也不会有前端硬编码的重复子项）。插件业务页用 {@link #PLUGIN_MANAGER_PATH}。
+         * 前端侧边栏按此字段嵌套；插件业务页用 {@link #PLUGIN_MANAGER_PATH}，
+         * 与宿主的「插件管理」二级页面同级展示。
          */
         private String parentPath;
         /**

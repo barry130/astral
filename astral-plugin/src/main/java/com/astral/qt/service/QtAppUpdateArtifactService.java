@@ -50,14 +50,17 @@ public class QtAppUpdateArtifactService {
         if (updateId == null) {
             return List.of();
         }
-        return artifactCache.get(updateId, id -> {
-            List<QtAppUpdateArtifact> list = artifactMapper.selectList(
-                    new LambdaQueryWrapper<QtAppUpdateArtifact>()
-                            .eq(QtAppUpdateArtifact::getUpdateId, id)
-                            .orderByAsc(QtAppUpdateArtifact::getSort)
-                            .orderByAsc(QtAppUpdateArtifact::getId));
-            return list == null ? new ArrayList<>() : list;
-        });
+        return artifactCache.get(updateId, this::listByUpdateIdForWrite);
+    }
+
+    /** 保存校验直接读库，避免使用提交前缓存或把事务内数据放进公共缓存。 */
+    public List<QtAppUpdateArtifact> listByUpdateIdForWrite(Long updateId) {
+        List<QtAppUpdateArtifact> list = artifactMapper.selectList(
+                new LambdaQueryWrapper<QtAppUpdateArtifact>()
+                        .eq(QtAppUpdateArtifact::getUpdateId, updateId)
+                        .orderByAsc(QtAppUpdateArtifact::getSort)
+                        .orderByAsc(QtAppUpdateArtifact::getId));
+        return list == null ? new ArrayList<>() : list;
     }
 
     /**

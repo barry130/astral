@@ -235,7 +235,8 @@ public class FeedbackNoticeService {
 
     /** 新增通知（公告/定向）；渠道归一化与校验统一走 {@link NoticeChannel} */
     public SysNotice create(SysNotice notice) {
-        notice.setChannel(NoticeChannel.normalizeForStore(notice.getChannel()));
+        notice.setChannel(NotifyEventRegistry.isFeedbackReply(notice.getScene())
+                ? NoticeConstants.CHANNEL_ALL : NoticeChannel.normalizeForStore(notice.getChannel()));
         applyNotNullDefaults(notice);
         notice.setCreateTime(LocalDateTime.now());
         notice.setUpdateTime(LocalDateTime.now());
@@ -284,8 +285,11 @@ public class FeedbackNoticeService {
         applyNotNullDefaults(notice);
         LambdaUpdateWrapper<SysNotice> uw = new LambdaUpdateWrapper<SysNotice>()
                 .eq(SysNotice::getId, id);
-        // 仅当提交了渠道才归一化：为空表示「本次不改该字段」，不能回落成默认值把原渠道冲掉
-        if (notice.getChannel() != null && !notice.getChannel().isBlank()) {
+        // 事件归属取数据库行，避免编辑请求修改 scene 绕过回复通知的全平台约束。
+        SysNotice existing = sysNoticeMapper.selectById(id);
+        if (existing != null && NotifyEventRegistry.isFeedbackReply(existing.getScene())) {
+            uw.set(SysNotice::getChannel, NoticeConstants.CHANNEL_ALL);
+        } else if (notice.getChannel() != null && !notice.getChannel().isBlank()) {
             uw.set(SysNotice::getChannel, NoticeChannel.normalizeForStore(notice.getChannel()));
         }
         uw.set(SysNotice::getNoticeType, notice.getNoticeType())

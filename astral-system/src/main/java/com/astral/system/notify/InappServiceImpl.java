@@ -63,7 +63,8 @@ public class InappServiceImpl implements InappService {
         row.setContent(content);
         row.setScene(scene);
         row.setNoticeType(noticeType);
-        row.setChannel(platform == null || platform.isBlank() ? NoticeConstants.CHANNEL_ALL : platform);
+        row.setChannel(NotifyEventRegistry.isFeedbackReply(scene) || platform == null || platform.isBlank()
+                ? NoticeConstants.CHANNEL_ALL : platform);
         row.setDisplay(DISPLAY_MESSAGE_CENTER);
         row.setIsShow(1L);
         row.setIsTop(0L);

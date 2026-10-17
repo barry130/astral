@@ -78,6 +78,7 @@ export default function NoticeManagement() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SysNotice | null>(null);
   const [form] = Form.useForm();
+  const isFeedbackReply = editing?.scene === 'feedbackAdminReplied' || editing?.scene === 'feedbackUserReplied';
 
   const hasPerm = usePerm();
   // 通知维护权限：必须与后端 AdminMessageController 写接口的 @RequiresPermission("admin:message:edit") 保持一致
@@ -136,7 +137,8 @@ export default function NoticeManagement() {
       firstLoginOnly: record.firstLoginOnly ?? 0,
       marquee: record.marquee ?? 0,
       audience: record.audience || 'ALL',
-      channel: parseChannels(record.channel),
+      channel: record.scene === 'feedbackAdminReplied' || record.scene === 'feedbackUserReplied'
+        ? [NOTICE_CHANNEL_ALL] : parseChannels(record.channel),
       noticeType: record.noticeType || 'announce',
       effectiveRange: record.effectiveStart && record.effectiveEnd
         ? [dayjs(record.effectiveStart), dayjs(record.effectiveEnd)] : undefined,
@@ -151,7 +153,8 @@ export default function NoticeManagement() {
       ? (values.display as number[]).reduce((acc, b) => acc | b, 0) : values.display;
     const payload: SysNotice = {
       id: editing?.id,
-      channel: Array.isArray(values.channel) ? joinChannels(values.channel as string[]) : values.channel,
+      channel: isFeedbackReply ? NOTICE_CHANNEL_ALL
+        : Array.isArray(values.channel) ? joinChannels(values.channel as string[]) : values.channel,
       noticeType: values.noticeType,
       title: values.title,
       content: values.content,
@@ -309,13 +312,13 @@ export default function NoticeManagement() {
               <Form.Item
                 name="channel"
                 label="投放平台（可多选）"
-                extra="与接口统计的平台口径一致；选「全部平台」即不限端"
+                extra={isFeedbackReply ? '反馈回复通知使用全部平台' : '与接口统计的平台口径一致；选「全部平台」即不限端'}
                 rules={[{ required: true, message: '请选择投放平台' }]}
                 // 兼容层不支持 normalize，「全部平台」与具体平台的互斥在这里做
                 getValueFromEvent={(next: string[]) =>
                   toggleChannel(next || [], (form.getFieldValue('channel') as string[]) || [])}
               >
-                <Select mode="multiple" options={noticeChannelOptions()} placeholder="选择投放平台" maxTagCount="responsive" />
+                <Select mode="multiple" disabled={isFeedbackReply} options={noticeChannelOptions()} placeholder="选择投放平台" maxTagCount="responsive" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>

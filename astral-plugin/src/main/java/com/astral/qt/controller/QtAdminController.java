@@ -28,6 +28,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -142,27 +145,26 @@ public class QtAdminController {
      */
     @Operation(summary = "保存某版本的产物列表（全量覆盖）")
     @PutMapping("/updates/{id}/artifacts")
+    @Transactional(rollbackFor = Exception.class)
     public QtRestResp<List<QtAppUpdateArtifact>> saveUpdateArtifacts(
             @PathVariable Long id, @RequestBody List<QtAppUpdateArtifact> items) {
-        QtAppUpdate exist = qtUpdateMapper.selectById(id);
+        QtAppUpdate exist = qtUpdateMapper.selectByIdForUpdate(id);
         if (exist == null) {
             return QtRestResp.error(300, "版本信息不存在");
         }
         // 覆盖保存前先按「新清单」核对多平台覆盖：删掉某平台唯一的产物后，
         // 该平台客户端会挑不中产物，回退到主表直链（可能拿到别的平台的包）
-        String coverageErr = validatePlatformCoverage(exist.getPlatforms(), items,
-                exist.getDownloadUrl(), exist.getBrowserUrl());
+        String artifactErr = artifactService.validate(items);
+        if (artifactErr != null) {
+            return QtRestResp.error(300, artifactErr);
+        }
+        String coverageErr = validatePlatformCoverage(exist.getPlatforms(), items);
         if (coverageErr != null) {
             return QtRestResp.error(300, coverageErr);
         }
-        List<QtAppUpdateArtifact> saved;
-        try {
-            saved = artifactService.replaceAll(id, items);
-        } catch (IllegalArgumentException e) {
-            return QtRestResp.error(300, e.getMessage());
-        }
+        List<QtAppUpdateArtifact> saved = artifactService.replaceAll(id, items);
         syncLegacyFields(exist, saved.isEmpty() ? null : saved.get(0));
-        appService.evictUpdateCache();
+        evictUpdateCacheAfterCommit();
         return QtRestResp.success(saved);
     }
 
@@ -176,8 +178,7 @@ public class QtAdminController {
         }
         qtUpdateMapper.update(null, new LambdaUpdateWrapper<QtAppUpdate>()
                 .eq(QtAppUpdate::getId, exist.getId())
-                .set(fallback.getDownloadUrl() != null && !fallback.getDownloadUrl().isBlank(),
-                        QtAppUpdate::getDownloadUrl, fallback.getDownloadUrl())
+                .set(QtAppUpdate::getDownloadUrl, PatchValues.blankToNull(fallback.getDownloadUrl()))
                 .set(QtAppUpdate::getBrowserUrl, fallback.getBrowserUrl())
                 .set(QtAppUpdate::getIsGithub, fallback.getIsGithub() == null ? 0L : fallback.getIsGithub())
                 .set(QtAppUpdate::getMd5, fallback.getMd5())
@@ -187,19 +188,13 @@ public class QtAdminController {
 
     @Operation(summary = "新增版本更新")
     @PostMapping("/updates")
+    @Transactional(rollbackFor = Exception.class)
     public QtRestResp<QtAppUpdate> createUpdate(@RequestBody QtAppUpdate update) {
         // 多产物版本：下载地址由 artifacts 逐条提供，主表可以不填直链（保存后由兜底产物回填）
         List<QtAppUpdateArtifact> artifacts = artifactService.fromVos(update.getArtifacts());
-        if (artifacts.isEmpty()) {
-            String err = validateUpdateLinks(update);
-            if (err != null) {
-                return QtRestResp.error(300, err);
-            }
-        } else {
-            String err = artifactService.validate(artifacts);
-            if (err != null) {
-                return QtRestResp.error(300, err);
-            }
+        String err = artifactService.validate(artifacts);
+        if (err != null) {
+            return QtRestResp.error(300, err);
         }
         update.setId(null);
         // 平台多选：前端送逗号分隔 CSV（与公告 channel 同款），这里校验并归一（去重/去空/保持顺序）
@@ -213,8 +208,7 @@ public class QtAdminController {
         update.setPlatforms(QtAppUpdate.toPlatformsCsv(QtAppUpdate.parsePlatforms(platforms)));
         // 勾了多个平台时，每个平台都得有能落地的包：产物是按平台分条维护的，
         // 只给安卓加了产物却勾上鸿蒙，鸿蒙客户端会挑不中产物而回退主表直链（下到安卓包）
-        String coverageErr = validatePlatformCoverage(update.getPlatforms(), artifacts,
-                update.getDownloadUrl(), update.getBrowserUrl());
+        String coverageErr = validatePlatformCoverage(update.getPlatforms(), artifacts);
         if (coverageErr != null) {
             return QtRestResp.error(300, coverageErr);
         }
@@ -225,21 +219,20 @@ public class QtAdminController {
         update.setCreateTime(LocalDateTime.now());
         update.setUpdateTime(LocalDateTime.now());
         qtUpdateMapper.insert(update);
-        // 表单可以带产物一起提交（Windows 三架构一次性建好）：插入前已校验，这里只负责落库与回填兜底字段
-        if (!artifacts.isEmpty()) {
-            List<QtAppUpdateArtifact> saved = artifactService.replaceAll(update.getId(), artifacts);
-            syncLegacyFields(update, saved.isEmpty() ? null : saved.get(0));
-        }
-        update.setArtifacts(artifactService.toVos(update.getId()));
-        appService.evictUpdateCache();
+        // 插入前已校验；响应使用刚保存的清单，不把未提交的事务数据放进公共缓存。
+        List<QtAppUpdateArtifact> saved = artifactService.replaceAll(update.getId(), artifacts);
+        syncLegacyFields(update, saved.isEmpty() ? null : saved.get(0));
+        update.setArtifacts(saved.stream().map(QtAppUpdateArtifact::toVo).toList());
+        evictUpdateCacheAfterCommit();
         return QtRestResp.success(update);
     }
 
     @Operation(summary = "更新版本信息")
     @PutMapping("/updates/{id}")
+    @Transactional(rollbackFor = Exception.class)
     public QtRestResp<Void> updateAppUpdate(@PathVariable Long id, @RequestBody QtAppUpdate update) {
         // 编辑时以库中已有值为兜底校验（表单可能不回传未变更字段）
-        QtAppUpdate exist = qtUpdateMapper.selectById(id);
+        QtAppUpdate exist = qtUpdateMapper.selectByIdForUpdate(id);
         if (exist == null) {
             return QtRestResp.error("版本信息不存在");
         }
@@ -247,7 +240,11 @@ public class QtAdminController {
         String downloadUrl = PatchValues.orCurrent(update.getDownloadUrl(), exist.getDownloadUrl());
         String browserUrl = PatchValues.orCurrent(update.getBrowserUrl(), exist.getBrowserUrl());
         Long isGithub = PatchValues.orDefault(update.getIsGithub(), exist.getIsGithub());
-        String err = validateUpdateLinks(downloadUrl, browserUrl, isGithub);
+        // 带 artifacts 时按本次清单校验并一并保存；未提交时保留库中清单。
+        List<QtAppUpdateArtifact> artifacts = update.getArtifacts() == null
+                ? artifactService.listByUpdateIdForWrite(id)
+                : artifactService.fromVos(update.getArtifacts());
+        String err = artifactService.validate(artifacts);
         if (err != null) {
             return QtRestResp.error(300, err);
         }
@@ -258,9 +255,8 @@ public class QtAdminController {
             return QtRestResp.error(300, platformErr);
         }
         String normalizedPlatforms = QtAppUpdate.toPlatformsCsv(QtAppUpdate.parsePlatforms(platforms));
-        // 改平台时同样要保证每个平台都有包可下（产物挂在库里的子表上，用现存的清单判定）
-        String coverageErr = validatePlatformCoverage(normalizedPlatforms,
-                artifactService.listByUpdateId(id), downloadUrl, browserUrl);
+        // 所选平台必须逐一出现在最终产物清单中，不能被主表兜底地址绕过。
+        String coverageErr = validatePlatformCoverage(normalizedPlatforms, artifacts);
         if (coverageErr != null) {
             return QtRestResp.error(300, coverageErr);
         }
@@ -286,28 +282,12 @@ public class QtAdminController {
                 .set(QtAppUpdate::getFileSize, update.getFileSize())
                 .set(QtAppUpdate::getMd5, PatchValues.orCurrent(update.getMd5(), exist.getMd5()))
                 .set(QtAppUpdate::getUpdateTime, LocalDateTime.now()));
-        appService.evictUpdateCache();
+        if (update.getArtifacts() != null) {
+            List<QtAppUpdateArtifact> saved = artifactService.replaceAll(id, artifacts);
+            syncLegacyFields(exist, saved.isEmpty() ? null : saved.get(0));
+        }
+        evictUpdateCacheAfterCommit();
         return QtRestResp.success();
-    }
-
-    /**
-     * 版本保存服务端校验（UPDATE_DESIGN.md §2.2）：
-     * downloadUrl 与 browserUrl 至少填一个；isGithub=1 时 downloadUrl 必填。
-     */
-    private String validateUpdateLinks(QtAppUpdate update) {
-        return validateUpdateLinks(update.getDownloadUrl(), update.getBrowserUrl(), update.getIsGithub());
-    }
-
-    private String validateUpdateLinks(String downloadUrl, String browserUrl, Long isGithub) {
-        boolean hasDirect = downloadUrl != null && !downloadUrl.isBlank();
-        boolean hasBrowser = browserUrl != null && !browserUrl.isBlank();
-        if (!hasDirect && !hasBrowser) {
-            return "直链下载与浏览器下载至少填一个";
-        }
-        if (isGithub != null && isGithub == 1L && !hasDirect) {
-            return "GitHub 下载必须填写直链下载地址";
-        }
-        return null;
     }
 
     // ==================== GitHub 加速节点（UPDATE_DESIGN.md §2.2） ====================
@@ -493,47 +473,21 @@ public class QtAdminController {
      * download_url，装上一个安卓包。旧的多行批量接口靠「逐平台拆产物 + 逐平台校验」拦住了这种情况，
      * 改成一行后必须由这里补上。</p>
      *
-     * <p>判定：某平台既没有「专属产物（platform 相同）」也没有「不限平台产物（platform 为空）」时，
-     * 要求主表直链/浏览器链接至少填一个作为兜底（与 {@code validateUpdateLinks} 同口径）；
-     * 主表也没地址就直接报错，并点名是哪个平台。</p>
+     * <p>每个所选平台都必须有 platform 精确匹配的产物。
+     * 主表兜底链接和不限平台产物都不能代替平台专属产物。</p>
      *
      * @param platformsCsv 已归一的 platforms CSV
-     * @param artifacts    本次提交的产物（已过 artifactService.validate）
-     * @param downloadUrl  主表兜底直链
-     * @param browserUrl   主表兜底浏览器链接
+     * @param artifacts    最终保存的产物（已过 artifactService.validate）
      * @return 错误文案；通过返回 null
      */
-    private String validatePlatformCoverage(String platformsCsv, List<QtAppUpdateArtifact> artifacts,
-                                            String downloadUrl, String browserUrl) {
-        boolean hasFallback = (downloadUrl != null && !downloadUrl.isBlank())
-                || (browserUrl != null && !browserUrl.isBlank());
-        if (hasFallback) {
-            // 主表有兜底地址，任何平台都至少能下到一个包（旧口径允许这样）
-            return null;
-        }
-        boolean hasGeneric = false;
-        for (QtAppUpdateArtifact a : artifacts) {
-            if (a != null && a.getPlatform() == null) {
-                hasGeneric = true;
-                break;
-            }
-        }
-        if (hasGeneric) {
-            return null;
-        }
-        for (Long platform : QtAppUpdate.parsePlatforms(platformsCsv)) {
-            boolean covered = false;
-            for (QtAppUpdateArtifact a : artifacts) {
-                if (a != null && platform.equals(a.getPlatform())) {
-                    covered = true;
-                    break;
-                }
-            }
-            if (!covered) {
-                return platformLabel(platform) + "：缺少下载地址（请为该平台添加产物，或填写主表直链/浏览器链接作为兜底）";
-            }
-        }
-        return null;
+    private String validatePlatformCoverage(String platformsCsv, List<QtAppUpdateArtifact> artifacts) {
+        List<QtAppUpdateArtifact> items = artifacts == null ? List.of() : artifacts;
+        List<String> missing = QtAppUpdate.parsePlatforms(platformsCsv).stream()
+                .filter(platform -> items.stream().noneMatch(a -> a != null && platform.equals(a.getPlatform())))
+                .map(this::platformLabel)
+                .toList();
+        return missing.isEmpty() ? null : "缺少所选平台的产物：" + String.join("、", missing)
+                + "（请为每个所选平台添加对应产物）";
     }
 
     /** 平台码 → 中文名（仅用于拼错误提示，避免用户看到 1101 这种裸码值）；未知码值原样返回 */
@@ -560,5 +514,19 @@ public class QtAdminController {
             return "鸿蒙";
         }
         return String.valueOf(platform);
+    }
+
+    /** 事务提交后再清缓存，避免其他请求在提交前把旧数据重新放回缓存。 */
+    private void evictUpdateCacheAfterCommit() {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            appService.evictUpdateCache();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                appService.evictUpdateCache();
+            }
+        });
     }
 }

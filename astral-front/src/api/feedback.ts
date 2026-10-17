@@ -56,6 +56,8 @@ export interface SysNotice {
   /** 点对点目标用户ID（NULL=广播） */
   userId?: number;
   feedbackId?: number;
+  /** 通知来源事件，由服务端写入 */
+  scene?: string;
   /** 位掩码：1开屏 2通告栏 4消息中心 */
   display?: number;
   title?: string;

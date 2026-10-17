@@ -181,6 +181,11 @@ public class NotifyRuleController {
 
     /** 平台定向归一：小写、去空白（存逗号分隔集合，语义与 sys_notice.channel 一致） */
     private void normalizePlatform(SysNotifyRule entity) {
+        if (NotifyChannel.INAPP.equalsIgnoreCase(entity.getChannel())
+                && NotifyEventRegistry.isFeedbackReply(entity.getEventCode())) {
+            entity.setPlatform("all");
+            return;
+        }
         if (entity.getPlatform() == null) {
             return;
         }

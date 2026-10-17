@@ -142,23 +142,24 @@ export default function QtAdminPage() {
    * 打开版本弹窗。编辑时要单独拉取产物清单：
    * 分页接口返回的 QtUpdate 里只有「按当前请求挑好的那一条」，产物全集要走
    * GET /updates/{id}/artifacts，否则编辑 Windows 三架构版本时会只看到一份产物、
-   * 保存即把另外两份删掉（该接口是全量覆盖语义）。
+   * 保存即把另外两份删掉（版本保存时产物是全量覆盖语义）。
    */
-  const openUpdateModal = useCallback((record?: QtUpdate) => {
+  const openUpdateModal = useCallback(async (record?: QtUpdate) => {
     if (record?.id != null) {
-      updateForm.resetFields();
-      // 「平台」在表单里是数组字段（多选），库里是逗号分隔 CSV：回填时拆开。
-      // 编辑态控件禁用——PUT /updates/{id} 会按白名单写 platforms，但换平台意味着
-      // 这个版本要发给另一批客户端，语义上应当新增一条而不是改旧的。
-      updateForm.setFieldsValue({ ...record, platforms: parsePlatforms(record.platforms), artifacts: [] });
-      setUpdateIsEdit(true);
-      qtAdminApi.artifacts(record.id).then((res) => {
-        if (res.code === 200) {
-          updateForm.setFieldValue('artifacts', res.data || []);
-        }
-      }).catch(() => {});
+      try {
+        // 产物加载成功后才允许编辑，避免加载失败或尚未加载时误把清单清空。
+        const res = await qtAdminApi.artifacts(record.id);
+        if (res.code !== 200) throw new Error(res.message || '产物清单加载失败');
+        updateForm.resetFields();
+        updateForm.setFieldsValue({ ...record, platforms: parsePlatforms(record.platforms), artifacts: res.data || [] });
+        setUpdateIsEdit(true);
+      } catch (error: any) {
+        message.error(error?.message || '产物清单加载失败');
+        return;
+      }
     } else {
       updateForm.resetFields();
+      updateForm.setFieldValue('artifacts', []);
       setUpdateIsEdit(false);
     }
     setUpdateModal(true);
@@ -167,26 +168,24 @@ export default function QtAdminPage() {
   const submitUpdate = async () => {
     const values = await updateForm.validateFields();
     const editing = values.id != null;
-    // 产物单独走全量覆盖接口：更新版本信息的 PUT 只认主表字段，
-    // 把 artifacts 塞进请求体也不会被处理（白名单逐列 set）。
-    const artifacts: QtUpdateArtifact[] | undefined = values.artifacts;
-    // 「平台」是数组字段：提交前拼成 CSV（同一行承载多平台，不再拆成多行）
+    const artifacts: QtUpdateArtifact[] = values.artifacts || [];
+    const missing = (values.platforms as number[]).filter((platform) =>
+      !artifacts.some((artifact) => Number(artifact.platform) === Number(platform)));
+    if (missing.length > 0) {
+      message.error(`缺少所选平台的产物：${missing.map((platform) =>
+        updatePlatformOpts.find((option) => Number(option.value) === Number(platform))?.label || platform).join('、')}`);
+      return;
+    }
+    // 平台和本次产物清单一次提交，由服务端在同一事务中校验并保存。
     const platforms = joinPlatforms(values.platforms);
     try {
-      if (editing) {
-        await qtAdminApi.updateUpdate(values.id, { ...values, platforms });
-        if (artifacts) {
-          await qtAdminApi.saveArtifacts(values.id, artifacts);
-        }
-        message.success('版本信息已更新');
-      } else {
-        // 表单里的 platforms 是数组，请求体要 CSV：解构掉再用拼好的值覆盖
-        const { id: _id, platforms: _platforms, ...rest } = values;
-        const res = await qtAdminApi.createUpdate({ ...rest, platforms });
-        if (res.code === 200) {
-          message.success('版本信息已创建');
-        }
-      }
+      const { id: _id, platforms: _platforms, ...rest } = values;
+      const payload = { ...rest, platforms, artifacts };
+      const res = editing
+        ? await qtAdminApi.updateUpdate(values.id, payload)
+        : await qtAdminApi.createUpdate(payload);
+      if (res.code !== 200) throw new Error(res.message || '操作失败');
+      message.success(editing ? '版本信息已更新' : '版本信息已创建');
       setUpdateModal(false);
       loadUpdates();
     } catch (error: any) {
@@ -465,7 +464,7 @@ export default function QtAdminPage() {
       >
         <Form form={updateForm} layout="vertical" initialValues={{ platforms: [1101], channel: 'stable', isGithub: 0, isForce: 0, isPublished: 0, updateType: '1' }}>
           <Form.Item name="id" hidden><Input /></Form.Item>
-          {!updateIsEdit && watchedUpdatePlatforms.length > 1 && (
+          {watchedUpdatePlatforms.length > 1 && (
             <Alert
               type="info"
               showIcon
@@ -486,8 +485,7 @@ export default function QtAdminPage() {
               <Form.Item name="versionName" label="版本名称"><Input placeholder="如 2.3.0" /></Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
-              {/* 平台多选：同一版本号可一次投放给多个平台（platforms 是逗号分隔多值列，
-                  与公告 channel 同款方案）。编辑态禁用——换平台等于换受众，请新增一条。 */}
+              {/* 新增和编辑均可多选平台，保存时逐一检查产物覆盖。 */}
               <Form.Item
                 name="platforms"
                 label="平台"
@@ -495,14 +493,14 @@ export default function QtAdminPage() {
                   { required: true, message: '请选择平台' },
                   { type: 'array', message: '请选择平台' },
                 ]}
-                extra={updateIsEdit ? '编辑时不可改平台，如需换平台请删除后重新新增' : '可多选：该版本会同时投放给所有勾选平台'}
+                extra="可多选；每个所选平台都必须添加对应产物"
               >
                 <Select
                   mode="multiple"
                   options={updatePlatformOpts as any}
                   placeholder="可多选，如安卓 + 鸿蒙"
                   allowClear
-                  disabled={updateIsEdit}
+                  disabled={!canEdit}
                 />
               </Form.Item>
             </Col>
@@ -566,51 +564,18 @@ export default function QtAdminPage() {
                   产物清单（{fields.length}）
                   {fields.length > 0 && <Tag>App 按「平台+架构」自动挑选</Tag>}
                 </Divider>
+                <Paragraph type="secondary">
+                  每个所选平台至少添加一条对应产物，并填写直链或浏览器下载地址。Windows / macOS 可按架构添加多条产物。
+                </Paragraph>
                 {fields.length === 0 && (
-                  <div>
-                    <Form.Item
-                      name="downloadUrl"
-                      label="直链下载链接"
-                      dependencies={['browserUrl']}
-                      rules={[
-                        ({ getFieldValue }) => ({
-                          validator(_: unknown, value: string) {
-                            if (value || getFieldValue('browserUrl')) return Promise.resolve();
-                            return Promise.reject(new Error('直链下载与浏览器下载至少填一个'));
-                          },
-                        }),
-                      ]}
-                    >
-                      <Input placeholder="直链下载地址，GitHub 时填原始 release 链接" />
-                    </Form.Item>
-                    <Form.Item
-                      name="browserUrl"
-                      label="浏览器下载链接"
-                      dependencies={['downloadUrl']}
-                      rules={[
-                        ({ getFieldValue }) => ({
-                          validator(_: unknown, value: string) {
-                            if (value || getFieldValue('downloadUrl')) return Promise.resolve();
-                            return Promise.reject(new Error('直链下载与浏览器下载至少填一个'));
-                          },
-                        }),
-                      ]}
-                    >
-                      <Input placeholder="浏览器下载地址（两个链接都填时 App 端展示两个按钮）" />
-                    </Form.Item>
-                    <Paragraph type="secondary">
-                      未配置产物时使用上面的单条下载地址（旧口径）。Windows / macOS 请为每种架构各加一条产物。
-                    </Paragraph>
-                  </div>
+                  <Alert type="warning" showIcon message="尚未添加产物，请为所选平台添加对应产物后保存" style={{ marginBottom: 12 }} />
                 )}
                 {fields.map((field) => (
                   <div key={field.key} className="rounded-md border border-border p-3 mb-3">
                     <Row gutter={[12, 0]}>
                       <Col xs={{ span: 24 }} md={{ span: 8 }}>
-                        {/* 平台默认带当前版本的平台：产物与版本同平台是绝大多数情况，
-                            不同平台（如一个 Win+Mac 混合包）可显式改选。 */}
                         <Form.Item name={[field.name, 'platform']} label="平台" style={{ marginBottom: 8 }}>
-                          <Select options={updatePlatformOpts as any} placeholder="默认同版本平台" allowClear />
+                          <Select options={updatePlatformOpts as any} placeholder="不限平台（不计入所选平台覆盖）" allowClear />
                         </Form.Item>
                       </Col>
                       <Col xs={{ span: 24 }} md={{ span: 8 }}>
@@ -681,10 +646,11 @@ export default function QtAdminPage() {
                   icon={<PlusOutlined />}
                   disabled={!canEdit}
                   onClick={() => {
-                    // 「平台」是多选数组，产物默认带第一个平台；留空则该产物对同版本所有平台生效
-                    const picked = updateForm.getFieldValue('platforms');
-                    const first = Array.isArray(picked) ? picked[0] : picked;
-                    add({ platform: first, isGithub: 0 });
+                    // 优先填尚未配置产物的平台，便于连续补齐多平台清单。
+                    const picked: number[] = updateForm.getFieldValue('platforms') || [];
+                    const current: QtUpdateArtifact[] = updateForm.getFieldValue('artifacts') || [];
+                    const platform = picked.find((item) => !current.some((artifact) => Number(artifact.platform) === Number(item))) ?? picked[0];
+                    add({ platform, isGithub: 0 });
                   }}
                 >
                   添加产物

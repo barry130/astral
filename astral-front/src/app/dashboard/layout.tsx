@@ -125,7 +125,7 @@ const byPluginSort = (a: { sort?: number }, b: { sort?: number }) => (a.sort ?? 
  * - parentPath 为空或**父节点不存在** → 作为顶层叶子追加（按 sort 排序）。
  *
  * 嵌套与否完全由插件自己声明（`NavItem.pluginPage(...)` 即挂在「插件管理」下的二级菜单），
- * 前端不做任何硬编码塞入，也没有旧代码里那个硬编码的重复「插件管理」子项。
+ * 「插件管理」目录及其同名管理页面由宿主菜单提供，插件只声明自己的业务入口。
  * 第二条兜底很重要：用户没有 `admin:plugin:view` 时看不到「插件管理」本身，
  * 此时他有权访问的插件页会退到顶层展示，而不是从侧边栏消失。
  */
@@ -171,7 +171,7 @@ interface TabItem {
 }
 
 /** 菜单分组标识（后端菜单树不可用时的兜底数据源使用） */
-type MenuGroup = 'overview' | 'system' | 'ops';
+type MenuGroup = 'overview' | 'system' | 'ops' | 'plugin';
 
 /** 菜单项渲染模型（antd Menu items 结构的等价物） */
 interface MenuItemModel {
@@ -208,7 +208,7 @@ const menuConfig: {
   { key: '/dashboard/system/mail', icon: <Mail />, label: '邮箱管理', permission: 'admin:system:mail:view', group: 'system' },
   { key: '/dashboard/system/mail/log', icon: <PieChart />, label: '邮箱统计', permission: 'admin:system:mail:statistics:view', group: 'system' },
   { key: '/dashboard/log', icon: <FileText />, label: '日志管理', permission: 'admin:log:view', group: 'ops' },
-  { key: '/dashboard/plugin', icon: <Blocks />, label: '插件管理', permission: 'admin:plugin:view', group: 'ops' },
+  { key: '/dashboard/plugin', icon: <PlugZap />, label: '插件管理', permission: 'admin:plugin:view', group: 'plugin' },
 ];
 
 /** 分组元信息：分组 key（非路由）、图标、名称、展示顺序 */
@@ -216,6 +216,7 @@ const MENU_GROUPS: Array<{ group: MenuGroup; key: string; icon: ReactNode; label
   { group: 'overview', key: `${GROUP_KEY_PREFIX}overview`, icon: <LayoutDashboard />, label: '概览' },
   { group: 'system', key: `${GROUP_KEY_PREFIX}system`, icon: <Settings />, label: '系统管理' },
   { group: 'ops', key: `${GROUP_KEY_PREFIX}ops`, icon: <FileText />, label: '运维' },
+  { group: 'plugin', key: `${GROUP_KEY_PREFIX}plugin`, icon: <Blocks />, label: '插件管理' },
 ];
 
 /* ============================ 侧边栏菜单渲染 ============================ */
@@ -284,9 +285,8 @@ function NavGroup({
   );
 
   /**
-   * 组头点击：分组自身是真实路由（如 /dashboard/plugin 被插件项挂成父级）时，
-   * 既跳转到该页面又展开子项——避免「组里只有子项、父页面反而进不去」；
-   * 纯分组（menu-group-*）只做展开/收起。
+   * 带页面路由的组头可跳转；/dashboard/group/ 下的目录只做展开/收起。
+   * 插件管理使用目录节点，实际页面由同名二级菜单打开。
    */
   const isNavigateGroup = !!item.key && item.key.startsWith('/') && !item.key.startsWith(GROUP_KEY_PREFIX);
   const headerOnClick = () => {
@@ -454,7 +454,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     for (const node of tree) {
       if (node.visible === 0) continue;
       if (!hasPermissionIn(userPermissions, node.permission)) continue;
-      if (node.path) {
+      if (node.path && !node.path.startsWith(GROUP_KEY_PREFIX)) {
         if (seenKeys.has(node.path)) continue;
         seenKeys.add(node.path);
         result.push({ key: node.path, icon: iconFor(node.path, node.icon), label: node.name });
@@ -490,7 +490,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       // 使用后端菜单配置
       const treeItems = buildMenuItemsFromTree(backendMenuTree);
       const flatItems = buildFlatTabItems(backendMenuTree);
-      // 插件导航项按 NavItem.parentPath 挂载（插件自己声明挂哪；不再塞重复的「插件管理」子项）
+      // 插件导航项按 NavItem.parentPath 挂载到宿主提供的目录。
       if (visiblePluginNavItems.length > 0) {
         attachPluginNav(treeItems, visiblePluginNavItems);
       }
