@@ -25,7 +25,7 @@
 -- ============================================================
 
 -- 1) 字典类型：qt_update_arch（版本更新产物的 CPU 架构）
-INSERT INTO sys_dict_type (id, dict_code, dict_name, value_type, db_type, max_length, description, status)
+INSERT INTO sys_dict_type (id, dict_code, dict_name, data_type, jdbc_type, data_length, description, status)
 SELECT (SELECT COALESCE(MAX(id), 0) FROM sys_dict_type) + 1,
        'qt_update_arch', '版本更新CPU架构', 'String', 'VARCHAR', 16,
        '版本更新产物的CPU架构(x64/x86/arm64；留空=不限架构)', 1
