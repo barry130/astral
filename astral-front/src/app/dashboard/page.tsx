@@ -98,8 +98,8 @@ function ratioTone(rate: number, good: number, warn: number): Tone {
 /** 统计卡图标芯片：中性浅灰底 + 次级前景图标 */
 function StatIcon({ icon }: { icon: React.ReactNode }) {
   return (
-    <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[rgba(24,24,27,0.04)]">
-      <span className="inline-flex text-xl text-muted-foreground">{icon}</span>
+    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5">
+      <span className="inline-flex text-primary [&_svg]:size-5">{icon}</span>
     </div>
   );
 }
@@ -373,17 +373,19 @@ export default function DashboardPage() {
   const hitTone = hitRate === null ? TONE_NORMAL : ratioTone(hitRate, 90, 70);
 
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="page-title mb-2">仪表盘</h2>
-        <p className="m-0 text-muted-foreground">
-          实时监控系统运行状态与今日业务表现
-          {updatedAt && (
-            <span className="ml-2 text-muted-foreground/70">
-              · 每 30 秒自动刷新，最近更新 {updatedAt.toLocaleTimeString('zh-CN', { hour12: false })}
-            </span>
-          )}
-        </p>
+    <div className="dashboard-overview">
+      <div className="overview-heading mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground">工作台 / 系统概览</p>
+          <h2 className="page-title">仪表盘</h2>
+          <p className="mt-2 text-sm text-muted-foreground">系统运行状态与今日业务表现，一目了然。</p>
+        </div>
+        <div className="flex items-center gap-2.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
+          <Activity aria-hidden className="size-3.5 text-primary" />
+          <span>{updatedAt ? `${updatedAt.toLocaleTimeString('zh-CN', { hour12: false })} 更新` : '等待数据更新'}</span>
+          <span aria-hidden className="h-3 w-px bg-border" />
+          <span>每 30 秒刷新</span>
+        </div>
       </div>
 
       {/* 核心资源指标：4 列响应式栅格 */}

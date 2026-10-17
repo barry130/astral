@@ -6,7 +6,7 @@
 @custom-variant dark (&:is([data-theme="dark"] *), &[data-theme="dark"]);
 
 /* ============================================================
-   shadcn/ui 语义令牌 —— 与下方极简令牌（石墨黑 · 白底）对齐。
+   shadcn/ui 语义令牌 —— 冷灰表面与青绿强调色，与下方应用令牌保持一致。
    Tailwind 类（bg-background / text-foreground / border-border 等）
    经 @theme inline 解析到这些变量；明暗切换由 data-theme 驱动。
    ============================================================ */
@@ -17,7 +17,7 @@
   --card-foreground: #18181b;
   --popover: #ffffff;
   --popover-foreground: #18181b;
-  --primary: #18181b;
+  --primary: #0f766e;
   --primary-foreground: #ffffff;
   --secondary: #f7f7f8;
   --secondary-foreground: #18181b;
@@ -29,7 +29,7 @@
   --destructive-foreground: #ffffff;
   --border: #e4e4e7;
   --input: #e4e4e7;
-  --ring: #a1a1aa;
+  --ring: #0f766e;
   --radius: 0.625rem;
 }
 [data-theme="dark"]{
@@ -39,8 +39,8 @@
   --card-foreground: #e6e9ee;
   --popover: #1f242d;
   --popover-foreground: #e6e9ee;
-  --primary: #a1a1aa;
-  --primary-foreground: #12151b;
+  --primary: #5eead4;
+  --primary-foreground: #102622;
   --secondary: #1a1e26;
   --secondary-foreground: #e6e9ee;
   --muted: #1f242d;
@@ -51,7 +51,7 @@
   --destructive-foreground: #ffffff;
   --border: #262c37;
   --input: #262c37;
-  --ring: #52525b;
+  --ring: #5eead4;
 }
 
 
@@ -82,17 +82,16 @@
      --color-brand               品牌主色：主按钮 / 选中态 / 聚焦环（唯一 CTA 色）
      --color-brand-hover         品牌色按压态
      --color-success/warning/error 状态色
-     风格：极简现代 · 白底 · 石墨黑主色（中性色系，无彩色品牌色）
+     风格：冷灰背景 · 清晰表面 · 青绿强调，颜色仅用于操作和状态
      约束：--color-warning 对比度仅 ~3:1，只能用于图标 / 底色，
            不得作为正文文字色（WCAG AA 正文需 ≥4.5:1） */
   --color-surface-dark: #18181b;
   --color-surface-dark-hover: #27272a;
-  --color-brand: #18181b;
-  --color-brand-hover: #27272a;
+  --color-brand: #0f766e;
+  --color-brand-hover: #115e59;
   /* 品牌色作为「文字 / 链接」使用时的色值。
-     浅色下与 --color-brand 相同；深色下改用更亮的灰以保证 ≥4.5:1
-     （石墨黑 #18181b 在深底上不可读，文字/链接必须用亮灰） */
-  --color-brand-text: #18181b;
+     浅色下与 --color-brand 相同；深色下使用亮青绿，保持文字对比度。 */
+  --color-brand-text: #0f766e;
   --color-success: #16a34a;
   --color-warning: #d97706;
   --color-error: #dc2626;
@@ -101,13 +100,13 @@
   /* 次级信息：#71717a 在白底上约 4.8:1，满足 WCAG AA */
   --color-text-tertiary: #71717a;
   --color-border: #e4e4e7;
-  --color-border-light: #f0f0f1;
-  --color-bg-base: #f7f7f8;
+  --color-border-light: #edf0f3;
+  --color-bg-base: #f4f6f8;
   --color-bg-white: #ffffff;
   --color-bg-card: #ffffff;
   --color-bg-sidebar: #ffffff;
-  --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.04);
-  --shadow-md: 0 4px 12px rgba(24, 24, 27, 0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.035);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.055);
   --shadow-lg: 0 12px 32px rgba(24, 24, 27, 0.08);
   --shadow-clay: 0 1px 2px rgba(24, 24, 27, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --radius-sm: 6px;
@@ -120,8 +119,8 @@
   --icon-md: 16px;
   --icon-lg: 22px;
   /* 侧边栏菜单态（白底侧边栏，深色模式在下方翻转） */
-  --menu-hover-bg: rgba(24, 24, 27, 0.04);
-  --menu-selected-bg: rgba(24, 24, 27, 0.06);
+  --menu-hover-bg: #f3f5f7;
+  --menu-selected-bg: #e8f3f1;
   /* 玻璃拟态：仅限浮层（弹窗 / 抽屉 / 下拉 / 提示），主体页面一律实色 */
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-bg-strong: rgba(255, 255, 255, 0.66);
@@ -185,11 +184,12 @@ to{
 .stagger-5{ animation-delay: 0.25s; }
 .stagger-6{ animation-delay: 0.3s; }
 .page-title{
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 650;
   color: var(--color-text);
-  margin-bottom: 24px;
-  letter-spacing: -0.5px;
+  margin-bottom: 20px;
+  line-height: 1.35;
+  letter-spacing: -0.6px;
 }
 .content-wrapper{
   padding: 0;
@@ -609,7 +609,6 @@ to{
   height: 64px;
   display: flex;
   align-items: center;
-  justify-content: center;
   border-bottom: 1px solid var(--color-border-light);
 }
 .sider-logo h1{
@@ -644,12 +643,10 @@ to{
   cursor: pointer;
 }
 .dashboard-content{
-  margin: 24px;
-  padding: 24px;
-  background: var(--color-bg-white);
-  border-radius: var(--radius-md);
-  min-height: calc(100vh - 84px);
-  box-shadow: var(--shadow-sm);
+  margin: 0 auto;
+  padding: 28px;
+  max-width: 1680px;
+  min-height: calc(100vh - 105px);
 }
 ::-webkit-scrollbar{
   width: 6px;
@@ -686,7 +683,7 @@ to{
 .p-16{ padding: 16px; }
 .p-24{ padding: 24px; }
 .tabs-wrapper{
-  background: #fff;
+  background: var(--color-bg-base);
 }
 .filter-bar{
   display: flex;
@@ -775,15 +772,14 @@ body{
     padding: 0 16px !important;
   }
 .dashboard-content{
-    margin: 16px !important;
-    padding: 16px !important;
+    padding: 20px !important;
   }
 .page-title{
-    font-size: 17px !important;
-    margin-bottom: 16px !important;
+    font-size: 22px !important;
+    margin-bottom: 16px;
   }
 .tabs-wrapper{
-    padding: 6px 12px 0 !important;
+    padding: 8px 16px !important;
   }}
 
 
@@ -803,17 +799,16 @@ body{
   }
 .tabs-wrapper{
     top: 56px !important;
-    padding: 4px 8px 0 !important;
+    padding: 6px 12px !important;
   }
 .dashboard-content{
-    margin: 8px !important;
-    padding: 12px !important;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 16px !important;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
     min-height: calc(100vh - 116px) !important;
   }
 .page-title{
-    font-size: 16px !important;
-    margin-bottom: 12px !important;
+    font-size: 20px !important;
+    margin-bottom: 12px;
   }
 .filter-bar{
     gap: 6px !important;
@@ -838,14 +833,13 @@ body{
 
 /* ---------- 窄屏：≤400px ---------- */
 @media (max-width: 400px) {.dashboard-content{
-    margin: 8px !important;
-    padding: 12px !important;
+    padding: 16px !important;
   }
 .page-title{
-    font-size: 15px !important;
+    font-size: 20px !important;
   }}
 :root{
-  --focus-ring: 0 0 0 3px rgba(24, 24, 27, 0.22);
+  --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.22);
 }
 :focus:not(:focus-visible){
   outline: none;
@@ -866,9 +860,9 @@ body{
   color-scheme: dark;
   --color-surface-dark: #e4e4e7;
   --color-surface-dark-hover: #d4d4d8;
-  --color-brand: #52525b;        /* 按钮底色：白字 6.7:1 */
-  --color-brand-hover: #6b6b74;
-  --color-brand-text: #a1a1aa;   /* 文字 / 链接：深底 ≥4.5:1 */
+  --color-brand: #115e59;        /* 自定义按钮仍使用白字 */
+  --color-brand-hover: #0f766e;
+  --color-brand-text: #5eead4;
   --color-success: #2fb57c;
   --color-warning: #e0a82c;
   --color-error: #e0564f;
@@ -886,8 +880,8 @@ body{
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-clay: 0 1px 2px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   --menu-hover-bg: rgba(255, 255, 255, 0.05);
-  --menu-selected-bg: rgba(255, 255, 255, 0.09);
-  --focus-ring: 0 0 0 3px rgba(161, 161, 170, 0.35);
+  --menu-selected-bg: rgba(94, 234, 212, 0.10);
+  --focus-ring: 0 0 0 3px rgba(94, 234, 212, 0.25);
   --glass-bg: rgba(26, 30, 38, 0.78);
   --glass-bg-strong: rgba(22, 26, 34, 0.82);
   --glass-border: rgba(255, 255, 255, 0.1);
@@ -899,8 +893,8 @@ body{
   background: var(--color-bg-white) !important;
   border-bottom-color: var(--color-border) !important;
 }
-[data-theme="dark"] .dashboard-content, [data-theme="dark"] .tabs-wrapper{
-  background: var(--color-bg-white) !important;
+[data-theme="dark"] .tabs-wrapper{
+  background: var(--color-bg-base);
 }
 [data-theme="dark"] .sider-logo{
   border-bottom-color: var(--color-border) !important;
@@ -1748,3 +1742,25 @@ table.rt-body-wrap td:not(.truncate){
 .compat-col-offset-21{margin-left:calc(100% / 24 * 21)}
 .compat-col-offset-22{margin-left:calc(100% / 24 * 22)}
 .compat-col-offset-23{margin-left:calc(100% / 24 * 23)}
+/* 后台的表面层级：内容直接放在底色上，卡片承担内容分组。 */
+.dashboard-content [data-slot="card"] {
+  box-shadow: var(--shadow-sm);
+}
+.dashboard-nav-item {
+  min-height: 38px;
+}
+.dashboard-nav-item[aria-current="page"] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-brand-text) 10%, transparent);
+}
+.dashboard-tab[aria-selected="true"] svg {
+  color: var(--color-brand-text);
+}
+.dashboard-overview .page-title {
+  margin-bottom: 0;
+}
+.dashboard-overview .stat-card {
+  border-color: color-mix(in srgb, var(--color-border) 75%, transparent);
+}
+.dashboard-overview .stat-card [data-slot="progress"] {
+  background: var(--color-bg-base);
+}

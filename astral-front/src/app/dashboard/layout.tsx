@@ -240,11 +240,11 @@ function NavLeaf({
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors cursor-pointer',
+        'dashboard-nav-item flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors cursor-pointer',
         'disabled:pointer-events-none disabled:opacity-50',
         collapsed && 'justify-center px-0',
         active
-          ? 'bg-[var(--menu-selected-bg)] font-medium text-foreground'
+          ? 'bg-[var(--menu-selected-bg)] font-semibold text-[var(--color-brand-text)]'
           : 'text-muted-foreground hover:bg-[var(--menu-hover-bg)] hover:text-foreground',
       )}
     >
@@ -299,7 +299,7 @@ function NavGroup({
       onClick={headerOnClick}
       aria-expanded={open}
       className={cn(
-        'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors cursor-pointer',
+        'dashboard-nav-item flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors cursor-pointer',
         collapsed && 'justify-center px-0',
         groupActive ? 'font-medium text-foreground' : 'text-muted-foreground hover:bg-[var(--menu-hover-bg)] hover:text-foreground',
       )}
@@ -797,18 +797,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }}
       >
         {/* Logo */}
-        <div className="sider-logo flex h-16 shrink-0 items-center px-4">
-          {siderCollapsed ? (
-            <div
-              aria-hidden
-              className="flex size-8 items-center justify-center rounded-lg bg-primary text-[15px] font-bold tracking-normal text-primary-foreground"
-            >
-              A
+        <div className={cn('sider-logo flex h-16 shrink-0 items-center gap-3 px-5', siderCollapsed && 'justify-center px-0')}>
+          <div aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-sm">
+            A<span className="mb-2 text-xs opacity-60">✦</span>
+          </div>
+          {!siderCollapsed && (
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold tracking-tight text-foreground">Astral</h1>
+              <p className="text-[10px] font-medium tracking-[0.16em] text-muted-foreground">管理工作台</p>
             </div>
-          ) : (
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
-              Astral<span className="text-primary">.</span>
-            </h1>
           )}
         </div>
 
@@ -818,7 +815,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="relative mx-3 mb-1.5">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
-                className="sider-search h-8 pl-8 text-xs"
+                className="sider-search h-9 border-transparent bg-muted/70 pl-8 text-xs shadow-none focus-visible:border-ring"
                 placeholder="搜索菜单"
                 value={menuKeyword}
                 onChange={(e) => setMenuKeyword(e.target.value)}
@@ -873,6 +870,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {/* 头部 */}
         <header className="dashboard-header flex h-14 items-center gap-1 border-b border-border bg-[var(--color-bg-white)] px-4">
+          {!showBreadcrumb && (
+            <div className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+              {breadcrumbLast?.label || '工作台'}
+            </div>
+          )}
           {/* 面包屑：左侧（flex-1 占满剩余空间，把右侧操作区顶到最右） */}
           {showBreadcrumb && (
             <Breadcrumb className="ml-1 min-w-0 flex-1">
@@ -955,7 +957,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* 页签条 */}
         {openTabs.length > 0 && (
           <div
-            className="tabs-wrapper sticky top-0 z-10 flex items-center overflow-hidden border-b border-border bg-[var(--color-bg-white)] px-4 pt-2"
+            className="tabs-wrapper sticky top-14 z-10 flex items-center overflow-hidden border-b border-border px-5 py-2"
           >
             <div className="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex gap-1 whitespace-nowrap">
@@ -973,9 +975,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         if (e.key === 'Enter' || e.key === ' ') handleTabChange(tab.key);
                       }}
                       className={cn(
-                        'group inline-flex cursor-pointer items-center gap-1.5 rounded-t-lg border border-b-0 px-3 py-2 text-sm transition-colors',
+                        'dashboard-tab group inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors',
                         active
-                          ? 'border-border bg-[var(--color-bg-base)] font-medium text-foreground'
+                          ? 'border-border bg-card font-semibold text-[var(--color-brand-text)] shadow-sm'
                           : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
                       )}
                     >
