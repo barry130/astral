@@ -136,6 +136,29 @@ export interface MyStorageFolder {
   status: string;
   storageConfigId: number;
   myPermissions: string;
+  parentId?: number | null;
+}
+
+export interface FileManagerQuery {
+  current?: number;
+  size?: number;
+  folderId?: number;
+  keyword?: string;
+  category?: string;
+  visibility?: string;
+  sort?: string;
+}
+
+export interface FileBatchRequest {
+  publicIds: string[];
+  action: 'move' | 'delete' | 'visibility';
+  folderId?: number;
+  visibility?: string;
+}
+
+export interface FileBatchResult {
+  succeeded: string[];
+  failed: { publicId: string; message: string }[];
 }
 
 export const storageApi = {
@@ -190,4 +213,21 @@ export const storageApi = {
     request.post(`/api/v1/all/storage/files/${publicId}/permanent-url`),
   registerUpload: (uploadId: string) =>
     request.post('/api/v1/all/storage/files/register', { uploadId }),
+
+  // 共用文件管理；后台写入沿用 admin:storage:edit，用户端按文件夹授权。
+  managerFiles: (params: FileManagerQuery, admin = false) => request.get<StoragePageResult<StorageFile>>(
+    admin ? '/api/v1/admin/plugin/storage/manager/files' : '/api/v1/all/storage/files', { params }),
+  managerUpdate: (publicId: string, data: { originalName?: string; folderId?: number }, admin = false) =>
+    request.put<StorageFile>(`${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/${publicId}`, data),
+  managerBatch: (data: FileBatchRequest, admin = false) =>
+    request.post<FileBatchResult>(`${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/batch`, data),
+  managerUrl: (publicId: string, permanent = false, admin = false) =>
+    request.post<{ url: string; expiresAt?: number }>(`${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/${publicId}/${permanent ? 'permanent-url' : 'download-url'}`),
+  managerTicket: (data: { folderId: number; fileName: string; contentType: string; sizeBytes: number }, admin = false) =>
+    request.post<TicketView>(`${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/upload-ticket`, data),
+  createMyFolder: (data: { parentId?: number; folderName: string }) =>
+    request.post<StorageFolder>('/api/v1/all/storage/folders', data),
+  renameMyFolder: (id: number, folderName: string) =>
+    request.put<StorageFolder>(`/api/v1/all/storage/folders/${id}`, { folderName }),
+  deleteMyFolder: (id: number) => request.delete(`/api/v1/all/storage/folders/${id}`),
 };

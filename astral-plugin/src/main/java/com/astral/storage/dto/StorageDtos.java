@@ -43,7 +43,7 @@ public final class StorageDtos {
 
     /** 用户侧「我的文件夹」视图：文件夹基础信息 + 当前用户在该文件夹上的权限集合（ALL 或逗号分隔权限名） */
     public record FolderMineView(Long id, String folderName, String folderPath, String visibility,
-                                 String status, Long storageConfigId, String myPermissions) {
+                                 String status, Long storageConfigId, String myPermissions, Long parentId) {
     }
 
     // ==================== 上传与下载 ====================
@@ -87,5 +87,24 @@ public final class StorageDtos {
     }
 
     public record WorkerAckReq(boolean success, String errorMessage) {
+    }
+
+    /** 文件管理查询；sort 只允许服务端白名单字段。 */
+    public record FileQuery(Long folderId, String keyword, String category, String visibility, String sort) {
+    }
+
+    public record FileUpdateReq(String originalName, Long folderId) {
+    }
+
+    public record UserFolderReq(Long parentId, String folderName) {
+    }
+
+    public record FileBatchReq(List<String> publicIds, String action, Long folderId, String visibility) {
+    }
+
+    public record BatchFailure(String publicId, String message) {
+    }
+
+    public record BatchResult(List<String> succeeded, List<BatchFailure> failed) {
     }
 }

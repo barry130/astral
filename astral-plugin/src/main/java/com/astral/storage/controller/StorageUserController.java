@@ -37,6 +37,8 @@ public class StorageUserController {
     private final StorageFileService fileService;
     private final UploadTicketService ticketService;
     private final PermissionChecker permissionChecker;
+    private final com.astral.storage.service.FileManagerService fileManagerService;
+    private final com.astral.storage.service.StorageBatchService batchService;
 
     private static String userId(jakarta.servlet.http.HttpServletRequest request) {
         Object userId = request.getAttribute("userId");
@@ -149,7 +151,7 @@ public class StorageUserController {
         StorageFileEntity file = fileService.getByPublicId(publicId);
         String userId = userId(request);
         boolean uploader = userId != null && userId.equals(file.getUploaderId());
-        if (!uploader) {
+        if (!uploader && !isAdmin()) {
             folderService.requirePermission(userId, file.getFolderId(), "READ");
         }
         file.setProviderLocatorJson(null);
@@ -161,7 +163,8 @@ public class StorageUserController {
                                                        @RequestParam(defaultValue = "1") long current,
                                                        @RequestParam(defaultValue = "20") long size,
                                                        jakarta.servlet.http.HttpServletRequest request) {
-        Page<StorageFileEntity> page = fileService.pageFolderFiles(folderId, userId(request), current, size);
+        Page<StorageFileEntity> page = fileManagerService.page(userId(request), isAdmin(), current, size,
+                new StorageDtos.FileQuery(folderId, null, null, null, null));
         page.getRecords().forEach(f -> f.setProviderLocatorJson(null));
         return Result.success(page);
     }
@@ -170,14 +173,58 @@ public class StorageUserController {
     public Result<StorageFileEntity> changeVisibility(@PathVariable String publicId,
                                                       @RequestParam String value,
                                                       jakarta.servlet.http.HttpServletRequest request) {
-        StorageFileEntity file = fileService.changeVisibility(publicId, userId(request), value);
+        StorageFileEntity file = fileService.changeVisibility(publicId, userId(request), value, isAdmin());
         file.setProviderLocatorJson(null);
         return Result.success(file);
     }
 
     @DeleteMapping("/files/{publicId}")
     public Result<Void> deleteFile(@PathVariable String publicId, jakarta.servlet.http.HttpServletRequest request) {
-        fileService.requestDelete(publicId, userId(request));
+        fileService.requestDelete(publicId, userId(request), isAdmin());
         return Result.success();
+    }
+
+    @GetMapping("/files")
+    public Result<Page<StorageFileEntity>> files(@RequestParam(defaultValue = "1") long current,
+                                                @RequestParam(defaultValue = "24") long size,
+                                                StorageDtos.FileQuery query,
+                                                jakarta.servlet.http.HttpServletRequest request) {
+        return Result.success(fileManagerService.page(userId(request), isAdmin(), current, size, query));
+    }
+
+    @PutMapping("/files/{publicId}")
+    public Result<StorageFileEntity> updateFile(@PathVariable String publicId,
+                                               @RequestBody StorageDtos.FileUpdateReq req,
+                                               jakarta.servlet.http.HttpServletRequest request) {
+        return Result.success(fileManagerService.update(publicId, req, userId(request), isAdmin()));
+    }
+
+    /** 各项独立事务，单个失败不回滚已完成的文件；返回逐项结果供前端保留失败选择。 */
+    @PostMapping("/files/batch")
+    public Result<StorageDtos.BatchResult> batch(@RequestBody StorageDtos.FileBatchReq req,
+                                                jakarta.servlet.http.HttpServletRequest request) {
+        return Result.success(batchService.execute(req, userId(request), isAdmin()));
+    }
+
+    @PostMapping("/folders")
+    public Result<StorageFolderEntity> createFolder(@RequestBody StorageDtos.UserFolderReq req,
+                                                    jakarta.servlet.http.HttpServletRequest request) {
+        return Result.success(fileManagerService.createFolder(req, userId(request), isAdmin()));
+    }
+
+    @PutMapping("/folders/{id}")
+    public Result<StorageFolderEntity> renameFolder(@PathVariable Long id, @RequestBody StorageDtos.UserFolderReq req,
+                                                    jakarta.servlet.http.HttpServletRequest request) {
+        return Result.success(fileManagerService.renameFolder(id, req, userId(request), isAdmin()));
+    }
+
+    @DeleteMapping("/folders/{id}")
+    public Result<Void> deleteFolder(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
+        fileManagerService.deleteFolder(id, userId(request), isAdmin());
+        return Result.success();
+    }
+
+    private boolean isAdmin() {
+        return permissionChecker.hasPermission(PermissionChecker.SUPER_PERMISSION);
     }
 }

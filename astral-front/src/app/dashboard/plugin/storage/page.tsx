@@ -7,12 +7,14 @@ import {
 } from '@/components/antd-compat';
 import { ResizableTable } from '@/components/ResizableTable';
 import {
-  CloudUploadOutlined, DeleteOutlined, ExperimentOutlined, PlusOutlined,
-  ReloadOutlined, StarOutlined, LinkOutlined, EyeOutlined,
+  DeleteOutlined, ExperimentOutlined, PlusOutlined,
+  ReloadOutlined, StarOutlined,
 } from '@/components/antd-compat/icons';
 import { storageApi } from '@/api/storage';
 import { fetchDictOptions, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
+import FileManager from '@/components/storage/FileManager';
+import { uploadWithStorageTicket } from '@/lib/storage-upload';
 import type { StorageConfig, StorageFile, StorageFolder, StoragePageResult, StorageTask, StorageAudit, S3ProviderOptions, FolderUploadPolicy } from '@/api/storage';
 
 function fmtBytes(bytes?: number): string {
@@ -195,122 +197,6 @@ export default function StoragePage() {
     }
   };
 
-  // ==================== 文件 ====================
-  const [files, setFiles] = useState<StoragePageResult<StorageFile>>({ records: [], total: 0, size: 20, current: 1 });
-  const [fileQuery, setFileQuery] = useState({ current: 1, size: 20, folderId: undefined as number | undefined, keyword: '' });
-  const [uploadFolderId, setUploadFolderId] = useState<number | undefined>();
-  const [uploading, setUploading] = useState(false);
-
-  /** isAlive 由筛选 effect 注入：被更新的请求取代后丢弃慢响应，避免旧结果覆盖新结果 */
-  const loadFiles = (query = fileQuery, isAlive: () => boolean = () => true) => {
-    storageApi.pageFiles(query).then((res) => {
-      if (res.code === 200 && isAlive()) setFiles(res.data);
-    }).catch((e) => {
-      if (isAlive()) message.error(e.message);
-    });
-  };
-
-  const copyDownloadUrl = async (file: StorageFile) => {
-    try {
-      const res = await storageApi.downloadUrl(file.publicId!);
-      if (res.code === 200) {
-        await navigator.clipboard.writeText(res.data.url);
-        message.success(`短链已复制（${new Date(res.data.expiresAt * 1000).toLocaleTimeString()} 过期）`);
-      }
-    } catch (e: any) {
-      message.error(e.message || '生成下载地址失败');
-    }
-  };
-
-  const copyPermanentUrl = async (file: StorageFile) => {
-    try {
-      const res = await storageApi.permanentUrl(file.publicId!);
-      if (res.code === 200) {
-        await navigator.clipboard.writeText(res.data.url);
-        message.success('永久公开链接已复制（仅公开文件可用）');
-      }
-    } catch (e: any) {
-      message.error(e.message || '生成永久链接失败');
-    }
-  };
-
-  // ==================== 图片预览（弹层；图片源用短链=短时签名下载地址） ====================
-  const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
-  const previewImage = async (file: StorageFile) => {
-    try {
-      const res = await storageApi.downloadUrl(file.publicId!);
-      if (res.code === 200) {
-        setPreview({ url: res.data.url, name: file.originalName || file.publicId || '图片预览' });
-      }
-    } catch (e: any) {
-      message.error(e.message || '获取预览地址失败');
-    }
-  };
-
-  /** 统一文件直传：TELEGRAM 走 Worker（POST multipart），S3 系/COS/OSS 走预签名 PUT，UPYUN 走表单 API */
-  const uploadFileDirect = async (folderId: number, file: File): Promise<string> => {
-    const ticketRes = await storageApi.uploadTicket({
-      folderId,
-      fileName: file.name,
-      contentType: file.type || 'application/octet-stream',
-      sizeBytes: file.size,
-    });
-    if (ticketRes.code !== 200) throw new Error(ticketRes.message);
-    const ticket = ticketRes.data;
-    let publicId: string;
-    if (ticket.method === 'PUT') {
-      // S3 系（R2/S3/七牛）/COS/OSS：浏览器直传对象存储，完成后回 Astral 登记元数据
-      const putResp = await fetch(ticket.uploadUrl, { method: 'PUT', body: file });
-      if (!putResp.ok) throw new Error(`对象存储返回 ${putResp.status}`);
-      const regRes = await storageApi.registerUpload(ticket.uploadId);
-      if (regRes.code !== 200) throw new Error(regRes.message);
-      publicId = regRes.data.publicId;
-    } else if (ticket.form) {
-      // UPYUN：表单 API 直传（policy/authorization + file），完成后回 Astral 登记元数据
-      const form = new FormData();
-      form.append('policy', ticket.form.policy);
-      form.append('authorization', ticket.form.authorization);
-      form.append(ticket.formField || 'file', file);
-      const resp = await fetch(ticket.uploadUrl, { method: 'POST', body: form });
-      if (!resp.ok) throw new Error(`又拍云返回 ${resp.status}`);
-      const regRes = await storageApi.registerUpload(ticket.uploadId);
-      if (regRes.code !== 200) throw new Error(regRes.message);
-      publicId = regRes.data.publicId;
-    } else {
-      // TELEGRAM：Worker 转存 Telegram 并回调登记
-      const form = new FormData();
-      form.append(ticket.formField || 'file', file);
-      const resp = await fetch(ticket.uploadUrl, { method: ticket.method, body: form });
-      const json = await resp.json().catch(() => ({}));
-      if (!resp.ok || !json.ok) {
-        throw new Error(json.message || `Worker 返回 ${resp.status}`);
-      }
-      publicId = json.publicId;
-    }
-    return publicId;
-  };
-
-  /** 浏览器直传（Astral 只签发凭证；文件正文不经过 Astral） */
-  const customUploadRequest = async (options: any) => {
-    if (!uploadFolderId) {
-      message.warning('请先选择上传文件夹');
-      options.onError?.(new Error('no folder'));
-      return;
-    }
-    setUploading(true);
-    try {
-      const publicId = await uploadFileDirect(uploadFolderId, options.file);
-      message.success(`上传成功：${publicId}`);
-      options.onSuccess?.({ publicId });
-      loadFiles({ ...fileQuery, current: 1 });
-    } catch (e: any) {
-      message.error(e.message || '上传失败');
-      options.onError?.(e);
-    } finally {
-      setUploading(false);
-    }
-  };
-
   // ==================== 上传测试 ====================
   const [testFolderId, setTestFolderId] = useState<number | undefined>();
   const [testRunning, setTestRunning] = useState(false);
@@ -420,19 +306,19 @@ export default function StoragePage() {
 
       // 1. 凭证签发
       setStep(0, 'run');
-      const ticketRes = await storageApi.uploadTicket({
+      const ticketRes = await storageApi.managerTicket({
         folderId: testFolderId,
         fileName: testFile.name,
         contentType: testFile.type,
         sizeBytes: testFile.size,
-      });
+      }, true);
       if (ticketRes.code !== 200) throw new Error(ticketRes.message);
       const isTelegram = ticketRes.data.method !== 'PUT' && !ticketRes.data.form;
       setStep(0, 'ok', `凭证已签发（${isTelegram ? 'TELEGRAM/Worker' : ticketRes.data.form ? 'UPYUN 表单直传' : '预签名 PUT'}，有效期至 ${new Date(ticketRes.data.expiresAt * 1000).toLocaleTimeString()}）`);
 
       // 2. 直传（TELEGRAM → Worker；对象存储系 → 各 Provider 直传）
       setStep(1, 'run');
-      const publicId: string = await uploadFileDirect(testFolderId, testFile);
+      const publicId: string = await uploadWithStorageTicket(ticketRes.data, testFile);
       setStep(1, 'ok', isTelegram ? '文件已送达 Worker' : '对象已写入存储桶');
 
       // 3. 回执登记（成功响应即表示登记已完成；此处刷新列表核对落库）
@@ -445,7 +331,7 @@ export default function StoragePage() {
 
       // 4. 下载验证
       setStep(3, 'run');
-      const dlRes = await storageApi.downloadUrl(publicId);
+      const dlRes = await storageApi.managerUrl(publicId, false, true);
       if (dlRes.code !== 200) throw new Error(dlRes.message);
       const dlResp = await fetch(dlRes.data.url);
       if (!dlResp.ok) throw new Error(`下载验证失败：HTTP ${dlResp.status}`);
@@ -484,7 +370,6 @@ export default function StoragePage() {
   useEffect(() => {
     loadConfigs();
     loadFolders();
-    loadFiles();
     // 枚举选项走数据字典（storage_*，V5__storage_dict.sql）；失败时降级为字典原值展示
     fetchDictOptions([
       'storage_provider_type', 'storage_status', 'storage_file_status',
@@ -492,17 +377,6 @@ export default function StoragePage() {
       'storage_verify_content',
     ]).then(setDict).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    let alive = true;
-    loadFiles(fileQuery, () => alive);
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileQuery.current, fileQuery.size, fileQuery.folderId, fileQuery.keyword]);
-
-  const folderName = (id?: number) => folders.find((f) => f.id === id)?.folderName || '-';
 
   /** Provider 展示配色（纯前端观感，保留映射；文案标签走 storage_provider_type 字典） */
   const PROVIDER_COLOR: Record<string, string> = {
@@ -518,9 +392,6 @@ export default function StoragePage() {
   /** 状态列渲染：配色走 STATUS_COLOR（展示逻辑），文案走 storage_*_status 字典 */
   const statusTag = (status?: string) => (
     <Tag color={STATUS_COLOR[status || ''] || 'default'}>{dictLabel('storage_status', status)}</Tag>
-  );
-  const fileStatusTag = (status?: string) => (
-    <Tag color={STATUS_COLOR[status || ''] || 'default'}>{dictLabel('storage_file_status', status)}</Tag>
   );
   const taskStatusTag = (status?: string) => (
     <Tag color={STATUS_COLOR[status || ''] || 'default'}>{dictLabel('storage_task_status', status)}</Tag>
@@ -610,42 +481,6 @@ export default function StoragePage() {
     },
   ];
 
-  const fileColumns = [
-    { title: '文件名', dataIndex: 'originalName', ellipsis: true },
-    { title: '文件夹', dataIndex: 'folderId', width: 120, render: (v: number) => folderName(v) },
-    { title: '类型', dataIndex: 'contentType', width: 120, ellipsis: true },
-    { title: '大小', dataIndex: 'sizeBytes', width: 90, render: (v: number) => fmtBytes(v) },
-    { title: '可见性', dataIndex: 'visibility', width: 90, render: (v: string) => (
-      <Tag color={v === 'PUBLIC' ? 'green' : 'blue'}>{dictLabel('storage_visibility', v)}</Tag>
-    ) },
-    { title: '状态', dataIndex: 'status', width: 110, render: (v: string) => fileStatusTag(v) },
-    { title: '时间', dataIndex: 'createTime', width: 160, render: (v: string) => (v || '').replace('T', ' ').slice(0, 19) },
-    {
-      title: '操作', key: 'action', width: 330,
-      render: (_: any, record: StorageFile) => (
-        <Space>
-          <Tooltip title="生成短时签名下载地址（短链）并复制">
-            <Button size="small" icon={<LinkOutlined />} onClick={() => copyDownloadUrl(record)}>短链</Button>
-          </Tooltip>
-          <Tooltip title="生成永久公开链接（仅公开文件；对象存储系需配置公开域名，Telegram 需重新部署 Worker）">
-            <Button size="small" icon={<LinkOutlined />} onClick={() => copyPermanentUrl(record)}>永久</Button>
-          </Tooltip>
-          {record.contentType?.startsWith('image/') && (
-            <Tooltip title="预览图片">
-              <Button size="small" icon={<EyeOutlined />} onClick={() => previewImage(record)}>预览</Button>
-            </Tooltip>
-          )}
-          <Popconfirm title="删除后会移除远端对象（Telegram 为异步任务），确定？" disabled={!canEdit} onConfirm={async () => {
-            try { await storageApi.deleteFile(record.publicId!); message.success('已进入删除流程'); loadFiles(); }
-            catch (e: any) { message.error(e.message); }
-          }}>
-            <Button size="small" danger disabled={!canEdit} icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
   return (
     <div>
       <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
@@ -663,60 +498,12 @@ export default function StoragePage() {
         message="Bot Token / Access Key 只进入对应存储端，不经过本系统；公开文件可生成永久直链，私有文件只发短时签名地址。"
       />
 
-      {/* 图片预览弹层：图片源为短链（短时签名下载地址），公开/私有均可用 */}
-      <Modal
-        open={!!preview}
-        footer={null}
-        onCancel={() => setPreview(null)}
-        title={preview?.name}
-        width={760}
-      >
-        {preview && (
-          <img
-            src={preview.url}
-            alt={preview.name}
-            style={{ maxWidth: '100%', maxHeight: '70vh', display: 'block', margin: '0 auto', objectFit: 'contain' }}
-          />
-        )}
-      </Modal>
-
       <Card>
         <Tabs
           items={[
             {
-              key: 'files', label: '文件管理', forceRender: true,
-              children: (
-                <div>
-                  <div style={{ marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <Select
-                      allowClear placeholder="按文件夹筛选" style={{ width: 200 }}
-                      options={folders.map((f) => ({ label: f.folderPath || f.folderName, value: f.id! }))}
-                      value={fileQuery.folderId}
-                      onChange={(v) => setFileQuery((q) => ({ ...q, folderId: v, current: 1 }))}
-                    />
-                    <Input.Search
-                      placeholder="按文件名搜索" style={{ width: 220 }}
-                      onSearch={(v) => setFileQuery((q) => ({ ...q, keyword: v, current: 1 }))}
-                    />
-                    <Select
-                      placeholder="上传到文件夹" style={{ width: 200 }} value={uploadFolderId}
-                      options={folders.filter((f) => f.status === 'ENABLED').map((f) => ({ label: f.folderPath || f.folderName, value: f.id! }))}
-                      onChange={setUploadFolderId}
-                    />
-                    <Upload
-                      customRequest={customUploadRequest}
-                      showUploadList={false}
-                      disabled={!canEdit || !uploadFolderId}
-                    >
-                      <Button type="primary" icon={<CloudUploadOutlined />} loading={uploading} disabled={!canEdit || !uploadFolderId}>
-                        上传文件
-                      </Button>
-                    </Upload>
-                    <Button icon={<ReloadOutlined />} onClick={() => loadFiles()}>刷新</Button>
-                  </div>
-                  <PagedTable files={files} columns={fileColumns} onPage={(current, size) => setFileQuery((q) => ({ ...q, current, size }))} rowKey="publicId" />
-                </div>
-              ),
+              key: 'files', label: '文件管理',
+              children: <FileManager admin canEdit={canEdit} />,
             },
             {
               key: 'folders', label: '文件夹与授权',

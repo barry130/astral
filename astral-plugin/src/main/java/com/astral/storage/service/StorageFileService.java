@@ -566,10 +566,14 @@ public class StorageFileService {
     // ==================== 可见性与删除 ====================
 
     @Transactional(rollbackFor = Exception.class)
-    public StorageFileEntity changeVisibility(String publicId, String userId, String visibility) {
+    public StorageFileEntity changeVisibility(String publicId, String userId, String visibility, boolean adminExempt) {
+        fileMapper.lockUploadKey("storage-file:" + publicId);
         StorageFileEntity file = getByPublicId(publicId);
+        if (!StorageFileEntity.STATUS_AVAILABLE.equals(file.getStatus())) {
+            throw new BusinessException("STORAGE016");
+        }
         boolean uploader = userId != null && userId.equals(file.getUploaderId());
-        if (!uploader) {
+        if (!uploader && !adminExempt) {
             folderService.requirePermission(userId, file.getFolderId(), "UPDATE");
         }
         if (!StorageFileEntity.VISIBILITY_PRIVATE.equals(visibility)
@@ -593,7 +597,8 @@ public class StorageFileService {
      * TELEGRAM 走任务表由 Worker 拉取执行 deleteMessage 后确认。
      */
     @Transactional(rollbackFor = Exception.class)
-    public void requestDelete(String publicId, String userId) {
+    public void requestDelete(String publicId, String userId, boolean adminExempt) {
+        fileMapper.lockUploadKey("storage-file:" + publicId);
         StorageFileEntity file = getByPublicId(publicId);
         if (StorageFileEntity.STATUS_DELETED.equals(file.getStatus())) {
             throw new BusinessException("STORAGE021");
@@ -602,7 +607,7 @@ public class StorageFileService {
             return;
         }
         boolean uploader = userId != null && userId.equals(file.getUploaderId());
-        if (!uploader) {
+        if (!uploader && !adminExempt) {
             folderService.requirePermission(userId, file.getFolderId(), "DELETE");
         }
         String providerType = providerTypeOf(file);
@@ -889,5 +894,15 @@ public class StorageFileService {
         String m = mime == null ? "application/octet-stream" : mime.trim().toLowerCase();
         int semicolon = m.indexOf(';');
         return semicolon > 0 ? m.substring(0, semicolon).trim() : m;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public StorageFileEntity changeVisibility(String publicId, String userId, String visibility) {
+        return changeVisibility(publicId, userId, visibility, false);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void requestDelete(String publicId, String userId) {
+        requestDelete(publicId, userId, false);
     }
 }

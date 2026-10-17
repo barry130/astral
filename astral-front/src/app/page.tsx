@@ -1,224 +1,270 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
 import {
-  LogIn,
-  LayoutDashboard,
-  ShieldCheck,
-  Users,
-  LayoutGrid,
-  Mic,
-  Headphones,
-  MessageSquare,
-  PlugZap,
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
+  AudioLines,
+  ChartNoAxesCombined,
   Database,
-  LineChart,
-  Server,
-  Rocket,
+  FolderOpen,
+  Headphones,
   Image as ImageIcon,
-  ChevronRight,
+  LayoutDashboard,
+  MessageSquare,
+  Moon,
+  Orbit,
+  PlugZap,
+  ShieldCheck,
+  Sun,
+  Users,
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import { useTheme } from './providers';
+import styles from './page.module.css';
 
-/**
- * 项目介绍首页（根路由 /）
- * 静态展示项目定位、核心功能、技术栈与插件体系；
- * 顶部按钮根据登录状态指向控制台或登录页，不再自动跳转。
- */
+/** 首页的所有轻听入口统一直达独立官网，不经过旧的 /lightlisten 介绍页。 */
+const QUIET_MUSIC_URL = 'https://quietmusic.canace.cn/';
 
 const FEATURES = [
   {
-    icon: <Users />,
+    icon: Users,
     title: '用户与权限',
-    desc: '用户管理、角色权限、RBAC 模型、权限树，Sa-Token 认证与会话管理',
+    desc: '统一管理用户、角色与访问权限，让每个人各司其职。',
   },
   {
-    icon: <ShieldCheck />,
-    title: '安全审计',
-    desc: '操作日志、登录日志 AOP 异步记录，Token 在线管理与吊销',
+    icon: ShieldCheck,
+    title: '日志与审计',
+    desc: '记录登录与操作轨迹，支持会话管理和问题追踪。',
   },
   {
-    icon: <Database />,
-    title: '数据管理',
-    desc: '数据字典、系统配置、表结构管理、代码生成、SQL 生成与导出',
+    icon: Database,
+    title: '数据与配置',
+    desc: '集中维护数据字典、系统配置与表结构，减少重复工作。',
   },
   {
-    icon: <Server />,
-    title: '基础设施',
-    desc: '邮件服务、序列生成（Snowflake / 号段 / Redis 等 5 种算法）、系统监控',
+    icon: MessageSquare,
+    title: '消息与反馈',
+    desc: '连接用户反馈、回复与通知，让沟通有回应。',
   },
   {
-    icon: <LineChart />,
-    title: '全端统计',
-    desc: '客户端上报采集、访问量 / 设备 / 接口指标、错误日志聚合',
+    icon: ChartNoAxesCombined,
+    title: '监控与统计',
+    desc: '汇集访问、设备和接口指标，了解服务的运行情况。',
   },
   {
-    icon: <LayoutGrid />,
-    title: '插件体系',
-    desc: 'SPI 扩展 + 插件注册中心 + 前端导航注入，管理页一键启停',
-  },
-];
-
-interface PluginCard {
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-  /** 有用户侧页面可进入的插件提供跳转路径 */
-  href?: string;
-  action?: string;
-  /** 公开页：未登录也可直接进入（如轻听音乐介绍页） */
-  public?: boolean;
-}
-
-const PLUGINS: PluginCard[] = [
-  {
-    icon: <Mic />,
-    title: '轻听音乐（qt）',
-    desc: 'App 用户体系、版本更新、打卡、收藏，提供 /api/v1/app/** 开放接口（公告由 feedback 插件统一提供）',
-    href: '/lightlisten',
-    action: '了解轻听',
-    public: true,
-  },
-  {
-    icon: <MessageSquare />,
-    title: '反馈（feedback）',
-    desc: '用户反馈、管理员回复、站内消息通知',
-  },
-  {
-    icon: <PlugZap />,
-    title: '文件存储（storage）',
-    desc: 'Telegram + Cloudflare Worker 图床，文件夹授权与分享边界',
-    href: '/imgbed',
-    action: '进入图床',
+    icon: PlugZap,
+    title: '插件与扩展',
+    desc: '按需启用业务模块，让平台随实际需求逐步生长。',
   },
 ];
 
 const TECH_STACK = [
-  'Spring Boot 4.1',
-  'Java 25',
-  'Sa-Token',
-  'MyBatis-Plus',
-  'PostgreSQL',
-  'Redis',
-  'Next.js 16',
-  'React 19',
-  'TypeScript',
-  'shadcn/ui + Tailwind',
+  { title: '后端服务', items: ['Java 25', 'Spring Boot 4.1', 'Sa-Token', 'MyBatis-Plus'] },
+  { title: '前端体验', items: ['Next.js 16', 'React 19', 'TypeScript', 'shadcn/ui'] },
+  { title: '数据支持', items: ['PostgreSQL', 'Redis'] },
 ];
 
+/** 面向访客的服务首页；登录后仍停留在首页，由用户自主进入控制台。 */
 export default function HomePage() {
   const { isLogin } = useAuth();
-  const router = useRouter();
+  const { toggle } = useTheme();
+  const consoleHref = isLogin ? '/dashboard' : '/login';
+  const storageHref = isLogin ? '/files' : '/login';
 
   return (
-    <div className="landing-container">
-      {/* 顶部导航 */}
-      <header className="landing-header">
-        <div className="landing-header-inner">
-          <div className="landing-logo">
-            <div className="landing-logo-mark">
-              <Rocket />
-            </div>
-            <span className="landing-logo-name">Astral</span>
-          </div>
-          <div className="landing-header-actions">
-            <Button variant="outline" onClick={() => router.push('/lightlisten')}>
-              <Headphones />
-              轻听音乐
+    <div className="min-h-dvh bg-background text-foreground">
+      <a
+        href="#main-content"
+        className={`${styles.skipLink} rounded-lg bg-primary px-4 py-3 text-primary-foreground`}
+      >
+        跳至主要内容
+      </a>
+
+      <header className="sticky top-0 z-20 border-b border-border bg-background">
+        <div className="mx-auto flex min-h-18 max-w-6xl items-center justify-between gap-3 px-5 sm:px-8">
+          <Link href="/" aria-label="Astral 首页" className={`${styles.focusLink} flex shrink-0 items-center gap-2.5 rounded-lg`}>
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Orbit className="size-5" aria-hidden="true" />
+            </span>
+            <span className="text-xl font-semibold tracking-tight">Astral<span className="text-primary">.</span></span>
+          </Link>
+
+          <nav aria-label="首页导航" className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
+            <a href="#applications" className={`${styles.focusLink} rounded-sm transition-colors hover:text-foreground`}>应用入口</a>
+            <a href="#platform" className={`${styles.focusLink} rounded-sm transition-colors hover:text-foreground`}>平台能力</a>
+            <a href={QUIET_MUSIC_URL} className={`${styles.focusLink} inline-flex items-center gap-1 rounded-sm transition-colors hover:text-foreground`}>
+              轻听音乐 <ArrowUpRight className="size-3.5" aria-hidden="true" />
+            </a>
+          </nav>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={toggle} aria-label="切换明暗主题" title="切换明暗主题">
+              <Sun className="hidden dark:block" aria-hidden="true" />
+              <Moon className="dark:hidden" aria-hidden="true" />
             </Button>
-            <Button variant="outline" onClick={() => router.push(isLogin ? '/imgbed' : '/login')}>
-              <ImageIcon />
-              图床
-            </Button>
-            <Button variant="ghost" onClick={() => router.push(isLogin ? '/dashboard' : '/login')}>
-              {isLogin ? '返回控制台' : '后台登录'}
-            </Button>
-            <Button onClick={() => router.push(isLogin ? '/dashboard' : '/login')}>
-              {isLogin ? <LayoutDashboard /> : <LogIn />}
-              {isLogin ? '进入控制台' : '登录系统'}
+            <Button asChild variant="outline" className="rounded-full px-4">
+              <Link href={consoleHref} prefetch={false}>
+                <LayoutDashboard aria-hidden="true" />
+                {isLogin ? '进入控制台' : '管理登录'}
+              </Link>
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="landing-hero">
-        <h1 className="landing-hero-title fade-in-up">Astral 后台管理系统</h1>
-        <p className="landing-hero-subtitle fade-in-up stagger-1">基于 Spring Boot 4.1 + Next.js 16 的全栈管理平台</p>
-        <p className="landing-hero-desc fade-in-up stagger-2">
-          前后端分离架构，内置 RBAC 权限模型、操作日志审计、Sa-Token 认证与可扩展插件体系，开箱即用。
-        </p>
-        <div className="landing-hero-actions fade-in-up stagger-3">
-          <Button
-            size="lg"
-            className="h-11 px-6 text-[15px]"
-            onClick={() => router.push(isLogin ? '/dashboard' : '/login')}
-          >
-            {isLogin ? <LayoutDashboard /> : <LogIn />}
-            {isLogin ? '进入控制台' : '登录体验'}
-          </Button>
-        </div>
-      </section>
-
-      {/* 核心功能 */}
-      <section className="landing-section">
-        <h2 className="landing-section-title">核心功能</h2>
-        <div className="landing-grid landing-grid-3">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="landing-card">
-              <div className="landing-card-icon">{f.icon}</div>
-              <h3 className="landing-card-title">{f.title}</h3>
-              <p className="landing-card-desc">{f.desc}</p>
+      <main id="main-content" className="mx-auto max-w-6xl px-5 sm:px-8">
+        <section aria-labelledby="hero-title" className="grid items-center gap-8 pb-12 pt-14 sm:pb-16 sm:pt-20 lg:grid-cols-[1.3fr_1fr] lg:gap-16 lg:pb-20 lg:pt-24">
+          <div>
+            <p className="mb-5 flex items-center gap-2 text-sm font-medium text-primary">
+              <span className="h-px w-6 bg-primary" aria-hidden="true" />
+              ASTRAL · 应用与服务
+            </p>
+            <h1 id="hero-title" className="text-[clamp(2.5rem,5vw,4rem)] font-semibold leading-[1.2] tracking-tight">
+              日常所需，<br />
+              <span className="text-primary">触手可及。</span>
+            </h1>
+            <p className="mt-6 max-w-md text-base leading-8 text-muted-foreground">
+              听音乐、管理文件，或进入管理控制台。<br className="hidden sm:block" />
+              从这里，找到你需要的应用与服务。
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Button asChild size="lg" className="h-11 rounded-full px-6">
+                <a href="#applications">探索应用 <ArrowDown aria-hidden="true" /></a>
+              </Button>
+              <Button asChild variant="ghost" size="lg" className="h-11 rounded-full">
+                <a href="#platform">了解平台 <ArrowRight aria-hidden="true" /></a>
+              </Button>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
 
-      {/* 业务插件 */}
-      <section className="landing-section">
-        <h2 className="landing-section-title">业务插件</h2>
-        <p className="landing-section-desc">
-          插件实现统一收敛在 astral-plugin 模块，通过 SPI 注册中心自动发现，后台可启停。
-        </p>
-        <div className="landing-grid landing-grid-3">
-          {PLUGINS.map((p) => (
-            <div
-              key={p.title}
-              className={`landing-card${p.href ? ' landing-card-link' : ''}`}
-              onClick={p.href ? () => router.push(p.public || isLogin ? p.href! : '/login') : undefined}
-            >
-              <div className="landing-card-icon">{p.icon}</div>
-              <h3 className="landing-card-title">{p.title}</h3>
-              <p className="landing-card-desc">{p.desc}</p>
-              {p.href && (
-                <span className="landing-card-action inline-flex items-center gap-0.5">
-                  {p.action}
-                  <ChevronRight className="size-3.5" />
+          <aside aria-label="服务导航" className="rounded-2xl border border-border bg-muted/40 p-5 sm:p-7">
+            <p className="mb-5 text-xs font-medium tracking-[0.18em] text-muted-foreground">从喜欢的事开始</p>
+            <a href={QUIET_MUSIC_URL} className={`${styles.focusLink} group flex items-center gap-4 rounded-xl py-3`}>
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-primary">
+                <Headphones className="size-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">给日常一点旋律</span>
+                <span className="mt-1 block text-xs text-muted-foreground">打开轻听音乐官网</span>
+              </span>
+              <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
+            </a>
+            <div className="my-2 border-t border-border" />
+            <Link href={storageHref} prefetch={false} className={`${styles.focusLink} group flex items-center gap-4 rounded-xl py-3`}>
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-primary">
+                <FolderOpen className="size-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">让文件井井有条</span>
+                <span className="mt-1 block text-xs text-muted-foreground">{isLogin ? '进入我的文件' : '登录后管理与分享文件'}</span>
+              </span>
+              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
+            </Link>
+          </aside>
+        </section>
+
+        <section id="applications" aria-labelledby="applications-title" className="scroll-mt-24 pb-16 sm:pb-20">
+          <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="mb-2 text-xs font-medium tracking-[0.14em] text-primary">EXPLORE</p>
+              <h2 id="applications-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">选一个，开始使用</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">专注日常，让每次打开都更简单。</p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <a href={QUIET_MUSIC_URL} className={`${styles.appCard} group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-8`}>
+              <div className="relative z-10 flex items-start justify-between gap-4">
+                <Image src="/lightlisten/icon.png" alt="" width={56} height={56} className="rounded-2xl" />
+                <span className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground">音乐应用</span>
+              </div>
+              <div className="relative z-10 mb-9 mt-7">
+                <h3 className="text-2xl font-semibold tracking-tight">轻听音乐</h3>
+                <p className="mt-1 text-xs tracking-[0.12em] text-muted-foreground">QUIET MUSIC</p>
+                <p className="mt-4 max-w-sm text-sm leading-7 text-muted-foreground">发现喜欢的音乐，收藏常听的歌。<br />在手机与电脑上，享受自己的聆听时光。</p>
+              </div>
+              <div className="relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border pt-5">
+                <span className="text-sm font-medium text-primary">前往轻听官网</span>
+                <ArrowUpRight className="size-5 text-primary transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
+              </div>
+              <AudioLines className="pointer-events-none absolute -right-4 top-20 size-44 text-primary/[0.04]" strokeWidth={1} aria-hidden="true" />
+            </a>
+
+            <Link href={storageHref} prefetch={false} className={`${styles.appCard} group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-8`}>
+              <div className="relative z-10 flex items-start justify-between gap-4">
+                <span className="flex size-14 items-center justify-center rounded-2xl bg-muted text-primary">
+                  <ImageIcon className="size-7" strokeWidth={1.5} aria-hidden="true" />
                 </span>
-              )}
+                <span className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground">文件工具</span>
+              </div>
+              <div className="relative z-10 mb-9 mt-7">
+                <h3 className="text-2xl font-semibold tracking-tight">文件管理</h3>
+                <p className="mt-1 text-xs tracking-[0.12em] text-muted-foreground">FILE MANAGER</p>
+                <p className="mt-4 max-w-sm text-sm leading-7 text-muted-foreground">集中存放文件，按文件夹整理内容。<br />从上传、管理到分享，让文件随用随取。</p>
+              </div>
+              <div className="relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border pt-5">
+                <span className="text-sm font-medium text-primary">{isLogin ? '进入我的文件' : '登录后使用'}</span>
+                <ArrowRight className="size-5 text-primary transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              </div>
+              <FolderOpen className="pointer-events-none absolute -right-4 top-20 size-44 text-primary/[0.04]" strokeWidth={1} aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
+
+        <section id="platform" aria-labelledby="platform-title" className="scroll-mt-24 border-t border-border py-12 sm:py-16">
+          <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
+            <div>
+              <p className="mb-2 text-xs font-medium tracking-[0.14em] text-primary">BUILT ON ASTRAL</p>
+              <h2 id="platform-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">应用背后，服务有序运转</h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">统一的管理平台，连接用户、数据与业务扩展。</p>
             </div>
-          ))}
-        </div>
-      </section>
+            <Button asChild variant="outline" className="h-11 self-start rounded-full px-5 sm:shrink-0">
+              <Link href={consoleHref} prefetch={false}>
+                {isLogin ? '进入管理控制台' : '登录管理控制台'}
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
+          </div>
 
-      {/* 技术栈 */}
-      <section className="landing-section">
-        <h2 className="landing-section-title">技术栈</h2>
-        <div className="landing-tags">
-          {TECH_STACK.map((t) => (
-            <span key={t} className="landing-tag">
-              {t}
-            </span>
-          ))}
-        </div>
-      </section>
+          <div className="mt-9 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map(({ icon: Icon, title, desc }) => (
+              <article key={title} className="flex items-start gap-3.5">
+                <Icon className="mt-1 size-5 shrink-0 text-primary" strokeWidth={1.6} aria-hidden="true" />
+                <div>
+                  <h3 className="text-sm font-semibold">{title}</h3>
+                  <p className="mt-2 text-sm leading-7 text-muted-foreground">{desc}</p>
+                </div>
+              </article>
+            ))}
+          </div>
 
-      {/* 页脚 */}
-      <footer className="landing-footer">
-        <p>Astral Management System · Spring Boot 4.1 + Next.js 16</p>
-        <p className="landing-footer-secondary">详见项目 README</p>
+          <div className="mt-12 grid gap-6 rounded-2xl border border-border bg-muted/40 p-5 sm:p-6 lg:grid-cols-[1.3fr_1.3fr_1fr]">
+            {TECH_STACK.map(({ title, items }) => (
+              <div key={title}>
+                <h3 className="mb-3 text-xs font-medium text-muted-foreground">{title}</h3>
+                <ul className="flex flex-wrap gap-x-3 gap-y-2">
+                  {items.map((item) => <li key={item} className="text-xs leading-5">{item}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-border bg-muted/30">
+        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-5 px-5 py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-8">
+          <p><span className="font-semibold text-foreground">Astral</span><span className="mx-2" aria-hidden="true">/</span>连接应用与服务</p>
+          <nav aria-label="页脚导航" className="flex flex-wrap items-center gap-x-5 gap-y-3">
+            <a href={QUIET_MUSIC_URL} className={`${styles.focusLink} rounded-sm hover:text-foreground`}>轻听音乐官网 ↗</a>
+            <Link href={storageHref} prefetch={false} className={`${styles.focusLink} rounded-sm hover:text-foreground`}>文件管理</Link>
+            <Link href={consoleHref} prefetch={false} className={`${styles.focusLink} rounded-sm hover:text-foreground`}>{isLogin ? '管理控制台' : '管理登录'}</Link>
+          </nav>
+        </div>
       </footer>
     </div>
   );

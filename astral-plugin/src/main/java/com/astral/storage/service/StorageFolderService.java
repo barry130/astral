@@ -53,7 +53,7 @@ public class StorageFolderService {
     public List<StorageDtos.FolderMineView> listAllAsMine() {
         return listAll().stream()
                 .map(f -> new StorageDtos.FolderMineView(f.getId(), f.getFolderName(), f.getFolderPath(),
-                        f.getVisibility(), f.getStatus(), f.getStorageConfigId(), "ALL"))
+                        f.getVisibility(), f.getStatus(), f.getStorageConfigId(), "ALL", f.getParentId()))
                 .collect(Collectors.toList());
     }
 
@@ -94,7 +94,7 @@ public class StorageFolderService {
                 .map(e -> {
                     StorageFolderEntity f = folders.get(e.getKey());
                     return new StorageDtos.FolderMineView(f.getId(), f.getFolderName(), f.getFolderPath(),
-                            f.getVisibility(), f.getStatus(), f.getStorageConfigId(), e.getValue());
+                            f.getVisibility(), f.getStatus(), f.getStorageConfigId(), e.getValue(), f.getParentId());
                 })
                 .collect(Collectors.toList());
     }
@@ -109,6 +109,8 @@ public class StorageFolderService {
 
     @Transactional(rollbackFor = Exception.class)
     public StorageFolderEntity create(StorageDtos.FolderCreateReq req, String operator) {
+        fileMapper.lockUploadKey("storage-folder-tree");
+        validateFolderName(req.folderName());
         if (req.folderName() == null || req.folderName().isBlank() || req.folderName().length() > 128) {
             throw new BusinessException("COMMON002", "文件夹名称不能为空且不超过 128 字符");
         }
@@ -139,8 +141,7 @@ public class StorageFolderService {
             }
             parentPath = parent.getFolderPath();
         }
-        Long dup = folderMapper.selectCount(new LambdaQueryWrapper<StorageFolderEntity>()
-                .eq(StorageFolderEntity::getParentId, parentId)
+        Long dup = folderMapper.selectCount(siblings(parentId)
                 .eq(StorageFolderEntity::getFolderName, req.folderName().trim()));
         if (dup != null && dup > 0) {
             throw new BusinessException("STORAGE028");
@@ -150,6 +151,7 @@ public class StorageFolderService {
         folder.setParentId(parentId);
         folder.setFolderName(req.folderName().trim());
         folder.setFolderPath(parentPath.isEmpty() ? "/" + req.folderName().trim() : parentPath + "/" + req.folderName().trim());
+        validateFolderPath(folder.getFolderPath());
         folder.setStorageConfigId(configId);
         folder.setOwnerType(StorageFolderEntity.OWNER_USER);
         folder.setOwnerId(operator);
@@ -167,16 +169,21 @@ public class StorageFolderService {
 
     @Transactional(rollbackFor = Exception.class)
     public StorageFolderEntity update(Long id, StorageDtos.FolderUpdateReq req, String operator) {
+        fileMapper.lockUploadKey("storage-folder-tree");
         StorageFolderEntity folder = getById(id);
-        if (req.folderName() != null && !req.folderName().isBlank()) {
-            if (req.folderName().contains("/") || req.folderName().contains("\\")) {
-                throw new BusinessException("COMMON002", "文件夹名称不能包含路径分隔符");
+        if (req.folderName() != null) {
+            validateFolderName(req.folderName());
+            Long duplicate = folderMapper.selectCount(siblings(folder.getParentId())
+                    .ne(StorageFolderEntity::getId, id)
+                    .eq(StorageFolderEntity::getFolderName, req.folderName().trim()));
+            if (duplicate != null && duplicate > 0) {
+                throw new BusinessException("STORAGE028");
             }
+            String parentPath = folder.getParentId() == null ? "" : getById(folder.getParentId()).getFolderPath();
             folder.setFolderName(req.folderName().trim());
-            // 重建自身展示路径（子级路径不级联更新，MVP 限制：重命名深层文件夹后子级路径展示保持原值）
-            String oldName = folder.getFolderPath().substring(folder.getFolderPath().lastIndexOf('/') + 1);
-            folder.setFolderPath(folder.getFolderPath().substring(0,
-                    folder.getFolderPath().length() - oldName.length()) + req.folderName().trim());
+            folder.setFolderPath(parentPath + "/" + folder.getFolderName());
+            validateFolderPath(folder.getFolderPath());
+            syncDescendantPaths(folder, operator, new java.util.HashSet<>());
         }
         if (req.visibility() != null && !req.visibility().isBlank()) {
             if (!StorageFolderEntity.VISIBILITY_PRIVATE.equals(req.visibility())
@@ -211,6 +218,7 @@ public class StorageFolderService {
 
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id, String operator) {
+        fileMapper.lockUploadKey("storage-folder-tree");
         getById(id);
         Long children = folderMapper.selectCount(new LambdaQueryWrapper<StorageFolderEntity>()
                 .eq(StorageFolderEntity::getParentId, id));
@@ -345,5 +353,38 @@ public class StorageFolderService {
             throw new BusinessException("STORAGE004");
         }
         return config;
+    }
+
+    private LambdaQueryWrapper<StorageFolderEntity> siblings(Long parentId) {
+        return new LambdaQueryWrapper<StorageFolderEntity>()
+                .isNull(parentId == null, StorageFolderEntity::getParentId)
+                .eq(parentId != null, StorageFolderEntity::getParentId, parentId);
+    }
+
+    private void validateFolderName(String name) {
+        if (name == null || name.isBlank() || name.trim().length() > 128
+                || name.contains("/") || name.contains("\\") || name.chars().anyMatch(Character::isISOControl)
+                || ".".equals(name.trim()) || "..".equals(name.trim())) {
+            throw new BusinessException("COMMON002", "文件夹名称须为 1–128 字符，不能包含路径分隔符、控制字符或仅为点号");
+        }
+    }
+
+    private void validateFolderPath(String path) {
+        if (path.length() > 512) {
+            throw new BusinessException("COMMON002", "文件夹完整路径不能超过 512 字符");
+        }
+    }
+
+    private void syncDescendantPaths(StorageFolderEntity parent, String operator, java.util.Set<Long> visited) {
+        if (!visited.add(parent.getId())) {
+            throw new BusinessException("COMMON002", "文件夹结构存在循环");
+        }
+        for (StorageFolderEntity child : folderMapper.selectList(siblings(parent.getId()))) {
+            child.setFolderPath(parent.getFolderPath() + "/" + child.getFolderName());
+            validateFolderPath(child.getFolderPath());
+            child.setUpdateBy(operator);
+            folderMapper.updateById(child);
+            syncDescendantPaths(child, operator, visited);
+        }
     }
 }
