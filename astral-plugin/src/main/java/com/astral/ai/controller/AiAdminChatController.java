@@ -371,8 +371,10 @@ public class AiAdminChatController {
         if (!events.isEmpty()) {
             next = events.get(events.size() - 1).sequence();
         }
-        return new AiAppDtos.EventBatch(entity.getId(), entity.getStatus(), events, next,
-                AiConstants.RequestStatus.isTerminal(entity.getStatus()));
+        // 同 App 端：终态 + 游标追平才算流结束，否则客户端会漏掉 message.completed
+        boolean terminal = AiConstants.RequestStatus.isTerminal(entity.getStatus())
+                && eventService.drained(entity.getId(), next);
+        return new AiAppDtos.EventBatch(entity.getId(), entity.getStatus(), events, next, terminal);
     }
 
     /** 管理侧的第二道权限：答疑必须持有 qa:use，其余管理助手必须持有 assistant:use */

@@ -197,8 +197,11 @@ public class AiAppController {
         if (!events.isEmpty()) {
             next = events.get(events.size() - 1).sequence();
         }
-        return Result.success(new AiAppDtos.EventBatch(id, entity.getStatus(), events, next,
-                AiConstants.RequestStatus.isTerminal(entity.getStatus())));
+        // 终态 + 游标追平才算流结束：一次拉取有条数上限，请求 SUCCEEDED 时
+        // 事件可能还剩几百条没读，提前报 terminal 会让客户端丢掉 message.completed
+        boolean terminal = AiConstants.RequestStatus.isTerminal(entity.getStatus())
+                && eventService.drained(id, next);
+        return Result.success(new AiAppDtos.EventBatch(id, entity.getStatus(), events, next, terminal));
     }
 
     @PostMapping("/requests/{id}/cancel")

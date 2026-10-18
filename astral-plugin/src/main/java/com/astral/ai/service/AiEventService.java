@@ -136,4 +136,16 @@ public class AiEventService {
     private long nextSequence(Long requestId) {
         return lastSequence(requestId) + AiConstants.Runtime.EVENT_SEQUENCE_STEP;
     }
+
+    /**
+     * 游标之后是否已经没有事件。
+     *
+     * <p>客户端靠 {@code terminal} 决定停不停轮询，而一次拉取有条数上限：
+     * 一个请求终态时事件可能还剩几百条没读（{@code message.delta} 一条一个字），
+     * 只按请求状态判终态会让客户端在读到 {@code message.completed} 之前就收工，
+     * 界面上只剩半截增量拼出来的原始 JSON。所以必须「状态终态 + 游标追平」才算流结束。</p>
+     */
+    public boolean drained(Long requestId, long cursor) {
+        return lastSequence(requestId) <= cursor;
+    }
 }
