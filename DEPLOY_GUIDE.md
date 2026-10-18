@@ -73,6 +73,7 @@ vi .env      # 填入数据库、Redis 的真实地址与密码
 | `STORAGE_UPLOAD_TICKET_KEY` | `openssl rand -base64 48` 生成 | 文件存储：上传凭证 HMAC 密钥，需与 Worker Secret 一致 |
 | `STORAGE_ORIGIN_SHARED_SECRET` | 同上（另生成） | 文件存储：Worker 回调鉴权密钥，需与 Worker Secret 一致 |
 | `STORAGE_DOWNLOAD_SIGNING_KEY_V1` | 同上（另生成） | 文件存储：下载地址签名密钥，需与 Worker Secret 一致 |
+| `ASTRAL_AI_SECRET_KEY` | `openssl rand -base64 32` 生成，**生成后永不更换** | AI 插件：提供方 API Key 的加密主密钥（KEK）。换值或未配置时，已保存的密文全部解不开，后台报「提供方密钥无法解密，请重新保存」；必须同时出现在 `docker-compose.yml` backend 的 `environment:` 透传列表里 |
 | `NEXT_PUBLIC_API_URL` | 留空（推荐）或 `https://<你的API域名>` | 浏览器访问 API 的基地址（构建时内联）。**改用 CI 构建镜像后本项在 `.env` 中不再生效**，需写进 `.cnb.yml` 前端流水线的构建参数（`--build-arg`），见下文「CI 构建 + 服务器 pull 更新」 |
 | `REGISTRY` | `docker.cnb.cool/canace/astral` | （可选）镜像仓库前缀，只到命名空间；配合 `docker-compose.registry.yml` 使用 |
 | `TAG` | `latest` 或 `20260926-a1b2c3d4` | （可选）镜像 tag，兼作回滚开关 |

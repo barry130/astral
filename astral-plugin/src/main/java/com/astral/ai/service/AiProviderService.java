@@ -213,7 +213,16 @@ public class AiProviderService {
         if (encrypted != null && !encrypted.isBlank()) {
             String plain = cipher.decrypt(encrypted);
             if (plain == null) {
-                throw new BusinessException("AI006", "提供方密钥无法解密，请重新保存");
+                if (!cipher.isConfigured()) {
+                    // 服务器没配 KEK：密文在库里但没有任何口令能解开它
+                    throw new BusinessException("AI006", "提供方密钥已加密存储，但服务器未配置解密主密钥："
+                            + "请在部署环境的 deploy/.env 设置 ASTRAL_AI_SECRET_KEY（须与保存密钥时的值一致），"
+                            + "并确认 docker-compose.yml 已透传该变量，然后重启后端");
+                }
+                // KEK 已配置但解不开：保存密钥后主密钥被更换过
+                throw new BusinessException("AI006", "提供方密钥无法解密：当前 ASTRAL_AI_SECRET_KEY "
+                        + "与保存该密钥时所用的主密钥不一致（或密文已损坏）。"
+                        + "请改回原主密钥，或在本提供方上重新保存 API Key 以重新加密");
             }
             return plain;
         }

@@ -47,6 +47,11 @@ services:
       STORAGE_UPLOAD_TICKET_KEY: "${STORAGE_UPLOAD_TICKET_KEY:-}"
       STORAGE_ORIGIN_SHARED_SECRET: "${STORAGE_ORIGIN_SHARED_SECRET:-}"
       STORAGE_DOWNLOAD_SIGNING_KEY_V1: "${STORAGE_DOWNLOAD_SIGNING_KEY_V1:-}"
+      # ---- AI 插件密钥加密主密钥（KEK）----
+      # ai_provider.encrypted_api_key 的 AES-256-GCM 解密口令。必须与「保存提供方密钥时」
+      # 所用值逐字一致——换了值（或没配）旧密文全部解不开，报 AI006「提供方密钥无法解密」。
+      # 只能通过 deploy/.env 注入，绝不写进版本库；一旦使用不要随意更换。
+      ASTRAL_AI_SECRET_KEY: "${ASTRAL_AI_SECRET_KEY:-}"
       # ---- 时区 ----
       TZ: Asia/Shanghai
       # ---- CORS 跨域白名单（当前生产为「跨域直连」形态：web.canace.cn 直连 astral.canace.cn）----
