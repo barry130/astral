@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS qt_app_update (
     version_code BIGINT NOT NULL,
     platforms VARCHAR(64) NOT NULL DEFAULT '',
     version_name VARCHAR(64),
-    version_info VARCHAR(512),
+    -- 发版公告支持 HTML 富文本，512 装不下（V20261018001 已把存量库加宽到 5000）
+    version_info VARCHAR(5000),
     update_type VARCHAR(32),
     download_url VARCHAR(1024),
     channel VARCHAR(16) NOT NULL DEFAULT 'stable',

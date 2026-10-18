@@ -552,7 +552,9 @@ export default function QtAdminPage() {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item name="versionInfo" label="更新说明"><Input.TextArea rows={3} placeholder="更新内容说明" /></Form.Item>
+          <Form.Item name="versionInfo" label="更新说明" extra="支持 HTML 公告，最长 5000 字">
+            <Input.TextArea rows={3} maxLength={5000} showCount placeholder="更新内容说明" />
+          </Form.Item>
 
           {/* ============ 产物清单（一版本多包：Windows x64/x86/arm64…） ============
                服务端按请求方的 platform + arch 挑产物，挑中后把地址写回主表同名字段；

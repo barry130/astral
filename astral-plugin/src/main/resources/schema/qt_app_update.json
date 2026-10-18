@@ -45,7 +45,7 @@
       "fieldType": "String",
       "jdbcType": "VARCHAR",
       "comment": "版本信息",
-      "length": 512
+      "length": 5000
     },
     {
       "columnName": "update_type",
