@@ -262,6 +262,23 @@ public class AiChatOrchestrator {
                 }
             }
 
+            // 工具轮用尽仍在调工具：模型会把「我先去搜索」这类过渡语当成最终回答，
+            // 用户看到的就是一句空话。这里再给一次不带工具的机会，逼它用已有结果作答。
+            if (!cancelled(requestId) && answer.toString().isBlank()) {
+                List<Message> messages = new ArrayList<>();
+                messages.add(Message.system(systemPrompt + """
+
+
+                        工具调用次数已用尽。请**立刻**基于上面已经拿到的工具结果直接作答，
+                        不要再请求任何工具。若确实缺少信息，就用现有结果给出最接近的推荐。
+                        """));
+                messages.addAll(history(conversation.getId()));
+                RoundResult result = callModel(request, assistant, resolved, messages, null, assistant);
+                tokenIn += result.promptTokens();
+                tokenOut += result.completionTokens();
+                answer.append(result.content());
+            }
+
             if (cancelled(requestId)) {
                 return;
             }
