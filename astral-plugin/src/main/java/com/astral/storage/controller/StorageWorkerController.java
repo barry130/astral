@@ -42,10 +42,13 @@ public class StorageWorkerController {
     public Result<WorkerCallbackResp> uploadCallback(@RequestBody StorageDtos.WorkerCallbackReq req) {
         StorageFileEntity file = fileService.registerFromCallback(req);
         fileService.verifyContentAfterRegistration(file.getPublicId());
-        return Result.success(new WorkerCallbackResp(file.getPublicId(), file.getStatus()));
+        // contentVersion/visibility 回传给 Worker 做上传预热（把内存中的字节直接写进边缘缓存，
+        // 使永久链接/签名链接的首次访问无需回源三跳）
+        return Result.success(new WorkerCallbackResp(file.getPublicId(), file.getStatus(),
+                file.getContentVersion(), file.getVisibility()));
     }
 
-    public record WorkerCallbackResp(String publicId, String status) {
+    public record WorkerCallbackResp(String publicId, String status, long contentVersion, String visibility) {
     }
 
     /**

@@ -16,6 +16,7 @@ class StorageFileServiceTest {
     private StorageFileMapper mapper;
     private StorageTaskMapper tasks;
     private StorageFolderService folders;
+    private WorkerCachePurgeService purger;
     private StorageFileService service;
     private StorageFileEntity file;
 
@@ -24,8 +25,10 @@ class StorageFileServiceTest {
         mapper = mock(StorageFileMapper.class);
         tasks = mock(StorageTaskMapper.class);
         folders = mock(StorageFolderService.class);
-        service = spy(new StorageFileService(mapper, tasks, null, folders, mock(StorageAuditService.class),
-                null, null, null, null, null, null, null, null, null));
+        purger = mock(WorkerCachePurgeService.class);
+        var configCache = mock(StorageConfigCache.class);
+        service = spy(new StorageFileService(mapper, tasks, configCache, folders, mock(StorageAuditService.class),
+                null, null, null, null, null, null, null, null, null, purger));
         file = new StorageFileEntity();
         file.setId(1L);
         file.setPublicId("public-id");
@@ -73,5 +76,19 @@ class StorageFileServiceTest {
         assertThrows(BusinessException.class, () -> service.changeVisibility("public-id", "admin", "PUBLIC", true));
         verify(mapper, never()).updateById(any(StorageFileEntity.class));
         assertEquals("PRIVATE", file.getVisibility());
+    }
+
+    @Test
+    void visibilityChangeTriggersWorkerCachePurge() {
+        // 可见性变更递增版本后，必须异步失效旧版本（递增前的 contentVersion=1）的边缘缓存键
+        service.changeVisibility("public-id", "admin", "PUBLIC", true);
+        verify(purger).purgeFileAsync(isNull(), eq("public-id"), eq(1L), isNull());
+    }
+
+    @Test
+    void telegramDeleteEnqueuesTaskAndPurgesEdgeCache() {
+        service.requestDelete("public-id", "admin", true);
+        verify(tasks).insert(any(StorageTaskEntity.class));
+        verify(purger).purgeFileAsync(isNull(), eq("public-id"), eq(1L), isNull());
     }
 }

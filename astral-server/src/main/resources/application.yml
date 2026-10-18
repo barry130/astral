@@ -119,8 +119,10 @@ astral:
       max-file-size-bytes: ${STORAGE_MAX_FILE_SIZE:20971520}
       # 上传凭证有效期（秒），签发给 Cloudflare Worker 的短时上传授权
       upload-ticket-ttl-seconds: 600
-      # 下载签名 URL 有效期（秒），公开/私有统一 300s（MVP 撤销窗口 = TTL）
-      download-url-ttl-seconds: 300
+      # 下载签名 URL 有效期（秒）。签名只绑定 (publicId, contentVersion)，内容不可变；
+      # 撤销依赖可见性变更递增 contentVersion 使旧 URL 失效，而非依赖短 TTL。
+      # 1h 的好处：URL 在浏览器/边缘缓存内可复用一整个访问会话，命中率大幅上升。
+      download-url-ttl-seconds: 3600
       # Worker HMAC 时间戳窗口（秒）与重放保护
       origin-timestamp-window-seconds: 300
       # 允许的 MIME 白名单：留空 = 不限制文件类型（文件管理上传不再限定类型）；如需收紧，填逗号分隔的 MIME 列表

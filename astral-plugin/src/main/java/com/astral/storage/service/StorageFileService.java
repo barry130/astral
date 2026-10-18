@@ -75,6 +75,7 @@ public class StorageFileService {
     private final UpyunApiService upyunApiService;
     private final StorageProperties properties;
     private final ObjectMapper objectMapper;
+    private final WorkerCachePurgeService workerCachePurgeService;
 
     /**
      * 内容校验专用 HTTP 客户端。
@@ -585,9 +586,13 @@ public class StorageFileService {
         }
         file.setVisibility(visibility);
         // 内容版本递增：Worker 缓存键随版本变化，旧缓存自然过期（撤销窗口 = URL TTL）
-        file.setContentVersion(file.getContentVersion() + 1);
+        long oldVersion = file.getContentVersion();
+        file.setContentVersion(oldVersion + 1);
         file.setUpdateTime(LocalDateTime.now());
         fileMapper.updateById(file);
+        // 旧版本缓存键不再对应任何合法可见性（PUBLIC↔PRIVATE 都可能回退），主动失效立即撤销；
+        // 必须清「旧版本」键——新版本键还没有任何 URL 指向它
+        purgeWorkerCacheQuietly(file, oldVersion);
         auditService.record("FILE_VISIBILITY", "USER", userId, "FILE", publicId, visibility, "OK");
         return file;
     }
@@ -636,6 +641,9 @@ public class StorageFileService {
         task.setRetryCount(0);
         task.setStatus(StorageTaskEntity.STATUS_PENDING);
         taskMapper.insert(task);
+        // 远端消息删除尚由 Worker 异步执行，但边缘缓存立即可失效：等 Worker ack 再清，
+        // 删除期间旧 URL 会继续从缓存出图（最快也要 5 分钟 cron 周期）。
+        purgeWorkerCacheQuietly(file);
         auditService.record("FILE_DELETE", "USER", userId, "FILE", publicId, "task=" + task.getId(), "OK");
     }
 
@@ -713,6 +721,8 @@ public class StorageFileService {
                     file.setDeletedTime(now);
                     file.setUpdateTime(now);
                     fileMapper.updateById(file);
+                    // 兜底再清一次边缘缓存（requestDelete 已清过；覆盖上次 purge 失败的情况）
+                    purgeWorkerCacheQuietly(file);
                 }
             }
             auditService.record("FILE_DELETE_ACK", "WORKER", String.valueOf(taskId), "FILE",
@@ -744,7 +754,45 @@ public class StorageFileService {
         taskMapper.updateById(task);
     }
 
-    // ==================== 内部工具 ====================
+    /** 从 locator JSON 取字段（缺失返回 null） */
+    private String locatorField(StorageFileEntity file, String field) {
+        try {
+            JsonNode locator = objectMapper.readTree(file.getProviderLocatorJson());
+            return locator.path(field).asText(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 主动失效 Worker 边缘缓存（TELEGRAM 专用，尽力而为）。
+     * <p>删除/停用配置不递增 contentVersion，旧签名 URL 在有效期内仍可从边缘缓存出图；
+     * 这里异步逐 Worker 发 purge 请求，把撤销延迟从边缘缓存 TTL 收敛到秒级。
+     * 必须异步：purge 是跨网络尽力而为操作，不能拖住删除主流程/事务。</p>
+     *
+     * @param targetVersion 要清除的缓存键版本号：删除场景传当前版本；
+     *                      可见性变更场景必须传「递增前的旧版本」（新版本键还没有 URL 指向）
+     */
+    private void purgeWorkerCacheQuietly(StorageFileEntity file, long targetVersion) {
+        if (file == null || file.getPublicId() == null) {
+            return;
+        }
+        try {
+            StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
+            workerCachePurgeService.purgeFileAsync(config, file.getPublicId(), targetVersion,
+                    locatorField(file, "fileId"));
+        } catch (Exception e) {
+            log.warn("[Storage] Worker 缓存失效触发异常: publicId={}, {}", file.getPublicId(), e.getMessage());
+        }
+    }
+
+    /** 以文件当前 contentVersion 为目标版本的便捷重载 */
+    private void purgeWorkerCacheQuietly(StorageFileEntity file) {
+        if (file == null || file.getContentVersion() == null) {
+            return;
+        }
+        purgeWorkerCacheQuietly(file, file.getContentVersion());
+    }
 
     private String providerTypeOf(StorageFileEntity file) {
         return file.getProviderType() == null ? StorageConfigEntity.PROVIDER_TELEGRAM : file.getProviderType();

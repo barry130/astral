@@ -206,6 +206,18 @@ export default function FileManager({ admin = false, canEdit = true }: { admin?:
     const version = ++previewVersion.current;
     setPreview({ file });
     try {
+      // PUBLIC 文件优先用永久链接：无过期签名，Worker 边缘长缓存可直接命中（省一次换链 POST + 更高缓存命中率）。
+      // 失败（如配置未填 Worker 地址）或 PRIVATE 文件仍走签名链接。
+      if (file.visibility === 'PUBLIC') {
+        try {
+          const permanent = await storageApi.managerUrl(file.publicId!, true, admin);
+          if (version !== previewVersion.current) return;
+          if (permanent.code === 200 && permanent.data?.url) {
+            setPreview({ file, url: permanent.data.url });
+            return;
+          }
+        } catch { /* 回退签名链接 */ }
+      }
       const result = await storageApi.managerUrl(file.publicId!, false, admin);
       if (version !== previewVersion.current) return;
       if (result.code !== 200) throw new Error(result.message);

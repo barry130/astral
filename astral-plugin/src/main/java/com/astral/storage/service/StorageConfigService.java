@@ -58,6 +58,9 @@ public class StorageConfigService {
     @Resource
     private StorageConfigCache configCache;
 
+    @Resource
+    private WorkerCachePurgeService workerCachePurgeService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public List<StorageConfigEntity> listAll() {
@@ -150,6 +153,11 @@ public class StorageConfigService {
         config.setHealthStatus(StorageConfigEntity.HEALTH_UNKNOWN);
         configMapper.updateById(config);
         configCache.evictAll();
+        // 停用（ENABLED→DISABLED）时失效该配置下全部文件的边缘缓存：
+        // 停用不递增 contentVersion，旧 URL 在签名有效期内仍可从缓存出图
+        if (StorageConfigEntity.STATUS_DISABLED.equals(config.getStatus())) {
+            purgeConfigWorkerCache(config);
+        }
         auditService.record("CONFIG_UPDATE", "USER", operator, "CONFIG", String.valueOf(id), null, "OK");
         return redactSecret(config);
     }
@@ -165,6 +173,28 @@ public class StorageConfigService {
         configCache.evictAll();
         auditService.record("CONFIG_DELETE", "USER", operator, "CONFIG", String.valueOf(id),
                 "name=" + config.getName(), "OK");
+    }
+
+    /**
+     * 失效一个 TELEGRAM 配置下全部可用文件的 Worker 边缘缓存（尽力而为，异步逐文件）。
+     * <p>停用配置时调用；删除配置时文件数为 0 无需清理。失败只记日志，
+     * 残余副本最多存活一个边缘缓存 TTL 窗口。</p>
+     */
+    private void purgeConfigWorkerCache(StorageConfigEntity config) {
+        try {
+            List<com.astral.storage.entity.StorageFileEntity> files = fileMapper.selectList(
+                    new LambdaQueryWrapper<com.astral.storage.entity.StorageFileEntity>()
+                            .eq(com.astral.storage.entity.StorageFileEntity::getStorageConfigId, config.getId())
+                            .eq(com.astral.storage.entity.StorageFileEntity::getStatus,
+                                    com.astral.storage.entity.StorageFileEntity.STATUS_AVAILABLE));
+            for (com.astral.storage.entity.StorageFileEntity file : files) {
+                workerCachePurgeService.purgeFileAsync(config, file.getPublicId(),
+                        file.getContentVersion() == null ? 1L : file.getContentVersion(), null);
+            }
+            log.info("[Storage] 配置停用，已触发 Worker 缓存失效: configId={}, files={}", config.getId(), files.size());
+        } catch (Exception e) {
+            log.warn("[Storage] 配置停用触发缓存失效异常: configId={}, {}", config.getId(), e.getMessage());
+        }
     }
 
     /** 设为默认配置（全表唯一默认） */
