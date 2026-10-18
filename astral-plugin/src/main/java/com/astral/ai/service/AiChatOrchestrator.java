@@ -234,6 +234,10 @@ public class AiChatOrchestrator {
             }
 
             int maxToolRounds = resolveMaxToolRounds(version);
+            // 同一工具已经成功返回过结果，就不再提供给后续轮次。
+            // 事故现场：模型在 4 轮里反复调 search_music，每轮拿到的 30 首候选完全相同，
+            // 最终把「我先搜索…」当成最终回答。工具一直挂在可调用列表里，模型就会一直调。
+            java.util.Set<String> exhaustedTools = new java.util.LinkedHashSet<>();
             for (int round = 0; round < maxToolRounds; round++) {
                 if (cancelled(requestId)) {
                     return;
@@ -241,7 +245,7 @@ public class AiChatOrchestrator {
                 List<Message> messages = new ArrayList<>();
                 messages.add(Message.system(systemPrompt));
                 messages.addAll(history(conversation.getId()));
-                List<ToolSpec> specs = toolSpecs(tools);
+                List<ToolSpec> specs = toolSpecs(availableTools(tools, exhaustedTools));
 
                 RoundResult result = callModel(request, assistant, resolved, messages, specs,
                         answer.length() == 0 ? assistant : null);
@@ -263,6 +267,10 @@ public class AiChatOrchestrator {
                     requestService.markWaiting(requestId, true);
                     conversationService.update(status(assistant, AiConstants.MessageStatus.STREAMING));
                     return;
+                }
+                // 成功执行过的工具在后续轮次不再提供（READ 类工具重复调用没有新信息）
+                for (ToolCall call : result.toolCalls()) {
+                    exhaustedTools.add(call.name());
                 }
             }
 
@@ -1043,5 +1051,27 @@ public class AiChatOrchestrator {
         }
         JsonNode blocks = node.get("blocks");
         return blocks != null && blocks.isArray() && !blocks.isEmpty();
+    }
+
+    /**
+     * 过滤掉已经用过的工具，供下一轮使用。
+     * <p>只过滤 READ 类工具：DRAFT / HIGH 类操作（发通知、改配置）允许在用户确认后
+     * 重复执行，而搜索类工具重复调用只会拿到同一批候选，纯粹浪费轮次。</p>
+     */
+    static List<AiToolService.EffectiveTool> availableTools(List<AiToolService.EffectiveTool> tools,
+                                                           java.util.Set<String> exhausted) {
+        if (tools == null || tools.isEmpty() || exhausted == null || exhausted.isEmpty()) {
+            return tools;
+        }
+        List<AiToolService.EffectiveTool> remaining = new ArrayList<>();
+        for (AiToolService.EffectiveTool tool : tools) {
+            String code = tool.tool().getToolCode();
+            boolean readOnly = AiConstants.RiskLevel.READ.equals(tool.risk());
+            if (readOnly && exhausted.contains(code)) {
+                continue;
+            }
+            remaining.add(tool);
+        }
+        return remaining;
     }
 }

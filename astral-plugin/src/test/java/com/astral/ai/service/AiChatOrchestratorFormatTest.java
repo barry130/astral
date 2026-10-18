@@ -1,7 +1,12 @@
 package com.astral.ai.service;
 
+import com.astral.ai.common.AiConstants;
 import com.astral.ai.entity.AiAgentVersionEntity;
+import com.astral.ai.entity.AiToolEntity;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -87,6 +92,39 @@ class AiChatOrchestratorFormatTest {
     void fencedJsonIsStillRecognised() {
         String fenced = "```json\n{\"answer\":\"挑了几首\",\"blocks\":[{\"type\":\"song_list\"}]}\n```";
         assertTrue(AiChatOrchestrator.hasStructuredBlocks(fenced));
+    }
+
+    @Test
+    void exhaustedReadToolsAreDroppedFromTheNextRound() {
+        // 事故现场：模型 4 轮反复调 search_music，每轮候选完全相同
+        List<AiToolService.EffectiveTool> tools = List.of(
+                tool("search_music", AiConstants.RiskLevel.READ),
+                tool("get_user_likes", AiConstants.RiskLevel.READ),
+                tool("send_email", AiConstants.RiskLevel.HIGH));
+
+        List<AiToolService.EffectiveTool> remaining = AiChatOrchestrator.availableTools(
+                tools, Set.of("search_music"));
+
+        List<String> codes = remaining.stream().map(t -> t.tool().getToolCode()).toList();
+        assertFalse(codes.contains("search_music"), codes.toString());
+        // 没用过的 READ 工具仍在
+        assertTrue(codes.contains("get_user_likes"), codes.toString());
+        // HIGH 类操作允许重复（用户确认后可再次执行）
+        assertTrue(codes.contains("send_email"), codes.toString());
+    }
+
+    @Test
+    void availableToolsKeepsEverythingWhenNothingExhausted() {
+        List<AiToolService.EffectiveTool> tools = List.of(tool("search_music", AiConstants.RiskLevel.READ));
+        assertEquals(1, AiChatOrchestrator.availableTools(tools, Set.of()).size());
+        assertEquals(1, AiChatOrchestrator.availableTools(tools, null).size());
+        assertTrue(AiChatOrchestrator.availableTools(null, Set.of("x")) == null);
+    }
+
+    private static AiToolService.EffectiveTool tool(String code, String risk) {
+        AiToolEntity entity = new AiToolEntity();
+        entity.setToolCode(code);
+        return new AiToolService.EffectiveTool(entity, null, risk, AiConstants.ApprovalPolicy.NONE, 0);
     }
 
     private static AiAgentVersionEntity version(String toolPolicyJson) {
