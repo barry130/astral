@@ -70,6 +70,8 @@ public class AiChatOrchestrator {
 
     /** 拼入模型的历史消息上限 */
     private static final int MAX_HISTORY_MESSAGES = 40;
+    /** AiProviderDtos.Message 的角色字面量（小写，OpenAI 兼容格式） */
+    private static final String ROLE_TOOL = "tool";
 
     /** 系统提示词里引用的知识条目上限 */
     private static final int MAX_KNOWLEDGE_HITS = 6;
@@ -613,6 +615,8 @@ public class AiChatOrchestrator {
         List<AiMessageEntity> rows = conversationService.messages(conversationId, null, MAX_HISTORY_MESSAGES);
         List<Message> messages = new ArrayList<>();
         for (AiMessageEntity row : rows) {
+            // 历史窗口是按条数截断的，可能把「助手 toolCalls」与紧随其后的「tool 结果」切成两半。
+            // 提供方会因此报 400（orphaned or duplicate tool result），所以在下面统一做配对修复。
             if (row.getContent() == null || row.getContent().isBlank()) {
                 continue;
             }
@@ -648,7 +652,59 @@ public class AiChatOrchestrator {
                 messages.add(Message.assistant(row.getContent()));
             }
         }
-        return messages;
+        return dropOrphanToolMessages(messages);
+    }
+
+    /**
+     * 修复 tool 调用与 tool 结果的配对。
+     * <p>模型服务要求每条 tool 消息都必须紧跟一条声明了同名 toolCallId 的助手消息；反过来，
+     * 助手声明的 toolCalls 若缺少对应结果也会被拒。历史按条数截断时两头都可能被切断，
+     * 这里把不成对的部分整体丢弃——宁可少一轮上下文，也不要整轮请求失败。</p>
+     */
+    private List<Message> dropOrphanToolMessages(List<Message> messages) {
+        List<Message> fixed = new ArrayList<>(messages.size());
+        int i = 0;
+        while (i < messages.size()) {
+            Message current = messages.get(i);
+            if (ROLE_TOOL.equals(current.role())) {
+                i++; // 没有助手声明在前：孤立结果，直接丢
+                continue;
+            }
+            Set<String> declared = new LinkedHashSet<>();
+            if (current.toolCalls() != null) {
+                for (ToolCall call : current.toolCalls()) {
+                    declared.add(call.id());
+                }
+            }
+            if (declared.isEmpty()) {
+                fixed.add(current);
+                i++;
+                continue;
+            }
+            // 先收集紧随其后的一整段 tool 结果，再判断是否与本条声明严格一一对应
+            int end = i + 1;
+            while (end < messages.size() && ROLE_TOOL.equals(messages.get(end).role())) {
+                end++;
+            }
+            List<Message> results = messages.subList(i + 1, end);
+            Set<String> answered = new LinkedHashSet<>();
+            boolean paired = true;
+            for (Message result : results) {
+                if (result.toolCallId() == null || !declared.contains(result.toolCallId())
+                        || !answered.add(result.toolCallId())) {
+                    paired = false;
+                    break;
+                }
+            }
+            if (paired && declared.equals(answered)) {
+                fixed.add(current);
+                fixed.addAll(results);
+            }
+            // 配对不全（结果缺失、重复或对不上）：助手消息与结果整段丢弃，
+            // 避免把孤立的 toolCalls / tool 结果发给模型服务导致 400。
+            i = end;
+        }
+        return fixed;
     }
 
     private List<ToolSpec> toolSpecs(List<AiToolService.EffectiveTool> tools) {

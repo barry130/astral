@@ -197,15 +197,17 @@ class AiAgentValidationServiceTest {
     // ==================== 提示词 ====================
 
     @Test
-    void unboundPromptOnlyWarnsBecauseFallbackPromptExists() {
+    void unboundPromptBlocksPublish() {
+        // 线上事故：缺提示词的版本被放行发布，模型失去角色约束只会回散文，
+        // 音乐助手因此产不出 blocks/actions，客户端拿不到可点的歌。
         wireRoute(AiConstants.AgentType.MUSIC, "QT_UNIAPPX", "MOCK", true, true, true, 512);
         AiAgentVersionEntity version = versionOfAgent(1L);
         version.setSystemPromptVersionId(null);
 
         AiAdminDtos.ValidationVo result = service.validate(version);
 
-        assertHasIssue(result, "PROMPT_MISSING", "WARN");
-        assertTrue(result.valid());
+        assertHasIssue(result, "PROMPT_MISSING", "ERROR");
+        assertFalse(result.valid());
     }
 
     @Test
@@ -250,8 +252,22 @@ class AiAgentValidationServiceTest {
     }
 
     @Test
-    void blankResponseSchemaIsAcceptable() {
+    void musicAgentWithoutResponseSchemaBlocksPublish() {
+        // 音乐助手必须靠 schema 约束 {answer,blocks,actions}，空 schema 会让卡片与动作消失。
         wireHealthyAgent(AiConstants.AgentType.MUSIC, "QT_UNIAPPX", "MOCK");
+        AiAgentVersionEntity version = versionOfAgent(1L);
+        version.setResponseSchemaJson("  ");
+
+        AiAdminDtos.ValidationVo result = service.validate(version);
+
+        assertHasIssue(result, "SCHEMA_MISSING", "ERROR");
+        assertFalse(result.valid());
+    }
+
+    @Test
+    void adminAgentWithoutResponseSchemaIsAcceptable() {
+        // 管理助手与答疑助手可以只回纯文本，不强求结构化输出。
+        wireHealthyAgent(AiConstants.AgentType.ADMIN, "ASTRAL_FRONT", "MOCK");
         AiAgentVersionEntity version = versionOfAgent(1L);
         version.setResponseSchemaJson("  ");
 
@@ -451,6 +467,9 @@ class AiAgentValidationServiceTest {
         version.setStatus(AiConstants.VersionStatus.DRAFT);
         version.setProviderRouteId(10L);
         version.setSystemPromptVersionId(9L);
+        // 音乐助手发布时强制要求响应 Schema（见 SCHEMA_MISSING），
+        // 所以「健康版本」的基线配置必须带上它，否则每个用例都会撞这条规则。
+        version.setResponseSchemaJson("{\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\"}}}");
         return version;
     }
 

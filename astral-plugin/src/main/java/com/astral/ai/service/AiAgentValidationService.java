@@ -64,7 +64,7 @@ public class AiAgentValidationService {
         checkClients(agent, version, issues);
         checkRoute(version, issues);
         checkPrompt(version, issues, agent);
-        checkSchema(version, issues);
+        checkSchema(version, issues, agent);
         checkTools(version, agent, issues);
         checkKnowledge(version, issues);
         checkQuota(agent, version, issues);
@@ -155,7 +155,10 @@ public class AiAgentValidationService {
     private void checkPrompt(AiAgentVersionEntity version, List<AiAdminDtos.ValidationVo.ValidationIssue> issues,
                              AiAgentEntity agent) {
         if (version.getSystemPromptVersionId() == null) {
-            issues.add(warn("PROMPT_MISSING", "未绑定系统提示词，将使用平台兜底提示词", "systemPromptVersionId"));
+            // 曾经只是 WARN，结果「缺提示词的版本」照样能发布：模型没有角色约束，
+            // 音乐助手会回一段散文、不产出 blocks/actions，客户端拿不到可点的歌。
+            issues.add(error("PROMPT_MISSING", "未绑定系统提示词，发布后模型缺少角色约束，无法产出结构化结果",
+                    "systemPromptVersionId"));
             return;
         }
         try {
@@ -179,9 +182,16 @@ public class AiAgentValidationService {
         }
     }
 
-    private void checkSchema(AiAgentVersionEntity version, List<AiAdminDtos.ValidationVo.ValidationIssue> issues) {
+    private void checkSchema(AiAgentVersionEntity version, List<AiAdminDtos.ValidationVo.ValidationIssue> issues,
+                             AiAgentEntity agent) {
         String schema = version.getResponseSchemaJson();
         if (schema == null || schema.isBlank()) {
+            // 音乐助手要靠 response schema 约束模型输出 {answer,blocks,actions}；
+            // 缺了它模型会回纯文本，客户端就渲染不出歌曲卡片与播放动作。
+            if (AiConstants.AgentType.MUSIC.equals(agent.getAgentType())) {
+                issues.add(error("SCHEMA_MISSING", "音乐助手必须配置响应 Schema，否则无法产出歌曲卡片与播放动作",
+                        "responseSchemaJson"));
+            }
             return;
         }
         Object parsed = AiJson.read(schema);
