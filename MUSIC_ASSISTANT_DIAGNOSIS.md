@@ -276,3 +276,126 @@ WHERE conversation_id = <新会话> ORDER BY id;
 ```
 
 **成功标志**：ASSISTANT 消息的 `blocks_json` 里出现 `"type":"song_list"` 且 `items` 非空。
+
+---
+
+# 第二轮诊断（2026-10-18 17:43 补充）
+
+第一轮修完后用户仍然「还是不行」，而且报出新错误。继续追查又挖出**两个更深的问题**，其中一个直接导致请求 500。
+
+## 七、根因 6：`specs` 空指针，整个请求 500
+
+错误原文（截图红条 + `ai_request.error_summary`）：
+
+```
+Cannot invoke "java.util.List.isEmpty()" because "specs" is null
+```
+
+位置：`AiChatOrchestrator.callModel` 第 313 行（修复前）：
+
+```java
+specs.isEmpty() ? null : specs,
+```
+
+调用方是「工具轮用尽后强制作答」那段兜底逻辑，传的是 `callModel(..., null, assistant)` —— 明确把 `specs` 传成 `null`，而 `callModel` 里没做空判断，直接 NPE。
+
+**讽刺之处**：这个兜底逻辑是第一轮为了「逼模型作答」新加的，结果它自己先崩了，导致整个请求变成 FAILED，用户连过渡语都保不住。
+
+修复：
+
+```java
+specs == null || specs.isEmpty() ? null : specs,
+```
+
+## 八、根因 7：会话绑定归档版本，发版永远不生效
+
+这是「发了版却没效果」的真正原因，也是**前两轮全部白费的关键**。
+
+证据对比：
+
+| 时间 | 事件 |
+|---|---|
+| 17:11 | 会话 7009 创建，绑定 v3（3006） |
+| 17:23 | 我发布 v4（3007），v3 被归档 |
+| 17:43 | 用户发「再来点」，请求 9021 的 `agent_version_id` **仍然是 3006** |
+
+数据库状态明明是 `ai_agent.published_version_id = 3007`，请求却用了 3006。
+
+原因在 `AiAccessService.resolveVersion`（修复前）：
+
+```java
+if (conversationVer != null) {
+    AiAgentVersionEntity version = agentService.requireVersion(conversationVer);
+    if (PUBLISHED.equals(version.getStatus()) || ARCHIVED.equals(version.getStatus())) {
+        return version;   // ← ARCHIVED 也照样返回！
+    }
+}
+```
+
+会话绑定的版本只要状态是 `PUBLISHED` **或 `ARCHIVED`** 就沿用。于是：**会话一旦创建，后续发多少版都不会生效，必须手动新建会话。**
+
+修复后：
+
+```java
+if (conversationVer != null && conversationVer.equals(publishedId)) {
+    return agentService.requireVersion(publishedId);   // 就是当前发布版，沿用
+}
+if (conversationVer != null) {
+    AiAgentVersionEntity bound = agentService.requireVersion(conversationVer);
+    if (PUBLISHED.equals(bound.getStatus())) {
+        return bound;                                   // 仍是发布版，沿用
+    }
+    // ARCHIVED / DRAFT → 落到下面跟随最新发布版
+}
+return agentService.requireVersion(publishedId);
+```
+
+## 九、根因 8：工具从不「用完即弃」，模型反复搜同一批歌
+
+`ai_tool_call` 铁证：一次请求里 **4 次 `search_music`**，关键词只差一两个字：
+
+| 轮次 | keywords |
+|---|---|
+| 1 | 跑步/快歌/动感/高节奏/运动 |
+| 2 | 跑步/快歌/运动/节奏感强/燃 |
+| 3 | 跑步/快节奏/燃/运动 |
+| 4 | 跑步/燃脂/高能快歌/运动节奏/电子舞曲 |
+
+每次客户端都回传**同样那 30 首候选**。模型看到 `search_music` 一直挂在可调用列表里，就一直调，把轮次耗尽。
+
+原因：`toolSpecs(tools)` 每一轮都传全量工具。
+
+修复：新增 `availableTools(tools, exhausted)`，成功执行过的 **READ 类**工具从后续轮次移除；`DRAFT`/`HIGH` 类不过滤（用户确认后本就允许重复执行）。
+
+## 十、上游实测：api.haogpt.net 返回 503
+
+用线上 provider 真实配置打了一次端到端：
+
+```
+POST https://api.haogpt.net/v1/chat/completions
+HTTP 503
+{"error":{"message":"The group daily usage authorization service is temporarily unavailable.",
+          "code":"group_daily_usage_authorization_unavailable"}}
+```
+
+**这是上游授权服务故障，与配置无关。** 另外本地 KEK（`astral-local-dev-kek-2026`）与服务器不一致，`AiSecretCipher` 报 `Tag mismatch`，无法在本地解密 API Key 做完整验证。
+
+## 十一、三轮修复总览
+
+| 提交 | 内容 |
+|---|---|
+| `23152b0` | response_format 协议包装、maxRounds 读取、结构化兜底、完整 Schema（393B→2978B）、提示词三首歌示例 |
+| `8c24e31` | 诊断档案 |
+| `938eb64` | specs 空指针修复、归档版本不再沿用会话绑定 |
+| `023328f` | 已用过的 READ 工具不再提供给后续轮次 |
+
+**线上配置**：v4（id=3007）已发布，提示词 2349B，Schema 2978B，9 个工具绑定齐全。
+
+**测试**：新增 `AiChatOrchestratorFormatTest`（10 用例）、`AiAccessServiceResolveVersionTest`（5 用例），全量 179 用例通过。
+
+## 十二、若仍不行，下一步排查方向
+
+1. **确认版本真的切过去了**：发一条消息后查 `ai_request.agent_version_id`，必须是 `3007`。若还是 3006，说明 `resolveVersion` 修复没生效（后端未重启或 jar 未 install）。
+2. **确认 `response_format` 被接受**：看 `ai_request.configuration_snapshot` 里的 `responseSchemaJson` 是否为 2978B 版本。
+3. **确认模型输出**：查 `ai_message` 里 ASSISTANT 消息的 `content` 是否为 JSON。若是纯文本，说明 deepseek 忽略了 `response_format`，此时需要走「把候选歌单直接拼进 system prompt」的兜底方案。
+4. **上游 503**：等 api.haogpt.net 恢复，或换一个提供方测试。
