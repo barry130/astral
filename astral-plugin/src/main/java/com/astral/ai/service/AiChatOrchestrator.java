@@ -785,16 +785,57 @@ public class AiChatOrchestrator {
             return new Parsed("", List.of(), List.of(), "stop");
         }
         String json = stripFence(text);
-        if (json.startsWith("{") && json.endsWith("}")) {
-            JsonNode node = AiJson.read(json);
-            if (node != null && node.isObject() && (node.has("answer") || node.has("blocks"))) {
-                String answer = AiJson.text(node, "answer", text);
-                List<AiAppDtos.Block> blocks = parseBlocks(node.get("blocks"));
-                List<AiAppDtos.ActionVo> actions = parseActions(node.get("actions"));
-                return new Parsed(answer, blocks, actions, "stop");
+        JsonNode node = extractJsonObject(json);
+        if (node != null && node.isObject() && (node.has("answer") || node.has("blocks"))) {
+            String answer = AiJson.text(node, "answer", "");
+            if (answer == null || answer.isBlank()) {
+                // 模型只给了 JSON、没写 answer：用 JSON 之前的那段话兜底，再退到默认文案
+                String preamble = json.substring(0, Math.max(0, json.indexOf('{'))).trim();
+                answer = preamble.isEmpty() ? "为你挑了几首歌。" : preamble;
             }
+            List<AiAppDtos.Block> blocks = parseBlocks(node.get("blocks"));
+            List<AiAppDtos.ActionVo> actions = parseActions(node.get("actions"));
+            return new Parsed(answer, blocks, actions, "stop");
         }
         return new Parsed(text, List.of(), List.of(), "stop");
+    }
+
+    /**
+     * 从模型输出里提取 JSON 对象。
+     * <p>事故现场：模型先写了一句「我来找一些适合跑步的快节奏歌曲。」再跟 JSON，
+     * 而解析器只认「整段以 { 开头」，于是这段完整正确的 JSON 被当成纯文本原样显示给用户，
+     * 卡片和播放按钮全都没有。这里改为扫描出第一个能解析成对象的花括号区间。</p>
+     */
+    static JsonNode extractJsonObject(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        String trimmed = text.trim();
+        // 整段就是 JSON 的快路径
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            JsonNode direct = AiJson.read(trimmed);
+            if (direct != null && direct.isObject()) {
+                return direct;
+            }
+        }
+        // 从每个 { 开始尝试，取第一个能解析成对象且带 answer/blocks 的
+        int from = 0;
+        while (true) {
+            int start = trimmed.indexOf('{', from);
+            if (start < 0) {
+                return null;
+            }
+            int end = trimmed.lastIndexOf('}');
+            if (end <= start) {
+                return null;
+            }
+            JsonNode candidate = AiJson.read(trimmed.substring(start, end + 1));
+            if (candidate != null && candidate.isObject()
+                    && (candidate.has("answer") || candidate.has("blocks"))) {
+                return candidate;
+            }
+            from = start + 1;
+        }
     }
 
     private List<AiAppDtos.Block> parseBlocks(JsonNode node) {
@@ -1041,11 +1082,7 @@ public class AiChatOrchestrator {
         if (raw == null || raw.isBlank()) {
             return false;
         }
-        String json = stripFence(raw.trim());
-        if (!json.startsWith("{") || !json.endsWith("}")) {
-            return false;
-        }
-        JsonNode node = AiJson.read(json);
+        JsonNode node = extractJsonObject(stripFence(raw.trim()));
         if (node == null || !node.isObject()) {
             return false;
         }

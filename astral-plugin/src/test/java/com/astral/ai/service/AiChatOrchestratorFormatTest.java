@@ -10,6 +10,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -92,6 +93,33 @@ class AiChatOrchestratorFormatTest {
     void fencedJsonIsStillRecognised() {
         String fenced = "```json\n{\"answer\":\"挑了几首\",\"blocks\":[{\"type\":\"song_list\"}]}\n```";
         assertTrue(AiChatOrchestrator.hasStructuredBlocks(fenced));
+    }
+
+    @Test
+    void jsonPrefixedWithPreambleIsStillParsed() {
+        // 事故现场：模型先写一句话再跟 JSON，解析器只认「整段以 { 开头」，于是把原始 JSON
+        // 当普通文字显示在气泡里，用户看不到卡片也点不了播放。
+        String real = "我来找一些适合跑步的快节奏歌曲。 "
+                + "{\"answer\":\"按跑步节奏挑了几首\",\"blocks\":[{\"type\":\"song_list\",\"title\":\"适合跑步的快歌\","
+                + "\"items\":[{\"songId\":\"003c2vQs4KNLVS\",\"sourceId\":\"qq\",\"name\":\"Far Away From Home\","
+                + "\"artist\":\"Groove Coverage\",\"reason\":\"电子节拍稳定\"}]}],"
+                + "\"actions\":[{\"type\":\"PLAY_SONG\",\"songId\":\"003c2vQs4KNLVS\",\"sourceId\":\"qq\"}]}";
+
+        assertTrue(AiChatOrchestrator.hasStructuredBlocks(real));
+
+        var node = AiChatOrchestrator.extractJsonObject(real);
+        assertNotNull(node, "带前言的 JSON 必须能被提取出来");
+        assertEquals("按跑步节奏挑了几首", node.get("answer").asString());
+        assertTrue(node.get("blocks").isArray());
+    }
+
+    @Test
+    void extractJsonObjectRejectsPlainTextAndHandlesMissingJson() {
+        assertNull(AiChatOrchestrator.extractJsonObject("我先搜索适合跑步的快节奏歌曲。"));
+        assertNull(AiChatOrchestrator.extractJsonObject(""));
+        assertNull(AiChatOrchestrator.extractJsonObject(null));
+        // 有花括号但不是 JSON 对象
+        assertNull(AiChatOrchestrator.extractJsonObject("结果见 {not json}"));
     }
 
     @Test
