@@ -310,7 +310,7 @@ public class AiChatOrchestrator {
                 providerService.resolveApiKey(resolved.provider()),
                 resolved.model().getModelCode(),
                 messages,
-                specs.isEmpty() ? null : specs,
+                specs == null || specs.isEmpty() ? null : specs,
                 routeTemperature(resolved.route()),
                 routeTopP(resolved.route()),
                 routeMaxTokens(resolved.route(), resolved.model()),

@@ -126,23 +126,31 @@ public class AiAccessService {
     }
 
     /**
-     * 解析智能体当前可用的版本：以已发布版本为准，若会话已绑定版本则沿用会话版本。
+     * 解析智能体当前可用的版本。
+     * <p>会话绑定的版本只用于「同一会话内保持一致」；一旦该版本被归档（说明后台发布了新版），
+     * 就应当切到当前已发布版本，否则用户改完配置发版后，旧会话永远跑旧配置——
+     * 这正是「发了版却没效果」的根因。草稿版本绝不参与运行。</p>
      *
      * @param agent           智能体
      * @param conversationVer 会话绑定的版本（可空）
      * @return 实际使用版本
      */
     public AiAgentVersionEntity resolveVersion(AiAgentEntity agent, Long conversationVer) {
-        if (conversationVer != null) {
-            AiAgentVersionEntity version = agentService.requireVersion(conversationVer);
-            if (AiConstants.VersionStatus.PUBLISHED.equals(version.getStatus())
-                    || AiConstants.VersionStatus.ARCHIVED.equals(version.getStatus())) {
-                return version;
-            }
-        }
-        if (agent.getPublishedVersionId() == null) {
+        Long publishedId = agent.getPublishedVersionId();
+        if (publishedId == null) {
             throw new AiException("AI002", agent.getAgentCode());
         }
-        return agentService.requireVersion(agent.getPublishedVersionId());
+        if (conversationVer != null && conversationVer.equals(publishedId)) {
+            return agentService.requireVersion(publishedId);
+        }
+        if (conversationVer != null) {
+            AiAgentVersionEntity bound = agentService.requireVersion(conversationVer);
+            // 会话绑定的就是当前发布版才沿用；已归档说明后台发了新版，必须跟随；
+            // 草稿则完全不参与运行。
+            if (AiConstants.VersionStatus.PUBLISHED.equals(bound.getStatus())) {
+                return bound;
+            }
+        }
+        return agentService.requireVersion(publishedId);
     }
 }
