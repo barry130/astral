@@ -1,0 +1,141 @@
+{
+    "tableName":  "ai_knowledge_source",
+    "tableComment":  "AI 知识源",
+    "moduleName":  "ai",
+    "className":  "AiKnowledgeSourceEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "source_code",
+                       "fieldName":  "sourceCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "知识源编码",
+                       "length":  64,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "name",
+                       "fieldName":  "name",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "知识源名称",
+                       "length":  128,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "source_type",
+                       "fieldName":  "sourceType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(48)",
+                       "comment":  "知识源类型",
+                       "length":  48,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "description",
+                       "fieldName":  "description",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "描述",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "path_pattern",
+                       "fieldName":  "pathPattern",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "路径匹配",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "enabled",
+                       "fieldName":  "enabled",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否启用",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "sync_mode",
+                       "fieldName":  "syncMode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "同步方式",
+                       "length":  16,
+                       "defaultValue":  "MANUAL"
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "状态",
+                       "length":  32,
+                       "defaultValue":  "READY"
+                   },
+                   {
+                       "columnName":  "last_sync_time",
+                       "fieldName":  "lastSyncTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "最近同步时间"
+                   },
+                   {
+                       "columnName":  "document_count",
+                       "fieldName":  "documentCount",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "文档数量",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "created_by",
+                       "fieldName":  "createdBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "创建人"
+                   },
+                   {
+                       "columnName":  "updated_by",
+                       "fieldName":  "updatedBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "更新人"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_knowledge_source_code",
+                        "columns":  [
+                                        "source_code"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

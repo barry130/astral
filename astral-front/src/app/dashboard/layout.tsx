@@ -35,6 +35,9 @@ import {
   Sun,
   Moon,
   ChevronDown,
+  Bot,
+  MessageSquare,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -95,6 +98,9 @@ const iconMap: Record<string, ReactNode> = {
   MoonOutlined: <Moon />,
   AppstoreOutlined: <Blocks />,
   AppstoreAddOutlined: <Blocks />,
+  RobotOutlined: <Bot />,
+  MessageOutlined: <MessageSquare />,
+  ReadOutlined: <BookOpen />,
 };
 
 /**

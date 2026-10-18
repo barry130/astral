@@ -1,0 +1,68 @@
+{
+    "tableName":  "ai_request_event",
+    "tableComment":  "AI 请求事件",
+    "moduleName":  "ai",
+    "className":  "AiRequestEventEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "request_id",
+                       "fieldName":  "requestId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "请求 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "sequence_no",
+                       "fieldName":  "sequenceNo",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "事件序号",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "event_type",
+                       "fieldName":  "eventType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(48)",
+                       "comment":  "事件类型",
+                       "length":  48,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "data_json",
+                       "fieldName":  "dataJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "事件数据"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_request_event_seq",
+                        "columns":  [
+                                        "request_id",
+                                        "sequence_no"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

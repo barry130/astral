@@ -1,0 +1,120 @@
+{
+    "tableName":  "ai_prompt_version",
+    "tableComment":  "AI 提示词版本",
+    "moduleName":  "ai",
+    "className":  "AiPromptVersionEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "template_id",
+                       "fieldName":  "templateId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "模板 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "version_no",
+                       "fieldName":  "versionNo",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "版本号",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "版本状态",
+                       "length":  32,
+                       "isRequired":  true,
+                       "defaultValue":  "DRAFT"
+                   },
+                   {
+                       "columnName":  "system_prompt",
+                       "fieldName":  "systemPrompt",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "系统提示词"
+                   },
+                   {
+                       "columnName":  "user_prompt_template",
+                       "fieldName":  "userPromptTemplate",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "用户提示词模板"
+                   },
+                   {
+                       "columnName":  "variables_json",
+                       "fieldName":  "variablesJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "变量定义"
+                   },
+                   {
+                       "columnName":  "changelog",
+                       "fieldName":  "changelog",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "变更说明",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "published_by",
+                       "fieldName":  "publishedBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "发布人"
+                   },
+                   {
+                       "columnName":  "published_at",
+                       "fieldName":  "publishedAt",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "发布时间"
+                   },
+                   {
+                       "columnName":  "created_by",
+                       "fieldName":  "createdBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "创建人"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_prompt_version_no",
+                        "columns":  [
+                                        "template_id",
+                                        "version_no"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

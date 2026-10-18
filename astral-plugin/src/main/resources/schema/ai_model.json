@@ -1,0 +1,173 @@
+{
+    "tableName":  "ai_model",
+    "tableComment":  "AI 模型",
+    "moduleName":  "ai",
+    "className":  "AiModelEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "provider_id",
+                       "fieldName":  "providerId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "所属提供方 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "model_code",
+                       "fieldName":  "modelCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "模型编码",
+                       "length":  128,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "model_name",
+                       "fieldName":  "modelName",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "模型名称",
+                       "length":  128,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "model_kind",
+                       "fieldName":  "modelKind",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "模型类型",
+                       "length":  32,
+                       "isRequired":  true,
+                       "defaultValue":  "CHAT"
+                   },
+                   {
+                       "columnName":  "supports_stream",
+                       "fieldName":  "supportsStream",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否支持流式",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "supports_tools",
+                       "fieldName":  "supportsTools",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否支持工具调用",
+                       "defaultValue":  "false"
+                   },
+                   {
+                       "columnName":  "supports_json",
+                       "fieldName":  "supportsJson",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否支持 JSON 输出",
+                       "defaultValue":  "false"
+                   },
+                   {
+                       "columnName":  "supports_vision",
+                       "fieldName":  "supportsVision",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否支持图片输入",
+                       "defaultValue":  "false"
+                   },
+                   {
+                       "columnName":  "max_context_tokens",
+                       "fieldName":  "maxContextTokens",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "最大上下文 Token",
+                       "defaultValue":  "8192"
+                   },
+                   {
+                       "columnName":  "max_output_tokens",
+                       "fieldName":  "maxOutputTokens",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "最大输出 Token",
+                       "defaultValue":  "2048"
+                   },
+                   {
+                       "columnName":  "input_price",
+                       "fieldName":  "inputPrice",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "输入单价（每千 Token）"
+                   },
+                   {
+                       "columnName":  "output_price",
+                       "fieldName":  "outputPrice",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "输出单价（每千 Token）"
+                   },
+                   {
+                       "columnName":  "currency",
+                       "fieldName":  "currency",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(8)",
+                       "comment":  "币种",
+                       "length":  8,
+                       "defaultValue":  "CNY"
+                   },
+                   {
+                       "columnName":  "enabled",
+                       "fieldName":  "enabled",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否启用",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "remark",
+                       "fieldName":  "remark",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "备注",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_model_code",
+                        "columns":  [
+                                        "provider_id",
+                                        "model_code"
+                                    ],
+                        "isUnique":  true
+                    },
+                    {
+                        "indexName":  "idx_ai_model_provider",
+                        "columns":  [
+                                        "provider_id"
+                                    ]
+                    }
+                ]
+}

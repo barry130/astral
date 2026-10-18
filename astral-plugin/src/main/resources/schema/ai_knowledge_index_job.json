@@ -1,0 +1,122 @@
+{
+    "tableName":  "ai_knowledge_index_job",
+    "tableComment":  "AI 知识索引任务",
+    "moduleName":  "ai",
+    "className":  "AiKnowledgeIndexJobEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "source_id",
+                       "fieldName":  "sourceId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "知识源 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "job_type",
+                       "fieldName":  "jobType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "任务类型",
+                       "length":  32,
+                       "defaultValue":  "FULL"
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "任务状态",
+                       "length":  32,
+                       "defaultValue":  "QUEUED"
+                   },
+                   {
+                       "columnName":  "total_count",
+                       "fieldName":  "totalCount",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "总数",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "processed_count",
+                       "fieldName":  "processedCount",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "已处理",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "failed_count",
+                       "fieldName":  "failedCount",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "失败数",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "started_at",
+                       "fieldName":  "startedAt",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "开始时间"
+                   },
+                   {
+                       "columnName":  "finished_at",
+                       "fieldName":  "finishedAt",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "结束时间"
+                   },
+                   {
+                       "columnName":  "error_summary",
+                       "fieldName":  "errorSummary",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(1024)",
+                       "comment":  "错误摘要",
+                       "length":  1024
+                   },
+                   {
+                       "columnName":  "created_by",
+                       "fieldName":  "createdBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "创建人"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "idx_ai_knowledge_index_job_source",
+                        "columns":  [
+                                        "source_id",
+                                        "status"
+                                    ]
+                    }
+                ]
+}

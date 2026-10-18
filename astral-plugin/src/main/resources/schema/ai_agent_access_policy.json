@@ -1,0 +1,98 @@
+{
+    "tableName":  "ai_agent_access_policy",
+    "tableComment":  "AI 智能体访问策略",
+    "moduleName":  "ai",
+    "className":  "AiAgentAccessPolicyEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "agent_id",
+                       "fieldName":  "agentId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "subject_type",
+                       "fieldName":  "subjectType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "主体类型",
+                       "length":  32,
+                       "isRequired":  true,
+                       "defaultValue":  "ALL"
+                   },
+                   {
+                       "columnName":  "subject_id",
+                       "fieldName":  "subjectId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主体 ID",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "allow_access",
+                       "fieldName":  "allowAccess",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否允许访问",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "daily_request_limit",
+                       "fieldName":  "dailyRequestLimit",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "每日请求上限"
+                   },
+                   {
+                       "columnName":  "monthly_request_limit",
+                       "fieldName":  "monthlyRequestLimit",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "每月请求上限"
+                   },
+                   {
+                       "columnName":  "remark",
+                       "fieldName":  "remark",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "备注",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "idx_ai_agent_access_agent",
+                        "columns":  [
+                                        "agent_id"
+                                    ]
+                    }
+                ]
+}

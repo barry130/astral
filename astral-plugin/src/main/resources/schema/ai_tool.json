@@ -1,0 +1,158 @@
+{
+    "tableName":  "ai_tool",
+    "tableComment":  "AI 工具",
+    "moduleName":  "ai",
+    "className":  "AiToolEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "tool_code",
+                       "fieldName":  "toolCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "工具编码",
+                       "length":  64,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "name",
+                       "fieldName":  "name",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "工具名称",
+                       "length":  128,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "description",
+                       "fieldName":  "description",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "描述",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "handler_key",
+                       "fieldName":  "handlerKey",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "处理器键（仅限代码登记）",
+                       "length":  64,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "client_types",
+                       "fieldName":  "clientTypes",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "可用客户端",
+                       "length":  128
+                   },
+                   {
+                       "columnName":  "permission_codes",
+                       "fieldName":  "permissionCodes",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "所需权限"
+                   },
+                   {
+                       "columnName":  "risk_level",
+                       "fieldName":  "riskLevel",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "风险等级",
+                       "length":  16,
+                       "isRequired":  true,
+                       "defaultValue":  "READ"
+                   },
+                   {
+                       "columnName":  "approval_policy",
+                       "fieldName":  "approvalPolicy",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(24)",
+                       "comment":  "确认策略",
+                       "length":  24,
+                       "isRequired":  true,
+                       "defaultValue":  "NONE"
+                   },
+                   {
+                       "columnName":  "arguments_schema",
+                       "fieldName":  "argumentsSchema",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "参数结构"
+                   },
+                   {
+                       "columnName":  "result_schema",
+                       "fieldName":  "resultSchema",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "结果结构"
+                   },
+                   {
+                       "columnName":  "side_effects",
+                       "fieldName":  "sideEffects",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "副作用说明"
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "状态",
+                       "length":  16,
+                       "isRequired":  true,
+                       "defaultValue":  "ENABLED"
+                   },
+                   {
+                       "columnName":  "created_by",
+                       "fieldName":  "createdBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "创建人"
+                   },
+                   {
+                       "columnName":  "updated_by",
+                       "fieldName":  "updatedBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "更新人"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_tool_code",
+                        "columns":  [
+                                        "tool_code"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

@@ -1,0 +1,106 @@
+{
+    "tableName":  "ai_agent_tool",
+    "tableComment":  "AI 智能体工具绑定",
+    "moduleName":  "ai",
+    "className":  "AiAgentToolEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "agent_version_id",
+                       "fieldName":  "agentVersionId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体版本 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "tool_id",
+                       "fieldName":  "toolId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "工具 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "enabled",
+                       "fieldName":  "enabled",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否启用",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "sort",
+                       "fieldName":  "sort",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "排序",
+                       "defaultValue":  "100"
+                   },
+                   {
+                       "columnName":  "risk_override",
+                       "fieldName":  "riskOverride",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "风险覆盖（只能提高）",
+                       "length":  16
+                   },
+                   {
+                       "columnName":  "approval_policy",
+                       "fieldName":  "approvalPolicy",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(24)",
+                       "comment":  "确认策略覆盖",
+                       "length":  24
+                   },
+                   {
+                       "columnName":  "arguments_schema_override",
+                       "fieldName":  "argumentsSchemaOverride",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "参数结构覆盖"
+                   },
+                   {
+                       "columnName":  "result_schema_override",
+                       "fieldName":  "resultSchemaOverride",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "结果结构覆盖"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_agent_tool",
+                        "columns":  [
+                                        "agent_version_id",
+                                        "tool_id"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

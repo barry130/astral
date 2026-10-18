@@ -1,0 +1,141 @@
+{
+    "tableName":  "ai_usage",
+    "tableComment":  "AI 用量",
+    "moduleName":  "ai",
+    "className":  "AiUsageEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "request_id",
+                       "fieldName":  "requestId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "请求 ID"
+                   },
+                   {
+                       "columnName":  "user_id",
+                       "fieldName":  "userId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "用户 ID"
+                   },
+                   {
+                       "columnName":  "agent_id",
+                       "fieldName":  "agentId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体 ID"
+                   },
+                   {
+                       "columnName":  "agent_version_id",
+                       "fieldName":  "agentVersionId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体版本 ID"
+                   },
+                   {
+                       "columnName":  "provider_id",
+                       "fieldName":  "providerId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "提供方 ID"
+                   },
+                   {
+                       "columnName":  "model_id",
+                       "fieldName":  "modelId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "模型 ID"
+                   },
+                   {
+                       "columnName":  "input_tokens",
+                       "fieldName":  "inputTokens",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "输入 Token",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "output_tokens",
+                       "fieldName":  "outputTokens",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "输出 Token",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "estimated_cost",
+                       "fieldName":  "estimatedCost",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "预估费用"
+                   },
+                   {
+                       "columnName":  "currency",
+                       "fieldName":  "currency",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(8)",
+                       "comment":  "币种",
+                       "length":  8,
+                       "defaultValue":  "CNY"
+                   },
+                   {
+                       "columnName":  "reservation_amount",
+                       "fieldName":  "reservationAmount",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "预占金额"
+                   },
+                   {
+                       "columnName":  "settled_amount",
+                       "fieldName":  "settledAmount",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "结算金额"
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "结算状态",
+                       "length":  16,
+                       "isRequired":  true,
+                       "defaultValue":  "RESERVED"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "idx_ai_usage_user",
+                        "columns":  [
+                                        "user_id",
+                                        "create_time"
+                                    ]
+                    }
+                ]
+}

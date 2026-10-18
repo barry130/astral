@@ -26,6 +26,16 @@ public class ErrorCodes {
     }
 
     public static String format(String code, Object... args) {
-        return MessageFormat.format(getMessage(code), args);
+        String template = getMessage(code);
+        if (args == null || args.length == 0) {
+            return template;
+        }
+        String formatted = MessageFormat.format(template, args);
+        // 文案没有占位符时 MessageFormat 会静默丢弃细节参数，导致「密钥口令未配置」
+        // 这类关键原因全部被压成同一句提示，因此把细节附在消息尾部。
+        if (template.indexOf("{0}") < 0 && !formatted.equals(String.valueOf(args[0]))) {
+            formatted = formatted + "：" + args[0];
+        }
+        return formatted;
     }
 }

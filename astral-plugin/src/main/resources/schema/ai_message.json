@@ -1,0 +1,145 @@
+{
+    "tableName":  "ai_message",
+    "tableComment":  "AI 消息",
+    "moduleName":  "ai",
+    "className":  "AiMessageEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "conversation_id",
+                       "fieldName":  "conversationId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "会话 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "request_id",
+                       "fieldName":  "requestId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "请求 ID"
+                   },
+                   {
+                       "columnName":  "parent_message_id",
+                       "fieldName":  "parentMessageId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "父消息 ID"
+                   },
+                   {
+                       "columnName":  "role",
+                       "fieldName":  "role",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "角色",
+                       "length":  16,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "content",
+                       "fieldName":  "content",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "内容"
+                   },
+                   {
+                       "columnName":  "content_type",
+                       "fieldName":  "contentType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(24)",
+                       "comment":  "内容类型",
+                       "length":  24,
+                       "defaultValue":  "TEXT"
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "状态",
+                       "length":  16,
+                       "defaultValue":  "SUCCEEDED"
+                   },
+                   {
+                       "columnName":  "blocks_json",
+                       "fieldName":  "blocksJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "结构化块"
+                   },
+                   {
+                       "columnName":  "citations_json",
+                       "fieldName":  "citationsJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "引用"
+                   },
+                   {
+                       "columnName":  "model_name",
+                       "fieldName":  "modelName",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "模型名称",
+                       "length":  128
+                   },
+                   {
+                       "columnName":  "input_tokens",
+                       "fieldName":  "inputTokens",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "输入 Token",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "output_tokens",
+                       "fieldName":  "outputTokens",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "输出 Token",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "finish_reason",
+                       "fieldName":  "finishReason",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "结束原因",
+                       "length":  32
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "idx_ai_message_conversation",
+                        "columns":  [
+                                        "conversation_id",
+                                        "id"
+                                    ]
+                    }
+                ]
+}

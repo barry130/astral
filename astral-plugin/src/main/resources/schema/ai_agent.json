@@ -1,0 +1,210 @@
+{
+    "tableName":  "ai_agent",
+    "tableComment":  "AI 智能体",
+    "moduleName":  "ai",
+    "className":  "AiAgentEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "agent_code",
+                       "fieldName":  "agentCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "智能体编码",
+                       "length":  64,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "name",
+                       "fieldName":  "name",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "智能体名称",
+                       "length":  128,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "agent_type",
+                       "fieldName":  "agentType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "智能体类型",
+                       "length":  32,
+                       "isRequired":  true,
+                       "defaultValue":  "CUSTOM"
+                   },
+                   {
+                       "columnName":  "description",
+                       "fieldName":  "description",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "描述",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "icon",
+                       "fieldName":  "icon",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "图标",
+                       "length":  64
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "状态",
+                       "length":  32,
+                       "isRequired":  true,
+                       "defaultValue":  "DRAFT"
+                   },
+                   {
+                       "columnName":  "client_types",
+                       "fieldName":  "clientTypes",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "可用客户端",
+                       "length":  128,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "entry_config",
+                       "fieldName":  "entryConfig",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "入口配置"
+                   },
+                   {
+                       "columnName":  "permission_code",
+                       "fieldName":  "permissionCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(96)",
+                       "comment":  "使用权限编码",
+                       "length":  96
+                   },
+                   {
+                       "columnName":  "client_permission_codes",
+                       "fieldName":  "clientPermissionCodes",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "各客户端权限编码"
+                   },
+                   {
+                       "columnName":  "quota_policy_id",
+                       "fieldName":  "quotaPolicyId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "额度策略 ID"
+                   },
+                   {
+                       "columnName":  "published_version_id",
+                       "fieldName":  "publishedVersionId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "当前发布版本 ID"
+                   },
+                   {
+                       "columnName":  "allow_user_context",
+                       "fieldName":  "allowUserContext",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "允许用户上下文",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "allow_file_context",
+                       "fieldName":  "allowFileContext",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "允许文件上下文",
+                       "defaultValue":  "false"
+                   },
+                   {
+                       "columnName":  "conversation_enabled",
+                       "fieldName":  "conversationEnabled",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "允许会话",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "feedback_enabled",
+                       "fieldName":  "feedbackEnabled",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "允许反馈",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "sort",
+                       "fieldName":  "sort",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "排序",
+                       "defaultValue":  "100"
+                   },
+                   {
+                       "columnName":  "created_by",
+                       "fieldName":  "createdBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "创建人"
+                   },
+                   {
+                       "columnName":  "updated_by",
+                       "fieldName":  "updatedBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "更新人"
+                   },
+                   {
+                       "columnName":  "deleted_at",
+                       "fieldName":  "deletedAt",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "删除时间"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_agent_code",
+                        "columns":  [
+                                        "agent_code"
+                                    ],
+                        "isUnique":  true
+                    },
+                    {
+                        "indexName":  "idx_ai_agent_type",
+                        "columns":  [
+                                        "agent_type",
+                                        "status"
+                                    ]
+                    }
+                ]
+}

@@ -1,0 +1,136 @@
+{
+    "tableName":  "ai_provider_route",
+    "tableComment":  "AI 提供方路由",
+    "moduleName":  "ai",
+    "className":  "AiProviderRouteEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "route_code",
+                       "fieldName":  "routeCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "路由编码",
+                       "length":  64,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "name",
+                       "fieldName":  "name",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "路由名称",
+                       "length":  128,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "provider_id",
+                       "fieldName":  "providerId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "提供方 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "model_id",
+                       "fieldName":  "modelId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "模型 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "fallback_model_id",
+                       "fieldName":  "fallbackModelId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "兜底模型 ID"
+                   },
+                   {
+                       "columnName":  "temperature",
+                       "fieldName":  "temperature",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "温度",
+                       "defaultValue":  "0.7"
+                   },
+                   {
+                       "columnName":  "top_p",
+                       "fieldName":  "topP",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "Top P",
+                       "defaultValue":  "1"
+                   },
+                   {
+                       "columnName":  "max_tokens",
+                       "fieldName":  "maxTokens",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "最大输出 Token"
+                   },
+                   {
+                       "columnName":  "extra_parameters_json",
+                       "fieldName":  "extraParametersJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "额外模型参数"
+                   },
+                   {
+                       "columnName":  "enabled",
+                       "fieldName":  "enabled",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否启用",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "remark",
+                       "fieldName":  "remark",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "备注",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_provider_route_code",
+                        "columns":  [
+                                        "route_code"
+                                    ],
+                        "isUnique":  true
+                    },
+                    {
+                        "indexName":  "idx_ai_provider_route_provider",
+                        "columns":  [
+                                        "provider_id"
+                                    ]
+                    }
+                ]
+}

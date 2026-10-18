@@ -255,6 +255,8 @@ export interface TextAreaProps {
   style?: CSSProperties;
   id?: string;
   status?: 'error' | 'warning';
+  /** 回车发送/换行等快捷键需要拿到原生 keydown；缺少它时对话输入框无法拦截 Enter */
+  onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
 }
 
 export function InputTextArea({
@@ -267,13 +269,29 @@ export function InputTextArea({
   disabled,
   readOnly,
   showCount,
+  autoSize,
   className,
   style,
   id,
+  onKeyDown,
 }: TextAreaProps) {
   const [inner, setInner] = useState(defaultValue ?? '');
   const controlled = value !== undefined;
   const current = controlled ? (value ?? '') : inner;
+
+  /**
+   * autoSize 用 rows 近似实现：按换行数估算行高再夹到 [minRows, maxRows]。
+   * 真正的像素级自适应要读 scrollHeight，那会引入布局抖动（每次输入都强制回流），
+   * 对聊天输入框这种高频输入场景反而更差。
+   */
+  const computedRows = (() => {
+    if (!autoSize) return rows;
+    const conf = typeof autoSize === 'object' ? autoSize : {};
+    const minRows = conf.minRows ?? 2;
+    const maxRows = conf.maxRows ?? 6;
+    const lineCount = current.split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 80)), 0);
+    return Math.min(maxRows, Math.max(minRows, lineCount));
+  })();
 
   return (
     <span className="relative block w-full">
@@ -284,12 +302,13 @@ export function InputTextArea({
           if (!controlled) setInner(e.target.value);
           onChange?.(e);
         }}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
-        rows={rows}
+        rows={computedRows}
         maxLength={maxLength}
         disabled={disabled}
         readOnly={readOnly}
-        className={cn(FIELD_BASE, 'h-auto resize-y py-2 leading-relaxed', className)}
+        className={cn(FIELD_BASE, 'h-auto py-2 leading-relaxed', autoSize ? 'resize-none' : 'resize-y', className)}
         style={style}
       />
       {showCount && maxLength ? (
@@ -661,17 +680,21 @@ function SelectBase({
                     className="inline-flex max-w-[10rem] items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-xs"
                   >
                     <span className="truncate">{labelOf(v)}</span>
-                    <button
-                      type="button"
-                      aria-label="移除"
-                      className="cursor-pointer text-muted-foreground hover:text-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        commit(selected.filter((s) => s !== v));
-                      }}
-                    >
-                      <X className="size-3" />
-                    </button>
+                    {/* disabled 时只读：antd 语义下禁用的 Select 标签不可移除，
+                        否则只读态（如已发布的智能体版本）仍能改本地选中值 */}
+                    {!disabled && (
+                      <button
+                        type="button"
+                        aria-label="移除"
+                        className="cursor-pointer text-muted-foreground hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          commit(selected.filter((s) => s !== v));
+                        }}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    )}
                   </span>
                 ))}
                 {selected.length > shownTags.length ? (

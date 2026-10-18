@@ -129,6 +129,11 @@ astral:
       upload-ticket-key: ${STORAGE_UPLOAD_TICKET_KEY:}
       origin-shared-secret: ${STORAGE_ORIGIN_SHARED_SECRET:}
       download-signing-key: ${STORAGE_DOWNLOAD_SIGNING_KEY_V1:}
+    ai:
+      enabled: ${AI_PLUGIN_ENABLED:true}
+      # API Key 落库加密口令（AES-GCM KEK）：只经环境变量注入，禁止写进仓库；
+      # 留空时插件退化为「只允许 secret_ref 引用」模式，后台保存 API Key 会直接报错。
+      secret-key: ${ASTRAL_AI_SECRET_KEY:}
 
   sequence:
     default-type: segment

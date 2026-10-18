@@ -1,0 +1,145 @@
+{
+    "tableName":  "ai_conversation",
+    "tableComment":  "AI 会话",
+    "moduleName":  "ai",
+    "className":  "AiConversationEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "conversation_key",
+                       "fieldName":  "conversationKey",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "会话键",
+                       "length":  64,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "agent_id",
+                       "fieldName":  "agentId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "agent_version_id",
+                       "fieldName":  "agentVersionId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体版本 ID"
+                   },
+                   {
+                       "columnName":  "user_id",
+                       "fieldName":  "userId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "用户 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "client_type",
+                       "fieldName":  "clientType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(24)",
+                       "comment":  "客户端类型",
+                       "length":  24,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "title",
+                       "fieldName":  "title",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(256)",
+                       "comment":  "标题",
+                       "length":  256
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "状态",
+                       "length":  16,
+                       "defaultValue":  "ACTIVE"
+                   },
+                   {
+                       "columnName":  "message_count",
+                       "fieldName":  "messageCount",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "消息数量",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "last_message_time",
+                       "fieldName":  "lastMessageTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "最近消息时间"
+                   },
+                   {
+                       "columnName":  "context_json",
+                       "fieldName":  "contextJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "上下文快照"
+                   },
+                   {
+                       "columnName":  "pinned",
+                       "fieldName":  "pinned",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否置顶",
+                       "defaultValue":  "false"
+                   },
+                   {
+                       "columnName":  "deleted_at",
+                       "fieldName":  "deletedAt",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "删除时间"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_conversation_key",
+                        "columns":  [
+                                        "conversation_key"
+                                    ],
+                        "isUnique":  true
+                    },
+                    {
+                        "indexName":  "idx_ai_conversation_user",
+                        "columns":  [
+                                        "user_id",
+                                        "agent_id"
+                                    ]
+                    }
+                ]
+}

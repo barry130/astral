@@ -1,0 +1,142 @@
+{
+    "tableName":  "ai_user_quota",
+    "tableComment":  "AI 用户额度",
+    "moduleName":  "ai",
+    "className":  "AiUserQuotaEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "user_id",
+                       "fieldName":  "userId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "用户 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "agent_id",
+                       "fieldName":  "agentId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体 ID",
+                       "isRequired":  true,
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "policy_id",
+                       "fieldName":  "policyId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "策略 ID"
+                   },
+                   {
+                       "columnName":  "period_type",
+                       "fieldName":  "periodType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(8)",
+                       "comment":  "周期类型",
+                       "length":  8,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "period_start",
+                       "fieldName":  "periodStart",
+                       "fieldType":  "LocalDate",
+                       "jdbcType":  "DATE",
+                       "comment":  "周期开始",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "period_end",
+                       "fieldName":  "periodEnd",
+                       "fieldType":  "LocalDate",
+                       "jdbcType":  "DATE",
+                       "comment":  "周期结束"
+                   },
+                   {
+                       "columnName":  "request_count",
+                       "fieldName":  "requestCount",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "请求数",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "input_tokens",
+                       "fieldName":  "inputTokens",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "输入 Token",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "output_tokens",
+                       "fieldName":  "outputTokens",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "输出 Token",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "reserved_cost",
+                       "fieldName":  "reservedCost",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "预占费用",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "settled_cost",
+                       "fieldName":  "settledCost",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "结算费用",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "version",
+                       "fieldName":  "version",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "版本号",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_user_quota_period",
+                        "columns":  [
+                                        "user_id",
+                                        "agent_id",
+                                        "period_type",
+                                        "period_start"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

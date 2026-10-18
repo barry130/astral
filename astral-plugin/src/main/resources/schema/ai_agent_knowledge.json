@@ -1,0 +1,108 @@
+{
+    "tableName":  "ai_agent_knowledge",
+    "tableComment":  "AI 智能体知识绑定",
+    "moduleName":  "ai",
+    "className":  "AiAgentKnowledgeEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "agent_version_id",
+                       "fieldName":  "agentVersionId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体版本 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "knowledge_source_id",
+                       "fieldName":  "knowledgeSourceId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "知识源 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "enabled",
+                       "fieldName":  "enabled",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否启用",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "priority",
+                       "fieldName":  "priority",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "优先级",
+                       "defaultValue":  "100"
+                   },
+                   {
+                       "columnName":  "retrieval_top_k",
+                       "fieldName":  "retrievalTopK",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "召回数量",
+                       "defaultValue":  "5"
+                   },
+                   {
+                       "columnName":  "min_score",
+                       "fieldName":  "minScore",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "最低相关度",
+                       "defaultValue":  "0.2"
+                   },
+                   {
+                       "columnName":  "citation_policy",
+                       "fieldName":  "citationPolicy",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "引用策略",
+                       "length":  32,
+                       "defaultValue":  "REQUIRED"
+                   },
+                   {
+                       "columnName":  "filter_policy_json",
+                       "fieldName":  "filterPolicyJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "过滤策略"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_agent_knowledge",
+                        "columns":  [
+                                        "agent_version_id",
+                                        "knowledge_source_id"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

@@ -1,0 +1,188 @@
+{
+    "tableName":  "ai_quota_policy",
+    "tableComment":  "AI 额度策略",
+    "moduleName":  "ai",
+    "className":  "AiQuotaPolicyEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "policy_code",
+                       "fieldName":  "policyCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "策略编码",
+                       "length":  64,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "name",
+                       "fieldName":  "name",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "策略名称",
+                       "length":  128,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "scope_type",
+                       "fieldName":  "scopeType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "作用域",
+                       "length":  16,
+                       "isRequired":  true,
+                       "defaultValue":  "GLOBAL"
+                   },
+                   {
+                       "columnName":  "agent_id",
+                       "fieldName":  "agentId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体 ID",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "role_id",
+                       "fieldName":  "roleId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "角色 ID",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "user_id",
+                       "fieldName":  "userId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "用户 ID",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "daily_requests",
+                       "fieldName":  "dailyRequests",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "每日请求上限"
+                   },
+                   {
+                       "columnName":  "monthly_requests",
+                       "fieldName":  "monthlyRequests",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "每月请求上限"
+                   },
+                   {
+                       "columnName":  "daily_input_tokens",
+                       "fieldName":  "dailyInputTokens",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "每日输入 Token"
+                   },
+                   {
+                       "columnName":  "monthly_input_tokens",
+                       "fieldName":  "monthlyInputTokens",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "每月输入 Token"
+                   },
+                   {
+                       "columnName":  "daily_output_tokens",
+                       "fieldName":  "dailyOutputTokens",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "每日输出 Token"
+                   },
+                   {
+                       "columnName":  "monthly_output_tokens",
+                       "fieldName":  "monthlyOutputTokens",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "每月输出 Token"
+                   },
+                   {
+                       "columnName":  "max_input_chars",
+                       "fieldName":  "maxInputChars",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "单次最大输入字符"
+                   },
+                   {
+                       "columnName":  "max_context_tokens",
+                       "fieldName":  "maxContextTokens",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "最大上下文 Token"
+                   },
+                   {
+                       "columnName":  "max_output_tokens",
+                       "fieldName":  "maxOutputTokens",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "最大输出 Token"
+                   },
+                   {
+                       "columnName":  "max_concurrent",
+                       "fieldName":  "maxConcurrent",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "最大并发"
+                   },
+                   {
+                       "columnName":  "monthly_cost_limit",
+                       "fieldName":  "monthlyCostLimit",
+                       "fieldType":  "BigDecimal",
+                       "jdbcType":  "DECIMAL(18,6)",
+                       "comment":  "月度费用上限"
+                   },
+                   {
+                       "columnName":  "enabled",
+                       "fieldName":  "enabled",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否启用",
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "remark",
+                       "fieldName":  "remark",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "备注",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_quota_policy_code",
+                        "columns":  [
+                                        "policy_code"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

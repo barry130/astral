@@ -1,0 +1,188 @@
+{
+    "tableName":  "ai_provider",
+    "tableComment":  "AI 提供方",
+    "moduleName":  "ai",
+    "className":  "AiProviderEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "provider_code",
+                       "fieldName":  "providerCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "提供方编码",
+                       "length":  64,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "name",
+                       "fieldName":  "name",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "提供方名称",
+                       "length":  128,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "provider_type",
+                       "fieldName":  "providerType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "提供方类型",
+                       "length":  32,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "base_url",
+                       "fieldName":  "baseUrl",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "接口基础地址",
+                       "length":  512,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "enabled",
+                       "fieldName":  "enabled",
+                       "fieldType":  "Boolean",
+                       "jdbcType":  "BOOLEAN",
+                       "comment":  "是否启用",
+                       "isRequired":  true,
+                       "defaultValue":  "true"
+                   },
+                   {
+                       "columnName":  "secret_ref",
+                       "fieldName":  "secretRef",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "密钥引用（环境变量名）",
+                       "length":  128
+                   },
+                   {
+                       "columnName":  "encrypted_api_key",
+                       "fieldName":  "encryptedApiKey",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(2048)",
+                       "comment":  "加密后的 API Key",
+                       "length":  2048
+                   },
+                   {
+                       "columnName":  "connect_timeout_ms",
+                       "fieldName":  "connectTimeoutMs",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "连接超时（毫秒）",
+                       "defaultValue":  "10000"
+                   },
+                   {
+                       "columnName":  "read_timeout_ms",
+                       "fieldName":  "readTimeoutMs",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "读取超时（毫秒）",
+                       "defaultValue":  "120000"
+                   },
+                   {
+                       "columnName":  "max_retries",
+                       "fieldName":  "maxRetries",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "最大重试次数",
+                       "defaultValue":  "1"
+                   },
+                   {
+                       "columnName":  "weight",
+                       "fieldName":  "weight",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "负载权重",
+                       "defaultValue":  "100"
+                   },
+                   {
+                       "columnName":  "health_status",
+                       "fieldName":  "healthStatus",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "健康状态",
+                       "length":  32,
+                       "defaultValue":  "UNKNOWN"
+                   },
+                   {
+                       "columnName":  "last_health_time",
+                       "fieldName":  "lastHealthTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "最近健康检查时间"
+                   },
+                   {
+                       "columnName":  "last_health_message",
+                       "fieldName":  "lastHealthMessage",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "最近健康检查说明",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "remark",
+                       "fieldName":  "remark",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(512)",
+                       "comment":  "备注",
+                       "length":  512
+                   },
+                   {
+                       "columnName":  "created_by",
+                       "fieldName":  "createdBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "创建人"
+                   },
+                   {
+                       "columnName":  "updated_by",
+                       "fieldName":  "updatedBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "更新人"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_provider_code",
+                        "columns":  [
+                                        "provider_code"
+                                    ],
+                        "isUnique":  true
+                    },
+                    {
+                        "indexName":  "idx_ai_provider_enabled",
+                        "columns":  [
+                                        "enabled"
+                                    ]
+                    }
+                ]
+}

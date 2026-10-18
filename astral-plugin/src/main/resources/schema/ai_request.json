@@ -1,0 +1,262 @@
+{
+    "tableName":  "ai_request",
+    "tableComment":  "AI 请求",
+    "moduleName":  "ai",
+    "className":  "AiRequestEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "conversation_id",
+                       "fieldName":  "conversationId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "会话 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "agent_id",
+                       "fieldName":  "agentId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "agent_version_id",
+                       "fieldName":  "agentVersionId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体版本 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "user_id",
+                       "fieldName":  "userId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "用户 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "client_type",
+                       "fieldName":  "clientType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(24)",
+                       "comment":  "客户端类型",
+                       "length":  24
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(24)",
+                       "comment":  "请求状态",
+                       "length":  24,
+                       "isRequired":  true,
+                       "defaultValue":  "QUEUED"
+                   },
+                   {
+                       "columnName":  "idempotency_key",
+                       "fieldName":  "idempotencyKey",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(96)",
+                       "comment":  "幂等键",
+                       "length":  96
+                   },
+                   {
+                       "columnName":  "provider_id",
+                       "fieldName":  "providerId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "提供方 ID"
+                   },
+                   {
+                       "columnName":  "model_id",
+                       "fieldName":  "modelId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "模型 ID"
+                   },
+                   {
+                       "columnName":  "prompt_version_id",
+                       "fieldName":  "promptVersionId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "提示词版本 ID"
+                   },
+                   {
+                       "columnName":  "input_snapshot",
+                       "fieldName":  "inputSnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "输入快照"
+                   },
+                   {
+                       "columnName":  "context_snapshot",
+                       "fieldName":  "contextSnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "上下文快照"
+                   },
+                   {
+                       "columnName":  "configuration_snapshot",
+                       "fieldName":  "configurationSnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "版本配置快照"
+                   },
+                   {
+                       "columnName":  "knowledge_snapshot",
+                       "fieldName":  "knowledgeSnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "知识策略快照"
+                   },
+                   {
+                       "columnName":  "tool_policy_snapshot",
+                       "fieldName":  "toolPolicySnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "工具策略快照"
+                   },
+                   {
+                       "columnName":  "context_policy_snapshot",
+                       "fieldName":  "contextPolicySnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "上下文策略快照"
+                   },
+                   {
+                       "columnName":  "response_schema_snapshot",
+                       "fieldName":  "responseSchemaSnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "响应结构快照"
+                   },
+                   {
+                       "columnName":  "safety_policy_snapshot",
+                       "fieldName":  "safetyPolicySnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "安全策略快照"
+                   },
+                   {
+                       "columnName":  "quota_policy_snapshot",
+                       "fieldName":  "quotaPolicySnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "额度策略快照"
+                   },
+                   {
+                       "columnName":  "error_code",
+                       "fieldName":  "errorCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "错误码",
+                       "length":  32
+                   },
+                   {
+                       "columnName":  "error_summary",
+                       "fieldName":  "errorSummary",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(1024)",
+                       "comment":  "错误摘要",
+                       "length":  1024
+                   },
+                   {
+                       "columnName":  "cancel_reason",
+                       "fieldName":  "cancelReason",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(256)",
+                       "comment":  "取消原因",
+                       "length":  256
+                   },
+                   {
+                       "columnName":  "token_in",
+                       "fieldName":  "tokenIn",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "输入 Token",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "token_out",
+                       "fieldName":  "tokenOut",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "输出 Token",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "started_at",
+                       "fieldName":  "startedAt",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "开始时间"
+                   },
+                   {
+                       "columnName":  "first_token_at",
+                       "fieldName":  "firstTokenAt",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "首 Token 时间"
+                   },
+                   {
+                       "columnName":  "finished_at",
+                       "fieldName":  "finishedAt",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "结束时间"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "idx_ai_request_conversation",
+                        "columns":  [
+                                        "conversation_id",
+                                        "id"
+                                    ]
+                    },
+                    {
+                        "indexName":  "idx_ai_request_user",
+                        "columns":  [
+                                        "user_id",
+                                        "create_time"
+                                    ]
+                    },
+                    {
+                        "indexName":  "uk_ai_request_idem",
+                        "columns":  [
+                                        "user_id",
+                                        "agent_id",
+                                        "idempotency_key"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

@@ -1,0 +1,109 @@
+{
+    "tableName":  "ai_feedback",
+    "tableComment":  "AI 反馈",
+    "moduleName":  "ai",
+    "className":  "AiFeedbackEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "conversation_id",
+                       "fieldName":  "conversationId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "会话 ID"
+                   },
+                   {
+                       "columnName":  "message_id",
+                       "fieldName":  "messageId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "消息 ID"
+                   },
+                   {
+                       "columnName":  "request_id",
+                       "fieldName":  "requestId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "请求 ID"
+                   },
+                   {
+                       "columnName":  "user_id",
+                       "fieldName":  "userId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "用户 ID"
+                   },
+                   {
+                       "columnName":  "agent_id",
+                       "fieldName":  "agentId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体 ID"
+                   },
+                   {
+                       "columnName":  "feedback_type",
+                       "fieldName":  "feedbackType",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(24)",
+                       "comment":  "反馈类型",
+                       "length":  24,
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "reason_code",
+                       "fieldName":  "reasonCode",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(64)",
+                       "comment":  "原因编码",
+                       "length":  64
+                   },
+                   {
+                       "columnName":  "comment",
+                       "fieldName":  "comment",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "说明"
+                   },
+                   {
+                       "columnName":  "metadata_json",
+                       "fieldName":  "metadataJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "附加信息"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "idx_ai_feedback_agent",
+                        "columns":  [
+                                        "agent_id",
+                                        "create_time"
+                                    ]
+                    }
+                ]
+}

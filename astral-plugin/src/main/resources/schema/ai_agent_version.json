@@ -1,0 +1,198 @@
+{
+    "tableName":  "ai_agent_version",
+    "tableComment":  "AI 智能体版本",
+    "moduleName":  "ai",
+    "className":  "AiAgentVersionEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "agent_id",
+                       "fieldName":  "agentId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "智能体 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "version_no",
+                       "fieldName":  "versionNo",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "版本号",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "version_name",
+                       "fieldName":  "versionName",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "版本名称",
+                       "length":  128
+                   },
+                   {
+                       "columnName":  "status",
+                       "fieldName":  "status",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(32)",
+                       "comment":  "版本状态",
+                       "length":  32,
+                       "isRequired":  true,
+                       "defaultValue":  "DRAFT"
+                   },
+                   {
+                       "columnName":  "provider_route_id",
+                       "fieldName":  "providerRouteId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "提供方路由 ID"
+                   },
+                   {
+                       "columnName":  "system_prompt_version_id",
+                       "fieldName":  "systemPromptVersionId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "系统提示词版本 ID"
+                   },
+                   {
+                       "columnName":  "client_types_snapshot",
+                       "fieldName":  "clientTypesSnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(128)",
+                       "comment":  "客户端快照",
+                       "length":  128
+                   },
+                   {
+                       "columnName":  "entry_config_snapshot",
+                       "fieldName":  "entryConfigSnapshot",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "入口配置快照"
+                   },
+                   {
+                       "columnName":  "context_policy_json",
+                       "fieldName":  "contextPolicyJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "上下文策略"
+                   },
+                   {
+                       "columnName":  "response_schema_json",
+                       "fieldName":  "responseSchemaJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "响应结构"
+                   },
+                   {
+                       "columnName":  "tool_policy_json",
+                       "fieldName":  "toolPolicyJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "工具策略"
+                   },
+                   {
+                       "columnName":  "knowledge_policy_json",
+                       "fieldName":  "knowledgePolicyJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "知识策略"
+                   },
+                   {
+                       "columnName":  "model_parameters_json",
+                       "fieldName":  "modelParametersJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "模型参数"
+                   },
+                   {
+                       "columnName":  "safety_policy_json",
+                       "fieldName":  "safetyPolicyJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "安全策略"
+                   },
+                   {
+                       "columnName":  "quota_override_json",
+                       "fieldName":  "quotaOverrideJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "额度覆盖"
+                   },
+                   {
+                       "columnName":  "validation_summary_json",
+                       "fieldName":  "validationSummaryJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "校验结果"
+                   },
+                   {
+                       "columnName":  "published_by",
+                       "fieldName":  "publishedBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "发布人"
+                   },
+                   {
+                       "columnName":  "published_at",
+                       "fieldName":  "publishedAt",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "发布时间"
+                   },
+                   {
+                       "columnName":  "rollback_from_version_id",
+                       "fieldName":  "rollbackFromVersionId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "回滚来源版本"
+                   },
+                   {
+                       "columnName":  "created_by",
+                       "fieldName":  "createdBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "创建人"
+                   },
+                   {
+                       "columnName":  "updated_by",
+                       "fieldName":  "updatedBy",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "更新人"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   },
+                   {
+                       "columnName":  "update_time",
+                       "fieldName":  "updateTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "更新时间",
+                       "isAutoFill":  "INSERT_UPDATE"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "uk_ai_agent_version_no",
+                        "columns":  [
+                                        "agent_id",
+                                        "version_no"
+                                    ],
+                        "isUnique":  true
+                    }
+                ]
+}

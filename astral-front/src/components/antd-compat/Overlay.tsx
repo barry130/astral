@@ -5,7 +5,7 @@
  * Modal / Drawer / Tabs（含 TabPane 旧写法）
  */
 
-import { Children, isValidElement, useState, type CSSProperties, type ReactNode } from 'react';
+import { Children, isValidElement, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Loader2, X } from 'lucide-react';
 
@@ -206,6 +206,7 @@ export function Drawer({
           onClick={() => maskClosable && onClose?.()}
         />
         <DialogPrimitive.Content
+          data-slot="dialog-content"
           className={cn(
             'fixed z-50 flex flex-col border-border bg-card shadow-lg outline-none',
             PLACEMENT_CLS[placement] ?? PLACEMENT_CLS.right,
@@ -251,7 +252,7 @@ export interface TabItem {
   /** TabPane 旧写法用 */
   tab?: ReactNode;
   closable?: boolean;
-  /** 允许 antd 的 forceRender 写法（本实现天然支持，占位即可） */
+  /** 为 true 时即使未激活也立即挂载（antd 语义一致）；默认懒挂载 */
   forceRender?: boolean;
 }
 
@@ -298,8 +299,8 @@ function TabsBase({
   activeKey,
   defaultActiveKey,
   onChange,
-  destroyInactiveTabPane,
-  destroyOnHidden,
+  // destroyInactiveTabPane/destroyOnHidden：懒挂载实现里页签只挂一次且保留，
+  // antd 的「切走即销毁」语义与 keep-alive 冲突，这里有意忽略（保持状态不丢）
   type = 'line',
   size = 'middle',
   className,
@@ -310,8 +311,9 @@ function TabsBase({
   const [inner, setInner] = useState(defaultActiveKey ?? list[0]?.key ?? '');
   const current = activeKey ?? inner;
   const active = list.find((t) => t.key === current) ?? list[0];
-  const destroy = destroyInactiveTabPane || destroyOnHidden;
   const card = type === 'card' || type === 'editable-card';
+  /** 已访问过的页签（keep-alive 集合）：懒挂载后保留状态，避免切换丢失 */
+  const mountedKeysRef = useRef<Set<string>>(new Set());
 
   const select = (key: string) => {
     if (activeKey === undefined) setInner(key);
@@ -350,15 +352,25 @@ function TabsBase({
         {tabBarExtraContent ? <div className="ml-auto flex items-center gap-2 pb-1">{tabBarExtraContent}</div> : null}
       </div>
 
-      {list.map((tab) => {
-        const on = tab.key === active?.key;
-        if (!on && destroy) return null;
-        return (
-          <div key={tab.key} role="tabpanel" hidden={!on} className={cn('pt-4', !on && 'hidden')}>
-            {tab.children}
-          </div>
-        );
-      })}
+      {(() => {
+        // 懒挂载 + keep-alive：未访问过的页签不挂载（不发请求），访问过的保留状态。
+        // 旧实现把所有页签同时挂载只靠 hidden 隐藏——页签一多（如 AI 配置 11 个），
+        // 每个面板的 useEffect 全部触发，首屏瞬间发出几十个请求。
+        const everMounted = mountedKeysRef.current;
+        const activeKeyNow = active?.key;
+        if (activeKeyNow !== undefined && !everMounted.has(activeKeyNow)) {
+          everMounted.add(activeKeyNow);
+        }
+        return list.map((tab) => {
+          const on = tab.key === activeKeyNow;
+          if (!on && !everMounted.has(tab.key) && !tab.forceRender) return null;
+          return (
+            <div key={tab.key} role="tabpanel" hidden={!on} className={cn('pt-4', !on && 'hidden')}>
+              {tab.children}
+            </div>
+          );
+        });
+      })()}
     </div>
   );
 }

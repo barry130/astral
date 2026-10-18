@@ -1,0 +1,88 @@
+{
+    "tableName":  "ai_knowledge_chunk",
+    "tableComment":  "AI 知识分片",
+    "moduleName":  "ai",
+    "className":  "AiKnowledgeChunkEntity",
+    "fields":  [
+                   {
+                       "columnName":  "id",
+                       "fieldName":  "id",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "主键",
+                       "isPrimaryKey":  true,
+                       "isAutoIncrement":  false,
+                       "mybatisPlusIdType":  "INPUT"
+                   },
+                   {
+                       "columnName":  "document_id",
+                       "fieldName":  "documentId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "文档 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "source_id",
+                       "fieldName":  "sourceId",
+                       "fieldType":  "Long",
+                       "jdbcType":  "BIGINT",
+                       "comment":  "知识源 ID",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "chunk_no",
+                       "fieldName":  "chunkNo",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "分片序号",
+                       "isRequired":  true
+                   },
+                   {
+                       "columnName":  "section",
+                       "fieldName":  "section",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(256)",
+                       "comment":  "章节",
+                       "length":  256
+                   },
+                   {
+                       "columnName":  "content",
+                       "fieldName":  "content",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "正文"
+                   },
+                   {
+                       "columnName":  "token_count",
+                       "fieldName":  "tokenCount",
+                       "fieldType":  "Integer",
+                       "jdbcType":  "INTEGER",
+                       "comment":  "Token 数量",
+                       "defaultValue":  "0"
+                   },
+                   {
+                       "columnName":  "embedding_json",
+                       "fieldName":  "embeddingJson",
+                       "fieldType":  "String",
+                       "jdbcType":  "TEXT",
+                       "comment":  "向量"
+                   },
+                   {
+                       "columnName":  "create_time",
+                       "fieldName":  "createTime",
+                       "fieldType":  "LocalDateTime",
+                       "jdbcType":  "TIMESTAMP",
+                       "comment":  "创建时间",
+                       "isAutoFill":  "INSERT"
+                   }
+               ],
+    "indexes":  [
+                    {
+                        "indexName":  "idx_ai_knowledge_chunk_doc",
+                        "columns":  [
+                                        "document_id"
+                                    ]
+                    }
+                ]
+}
