@@ -16,21 +16,63 @@
 
 ## 输出格式
 
-必须只输出一个 JSON 对象，不要包裹代码块，不要输出多余文字：
+必须只输出一个 JSON 对象，不要包裹代码块，不要输出多余文字。
+
+**只要工具结果里出现了候选歌曲，`blocks` 就必须非空，并且 `items` 里至少放 3 首歌。** 不要只写 `answer` 就结束——那样用户界面上什么卡片都不会出现。
+
+正确示例（假设候选里确实有这三首）：
 
 ```json
 {
-  "answer": "给用户看的中文说明，简洁自然，不要罗列内部字段",
+  "answer": "按跑步的节奏感挑了几首，BPM 都在 120 以上。",
   "blocks": [
-    { "type": "song_list", "title": "为你挑的歌", "items": [] }
+    {
+      "type": "song_list",
+      "title": "适合跑步的快歌",
+      "items": [
+        {
+          "songId": "003c2vQs4KNLVS",
+          "sourceId": "qq",
+          "name": "Far Away From Home",
+          "artist": "Groove Coverage",
+          "album": "Greatest Hits",
+          "duration": 261,
+          "reason": "电子节拍稳，适合匀速跑"
+        },
+        {
+          "songId": "002Eoc601yzi7Y",
+          "sourceId": "qq",
+          "name": "Cloud 9",
+          "artist": "Itro/Tobu",
+          "album": "Cloud 9",
+          "duration": 277,
+          "reason": "轻快鼓点，跑起来不闷"
+        },
+        {
+          "songId": "001Cr4A03DRoYk",
+          "sourceId": "qq",
+          "name": "最美的太阳 + 翅膀 (Live)",
+          "artist": "张杰/林俊杰",
+          "album": "我是歌手第二季 总决赛",
+          "duration": 271,
+          "reason": "现场版爆发力强，冲刺用"
+        }
+      ]
+    }
   ],
   "actions": [
-    { "type": "PLAY_SONG", "songId": "候选里的 songId", "sourceId": "候选里的 sourceId" }
+    { "type": "PLAY_SONG", "songId": "003c2vQs4KNLVS", "sourceId": "qq" },
+    { "type": "PLAY_LIST" }
   ]
 }
 ```
 
-`items` 里每一项至少包含 `songId`、`sourceId`、`name`、`artist`，可选 `album`、`duration`、`quality`、`reason`。没有候选时 `items` 留空数组，并在 `answer` 里说明还需要什么信息。
+字段规则：
+
+- `songId` 与 `sourceId` **必须逐字复制**工具结果里的值，一个字都不能改，否则客户端找不到歌、点了播不了。
+- `name` / `artist` / `album` / `duration` / `coverUrl` 也都取自工具结果，不要自己编。
+- `reason` 不超过 30 字，要结合用户说的话，别写「很好听」。
+- 确实一首候选都没有时，`blocks` 才留空数组，并在 `answer` 里说明还需要什么信息。
 
 ## 边界
 

@@ -68,6 +68,9 @@ public class AiChatOrchestrator {
     /** 一次请求内最多允许多少轮「模型 → 工具 → 模型」 */
     private static final int MAX_TOOL_ROUNDS = 4;
 
+    /** 后台可配置的轮数硬上限，防止填一个离谱的大数把请求拖死 */
+    private static final int MAX_TOOL_ROUNDS_LIMIT = 8;
+
     /** 拼入模型的历史消息上限 */
     private static final int MAX_HISTORY_MESSAGES = 40;
     /** AiProviderDtos.Message 的角色字面量（小写，OpenAI 兼容格式） */
@@ -230,7 +233,8 @@ public class AiChatOrchestrator {
                 systemPrompt = systemPrompt + "\n\n" + knowledge.block();
             }
 
-            for (int round = 0; round < MAX_TOOL_ROUNDS; round++) {
+            int maxToolRounds = resolveMaxToolRounds(version);
+            for (int round = 0; round < maxToolRounds; round++) {
                 if (cancelled(requestId)) {
                     return;
                 }
@@ -264,7 +268,9 @@ public class AiChatOrchestrator {
 
             // 工具轮用尽仍在调工具：模型会把「我先去搜索」这类过渡语当成最终回答，
             // 用户看到的就是一句空话。这里再给一次不带工具的机会，逼它用已有结果作答。
-            if (!cancelled(requestId) && answer.toString().isBlank()) {
+            // 判定条件不能用「answer 为空」——本次事故里 answer 是「我会为你制定一个搜索计划。」，
+            // 非空但毫无信息量，兜底因此从未触发。改为「解析不出结构化 blocks」。
+            if (!cancelled(requestId) && !hasStructuredBlocks(answer.toString())) {
                 List<Message> messages = new ArrayList<>();
                 messages.add(Message.system(systemPrompt + """
 
@@ -308,7 +314,7 @@ public class AiChatOrchestrator {
                 routeTemperature(resolved.route()),
                 routeTopP(resolved.route()),
                 routeMaxTokens(resolved.route(), resolved.model()),
-                resolved.version().getResponseSchemaJson(),
+                responseFormat(resolved.version().getResponseSchemaJson()),
                 resolved.route() == null ? null : resolved.route().getExtraParametersJson(),
                 resolved.provider().getConnectTimeoutMs() == null ? 10000 : resolved.provider().getConnectTimeoutMs(),
                 resolved.provider().getReadTimeoutMs() == null ? 60000 : resolved.provider().getReadTimeoutMs(),
@@ -829,7 +835,7 @@ public class AiChatOrchestrator {
         return actions;
     }
 
-    private String stripFence(String text) {
+    private static String stripFence(String text) {
         String trimmed = text.trim();
         if (trimmed.startsWith("```")) {
             int firstLine = trimmed.indexOf('\n');
@@ -965,5 +971,77 @@ public class AiChatOrchestrator {
         ArrayNode array = AiJson.mapper().createArrayNode();
         values.forEach(array::add);
         return array;
+    }
+
+    /**
+     * 把版本上的 responseSchema 转成提供方要的 {@code response_format}。
+     * <p>库里存的是<b>裸 JSON Schema</b>（顶层就是 {@code {"type":"object","properties":…}}），
+     * 而 OpenAI 兼容协议要求 {@code response_format} 是
+     * {@code {"type":"json_schema","json_schema":{"name":…,"schema":<裸schema>}}} 或
+     * {@code {"type":"json_object"}}。以前把裸 schema 直接塞进 response_format，
+     * {@code type} 值是 "object" 属于非法枚举，提供方会静默忽略 —— 于是模型从来不知道
+     * 要输出 JSON，音乐助手只回一句散文。这里按协议重新包装。</p>
+     */
+    static String responseFormat(String responseSchemaJson) {
+        if (responseSchemaJson == null || responseSchemaJson.isBlank()
+                || "{}".equals(responseSchemaJson.trim())) {
+            return null;
+        }
+        JsonNode schema = AiJson.read(responseSchemaJson);
+        if (schema == null || !schema.isObject()) {
+            return null;
+        }
+        // 已经是对协议格式的，原样使用
+        String type = AiJson.text(schema, "type", "");
+        if ("json_schema".equals(type) || "json_object".equals(type) || "text".equals(type)) {
+            return responseSchemaJson;
+        }
+        ObjectNode format = AiJson.mapper().createObjectNode();
+        format.put("type", "json_schema");
+        ObjectNode wrapper = format.putObject("json_schema");
+        wrapper.put("name", "agent_response");
+        // strict=false：各家兼容层对 strict 支持不一，强制 strict 容易被拒
+        wrapper.put("strict", false);
+        format.set("schema", schema);
+        return AiJson.write(format);
+    }
+
+    /**
+     * 解析版本里 {@code tool_policy_json} 的 {@code maxRounds}。
+     * <p>后台一直能配这个值，但编排器过去直接读常量 {@link #MAX_TOOL_ROUNDS}，
+     * 配置从来没生效过。这里读配置并夹在 [1, MAX_TOOL_ROUNDS_LIMIT] 之间，
+     * 避免后台填 0 或填一个离谱的大数把请求拖死。</p>
+     */
+    static int resolveMaxToolRounds(AiAgentVersionEntity version) {
+        JsonNode policy = AiJson.read(version == null ? null : version.getToolPolicyJson());
+        int configured = MAX_TOOL_ROUNDS;
+        if (policy != null && policy.isObject()) {
+            JsonNode node = policy.get("maxRounds");
+            if (node != null && node.isNumber()) {
+                configured = node.asInt();
+            }
+        }
+        return Math.max(1, Math.min(configured, MAX_TOOL_ROUNDS_LIMIT));
+    }
+
+    /**
+     * 判断模型输出里是否含有可渲染的结构化块（歌曲卡片、引用等）。
+     * <p>只看「answer 非空」会把「我会先搜索候选歌曲」这种过渡语当成有效回答，
+     * 于是兜底不触发、用户什么也拿不到。这里要求真的解析出非空 blocks。</p>
+     */
+    static boolean hasStructuredBlocks(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return false;
+        }
+        String json = stripFence(raw.trim());
+        if (!json.startsWith("{") || !json.endsWith("}")) {
+            return false;
+        }
+        JsonNode node = AiJson.read(json);
+        if (node == null || !node.isObject()) {
+            return false;
+        }
+        JsonNode blocks = node.get("blocks");
+        return blocks != null && blocks.isArray() && !blocks.isEmpty();
     }
 }

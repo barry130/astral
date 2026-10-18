@@ -1,0 +1,99 @@
+{
+  "type": "object",
+  "required": ["answer", "blocks"],
+  "properties": {
+    "answer": {
+      "type": "string",
+      "description": "给用户看的中文说明，1-2 句，自然口语，不要罗列字段名或内部 id"
+    },
+    "blocks": {
+      "type": "array",
+      "description": "必须至少包含一个 song_list 块，用来渲染可点击的歌曲卡片；只有确实没有候选时才留空数组",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "required": ["type", "title", "items"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["song_list"],
+            "description": "固定填 song_list"
+          },
+          "title": {
+            "type": "string",
+            "description": "卡片标题，例如「适合跑步的快歌」"
+          },
+          "items": {
+            "type": "array",
+            "description": "歌曲列表，从工具结果里挑选，通常 3-8 首",
+            "items": {
+              "type": "object",
+              "required": ["songId", "sourceId", "name", "artist", "reason"],
+              "properties": {
+                "songId": {
+                  "type": "string",
+                  "description": "逐字复制工具结果里的 songId，禁止编造或改写"
+                },
+                "sourceId": {
+                  "type": "string",
+                  "description": "逐字复制工具结果里的 sourceId，例如 qq / wyy / kw / kg"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "歌曲名，取自工具结果"
+                },
+                "artist": {
+                  "type": "string",
+                  "description": "歌手名，取自工具结果"
+                },
+                "album": {
+                  "type": "string",
+                  "description": "专辑名，取自工具结果，可省略"
+                },
+                "duration": {
+                  "type": "integer",
+                  "description": "时长（秒），取自工具结果，可省略"
+                },
+                "coverUrl": {
+                  "type": "string",
+                  "description": "封面地址，取自工具结果，可省略"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "不超过 30 字的推荐理由，要结合用户描述，不要写「很好听」这类空话"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "建议客户端执行的动作，可为空数组；只是建议，实际播放由客户端决定",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["PLAY_SONG", "PLAY_LIST", "ADD_TO_QUEUE", "ADD_TO_FAVORITE", "OPEN_SONG", "OPEN_ARTIST", "OPEN_ALBUM", "OPEN_PLAYLIST", "SEARCH_MUSIC"],
+            "description": "动作类型"
+          },
+          "songId": {
+            "type": "string",
+            "description": "PLAY_SONG / ADD_TO_QUEUE 等需要，必须来自上面的 items"
+          },
+          "sourceId": {
+            "type": "string",
+            "description": "与 songId 配套的音源标识"
+          },
+          "keyword": {
+            "type": "string",
+            "description": "SEARCH_MUSIC 需要，搜索关键词"
+          }
+        }
+      }
+    }
+  }
+}
