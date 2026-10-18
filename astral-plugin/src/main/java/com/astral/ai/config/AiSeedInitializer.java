@@ -77,6 +77,7 @@ public class AiSeedInitializer implements ApplicationRunner {
     private final AiToolService toolService;
     private final AiQuotaService quotaService;
     private final AiAgentValidationService validationService;
+    private final com.astral.ai.service.AiRequestService requestService;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -88,6 +89,13 @@ public class AiSeedInitializer implements ApplicationRunner {
             // 工具登记与「后台是否勾选」无关：代码里有的处理器必须全部落库，否则无法被绑定
             int tools = toolService.syncFromCode(null);
             log.info("[AiSeed] 工具处理器登记完成：{} 个", tools);
+            // 运行期清理，与种子开关无关：上个进程留下的「生成中」请求必须收尾，
+            // 否则界面上永远转圈、客户端永远等不到终态
+            int stale = requestService.failStaleRequests("AI012",
+                    "服务重启导致本次生成中断，请重新发送");
+            if (stale > 0) {
+                log.warn("[AiSeed] 已收尾上个进程遗留的未完成请求 {} 个", stale);
+            }
             if (!properties.isSeedEnabled()) {
                 return;
             }

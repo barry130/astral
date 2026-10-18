@@ -55,6 +55,20 @@ public class OpenAiCompatibleProvider implements AiProvider {
     /** 上游错误信息截断长度 */
     private static final int MAX_ERROR_CHARS = 400;
 
+    /** 空闲读超时默认值：上游 90 秒不吐一个字就当中断（配置里给了 readTimeoutMs 时以配置为准） */
+    private static final int DEFAULT_READ_TIMEOUT_MS = 90_000;
+
+    /**
+     * SSE 单行读取的执行器。
+     *
+     * <p>JDK {@code HttpRequest.timeout} 管不到响应体流，读阻塞时只能靠「外部掐断」，
+     * 所以每次读都丢到这里的线程上，由调用线程带超时等待。用虚拟线程：一次生成只占
+     * 一个读任务，不会有队列压力；命名便于 jstack 排查。</p>
+     */
+    private static final java.util.concurrent.ExecutorService READ_EXECUTOR =
+            java.util.concurrent.Executors.newThreadPerTaskExecutor(
+                    Thread.ofVirtual().name("ai-sse-read-", 0).factory());
+
     @Override
     public String type() {
         return TYPE;
@@ -107,7 +121,7 @@ public class OpenAiCompatibleProvider implements AiProvider {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
                 String line;
-                while ((line = reader.readLine()) != null) {
+                while ((line = readLineWithIdleGuard(reader, request)) != null) {
                     if (line.isEmpty() || line.startsWith(":")) {
                         continue;
                     }
@@ -414,6 +428,38 @@ public class OpenAiCompatibleProvider implements AiProvider {
             }
             String args = arguments.isEmpty() ? "{}" : arguments.toString();
             return new ToolCall(id == null ? "call_" + Math.abs(name.hashCode()) : id, name, args);
+        }
+    }
+
+    /**
+     * 带空闲上限的 {@code readLine}。
+     *
+     * <p>{@link HttpRequest#timeout} 只覆盖到「收到响应头」为止，对
+     * {@code BodyHandlers.ofInputStream()} 返回的响应体流不生效：上游把 SSE 头发完
+     * 之后不再吐数据（网关挂住、连接被中间设备黑洞），{@code readLine()} 就会永久
+     * 阻塞，把编排线程占死，界面上表现为请求一直「生成中」、token 恒为 0。</p>
+     *
+     * <p>这里把每次读取放到独立线程上跑，主线程最多等
+     * {@code readTimeoutMs}；超时就关掉响应流（让阻塞的读立刻抛异常退出）并抛
+     * {@code AI006}，把失败暴露给用户，而不是静默卡住。用「单次读取」而不是
+     * 「整段耗时」作上限，是为了不误杀正常的长回答：只要上游还在吐字就一直续期。</p>
+     */
+    private String readLineWithIdleGuard(BufferedReader reader, ChatRequest request) throws Exception {
+        int timeout = request.readTimeoutMs() > 0 ? request.readTimeoutMs() : DEFAULT_READ_TIMEOUT_MS;
+        java.util.concurrent.Future<String> future =
+                READ_EXECUTOR.submit(() -> reader.readLine());
+        try {
+            return future.get(timeout, java.util.concurrent.TimeUnit.MILLISECONDS);
+        } catch (java.util.concurrent.TimeoutException e) {
+            future.cancel(true);
+            throw new AiException("AI006", "上游 " + (timeout / 1000)
+                    + " 秒内没有返回任何数据，已中断本次生成，请重试");
+        } catch (java.util.concurrent.ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception ex) {
+                throw ex;
+            }
+            throw new AiException("AI006", truncate(String.valueOf(cause)));
         }
     }
 }

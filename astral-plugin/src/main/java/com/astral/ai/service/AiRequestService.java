@@ -36,6 +36,7 @@ public class AiRequestService {
     public static final int MAX_PAGE_SIZE = 200;
 
     private final AiRequestMapper requestMapper;
+    private final com.astral.ai.mapper.AiMessageMapper messageMapper;
 
     // ==================== 创建 ====================
 
@@ -272,5 +273,72 @@ public class AiRequestService {
 
     private static String emptyToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    /**
+     * 收尾上个进程遗留的未完成请求。
+     *
+     * <p>编排线程是进程内的内存线程，进程一停这些请求就再也不会推进，
+     * 但数据库里仍留着 RUNNING / WAITING_* 状态：界面上它们会永远显示「生成中」，
+     * 客户端轮询也永远等不到终态。启动时统一标记为失败，让用户能重新发起。</p>
+     *
+     * @return 被收尾的请求数
+     */
+    public int failStaleRequests(String errorCode, String errorSummary) {
+        LocalDateTime now = LocalDateTime.now();
+        List<AiRequestEntity> stale = requestMapper.selectList(new LambdaQueryWrapper<AiRequestEntity>()
+                .in(AiRequestEntity::getStatus, AiConstants.RequestStatus.QUEUED,
+                        AiConstants.RequestStatus.RUNNING,
+                        AiConstants.RequestStatus.WAITING_TOOL,
+                        AiConstants.RequestStatus.WAITING_APPROVAL));
+        int fixed = 0;
+        for (AiRequestEntity entity : stale) {
+            entity.setStatus(AiConstants.RequestStatus.FAILED);
+            entity.setErrorCode(errorCode);
+            entity.setErrorSummary(AiJson.truncate(errorSummary, 500));
+            entity.setFinishedAt(now);
+            requestMapper.updateById(entity);
+            // 该请求下还挂着的助手空壳消息也要收尾，否则会话里会留下永远转圈的空气泡
+            List<com.astral.ai.entity.AiMessageEntity> pending =
+                    messageMapper.selectList(new LambdaQueryWrapper<com.astral.ai.entity.AiMessageEntity>()
+                            .eq(com.astral.ai.entity.AiMessageEntity::getRequestId, entity.getId())
+                            .eq(com.astral.ai.entity.AiMessageEntity::getRole,
+                                    AiConstants.MessageRole.ASSISTANT)
+                            .in(com.astral.ai.entity.AiMessageEntity::getStatus,
+                                    AiConstants.MessageStatus.PENDING,
+                                    AiConstants.MessageStatus.STREAMING));
+            for (com.astral.ai.entity.AiMessageEntity message : pending) {
+                message.setStatus(AiConstants.MessageStatus.FAILED);
+                message.setFinishReason(errorCode);
+                if (message.getContent() == null || message.getContent().isBlank()) {
+                    message.setContent(errorSummary);
+                }
+                messageMapper.updateById(message);
+            }
+            fixed++;
+        }
+        // 上一版遗留的孤儿消息：请求已是终态（此前被收尾过），但消息还停在 PENDING/STREAMING。
+        // 只按 requestId 反查 request 状态，不依赖本次 stale 列表，保证重复启动也能补齐。
+        List<com.astral.ai.entity.AiMessageEntity> orphans =
+                messageMapper.selectList(new LambdaQueryWrapper<com.astral.ai.entity.AiMessageEntity>()
+                        .eq(com.astral.ai.entity.AiMessageEntity::getRole, AiConstants.MessageRole.ASSISTANT)
+                        .in(com.astral.ai.entity.AiMessageEntity::getStatus,
+                                AiConstants.MessageStatus.PENDING,
+                                AiConstants.MessageStatus.STREAMING)
+                        .isNotNull(com.astral.ai.entity.AiMessageEntity::getRequestId));
+        for (com.astral.ai.entity.AiMessageEntity message : orphans) {
+            AiRequestEntity owner = requestMapper.selectById(message.getRequestId());
+            if (owner == null || !AiConstants.RequestStatus.isTerminal(owner.getStatus())) {
+                continue;
+            }
+            message.setStatus(AiConstants.MessageStatus.FAILED);
+            message.setFinishReason(errorCode);
+            if (message.getContent() == null || message.getContent().isBlank()) {
+                message.setContent(errorSummary);
+            }
+            messageMapper.updateById(message);
+            fixed++;
+        }
+        return fixed;
     }
 }
