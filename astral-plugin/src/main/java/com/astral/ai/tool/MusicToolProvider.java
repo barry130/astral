@@ -370,8 +370,10 @@ public class MusicToolProvider implements AiToolProvider {
         ArrayNode candidateArray = payload.putArray("candidates");
         StringBuilder readable = new StringBuilder("客户端已回传 ").append(candidates.size())
                 .append(" 首候选歌曲（来源：客户端音源包）。")
-                .append("候选已经足够，请**立即**从中挑选并按输出格式作答，不要再调用任何搜索工具；")
-                .append("重复搜索只会拿到同一批候选。请只从下列候选中挑选，不要编造不存在的歌曲：");
+                .append("注意：候选池是客户端在用户发消息前按其原话预先搜索好的**固定一批**，")
+                .append("与你传的 keywords/filters 无关——换关键词、换音源再搜也只会拿到同一批，不要再调用任何搜索工具。")
+                .append("请**立即**从下列候选中挑选并按输出格式作答；如果用户要「再来点/更多」，"
+                        + "优先挑本轮还没推荐过的候选，确实没有更多可挑时如实说明候选已用尽。请只从下列候选中挑选，不要编造不存在的歌曲：");
         for (int i = 0; i < candidates.size(); i++) {
             AiAppDtos.MusicCandidate candidate = candidates.get(i);
             ObjectNode item = candidateArray.addObject();

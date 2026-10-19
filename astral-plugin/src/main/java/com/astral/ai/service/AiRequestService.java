@@ -13,7 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.management.ManagementFactory;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -286,7 +289,14 @@ public class AiRequestService {
      */
     public int failStaleRequests(String errorCode, String errorSummary) {
         LocalDateTime now = LocalDateTime.now();
+        // 只收尾 JVM 启动前创建的请求。清扫在 ApplicationReady 时机才跑，而这时端口已放开、
+        // 新请求已经开始流入：不带时间下限会把刚建好的活请求误标成「重启中断」，编排线程
+        // 随后又会把状态盖回 SUCCEEDED，留下永远清不掉的脏 error_code（实测 req 15032）。
+        LocalDateTime bootTime = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(ManagementFactory.getRuntimeMXBean().getStartTime()),
+                ZoneId.systemDefault());
         List<AiRequestEntity> stale = requestMapper.selectList(new LambdaQueryWrapper<AiRequestEntity>()
+                .lt(AiRequestEntity::getCreateTime, bootTime)
                 .in(AiRequestEntity::getStatus, AiConstants.RequestStatus.QUEUED,
                         AiConstants.RequestStatus.RUNNING,
                         AiConstants.RequestStatus.WAITING_TOOL,

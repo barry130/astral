@@ -73,6 +73,15 @@ public class AiChatOrchestrator {
 
     /** 拼入模型的历史消息上限 */
     private static final int MAX_HISTORY_MESSAGES = 40;
+
+    /** 历史回放里「已推荐歌曲」摘要的上限条数，防止长歌单把上下文窗口撑爆 */
+    private static final int MAX_RECOMMENDED_SUMMARY = 12;
+
+    /** 模型没给出任何可用卡片时，服务端从候选池代挑的推荐条数。 */
+    private static final int SYNTHESIZED_RECOMMENDATIONS = 5;
+
+    /** 过滤后每轮至少保留的卡片数：编造被滤掉太多时从候选池补齐到这个数。 */
+    private static final int MIN_RECOMMENDED_CARDS = 3;
     /** AiProviderDtos.Message 的角色字面量（小写，OpenAI 兼容格式） */
     private static final String ROLE_TOOL = "tool";
 
@@ -547,10 +556,21 @@ public class AiChatOrchestrator {
                           List<AiAppDtos.Citation> citations, AiModelEntity model,
                           int tokenIn, int tokenOut) {
         Parsed parsed = parseAnswer(rawContent, request.getResponseSchemaSnapshot());
+        // 实测（生产 conv 8010 / 本地复现）证明只靠提示词压不住：模型会推荐候选池之外、
+        // 客户端根本放不了的歌（编造，或回声当前播放队列），「再来点」时还会重复上一轮
+        // 推荐过的歌。这里服务端硬校验：song_list 只放行客户端上下文里真实存在、且本
+        // 会话未推荐过的歌。
+        parsed = sanitizeRecommended(parsed, request, assistant.getConversationId());
         assistant.setContent(parsed.answer());
         assistant.setStatus(AiConstants.MessageStatus.COMPLETED);
         assistant.setContentType(parsed.blocks().isEmpty() ? "TEXT" : "STRUCTURED");
-        assistant.setBlocksJson(parsed.blocks().isEmpty() ? null : AiJson.write(parsed.blocks()));
+        // updateById 对 null 字段不落地：工具轮写进 blocksJson 的 toolCalls 若不显式覆盖，
+        // 收尾时 blocks 为空就会把上一轮的工具调用残留当成消息 blocks 存下去（DB 与事件不一致）
+        if (!parsed.blocks().isEmpty()) {
+            assistant.setBlocksJson(AiJson.write(parsed.blocks()));
+        } else if (assistant.getBlocksJson() != null && assistant.getBlocksJson().contains("toolCalls")) {
+            assistant.setBlocksJson("[]");
+        }
         assistant.setCitationsJson(citations.isEmpty() ? null : AiJson.write(citations));
         assistant.setModelName(model.getModelName());
         assistant.setInputTokens(tokenIn);
@@ -680,7 +700,15 @@ public class AiChatOrchestrator {
                     messages.add(Message.tool(toolCallId, toolName, row.getContent()));
                 }
             } else if (AiConstants.MessageRole.ASSISTANT.equals(row.getRole())) {
-                messages.add(Message.assistant(row.getContent()));
+                // 模型只看得到 content 文本：上一轮推荐的歌单在 blocks 里，不拼进历史它就
+                // 不知道自己推荐过什么，用户说「再来点」时会从同一批候选里挑出同样的三首。
+                String content = row.getContent();
+                String recommended = recommendedSongsSummary(row.getBlocksJson());
+                if (!recommended.isEmpty()) {
+                    content = content + "\n（这条历史回答已推荐过以下歌曲，本次用户要更多时请优先推荐别的，不要重复："
+                            + recommended + "）";
+                }
+                messages.add(Message.assistant(content));
             }
         }
         return dropOrphanToolMessages(messages);
@@ -785,7 +813,9 @@ public class AiChatOrchestrator {
             return new Parsed("", List.of(), List.of(), "stop");
         }
         String json = stripFence(text);
-        JsonNode node = extractJsonObject(json);
+        // 正常轮与兜底轮的输出会拼接成两段 JSON：优先取带非空 blocks 的那个（一般是兜底
+        // 补出来的完整卡片），否则取最后一段有 answer 的，不能让前面的空 blocks 抢先。
+        JsonNode node = pickAnswerNode(extractJsonObjectCandidates(json));
         if (node != null && node.isObject() && (node.has("answer") || node.has("blocks"))) {
             String answer = AiJson.text(node, "answer", "");
             if (answer == null || answer.isBlank()) {
@@ -1110,5 +1140,488 @@ public class AiChatOrchestrator {
             remaining.add(tool);
         }
         return remaining;
+    }
+
+    /**
+     * 从一条助手历史消息的 blocks 里摘出已推荐歌曲的摘要。
+     *
+     * <p>blocks 形如 {@code [{"type":"song_list","title":...,"data":{"items":[{"songId":...,"sourceId":...,
+     * "name":...,"artist":...},...]}}]}——items 挂在 {@code data} 下（Block 记录序列化的真实形状），
+     * 直接读顶层 {@code block.get("items")} 永远是 null，提示会静默空转。
+     * 摘要格式「名字-歌手」，最多 {@value MAX_RECOMMENDED_SUMMARY} 首，防止历史窗口被撑爆。
+     * 解析不出任何歌曲就返回空串，调用方按「没有推荐过」处理。</p>
+     */
+    static String recommendedSongsSummary(String blocksJson) {
+        if (blocksJson == null || blocksJson.isBlank() || blocksJson.contains("toolCalls")) {
+            return "";
+        }
+        JsonNode node = AiJson.read(blocksJson);
+        if (node == null || !node.isArray() || node.isEmpty()) {
+            return "";
+        }
+        StringBuilder summary = new StringBuilder();
+        int count = 0;
+        for (JsonNode block : node) {
+            JsonNode items = blockItems(block);
+            if (items == null || !items.isArray()) {
+                continue;
+            }
+            for (JsonNode item : items) {
+                if (item == null || !item.isObject()) {
+                    continue;
+                }
+                String name = AiJson.text(item, "name", "");
+                String artist = AiJson.text(item, "artist", "");
+                if (name.isBlank()) {
+                    continue;
+                }
+                if (summary.length() > 0) {
+                    summary.append("、");
+                }
+                summary.append(name);
+                if (!artist.isBlank()) {
+                    summary.append('-').append(artist);
+                }
+                count++;
+                if (count >= MAX_RECOMMENDED_SUMMARY) {
+                    return summary.toString();
+                }
+            }
+        }
+        return summary.toString();
+    }
+
+    /**
+     * 服务端硬校验模型的推荐歌单（song_list 块）。
+     *
+     * <p>提示词已要求「音源必须来自客户端上报的候选」，但实测模型仍会：
+     * ① 输出候选池之外、客户端无法播放的歌——要么凭空编造（本地复现），要么把用户
+     *    正在播的队列直接回声成推荐（生产 conv 8010，req 12027 推荐的正是 currentQueue 里的三首）；
+     * ② 「再来点」时重复上一轮已推荐过的歌。
+     * 这里把 song_list 的 items 过滤为「客户端上下文（候选池 ∪ 当前队列 ∪ 当前歌曲）里
+     * 真实存在、且本会话此前未推荐过」的歌；条目字段以客户端上报的原始数据为准
+     * （模型抄写的 name/coverUrl 不可信，只保留它写的 reason）。整块滤空则删除该块；
+     * 所有 song_list 全被滤空时在 answer 末尾补一句说明，避免正文说推荐了、卡片却一张没有。</p>
+     */
+    Parsed sanitizeRecommended(Parsed parsed, AiRequestEntity request, Long conversationId) {
+        boolean hasSongList = false;
+        for (AiAppDtos.Block block : parsed.blocks()) {
+            if ("song_list".equals(block.type())) {
+                hasSongList = true;
+                break;
+            }
+        }
+        if (!hasSongList && !musicSearchCalled(request)) {
+            return parsed;
+        }
+        Map<String, Map<String, Object>> universe = clientSongUniverse(request.getContextSnapshot());
+        Set<String> alreadyKeys = recommendedSongKeys(conversationId);
+        List<AiAppDtos.Block> keptBlocks = new ArrayList<>();
+        int droppedUnknown = 0;
+        int droppedRepeat = 0;
+        boolean keptAnySong = false;
+        // 模型写的 id → 保留卡片真实条目，供下面重写 PLAY 类动作的 songId/sourceId
+        Map<String, Map<String, Object>> actionRemap = new LinkedHashMap<>();
+        for (AiAppDtos.Block block : parsed.blocks()) {
+            if (!"song_list".equals(block.type())) {
+                keptBlocks.add(block);
+                continue;
+            }
+            List<Map<String, Object>> keptItems = new ArrayList<>();
+            Object rawItems = block.data().get("items");
+            if (rawItems instanceof List<?> items) {
+                for (Object rawItem : items) {
+                    if (!(rawItem instanceof Map<?, ?> item)) {
+                        continue;
+                    }
+                    String sourceId = mapStr(item, "sourceId");
+                    String songId = mapStr(item, "songId");
+                    String name = mapStr(item, "name");
+                    String artist = mapStr(item, "artist");
+                    Map<String, Object> canonical = null;
+                    if (!songId.isBlank() && !sourceId.isBlank()) {
+                        canonical = universe.get(songKey(sourceId, songId));
+                    }
+                    if (canonical == null && !name.isBlank()) {
+                        canonical = universe.get(nameKey(name, artist));
+                    }
+                    if (canonical == null) {
+                        droppedUnknown++;
+                        continue;
+                    }
+                    boolean repeated = (!songId.isBlank() && !sourceId.isBlank()
+                            && alreadyKeys.contains(songKey(sourceId, songId)))
+                            || (!name.isBlank() && alreadyKeys.contains(nameKey(name, artist)));
+                    if (repeated) {
+                        droppedRepeat++;
+                        continue;
+                    }
+                    // 以客户端数据为底，仅保留模型写的推荐理由
+                    Map<String, Object> merged = new LinkedHashMap<>(canonical);
+                    String reason = mapStr(item, "reason");
+                    if (!reason.isBlank()) {
+                        merged.put("reason", reason);
+                    }
+                    keptItems.add(merged);
+                    keptAnySong = true;
+                    if (!songId.isBlank() && !sourceId.isBlank()) {
+                        actionRemap.put(songKey(sourceId, songId), merged);
+                    }
+                    if (!songId.isBlank() && !sourceId.isBlank()) {
+                        alreadyKeys.add(songKey(sourceId, songId));
+                    }
+                    if (!name.isBlank()) {
+                        alreadyKeys.add(nameKey(name, artist));
+                    }
+                }
+            }
+            if (keptItems.isEmpty()) {
+                continue;
+            }
+            Map<String, Object> data = new LinkedHashMap<>(block.data());
+            data.put("items", keptItems);
+            keptBlocks.add(new AiAppDtos.Block(block.type(), block.title(), data));
+        }
+        List<AiAppDtos.ActionVo> keptActions = new ArrayList<>();
+        int droppedActions = 0;
+        for (AiAppDtos.ActionVo action : parsed.actions()) {
+            String actionSongId = mapStr(action.payload(), "songId");
+            if (actionSongId.isBlank()) {
+                // SEARCH_MUSIC / OPEN_* 这类不带 songId 的动作原样保留
+                keptActions.add(action);
+                continue;
+            }
+            Map<String, Object> mapped = actionRemap.get(
+                    songKey(mapStr(action.payload(), "sourceId"), actionSongId));
+            if (mapped == null) {
+                // 动作指向的歌不在保留的卡片里（编造或已被滤掉），客户端拿去只会播放失败
+                droppedActions++;
+                continue;
+            }
+            Map<String, Object> payload = new LinkedHashMap<>(action.payload());
+            payload.put("songId", mapStr(mapped, "songId"));
+            payload.put("sourceId", mapStr(mapped, "sourceId"));
+            keptActions.add(new AiAppDtos.ActionVo(action.actionId(), action.type(), payload));
+        }
+        if (droppedUnknown + droppedRepeat + droppedActions > 0) {
+            log.info("[AI] 推荐硬校验 requestId={}：滤掉候选外 {} 首、已推荐过 {} 首、无效动作 {} 个",
+                    request.getId(), droppedUnknown, droppedRepeat, droppedActions);
+        }
+        if (!keptAnySong) {
+            // 模型一张可用卡片都没留下（整轮空 blocks 逃避，或全被滤掉），但候选池里还有
+            // 没推荐过的新歌：服务端直接代挑，不能让「再补几首」落空成一句空头支票。
+            List<Map<String, Object>> fresh = freshClientSongs(universe, alreadyKeys, SYNTHESIZED_RECOMMENDATIONS);
+            if (!fresh.isEmpty()) {
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("items", fresh);
+                keptBlocks.add(new AiAppDtos.Block("song_list", "为你挑选", data));
+                log.info("[AI] 推荐硬校验 requestId={}：模型未给出可用卡片，服务端从候选池代挑 {} 首",
+                        request.getId(), fresh.size());
+                String answer = parsed.answer();
+                return new Parsed(answer == null || answer.isBlank()
+                        ? "从候选池里替你挑了几首这轮还没推荐过的歌。" : answer,
+                        keptBlocks, keptActions, parsed.finishReason());
+            }
+            String answer = parsed.answer();
+            String note = "\n\n（这批候选里没有能再推荐的新歌了。可以换个方向，或告诉我具体想听什么，我再让客户端找一批。）";
+            return new Parsed((answer == null || answer.isBlank() ? "这批候选里没有能再推荐的新歌了。" : answer) + note,
+                    keptBlocks, keptActions, parsed.finishReason());
+        }
+        // 编造被滤掉太多会让卡片缩水（实测一轮 5 首滤完只剩 1-2 首，schema 预期 3-8 首）：
+        // 从池里还没推荐过的歌补齐到最少 3 张，保证「再来点」永远有东西可看
+        int keptCount = 0;
+        int firstSongListIndex = -1;
+        for (int i = 0; i < keptBlocks.size(); i++) {
+            AiAppDtos.Block block = keptBlocks.get(i);
+            if (!"song_list".equals(block.type())
+                    || !(block.data().get("items") instanceof List<?> list)) {
+                continue;
+            }
+            keptCount += list.size();
+            if (firstSongListIndex < 0) {
+                firstSongListIndex = i;
+            }
+        }
+        if (keptCount > 0 && keptCount < MIN_RECOMMENDED_CARDS) {
+            List<Map<String, Object>> topUp = freshClientSongs(universe, alreadyKeys, MIN_RECOMMENDED_CARDS - keptCount);
+            if (!topUp.isEmpty()) {
+                AiAppDtos.Block block = keptBlocks.get(firstSongListIndex);
+                List<Object> items = new ArrayList<>();
+                Object current = block.data().get("items");
+                if (current instanceof List<?> list) {
+                    items.addAll(list);
+                }
+                items.addAll(topUp);
+                Map<String, Object> data = new LinkedHashMap<>(block.data());
+                data.put("items", items);
+                keptBlocks.set(firstSongListIndex, new AiAppDtos.Block(block.type(), block.title(), data));
+                log.info("[AI] 推荐硬校验 requestId={}：卡片缩水（滤后 {} 首），从候选池补齐 {} 首",
+                        request.getId(), keptCount, topUp.size());
+            }
+        }
+        return new Parsed(parsed.answer(), keptBlocks, keptActions, parsed.finishReason());
+    }
+
+    /**
+     * 从客户端上下文快照（musicCandidates / currentQueue / currentSong）提取全部可选歌曲。
+     * <p>每首歌登记两种键：{@code sourceId|songId}（精确）与规范化 {@code name|artist}（兜底，
+     * 防模型抄错 id）。值是客户端上报的原始条目，用于替换模型输出的失真字段。</p>
+     */
+    static Map<String, Map<String, Object>> clientSongUniverse(String contextSnapshot) {
+        Map<String, Map<String, Object>> universe = new LinkedHashMap<>();
+        if (contextSnapshot == null || contextSnapshot.isBlank()) {
+            return universe;
+        }
+        JsonNode context = AiJson.readObject(contextSnapshot);
+        if (context == null || !context.isObject()) {
+            return universe;
+        }
+        for (String key : List.of(AiConstants.ContextKey.MUSIC_CANDIDATES,
+                AiConstants.ContextKey.CURRENT_QUEUE, AiConstants.ContextKey.CURRENT_SONG)) {
+            JsonNode node = context.get(key);
+            if (node == null) {
+                continue;
+            }
+            if (node.isArray()) {
+                for (JsonNode item : node) {
+                    registerClientSong(universe, item);
+                }
+            } else if (node.isObject()) {
+                registerClientSong(universe, node);
+            }
+        }
+        return universe;
+    }
+
+    /** 登记一首客户端上报的歌：sourceId|songId 与规范化 name|artist 两种键都指向同一个原始条目。 */
+    private static void registerClientSong(Map<String, Map<String, Object>> universe, JsonNode item) {
+        if (item == null || !item.isObject()) {
+            return;
+        }
+        Map<String, Object> song = new LinkedHashMap<>();
+        item.properties().forEach(entry ->
+                song.put(entry.getKey(), AiJson.mapper().convertValue(entry.getValue(), Object.class)));
+        String sourceId = mapStr(song, "sourceId");
+        String songId = mapStr(song, "songId");
+        String name = mapStr(song, "name");
+        String artist = mapStr(song, "artist");
+        if (!songId.isBlank() && !sourceId.isBlank()) {
+            universe.putIfAbsent(songKey(sourceId, songId), song);
+        }
+        if (!name.isBlank()) {
+            universe.putIfAbsent(nameKey(name, artist), song);
+        }
+    }
+
+    /**
+     * 本会话此前所有助手消息推荐过的歌曲键集合（songKey 与 nameKey 两种）。
+     * <p>正在收尾的这条助手消息 blocks 还没落库，天然不会被算进来。窗口与模型能看到的
+     * 历史窗口一致（{@value MAX_HISTORY_MESSAGES} 条），连续两轮的重复一定能被拦住。</p>
+     */
+    private Set<String> recommendedSongKeys(Long conversationId) {
+        Set<String> keys = new LinkedHashSet<>();
+        for (AiMessageEntity row : conversationService.messages(conversationId, null, MAX_HISTORY_MESSAGES)) {
+            collectRecommendedKeys(row.getBlocksJson(), keys);
+        }
+        return keys;
+    }
+
+    /** 从一条助手消息的 blocks 里收集 song_list 已推荐歌曲的两种键。 */
+    static void collectRecommendedKeys(String blocksJson, Set<String> keys) {
+        if (blocksJson == null || blocksJson.isBlank() || blocksJson.contains("toolCalls")) {
+            return;
+        }
+        JsonNode node = AiJson.read(blocksJson);
+        if (node == null || !node.isArray()) {
+            return;
+        }
+        for (JsonNode block : node) {
+            if (block == null || !"song_list".equals(AiJson.text(block, "type", ""))) {
+                continue;
+            }
+            JsonNode items = blockItems(block);
+            if (items == null || !items.isArray()) {
+                continue;
+            }
+            for (JsonNode item : items) {
+                if (item == null || !item.isObject()) {
+                    continue;
+                }
+                String sourceId = AiJson.text(item, "sourceId", "").trim();
+                String songId = AiJson.text(item, "songId", "").trim();
+                String name = AiJson.text(item, "name", "").trim();
+                String artist = AiJson.text(item, "artist", "").trim();
+                if (!songId.isBlank() && !sourceId.isBlank()) {
+                    keys.add(songKey(sourceId, songId));
+                }
+                if (!name.isBlank()) {
+                    keys.add(nameKey(name, artist));
+                }
+            }
+        }
+    }
+
+    /** 歌曲精确键：sourceId|songId。 */
+    static String songKey(String sourceId, String songId) {
+        return sourceId.trim() + "|" + songId.trim();
+    }
+
+    /** 歌曲兜底键：规范化 name|artist（去空白、小写），容忍模型抄写大小写/空格误差。 */
+    static String nameKey(String name, String artist) {
+        return normalizeSongText(name) + "|" + normalizeSongText(artist);
+    }
+
+    private static String normalizeSongText(String value) {
+        return value == null ? "" : value.replaceAll("\\s+", "").toLowerCase();
+    }
+
+    private static String mapStr(Map<?, ?> map, String key) {
+        Object value = map == null ? null : map.get(key);
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    /**
+     * 扫出文本里全部顶层 JSON 对象（带 answer 或 blocks 字段的）。
+     * <p>正常轮与兜底轮的输出会拼在同一段 answer 里，旧解析「从每个 { 到最后一个 } 取第一个
+     * 能解析的」会把第二段吞掉。这里按括号深度与字符串状态切出每个顶层对象，
+     * 供 {@link #pickAnswerNode} 挑出真正该用的那段。</p>
+     */
+    static List<JsonNode> extractJsonObjectCandidates(String text) {
+        List<JsonNode> result = new ArrayList<>();
+        if (text == null || text.isBlank()) {
+            return result;
+        }
+        String s = text.trim();
+        int depth = 0;
+        int start = -1;
+        boolean inString = false;
+        boolean escape = false;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (inString) {
+                if (escape) {
+                    escape = false;
+                } else if (c == '\\') {
+                    escape = true;
+                } else if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+            } else if (c == '{') {
+                if (depth == 0) {
+                    start = i;
+                }
+                depth++;
+            } else if (c == '}') {
+                if (depth > 0) {
+                    depth--;
+                    if (depth == 0 && start >= 0) {
+                        JsonNode node = AiJson.read(s.substring(start, i + 1));
+                        if (node != null && node.isObject()
+                                && (node.has("answer") || node.has("blocks"))) {
+                            result.add(node);
+                        }
+                        start = -1;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 从多段候选 JSON 里挑真正该采用的回答：优先带非空 blocks 的（兜底轮补出的完整卡片），
+     * 其次取最后一段有 answer 的，实在不行才用第一段。
+     */
+    static JsonNode pickAnswerNode(List<JsonNode> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+        JsonNode withBlocks = null;
+        JsonNode withAnswer = null;
+        for (JsonNode node : candidates) {
+            JsonNode blocks = node.get("blocks");
+            if (blocks != null && blocks.isArray() && !blocks.isEmpty()) {
+                withBlocks = node;
+            }
+            String answer = AiJson.text(node, "answer", "");
+            if (answer != null && !answer.isBlank()) {
+                withAnswer = node;
+            }
+        }
+        if (withBlocks != null) {
+            return withBlocks;
+        }
+        return withAnswer != null ? withAnswer : candidates.get(0);
+    }
+
+    /** 本请求是否调用过音乐搜索类工具（TOOL 消息的 blocksJson 里带 search_ 工具名）。 */
+    private boolean musicSearchCalled(AiRequestEntity request) {
+        for (AiMessageEntity row : conversationService.byRequest(request.getId())) {
+            if (AiConstants.MessageRole.TOOL.equals(row.getRole())
+                    && row.getBlocksJson() != null && row.getBlocksJson().contains("search_")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 从客户端候选池里代挑还没推荐过的歌（按客户端上报顺序取前 limit 首）。
+     * <p>同一首歌在 universe 里登记了两种键，这里逐首去重并跳过历史已推荐的。</p>
+     */
+    static List<Map<String, Object>> freshClientSongs(Map<String, Map<String, Object>> universe,
+                                                       Set<String> alreadyKeys, int limit) {
+        List<Map<String, Object>> fresh = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        for (Map<String, Object> song : universe.values()) {
+            String sourceId = mapStr(song, "sourceId");
+            String songId = mapStr(song, "songId");
+            String name = mapStr(song, "name");
+            String artist = mapStr(song, "artist");
+            String idKey = songId.isBlank() || sourceId.isBlank() ? null : songKey(sourceId, songId);
+            String nmKey = name.isBlank() ? null : nameKey(name, artist);
+            boolean seenBefore = (idKey != null && seen.contains(idKey))
+                    || (nmKey != null && seen.contains(nmKey));
+            boolean recommendedBefore = (idKey != null && alreadyKeys.contains(idKey))
+                    || (nmKey != null && alreadyKeys.contains(nmKey));
+            if (seenBefore || recommendedBefore) {
+                continue;
+            }
+            if (idKey != null) {
+                seen.add(idKey);
+            }
+            if (nmKey != null) {
+                seen.add(nmKey);
+            }
+            Map<String, Object> item = new LinkedHashMap<>(song);
+            item.put("reason", "候选池里替你挑的，这轮还没推荐过");
+            fresh.add(item);
+            if (fresh.size() >= Math.max(1, limit)) {
+                break;
+            }
+        }
+        return fresh;
+    }
+
+    /**
+     * 取 song_list 块里的 items 数组。
+     * <p>Block 记录序列化的真实形状是 {@code {type,title,data:{items:[...]}}}——items 挂在
+     * {@code data} 下；早年按顶层 {@code block.get("items")} 读，永远是 null，导致历史
+     * 「已推荐过」提示从第一天起就静默空转（模型从没收到过避让提示）。</p>
+     */
+    static JsonNode blockItems(JsonNode block) {
+        if (block == null || !block.isObject()) {
+            return null;
+        }
+        JsonNode data = block.get("data");
+        JsonNode items = data == null ? null : data.get("items");
+        if (items == null || !items.isArray()) {
+            items = block.get("items");
+        }
+        return items != null && items.isArray() ? items : null;
     }
 }
