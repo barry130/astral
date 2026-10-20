@@ -136,6 +136,21 @@
       "defaultValue": "0"
     },
     {
+      "columnName": "read_seconds",
+      "fieldName": "readSeconds",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "开屏弹窗读秒(仅首次启动免责声明用;NULL或0=不读秒,确认键立即可点)"
+    },
+    {
+      "columnName": "terms_version",
+      "fieldName": "termsVersion",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "条款版本号(仅首次启动免责声明用;客户端记住已接受的版本,版本变化则重新弹一次)",
+      "length": 32
+    },
+    {
       "columnName": "effective_start",
       "fieldName": "effectiveStart",
       "fieldType": "LocalDateTime",

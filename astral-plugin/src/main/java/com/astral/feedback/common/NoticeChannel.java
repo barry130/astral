@@ -64,6 +64,13 @@ public final class NoticeChannel {
     /** 遗留渠道值：PC / 桌面端 */
     public static final String LEGACY_PC = "pc";
 
+    /**
+     * 桌面三端：qt-pc（Tauri）的三个编译目标。
+     * <p>顺序同 {@link #PLATFORMS}，保证 {@link #desktopOnly} 的输出稳定。</p>
+     */
+    public static final List<String> DESKTOP = List.of(
+            ClientHeaders.UT_WINDOWS, ClientHeaders.UT_LINUX, ClientHeaders.UT_MACOS);
+
     /** 移动端双平台（遗留 {@code app} 展开后的集合，也是缺省投放集合） */
     private static final List<String> MOBILE_APP = List.of(ClientHeaders.UT_ANDROID, ClientHeaders.UT_IOS);
 
@@ -253,6 +260,15 @@ public final class NoticeChannel {
             }
         }
         return List.copyOf(out);
+    }
+
+    /**
+     * 桌面三端的落库值（{@code app-windows,app-linux,app-macos}）。
+     * <p>给「只投桌面」的通知用：目前唯一使用者是首次启动免责声明，
+     * 理由见 {@code FeedbackNoticeService#clampDisclaimerChannel}。</p>
+     */
+    public static String desktopOnlyValue() {
+        return join(DESKTOP);
     }
 
     private static String join(Collection<String> values) {

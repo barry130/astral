@@ -68,6 +68,14 @@ export interface SysNotice {
   dialogClosable?: number;
   firstLoginOnly?: number;
   marquee?: number;
+  /** 开屏弹窗读秒（仅首次启动免责声明用；NULL/0 = 不读秒，确认键立即可点） */
+  readSeconds?: number;
+  /**
+   * 条款版本号（仅首次启动免责声明用）。
+   * 客户端把「开屏位 + 此字段非空」的公告认定为首次启动免责声明，并记住已接受的版本；
+   * 值一变就再弹一次，用来实现「改了条款要重新确认」。
+   */
+  termsVersion?: string;
   effectiveStart?: string;
   effectiveEnd?: string;
   versionMin?: number;

@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS sys_notice (
     dialog_closable  BIGINT NOT NULL DEFAULT 1,
     first_login_only BIGINT NOT NULL DEFAULT 0,
     marquee          BIGINT NOT NULL DEFAULT 0,
+    read_seconds     BIGINT,                               -- 开屏弹窗读秒（仅首次启动免责声明用；NULL/0=不读秒）
+    terms_version    VARCHAR(32),                          -- 条款版本号（仅首次启动免责声明用；版本变化则重新弹一次）
     effective_start  TIMESTAMP,
     effective_end    TIMESTAMP,
     version_min      BIGINT,                               -- 版本码（如 300）
@@ -113,6 +115,8 @@ COMMENT ON COLUMN sys_notice.is_top IS '是否置顶(0-否 1-是)';
 COMMENT ON COLUMN sys_notice.dialog_closable IS '开屏弹窗是否可关闭';
 COMMENT ON COLUMN sys_notice.first_login_only IS '仅首次登录弹出';
 COMMENT ON COLUMN sys_notice.marquee IS '通告栏是否跑马灯';
+COMMENT ON COLUMN sys_notice.read_seconds IS '开屏弹窗读秒(仅首次启动免责声明用;NULL或0=不读秒,确认键立即可点)';
+COMMENT ON COLUMN sys_notice.terms_version IS '条款版本号(仅首次启动免责声明用;客户端记住已接受的版本,版本变化则重新弹一次)';
 COMMENT ON COLUMN sys_notice.effective_start IS '生效时间(空不限)';
 COMMENT ON COLUMN sys_notice.effective_end IS '失效时间(空不限)';
 COMMENT ON COLUMN sys_notice.version_min IS '生效版本码下限(如300)';

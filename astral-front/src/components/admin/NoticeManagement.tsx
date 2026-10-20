@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Tag, Button, Space, Select, Input, Modal, Form, Row, Col, Switch, DatePicker, InputNumber, message, Popconfirm, Typography } from '@/components/antd-compat';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@/components/antd-compat/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FileTextOutlined } from '@/components/antd-compat/icons';
 import dayjs from 'dayjs';
 import {
   messageAdminApi, SysNotice,
@@ -30,6 +30,53 @@ const AUDIENCE_OPTIONS = [
 
 /** 新建通知的缺省投放平台：等价于改造前的 channel=app（Android + iOS） */
 const DEFAULT_CHANNELS = ['app-android', 'app-ios'];
+
+/**
+ * 免责声明固定只投桌面三端，与后端 `NoticeChannel.desktopOnlyValue()` 保持一致。
+ *
+ * 两件事必须一起做：客户端 `X-App-Ut` 跟着编译目标走（Windows / Linux / macOS 各一个值），
+ * 只勾 Windows 会让另外两个平台的 PC 版永远收不到声明；而投到手机端更糟 ——
+ * uniappx 不认识 termsVersion，会把带 `dialogClosable=0` 的声明当成不可关闭开屏公告，
+ * 那个弹窗点「我知道了」执行的是 exitApp()。
+ *
+ * 服务端 `FeedbackNoticeService.clampDisclaimerChannel` 已经强制改写，这里同步是为了
+ * 表单上显示的就是最终落库值（免得运营以为自己选的生效了）。
+ */
+const DISCLAIMER_DESKTOP_CHANNELS = ['app-windows', 'app-linux', 'app-macos'];
+
+/**
+ * 首次启动免责声明的一键模板（后台「消息管理」→ 新建通知 → 选它自动填表）。
+ *
+ * 为什么要有模板：这段正文原本硬编码在 qt-pc 的 FirstRunDisclaimer.tsx 里，
+ * 改一句话就要发版；改由后台下发后，运营得自己从空白表单写起——漏了「条款版本号」
+ * 客户端就不认为这是声明（判定条件：开屏位 + termsVersion 非空），会静默不弹。
+ * 模板把这些隐性约束一次填好，正文口径与 DESIGN §5.6 一致。
+ *
+ * 正文是富文本（客户端 lib/richText 白名单渲染，不走 innerHTML），
+ * 因此可以用 h3/p/strong，但不要写 style/script/iframe（会被过滤）。
+ */
+const DISCLAIMER_TEMPLATE: Partial<SysNotice> & { display?: number } = {
+  title: '使用前请先阅读',
+  noticeType: 'announce',
+  display: 1,
+  audience: 'ALL',
+  dialogClosable: 0,
+  firstLoginOnly: 0,
+  isShow: 1,
+  isTop: 0,
+  marquee: 0,
+  readSeconds: 3,
+  termsVersion: '2026.10',
+  content: [
+    '<h3>一、这是什么</h3>',
+    '<p>轻听（QuietMusic）是一个个人开发、免费开源的音乐播放器，用来管理并播放你自己的本地音乐，也可以通过你自己安装的音源包在线试听。它按「现状」提供，不承诺随时可用。</p>',
+    '<h3>二、请这样使用</h3>',
+    '<p>仅供个人学习与自用，不得用于商业用途；不得用于批量抓取、下载或再分发受版权保护的音乐。通过音源包访问到的第三方内容，其合法性与风险由你自己承担。</p>',
+    '<h3>三、开源与免费</h3>',
+    '<p>本软件的全部功能免费，源代码完整开源（Apache-2.0 + 补充条款）。</p>',
+    '<p>如果你见到任何以本软件名义向你收取费用的版本或服务，那不是本项目，请立即卸载，并到反馈渠道告诉我们。</p>',
+  ].join(''),
+};
 
 /** 落库值（逗号分隔）→ 多选控件值 */
 function parseChannels(channel?: string): string[] {
@@ -79,6 +126,13 @@ export default function NoticeManagement() {
   const [editing, setEditing] = useState<SysNotice | null>(null);
   const [form] = Form.useForm();
   const isFeedbackReply = editing?.scene === 'feedbackAdminReplied' || editing?.scene === 'feedbackUserReplied';
+  /**
+   * 表单里「条款版本号」这一格一旦填了，这条公告就是首次启动免责声明：
+   * 客户端按它认领，服务端按它把渠道收窄到桌面三端。这里订阅它，是为了在渠道那一格
+   * 当场说明白「你选的平台会被改写」，而不是等提交后才发现落库值和选的不一样。
+   */
+  const termsVersionInput = Form.useWatch('termsVersion', form) as string | undefined;
+  const isDisclaimerDraft = (termsVersionInput ?? '').trim().length > 0;
 
   const hasPerm = usePerm();
   // 通知维护权限：必须与后端 AdminMessageController 写接口的 @RequiresPermission("admin:message:edit") 保持一致
@@ -120,6 +174,23 @@ export default function NoticeManagement() {
       firstLoginOnly: 0,
       marquee: 0,
       audience: 'ALL',
+    });
+    setModalOpen(true);
+  };
+
+  /**
+   * 用免责声明模板新建：只填表不落库，运营还能改文案、改读秒、改版本号后再点确定。
+   * 单独一个入口而不是塞进 openCreate 的默认值 —— 普通公告不该默认带读秒和条款版本号，
+   * 那会让每条公告都被 qt-pc 当成免责声明（两个弹窗叠着弹）。
+   */
+  const openCreateDisclaimer = () => {
+    setEditing(null);
+    form.resetFields();
+    form.setFieldsValue({
+      ...DISCLAIMER_TEMPLATE,
+      channel: [...DISCLAIMER_DESKTOP_CHANNELS],
+      display: [DISCLAIMER_TEMPLATE.display ?? 1],
+      effectiveRange: undefined,
     });
     setModalOpen(true);
   };
@@ -169,6 +240,11 @@ export default function NoticeManagement() {
       dialogClosable: values.dialogClosable ?? 1,
       firstLoginOnly: values.firstLoginOnly ?? 0,
       marquee: values.marquee ?? 0,
+      // 首次启动免责声明两列。清空输入框 = 取消声明身份，必须真的写回 NULL：
+      // 后端的 update 对这两列是「无条件 set」，所以这里用 undefined 让 JSON 省略该键即可，
+      // 服务端收到 null 就会落 NULL（不要写成 0 或空串 —— 空串会让 qt-pc 侧误判成「有版本号」）
+      readSeconds: typeof values.readSeconds === 'number' ? values.readSeconds : undefined,
+      termsVersion: (values.termsVersion ?? '').trim() || undefined,
       effectiveStart: values.effectiveRange?.[0]?.format('YYYY-MM-DD HH:mm:ss') || undefined,
       effectiveEnd: values.effectiveRange?.[1]?.format('YYYY-MM-DD HH:mm:ss') || undefined,
     };
@@ -220,6 +296,22 @@ export default function NoticeManagement() {
     },
     { title: '标题', dataIndex: 'title', ellipsis: true },
     {
+      // 标出哪条是「首次启动免责声明」：判定在客户端，后台光看展示位看不出区别
+      // （一条 display 含开屏位、但没填条款版本号的公告，客户端当普通开屏弹窗处理）
+      title: '免责声明', dataIndex: 'termsVersion', width: 110,
+      render: (v: string, record: SysNotice) => {
+        const ver = (v ?? '').trim();
+        if (!ver) return '-';
+        const splash = ((record.display ?? 0) & 1) === 1;
+        return (
+          <Space size={4}>
+            <Tag color={splash ? 'green' : 'orange'}>{splash ? '开屏' : '缺开屏位'}</Tag>
+            <Tag>{ver}</Tag>
+          </Space>
+        );
+      },
+    },
+    {
       title: '展示位', dataIndex: 'display', width: 140,
       render: (v: number) => DISPLAY_OPTIONS.filter((o) => (v & o.value) === o.value).map((o) => o.label.replace(/ \(\d\)$/, '')).join(' / ') || '-',
     },
@@ -258,6 +350,7 @@ export default function NoticeManagement() {
           </div>
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => load()}>刷新</Button>
+            {canEdit && <Button icon={<FileTextOutlined />} onClick={openCreateDisclaimer}>免责声明</Button>}
             {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>发布通知</Button>}
             {!canEdit && <Tag>只读</Tag>}
           </Space>
@@ -312,7 +405,12 @@ export default function NoticeManagement() {
               <Form.Item
                 name="channel"
                 label="投放平台（可多选）"
-                extra={isFeedbackReply ? '反馈回复通知使用全部平台' : '与接口统计的平台口径一致；选「全部平台」即不限端'}
+                extra={isFeedbackReply
+                  ? '反馈回复通知使用全部平台'
+                  : isDisclaimerDraft
+                    // 这一格填了版本号就是免责声明，渠道会被服务端强制改写
+                    ? '免责声明固定只投桌面三端（Windows / Linux / macOS），保存时会自动改写为这三项'
+                    : '与接口统计的平台口径一致；选「全部平台」即不限端'}
                 rules={[{ required: true, message: '请选择投放平台' }]}
                 // 兼容层不支持 normalize，「全部平台」与具体平台的互斥在这里做
                 getValueFromEvent={(next: string[]) =>
@@ -402,6 +500,33 @@ export default function NoticeManagement() {
             <Col xs={24} md={12}>
               <Form.Item name="firstLoginOnly" label="仅首次登录弹出" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
                 <Switch checkedChildren="仅首次" unCheckedChildren="每次" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/*
+            首次启动免责声明专用的两列。判定条件写在客户端（qt-pc stores/disclaimer.ts）：
+            「开屏位 + 条款版本号非空」= 这条是免责声明，会从通用开屏弹窗里摘出去单独处理。
+            所以这两项只在真的要做免责声明时填，普通公告留空。
+          */}
+          <Row gutter={16}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                name="readSeconds"
+                label="确认前读秒（秒）"
+                extra="留空或 0 = 不读秒，确认键立即可点。仅对首次启动免责声明生效"
+              >
+                <InputNumber min={0} max={60} style={{ width: '100%' }} placeholder="如 3" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                name="termsVersion"
+                label="条款版本号"
+                extra="填了才算「首次启动免责声明」；改这个值 = 所有客户端重新弹一次。如 2026.10"
+                rules={[{ max: 32, message: '版本号最长 32 个字符' }]}
+              >
+                <Input placeholder="留空 = 不是免责声明" />
               </Form.Item>
             </Col>
           </Row>

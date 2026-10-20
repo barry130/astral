@@ -238,11 +238,57 @@ public class FeedbackNoticeService {
         notice.setChannel(NotifyEventRegistry.isFeedbackReply(notice.getScene())
                 ? NoticeConstants.CHANNEL_ALL : NoticeChannel.normalizeForStore(notice.getChannel()));
         applyNotNullDefaults(notice);
+        clampReadSeconds(notice);
+        clampDisclaimerChannel(notice);
         notice.setCreateTime(LocalDateTime.now());
         notice.setUpdateTime(LocalDateTime.now());
         sysNoticeMapper.insert(notice);
         evictNoticeCache();
         return notice;
+    }
+
+    /**
+     * 读秒时长上限（秒）。与后台表单 {@code InputNumber max={60}} 同值，此处再兜一次：
+     * 表单能拦住的只有走界面的操作，直接调 {@code POST /admin/messages} 或脚本写库仍可塞大值。
+     * <p>为什么必须有上限：这个读秒对应 qt-pc 的全屏免责声明弹窗，**没有关闭键**，
+     * 用户只能等读秒走完 —— 写个 600 就等于把所有新用户首次启动锁十分钟。
+     * 小数点与负数一律归 0（0 = 不读秒，确认键立即可点，最安全的一侧）。</p>
+     */
+    private static final long MAX_READ_SECONDS = 60L;
+
+    /** 读秒夹到 [0, 60]；null 保持 null（= 不读秒） */
+    private static void clampReadSeconds(SysNotice notice) {
+        Long v = notice.getReadSeconds();
+        if (v == null) return;
+        notice.setReadSeconds(Math.min(MAX_READ_SECONDS, Math.max(0L, v)));
+    }
+
+    /**
+     * 免责声明一律只投桌面三端（{@code app-windows / app-linux / app-macos}）。
+     *
+     * <p><b>为什么必须在服务端强制：</b>这条公告的两个专用字段只有 qt-pc 认识
+     * （`stores/disclaimer.ts` 按「开屏位 + terms_version 非空」认领）。如果它被投到
+     * 手机端，qt-uniappx 会当成普通开屏公告处理 —— 而免责声明模板带
+     * `dialog_closable=0`，其开屏弹窗里「我知道了」在不可关闭时执行的是
+     * {@code exitApp()}，用户点一下 App 直接退出；并且 uniappx 不记录 terms_version，
+     * 于是每次启动都会再弹一次。这不是文案问题，是把别端 App 点崩。</p>
+     *
+     * <p>同时顺带修掉另一半：qt-pc 的 {@code X-App-Ut} 跟着编译目标走
+     * （Windows 是 {@code app-windows}、Linux 是 {@code app-linux}、macOS 是
+     * {@code app-macos}），后台若只勾 Windows，Linux/macOS 的 PC 版本永远收不到声明。
+     * 所以这里不是「取交集」，而是**直接改成桌面三端全选**。</p>
+     *
+     * <p>非声明公告（terms_version 为空）不受影响，仍按后台所选渠道投放。</p>
+     */
+    private static void clampDisclaimerChannel(SysNotice notice) {
+        String terms = notice.getTermsVersion();
+        if (terms == null || terms.isBlank()) return;
+        String want = NoticeChannel.desktopOnlyValue();
+        if (!want.equals(notice.getChannel())) {
+            log.info("[FeedbackPlugin] 免责声明渠道按规则收窄为桌面三端：{} -> {}",
+                    notice.getChannel(), want);
+        }
+        notice.setChannel(want);
     }
 
     /**
@@ -283,6 +329,10 @@ public class FeedbackNoticeService {
      */
     public void update(Long id, SysNotice notice) {
         applyNotNullDefaults(notice);
+        clampReadSeconds(notice);
+        // 先按「是不是免责声明」定渠道，再进白名单分支：命中的渠道必须落库，
+        // 否则编辑一条已有声明时（表单没提交 channel）会留着旧的手机端投放值。
+        clampDisclaimerChannel(notice);
         LambdaUpdateWrapper<SysNotice> uw = new LambdaUpdateWrapper<SysNotice>()
                 .eq(SysNotice::getId, id);
         // 事件归属取数据库行，避免编辑请求修改 scene 绕过回复通知的全平台约束。
@@ -304,6 +354,9 @@ public class FeedbackNoticeService {
                 .set(SysNotice::getDialogClosable, notice.getDialogClosable())
                 .set(SysNotice::getFirstLoginOnly, notice.getFirstLoginOnly())
                 .set(SysNotice::getMarquee, notice.getMarquee())
+                // 首次启动免责声明专用两列（可空，清空即写 NULL = 不读秒 / 无版本号）
+                .set(SysNotice::getReadSeconds, notice.getReadSeconds())
+                .set(SysNotice::getTermsVersion, notice.getTermsVersion())
                 .set(SysNotice::getEffectiveStart, notice.getEffectiveStart())
                 .set(SysNotice::getEffectiveEnd, notice.getEffectiveEnd())
                 .set(SysNotice::getVersionMin, notice.getVersionMin())

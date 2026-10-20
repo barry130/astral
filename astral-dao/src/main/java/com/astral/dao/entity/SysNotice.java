@@ -60,6 +60,13 @@ public class SysNotice {
 
     private Long marquee;
 
+    @TableField("read_seconds")
+    private Long readSeconds;
+
+    @TableField("terms_version")
+    @Size(max = 32)
+    private String termsVersion;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField("effective_start")
     private LocalDateTime effectiveStart;
