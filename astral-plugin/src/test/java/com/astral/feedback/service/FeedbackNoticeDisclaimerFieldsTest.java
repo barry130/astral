@@ -156,16 +156,19 @@ class FeedbackNoticeDisclaimerFieldsTest {
         verify(mapper).insert(fresh);
     }
 
-    // ==================== 渠道：免责声明只投桌面三端 ====================
+    // ==================== 渠道：免责声明投 App 六端且强制可关闭 ====================
+
+    /** 免责声明固定投放的 App 六端（不含 web） */
+    private static final String APP_SIX_CHANNELS =
+            "app-android,app-ios,app-windows,app-linux,app-macos,app-harmony";
 
     /**
-     * 声明被人勾了「不限平台」也必须收窄到桌面三端。
-     * <p>放出去的后果不是文案难看：qt-uniappx 不认识 terms_version，会当成普通开屏公告，
-     * 而声明模板带 {@code dialog_closable=0} —— 那个弹窗里「我知道了」在不可关闭时调的是
-     * {@code exitApp()}，用户点一下 App 直接退出，且每次启动都再弹。</p>
+     * 声明被人勾了「不限平台」也必须收窄到 App 六端。
+     * <p>为什么不能只管桌面三端：Android / iOS / 鸿蒙也由这张表下发声明，
+     * 漏掉哪个平台，那个平台的用户就永远看不到。</p>
      */
     @Test
-    void createForcesDisclaimerToDesktopChannels() {
+    void createForcesDisclaimerToAppChannels() {
         SysNotice fresh = new SysNotice();
         fresh.setTitle("使用前请先阅读");
         fresh.setTermsVersion("2026.10");
@@ -173,40 +176,71 @@ class FeedbackNoticeDisclaimerFieldsTest {
 
         service.create(fresh);
 
-        assertEquals("app-windows,app-linux,app-macos", fresh.getChannel(),
-                "不管后台勾了什么，声明只投桌面三端");
+        assertEquals(APP_SIX_CHANNELS, fresh.getChannel(),
+                "不管后台勾了什么，声明只投 App 六端");
     }
 
     /**
-     * 只勾 Windows 也要补齐 Linux/macOS：qt-pc 的 {@code X-App-Ut} 跟着编译目标走，
-     * 漏掉哪个平台，那个平台的 PC 用户就永远看不到声明。
+     * 只勾 Windows 也要补齐其余五端：各端 {@code X-App-Ut} 跟着编译目标走，
+     * 漏掉哪个平台，那个平台的用户就永远看不到声明。
      */
     @Test
-    void createFillsAllDesktopPlatformsEvenIfOnlyWindowsGiven() {
+    void createFillsAllAppPlatformsEvenIfOnlyWindowsGiven() {
         SysNotice fresh = new SysNotice();
         fresh.setTermsVersion("2026.10");
         fresh.setChannel("app-windows");
 
         service.create(fresh);
 
-        assertEquals("app-windows,app-linux,app-macos", fresh.getChannel());
+        assertEquals(APP_SIX_CHANNELS, fresh.getChannel());
     }
 
-    /** 编辑路径同样收窄（表单没提交 channel 时也要落到桌面三端，不能留着旧的手机端值） */
+    /** 编辑路径同样收窄（表单没提交 channel 时也要落到 App 六端，不能留着旧的单端值） */
     @Test
-    void editingDisclaimerForcesDesktopChannels() {
+    void editingDisclaimerForcesAppChannels() {
         SysNotice edit = new SysNotice();
         edit.setTermsVersion("2026.10");
         edit.setChannel("app-android,app-ios");
 
         LambdaUpdateWrapper<SysNotice> wrapper = runUpdate(edit);
 
-        assertEquals("app-windows,app-linux,app-macos", setValueOf(wrapper, "channel"));
+        assertEquals(APP_SIX_CHANNELS, setValueOf(wrapper, "channel"));
+    }
+
+    /**
+     * 声明必须强制 {@code dialog_closable=1}，后台填 0 也不认。
+     * <p>3.0.7 及以前的 qt-uniappx 不认识 terms_version，会把声明当普通开屏公告处理，
+     * 而 {@code qt-notice-splash} 在不可关闭时点「我知道了」执行的是 {@code exitApp()} ——
+     * 用户点一下 App 直接退出，且每次启动都再弹。这条断言守的就是这个崩溃路径。</p>
+     */
+    @Test
+    void createForcesDisclaimerDialogClosable() {
+        SysNotice fresh = new SysNotice();
+        fresh.setTermsVersion("2026.10");
+        fresh.setDialogClosable(0L);
+
+        service.create(fresh);
+
+        assertEquals(1L, fresh.getDialogClosable(), "声明必须强制可关闭，堵掉老 APK 的 exitApp() 路径");
+    }
+
+    /** 编辑路径同样强制可关闭（后台把开关关掉也改写回 1） */
+    @Test
+    void editingDisclaimerForcesDialogClosable() {
+        SysNotice edit = new SysNotice();
+        edit.setTermsVersion("2026.10");
+        edit.setDialogClosable(0L);
+
+        LambdaUpdateWrapper<SysNotice> wrapper = runUpdate(edit);
+
+        assertEquals(1L, setValueOf(wrapper, "dialog_closable"));
     }
 
     /**
      * 普通公告不受影响 —— 这条守的是「别把整个公告系统的渠道逻辑改坏」。
      * 顺带覆盖「把一条声明改回普通公告」：清空版本号后渠道回到后台所选。
+     * <p>dialog_closable 也是后台说了算：普通公告勾「不可关闭」是正当需求
+     * （强制可关闭只对声明成立）。</p>
      */
     @Test
     void ordinaryNoticeKeepsChosenChannels() {
@@ -217,5 +251,18 @@ class FeedbackNoticeDisclaimerFieldsTest {
         service.create(fresh);
 
         assertEquals("app-android,app-ios", fresh.getChannel());
+    }
+
+    /** 普通公告的 dialog_closable=0 不该被连带改掉（强制可关闭只针对声明） */
+    @Test
+    void ordinaryNoticeKeepsDialogClosable() {
+        SysNotice fresh = new SysNotice();
+        fresh.setTitle("普通开屏公告");
+        fresh.setChannel("app-android");
+        fresh.setDialogClosable(0L);
+
+        service.create(fresh);
+
+        assertEquals(0L, fresh.getDialogClosable(), "普通公告的不可关闭是正当需求，不能被声明的规则连带改掉");
     }
 }

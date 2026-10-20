@@ -32,17 +32,20 @@ const AUDIENCE_OPTIONS = [
 const DEFAULT_CHANNELS = ['app-android', 'app-ios'];
 
 /**
- * 免责声明固定只投桌面三端，与后端 `NoticeChannel.desktopOnlyValue()` 保持一致。
+ * 免责声明固定只投 App 六端（Android / iOS / 鸿蒙 / Windows / Linux / macOS），
+ * 与后端 `NoticeChannel.allAppValue()` 保持一致；**不含 Web**（qt-web 不支持这套字段）。
  *
- * 两件事必须一起做：客户端 `X-App-Ut` 跟着编译目标走（Windows / Linux / macOS 各一个值），
- * 只勾 Windows 会让另外两个平台的 PC 版永远收不到声明；而投到手机端更糟 ——
- * uniappx 不认识 termsVersion，会把带 `dialogClosable=0` 的声明当成不可关闭开屏公告，
- * 那个弹窗点「我知道了」执行的是 exitApp()。
+ * 为什么要在服务端强制改写：各端 `X-App-Ut` 跟着编译目标走（Windows→app-windows、
+ * 鸿蒙原生包→app-harmony……），少勾一个平台那个平台的用户就永远收不到声明；
+ * 同时老版本 APK（3.0.7 及以前）不认识 termsVersion，会把声明当成普通开屏公告，
+ * 而声明模板是 `dialogClosable=0` —— 那个弹窗点「我知道了」执行的是 exitApp()。
  *
- * 服务端 `FeedbackNoticeService.clampDisclaimerChannel` 已经强制改写，这里同步是为了
- * 表单上显示的就是最终落库值（免得运营以为自己选的生效了）。
+ * 服务端 `FeedbackNoticeService.clampDisclaimerChannel` 已经强制改写渠道并把
+ * `dialogClosable` 顶回 1，这里同步是为了表单上显示的就是最终落库值（免得运营以为自己选的生效了）。
  */
-const DISCLAIMER_DESKTOP_CHANNELS = ['app-windows', 'app-linux', 'app-macos'];
+const DISCLAIMER_CHANNELS = [
+  'app-android', 'app-ios', 'app-windows', 'app-linux', 'app-macos', 'app-harmony',
+];
 
 /**
  * 首次启动免责声明的一键模板（后台「消息管理」→ 新建通知 → 选它自动填表）。
@@ -54,13 +57,18 @@ const DISCLAIMER_DESKTOP_CHANNELS = ['app-windows', 'app-linux', 'app-macos'];
  *
  * 正文是富文本（客户端 lib/richText 白名单渲染，不走 innerHTML），
  * 因此可以用 h3/p/strong，但不要写 style/script/iframe（会被过滤）。
+ *
+ * `dialogClosable` 填 1（可关闭）：声明本身靠读秒防手滑，不需要靠「不可关闭」；
+ * 而老版本 APK 不认识 termsVersion，会把这条公告当普通开屏公告，不可关闭时
+ * 点「我知道了」执行 exitApp()。服务端 `clampDisclaimerChannel` 也会强制顶回 1，
+ * 这里同值是为了表单显示的就是最终落库值。
  */
 const DISCLAIMER_TEMPLATE: Partial<SysNotice> & { display?: number } = {
   title: '使用前请先阅读',
   noticeType: 'announce',
   display: 1,
   audience: 'ALL',
-  dialogClosable: 0,
+  dialogClosable: 1,
   firstLoginOnly: 0,
   isShow: 1,
   isTop: 0,
@@ -128,7 +136,7 @@ export default function NoticeManagement() {
   const isFeedbackReply = editing?.scene === 'feedbackAdminReplied' || editing?.scene === 'feedbackUserReplied';
   /**
    * 表单里「条款版本号」这一格一旦填了，这条公告就是首次启动免责声明：
-   * 客户端按它认领，服务端按它把渠道收窄到桌面三端。这里订阅它，是为了在渠道那一格
+   * 客户端按它认领，服务端按它把渠道强制改写为 App 六端。这里订阅它，是为了在渠道那一格
    * 当场说明白「你选的平台会被改写」，而不是等提交后才发现落库值和选的不一样。
    */
   const termsVersionInput = Form.useWatch('termsVersion', form) as string | undefined;
@@ -188,7 +196,7 @@ export default function NoticeManagement() {
     form.resetFields();
     form.setFieldsValue({
       ...DISCLAIMER_TEMPLATE,
-      channel: [...DISCLAIMER_DESKTOP_CHANNELS],
+      channel: [...DISCLAIMER_CHANNELS],
       display: [DISCLAIMER_TEMPLATE.display ?? 1],
       effectiveRange: undefined,
     });
@@ -409,7 +417,7 @@ export default function NoticeManagement() {
                   ? '反馈回复通知使用全部平台'
                   : isDisclaimerDraft
                     // 这一格填了版本号就是免责声明，渠道会被服务端强制改写
-                    ? '免责声明固定只投桌面三端（Windows / Linux / macOS），保存时会自动改写为这三项'
+                    ? '免责声明固定只投 App 六端，不含 Web（Android / iOS / 鸿蒙 / Windows / Linux / macOS），保存时会自动改写为这六项，并强制「可关闭」'
                     : '与接口统计的平台口径一致；选「全部平台」即不限端'}
                 rules={[{ required: true, message: '请选择投放平台' }]}
                 // 兼容层不支持 normalize，「全部平台」与具体平台的互斥在这里做

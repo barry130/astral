@@ -65,11 +65,16 @@ public final class NoticeChannel {
     public static final String LEGACY_PC = "pc";
 
     /**
-     * 桌面三端：qt-pc（Tauri）的三个编译目标。
-     * <p>顺序同 {@link #PLATFORMS}，保证 {@link #desktopOnly} 的输出稳定。</p>
+     * App 六端：所有「装出来是一个 App、带统一客户端系统头」的平台，即 {@link #PLATFORMS}
+     * 去掉 {@code web}。
+     * <p>qt-uniappx（Android / iOS / 鸿蒙原生包）与 qt-pc（Tauri 的 Windows / Linux / macOS）
+     * 都在其中；qt-web 不存在，Web/H5 也不支持免责声明那套字段。</p>
+     * <p>顺序同 {@link #PLATFORMS}，保证 {@link #allAppValue} 的输出稳定。</p>
      */
-    public static final List<String> DESKTOP = List.of(
-            ClientHeaders.UT_WINDOWS, ClientHeaders.UT_LINUX, ClientHeaders.UT_MACOS);
+    public static final List<String> APP_PLATFORMS = List.of(
+            ClientHeaders.UT_ANDROID, ClientHeaders.UT_IOS,
+            ClientHeaders.UT_WINDOWS, ClientHeaders.UT_LINUX, ClientHeaders.UT_MACOS,
+            ClientHeaders.UT_HARMONY);
 
     /** 移动端双平台（遗留 {@code app} 展开后的集合，也是缺省投放集合） */
     private static final List<String> MOBILE_APP = List.of(ClientHeaders.UT_ANDROID, ClientHeaders.UT_IOS);
@@ -263,12 +268,13 @@ public final class NoticeChannel {
     }
 
     /**
-     * 桌面三端的落库值（{@code app-windows,app-linux,app-macos}）。
-     * <p>给「只投桌面」的通知用：目前唯一使用者是首次启动免责声明，
+     * App 六端的落库值（{@code app-android,app-ios,app-windows,app-linux,app-macos,app-harmony}，
+     * 共 63 字符 &lt; {@link #MAX_STORED_LENGTH}）。
+     * <p>给「投给所有 App、但绝不投 Web」的通知用：目前唯一使用者是首次启动免责声明，
      * 理由见 {@code FeedbackNoticeService#clampDisclaimerChannel}。</p>
      */
-    public static String desktopOnlyValue() {
-        return join(DESKTOP);
+    public static String allAppValue() {
+        return join(APP_PLATFORMS);
     }
 
     private static String join(Collection<String> values) {

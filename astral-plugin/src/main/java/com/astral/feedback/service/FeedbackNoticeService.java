@@ -264,31 +264,37 @@ public class FeedbackNoticeService {
     }
 
     /**
-     * 免责声明一律只投桌面三端（{@code app-windows / app-linux / app-macos}）。
+     * 免责声明一律只投 App 六端
+     * （{@code app-android / app-ios / app-windows / app-linux / app-macos / app-harmony}，不含 {@code web}），
+     * 并强制 {@code dialog_closable=1}。
      *
-     * <p><b>为什么必须在服务端强制：</b>这条公告的两个专用字段只有 qt-pc 认识
-     * （`stores/disclaimer.ts` 按「开屏位 + terms_version 非空」认领）。如果它被投到
-     * 手机端，qt-uniappx 会当成普通开屏公告处理 —— 而免责声明模板带
-     * `dialog_closable=0`，其开屏弹窗里「我知道了」在不可关闭时执行的是
-     * {@code exitApp()}，用户点一下 App 直接退出；并且 uniappx 不记录 terms_version，
-     * 于是每次启动都会再弹一次。这不是文案问题，是把别端 App 点崩。</p>
+     * <p><b>为什么渠道必须在服务端强制：</b>客户端不登记 terms_version 就会把声明当成普通开屏公告，
+     * 而后台一键模板填的是 {@code dialog_closable=0} —— 那个开屏弹窗里「我知道了」在不可关闭时
+     * 执行的是 {@code exitApp()}。所以不能只依赖后台勾选：
+     * ① 各端 {@code X-App-Ut} 跟着编译目标走（Windows→{@code app-windows}、鸿蒙原生包→{@code app-harmony}……），
+     * 少勾一个平台，那个平台的用户就永远收不到声明；
+     * ② 老版本 APK 完全不可控，只勾了具体平台也可能被改错。
+     * 因此这里不是「取交集」，而是**直接改成 App 六端全选**。</p>
      *
-     * <p>同时顺带修掉另一半：qt-pc 的 {@code X-App-Ut} 跟着编译目标走
-     * （Windows 是 {@code app-windows}、Linux 是 {@code app-linux}、macOS 是
-     * {@code app-macos}），后台若只勾 Windows，Linux/macOS 的 PC 版本永远收不到声明。
-     * 所以这里不是「取交集」，而是**直接改成桌面三端全选**。</p>
+     * <p><b>为什么同时强制可关闭：</b>3.0.7 及以前的 qt-uniappx 不认识 terms_version，
+     * 会把这条公告当普通开屏公告走 {@code qt-notice-splash}；若 {@code dialog_closable=0}，
+     * 用户在 {@code onKnow()} 里点「我知道了」执行 {@code exitApp()}，点一下 App 就退出，
+     * 且每次启动都再弹一次。强制可关闭把这个崩溃路径堵死 —— 新客户端本来就不走 splash
+     * （qt-pc 按「开屏位 + termsVersion 非空」认领，不会读到这一位），所以对它们是零影响。</p>
      *
-     * <p>非声明公告（terms_version 为空）不受影响，仍按后台所选渠道投放。</p>
+     * <p>非声明公告（terms_version 为空）不受影响：渠道与 dialog_closable 都仍按后台所选投放。</p>
      */
     private static void clampDisclaimerChannel(SysNotice notice) {
         String terms = notice.getTermsVersion();
         if (terms == null || terms.isBlank()) return;
-        String want = NoticeChannel.desktopOnlyValue();
+        String want = NoticeChannel.allAppValue();
         if (!want.equals(notice.getChannel())) {
-            log.info("[FeedbackPlugin] 免责声明渠道按规则收窄为桌面三端：{} -> {}",
+            log.info("[FeedbackPlugin] 免责声明渠道按规则改写为 App 六端：{} -> {}",
                     notice.getChannel(), want);
         }
         notice.setChannel(want);
+        // 老 APK 会把声明当普通开屏公告；dialog_closable=0 时它的「我知道了」= exitApp()
+        notice.setDialogClosable(1L);
     }
 
     /**
