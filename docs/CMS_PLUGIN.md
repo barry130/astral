@@ -229,7 +229,16 @@ PDF/打印走浏览器自身能力（前台详情页直接「打印 → 另存�
 
 ## 从 Typecho 迁移内容
 
-`data-migration/` 提供一套可重跑的迁移脚本（`dump_typecho.py` 导出 → `etl_to_cms.py` 清洗入库，另有 `backfill_post_category.py` 回补多分类关联），已用于把 `www.canace.cn` 的 24 篇文章 + 3 个页面 + 10 个分类 + 站点设置迁入 cms 表。迁移口径（主键保留源 cid、多分类全部保留且第一个为主分类、正文 `<!--markdown-->` 与 Joe 主题标签清洗、摘要与封面自动生成等）见 `data-migration/README.md`。
+本仓库不包含迁移工具。本站现有内容（24 篇文章 + 3 个页面 + 10 个分类 + 站点设置）由一次性脚本从 Typecho 库导入，脚本涉及具体站点的数据库连接信息，故不纳入版本管理。
+
+迁移时的几条口径，供日后同类迁移参考：
+
+- **主键沿用源 cid**。Typecho 的 slug 多数就是数字，保留 cid 可让 `/post/3`、`/wiki/qt` 这类旧链接直接命中，无需重定向表。
+- **正文清洗**：剥离行首 `<!--markdown-->`（Typecho Markdown 插件标记），并把 Joe 主题的私有标签（`<joe-message>` 等）转成标准 Markdown 引用块。
+- **摘要与封面自动生成**：取正文首个段落为摘要，首张图片为封面。
+- **多分类**：源站一篇文章可挂多个分类，cms 侧由 `cms_post_category` 关联表承载，第一个（按源站排序）同时写入 `cms_post.category_id` 作为主分类。
+- **阅读数保留**：Typecho 的 `views` 直接映射到 `cms_post.views`。
+- **号段安全**：`cms_*` 表主键由 `sequence_segment` 发号，起始号段 1000000 远高于导入的 cid（≤ 104），故显式指定 id 插入不会与运行时发号冲突。
 
 ## 实现索引
 

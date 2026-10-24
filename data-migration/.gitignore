@@ -1,6 +1,0 @@
-# 导出的中间数据（可由 dump_typecho.py 重新生成，体积约 400 KB，不入库）
-typecho-dump.json
-
-# 迁移期间用于人工核验的截图与临时浏览器配置
-_shots/
-_chrome/
