@@ -1,0 +1,640 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * astral-blog 全局样式。
+ *
+ * 视觉基调：暖纸色底（象牙）+ 白色内容卡 + zinc 墨色文字，唯一强调色 sky-700。
+ * 克制优先——层次靠留白、字距、发丝描边与极淡投影建立，不堆装饰、不加高饱和渐变。
+ */
+
+@theme {
+  /* 字体：中文优先（PingFang SC / 思源黑体），西文回退到系统无衬线 */
+  --font-sans:
+    "PingFang SC", "HarmonyOS Sans SC", "Source Han Sans SC", "Noto Sans SC", "Hiragino Sans GB",
+    "Microsoft YaHei", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New",
+    monospace;
+
+  /* 表面：页面为极淡暖纸色，内容为白卡，弱化块比页面再深一档 */
+  --color-canvas: #f9f7f3;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f4f1ec;
+  --color-surface-sunken: #efece5;
+
+  /* 文字：zinc 墨色体系（标题 / 正文 / 次要 / 弱化） */
+  --color-ink: #18181b;
+  --color-ink-body: #3f3f46;
+  --color-ink-soft: #64646c;
+  --color-ink-faint: #8a8a92;
+
+  /* 描边：暖灰，比纯 zinc 柔和，与纸色底同源 */
+  --color-line: #e7e2da;
+  --color-line-soft: #f1ede6;
+  --color-line-strong: #d5cfc4;
+
+  /* 品牌色：sky-700 一系，唯一彩色家族 */
+  --color-brand: #0369a1;
+  --color-brand-strong: #075985;
+  --color-brand-wash: #eff6fb;
+  --color-brand-line: #cfe3ef;
+
+  /* 圆角与投影：小而稳，避免大圆角 + 重阴影的“塑料感” */
+  --radius-card: 16px;
+  --radius-panel: 12px;
+  --shadow-card: 0 1px 2px rgb(24 24 27 / 0.035), 0 8px 20px -16px rgb(24 24 27 / 0.12);
+  --shadow-card-hover: 0 1px 2px rgb(24 24 27 / 0.04), 0 18px 36px -24px rgb(24 24 27 / 0.18);
+  --shadow-paper: 0 1px 2px rgb(24 24 27 / 0.03), 0 32px 60px -48px rgb(24 24 27 / 0.22);
+
+  /*
+   * shadcn/ui 语义令牌 —— 从 astral-front 的 components/ui/ 拷来的组件依赖这套命名
+   * （bg-background / text-foreground / border-border / bg-primary …）。
+   * 这里把它们指回博客自己的暖纸色主题，使组件外观与管理端一致而底色仍是博客风格。
+   * 注意：博客不做深色模式，故不提供 [data-theme="dark"] 覆盖。
+   */
+  --color-background: #f9f7f3;
+  --color-foreground: #18181b;
+  --color-card: #ffffff;
+  --color-card-foreground: #18181b;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #18181b;
+  --color-primary: #0369a1;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f4f1ec;
+  --color-secondary-foreground: #3f3f46;
+  --color-muted: #f4f1ec;
+  --color-muted-foreground: #64646c;
+  --color-accent: #f4f1ec;
+  --color-accent-foreground: #18181b;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e7e2da;
+  --color-input: #d5cfc4;
+  --color-ring: #0369a1;
+
+  /* shadcn 组件用 rounded-md/lg 时取这一档变量 */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+}
+
+@layer base {
+  html {
+    /* 明色基准：滚动条与原生控件（日期/下拉）跟随浅色主题 */
+    color-scheme: light;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    /* 触屏点击不再等 300ms 双击判定 */
+    touch-action: manipulation;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink-body);
+    font-family: var(--font-sans);
+    font-feature-settings: "kern" 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* 点击高亮统一交给 :focus-visible / :active 表达，默认灰块与纸色底不搭 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 触屏设备可点区域补到 44px（组件里已放大的保持原样） */
+  @media (pointer: coarse) {
+    button:not([data-compact]),
+    [role="button"]:not([data-compact]) {
+      min-height: 2.75rem;
+    }
+  }
+
+  /* 弹层打开时不要连带滚动背后页面 */
+  [data-slot="dialog-content"] {
+    overscroll-behavior: contain;
+  }
+
+  /* viewport-fit=cover 让页面铺到刘海 / 圆角下方，粘顶栏与固定工作台得自己让开安全区 */
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  ::selection {
+    background-color: #d8e8f3;
+    color: #0c4a6e;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* 全站横向容器：固定占视口宽度的 80%。
+     max-width 2200px 只是给超宽屏（> 2750px）兜底，
+     2560 屏上仍是 2048px = 视口 80%，不会提前被夹窄。 */
+  .page-shell {
+    width: 80%;
+    margin-inline: auto;
+    min-width: 0;
+    max-width: 2200px;
+  }
+
+  /* 窄屏（< 1024px）视口宽度本来就紧，改回接近满宽 + 固定内边距 */
+  @media (max-width: 1023px) {
+    .page-shell {
+      width: 100%;
+      max-width: none;
+      padding-inline: 1.25rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .page-shell {
+      min-width: 900px;
+    }
+  }
+
+  /* 分区小标题：字距拉开的大写标签，用于侧栏 / 页脚 / 文末标签 */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--color-ink-faint);
+  }
+
+  /* 内容白卡：发丝描边 + 极淡投影，全站统一的“纸面” */
+  .paper {
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ---------- Markdown 正文（文章 / Wiki 共用，marked 服务端渲染） ---------- */
+
+  .markdown {
+    /* 不设上限：容器（.page-shell）已经按视口 80% 收过一道，
+       正文再叠一层 ch 上限就会又变回一根窄柱 */
+    color: var(--color-ink-body);
+    /* 字号随视口放大：1440 屏约 17px，2560 屏约 21px。
+       容器按 80% 铺开后，固定字号在大屏上会显得又稀又小 */
+    font-size: clamp(1.0625rem, 0.35vw + 0.75rem, 1.3125rem);
+    line-height: 1.85;
+    letter-spacing: 0.012em;
+    overflow-wrap: break-word;
+  }
+
+  .markdown > :first-child {
+    margin-top: 0;
+  }
+
+  .markdown > :last-child {
+    margin-bottom: 0;
+  }
+
+  .markdown h1,
+  .markdown h2,
+  .markdown h3,
+  .markdown h4,
+  .markdown h5,
+  .markdown h6 {
+    color: var(--color-ink);
+    font-weight: 600;
+    line-height: 1.38;
+    letter-spacing: -0.012em;
+    scroll-margin-top: 6rem;
+    /* 标题折行时让两行长度接近，避免末行只剩一两个字的孤行 */
+    text-wrap: balance;
+  }
+
+  /* 正文 h1 若用原来的 1.95em 会比页面标题（26~30px）还大，一眼出现两个「标题」。
+     压到 1.45em 并加一道细下划线，与 h2 的左侧竖线区分开：
+     层级读作「页面标题 > 章（h1 带下划线）> 节（h2 带竖线）> 小节（h3）」 */
+  .markdown h1 {
+    margin: 2.2em 0 0.85em;
+    padding-bottom: 0.32em;
+    border-bottom: 1px solid var(--color-line);
+    font-size: 1.45em;
+  }
+
+  /* h2 用左侧短竖线代替下划线，层级分明又不抢视线 */
+  .markdown h2 {
+    position: relative;
+    margin: 2em 0 0.8em;
+    padding-left: 0.72em;
+    font-size: 1.18em;
+  }
+
+  .markdown h2::before {
+    content: "";
+    position: absolute;
+    top: 0.3em;
+    bottom: 0.28em;
+    left: 0;
+    width: 3px;
+    border-radius: 999px;
+    background-color: var(--color-brand);
+    opacity: 0.7;
+  }
+
+  .markdown h3 {
+    margin: 1.8em 0 0.6em;
+    font-size: 1.08em;
+  }
+
+  .markdown h4 {
+    margin: 1.6em 0 0.5em;
+    font-size: 1em;
+  }
+
+  .markdown h5,
+  .markdown h6 {
+    margin: 1.6em 0 0.55em;
+    font-size: 1em;
+    letter-spacing: 0;
+    color: var(--color-ink-soft);
+  }
+
+  .markdown p {
+    margin: 1.1em 0;
+    text-wrap: pretty;
+  }
+
+  .markdown a {
+    color: var(--color-brand);
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: color-mix(in srgb, var(--color-brand) 28%, transparent);
+    transition:
+      color 0.15s ease,
+      text-decoration-color 0.15s ease;
+  }
+
+  .markdown a:hover {
+    color: var(--color-brand-strong);
+    text-decoration-color: currentColor;
+  }
+
+  .markdown strong {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .markdown ul,
+  .markdown ol {
+    margin: 1.1em 0;
+    padding-left: 1.45em;
+  }
+
+  .markdown ul {
+    list-style: disc;
+  }
+
+  .markdown ol {
+    list-style: decimal;
+  }
+
+  .markdown li {
+    margin: 0.45em 0;
+    padding-left: 0.15em;
+  }
+
+  .markdown li::marker {
+    color: var(--color-ink-faint);
+  }
+
+  .markdown li > ul,
+  .markdown li > ol {
+    margin: 0.5em 0 0.4em;
+  }
+
+  .markdown li > p {
+    margin: 0.4em 0;
+  }
+
+  .markdown blockquote {
+    margin: 1.7em 0;
+    padding: 0.85em 1.1em;
+    border-left: 2px solid var(--color-line-strong);
+    border-radius: 0 var(--radius-panel) var(--radius-panel) 0;
+    background-color: var(--color-surface-muted);
+    color: var(--color-ink-soft);
+  }
+
+  .markdown blockquote > :first-child {
+    margin-top: 0;
+  }
+
+  .markdown blockquote > :last-child {
+    margin-bottom: 0;
+  }
+
+  .markdown :not(pre) > code {
+    padding: 0.14em 0.38em;
+    border: 1px solid var(--color-line);
+    border-radius: 5px;
+    background-color: var(--color-surface-muted);
+    color: var(--color-ink-body);
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    overflow-wrap: anywhere;
+  }
+
+  /* 代码块用暖调深色：长代码不刺眼，与纸面形成清晰层次。
+     外层 .md-code 提供 mac 风格标题条（三个圆点 + 语言名 + 复制按钮），
+     着色由 highlight.js 的 .hljs-* 类完成（配色见下方「语法高亮主题」）。 */
+  .markdown .md-code {
+    margin: 1.7em 0;
+    overflow: hidden;
+    border: 1px solid #2b2824;
+    border-radius: var(--radius-panel);
+    background-color: #1c1b19;
+  }
+
+  .markdown .md-code-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    padding: 0.55em 0.9em;
+    border-bottom: 1px solid #2b2824;
+    background-color: #232220;
+  }
+
+  .markdown .md-code-dots {
+    display: inline-flex;
+    gap: 5px;
+  }
+
+  .markdown .md-code-dots i {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background-color: #4a463f;
+  }
+
+  .markdown .md-code-dots i:nth-child(1) {
+    background-color: #e06c60;
+  }
+
+  .markdown .md-code-dots i:nth-child(2) {
+    background-color: #d9a441;
+  }
+
+  .markdown .md-code-dots i:nth-child(3) {
+    background-color: #6aa84f;
+  }
+
+  .markdown .md-code-lang {
+    color: #8d887e;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+  }
+
+  .markdown .md-code-copy {
+    margin-left: auto;
+    padding: 0.15em 0.55em;
+    border: 1px solid #3a3730;
+    border-radius: 5px;
+    background-color: transparent;
+    color: #a9a49a;
+    font-size: 0.72rem;
+    line-height: 1.6;
+    cursor: pointer;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .markdown .md-code-copy:hover {
+    border-color: #565147;
+    color: #e7e3db;
+  }
+
+  .markdown .md-code-copy[data-copied='true'] {
+    border-color: #4d7a45;
+    color: #8fc07f;
+  }
+
+  .markdown pre {
+    margin: 0;
+    padding: 1.1em 1.25em;
+    overflow-x: auto;
+    background-color: transparent;
+    color: #e7e3db;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    scrollbar-width: thin;
+    scrollbar-color: #4a463f transparent;
+  }
+
+  .markdown pre code {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-family: var(--font-mono);
+    font-size: 1em;
+  }
+
+  .markdown pre::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .markdown pre::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background-color: #4a463f;
+  }
+
+  .markdown img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 1.8em auto;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-panel);
+    background-color: var(--color-surface-muted);
+    box-shadow: 0 20px 40px -32px rgb(24 24 27 / 0.4);
+  }
+
+  /* 表格：外层 .md-table 负责横向滚动，表格自身撑满整行。
+     若把 overflow-x 直接给 <table>（必须 display:block），thead 会按内容宽度
+     收缩导致底色右侧留白、列与表头错位。 */
+  .markdown .md-table {
+    margin: 1.7em 0;
+    overflow-x: auto;
+    border-radius: var(--radius-panel);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+
+  .markdown table {
+    width: 100%;
+    max-width: 100%;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-panel);
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9rem;
+  }
+
+  .markdown thead {
+    background-color: var(--color-surface-muted);
+  }
+
+  .markdown th {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .markdown th,
+  .markdown td {
+    padding: 0.65em 0.9em;
+    border-bottom: 1px solid var(--color-line-soft);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  /* 单元格竖分隔线：靠边框不重复叠边（相邻格只留一条） */
+  .markdown th + th,
+  .markdown td + td {
+    border-left: 1px solid var(--color-line-soft);
+  }
+
+  .markdown tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .markdown tbody tr:hover {
+    background-color: var(--color-surface-muted);
+  }
+
+  /* 窄屏：表格按内容宽度撑开、由 .md-table 横向滚动，而不是被压成 3 根细柱。
+     必须放在 .markdown table 的 width:100% 之后，否则会被上面的规则覆盖。
+     手机上 300px 宽塞 3 列时每列不到 100px，中文会碎成一行两三个字。 */
+  @media (max-width: 639px) {
+    .markdown table {
+      width: max-content;
+      min-width: 100%;
+      max-width: none;
+    }
+
+    .markdown th,
+    .markdown td {
+      min-width: 6em;
+    }
+  }
+
+  .markdown hr {
+    width: 100%;
+    height: 1px;
+    margin: 2.8em auto;
+    border: 0;
+    background: linear-gradient(90deg, transparent, var(--color-line-strong), transparent);
+  }
+
+  .markdown input[type="checkbox"] {
+    margin-right: 0.45em;
+    accent-color: var(--color-brand);
+    vertical-align: -0.08em;
+  }
+
+  .markdown del {
+    color: var(--color-ink-faint);
+  }
+
+  /* ---------- 语法高亮主题（暖调，与代码块底色同族） ---------- */
+  /* 只覆盖用到的 token，未列出的继承 pre 的 #e7e3db。 */
+
+  .markdown .hljs-comment,
+  .markdown .hljs-quote {
+    color: #7d786d;
+    font-style: italic;
+  }
+
+  .markdown .hljs-keyword,
+  .markdown .hljs-selector-tag,
+  .markdown .hljs-literal,
+  .markdown .hljs-doctag {
+    color: #d98e7a;
+  }
+
+  .markdown .hljs-string,
+  .markdown .hljs-regexp,
+  .markdown .hljs-addition {
+    color: #a8c98a;
+  }
+
+  .markdown .hljs-number,
+  .markdown .hljs-symbol,
+  .markdown .hljs-bullet {
+    color: #dcae72;
+  }
+
+  .markdown .hljs-title,
+  .markdown .hljs-section,
+  .markdown .hljs-title.function_ {
+    color: #e3c07c;
+  }
+
+  .markdown .hljs-title.class_,
+  .markdown .hljs-type,
+  .markdown .hljs-built_in {
+    color: #86b8c4;
+  }
+
+  .markdown .hljs-attr,
+  .markdown .hljs-attribute,
+  .markdown .hljs-variable,
+  .markdown .hljs-template-variable {
+    color: #c9a8d4;
+  }
+
+  .markdown .hljs-meta,
+  .markdown .hljs-meta .hljs-keyword {
+    color: #9a9488;
+  }
+
+  .markdown .hljs-deletion {
+    color: #d98e7a;
+  }
+
+  .markdown .hljs-emphasis {
+    font-style: italic;
+  }
+
+  .markdown .hljs-strong {
+    font-weight: 600;
+  }
+}

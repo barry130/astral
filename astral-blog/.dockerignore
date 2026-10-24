@@ -1,0 +1,14 @@
+# astral-blog 构建上下文瘦身（Dockerfile 在 astral-blog/ 下）
+node_modules
+.next
+.git
+.gitignore
+*.md
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.vercel
+.open-next
+.wrangler
