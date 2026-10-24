@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatDateTime } from '@/lib/format';
 import { Card, Button, Space, Tag, message, Popconfirm, Select } from '@/components/antd-compat';
 import { DeleteOutlined, LogoutOutlined, RollbackOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
@@ -165,9 +166,9 @@ export default function TokenPage() {
     { title: 'Token', dataIndex: 'token', key: 'token', ellipsis: true, render: (v: string) => `${v.substring(0, 20)}...` },
     { title: '登录IP', dataIndex: 'loginIp', key: 'loginIp' },
     { title: '登录端', dataIndex: 'device', key: 'device', width: 90, render: (v: string) => renderDevice(v) },
-    { title: '过期时间', dataIndex: 'expireTime', key: 'expireTime', render: (v: string) => v ? new Date(v).toLocaleString() : '-' },
+    { title: '过期时间', dataIndex: 'expireTime', key: 'expireTime', render: (v: string) => v ? formatDateTime(v) : '-' },
     { title: '状态', dataIndex: 'status', key: 'status', render: (v: number) => <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '有效' : '已吊销'}</Tag> },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => v ? new Date(v).toLocaleString() : '-' },
+    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => v ? formatDateTime(v) : '-' },
     {
       title: '操作',
       key: 'action',

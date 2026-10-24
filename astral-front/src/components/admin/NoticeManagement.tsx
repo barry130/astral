@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { formatDateTime } from '@/lib/format';
 import { Card, Tag, Button, Space, Select, Input, Modal, Form, Row, Col, Switch, DatePicker, InputNumber, message, Popconfirm, Typography } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FileTextOutlined } from '@/components/antd-compat/icons';
 import dayjs from 'dayjs';
@@ -332,7 +333,7 @@ export default function NoticeManagement() {
       title: '启用', dataIndex: 'isShow', width: 70,
       render: (v: number) => v === 1 ? <Tag color="green">是</Tag> : <Tag color="red">否</Tag>,
     },
-    { title: '时间', dataIndex: 'createTime', width: 170, render: (v: string) => (v ? new Date(v).toLocaleString() : '-') },
+    { title: '时间', dataIndex: 'createTime', width: 170, render: (v: string) => (v ? formatDateTime(v) : '-') },
     {
       title: '操作', key: 'action', width: 150,
       render: (_: any, record: SysNotice) => (

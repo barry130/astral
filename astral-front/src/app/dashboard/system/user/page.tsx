@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatDateTime } from '@/lib/format';
 import { Card, Button, Space, Modal, Form, Input, Select, Switch, Tag, message, Popconfirm, Tabs, Divider, Typography } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, LockOutlined, LoginOutlined } from '@/components/antd-compat/icons';
 import { request, ApiResult, readCsrfToken } from '@/api/client';
@@ -357,7 +358,7 @@ export default function UserPage() {
         />
       ),
     },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => new Date(v).toLocaleString() },
+    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => formatDateTime(v) },
     {
       title: '操作',
       key: 'action',

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatDateTime } from '@/lib/format';
 import { Card, Table, Row, Col, Statistic, DatePicker, Input, Select, Button, Space, Tag, message } from '@/components/antd-compat';
 import { ReloadOutlined } from '@/components/antd-compat/icons';
 import { mailApi, MailLog, MailStatistics } from '@/api/mail';
@@ -59,7 +60,7 @@ export default function MailLogPage() {
       title: '错误信息', dataIndex: 'errorMsg', key: 'errorMsg',
       render: (v: string) => v ? <span style={{ color: '#cf1322' }}>{v}</span> : '-',
     },
-    { title: '发送时间', dataIndex: 'sendTime', key: 'sendTime', render: (v?: string) => (v ? new Date(v).toLocaleString() : '-') },
+    { title: '发送时间', dataIndex: 'sendTime', key: 'sendTime', render: (v?: string) => (v ? formatDateTime(v) : '-') },
   ];
 
   return (

@@ -133,6 +133,8 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
               className="size-8 tabular-nums"
               onClick={() => goto(p)}
               aria-current={p === current ? 'page' : undefined}
+              // 页码按钮只有数字，读屏会念成「3 按钮」；补一个完整名称
+              aria-label={`第 ${p} 页`}
             >
               {p}
             </Button>

@@ -320,8 +320,24 @@ function Text({ type, strong, italic, underline, delete: del, code, disabled, cl
     );
   }
 
+  // 带 onClick 的文本就是「看起来像文字的按钮」：必须用 button 渲染，
+  // 否则键盘用户 Tab 不到、读屏也不会念成可操作控件。
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={cn(cls, 'cursor-pointer bg-transparent p-0 text-left disabled:cursor-not-allowed')}
+        style={style}
+        onClick={onClick}
+        disabled={disabled}
+      >
+        {children}
+      </button>
+    );
+  }
+
   return (
-    <span className={cls} style={style} onClick={onClick}>
+    <span className={cls} style={style}>
       {children}
     </span>
   );

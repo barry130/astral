@@ -11,13 +11,20 @@ export const metadata: Metadata = {
 /**
  * 视口配置：适配手机/平板等小屏设备
  * viewport-fit=cover 使页面延伸至安全区（刘海/圆角），配合 CSS env(safe-area-inset-*) 使用
+ *
+ * 刻意不设 maximumScale / userScalable：禁用缩放会让低视力用户无法放大表单与表格，
+ * 是 Web Interface Guidelines 明确列出的反模式。iOS 输入框聚焦的自动放大改用
+ * 字号 ≥16px 规避（见 globals.css 表单控件段）。
  */
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: 'cover',
-  themeColor: '#ffffff',
+  // 深浅色各一条：否则手机状态栏在深色主题下仍是白底，与页面割裂
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#12151b' },
+  ],
 };
 
 /**

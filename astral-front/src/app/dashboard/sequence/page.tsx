@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
+import { formatDateTime } from '@/lib/format';
 import { Card, Form, Input, Select, Button, message, Spin, InputNumber, Row, Col, Tag, Empty, Tabs, Popconfirm, Switch, Space, Modal, AutoComplete } from '@/components/antd-compat';
 import { ApiOutlined, SendOutlined, BulbOutlined, HistoryOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ToolOutlined } from '@/components/antd-compat/icons';
 import { sequenceApi, SequenceType, SequenceResponse } from '@/api/sequence';
@@ -266,7 +267,7 @@ export default function SequencePage() {
     { title: '业务键', dataIndex: 'bizKey', key: 'bizKey', render: (v: string) => <Tag color="blue">{v}</Tag> },
     { title: '类型', dataIndex: 'sequenceType', key: 'sequenceType', render: (v: string) => <Tag>{v}</Tag> },
     { title: '序列号', dataIndex: 'sequenceValue', key: 'sequenceValue', render: (v: number) => <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{v}</code> },
-    { title: '时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => new Date(v).toLocaleString() },
+    { title: '时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => formatDateTime(v) },
   ];
 
   // 配置表格列定义用 useMemo 固定引用，

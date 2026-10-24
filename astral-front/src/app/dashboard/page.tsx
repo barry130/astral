@@ -142,7 +142,7 @@ function StatCard({
             <Progress
               value={Math.min(100, Math.max(0, progress))}
               className="mt-3 h-1.5"
-              indicatorClassName={cn('transition-all', tone?.bar)}
+              indicatorClassName={cn('transition-[width] duration-300 ease-out', tone?.bar)}
             />
           )}
           {sub && <div className="mt-1.5 text-xs text-muted-foreground/80">{sub}</div>}
@@ -505,7 +505,7 @@ export default function DashboardPage() {
               <Progress
                 value={successRate}
                 className="mt-2 h-1.5"
-                indicatorClassName={cn('transition-all', rateTone.bar)}
+                indicatorClassName={cn('transition-[width] duration-300 ease-out', rateTone.bar)}
               />
               <div className="mt-3 flex justify-between text-xs text-muted-foreground">
                 <span>成功 {formatNumber(apiSummary?.successCount)}</span>
@@ -584,7 +584,7 @@ export default function DashboardPage() {
               <Progress
                 value={poolUsage}
                 className="mt-2 h-1.5"
-                indicatorClassName={cn('transition-all', poolTone.bar)}
+                indicatorClassName={cn('transition-[width] duration-300 ease-out', poolTone.bar)}
               />
               <div className="mt-3 flex justify-between text-xs text-muted-foreground">
                 <span>空闲 {formatNumber(database?.idleConnections)}</span>
@@ -645,7 +645,7 @@ export default function DashboardPage() {
                 <Progress
                   value={hitRate}
                   className="mt-2 h-1.5"
-                  indicatorClassName={cn('transition-all', hitTone.bar)}
+                  indicatorClassName={cn('transition-[width] duration-300 ease-out', hitTone.bar)}
                 />
               )}
               <div className="mt-3 flex justify-between text-xs text-muted-foreground">

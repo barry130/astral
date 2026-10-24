@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatDateTime } from '@/lib/format';
 import { Card, Button, Space, Modal, Form, Input, Select, Tag, message, Popconfirm } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
@@ -130,7 +131,7 @@ export default function ConfigPage() {
     { title: '配置值', dataIndex: 'configValue', key: 'configValue', width: 200, ellipsis: true },
     { title: '类型', dataIndex: 'configType', key: 'configType', width: 90, render: (v: number) => <Tag color={v === 1 ? 'blue' : 'orange'}>{v === 1 ? '内置' : '自定义'}</Tag> },
     { title: '描述', dataIndex: 'description', key: 'description', width: 300 },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: string) => new Date(v).toLocaleString() },
+    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: string) => formatDateTime(v) },
     {
       title: '操作',
       key: 'action',

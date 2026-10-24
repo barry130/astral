@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { formatDateTime } from '@/lib/format';
 import { Card, Row, Col, Statistic, Tag, Button, Space, Select, Input, Switch, Popconfirm, Drawer, Timeline, Form, message, Typography, Divider, Tabs, Tooltip, Spin } from '@/components/antd-compat';
 import { ReloadOutlined, MessageOutlined, DeleteOutlined, SendOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@/components/antd-compat/icons';
 import dynamic from 'next/dynamic';
@@ -233,7 +234,7 @@ function FeedbackPanel() {
     },
     { title: '用户邮箱', dataIndex: 'email', width: 170, ellipsis: true, render: (v: string) => v || '-' },
     { title: '联系方式', dataIndex: 'contact', width: 150, ellipsis: true, render: (v: string) => v || '-' },
-    { title: '时间', dataIndex: 'createTime', width: 170, render: (v: string) => (v ? new Date(v).toLocaleString() : '-') },
+    { title: '时间', dataIndex: 'createTime', width: 170, render: (v: string) => (v ? formatDateTime(v) : '-') },
     {
       title: '操作', key: 'action', width: 160, fixed: 'right' as const,
       render: (_: any, record: Feedback) => (
