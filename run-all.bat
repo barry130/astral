@@ -12,7 +12,8 @@ rem   3. auto-detect: %USERPROFILE%\.jdks\temurin-25* / ms-25* / *-25*,
 rem      then Program Files (Eclipse Adoptium / Java)
 rem
 rem Backend : run-backend.bat   logs\backend.log   port 27000
-rem Frontend: run-frontend.bat  logs\frontend.log  port 3000
+rem Frontend: run-frontend.bat  logs\frontend.log  port 3000 (astral-front admin console)
+rem           run-frontend.bat  own window        port 3001 (astral-blog public site)
 rem Closing a window stops that service. Close both to stop all.
 rem NOTE: keep this file ASCII-only. GBK codepage breaks UTF-8 comments.
 rem ============================================================
@@ -80,6 +81,8 @@ if not errorlevel 1 echo [WARN] port 27000 already in use - backend may be runni
 if not defined SKIP_FRONT (
     netstat -ano | findstr /C:":3000 " | findstr /C:"LISTENING" >nul 2>&1
     if not errorlevel 1 echo [WARN] port 3000 already in use - frontend may be running
+    netstat -ano | findstr /C:":3001 " | findstr /C:"LISTENING" >nul 2>&1
+    if not errorlevel 1 echo [WARN] port 3001 already in use - blog frontend may be running
 )
 
 rem ==================== 3. start ====================
@@ -87,13 +90,13 @@ echo [run-all] starting backend - window title: Astral Backend - build and boot 
 start "Astral Backend" cmd /k call "%~dp0run-backend.bat"
 
 if not defined SKIP_FRONT (
-    echo [run-all] starting frontend - window title: Astral Frontend - ready in seconds
+    echo [run-all] starting frontend - windows: Astral Frontend ^(admin^) + Astral Blog ^(public^)
     start "Astral Frontend" cmd /k call "%~dp0run-frontend.bat"
 )
 
 echo.
 echo [run-all] started:
 echo    backend  http://localhost:27000  - ready when log shows Started AstralApplication
-echo    frontend http://localhost:3000
-echo    logs     logs\backend.log and logs\frontend.log
+echo    admin    http://localhost:3000   - admin console ^(logs\frontend.log^)
+echo    blog     http://localhost:3001   - public blog ^(own window^)
 endlocal
