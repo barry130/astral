@@ -1,0 +1,144 @@
+{
+  "tableName": "cms_post",
+  "tableComment": "CMS 文章",
+  "moduleName": "cms",
+  "className": "CmsPost",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "title",
+      "fieldName": "title",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "标题",
+      "isRequired": true,
+      "length": 256
+    },
+    {
+      "columnName": "slug",
+      "fieldName": "slug",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "URL别名(可空,空则用id访问)",
+      "length": 128
+    },
+    {
+      "columnName": "summary",
+      "fieldName": "summary",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "摘要(空则前台截取正文)",
+      "length": 512
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "Markdown正文"
+    },
+    {
+      "columnName": "cover",
+      "fieldName": "cover",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "封面图URL",
+      "length": 512
+    },
+    {
+      "columnName": "category_id",
+      "fieldName": "categoryId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "分类ID(cms_category.id)"
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "状态(draft草稿/published已发布/hidden隐藏)",
+      "isRequired": true,
+      "defaultValue": "draft",
+      "length": 16
+    },
+    {
+      "columnName": "is_top",
+      "fieldName": "isTop",
+      "fieldType": "Boolean",
+      "jdbcType": "BOOLEAN",
+      "comment": "是否置顶",
+      "isRequired": true,
+      "defaultValue": "false"
+    },
+    {
+      "columnName": "views",
+      "fieldName": "views",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "浏览量",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "author_id",
+      "fieldName": "authorId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "作者ID(sys_user.id)"
+    },
+    {
+      "columnName": "published_at",
+      "fieldName": "publishedAt",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "发布时间(首次发布自动写入)"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    },
+    {
+      "columnName": "delete_time",
+      "fieldName": "deleteTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "软删除时间"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_cms_post_status",
+      "columns": ["status"]
+    },
+    {
+      "indexName": "idx_cms_post_category",
+      "columns": ["category_id"]
+    },
+    {
+      "indexName": "idx_cms_post_published",
+      "columns": ["status", "published_at"]
+    }
+  ]
+}

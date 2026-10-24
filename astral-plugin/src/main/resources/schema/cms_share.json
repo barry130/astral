@@ -1,0 +1,82 @@
+{
+  "tableName": "cms_share",
+  "tableComment": "CMS 内容分享链接",
+  "moduleName": "cms",
+  "className": "CmsShare",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "target_type",
+      "fieldName": "targetType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "目标类型(post/page)",
+      "isRequired": true
+    },
+    {
+      "columnName": "target_id",
+      "fieldName": "targetId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "目标ID(cms_post.id/cms_page.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "token",
+      "fieldName": "token",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "分享令牌(URL安全随机串，唯一)",
+      "isRequired": true
+    },
+    {
+      "columnName": "expire_at",
+      "fieldName": "expireAt",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "过期时间(NULL=永久)"
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "备注(用途说明)"
+    },
+    {
+      "columnName": "create_by",
+      "fieldName": "createBy",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "创建人(sys_user.id)"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_cms_share_token",
+      "columns": ["token"],
+      "unique": true
+    },
+    {
+      "indexName": "idx_cms_share_target",
+      "columns": ["target_type", "target_id"]
+    }
+  ]
+}

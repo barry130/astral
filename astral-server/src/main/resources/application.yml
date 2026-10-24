@@ -136,6 +136,13 @@ astral:
       # API Key 落库加密口令（AES-GCM KEK）：只经环境变量注入，禁止写进仓库；
       # 留空时插件退化为「只允许 secret_ref 引用」模式，后台保存 API Key 会直接报错。
       secret-key: ${ASTRAL_AI_SECRET_KEY:}
+    cms:
+      enabled: ${CMS_PLUGIN_ENABLED:true}
+      # 匿名评论限流：同一 IP 每 rate-limit-window-seconds 内最多 rate-limit-count 条
+      rate-limit-count: 5
+      rate-limit-window-seconds: 600
+      # 信任的反向代理 CIDR（X-Forwarded-For 取真实客户端 IP 用）
+      trusted-proxies: ${ASTRAL_TRUSTED_PROXIES:127.0.0.0/8,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
 
   sequence:
     default-type: segment

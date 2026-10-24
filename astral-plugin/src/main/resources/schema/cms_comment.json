@@ -1,0 +1,117 @@
+{
+  "tableName": "cms_comment",
+  "tableComment": "CMS 评论(匿名提交+审核制)",
+  "moduleName": "cms",
+  "className": "CmsComment",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "target_type",
+      "fieldName": "targetType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "目标类型(post文章/page页面)",
+      "isRequired": true,
+      "length": 16
+    },
+    {
+      "columnName": "target_id",
+      "fieldName": "targetId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "目标ID(cms_post.id或cms_page.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "nickname",
+      "fieldName": "nickname",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "昵称(游客填写)",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "email",
+      "fieldName": "email",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "邮箱(可选,仅管理端可见)",
+      "length": 128
+    },
+    {
+      "columnName": "content",
+      "fieldName": "content",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "评论内容(纯文本)",
+      "isRequired": true,
+      "length": 2000
+    },
+    {
+      "columnName": "status",
+      "fieldName": "status",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "状态(pending待审核/approved已通过/rejected已拒绝)",
+      "isRequired": true,
+      "defaultValue": "pending",
+      "length": 16
+    },
+    {
+      "columnName": "ip",
+      "fieldName": "ip",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "提交IP(服务端取,仅管理端可见)",
+      "length": 64
+    },
+    {
+      "columnName": "user_agent",
+      "fieldName": "userAgent",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "User-Agent(仅管理端可见)",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_cms_comment_target",
+      "columns": ["target_type", "target_id"]
+    },
+    {
+      "indexName": "idx_cms_comment_status",
+      "columns": ["status"]
+    },
+    {
+      "indexName": "idx_cms_comment_create_time",
+      "columns": ["create_time"]
+    }
+  ]
+}

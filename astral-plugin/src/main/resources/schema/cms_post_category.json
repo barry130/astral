@@ -1,0 +1,48 @@
+{
+  "tableName": "cms_post_category",
+  "tableComment": "CMS 文章×分类关联(多分类)",
+  "moduleName": "cms",
+  "className": "CmsPostCategory",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "post_id",
+      "fieldName": "postId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "文章ID(cms_post.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "category_id",
+      "fieldName": "categoryId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "分类ID(cms_category.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_cms_post_category_category",
+      "columns": ["category_id"]
+    }
+  ]
+}

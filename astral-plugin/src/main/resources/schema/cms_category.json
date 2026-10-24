@@ -1,0 +1,85 @@
+{
+  "tableName": "cms_category",
+  "tableComment": "CMS 分类（树形）",
+  "moduleName": "cms",
+  "className": "CmsCategory",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "name",
+      "fieldName": "name",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "分类名称",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "slug",
+      "fieldName": "slug",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "URL别名(可空)",
+      "length": 128
+    },
+    {
+      "columnName": "parent_id",
+      "fieldName": "parentId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "父分类ID(NULL=根)"
+    },
+    {
+      "columnName": "sort",
+      "fieldName": "sort",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "排序(越小越靠前)",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "description",
+      "fieldName": "description",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "分类描述",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_cms_category_parent",
+      "columns": ["parent_id"]
+    },
+    {
+      "indexName": "idx_cms_category_slug",
+      "columns": ["slug"]
+    }
+  ]
+}

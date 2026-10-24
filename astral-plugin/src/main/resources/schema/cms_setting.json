@@ -1,0 +1,60 @@
+{
+  "tableName": "cms_setting",
+  "tableComment": "CMS 站点设置(KV)",
+  "moduleName": "cms",
+  "className": "CmsSetting",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "setting_key",
+      "fieldName": "settingKey",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "配置键(site_title/site_description/footer_text/comment_enabled/comment_need_review)",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "setting_value",
+      "fieldName": "settingValue",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "配置值",
+      "length": 2000
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "说明",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": []
+}

@@ -1,0 +1,49 @@
+{
+  "tableName": "cms_tag",
+  "tableComment": "CMS 标签",
+  "moduleName": "cms",
+  "className": "CmsTag",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "name",
+      "fieldName": "name",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "标签名(唯一)",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "slug",
+      "fieldName": "slug",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "URL别名(可空)",
+      "length": 128
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_cms_tag_slug",
+      "columns": ["slug"]
+    }
+  ]
+}

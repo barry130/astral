@@ -1,0 +1,48 @@
+{
+  "tableName": "cms_post_tag",
+  "tableComment": "CMS 文章×标签关联",
+  "moduleName": "cms",
+  "className": "CmsPostTag",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "post_id",
+      "fieldName": "postId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "文章ID(cms_post.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "tag_id",
+      "fieldName": "tagId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "标签ID(cms_tag.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_cms_post_tag_tag",
+      "columns": ["tag_id"]
+    }
+  ]
+}
