@@ -76,6 +76,21 @@ type ArtifactRow = { path?: string; url?: string };
 /** 按平台准入编辑行：unlimited=不限制（提交时省略该平台键）；touched=已显式设置过，晚到的版本列表不再自动全选 */
 type AdmissionRow = { unlimited: boolean; codes: number[]; touched?: boolean };
 
+/**
+ * 现存应用版本（来自「版本更新」管理）。它是准入下拉的唯一候选源。
+ * <p>刻意<b>不过滤</b> isPublished / channel：未发布版本用于「先把音源包挂上去、应用版本稍后才发」的联调，
+ * 测试版用于灰度内测，两者都必须能被勾选；「是哪一种」交给 label 上的标注（测试版 / 未发布）去表达，
+ * 而不是从候选里剔掉——剔掉之后运营只能等应用发版才能配准入。</p>
+ */
+type AppVersionInfo = {
+  code: number;
+  name?: string;
+  channel?: string;
+  published: boolean;
+  /** 该版本投放过的平台码（platforms 逗号列拆出来的） */
+  platforms: number[];
+};
+
 /** 发布状态派生键：坏包 > 已发布 > 未发布（与服务端 bad/published 两布尔字段对应） */
 const stateKeyOf = (r: QtSourceRelease): string =>
   r.bad ? 'bad' : r.published ? 'published' : 'unpublished';
@@ -95,7 +110,9 @@ export default function SourceReleasesTab() {
   const [dict, setDict] = useState<Record<string, DictOption[]>>({});
   /** 行内上传中状态，按 Form.List 字段索引标记 */
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
-  /** 现存 App 版本号（平台码 → versionCode 降序），用于准入下拉自动反显 */
+  /** 现存 App 版本全量目录（含未发布 / 测试版），准入下拉的候选源 */
+  const [versionCatalog, setVersionCatalog] = useState<AppVersionInfo[]>([]);
+  /** 平台码 → 该平台投放过的 versionCode（降序）：只用于「新建时默认全选」 */
   const [appVersions, setAppVersions] = useState<Record<number, number[]>>({});
   /** 按平台准入选择状态（key=平台码），随「适用平台」联动增删 */
   const [admission, setAdmission] = useState<Record<number, AdmissionRow>>({});
@@ -153,29 +170,49 @@ export default function SourceReleasesTab() {
     ]).then(setDict).catch(() => {});
   }, []);
 
-  // 现存应用版本号（取版本更新管理的数据），按平台分组供准入下拉反显
-  useEffect(() => {
-    qtAdminApi.updates(1, 200).then((res) => {
+  /**
+   * 拉取应用版本目录（「版本更新」管理，接口本身不过滤发布状态与渠道）。
+   * <p>每次打开弹窗都重拉一次：版本更新与本 Tab 同处一个页面且 Tabs 不销毁，
+   * 只在挂载时拉一次会让「刚在另一个 Tab 新建的版本」在准入下拉里缺席。</p>
+   */
+  const loadAppVersions = async (): Promise<void> => {
+    try {
+      const res = await qtAdminApi.updates(1, 200);
       if (res.code !== 200) return;
+      const catalog: AppVersionInfo[] = [];
       const grouped: Record<number, number[]> = {};
       for (const u of res.data.records || []) {
-        if (u.platforms == null || u.versionCode == null) continue;
+        if (u.versionCode == null) continue;
         // platforms 是逗号分隔多值列：一个版本可同时投放多个平台，每个平台都要收进准入候选
-        for (const raw of String(u.platforms).split(',')) {
-          const p = Number(raw.trim());
-          if (!Number.isFinite(p) || p <= 0) continue;
-          (grouped[p] = grouped[p] || []).push(u.versionCode);
-        }
+        const platforms = String(u.platforms ?? '')
+          .split(',')
+          .map((s) => Number(s.trim()))
+          .filter((p) => Number.isFinite(p) && p > 0);
+        catalog.push({
+          code: u.versionCode,
+          name: u.versionName,
+          channel: u.channel,
+          published: u.isPublished === 1,
+          platforms,
+        });
+        for (const p of platforms) (grouped[p] = grouped[p] || []).push(u.versionCode);
       }
+      catalog.sort((a, b) => b.code - a.code);
       for (const k of Object.keys(grouped)) {
         grouped[Number(k)] = Array.from(new Set(grouped[Number(k)])).sort((a, b) => b - a);
       }
+      setVersionCatalog(catalog);
       setAppVersions(grouped);
-    }).catch(() => {});
-  }, []);
+    } catch {
+      // 拉取失败保留上一次的目录：准入下拉退化为「上一次已知版本」，不阻塞编辑
+    }
+  };
 
-  // 平台增删时同步准入行：新增平台默认全选现存版本，删除平台连带移除；
-  // 版本列表晚到时为未显式设置过的空行补默认全选
+  useEffect(() => { void loadAppVersions(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  // 平台增删时同步准入行：新增平台默认全选现存版本，删除平台连带移除。
+  // 版本目录晚到（打开弹窗才刷新）时，把「用户还没动过」的行重新对齐到最新目录——
+  // 否则新建弹窗会停在上一次缓存的旧版本集，刚建的版本仍然勾不到。
   const platformKey = watchedPlatforms.join(',');
   useEffect(() => {
     setAdmission((prev) => {
@@ -184,9 +221,11 @@ export default function SourceReleasesTab() {
         const old = prev[p];
         const codes = appVersions[p] || [];
         if (old) {
-          next[p] = !old.touched && !old.codes.length && codes.length
-            ? { ...old, unlimited: false, codes: [...codes] }
-            : old;
+          // 用户没动过的行要跟着最新目录走：包括「打开弹窗时缓存还是空的，被默认成了不限制」
+          // 这种情况——目录回来后要把它改回显式全选，否则下拉是空的、看起来像没有版本可选。
+          const stale = !old.touched && codes.length > 0
+            && (old.unlimited || old.codes.length !== codes.length || codes.some((c) => !old.codes.includes(c)));
+          next[p] = stale ? { ...old, unlimited: false, codes: [...codes] } : old;
           continue;
         }
         next[p] = { unlimited: !codes.length, codes: [...codes] };
@@ -209,7 +248,35 @@ export default function SourceReleasesTab() {
     load();
   };
 
+  /**
+   * 准入下拉里单个版本的显示文案：`版本名（版本码）· 测试版 · 未发布 · 安卓`
+   * 只写裸数字的话，运营看不出哪条是刚建好还没发的版本、哪条是灰度测试版。
+   */
+  const versionLabel = (v: AppVersionInfo, forPlatform: number): string => {
+    const parts: string[] = [v.name?.trim() ? `${v.name.trim()}（${v.code}）` : String(v.code)];
+    if (v.channel && v.channel !== 'stable') {
+      const ch = enumLabel(channelOpts, v.channel);
+      parts.push(ch === v.channel ? v.channel : ch);
+    }
+    if (!v.published) {
+      const un = enumLabel(stateOpts, 'unpublished');
+      parts.push(un === 'unpublished' ? FALLBACK_STATE_LABEL.unpublished : un);
+    }
+    // 非本平台的版本也列进来（预置下一版音源包时应用可能还没在该平台发版），标出平台避免误选
+    if (!v.platforms.includes(forPlatform)) {
+      parts.push(v.platforms.length ? v.platforms.map(platformLabel).join('/') : '未标平台');
+    }
+    return parts.join(' · ');
+  };
+
+  /** 某平台的准入候选：本平台投放过的版本在前，其他平台的版本在后 */
+  const versionOptions = (p: number) => [
+    ...versionCatalog.filter((v) => v.platforms.includes(p)),
+    ...versionCatalog.filter((v) => !v.platforms.includes(p)),
+  ].map((v) => ({ value: v.code, label: versionLabel(v, p) }));
+
   const openModal = (record?: QtSourceRelease) => {
+    setModal(true);
     if (record) {
       // 存量准入配置反显：键存在=显式版本集；键缺省或空数组=该平台不限制
       const adm: Record<number, AdmissionRow> = {};
@@ -233,7 +300,8 @@ export default function SourceReleasesTab() {
     } else {
       form.resetFields();
       form.setFieldsValue({ platforms: [...DEFAULT_PLATFORMS], channel: 'stable', hostApiVersion: 1, artifacts: [] });
-      // 新建默认：已选平台各自全选现存版本（用户自行删除不需要的）
+      // 新建默认：已选平台各自全选现存版本（用户自行删除不需要的）。
+      // 先用当前缓存垫一层，等刷新回来再用最新目录补一次默认全选（touched 的不会被覆盖）。
       setAdmission(() => {
         const adm: Record<number, AdmissionRow> = {};
         for (const p of DEFAULT_PLATFORMS) {
@@ -243,7 +311,9 @@ export default function SourceReleasesTab() {
         return adm;
       });
     }
-    setModal(true);
+    // 每次打开都刷新版本目录：另一个 Tab 里刚建的版本要能立刻出现在准入下拉里。
+    // 刷新回来的目录由下方 platformKey/appVersions 那个 effect 负责给「尚未动过」的行补默认全选。
+    void loadAppVersions();
   };
 
   const submit = async () => {
@@ -496,11 +566,12 @@ export default function SourceReleasesTab() {
           </Form.Item>
           <Form.Item
             label="按平台准入的应用版本号"
-            tooltip="默认每个平台全选现存版本，可删除不需要的（灰度放量）；勾「不限制」或一个不选=该平台不限制（含未来新版本）"
+            tooltip="候选包含未发布版本与测试版（会标注），可直接勾选。默认每个平台全选现存版本，可删除不需要的（灰度放量）；勾「不限制」或一个不选=该平台不限制（含未来新版本）"
           >
             {watchedPlatforms.length ? watchedPlatforms.map((p) => {
               const row = admission[p] || { unlimited: true, codes: [] as number[] };
-              const versions = appVersions[p] || [];
+              const options = versionOptions(p);
+              const ownCount = versionCatalog.filter((v) => v.platforms.includes(p)).length;
               return (
                 <Space key={p} align="baseline" style={{ display: 'flex', marginBottom: 4 }}>
                   <Tag color="blue" style={{ marginRight: 0 }}>{platformLabel(p)}</Tag>
@@ -511,20 +582,24 @@ export default function SourceReleasesTab() {
                     }))}
                   >不限制</Checkbox>
                   <Select
-                    mode="multiple" allowClear disabled={row.unlimited}
+                    mode="multiple" allowClear showSearch disabled={row.unlimited}
                     value={row.unlimited ? [] : row.codes}
-                    placeholder={versions.length ? '默认全选，可删除不需要的版本' : '该平台暂无已发布版本'}
-                    style={{ minWidth: 240 }}
-                    options={versions.map((c) => ({ value: c, label: String(c) }))}
+                    placeholder={options.length ? '默认全选，可删除不需要的版本' : '暂无应用版本，可勾「不限制」'}
+                    style={{ minWidth: 260 }}
+                    options={options}
                     onChange={(vals: number[]) => setAdmission((prev) => ({
                       ...prev, [p]: { ...row, codes: vals, touched: true },
                     }))}
                   />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    本平台 {ownCount} 个 / 共 {versionCatalog.length} 个
+                  </Typography.Text>
                 </Space>
               );
             }) : <Typography.Text type="secondary">先选择适用平台</Typography.Text>}
             <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              将写入：{JSON.stringify(admissionPreview)}（键缺省或空数组 = 该平台不限制）
+              候选含<b>未发布</b>与<b>测试版</b>（下拉里会标注），可直接勾选：适用于「音源包先上、应用版本稍后发」的流程。
+              标了其他平台名的版本号在该平台没有真实客户端，仅用于预置。将写入：{JSON.stringify(admissionPreview)}（键缺省或空数组 = 该平台不限制）
             </Paragraph>
           </Form.Item>
           <Paragraph type="secondary" style={{ marginBottom: 8 }}>
