@@ -659,7 +659,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading) {
     return (
       <div
-        style={{ height: '100vh' }}
+        style={{ height: '100dvh' }}
         className="flex items-center justify-center bg-[var(--color-bg-base)]"
       >
         <RotateCw className="size-8 animate-spin text-muted-foreground" />
@@ -780,9 +780,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const showBreadcrumb = !isMobile && breadcrumbTrail.length > 1;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
+      {/* 跳转正文：键盘用户不必逐个 Tab 穿过整条侧边栏与顶部菜单 */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[300] focus:rounded-md focus:border focus:border-border focus:bg-card focus:px-3 focus:py-2 focus:text-sm focus:text-foreground focus:shadow-md"
+      >
+        跳到正文
+      </a>
       {isMobile && mobileNavOpen && (
-        <div className="nav-mask fixed inset-0 z-[190] bg-black/40" onClick={() => setMobileNavOpen(false)} />
+        // 遮罩只负责「点一下关掉抽屉」，对读屏无意义：用 aria-hidden 从无障碍树移除，
+        // 关闭动作由抽屉自身的关闭按钮与 Esc 承担
+        <div
+          className="nav-mask fixed inset-0 z-[190] bg-black/40"
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden="true"
+        />
       )}
 
       {/* ==================== 侧边栏 ==================== */}
@@ -875,7 +888,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         style={{ marginLeft: isMobile ? 0 : siderCollapsed ? 80 : 220, transition: 'margin-left 0.2s' }}
       >
         {/* 头部 */}
-        <header className="dashboard-header flex h-14 items-center gap-1 border-b border-border bg-[var(--color-bg-white)] px-4">
+        <header className="dashboard-header safe-top flex h-14 items-center gap-1 border-b border-border bg-[var(--color-bg-white)] px-4">
           {!showBreadcrumb && (
             <div className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
               {breadcrumbLast?.label || '工作台'}
@@ -1049,7 +1062,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
 
         {/* 内容区 */}
-        <main className="dashboard-content fade-in p-4" style={{ minHeight: 'calc(100vh - 105px)' }}>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="dashboard-content fade-in p-4 outline-none"
+          style={{ minHeight: 'calc(100dvh - 105px)' }}
+        >
           {children}
         </main>
       </div>

@@ -11,6 +11,9 @@
    经 @theme inline 解析到这些变量；明暗切换由 data-theme 驱动。
    ============================================================ */
 :root {
+  /* 明色基准：让浏览器把滚动条、原生 select 下拉、日期选择器画成浅色。
+     深色主题在 [data-theme="dark"] 里覆盖为 dark。 */
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #18181b;
   --card: #ffffff;
@@ -200,6 +203,7 @@ to{
 }
 .login-container{
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -249,6 +253,7 @@ to{
 }
 .imgbed-container{
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--color-bg-base);
   color: var(--color-text);
 }
@@ -381,6 +386,7 @@ to{
 }
 .dashboard-layout{
   min-height: 100vh;
+  min-height: 100dvh;
 }
 .dashboard-sider{
   box-shadow: none;
@@ -446,6 +452,7 @@ to{
   padding: 28px;
   max-width: 1680px;
   min-height: calc(100vh - 105px);
+  min-height: calc(100dvh - 105px);
 }
 ::-webkit-scrollbar{
   width: 6px;
@@ -604,6 +611,7 @@ body{
     padding: 16px !important;
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
     min-height: calc(100vh - 116px) !important;
+    min-height: calc(100dvh - 116px) !important;
   }
 .page-title{
     font-size: 20px !important;
@@ -646,6 +654,53 @@ body{
 :focus-visible{
   outline: none;
   box-shadow: var(--focus-ring);
+}
+
+/* ---------- 交互基础规范 ---------- */
+/* 双击缩放延迟：manipulation 让移动端点击立即响应，不再等 300ms 判定是否双击 */
+button,
+a,
+[role="button"],
+[role="tab"],
+label,
+summary {
+  touch-action: manipulation;
+}
+
+/* 移动端点击高亮：默认那层灰色方块与设计稿的焦点反馈冲突，统一关掉，改由 :active / :focus-visible 表达 */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 触屏设备把可点区域补到 44px（CSS 兜底，组件里显式放大过的保持原样） */
+@media (pointer: coarse) {
+  button:not([data-compact]),
+  [role="button"]:not([data-compact]) {
+    min-height: 2.75rem;
+  }
+}
+
+/* 弹层/抽屉打开时不要连带滚动背后的页面（iOS 上尤其明显） */
+[data-slot="dialog-content"],
+[data-slot="sheet-content"],
+[data-slot="drawer-content"],
+.nav-mask {
+  overscroll-behavior: contain;
+}
+
+/* 数字列等宽，避免 1 与 8 的宽度差让表格逐行抖动 */
+.dashboard-content table td,
+.rt-tbody {
+  font-variant-numeric: tabular-nums;
+}
+
+/* viewport-fit=cover 后页面铺到刘海/圆角下方，粘顶的头部与固定底部工具条需自己让开安全区 */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 
@@ -982,6 +1037,7 @@ table.rt-body-wrap td:not(.truncate){
 .ql-page{
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   color: #1d2b4f;
   background: radial-gradient(120% 90% at 50% 0%, #eaf5ff 0%, #d8ebff 45%, #c8e0fb 100%);
@@ -1562,4 +1618,415 @@ table.rt-body-wrap td:not(.truncate){
 }
 .dashboard-overview .stat-card [data-slot="progress"] {
   background: var(--color-bg-base);
+}
+
+/* ============================================================
+   Markdown 预览排版（MarkdownEditor 的预览 / 分栏右侧使用）
+   与博客前台 astral-blog 的 .markdown 视觉保持一致，但颜色改走
+   管理端语义令牌，因此深色模式自动跟随 data-theme 切换。
+   ============================================================ */
+.markdown {
+  color: var(--foreground);
+  font-size: 0.9375rem;
+  line-height: 1.85;
+  overflow-wrap: break-word;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  color: var(--foreground);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  scroll-margin-top: 5rem;
+  /* 标题折行时让两行长度接近，避免末行只剩一两个字的孤行 */
+  text-wrap: balance;
+}
+
+.markdown h1 {
+  margin: 2em 0 0.7em;
+  font-size: 1.5rem;
+}
+
+.markdown h2 {
+  position: relative;
+  margin: 2.1em 0 0.75em;
+  padding-left: 0.7em;
+  font-size: 1.25rem;
+}
+
+/* h2 用左侧短竖线表示层级，避免下划线割裂正文 */
+.markdown h2::before {
+  content: "";
+  position: absolute;
+  top: 0.28em;
+  bottom: 0.26em;
+  left: 0;
+  width: 3px;
+  border-radius: 999px;
+  background-color: var(--primary);
+  opacity: 0.75;
+}
+
+.markdown h3 {
+  margin: 1.8em 0 0.6em;
+  font-size: 1.0625rem;
+}
+
+.markdown h4 {
+  margin: 1.6em 0 0.55em;
+  font-size: 0.9375rem;
+}
+
+.markdown h5,
+.markdown h6 {
+  margin: 1.4em 0 0.5em;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  letter-spacing: 0;
+}
+
+.markdown p {
+  margin: 1em 0;
+  text-wrap: pretty;
+}
+
+.markdown a {
+  color: var(--primary);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+.markdown a:hover {
+  text-decoration-color: currentColor;
+}
+
+.markdown strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 1em 0;
+  padding-left: 1.4em;
+}
+
+.markdown ul {
+  list-style: disc;
+}
+
+.markdown ol {
+  list-style: decimal;
+}
+
+.markdown li {
+  margin: 0.4em 0;
+  padding-left: 0.1em;
+}
+
+.markdown li::marker {
+  color: var(--muted-foreground);
+}
+
+.markdown li > ul,
+.markdown li > ol {
+  margin: 0.45em 0 0.35em;
+}
+
+.markdown li > p {
+  margin: 0.35em 0;
+}
+
+.markdown blockquote {
+  margin: 1.5em 0;
+  padding: 0.8em 1.05em;
+  border-left: 2px solid var(--border);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.markdown blockquote > :first-child {
+  margin-top: 0;
+}
+
+.markdown blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown :not(pre) > code {
+  padding: 0.14em 0.36em;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background-color: var(--muted);
+  color: var(--foreground);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.86em;
+  overflow-wrap: anywhere;
+}
+
+/* 代码块固定暖调深色：明暗两套主题下都不刺眼。
+   外层 .md-code 提供 mac 风格标题条（三个圆点 + 语言名 + 复制按钮），
+   着色由 highlight.js 的 .hljs-* 类完成（配色见文件末尾「语法高亮主题」）。 */
+.markdown .md-code {
+  margin: 1.5em 0;
+  overflow: hidden;
+  border: 1px solid #2b2824;
+  border-radius: var(--radius-md);
+  background-color: #1c1b19;
+}
+
+.markdown .md-code-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 0.5em 0.85em;
+  border-bottom: 1px solid #2b2824;
+  background-color: #232220;
+}
+
+.markdown .md-code-dots {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.markdown .md-code-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background-color: #4a463f;
+}
+
+.markdown .md-code-dots i:nth-child(1) {
+  background-color: #e06c60;
+}
+
+.markdown .md-code-dots i:nth-child(2) {
+  background-color: #d9a441;
+}
+
+.markdown .md-code-dots i:nth-child(3) {
+  background-color: #6aa84f;
+}
+
+.markdown .md-code-lang {
+  color: #8d887e;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.markdown .md-code-copy {
+  margin-left: auto;
+  padding: 0.12em 0.5em;
+  border: 1px solid #3a3730;
+  border-radius: 5px;
+  background-color: transparent;
+  color: #a9a49a;
+  font-size: 0.7rem;
+  line-height: 1.6;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.markdown .md-code-copy:hover {
+  border-color: #565147;
+  color: #e7e3db;
+}
+
+.markdown .md-code-copy[data-copied='true'] {
+  border-color: #4d7a45;
+  color: #8fc07f;
+}
+
+.markdown pre {
+  margin: 0;
+  padding: 1em 1.15em;
+  overflow-x: auto;
+  background-color: transparent;
+  color: #e7e3db;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  scrollbar-width: thin;
+  scrollbar-color: #4a463f transparent;
+}
+
+.markdown pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 1em;
+}
+
+.markdown pre::-webkit-scrollbar {
+  height: 8px;
+}
+
+.markdown pre::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background-color: #4a463f;
+}
+
+.markdown img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.6em auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--muted);
+}
+
+/* 表格：外层 .md-table 负责横向滚动，表格自身撑满整行。
+   若把 overflow-x 直接给 <table>（必须 display:block），thead 会按内容宽度
+   收缩导致底色右侧留白、列与表头错位。 */
+.markdown .md-table {
+  margin: 1.5em 0;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.markdown table {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.markdown thead {
+  background-color: var(--muted);
+}
+
+.markdown th {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.markdown th,
+.markdown td {
+  padding: 0.6em 0.85em;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+/* 单元格竖分隔线：相邻格只留一条，避免叠边 */
+.markdown th + th,
+.markdown td + td {
+  border-left: 1px solid var(--border);
+}
+
+.markdown tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.markdown tbody tr:hover {
+  background-color: var(--muted);
+}
+
+.markdown hr {
+  width: 100%;
+  height: 1px;
+  margin: 2.4em auto;
+  border: 0;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+.markdown input[type="checkbox"] {
+  margin-right: 0.45em;
+  accent-color: var(--primary);
+  vertical-align: -0.08em;
+}
+
+.markdown del {
+  color: var(--muted-foreground);
+}
+
+/* ---------- 语法高亮主题（暖调，与代码块底色同族） ---------- */
+/* 只覆盖用到的 token，未列出的继承 pre 的 #e7e3db。 */
+
+.markdown .hljs-comment,
+.markdown .hljs-quote {
+  color: #7d786d;
+  font-style: italic;
+}
+
+.markdown .hljs-keyword,
+.markdown .hljs-selector-tag,
+.markdown .hljs-literal,
+.markdown .hljs-doctag {
+  color: #d98e7a;
+}
+
+.markdown .hljs-string,
+.markdown .hljs-regexp,
+.markdown .hljs-addition {
+  color: #a8c98a;
+}
+
+.markdown .hljs-number,
+.markdown .hljs-symbol,
+.markdown .hljs-bullet {
+  color: #dcae72;
+}
+
+.markdown .hljs-title,
+.markdown .hljs-section,
+.markdown .hljs-title.function_ {
+  color: #e3c07c;
+}
+
+.markdown .hljs-title.class_,
+.markdown .hljs-type,
+.markdown .hljs-built_in {
+  color: #86b8c4;
+}
+
+.markdown .hljs-attr,
+.markdown .hljs-attribute,
+.markdown .hljs-variable,
+.markdown .hljs-template-variable {
+  color: #c9a8d4;
+}
+
+.markdown .hljs-meta,
+.markdown .hljs-meta .hljs-keyword {
+  color: #9a9488;
+}
+
+.markdown .hljs-deletion {
+  color: #d98e7a;
+}
+
+.markdown .hljs-emphasis {
+  font-style: italic;
+}
+
+.markdown .hljs-strong {
+  font-weight: 600;
 }
