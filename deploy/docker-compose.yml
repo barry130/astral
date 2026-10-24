@@ -108,6 +108,40 @@ services:
     networks:
       - astral-net
 
+  # ==================== 博客前台 (公开站点) ====================
+  # www.canace.cn 站点本体：公开博客 + Wiki，数据全部来自 backend 的
+  # /api/v1/app/cms/** 公开接口（服务端 RSC fetch，浏览器不跨域）。
+  blog:
+    build:
+      context: ../astral-blog
+      dockerfile: Dockerfile
+      network: host
+      args:
+        # 构建期不请求后端（页面全 force-dynamic），这里只为保持一致；
+        # 真正生效的是下面 environment 里的运行时值。
+        CMS_API_BASE: http://backend:27000
+    container_name: astral-blog
+    restart: unless-stopped
+    ports:
+      # 宿主机 3001 -> 容器 3000（容器内由 PORT=3000 决定，不经过 package.json 的 -p 3001）
+      - "3001:3000"
+    environment:
+      # 后端容器地址：博客所有数据都从它取（含转发登录态读写 /api/v1/admin/cms/**）
+      CMS_API_BASE: http://backend:27000
+      NODE_ENV: production
+      TZ: Asia/Shanghai
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - astral-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      start_period: 60s
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 networks:
   astral-net:
     driver: bridge

@@ -14,6 +14,12 @@
 astral-front/
 astral-front/node_modules
 astral-front/.next
+astral-blog/
+astral-blog/node_modules
+astral-blog/.next
+
+# 数据迁移脚本与导出的源站 JSON（仅本地用）
+data-migration/
 
 # 本地数据与日志
 data/

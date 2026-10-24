@@ -1,5 +1,5 @@
 # ============================================================================
-# CNB 云原生构建：自动构建后端 / 前端镜像并推送到 CNB 自带 Docker 制品库
+# CNB 云原生构建：自动构建后端 / 前端 / 博客镜像并推送到 CNB 自带 Docker 制品库
 # （docker.cnb.cool，随代码仓库托管，不再单独推腾讯云 TCR）
 #
 # 取代原 GitHub Actions（.github/workflows/docker-publish.yml，已删除）：
@@ -66,6 +66,25 @@
       docker push "$IMAGE_URL"
       docker push "$IMAGE_PREFIX/astral-frontend:latest"
 
+# 博客前台（astral-blog）：独立发布站点，构建上下文=astral-blog。
+# 与前端不同的是它不需要 NEXT_PUBLIC_API_URL——所有后端请求都在服务端完成，
+# 运行期由 CMS_API_BASE 决定（compose 里固定 http://backend:27000），
+# 所以镜像本身与域名无关，换域名不用重新构建。
+.blog-stages: &blog-stages
+  - name: 生成发布 tag（日期-短SHA，兼作回滚锚点）
+    script: echo -n "$IMAGE_PREFIX/astral-blog:$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"
+    exports:
+      info: IMAGE_URL
+  - name: docker build（博客，上下文=astral-blog）
+    script: >-
+      docker build -f astral-blog/Dockerfile
+      --build-arg CMS_API_BASE=http://backend:27000
+      -t "$IMAGE_URL" -t "$IMAGE_PREFIX/astral-blog:latest" astral-blog
+  - name: docker push（双 tag；第二个 tag 复用刚上传的层，几乎零开销）
+    script: |
+      docker push "$IMAGE_URL"
+      docker push "$IMAGE_PREFIX/astral-blog:latest"
+
 # ---- 构建配置 ----
 master:
   push:
@@ -105,6 +124,17 @@ master:
         - .cnb.yml
       stages: *frontend-stages
 
+    - name: blog 镜像
+      <<: *docker-pipeline
+      lock:
+        key: blog-image
+        cancel-in-progress: true
+      ifNewBranch: true
+      ifModify:
+        - astral-blog/**
+        - .cnb.yml
+      stages: *blog-stages
+
   # 手动触发（master 分支详情页按钮，见 .cnb/web_trigger.yml）：
   # 全量重建，不做路径过滤。web_trigger 事件没有文件变更基准，
   # ifModify 在该事件下本来就不生效，这里干脆不写。
@@ -122,3 +152,10 @@ master:
         key: frontend-image
         cancel-in-progress: true
       stages: *frontend-stages
+
+    - name: blog 镜像（手动全量）
+      <<: *docker-pipeline
+      lock:
+        key: blog-image
+        cancel-in-progress: true
+      stages: *blog-stages

@@ -25,3 +25,7 @@ services:
   frontend:
     image: ${REGISTRY}/astral-frontend:${TAG:-latest}
     pull_policy: always
+
+  blog:
+    image: ${REGISTRY}/astral-blog:${TAG:-latest}
+    pull_policy: always

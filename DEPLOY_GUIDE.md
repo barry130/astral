@@ -9,17 +9,40 @@
 
 ## 部署架构
 
+**推荐形态（有 nginx 反代，见 `deploy/nginx/`）：**
+
 ```
-浏览器页面 ───────────────► frontend 容器 (:3000)
+                         ┌─ www.canace.cn    ──► nginx ──► blog 容器 (:3001) ─┐
+                         │                                                       │
+浏览器 ──────────────────┼─ web.canace.cn    ──► nginx ──► frontend 容器 (:3000) │
+                         │                                                       ├─► backend 容器 (:27000)
+                         └─ astral.canace.cn ──► nginx ──► backend 容器 (:27000) ─┘        │
+                                                                                  PostgreSQL / Redis
+```
+
+nginx 终结 TLS 并做网络层限流，三个容器端口只绑 `127.0.0.1`（不对外暴露）。
+
+> 三个域名与现网一致（`www` 博客、`web` 管理端、`astral` 接口域），
+> 其中 `web` 与 `astral` 是**跨域直连**形态——前端镜像构建时把 `NEXT_PUBLIC_API_URL=https://astral.canace.cn` 内联，
+> 所以接口仍独立成域，不改成同源 `/api`（改了要重建镜像并调整 CORS / CSRF 策略）。
+> `canace.cn` 的子域之间同为「同站」，`SameSite=Strict` 的会话 Cookie 仍能正常携带。
+
+**简化形态（无 nginx，端口直接对外）：**
+
+```
+浏览器页面 ───────────────► frontend 容器 (:3000)   /  blog 容器 (:3001)
 浏览器 API 请求 ──────────► backend 容器 (:27000) ──► PostgreSQL / Redis (服务器已有)
 ```
 
-两个服务编排在 `deploy/docker-compose.yml`（不使用反向代理，前端 3000、后端 27000 直接对外）：
+三个服务编排在 `deploy/docker-compose.yml`：
 
 | 容器 | 镜像 | 宿主端口 | 说明 |
 |------|------|----------|------|
 | `astral-backend` | 本地构建 | `27000` | Spring Boot 后端 |
-| `astral-frontend` | 本地构建 | `3000` | Next.js 前端 |
+| `astral-frontend` | 本地构建 | `3000` | Next.js 管理端 |
+| `astral-blog` | 本地构建 | `3001` | Next.js 博客前台（公开站点，`www.canace.cn`） |
+
+> 博客容器内部端口是 3000（Next standalone 由 `PORT` 决定），映射到宿主机 3001 只为与管理端错开。
 
 ## 前置条件
 
@@ -28,23 +51,29 @@
 - Docker Engine 20.10+（含 `docker compose` 插件，v2）
 - 已有可访问的 PostgreSQL 实例
 - 已有可访问的 Redis 实例
-- 已放行安全组/防火墙端口：`3000`、`27000`（均必需）
+- 已放行安全组/防火墙端口：
+  - 走 nginx（推荐）：只需 `80`、`443`
+  - 不走 nginx：需 `3000`、`3001`、`27000`
 
 **本机（可选，仅本地调试）：**
 
-- JDK 25、Maven 3.9+、Node.js 24 LTS（与前端镜像 `node:24-alpine` 保持一致）
+- JDK 25、Maven 3.9+、Node.js 24 LTS（与镜像 `node:24-alpine` 保持一致）
 
 ## 部署相关文件
 
 | 路径 | 说明 |
 |------|------|
-| `deploy/docker-compose.yml` | 服务编排（backend + frontend） |
+| `deploy/docker-compose.yml` | 服务编排（backend + frontend + blog） |
+| `deploy/docker-compose.nginx.yml` | （可选）overlay：端口收回 `127.0.0.1`，配合 nginx 反代 |
+| `deploy/nginx/00-http-level.conf` | nginx **http 级**片段（限流区 `limit_req_zone` + WebSocket `map`） |
+| `deploy/nginx/10-astral-sites.conf` | nginx **server 级**配置（www 博客 + web 管理端 + astral 接口域，含 HTTPS） |
 | `astral-server/Dockerfile` | 后端多阶段构建（构建阶段 `maven:3.9-eclipse-temurin-25`；BuildKit 缓存 Maven 仓库） |
-| `astral-front/Dockerfile` | 前端多阶段构建（Next.js 16 standalone + `node:24-alpine` × 3 阶段；BuildKit 缓存 npm） |
+| `astral-front/Dockerfile` | 管理端多阶段构建（Next.js 16 standalone + `node:24-alpine` × 3 阶段；BuildKit 缓存 npm） |
+| `astral-blog/Dockerfile` | 博客多阶段构建（同上，用 pnpm + `pnpm-lock.yaml`） |
 | `.mvn/settings.xml` | Docker 构建用 Maven 镜像（阿里云 public） |
 | `.dockerignore` | 后端构建上下文排除项 |
-| `astral-front/.dockerignore` | 前端构建上下文排除项 |
-| `.cnb.yml` | （可选）CI：CNB 云原生构建，push 到 `master` 按改动路径自动构建并推送镜像到 CNB Docker 制品库（`docker.cnb.cool`） |
+| `astral-front/.dockerignore` / `astral-blog/.dockerignore` | 前端 / 博客构建上下文排除项 |
+| `.cnb.yml` | （可选）CI：CNB 云原生构建，push 到 `master` 按改动路径自动构建 backend / frontend / blog 三个镜像并推送 |
 | `.cnb/web_trigger.yml` | （可选）CI：分支详情页「构建并推送镜像」手动按钮（全量重建） |
 | `deploy/docker-compose.registry.yml` | （可选）overlay：服务镜像改为从私有仓库 pull，服务器不本地构建 |
 | `deploy/update.sh` | （可选）服务器一键更新：pull + 重建 + 清理旧镜像 |
@@ -132,6 +161,7 @@ cd /opt/astral/deploy
 # 小内存服务器（如 1 核 2G）建议串行构建，避免 Maven 与 Next 同时编译触发 OOM
 docker compose build backend
 docker compose build frontend
+docker compose build blog
 docker compose up -d
 ```
 
@@ -169,14 +199,102 @@ docker compose logs -f backend   # 后端日志
 
 ### 第四步：访问验证
 
+**不走 nginx（端口直接对外）：**
+
 | 入口 | 地址 |
 |------|------|
 | 管理后台 | `http://<服务器IP>:3000/` |
-| 直接访问前端 | `http://<服务器IP>:3000` |
+| 博客前台 | `http://<服务器IP>:3001/` |
 | 直接访问后端 API | `http://<服务器IP>:27000/api/v1/...` |
 | Swagger 文档 | `http://<服务器IP>:27000/swagger-ui.html` |
 
+**走 nginx（推荐，域名形态）：**
+
+| 入口 | 地址 |
+|------|------|
+| 博客前台 | `https://www.canace.cn/` |
+| 管理后台 | `https://web.canace.cn/` |
+| 后端 API | `https://astral.canace.cn/api/v1/...` |
+| 博客自己的 Route Handler | `https://www.canace.cn/api/...`（由 blog 容器处理，**不要**指向后端） |
+
 用 `admin` 账号登录管理后台，观察 `docker compose logs -f backend` 确认无异常。
+最后到管理端「内容管理 → 站点设置」把 **博客前台地址** 填成 `https://www.canace.cn`，分享链接才会生成正确的绝对地址。
+
+## 反向代理 + HTTPS（www / web / astral）
+
+不配置 nginx 也能跑，但生产环境绑定域名并启用 HTTPS 时必须配：会话 Cookie 是 `SameSite=Strict`，只有「同站」才会携带。`canace.cn` 的子域彼此算同站，所以 `web.canace.cn` 页面访问 `astral.canace.cn` 接口时 Cookie 照常带上。
+
+### 1. 准备证书
+
+三个域名各签一份（`www` 与裸域一起签）。DNS 都在 DNSPod：
+
+```bash
+sudo apt install -y nginx certbot
+sudo mkdir -p /etc/nginx/ssl /var/www/certbot
+
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d www.canace.cn -d canace.cn \
+  --email you@example.com --agree-tos --no-eff-email
+
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d web.canace.cn --email you@example.com --agree-tos --no-eff-email
+
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d astral.canace.cn --email you@example.com --agree-tos --no-eff-email
+```
+
+证书默认落在 `/etc/letsencrypt/live/<域名>/`。本仓库的 nginx 配置引用的是 `/etc/nginx/ssl/*.pem`，用软链或改路径都行：
+
+```bash
+for d in www.canace.cn web.canace.cn astral.canace.cn; do
+  sudo ln -sf /etc/letsencrypt/live/$d/fullchain.pem /etc/nginx/ssl/$d.fullchain.pem
+  sudo ln -sf /etc/letsencrypt/live/$d/privkey.pem   /etc/nginx/ssl/$d.key
+done
+```
+
+### 2. 放置配置
+
+```bash
+# http 级片段（limit_req_zone / map）—— 必须在 http{} 里，走 conf.d 的 include
+sudo cp deploy/nginx/00-http-level.conf /etc/nginx/conf.d/00-astral-http.conf
+# server 级配置
+sudo cp deploy/nginx/10-astral-sites.conf /etc/nginx/conf.d/10-astral-sites.conf
+
+# 确认 nginx.conf 的 http{} 里有一行（Ubuntu/Debian 官方包默认就有）
+grep -n 'include /etc/nginx/conf.d/\*.conf;' /etc/nginx/nginx.conf
+
+sudo nginx -t          # 语法校验，必须通过
+sudo systemctl reload nginx
+```
+
+> ⚠️ `limit_req_zone` 与 `map` 只能写在 `http {}` 块里。原 `nginx-reverse-proxy.example.conf` 把 `limit_req_zone` 写在 `server {}` 内，直接搬会报 `directive is not allowed here`，所以拆成了上面两个文件。
+
+### 3. 端口收回回环
+
+nginx 起来后，三个容器端口不该再对公网开放（否则能绕过限流直连后端）：
+
+```bash
+cd /opt/astral/deploy
+ASTRAL_BEHIND_NGINX=1 ./update.sh
+# 等价于：docker compose -f docker-compose.yml -f docker-compose.registry.yml \
+#                        -f docker-compose.nginx.yml up -d --no-build
+```
+
+`docker-compose.nginx.yml` 会把 `3000 / 3001 / 27000` 全改成 `127.0.0.1:<port>:<port>`。
+
+### 4. 关键路由说明
+
+| 请求 | 交给谁 | 原因 |
+|------|--------|------|
+| `www.canace.cn/` | blog 容器 `:3001` | 博客页面 |
+| `www.canace.cn/api/auth/login`、`/api/comment`、`/api/admin/**` | **blog 容器 `:3001`** | 这些是博客自己的 Next Route Handler，负责转发后端并透传 `satoken` / `astral_csrf`。**错配到 `:27000` 会让登录、评论、导出全部 404** |
+| `www.canace.cn/api/**` 其他 | blog 容器 `:3001` | 同上，统一交给博客容器 |
+| `web.canace.cn/` | frontend 容器 `:3000` | 管理端页面 |
+| `astral.canace.cn/api/**` | backend 容器 `:27000` | 跨域直连形态的接口域，前端镜像把该地址构建期内联 |
+
+博客对后端的访问全部发生在**服务端**（RSC fetch + Route Handler），`CMS_API_BASE=http://backend:27000` 由 compose 注入，浏览器从不直接访问后端端口。
+
+> ⚠️ nginx **不要**给 `astral.canace.cn` 加任何 CORS 响应头。后端 `CORS_ALLOWED_ORIGINS` 已经在处理，nginx 再补一份会出现两个 `Access-Control-Allow-Origin`，浏览器直接判定跨域失败。
 
 ## 日常运维
 
@@ -229,8 +347,9 @@ docker compose up -d --build
 
    GitHub 那条照旧需要代理；CNB 走国内直连，不开代理也能推。代理没开时 GitHub 那条会失败，但 CNB 可能已经推上去了，以 git 输出为准。
 4. **开启自动触发**：CNB 仓库「设置」里勾选**允许自动触发（云原生构建）**，否则 push 不会触发构建
-5. **首次推送验证**：`git push`。master 在 CNB 属于新分支，必定触发两条流水线全量构建（后端、前端并行）。成功后在 CNB 仓库「制品」页能看到两个镜像，各有两个 tag：`latest` 与「日期-短SHA」如 `20261001-1a2b3c4d`（后者用于精确发布/回滚）。制品路径与仓库路径一致（`docker.cnb.cool/canace/astral/astral-backend` 等），首次 push 自动创建，无需手动建仓
-   - 之后每次 push 按**改动路径**过滤：动 `astral-front/**` 只重建前端，动后端模块只重建后端，互不连坐；手动全量构建用 master 分支详情页的「构建并推送镜像」按钮
+5. **首次推送验证**：`git push`。master 在 CNB 属于新分支，必定触发三条流水线全量构建（后端、前端、博客并行）。成功后在 CNB 仓库「制品」页能看到三个镜像（`astral-backend` / `astral-frontend` / `astral-blog`），各有两个 tag：`latest` 与「日期-短SHA」如 `20261001-1a2b3c4d`（后者用于精确发布/回滚）。制品路径与仓库路径一致（`docker.cnb.cool/canace/astral/astral-backend` 等），首次 push 自动创建，无需手动建仓
+   - 之后每次 push 按**改动路径**过滤：动 `astral-front/**` 只重建前端，动 `astral-blog/**` 只重建博客，动后端模块只重建后端，互不连坐；手动全量构建用 master 分支详情页的「构建并推送镜像」按钮
+   - 博客镜像**不带域名**：它的后端地址在运行期由 `CMS_API_BASE` 决定（compose 固定 `http://backend:27000`），换域名不用重新构建。管理端镜像则相反，`NEXT_PUBLIC_API_URL` 是构建期内联的
 6. 服务器无需登录：仓库当前为公开仓，`docker pull docker.cnb.cool/canace/astral/astral-backend` 可匿名拉取。（若改回私有仓再执行一次登录：`echo "<CNB访问令牌>" | docker login docker.cnb.cool -u cnb --password-stdin`，令牌需勾选 `registry-package` 读权限）
 
 7. 服务器 `deploy/.env` 补两行：`REGISTRY=docker.cnb.cool/canace/astral`、`TAG=latest`
@@ -262,6 +381,8 @@ chmod +x update.sh          # 首次执行一次
 docker compose -f docker-compose.yml -f docker-compose.registry.yml pull
 docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-build
 ```
+
+> 前面有 nginx 时，两条命令都要再叠加 `-f docker-compose.nginx.yml`（或直接 `ASTRAL_BEHIND_NGINX=1 ./update.sh`）。
 
 ### ⛔ 别用宝塔面板「容器 → 升级」来更新这套栈
 
@@ -423,21 +544,21 @@ rm -f /opt/astral-docker-*.tar.gz                # 归档建议另存一份做�
 
 ## 接入域名与 HTTPS
 
-在服务器部署反向代理（Nginx / 宝塔 / Caddy 等）并签发 SSL 证书后，推荐把整站（含 API）统一到同一个 HTTPS 域名：
+完整步骤见上文「反向代理 + HTTPS（www / web / astral）」一节（证书 → 放置配置 → 端口收回回环）。这里只列与域名相关的几个判断点：
 
-- 反向代理只需把 `/` 整体转发到前端 `3000`。`/api/` 无需单独转发：浏览器请求 `https://<域名>/api/...` 到达 Next.js 后，由服务端 rewrites 转发到 backend 容器（`http://backend:27000`）
-- `NEXT_PUBLIC_API_URL` 保持**留空**（默认），浏览器使用同源相对路径请求 API，同源请求没有 Mixed Content、也没有 CORS 问题
-- **不要**把 `NEXT_PUBLIC_API_URL` 设为 `http://` 开头的地址：HTTPS 页面下浏览器会以 Mixed Content 拦截全部明文请求，前端表现为"无法连接到服务器，请检查后端服务是否启动"（实际是浏览器拦截，后端本身是正常的）
-- 若坚持浏览器直连 API（独立 API 域名），该地址必须也是 `https://`，且后端 `CORS_ALLOWED_ORIGINS` 需包含前端域名
-- 收紧安全组：`27000` 无需对公网开放；compose 中可将端口映射改为 `127.0.0.1:27000:27000` 仅供本机反向代理转发
+- **当前形态是跨域直连**：管理端页面在 `web.canace.cn`，接口在 `astral.canace.cn`。`NEXT_PUBLIC_API_URL` 是**构建期内联**（`.cnb.yml` 前端 job 的 `--build-arg NEXT_PUBLIC_API_URL=https://astral.canace.cn`），所以浏览器请求直接打到接口域，不走管理端的 `/api` rewrites
+- 因此后端 `CORS_ALLOWED_ORIGINS` **必须**包含 `https://web.canace.cn`（见 `deploy/.env.example` 的 CORS 段）。nginx **不要**给 `astral.canace.cn` 加任何 CORS 响应头，否则会出现两份 `Access-Control-Allow-Origin`，浏览器直接判定失败
+- **博客是另一种形态**：`www.canace.cn` 下的 `/api/*` 是博客自己的 Next Route Handler（登录 / 评论 / 页内保存 / 导出），必须转发到 **blog 容器 3001**，绝不能指向 27000；博客取后端数据全在服务端完成（`CMS_API_BASE`），浏览器不直接访问后端
+- 会话 Cookie 是 `SameSite=Strict`，`canace.cn` 的子域彼此同为「同站」，所以 `web.canace.cn` 页面访问 `astral.canace.cn` 时 Cookie 照常携带
+- **不要**把 `NEXT_PUBLIC_API_URL` 设为 `http://` 开头：HTTPS 页面下浏览器会以 Mixed Content 拦截全部明文请求，前端表现为"无法连接到服务器，请检查后端服务是否启动"（实际是浏览器拦截，后端本身是正常的）
+- 收紧安全组：走 nginx 时 `3000` / `3001` / `27000` 都无需对公网开放（`docker-compose.nginx.yml` 已把端口收回 `127.0.0.1`）
 
-修改 `NEXT_PUBLIC_API_URL` 后必须重新构建并重启 frontend：
+换域名时：博客镜像**不用重建**（后端地址运行期由 `CMS_API_BASE` 决定）；管理端镜像**必须重建**（`NEXT_PUBLIC_API_URL` 已内联进产物）。
 
 ```bash
+# 改了 NEXT_PUBLIC_API_URL 之后
 docker compose build --no-cache frontend && docker compose up -d frontend
 ```
-
-若服务器 `deploy/.env` 中设置过 `NEXT_PUBLIC_API_URL`，需同步删除或改为 `https://` 地址。
 
 ## 故障排查
 
