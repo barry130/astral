@@ -2,8 +2,8 @@
 
 本文档介绍如何将 Astral 管理后台（后端 + 前端）打包为 Docker 镜像并部署到服务器。
 
-- 后端：Spring Boot 4.1.0 / Java 25 / 端口 `27000`
-- 前端：Next.js 16.3（standalone）/ 端口 `3000`
+- 后端：Spring Boot 4.1.2 / Java 25 / 端口 `27000`
+- 前端：Next.js 16.4（standalone）/ 端口 `3000`
 - 数据库：PostgreSQL（复用服务器已有实例）
 - 缓存：Redis（复用服务器已有实例）
 
@@ -353,6 +353,16 @@ docker compose up -d --build
 6. 服务器无需登录：仓库当前为公开仓，`docker pull docker.cnb.cool/canace/astral/astral-backend` 可匿名拉取。（若改回私有仓再执行一次登录：`echo "<CNB访问令牌>" | docker login docker.cnb.cool -u cnb --password-stdin`，令牌需勾选 `registry-package` 读权限）
 
 7. 服务器 `deploy/.env` 补两行：`REGISTRY=docker.cnb.cool/canace/astral`、`TAG=latest`
+
+### 开源组件漏洞扫描（CI 附带）
+
+`.cnb.yml` 里有一条**「开源组件漏洞扫描」**任务，用平台官方插件 `cnbcool/sca-vulnerability` 做全量扫描，依赖指纹（`pom.xml`、两个前端的 `package.json` / lockfile）变更时自动跑：
+
+- 扫描结论写在构建日志里，同时生成 XLSX 报告作为 Commit 附件（`publish: true`）
+- **不设门禁**（没配 `failOnSeverity`）：镜像发布链路上卡一个第三方 CVE，等于用漏洞换可用性，紧急修复反而被自己堵死。标出漏洞、由人当天跟进
+- 想转成强门禁：给它加一行 `failOnSeverity: high`，但要同时接上「当天必须修完」的值班承诺
+
+本地想自查同一样东西，用工具自带的能力就够：前端 `npm audit`、博客 `pnpm audit`、后端 `mvn dependency:tree` 配 OSV / NVD 任一查询入口。
 
 ### 每次更新
 

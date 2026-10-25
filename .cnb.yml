@@ -85,9 +85,53 @@
       docker push "$IMAGE_URL"
       docker push "$IMAGE_PREFIX/astral-blog:latest"
 
+# ---- 开源组件漏洞扫描 ----
+# 为什么要它：2026-10 那批 CVE 是拿版本号人工翻漏洞库才发现的。没有扫描，
+# 下一个 CVE 公布还是得靠人想起来。
+#
+# 用平台官方插件 cnbcool/sca-vulnerability 而不是自研脚本（官方 T0：
+# docs.cnb.cool/zh/security/sca-vulnerability.md）：它直接解析 Maven/npm
+# 锁定的依赖清单，省掉「mvn 实解依赖树 + 自己查 OSV」那一层易错胶水，
+# 且自带增量规则（同一组件同一 CVE 不重复阻断）与 XLSX 报告。
+#
+# 为什么**不**配 failOnSeverity（＝不设门禁）：
+# 镜像发布链路上卡一个第三方 CVE，等于用漏洞换可用性 —— 紧急修复会被自己堵死。
+# 所以扫描失败也照常发镜像，只在日志里列出全部漏洞，由人（或 NPC）当天跟进。
+# 要转成强门禁：加一行 failOnSeverity: high 即可（须同时接上「当天修完」的值班承诺）。
+#
+# 触发条件：只在依赖指纹变更时跑，避免改文档也扫一遍。
+.sca-vuln: &sca-vuln
+  name: 开源组件漏洞扫描
+  runner:
+    tags: cnb:arch:amd64
+    cpus: 2
+  git:
+    lfs: false
+    submodules: false
+  allowFailure: true
+  stages:
+    - name: 扫描（全量）
+      image: cnbcool/sca-vulnerability:latest
+      timeout: 20m
+      settings:
+        scanMode: full
+        publish: true
+
 # ---- 构建配置 ----
 master:
   push:
+    # 漏洞扫描排在镜像之前：它不阻塞发布（allowFailure），但能保证「有洞必有记录」。
+    # 顺带一提，它让每次依赖变动都留一份 SCA 报告附件，事后回溯不用再猜。
+    - <<: *sca-vuln
+      ifModify:
+        - pom.xml
+        - '**/pom.xml'
+        - astral-front/package.json
+        - astral-front/package-lock.json
+        - astral-blog/package.json
+        - astral-blog/pnpm-lock.yaml
+        - .cnb.yml
+
     # ifNewBranch: 首次把 master 推上 CNB 时属于新分支，ifModify 没有比对基准，
     # 用它保证首次推送必定全量构建；之后每次 push 走 ifModify 路径过滤。
     - name: backend 镜像

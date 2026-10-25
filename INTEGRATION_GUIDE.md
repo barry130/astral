@@ -179,7 +179,7 @@ npm run dev
 
 前端通过 Next.js 的 rewrite 功能将 `/api/*` 代理到后端 `http://localhost:27000`。
 
-> 技术栈：Next.js 16.3（App Router + Turbopack，`output: 'standalone'`）+ React 19.2 + TypeScript 5.6 +
+> 技术栈：Next.js 16.4（App Router + Turbopack，`output: 'standalone'`）+ React 19.2 + TypeScript 5.6 +
 > Tailwind CSS v4 + shadcn/ui（Radix UI）。要求 Node.js 24 LTS（最低 20.9+），包管理用 npm。
 > Next 16 已移除 `next lint`，仓库因此没有 lint 脚本，类型检查用 `npx tsc --noEmit`。
 
