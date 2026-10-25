@@ -69,6 +69,17 @@
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
 
+        <!-- CVE-2026-91776（TypeDeserializerBase._findDeserializer 的类型 ID 缓存无上限，
+             name-based 多态 + defaultImpl 回退时每个未知类型 ID 都会留下一份缓存）。
+             本模块代码不引用 com.fasterxml.jackson.databind，它此前是 springdoc / MyBatis-Plus
+             等带进来的传递依赖（2.21.4）；统一由根 pom 的 Jackson 2 BOM 抬到 2.22.3。
+             这里显式声明，是为了让本模块的依赖树里出现并钉住修复版本，
+             同时不依赖「谁恰好把 databind 传进来」这种偶然性。 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <!-- StatReportService 报表聚合读的进程内缓存 -->
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
