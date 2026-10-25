@@ -7,7 +7,9 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <!-- 4.1.2 = 纯补丁抬升，解决内嵌 Tomcat 11.0.24 的 3 个 CRITICAL
+             （DIGEST/FORM 认证绕过、安全约束绕过）→ 11.0.27；Spring Framework 7.0.9→7.0.10。 -->
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
 
