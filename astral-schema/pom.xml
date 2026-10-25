@@ -43,6 +43,14 @@
             <version>3.9.6</version>
             <scope>provided</scope>
         </dependency>
+        <!-- maven-plugin-api 经 maven-core/maven-model 传递带入 plexus-utils，汇入的 3.5.1 的
+             extractFile 存在目录遍历（CVE-2025-67030）；显式提到 3.6.1 修复版。 -->
+        <dependency>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-utils</artifactId>
+            <version>3.6.1</version>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.apache.maven.plugin-tools</groupId>
             <artifactId>maven-plugin-annotations</artifactId>
