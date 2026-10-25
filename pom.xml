@@ -51,10 +51,11 @@
         <hutool.version>5.8.47</hutool.version>
         <mysql.version>9.7.0</mysql.version>
         <!-- Jackson 2（com.fasterxml.jackson.*）：Spring Boot 4.1 的 spring-boot-dependencies
-             只托管 Jackson 3（tools.jackson.*，jackson-bom 3.1.4），Jackson 2 系列沿用其自带的
-             jackson-2-bom 2.21.4——即 CVE-2026-91776 的受影响版本，框架升级不会把它带上去。
-             这里导入 Jackson 2 BOM 覆盖掉那 2.21.4，databind / core / annotations / datatype
-             一并抬到 2.22.3（修复版，不得下调），异常扫描报的传递依赖也由此统一。 -->
+             托管 jackson-2-bom 2.21.4——这一档同时挂着 CVE-2026-91776（类型 ID 缓存无上限）
+             与 CVE-2026-91777（@JsonIdentityInfo 前向引用解析线性扫描放大 CPU），
+             框架升级不会把它带上去。这里导入 Jackson 2 BOM 覆盖掉 2.21.4，
+             databind / core / annotations / datatype 一并抬到 2.22.3（修复版，不得下调），
+             异常扫描报的传递依赖也由此统一。 -->
         <jackson2.version>2.22.3</jackson2.version>
     </properties>
 
