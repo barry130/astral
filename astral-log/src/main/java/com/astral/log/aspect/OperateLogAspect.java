@@ -1,6 +1,7 @@
 package com.astral.log.aspect;
 
 import com.astral.common.util.ClientIp;
+import com.astral.common.util.LogSanitizer;
 import com.astral.log.service.LogService;
 import cn.hutool.core.util.StrUtil;
 import tools.jackson.databind.ObjectMapper;
@@ -42,6 +43,9 @@ public class OperateLogAspect {
     private final OperateLogWriter operateLogWriter;
     /** JSON序列化器，用于将请求参数和响应结果转换为JSON字符串 */
     private final ObjectMapper objectMapper;
+
+    /** 落库的请求/响应文本上限（字符） */
+    private static final int MAX_PERSISTED_LENGTH = 8 * 1024;
 
     /** 可信代理列表（决定能否采信 X-Forwarded-For） */
     @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
@@ -169,6 +173,17 @@ public class OperateLogAspect {
     }
 
     /**
+     * 截断超长文本：日志列是 TEXT，但把整页列表 / 大响应原样持久化既无检索价值
+     * 又会把库撑大（且拖慢异步写入）。保留头部足以定位问题。
+     */
+    private String truncate(String text) {
+        if (text == null || text.length() <= MAX_PERSISTED_LENGTH) {
+            return text;
+        }
+        return text.substring(0, MAX_PERSISTED_LENGTH) + "...(truncated)";
+    }
+
+    /**
      * 序列化请求参数为JSON字符串
      * <p>
      * 取方法第一个参数进行序列化（跳过 HttpServletRequest 类型参数）。
@@ -184,7 +199,9 @@ public class OperateLogAspect {
             if (args == null || args.length == 0) return "";
             Object params = args[0];
             if (params instanceof HttpServletRequest) return "";
-            return objectMapper.writeValueAsString(params);
+            // 凭据脱敏必须在落库前完成：改密码 / 重置密码 / 邮箱授权码 / 第三方密钥
+            // 都是从请求体经过的，「能看日志」不等于「该看到明文凭据」。
+            return truncate(LogSanitizer.mask(objectMapper.writeValueAsString(params)));
         } catch (Exception e) {
             return "";
         }
@@ -199,7 +216,7 @@ public class OperateLogAspect {
     private String getResponseResult(Object result) {
         try {
             if (result == null) return "";
-            return objectMapper.writeValueAsString(result);
+            return truncate(LogSanitizer.mask(objectMapper.writeValueAsString(result)));
         } catch (Exception e) {
             return "";
         }

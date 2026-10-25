@@ -98,6 +98,30 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
             "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0",
             Long.class);
 
+    /**
+     * 验证码「原子校验 + 失败自增 + 超限作废」脚本。
+     *
+     * <p>返回：{@code 1}=校验通过；{@code 0}=不匹配（计数已 +1）；{@code -1}=不匹配且已达上限
+     * （验证码已删除，必须重新发送）；{@code -2}=验证码不存在/已过期。</p>
+     *
+     * <p>为什么要放到 Lua 里：原实现是「GET 出来 → Java 侧比较 → 再 INCREMENT」，
+     * 并发请求全都能在「还没人记失败」的空窗里各试一次，5 次的封顶在并发下形同虚设；
+     * 同时两次 GET+比较把「已删除的验证码」和「刚被别人的失败删掉的验证码」混在一起判断。</p>
+     */
+    private static final DefaultRedisScript<Long> VERIFY_CODE_SCRIPT = new DefaultRedisScript<>(
+            "local stored = redis.call('GET', KEYS[1])\n"
+                    + "if not stored then return -2 end\n"
+                    + "if stored == ARGV[1] then return 1 end\n"
+                    + "local fails = redis.call('INCR', KEYS[2])\n"
+                    + "if fails == 1 then redis.call('EXPIRE', KEYS[2], ARGV[2]) end\n"
+                    + "if fails >= tonumber(ARGV[3]) then\n"
+                    + "  redis.call('DEL', KEYS[1])\n"
+                    + "  redis.call('DEL', KEYS[2])\n"
+                    + "  return -1\n"
+                    + "end\n"
+                    + "return 0",
+            Long.class);
+
     // ==================== 登录/注册（统一走宿主 sys_user + Sa-Token） ====================
 
     /**
@@ -335,11 +359,9 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         }
     }
 
-    /**
-     * 从 Redis 取验证码（已过期/不存在返回 null）。内部供 changePwByEmail 使用。
-     */
-    public String getValidCode(String email, String body) {
-        return stringRedisTemplate.opsForValue().get(CODE_KEY + email + ":" + body);
+    /** 验证码在 Redis 的键（改密/投递校验共用同一命名规则） */
+    private static String codeKey(String email, String body) {
+        return CODE_KEY + email + ":" + body;
     }
 
     public User changePwByEmail(QtChangePwByEmailDto dto) {
@@ -352,17 +374,19 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
             throw new QtException("当前邮箱还未注册");
         }
 
-        String codeKey = CODE_KEY + dto.getEmail() + ":" + EMAIL_BODY_CHANGE_PW;
-        String code = getValidCode(dto.getEmail(), EMAIL_BODY_CHANGE_PW);
-        if (code == null) {
-            throw new QtException("当前邮箱验证码不存在或已失效");
-        }
+        String redisKey = codeKey(dto.getEmail(), EMAIL_BODY_CHANGE_PW);
         // 验证码只有 6 位数字（10^6），不计数就能在有效期内并发枚举并重置任意账号密码。
         // 失败次数与 IP 限流是两层防护：前者按邮箱维度封顶总尝试次数，后者挡住跨邮箱扫描。
-        if (!code.equals(dto.getCode())) {
-            if (recordCodeFailure(codeKey)) {
-                throw new QtException("验证码错误次数过多，请重新获取验证码");
-            }
+        // 校验必须原子（Lua）：拆成「GET → Java 比较 → INCR」三步时，并发请求会全部挤在
+        // 「还没人记失败」的空窗里各试一次，5 次封顶等于不存在。
+        int verify = verifyCode(redisKey, dto.getCode());
+        if (verify == -2) {
+            throw new QtException("当前邮箱验证码不存在或已失效");
+        }
+        if (verify == -1) {
+            throw new QtException("验证码错误次数过多，请重新获取验证码");
+        }
+        if (verify != 1) {
             throw new QtException("当前验证码不正确");
         }
 
@@ -371,31 +395,33 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         userMapper.updateById(user);
 
         // 验证码一次性失效（连同失败计数），注销该用户所有会话
-        stringRedisTemplate.delete(List.of(codeKey, codeFailKey(codeKey)));
+        stringRedisTemplate.delete(List.of(redisKey, codeFailKey(redisKey)));
         StpUtil.kickout(user.getId());
 
         return user;
     }
 
     /**
-     * 记一次验证码比对失败，返回是否已达上限。
-     * <p>计数 key 与验证码同生命周期（首次失败时对齐验证码剩余 TTL），
-     * 达到 {@value MAX_CODE_FAILURES} 次即删除验证码，强制重新发送才能继续尝试。</p>
+     * 原子校验验证码（见 {@link #VERIFY_CODE_SCRIPT}）。
+     *
+     * @param codeKey 验证码在 Redis 的键
+     * @param input   用户提交的验证码
+     * @return 1=通过；0=不匹配；-1=已达失败上限（验证码已作废）；-2=验证码不存在/已过期
      */
-    private boolean recordCodeFailure(String codeKey) {
+    private int verifyCode(String codeKey, String input) {
+        if (input == null || input.isBlank()) {
+            input = "";
+        }
         String failKey = codeFailKey(codeKey);
-        Long count = stringRedisTemplate.opsForValue().increment(failKey);
-        if (count != null && count == 1L) {
-            Long codeTtl = stringRedisTemplate.getExpire(codeKey, TimeUnit.SECONDS);
-            stringRedisTemplate.expire(failKey,
-                    codeTtl != null && codeTtl > 0 ? Duration.ofSeconds(codeTtl) : CODE_TTL);
-        }
-        if (count != null && count >= MAX_CODE_FAILURES) {
-            stringRedisTemplate.delete(List.of(codeKey, failKey));
+        Long codeTtl = stringRedisTemplate.getExpire(codeKey, TimeUnit.SECONDS);
+        long ttl = codeTtl != null && codeTtl > 0 ? codeTtl : CODE_TTL.toSeconds();
+        Long result = stringRedisTemplate.execute(VERIFY_CODE_SCRIPT, List.of(codeKey, failKey),
+                input, String.valueOf(ttl), String.valueOf(MAX_CODE_FAILURES));
+        int code = result == null ? -2 : result.intValue();
+        if (code == -1) {
             log.warn("[QtPlugin] 邮箱验证码尝试次数超限，验证码已作废: key={}", codeKey);
-            return true;
         }
-        return false;
+        return code;
     }
 
     private static String codeFailKey(String codeKey) {

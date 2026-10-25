@@ -264,11 +264,29 @@ public class UploadTicketService {
         return isMimeAllowedForFolder(contentType, null);
     }
 
+    /** SVG 系列 MIME 判定（image/svg+xml 及其常见变体） */
+    private static boolean isSvgMime(String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        String mime = contentType.trim().toLowerCase(java.util.Locale.ROOT);
+        if (mime.contains(";")) {
+            mime = mime.substring(0, mime.indexOf(';')).trim();
+        }
+        return "image/svg+xml".equals(mime) || "image/svg".equals(mime) || "text/svg".equals(mime);
+    }
+
     /**
      * MIME 白名单判定（UPDATE_DESIGN.md §3.3）：文件夹策略 allowedMimes 优先，
      * 未配置时回落插件全局 allowed-mime-types（空 = 不限制）。
      */
     public boolean isMimeAllowedForFolder(String contentType, UploadPolicyService.PolicySpec policy) {
+        // SVG 无条件拒绝（先于白名单判断）：它是 XML 文档，可内联 script/onload，
+        // 一旦被浏览器按图片渲染就是同源存储型 XSS。Worker 下载侧已把它排除在内联白名单外，
+        // 这里从源头再拦一层 —— 光靠「渲染侧防御」的话，任何代理/直链场景都会重开这个洞。
+        if (isSvgMime(contentType)) {
+            return false;
+        }
         List<String> allowlist = policy != null && policy.allowedMimes() != null && !policy.allowedMimes().isEmpty()
                 ? policy.allowedMimes()
                 : properties.getAllowedMimeTypes();

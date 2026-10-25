@@ -49,11 +49,14 @@ public class ApiMetricCollector {
      * @param uri        接口路径（不含 query）
      * @param method     HTTP 方法
      * @param status     HTTP 状态码
-     * @param costMs     耗时（毫秒）
+     * @param elapsedNs  本次请求的**纳秒数**（取自拦截器 preHandle 的起点）。
      * @param ut         客户端平台（取自请求头，缺失时为空串）
      * @param appVersion 客户端版本（取自请求头，缺失时为空串）
      */
-    public void record(String uri, String method, int status, long costMs, String ut, String appVersion) {
+    public void record(String uri, String method, int status, long elapsedNs, String ut, String appVersion) {
+        // 旧实现由采集侧自己 start=now，导致「耗时恒为 0」——所有接口耗时报表都是假数据。
+        // 现在由拦截器传「自 preHandle 起的纳秒数」；负数（时钟异常）当 0 处理。
+        long costMs = Math.max(elapsedNs, 0L) / 1_000_000;
         LocalDateTime bucketHour = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
         ApiMetricKey key = new ApiMetricKey(bucketHour, uri, method, status, ut, appVersion);
         if (metrics.get(key) == null && metrics.mappingCount() >= MAX_BUCKETS) {

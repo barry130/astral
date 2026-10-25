@@ -309,9 +309,15 @@ public class StorageFileService {
             boolean full = UploadPolicyService.VERIFY_FULL.equals(level);
             // full 校验也带上硬上限：magic 只需文件头、像素校验只需元信息，都不需要整幅图，
             // 旧实现传 -1 会 readNBytes(Integer.MAX_VALUE) 把整个对象读进堆。
+            // 一律按文件头读取，与 full / magic 无关：magic 识别与 SVG 检测都只依赖前若干字节。
             byte[] head = fetchContentBytes(file, full ? MAX_VERIFY_BYTES : MAGIC_HEAD_BYTES);
-            String actual = detectImageMime(head);
             String declared = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
+            // SVG 是 XML 文档，可内联脚本：即便登记类型写成 image/svg+xml 也不放行
+            // （Worker 侧同样把 svg 排除在内联白名单外，两处都挡，避免只靠一层）。
+            if (declared.startsWith("image/svg") || looksLikeSvg(head)) {
+                throw new BusinessException("STORAGE033", "不支持 SVG 类型的图片");
+            }
+            String actual = detectImageMime(head);
             if (actual == null) {
                 // 非图片内容不在内置 magic 识别范围内：仅当登记类型声称是图片时才判失败
                 if (declared.startsWith("image/")) {
@@ -431,6 +437,44 @@ public class StorageFileService {
             log.warn("[Storage] 读取图片元信息失败，跳过像素校验: {}", e.getMessage());
             return -1;
         }
+    }
+
+    /**
+     * 是否为 SVG 内容（按前若干字节的 XML 根判断）。
+     * <p>SVG 没有二进制 magic，只能看文本：跳过 BOM/声明/注释/DOCTYPE 后，
+     * 首个元素是 {@code <svg} 即判定为 SVG。</p>
+     */
+    static boolean looksLikeSvg(byte[] head) {
+        if (head == null || head.length == 0) {
+            return false;
+        }
+        String text = new String(head, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("\uFEFF", "").trim().toLowerCase(java.util.Locale.ROOT);
+        // 依次剥掉 XML 声明 / 注释 / DOCTYPE，直到看到真正的根元素
+        while (true) {
+            if (text.startsWith("<?xml")) {
+                int end = text.indexOf("?>");
+                if (end < 0) {
+                    return false;
+                }
+                text = text.substring(end + 2).trim();
+            } else if (text.startsWith("<!--")) {
+                int end = text.indexOf("-->");
+                if (end < 0) {
+                    return false;
+                }
+                text = text.substring(end + 3).trim();
+            } else if (text.startsWith("<!doctype")) {
+                int end = text.indexOf('>');
+                if (end < 0) {
+                    return false;
+                }
+                text = text.substring(end + 1).trim();
+            } else {
+                break;
+            }
+        }
+        return text.startsWith("<svg");
     }
 
     /** 内置图片 magic 识别（PNG/JPEG/GIF/WebP）；非图片返回 null */

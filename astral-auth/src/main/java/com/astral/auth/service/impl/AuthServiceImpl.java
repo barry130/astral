@@ -81,7 +81,12 @@ public class AuthServiceImpl implements AuthService {
         try {
             password = rsaKeyManager.decryptPasswordBase64(password);
         } catch (Exception e) {
-            throw new BusinessException("AUTH004");
+            // 密文解不开 → 与「密码错误」返回同一个错误码（AUTH002）。
+            // 此前解填充失败走 AUTH004、密码错走 AUTH002，二者可区分：
+            // 攻击者据此判定「用户名是否存在」（不存在时不会有解密分支）、
+            // 并构成 PKCS#1 v1.5 填充 oracle。响应时间差异由两条分支的对称处理 + 同一出口收敛。
+            rsaKeyManager.recordLoginFailure(request.getUsername());
+            throw new BusinessException("AUTH002");
         }
         
         if (!BCrypt.checkpw(password, user.getPassword())) {

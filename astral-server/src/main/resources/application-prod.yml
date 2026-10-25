@@ -58,6 +58,29 @@ astral:
     # 若生产确实是纯 http 内网裸跑，把它显式改成 false，否则登录后 Cookie 不会落地。
     cookie-secure: ${AUTH_COOKIE_SECURE:true}
 
+# ---------------- 生产环境「默认收敛」的暴露面 ----------------
+# 鉴权拦截器只覆盖 /api/**，而 nginx 把整个站点域都反代到本服务：
+# /actuator/**、/v3/api-docs、/swagger-ui.html 因此完全绕过鉴权 ── 匿名即可读取
+# JVM/DB/Redis 指标与全部接口清单，等于给攻击者一份完整踩点地图。
+# 下面把默认值收紧到「只留健康检查」，需要排障时用环境变量临时放开。
+management:
+  endpoints:
+    web:
+      exposure:
+        # 只暴露 health（docker healthcheck 依赖）；metrics/prometheus 需要时显式加
+        include: ${ACTUATOR_ENDPOINTS:health}
+  endpoint:
+    health:
+      # 匿名端点不回组件细节（DB/Redis 连接串、磁盘路径都属内部信息）
+      show-details: ${ACTUATOR_HEALTH_DETAILS:never}
+
+springdoc:
+  # 生产默认关闭 OpenAPI 文档；本地/测试不受影响（本文件仅 prod profile 生效）
+  api-docs:
+    enabled: ${SPRINGDOC_ENABLED:false}
+  swagger-ui:
+    enabled: ${SPRINGDOC_ENABLED:false}
+
 mybatis-plus:
   configuration:
     # 生产静默 SQL 日志：每条 SQL + 参数打印到 stdout 在单核上是无谓开销

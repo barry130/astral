@@ -214,12 +214,17 @@ public class ProfileController {
         return user;
     }
 
-    /** RSA 解密（前端经 encryptPassword 加密，与登录同一通道） */
+    /**
+     * RSA 解密（前端经 encryptPassword 加密，与登录同一通道）。
+     *
+     * <p>失败统一抛 AUTH002（与「密码错误」同一错误码）：单独给「密码解密失败」（AUTH004）
+     * 会让调用方能区分「密文本身有问题」与「密码不对」，是登录链路上的填充 oracle 的一半。</p>
+     */
     private String decrypt(String encrypted) {
         try {
             return rsaKeyManager.decryptPasswordBase64(encrypted);
         } catch (Exception e) {
-            throw new BusinessException("AUTH004");
+            throw new BusinessException("AUTH002");
         }
     }
 }

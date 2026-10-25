@@ -14,6 +14,13 @@ crons = ["*/5 * * * *"]
 # Astral 后端公网地址（Worker 回源/回调使用，必须是 Worker 可访问的 https 地址）
 ASTRAL_ORIGIN_BASE_URL = "https://api.example.com"
 
+# 允许用浏览器 JS 读取签名下载 URL 的来源（逗号分隔）。
+# 留空 = 不回任何 Access-Control-Allow-Origin，即只有直接打开链接/标签页能下载，
+# 页面里的 fetch/XHR 读不到内容（推荐默认）。此前是 '*'，签名 URL 一旦外流，
+# 任何站点都能把私密文件内容取回去。需要管理台 JS 直接取图时按域名显式列出：
+#   ALLOWED_DOWNLOAD_ORIGINS = "https://web.canace.cn,https://canace.cn"
+ALLOWED_DOWNLOAD_ORIGINS = ""
+
 # 自定义域名（可选）：绑定后走 img.example.com；未绑定时使用 *.workers.dev 地址
 # 在 Dashboard → Workers → astral-storage → Settings → Domains & Routes 配置
 

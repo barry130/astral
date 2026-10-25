@@ -43,11 +43,76 @@ const META_CACHE_TTL = 300;
 // Telegram getFile 结果缓存：官方保证 file 链接在 getFile 后至少 1 小时有效，取 30 分钟留安全边际。
 const TG_PATH_CACHE_TTL = 1800;
 
+// 允许读取签名 URL 的浏览器来源（逗号分隔，如 https://web.canace.cn）。
+// 空 = 不回任何 Access-Control-Allow-Origin（默认最安全）。此前恒为 '*'：
+// 签名 URL 一旦被记录（聊天记录、Referer、日志），任何站点都能用 JS 取回文件内容，
+// 对可下载的私密文件等于绕过「只有链接持有者可见」的前提。
+const ALLOWED_DOWNLOAD_ORIGINS = (env) =>
+  String(env?.ALLOWED_DOWNLOAD_ORIGINS || '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+/** 按请求 Origin 回显 CORS（仅命中白名单时），并把 Vary 标出来避免缓存串味 */
+function downloadCorsHeaders(request, env) {
+  const origin = request.headers.get('Origin');
+  if (!origin || !ALLOWED_DOWNLOAD_ORIGINS(env).includes(origin)) {
+    return { Vary: 'Origin' };
+  }
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Range',
+    Vary: 'Origin',
+  };
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+
+// ==================== 下载内容安全头 ====================
+
+/**
+ * 视为「可内联安全」的图片类型白名单。
+ * <p>不含 image/svg+xml：SVG 是 XML 文档，里面可挂 script / onload / xlink:href，
+ * 一旦被浏览器按图片内联渲染就是同源存储型 XSS。Worker 域与站点域重合时后果最重。</p>
+ */
+const INLINE_SAFE_IMAGE_MIMES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/webp',
+  'image/bmp',
+  'image/avif',
+]);
+
+function normalizedMime(raw, fallback) {
+  const value = String(raw || '').toLowerCase().split(';')[0].trim();
+  return value || fallback;
+}
+
+/**
+ * 生成下载响应的安全头。
+ * <p>策略：只有「白名单内的图片」允许 {@code inline}（图床/头像要能直接显示），
+ * 其它一律 {@code attachment}（浏览器下载而不是渲染），并统一加 {@code nosniff}，
+ * 让浏览器不再按内容猜类型 —— 「上传 HTML 冒充图片」这条路因此走不通。</p>
+ */
+function safeContentHeaders(meta, contentType) {
+  const mime = normalizedMime(meta?.contentType || contentType, 'application/octet-stream');
+  const inline = INLINE_SAFE_IMAGE_MIMES.has(mime);
+  const disposition = inline ? 'inline' : 'attachment';
+  return {
+    'Content-Type': mime,
+    'Content-Disposition': `${disposition}; filename="${sanitizeFilename(meta?.fileName)}"`,
+    'X-Content-Type-Options': 'nosniff',
+    // 被直接打开（例如在标签页里访问）时也禁掉脚本与插件执行；
+    // 内联图片加 sandbox 会阻止 <img> 引用正常渲染，故只对外链/附件生效。
+    ...(inline ? {} : { 'Content-Security-Policy': "default-src 'none'; sandbox" }),
+  };
+}
 
 // ==================== 工具 ====================
 
@@ -286,12 +351,9 @@ async function prewarmCaches(env, origin, uploadFile, callback, registered) {
     await getTelegramFilePath(env, callback.telegramFileId);
     if (visibility === 'PUBLIC' && uploadFile) {
       const bytes = await uploadFile.arrayBuffer();
-      const baseHeaders = {
-        'Content-Type': meta.contentType || 'application/octet-stream',
-        'Content-Disposition': `inline; filename="${sanitizeFilename(meta.fileName)}"`,
-        'X-Content-Type-Options': 'nosniff',
-        ...CORS_HEADERS,
-      };
+      // 与 handleDownload / handlePermanentDownload 用同一套策略，
+      // 否则预热出来的缓存副本会绕过安全头（命中缓存直接回 inline）
+      const baseHeaders = safeContentHeaders(meta);
       // /_pcache/：永久链接内容（与 handlePermanentDownload 同键同 TTL）
       await cache.put(new URL(`/_pcache/${publicId}/${contentVersion}`, origin).toString(), new Response(bytes, {
         headers: { ...baseHeaders, 'Cache-Control': `public, max-age=${PERMANENT_CACHE_TTL}, s-maxage=${PERMANENT_CACHE_TTL}` },
@@ -393,13 +455,11 @@ async function handleDownload(request, env) {
 
   const isPublic = meta.visibility === 'PUBLIC';
   const headers = new Headers({
-    'Content-Type': meta.contentType || content.headers.get('Content-Type') || 'application/octet-stream',
-    'Content-Disposition': `inline; filename="${sanitizeFilename(meta.fileName)}"`,
-    'X-Content-Type-Options': 'nosniff',
+    ...safeContentHeaders(meta, content.headers.get('Content-Type')),
     'Cache-Control': isPublic
       ? `public, max-age=${PUBLIC_CACHE_TTL}, s-maxage=${PUBLIC_CACHE_TTL}`
       : 'private, no-store',
-    ...CORS_HEADERS,
+    ...downloadCorsHeaders(request, env),
   });
   const response = new Response(content.body, { status: 200, headers });
   if (isPublic) {
@@ -437,11 +497,9 @@ async function handlePermanentDownload(request, env) {
   if (!content.ok || !content.body) return errorResp('not found', 404);
 
   const headers = new Headers({
-    'Content-Type': meta.contentType || content.headers.get('Content-Type') || 'application/octet-stream',
-    'Content-Disposition': `inline; filename="${sanitizeFilename(meta.fileName)}"`,
-    'X-Content-Type-Options': 'nosniff',
+    ...safeContentHeaders(meta, content.headers.get('Content-Type')),
     'Cache-Control': `public, max-age=${PERMANENT_CACHE_TTL}, s-maxage=${PERMANENT_CACHE_TTL}`,
-    ...CORS_HEADERS,
+    ...downloadCorsHeaders(request, env),
   });
   const response = new Response(content.body, { status: 200, headers });
   await cache.put(cacheKey, response.clone());

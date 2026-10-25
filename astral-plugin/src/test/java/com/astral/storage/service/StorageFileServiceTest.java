@@ -92,3 +92,48 @@ class StorageFileServiceTest {
         verify(purger).purgeFileAsync(isNull(), eq("public-id"), eq(1L), isNull());
     }
 }
+
+// ==================== SVG 检测（存储型 XSS 的第一道闸） ====================
+
+class StorageFileServiceSvgTest {
+
+    private static byte[] utf8(String s) {
+        return s.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    @Test
+    void plainSvgIsDetected() {
+        assertTrue(StorageFileService.looksLikeSvg(utf8("<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>")));
+    }
+
+    @Test
+    void svgWithDeclarationCommentAndDoctypeIsDetected() {
+        String svg = "<?xml version=\"1.0\"?>\n<!-- figure -->\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"x\">\n<SVG onload=\"alert(1)\" xmlns=\"http://www.w3.org/2000/svg\"/>";
+        assertTrue(StorageFileService.looksLikeSvg(utf8(svg)));
+    }
+
+    @Test
+    void svgWithBomIsDetected() {
+        assertTrue(StorageFileService.looksLikeSvg(utf8("\uFEFF<svg/>")));
+    }
+
+    @Test
+    void binaryImagesAreNotSvg() {
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13};
+        assertFalse(StorageFileService.looksLikeSvg(png));
+        byte[] jpeg = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0, 0, 0, 0, 0, 0, 0};
+        assertFalse(StorageFileService.looksLikeSvg(jpeg));
+        assertFalse(StorageFileService.looksLikeSvg(null));
+        assertFalse(StorageFileService.looksLikeSvg(new byte[0]));
+    }
+
+    @Test
+    void htmlIsNotMistakenForSvg() {
+        assertFalse(StorageFileService.looksLikeSvg(utf8("<html><body>hi</body></html>")));
+    }
+
+    @Test
+    void unterminatedDeclarationIsNotSvg() {
+        assertFalse(StorageFileService.looksLikeSvg(utf8("<?xml version=\"1.0\"")));
+    }
+}

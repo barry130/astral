@@ -10,6 +10,7 @@ import com.astral.auth.dto.TokenInfo;
 import com.astral.auth.service.TokenService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -30,12 +31,40 @@ import java.util.stream.Collectors;
  * <p>基于Sa-Token实现Token管理功能，包括从Sa-Token存储中分页获取Token信息、
  * 吊销Token、踢出用户以及清理过期Token</p>
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TokenServiceImpl implements TokenService {
 
+    /** 单次会话列表最多扫描的 token 键数（本页只需一页数据，扫全库没有意义） */
+    private static final int MAX_SCANNED_TOKENS = 20_000;
+
     /** 用户Mapper，用于查询用户名 */
     private final UserMapper userMapper;
+
+    /**
+     * 扫描 Redis 中的登录 Token 键（有界）。
+     *
+     * <p><b>为什么不再用 {@code dao.searchData("", "", 0, -1, true)}</b>：</p>
+     * <ol>
+     *   <li>那是「取回全库所有键再在内存里筛」，而本项目的 Redis 与线上业务共用同一个实例，
+     *       管理端翻一次页就是一次全库扫描 + 每 token 2~3 次往返；</li>
+     *   <li>更要紧的是<b>顺序不可依赖</b>：Sa-Token 的 {@code SaFoxUtil.searchList} 对
+     *       {@code sortType} 只做 {@code Collections.reverse}（SCAN/KEYS 本身无序），
+     *       于是「最新会话」分页会整页错乱 —— 安全审计看到的在线会话是错的。</li>
+     * </ol>
+     * <p>改为：前缀检索 + 条数上界（{@link #MAX_SCANNED_TOKENS}）；「最新在前」不再依赖存储顺序，
+     * 由下方按会话创建时间倒序保证。</p>
+     */
+    private List<String> scanTokenKeys(SaTokenDao dao, String tokenPrefix) {
+        try {
+            List<String> keys = dao.searchData(tokenPrefix, "", 0, MAX_SCANNED_TOKENS, true);
+            return keys == null ? List.of() : keys;
+        } catch (Exception e) {
+            log.warn("[token] 会话键检索失败，本次按空处理: {}", e.getMessage());
+            return List.of();
+        }
+    }
 
     /**
      * 从Sa-Token中分页获取Token信息
@@ -49,8 +78,6 @@ public class TokenServiceImpl implements TokenService {
     @Override
     public Page<TokenInfo> pageFromSaToken(int pageNum, int pageSize, Long userId) {
         SaTokenDao dao = StpUtil.getStpLogic().getSaTokenDao();
-        // 获取Sa-Token中所有存储的键
-        List<String> allKeys = dao.searchData("", "", 0, -1, true);
 
         // 构建Token键的前缀，用于筛选登录Token
         String tokenPrefix = StpUtil.getStpLogic().getTokenName() + ":login:token:";
@@ -58,7 +85,7 @@ public class TokenServiceImpl implements TokenService {
         Set<Long> userIds = new HashSet<>();
 
         // 遍历所有键，筛选出登录Token
-        for (String key : allKeys) {
+        for (String key : scanTokenKeys(dao, tokenPrefix)) {
             if (!key.startsWith(tokenPrefix)) {
                 continue;
             }

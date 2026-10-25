@@ -125,7 +125,14 @@ public class UserController {
     @RequiresPermission("admin:system:user:view")
     @GetMapping("/{id}")
     public Result<User> getById(@PathVariable Long id) {
-        return Result.success(userService.getById(id));
+        User user = userService.getById(id);
+        if (user != null) {
+            // 与 exportCsv 口径一致：不回传 BCrypt 散列。
+            // 「只有加密后的散列」不构成放行理由——离库即可离线爆破，
+            // 且前端从不需要它（改密走 /{id}/password 单独接口）。
+            user.setPassword(null);
+        }
+        return Result.success(user);
     }
 
     /**

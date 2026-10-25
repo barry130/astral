@@ -168,6 +168,10 @@ sa-token:
   # 头优先，浏览器不会把 Cookie 自动带进跨站请求以外的场景，两者互不干扰。
   is-read-header: true
   is-read-cookie: true
+  # 【必须关】请求体读 token：POST 登录本身带 JSON body，若开启它，跨站页面可以用
+  # 一个 POST（带凭据 Cookie）把 token 塞进 body 通过认证 —— CSRF 从「头」转移到了「体」，
+  # SameSite=Strict 会成为唯一防线。显式关掉，凭据只认头与 Cookie。
+  is-read-body: false
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml

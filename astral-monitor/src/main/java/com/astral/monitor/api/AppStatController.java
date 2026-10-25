@@ -1,6 +1,7 @@
 package com.astral.monitor.api;
 
 import org.springframework.beans.factory.annotation.Value;
+import com.astral.common.annotation.RateLimit;
 import com.astral.common.result.Result;
 import com.astral.common.util.ClientIp;
 import com.astral.monitor.dto.StatReportRequest;
@@ -37,6 +38,9 @@ public class AppStatController {
      * 匿名批量上报统计事件（单批 ≤200 条）
      */
     @Operation(summary = "匿名批量上报统计事件")
+    // 匿名入口必须限流：单请求最多 200 事件 × 每事件 2~3 条 SQL，不限频就等于把
+    // 「按 IP 打穿连接池」的按钮交给公网。service 侧另有并发准入（MAX_CONCURRENT_BATCHES）。
+    @RateLimit(key = "ip", limit = 60, duration = 60, message = "上报过于频繁，请稍后再试")
     @PostMapping("/report")
     public Result<Void> report(@Valid @RequestBody StatReportRequest request,
                                HttpServletRequest servletRequest) {

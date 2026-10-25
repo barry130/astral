@@ -15,8 +15,11 @@ class AiUrlGuardTest {
 
     @Test
     void keepsPublicHttpsUrlAndStripsTrailingSlashes() {
-        assertEquals("https://api.openai.com/v1",
-                AiUrlGuard.validateBaseUrl("https://api.openai.com/v1///", null));
+        // 用 IP 字面量而不是域名：域名版本要靠 DNS 解析（AIR guard 会做 rebinding 检查），
+        // 在无外网/DNS 受限的构建机（如 CNB 流水线）会解析失败被误判为内网地址。
+        // 校验目标与「去尾部斜杠」无关，换成公网 IP 字面量同样成立。
+        assertEquals("https://11.22.33.44/v1",
+                AiUrlGuard.validateBaseUrl("https://11.22.33.44/v1///", null));
     }
 
     @Test

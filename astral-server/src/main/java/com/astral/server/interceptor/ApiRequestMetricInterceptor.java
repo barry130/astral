@@ -61,12 +61,14 @@ public class ApiRequestMetricInterceptor implements HandlerInterceptor {
                                 Object handler, Exception ex) {
         Object startObj = request.getAttribute(ATTR_START_NS);
         if (startObj instanceof Long startNs) {
-            long costMs = (System.nanoTime() - startNs) / 1_000_000;
             String uri = ClientHeaders.normalize(request.getRequestURI(), MAX_URI_LENGTH);
             String ut = ClientHeaders.resolveUt(
                     request.getHeader(clientUtHeader), request.getHeader(legacyPlatformHeader));
             String appVersion = ClientHeaders.normalizeVersion(request.getHeader(clientVersionHeader));
-            apiMetricCollector.record(uri, request.getMethod(), response.getStatus(), costMs, ut, appVersion);
+            // 传纳秒差值（不是提前除好的毫秒）：collector 内部自己换算，
+            // 避免「整数除法丢精度 → 绝大多数请求耗时恒为 0」这类口径错误。
+            apiMetricCollector.record(uri, request.getMethod(), response.getStatus(),
+                    System.nanoTime() - startNs, ut, appVersion);
         }
     }
 }
