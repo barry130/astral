@@ -60,6 +60,7 @@ public class QtSourceService {
     private final QtSourceReportMapper reportMapper;
     private final DictDataService dictDataService;
     private final ObjectMapper objectMapper;
+    private final QtPackHeaderProbe packHeaderProbe;
 
     /** 产物 path 白名单字典（启用的出现在前端下拉，停用的不再被继承） */
     private static final String DICT_ARTIFACT_PATH = "qt_source_artifact_path";
@@ -227,6 +228,9 @@ public class QtSourceService {
             log.info("[QtSource] 新建音源包 release: code={} name={} channel={} platforms={} artifacts={}",
                     code, entity.getSourceVersionName(), entity.getChannel(), entity.getPlatforms(),
                     entity.getArtifacts());
+            // 产物直发字段（packId/packVersionCode/packVersionName）异步补齐：
+            // 客户端拿到后免 Range 探测直接比版（与 play 同口径），补不上客户端回退自行探测
+            packHeaderProbe.fillAsync(entity.getId());
             return toVo(entity, true);
         }
     }
@@ -264,10 +268,18 @@ public class QtSourceService {
         }
         exist.setUpdateTime(LocalDateTime.now());
         releaseMapper.updateById(exist);
+        // url 换新文件的条目直发字段被清空了，异步补齐重新探测
+        packHeaderProbe.fillAsync(id);
     }
 
-    /** 发布（is_published=1，记录发布时间） */
+    /** 发布（is_published=1，记录发布时间）；发布前同步补齐产物直发字段（尽力，不阻塞） */
     public void publish(Long id) {
+        // 发布是直发字段的最佳补齐时机：客户端拿到 manifest 就能免探测比版；
+        // 探测不到只告警（客户端回退自行探测），版本不一致在 probe 内对账告警
+        int filled = packHeaderProbe.fillSync(id);
+        log.info("[QtSource] 发布前直发字段补齐: id={} filled={}", id, filled);
+        // fillSync 已把补齐结果写回 artifacts 列；必须重读再 updateById，
+        // 否则 updateById 会把补齐前的旧 artifacts 写回去（丢失更新）
         QtSourceRelease exist = requireRelease(id);
         exist.setIsPublished(1);
         exist.setPublishedAt(LocalDateTime.now());
@@ -276,26 +288,31 @@ public class QtSourceService {
         log.info("[QtSource] 发布音源包: code={} channel={}", exist.getSourceVersionCode(), exist.getChannel());
     }
 
-    /** 撤回发布（停止投递，已装设备保持现状） */
+    /** 撤回发布（停止投递，已装设备保持现状）。只改目标列，避免把异步补齐的 artifacts 写回旧值 */
     public void unpublish(Long id) {
         QtSourceRelease exist = requireRelease(id);
-        exist.setIsPublished(0);
-        exist.setUpdateTime(LocalDateTime.now());
-        releaseMapper.updateById(exist);
+        QtSourceRelease patch = new QtSourceRelease();
+        patch.setIsPublished(0);
+        patch.setUpdateTime(LocalDateTime.now());
+        releaseMapper.update(patch, new LambdaQueryWrapper<QtSourceRelease>()
+                .eq(QtSourceRelease::getId, id));
         log.info("[QtSource] 撤回音源包: code={} channel={}", exist.getSourceVersionCode(), exist.getChannel());
     }
 
-    /** 标记坏包（is_bad=1，可指定 rollbackTo；已标坏的版本不再参与 manifest 候选） */
+    /** 标记坏包（is_bad=1，可指定 rollbackTo；已标坏的版本不再参与 manifest 候选）。只改目标列 */
     public void markBad(Long id, Long rollbackTo) {
         QtSourceRelease exist = requireRelease(id);
-        exist.setIsBad(1);
+        QtSourceRelease patch = new QtSourceRelease();
+        patch.setIsBad(1);
         if (rollbackTo != null) {
-            exist.setRollbackTo(rollbackTo);
+            patch.setRollbackTo(rollbackTo);
         }
-        exist.setUpdateTime(LocalDateTime.now());
-        releaseMapper.updateById(exist);
+        patch.setUpdateTime(LocalDateTime.now());
+        releaseMapper.update(patch, new LambdaQueryWrapper<QtSourceRelease>()
+                .eq(QtSourceRelease::getId, id));
         log.warn("[QtSource] 标记坏包: code={} channel={} rollbackTo={}",
-                exist.getSourceVersionCode(), exist.getChannel(), exist.getRollbackTo());
+                exist.getSourceVersionCode(), exist.getChannel(),
+                rollbackTo != null ? rollbackTo : exist.getRollbackTo());
     }
 
     /** 删除（仅未发布的 release 允许删除，防误删已投递历史） */
@@ -456,6 +473,14 @@ public class QtSourceService {
                     mergedItem.setVersion(old.getVersion());
                 } else {
                     mergedItem.setVersion(old != null && old.getVersion() != null ? old.getVersion() + 1 : 1L);
+                }
+                // 直发字段（packId/packVersionCode/packVersionName）是服务端探测维护的：
+                // 管理端上送值一律忽略；url 没变 = 文件没换 → 继承旧值（探测结果继续有效）；
+                // url 换了/新条目 → 留空，由 fillAsync/fillSync 重新探测回填
+                if (old != null && old.getUrl() != null && old.getUrl().equals(mergedItem.getUrl())) {
+                    mergedItem.setPackId(old.getPackId());
+                    mergedItem.setPackVersionCode(old.getPackVersionCode());
+                    mergedItem.setPackVersionName(old.getPackVersionName());
                 }
                 merged.put(s.getPath(), mergedItem);
             }

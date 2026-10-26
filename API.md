@@ -310,6 +310,8 @@
 | POST | `/source-releases/{id}/bad` | 标记异常 |
 | DELETE | `/source-releases/{id}` | 删除音源包 |
 
+音源包 artifacts 条目除 `path` / `version` / `url` 外，manifest 还会直发服务端维护的包头字段 `packId` / `packVersionCode` / `packVersionName`（由 `QtPackHeaderProbe` 从产物首行 `/*__QT_PACK__*/` 包头探测回填：建单/编辑后异步补齐，发布前同步补齐；管理端上送的这三个字段一律忽略，url 未变的条目继承旧探测值）。客户端（qt-pc / qt-uniappx）优先用它们直接比版、免 Range 探测；字段缺失（旧服务端发的旧 release）时回退客户端自行探测。
+
 ---
 
 ## 8. 反馈插件 `astral-plugin / feedback`
