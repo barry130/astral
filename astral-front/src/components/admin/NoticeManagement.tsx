@@ -405,7 +405,7 @@ export default function NoticeManagement() {
         onOk={submit}
         okButtonProps={{ disabled: !canEdit }}
         onCancel={() => setModalOpen(false)}
-        width={640}
+        width={760}
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
@@ -444,7 +444,7 @@ export default function NoticeManagement() {
           </Form.Item>
 
           <Form.Item name="content" label="内容">
-            <Input.TextArea rows={4} placeholder="通知内容（支持富文本）" />
+            <Input.TextArea rows={8} placeholder="通知内容（支持富文本）" />
           </Form.Item>
 
           <Row gutter={16}>

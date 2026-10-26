@@ -324,7 +324,7 @@ export default function RolePage() {
         open={permModalVisible}
         onOk={handleAssignPermissionsSubmit}
         onCancel={() => setPermModalVisible(false)}
-        width={640}
+        width={760}
       >
         <div style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, color: 'var(--muted-foreground, #888)', fontSize: 12 }}>

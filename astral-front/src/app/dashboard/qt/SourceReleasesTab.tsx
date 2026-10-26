@@ -539,7 +539,7 @@ export default function SourceReleasesTab() {
         onCancel={() => setModal(false)}
         onOk={submit}
         okButtonProps={{ disabled: !canEdit }}
-        width={680}
+        width={760}
         destroyOnClose
       >
         <Form form={form} layout="vertical">
@@ -671,7 +671,7 @@ export default function SourceReleasesTab() {
       </Modal>
 
       {/* 装机分布弹窗 */}
-      <Modal title="音源包装机分布（版本 × 平台 × 结果）" open={statsModal} onCancel={() => setStatsModal(false)} footer={null} width={560}>
+      <Modal title="音源包装机分布（版本 × 平台 × 结果）" open={statsModal} onCancel={() => setStatsModal(false)} footer={null} width={760}>
         <ResizableTable
           rowKey={(r: QtSourceStatRow) => `${r.source_version_code}-${r.platform}-${r.result}`}
           columns={statsColumns}

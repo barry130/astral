@@ -295,7 +295,7 @@ export default function MenuPage() {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={handleSave}
-        width={600}
+        width={760}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="parentId" label="父菜单" rules={[{ required: true }]}>

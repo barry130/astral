@@ -197,7 +197,7 @@ export default function MailTemplatePage() {
       </Card>
 
       <Modal title={editing ? '编辑模板' : '新建模板'} open={modalVisible}
-        onOk={handleSubmit} onCancel={() => setModalVisible(false)} width={720} destroyOnClose>
+        onOk={handleSubmit} onCancel={() => setModalVisible(false)} width={760} destroyOnClose>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="templateCode" label="模板编码" tooltip="模板的唯一标识；发送侧按「绑定事件」解析模板，编码仅作标识与兼容回退" rules={[{ required: true }]}>
             <Input placeholder="如：changePasswordByEmail" />
@@ -226,7 +226,7 @@ export default function MailTemplatePage() {
         </Form>
       </Modal>
 
-      <Modal title="模板预览" open={previewVisible} footer={null} width={520} onCancel={() => setPreviewVisible(false)}>
+      <Modal title="模板预览" open={previewVisible} footer={null} width={760} onCancel={() => setPreviewVisible(false)}>
         {/* 模板正文是可写内容，曾用 dangerouslySetInnerHTML 直插 DOM：编辑者在正文埋脚本即可
             打到仅持查看权限的管理员会话（存储型 XSS）。改 sandbox iframe 渲染——
             无 allow-* 令牌时不执行脚本、不提交表单、不同源访问父页，样式/图片正常预览。 */}

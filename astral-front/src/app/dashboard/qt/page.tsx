@@ -461,6 +461,9 @@ export default function QtAdminPage() {
         onOk={submitUpdate}
         okButtonProps={{ disabled: !canEdit }}
         destroyOnClose
+        /* 默认宽度是 512px（DialogContent 的 sm:max-w-lg），两列表单 + 更新说明 HTML + 产物清单表格都伸不开，
+           放宽到 860px（与「数据统计」弹窗一致）。 */
+        width={860}
       >
         <Form form={updateForm} layout="vertical" initialValues={{ platforms: [1101], channel: 'stable', isGithub: 0, isForce: 0, isPublished: 0, updateType: '1' }}>
           <Form.Item name="id" hidden><Input /></Form.Item>
@@ -553,7 +556,8 @@ export default function QtAdminPage() {
             </Col>
           </Row>
           <Form.Item name="versionInfo" label="更新说明" extra="支持 HTML 公告，最长 5000 字">
-            <Input.TextArea rows={3} maxLength={5000} showCount placeholder="更新内容说明" />
+            {/* HTML 源码一行就是几十个字符，rows=3 时全靠滚动；放宽到 8 行，配合 860px 弹窗基本一屏可见。 */}
+            <Input.TextArea rows={8} maxLength={5000} showCount placeholder="更新内容说明" />
           </Form.Item>
 
           {/* ============ 产物清单（一版本多包：Windows x64/x86/arm64…） ============

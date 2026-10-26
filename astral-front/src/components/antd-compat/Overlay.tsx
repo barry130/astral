@@ -5,7 +5,7 @@
  * Modal / Drawer / Tabs（含 TabPane 旧写法）
  */
 
-import { Children, isValidElement, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Children, isValidElement, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Loader2, X } from 'lucide-react';
 
@@ -14,6 +14,13 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 /* ================================================================ Modal */
+
+/**
+ * 弹窗默认宽度（px）。
+ * DialogContent 自带的 `sm:max-w-lg` 只有 512px，编辑类表单（多列表单、富文本说明、表格）过窄，
+ * 因此兼容层统一放宽到 760px；调用方仍可用 `width={…}` 覆盖。
+ */
+const DEFAULT_MODAL_WIDTH_PX = 760;
 
 export interface ModalProps {
   title?: ReactNode;
@@ -70,8 +77,25 @@ export function Modal({
 }: ModalProps) {
   const isOpen = open ?? visible ?? false;
   const [submitting, setSubmitting] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(0);
 
-  const maxWidth = width === undefined ? undefined : typeof width === 'number' ? `${width}px` : width;
+  // 移动端判定：视口 < 768px（与 Tailwind md 断点、globals.css 的 .compat-col-md-* 一致）。
+  // 弹窗内边距从 px-5 降到 px-4，给窄屏省出 8px 可用宽度。
+  useEffect(() => {
+    const sync = () => setViewportWidth(window.innerWidth);
+    sync();
+    window.addEventListener('resize', sync);
+    return () => window.removeEventListener('resize', sync);
+  }, []);
+  const isCompact = viewportWidth > 0 && viewportWidth < 768;
+
+  // 统一套一层 min(期望宽度, 100vw - 2rem)：
+  // 桌面端按调用方/默认宽度展示；手机上任何宽度都会被压到「视口 − 32px」，
+  // 左右各留 16px 安全边距（否则 maxWidth 是内联样式，会盖掉 DialogContent 的
+  // max-w-[calc(100%-2rem)] + w-full，弹窗会贴满整屏、圆角被裁掉）。
+  const resolvedWidth = typeof width === 'number' || typeof width === 'string' ? width : DEFAULT_MODAL_WIDTH_PX;
+  const widthCss = typeof resolvedWidth === 'number' ? `${resolvedWidth}px` : resolvedWidth;
+  const maxWidth = `min(${widthCss}, calc(100vw - 2rem))`;
   const loading = confirmLoading || submitting;
 
   const handleOk = async () => {
@@ -125,7 +149,7 @@ export function Modal({
           if (!keyboard) e.preventDefault();
         }}
       >
-        <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-3.5" style={styles?.header}>
+        <div className={cn('flex items-center justify-between gap-4 border-b border-border py-3.5', isCompact ? 'px-4' : 'px-5')} style={styles?.header}>
           <DialogTitle className="text-[15px] font-semibold text-foreground">{title}</DialogTitle>
           <DialogPrimitive.Close
             aria-label="关闭"
@@ -138,10 +162,10 @@ export function Modal({
             任何超宽内容（如大量标签的 TreeSelect）都会把 640px 的弹窗整体撑到上千像素并漏出页面。
             加 min-w-0 后弹窗宽度由自身 maxWidth 决定，超宽内容只在内部溢出/滚动。
             overflow-y-auto 让超高表单在弹窗内部滚动（配合上面的 max-h + 1fr 行）。 */}
-        <div className="min-w-0 overflow-y-auto px-5 py-4" style={{ ...bodyStyle, ...styles?.body }}>
+        <div className={cn('min-w-0 overflow-y-auto py-4', isCompact ? 'px-4' : 'px-5')} style={{ ...bodyStyle, ...styles?.body }}>
           {children}
         </div>
-        {resolvedFooter ? <div className="px-5 pb-4">{resolvedFooter}</div> : null}
+        {resolvedFooter ? <div className={cn('pb-4', isCompact ? 'px-4' : 'px-5')}>{resolvedFooter}</div> : null}
       </DialogContent>
     </Dialog>
   );
@@ -214,7 +238,8 @@ export function Drawer({
             className,
           )}
           style={{
-            ...(isVertical ? { height: size, maxHeight: '100%' } : { width: size, maxWidth: '100%' }),
+            // maxWidth 用 min() 兜底：手机上（含 1080px 宽的横屏手机）抽屉不会超出视口。
+            ...(isVertical ? { height: size, maxHeight: '100%' } : { width: size, maxWidth: 'min(100%, 100vw)' }),
             ...style,
           }}
           onInteractOutside={(e) => {

@@ -513,7 +513,7 @@ export default function UserPage() {
       <Modal
         title={editingUser ? `编辑用户：${editingUser.username}` : '编辑用户'}
         open={editVisible}
-        width={560}
+        width={760}
         footer={null}
         onCancel={() => setEditVisible(false)}
       >

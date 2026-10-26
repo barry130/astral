@@ -125,7 +125,7 @@ export default function SmsProviderPage() {
       </Card>
 
       <Modal title={editing ? '编辑供应商' : '新增供应商'} open={modalVisible}
-        onOk={handleSubmit} onCancel={() => setModalVisible(false)} width={640} destroyOnClose>
+        onOk={handleSubmit} onCancel={() => setModalVisible(false)} width={760} destroyOnClose>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="providerName" label="供应商名称" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="providerType" label="类型" tooltip="由后端 SPI 注册（MOCK 本地测试 / ALIYUN 阿里云短信）" rules={[{ required: true }]}>

@@ -870,7 +870,7 @@ export default function StoragePage() {
         open={permModal.open}
         onOk={savePermissions}
         onCancel={() => setPermModal({ open: false, rows: [] })}
-        width={640}
+        width={760}
         okText="保存授权"
         okButtonProps={{ disabled: !canEdit }}
       >

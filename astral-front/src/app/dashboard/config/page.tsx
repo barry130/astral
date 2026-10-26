@@ -185,7 +185,7 @@ export default function ConfigPage() {
         onCancel={() => setModalVisible(false)}
         okText="保存"
         cancelText="取消"
-        width={520}
+        width={760}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
           <Row gutter={[16,16]}>

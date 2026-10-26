@@ -206,7 +206,7 @@ export default function NotifyRulePage() {
       </Card>
 
       <Modal title={editing ? '编辑规则' : '新建规则'} open={modalVisible}
-        onOk={handleSubmit} onCancel={() => setModalVisible(false)} width={680} destroyOnClose>
+        onOk={handleSubmit} onCancel={() => setModalVisible(false)} width={760} destroyOnClose>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="ruleName" label="规则名称" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item
@@ -264,7 +264,7 @@ export default function NotifyRulePage() {
       </Modal>
 
       <Modal title="发布事件（按启用规则试投）" open={publishVisible} footer={null}
-        onCancel={() => setPublishVisible(false)} width={720} destroyOnClose>
+        onCancel={() => setPublishVisible(false)} width={760} destroyOnClose>
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
             <div style={{ marginBottom: 4, fontSize: 13 }}>事件</div>

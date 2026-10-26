@@ -183,7 +183,7 @@ export default function SmsTemplatePage() {
       </Card>
 
       <Modal title={editing ? '编辑模板' : '新建模板'} open={modalVisible}
-        onOk={handleSubmit} onCancel={() => setModalVisible(false)} width={680} destroyOnClose>
+        onOk={handleSubmit} onCancel={() => setModalVisible(false)} width={760} destroyOnClose>
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="templateCode" label="模板编码" tooltip="本地唯一标识，仅作标识用（发送按绑定事件解析）" rules={[{ required: true }]}>
             <Input placeholder="如：systemAlertSms" />

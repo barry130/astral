@@ -733,7 +733,7 @@ export default function TableSchemaPage() {
         open={createModalVisible}
         onCancel={() => { setCreateModalVisible(false); createForm.resetFields(); }}
         footer={null}
-        width={500}
+        width={760}
       >
         <Form
           form={createForm}
