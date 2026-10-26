@@ -391,6 +391,9 @@ public class QtSourceService {
     /**
      * 应用版本准入（§2.3/§5.3）：平台缺省或空数组 = 不限制；
      * 配置了白名单时，请求的 appVersionCode 必须在其中。
+     * <p>appVersionCode 未上报（null）视为不限制：客户端契约是「版本号取不到时宁可
+     * 多给一个包，也不能谁都拿不到」（见 qt-uniappx source-update 的 fetchManifest），
+     * 且鸿蒙端 {@code getAppBaseInfo().appVersionCode} 官方不支持，缺参数是合法形态。</p>
      */
     private boolean admissionOk(QtSourceRelease release, Long platform, Long appVersionCode) {
         Map<String, List<Long>> codes = readAppVersionCodes(release);
@@ -398,7 +401,11 @@ public class QtSourceService {
         if (allowed == null || allowed.isEmpty()) {
             return true;
         }
-        return appVersionCode != null && allowed.contains(appVersionCode);
+        if (appVersionCode == null) {
+            // 未上报版本号（如鸿蒙端读不到 appVersionCode）：不限制，避免整张 manifest 被准入表挡成空
+            return true;
+        }
+        return allowed.contains(appVersionCode);
     }
 
     /** 同渠道最新一条 release；渠道内没有则回退到全局最新（artifacts 继承不区分渠道，URL 全集语义） */
