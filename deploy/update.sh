@@ -13,7 +13,13 @@
 #   ./update.sh                      # 用 deploy/.env 里的 TAG（默认 latest）
 #   ./update.sh 20260926-a1b2c3d     # 指定 tag 精确发布
 #   ./update.sh 20260919-ab12cd3     # 回滚到旧版本（注意：数据库迁移不会跟着回滚）
-#   ASTRAL_BEHIND_NGINX=1 ./update.sh   # 前面有 nginx 反代时（端口只绑回环，见 docker-compose.nginx.yml）
+#
+# 端口在 docker-compose.yml 里就写成 127.0.0.1:<port>，只绑回环 ——
+# 线上前面总有反代（宝塔面板 nginx 或 deploy/nginx/ 那套容器 nginx）。
+# 以前用 overlay 追加回环地址的做法是错的：Compose 对 ports 按
+# {ip, target, published, protocol} 合并，两条 IP 不同会被**同时保留**，
+# 容器自己绑两次同一端口，启动时报 `address already in use`。
+# 要直接对外就改 docker-compose.yml 里那三行，不要加 overlay。
 #
 # 不要用 `docker compose up -d --build` 走这条路：
 # 服务器只 pull 不构建，构建统一由 CNB 云原生构建（cnb.cool）完成。
@@ -22,14 +28,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# 带 nginx 反代时（三个端口都只绑回环），用以下命令：
-#   COMPOSE=(-f docker-compose.yml -f docker-compose.registry.yml -f docker-compose.nginx.yml)
-# 未启用 nginx 时保持原样（端口直接对外）。
 COMPOSE=(-f docker-compose.yml -f docker-compose.registry.yml)
-if [ "${ASTRAL_BEHIND_NGINX:-0}" = "1" ]; then
-  COMPOSE+=(-f docker-compose.nginx.yml)
-  echo "==> 已启用 nginx overlay：端口仅绑回环（127.0.0.1）"
-fi
+echo "==> 端口仅绑回环（127.0.0.1），供前面 nginx 反代"
 
 if [ "$#" -ge 1 ]; then
   export TAG="$1"

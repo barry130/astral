@@ -23,8 +23,11 @@ services:
       network: host
     container_name: astral-backend
     restart: unless-stopped
+    # 只绑回环：前面一定有 nginx（宝塔面板 nginx 或 deploy/nginx/ 那套容器 nginx）。
+    # 不要把这里改成 0.0.0.0 / 纯 "27000:27000" —— 那等于把后端裸奔在公网。
+    # 若确实要直接对外（裸机试跑），改成 "0.0.0.0:27000:27000" 并在安全组放开。
     ports:
-      - "27000:27000"
+      - "127.0.0.1:27000:27000"
     # 生产 JVM 参数 + SPRING_PROFILES_ACTIVE=prod（虚拟线程/线程参数/日志降级）
     # 仅在启动 backend 时加载 prod.env；测试环境不引用此文件
     env_file:
@@ -96,8 +99,9 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     container_name: astral-frontend
     restart: unless-stopped
+    # 只绑回环，理由同 backend
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       # 后端容器地址: 供 Next.js rewrites 将 /api 转发到后端
       BACKEND_URL: http://backend:27000
@@ -124,7 +128,8 @@ services:
     restart: unless-stopped
     ports:
       # 宿主机 3001 -> 容器 3000（容器内由 PORT=3000 决定，不经过 package.json 的 -p 3001）
-      - "3001:3000"
+      # 只绑回环，理由同 backend
+      - "127.0.0.1:3001:3000"
     environment:
       # 后端容器地址：博客所有数据都从它取（含转发登录态读写 /api/v1/admin/cms/**）
       CMS_API_BASE: http://backend:27000

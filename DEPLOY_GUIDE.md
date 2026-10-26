@@ -64,9 +64,8 @@ nginx 终结 TLS 并做网络层限流，三个容器端口只绑 `127.0.0.1`（
 | 路径 | 说明 |
 |------|------|
 | `deploy/docker-compose.yml` | 服务编排（backend + frontend + blog） |
-| `deploy/docker-compose.nginx.yml` | （可选）overlay：端口收回 `127.0.0.1`，配合 nginx 反代 |
-| `deploy/nginx/00-http-level.conf` | nginx **http 级**片段（限流区 `limit_req_zone` + WebSocket `map`） |
-| `deploy/nginx/10-astral-sites.conf` | nginx **server 级**配置（www 博客 + web 管理端 + astral 接口域，含 HTTPS） |
+| `deploy/nginx/00-http-level.conf` | nginx **http 级**片段（限流区 `limit_req_zone` + WebSocket `map`）。**仅系统 nginx 用，宝塔不要拷** |
+| `deploy/nginx/10-astral-sites.conf` | nginx **server 级**配置（www 博客 + web 管理端 + astral 接口域，含 HTTPS）。**仅系统 nginx 用，宝塔见「2A」** |
 | `astral-server/Dockerfile` | 后端多阶段构建（构建阶段 `maven:3.9-eclipse-temurin-25`；BuildKit 缓存 Maven 仓库） |
 | `astral-front/Dockerfile` | 管理端多阶段构建（Next.js 16 standalone + `node:24-alpine` × 3 阶段；BuildKit 缓存 npm） |
 | `astral-blog/Dockerfile` | 博客多阶段构建（同上，用 pnpm + `pnpm-lock.yaml`） |
@@ -226,7 +225,10 @@ docker compose logs -f backend   # 后端日志
 
 ### 1. 准备证书
 
-三个域名各签一份（`www` 与裸域一起签）。DNS 都在 DNSPod：
+三个域名各签一份（`www` 与裸域一起签）。
+
+**用宝塔面板的**：直接在「网站 → 设置 → SSL → Let's Encrypt」里申请，面板会自动续期，跳过本节命令。
+**用系统 nginx 的**：DNS 都在 DNSPod，走 certbot：
 
 ```bash
 sudo apt install -y nginx certbot
@@ -252,7 +254,39 @@ for d in www.canace.cn web.canace.cn astral.canace.cn; do
 done
 ```
 
-### 2. 放置配置
+### 2A. 宝塔面板 nginx（本项目线上的实际用法）
+
+`deploy/nginx/` 那两个文件是给「系统 nginx」用的，宝塔用户**不要**拷，改成在面板里配。
+
+三个站点的目标都是单一回环端口，所以用面板的「反向代理」最省事：
+
+| 宝塔站点 | 目标 URL | 发送域名 |
+|---|---|---|
+| `www.canace.cn`（含裸域 `canace.cn`） | `http://127.0.0.1:3001` | `$host` |
+| `web.canace.cn` | `http://127.0.0.1:3000` | `$host` |
+| `astral.canace.cn` | `http://127.0.0.1:27000` | `$host` |
+
+操作路径：**网站 → 对应站点 → 设置 → 反向代理 → 添加反向代理**，缓存选「不缓存」。
+
+> ✅ 三个站点都是「全部路径 → 单一容器」，所以 `/api/*` 天然落在博客容器里，这正是登录、评论、页内保存、导出所需要的。**千万不要**为 `www.canace.cn/api` 单独加一条指向 `27000` 的规则 —— 那会让这几项全部 404。
+
+**旧 Typecho 站点要清干净**：`www.canace.cn` 原本是 PHP 站点，切过来之后必须去掉 PHP 与伪静态，否则 `/index.php` 之类仍会打到 PHP 上。编辑「设置 → 配置文件」，删掉这两行（名字随 PHP 版本变化）：
+
+```nginx
+include enable-php-82.conf;        # ← 删掉整行
+include /www/server/panel/vhost/rewrite/www.canace.cn.conf;   # ← Typecho 伪静态，删掉整行
+```
+
+或者更彻底：**删除原 PHP 站点 → 重新添加为「纯静态」站点**，再配反向代理和 SSL。删站前先备份（见下文「切站」），删站会连证书一起删掉，重新申请即可。
+
+**导出/下载需要关缓冲**：宝塔的反向代理默认开 `proxy_buffering`，导出 ZIP 会把整包顶进内存。想让面板帮你写这一行，就在「反向代理 → 配置文件」里补：
+
+```nginx
+proxy_buffering off;
+client_max_body_size 20m;
+```
+
+### 2B. 系统 nginx（非宝塔）
 
 ```bash
 # http 级片段（limit_req_zone / map）—— 必须在 http{} 里，走 conf.d 的 include
@@ -273,14 +307,22 @@ sudo systemctl reload nginx
 
 nginx 起来后，三个容器端口不该再对公网开放（否则能绕过限流直连后端）：
 
+端口在 `docker-compose.yml` 里就写成 `127.0.0.1:<port>`，`./update.sh` 直接起即可：
+
 ```bash
 cd /opt/astral/deploy
-ASTRAL_BEHIND_NGINX=1 ./update.sh
-# 等价于：docker compose -f docker-compose.yml -f docker-compose.registry.yml \
-#                        -f docker-compose.nginx.yml up -d --no-build
+./update.sh
 ```
 
-`docker-compose.nginx.yml` 会把 `3000 / 3001 / 27000` 全改成 `127.0.0.1:<port>:<port>`。
+这跟反代跑在哪里无关：宿主机 nginx、宝塔面板 nginx、容器化 nginx 都反代到这几个回环端口。
+
+> ⚠️ 早先版本用 `docker-compose.loopback.yml` overlay 追加回环绑定，那是错的 ——
+> Compose 对 `ports` 按 `{ip, target, published, protocol}` 合并，主文件写 `27000:27000`（IP 为空）、
+> overlay 写 `127.0.0.1:27000:27000`，两者 IP 不同会被**同时保留**，容器要绑两次同一端口，
+> 启动即报 `Error starting userland proxy: listen tcp4 0.0.0.0:27000: bind: address already in use`。
+> 所以回环地址必须直接写在主文件里。
+
+要裸机试跑、直接用 `IP:端口` 访问，就把 `docker-compose.yml` 里那三行改成 `"0.0.0.0:<port>:<port>"` 并放开安全组（不推荐，等于把后端裸奔在公网）。
 
 ### 4. 关键路由说明
 
@@ -392,7 +434,7 @@ docker compose -f docker-compose.yml -f docker-compose.registry.yml pull
 docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d --no-build
 ```
 
-> 前面有 nginx 时，两条命令都要再叠加 `-f docker-compose.nginx.yml`（或直接 `ASTRAL_BEHIND_NGINX=1 ./update.sh`）。
+> 有反代时用 `./update.sh`（端口只绑回环，见「端口收回回环」一节）。
 
 ### ⛔ 别用宝塔面板「容器 → 升级」来更新这套栈
 
@@ -554,14 +596,14 @@ rm -f /opt/astral-docker-*.tar.gz                # 归档建议另存一份做�
 
 ## 接入域名与 HTTPS
 
-完整步骤见上文「反向代理 + HTTPS（www / web / astral）」一节（证书 → 放置配置 → 端口收回回环）。这里只列与域名相关的几个判断点：
+完整步骤见上文「反向代理 + HTTPS（www / web / astral）」一节（证书 → 反代配置 → 端口收回回环）。这里只列与域名相关的几个判断点：
 
 - **当前形态是跨域直连**：管理端页面在 `web.canace.cn`，接口在 `astral.canace.cn`。`NEXT_PUBLIC_API_URL` 是**构建期内联**（`.cnb.yml` 前端 job 的 `--build-arg NEXT_PUBLIC_API_URL=https://astral.canace.cn`），所以浏览器请求直接打到接口域，不走管理端的 `/api` rewrites
 - 因此后端 `CORS_ALLOWED_ORIGINS` **必须**包含 `https://web.canace.cn`（见 `deploy/.env.example` 的 CORS 段）。nginx **不要**给 `astral.canace.cn` 加任何 CORS 响应头，否则会出现两份 `Access-Control-Allow-Origin`，浏览器直接判定失败
 - **博客是另一种形态**：`www.canace.cn` 下的 `/api/*` 是博客自己的 Next Route Handler（登录 / 评论 / 页内保存 / 导出），必须转发到 **blog 容器 3001**，绝不能指向 27000；博客取后端数据全在服务端完成（`CMS_API_BASE`），浏览器不直接访问后端
 - 会话 Cookie 是 `SameSite=Strict`，`canace.cn` 的子域彼此同为「同站」，所以 `web.canace.cn` 页面访问 `astral.canace.cn` 时 Cookie 照常携带
 - **不要**把 `NEXT_PUBLIC_API_URL` 设为 `http://` 开头：HTTPS 页面下浏览器会以 Mixed Content 拦截全部明文请求，前端表现为"无法连接到服务器，请检查后端服务是否启动"（实际是浏览器拦截，后端本身是正常的）
-- 收紧安全组：走 nginx 时 `3000` / `3001` / `27000` 都无需对公网开放（`docker-compose.nginx.yml` 已把端口收回 `127.0.0.1`）
+- 收紧安全组：走 nginx 时 `3000` / `3001` / `27000` 都无需对公网开放（`docker-compose.yml` 里已把端口绑到 `127.0.0.1`）
 
 换域名时：博客镜像**不用重建**（后端地址运行期由 `CMS_API_BASE` 决定）；管理端镜像**必须重建**（`NEXT_PUBLIC_API_URL` 已内联进产物）。
 
@@ -569,6 +611,61 @@ rm -f /opt/astral-docker-*.tar.gz                # 归档建议另存一份做�
 # 改了 NEXT_PUBLIC_API_URL 之后
 docker compose build --no-cache frontend && docker compose up -d frontend
 ```
+
+## 从旧 Typecho 站切到新博客（www.canace.cn）
+
+`www.canace.cn` 原本跑 Typecho（PHP 站点）。切换前把旧站完整备份下来，出问题能立刻切回。
+
+### 1. 备份
+
+```bash
+mkdir -p /opt/backup
+mysqldump -u canace -p www_canace_cn > /opt/backup/typecho-$(date +%F).sql
+tar czf /opt/backup/typecho-files-$(date +%F).tgz /www/wwwroot/www.canace.cn
+docker ps --format '{{.Names}}\t{{.Image}}\t{{.ID}}' | tee /opt/backup/containers-$(date +%F).txt
+```
+
+`containers-*.txt` 里记着当前镜像 ID —— 这是回滚的锚点，别丢。
+
+### 2. 内容先确认到位
+
+新博客的数据来自数据库 `astral` 的 `cms_*` 表。部署完成后先验一次：
+
+```bash
+curl -s https://astral.canace.cn/api/v1/app/cms/setting
+# 期望：{"site_title":"...","site_description":"...",...}
+```
+
+返回空则说明后端还没连上库或 CMS 插件没启用，此时**不要**切 www 的流量。
+
+### 3. 切流量
+
+宝塔：先把原 PHP 站点停掉或改成纯静态，再按「2A」配 `www.canace.cn → 127.0.0.1:3001` 的反向代理，最后在面板申请 SSL。
+
+系统 nginx：把旧的 `server_name www.canace.cn` 配置块重命名为 `.bak`（从 `conf.d` 的生效路径移走），放上 `deploy/nginx/10-astral-sites.conf`。
+
+切完立刻验证：
+
+```bash
+curl -I https://www.canace.cn                     # 200
+curl -s https://www.canace.cn | grep -o '<title>[^<]*</title>'   # 应是站点名而非 Joe 主题
+curl -s https://www.canace.cn/post/68 | grep -c 'md-code'        # 正文代码块已渲染
+```
+
+### 4. 回滚
+
+```bash
+# nginx：把 Typecho 的配置块恢复，reload
+mv /www/server/panel/vhost/nginx/www.canace.cn.conf.bak /www/server/panel/vhost/nginx/www.canace.cn.conf
+nginx -t && nginx -s reload
+
+# 数据：Typecho 库没被动过，直接还在。若误删了站点目录：
+tar xzf /opt/backup/typecho-files-<日期>.tgz -C /
+```
+
+新博客侧回滚到上一版镜像：`./update.sh <上一个日期 tag>`（数据库迁移不会跟着回退，若新增过表需手工处理）。
+
+> ⚠️ 旧 Typecho 站点目录和库建议保留至少两周再清理。搜索引擎收录的是旧 URL —— 新博客沿用了源站 cid 作主键，`/post/3`、`/post/start`、`/wiki/qt` 这类旧链接能直接命中；但 Typecho 的 `/index.php/archives/3/` 形态没有做跳转，需要的话在 nginx 里补一条 rewrite。
 
 ## 故障排查
 
