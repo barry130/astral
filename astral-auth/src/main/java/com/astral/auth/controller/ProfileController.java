@@ -92,9 +92,9 @@ public class ProfileController {
             throw new BusinessException("AUTH002");
         }
         if (oldPlain.equals(newPlain)) {
-            return Result.fail("新密码不能与旧密码相同");
+            throw BusinessException.of("新密码不能与旧密码相同");
         }
-        // 强度策略（失败抛 IllegalArgumentException -> 400 文案）
+        // 强度策略（失败抛 IllegalArgumentException -> HTTP 200 + 业务码 320 参数错误）
         PasswordPolicy.validateOrThrow(newPlain, user.getUsername());
 
         user.setPassword(BCrypt.hashpw(newPlain));
@@ -126,11 +126,11 @@ public class ProfileController {
         long userId = StpUtil.getLoginIdAsLong();
         Object owner = StpUtil.getLoginIdByToken(token);
         if (owner == null) {
-            return Result.fail("会话不存在或已失效");
+            throw BusinessException.of("会话不存在或已失效");
         }
         if (!String.valueOf(userId).equals(String.valueOf(owner))) {
             // 越权防护：只能下线自己的 token
-            return Result.fail("只能下线自己的会话");
+            throw BusinessException.of("只能下线自己的会话");
         }
         StpUtil.logoutByTokenValue(token);
         return Result.success();
@@ -146,7 +146,7 @@ public class ProfileController {
         long userId = StpUtil.getLoginIdAsLong();
         User user = requireUser(userId);
         if (user.getTotpEnabled() != null && user.getTotpEnabled() == 1) {
-            return Result.fail("TOTP 已启用，请先关闭再重新绑定");
+            throw BusinessException.of("TOTP 已启用，请先关闭再重新绑定");
         }
         String secret = TotpUtil.generateSecret();
         user.setTotpSecret(secret);
@@ -171,7 +171,7 @@ public class ProfileController {
         long userId = StpUtil.getLoginIdAsLong();
         User user = requireUser(userId);
         if (user.getTotpSecret() == null || user.getTotpSecret().isBlank()) {
-            return Result.fail("请先生成 TOTP 密钥");
+            throw BusinessException.of("请先生成 TOTP 密钥");
         }
         if (!TotpUtil.verify(body.getCode(), user.getTotpSecret())) {
             throw new BusinessException("AUTH011");

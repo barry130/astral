@@ -2,6 +2,7 @@ package com.astral.system.controller;
 
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.annotation.RequiresSuper;
+import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.astral.schema.FieldSchema;
 import com.astral.schema.SchemaCodeGenerator;
@@ -42,16 +43,15 @@ public class TableSchemaController {
      * 否则 {@code ../../x} 这类取值可越出 schema 目录写任意文件。</p>
      *
      * @param tableName 待校验表名
-     * @return 不合法时返回错误结果，合法返回 null
+     * @throws BusinessException 表名为空（SYS010）或不是合法标识符（SYS013）
      */
-    private Result<?> invalidTableName(String tableName) {
+    private void validateTableName(String tableName) {
         if (tableName == null || tableName.isBlank()) {
-            return Result.error("SYS010");
+            throw new BusinessException("SYS010");
         }
         if (!SqlIdentifiers.isValid(tableName)) {
-            return Result.error("SYS013", tableName);
+            throw new BusinessException("SYS013", tableName);
         }
-        return null;
     }
 
     /**
@@ -76,13 +76,10 @@ public class TableSchemaController {
     @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}")
     public Result<TableSchema> getSchema(@PathVariable String tableName) {
-        Result<?> invalid = invalidTableName(tableName);
-        if (invalid != null) {
-            return (Result<TableSchema>) (Result<?>) invalid;
-        }
+        validateTableName(tableName);
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         return Result.success(schema);
     }
@@ -124,12 +121,9 @@ public class TableSchemaController {
     @RequiresSuper
     @PostMapping
     public Result<TableSchema> createSchema(@RequestBody CreateTableRequest request) throws IOException {
-        Result<?> invalid = invalidTableName(request.getTableName());
-        if (invalid != null) {
-            return (Result<TableSchema>) (Result<?>) invalid;
-        }
+        validateTableName(request.getTableName());
         if (SchemaRegistry.containsTable(request.getTableName())) {
-            return Result.error("SYS011", request.getTableName());
+            throw new BusinessException("SYS011", request.getTableName());
         }
 
         TableSchema schema = new TableSchema();
@@ -161,11 +155,9 @@ public class TableSchemaController {
     @RequiresSuper
     @DeleteMapping("/{tableName}")
     public Result<Void> deleteSchema(@PathVariable String tableName) throws IOException {
-        if (invalidTableName(tableName) != null) {
-            return Result.error("SYS013", tableName);
-        }
+        validateTableName(tableName);
         if (!SchemaRegistry.containsTable(tableName)) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         SchemaRegistry.deleteSchema(tableName);
         return Result.success();
@@ -262,7 +254,7 @@ public class TableSchemaController {
     public Result<String> generateEntity(@PathVariable String tableName) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         return Result.success(SchemaCodeGenerator.generateEntity(schema));
     }
@@ -279,7 +271,7 @@ public class TableSchemaController {
     public Result<String> generateMapper(@PathVariable String tableName) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         return Result.success(SchemaCodeGenerator.generateMapper(schema));
     }
@@ -296,7 +288,7 @@ public class TableSchemaController {
     public Result<String> generateService(@PathVariable String tableName) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         return Result.success(SchemaCodeGenerator.generateService(schema));
     }
@@ -313,7 +305,7 @@ public class TableSchemaController {
     public Result<String> generateServiceImpl(@PathVariable String tableName) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         return Result.success(SchemaCodeGenerator.generateServiceImpl(schema));
     }
@@ -330,7 +322,7 @@ public class TableSchemaController {
     public Result<String> generateController(@PathVariable String tableName) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         return Result.success(SchemaCodeGenerator.generateController(schema));
     }
@@ -347,7 +339,7 @@ public class TableSchemaController {
     public Result<Map<String, String>> generateFullCode(@PathVariable String tableName) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         Map<String, String> code = Map.of(
             "entity", SchemaCodeGenerator.generateEntity(schema),
@@ -373,7 +365,7 @@ public class TableSchemaController {
                                       @RequestParam(value = "dialect", required = false) String dialect) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         return Result.success(SchemaCodeGenerator.generateCreateSql(schema, SqlDialect.of(dialect)));
     }
@@ -411,7 +403,7 @@ public class TableSchemaController {
                                                     @RequestParam(value = "dialect", required = false) String dialect) throws IOException {
         TableSchema oldSchema = SchemaRegistry.getSchema(tableName);
         if (oldSchema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
 
         TableSchema savedOldSchema = SchemaRegistry.updateSchema(tableName, newSchema);
@@ -441,7 +433,7 @@ public class TableSchemaController {
                                            @RequestParam(value = "dialect", required = false) String dialect) {
         TableSchema oldSchema = SchemaRegistry.getSchema(tableName);
         if (oldSchema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         return Result.success(SchemaCodeGenerator.generateAlterSql(oldSchema, newSchema, SqlDialect.of(dialect)));
     }
@@ -458,7 +450,7 @@ public class TableSchemaController {
     public Result<TableSchema> exportSchema(@PathVariable String tableName) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
-            return Result.error("SYS009");
+            throw new BusinessException("SYS009");
         }
         return Result.success(schema);
     }

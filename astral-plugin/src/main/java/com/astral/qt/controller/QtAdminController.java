@@ -1,6 +1,7 @@
 package com.astral.qt.controller;
 
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.qt.QtPlugin;
@@ -108,7 +109,7 @@ public class QtAdminController {
     public Result<Void> changeUserState(@PathVariable Long id, @RequestParam Integer state) {
         User user = userMapper.selectById(id);
         if (user == null) {
-            return Result.error(300, "用户不存在");
+            throw BusinessException.of("用户不存在");
         }
         user.setStatus(state == null ? 1 : state);
         user.setUpdateTime(LocalDateTime.now());
@@ -132,7 +133,7 @@ public class QtAdminController {
     @GetMapping("/updates/{id}/artifacts")
     public Result<List<QtAppUpdateArtifact>> listUpdateArtifacts(@PathVariable Long id) {
         if (qtUpdateMapper.selectById(id) == null) {
-            return Result.error(300, "版本信息不存在");
+            throw BusinessException.of("版本信息不存在");
         }
         return Result.success(artifactService.listByUpdateId(id));
     }
@@ -150,17 +151,17 @@ public class QtAdminController {
             @PathVariable Long id, @RequestBody List<QtAppUpdateArtifact> items) {
         QtAppUpdate exist = qtUpdateMapper.selectByIdForUpdate(id);
         if (exist == null) {
-            return Result.error(300, "版本信息不存在");
+            throw BusinessException.of("版本信息不存在");
         }
         // 覆盖保存前先按「新清单」核对多平台覆盖：删掉某平台唯一的产物后，
         // 该平台客户端会挑不中产物，回退到主表直链（可能拿到别的平台的包）
         String artifactErr = artifactService.validate(items);
         if (artifactErr != null) {
-            return Result.error(300, artifactErr);
+            throw BusinessException.of(artifactErr);
         }
         String coverageErr = validatePlatformCoverage(exist.getPlatforms(), items);
         if (coverageErr != null) {
-            return Result.error(300, coverageErr);
+            throw BusinessException.of(coverageErr);
         }
         List<QtAppUpdateArtifact> saved = artifactService.replaceAll(id, items);
         syncLegacyFields(exist, saved.isEmpty() ? null : saved.get(0));
@@ -194,7 +195,7 @@ public class QtAdminController {
         List<QtAppUpdateArtifact> artifacts = artifactService.fromVos(update.getArtifacts());
         String err = artifactService.validate(artifacts);
         if (err != null) {
-            return Result.error(300, err);
+            throw BusinessException.of(err);
         }
         update.setId(null);
         // 平台多选：前端送逗号分隔 CSV（与公告 channel 同款），这里校验并归一（去重/去空/保持顺序）
@@ -203,14 +204,14 @@ public class QtAdminController {
                 : update.getPlatforms();
         String platformErr = validatePlatformsCsv(platforms);
         if (platformErr != null) {
-            return Result.error(300, platformErr);
+            throw BusinessException.of(platformErr);
         }
         update.setPlatforms(QtAppUpdate.toPlatformsCsv(QtAppUpdate.parsePlatforms(platforms)));
         // 勾了多个平台时，每个平台都得有能落地的包：产物是按平台分条维护的，
         // 只给安卓加了产物却勾上鸿蒙，鸿蒙客户端会挑不中产物而回退主表直链（下到安卓包）
         String coverageErr = validatePlatformCoverage(update.getPlatforms(), artifacts);
         if (coverageErr != null) {
-            return Result.error(300, coverageErr);
+            throw BusinessException.of(coverageErr);
         }
         if (update.getChannel() == null || update.getChannel().isBlank()) update.setChannel("stable");
         if (update.getIsGithub() == null) update.setIsGithub(0L);
@@ -234,7 +235,7 @@ public class QtAdminController {
         // 编辑时以库中已有值为兜底校验（表单可能不回传未变更字段）
         QtAppUpdate exist = qtUpdateMapper.selectByIdForUpdate(id);
         if (exist == null) {
-            return Result.error(300, "版本信息不存在");
+            throw BusinessException.of("版本信息不存在");
         }
         // null = 本次没提交（保持原值），空串 = 显式清空（写 NULL，列本身可空）
         String downloadUrl = PatchValues.orCurrent(update.getDownloadUrl(), exist.getDownloadUrl());
@@ -246,19 +247,19 @@ public class QtAdminController {
                 : artifactService.fromVos(update.getArtifacts());
         String err = artifactService.validate(artifacts);
         if (err != null) {
-            return Result.error(300, err);
+            throw BusinessException.of(err);
         }
         // 平台多选：null = 本次没提交（保持原值），空串 = 显式清空（下面会兜底为必填校验失败）
         String platforms = PatchValues.orCurrent(update.getPlatforms(), exist.getPlatforms());
         String platformErr = validatePlatformsCsv(platforms);
         if (platformErr != null) {
-            return Result.error(300, platformErr);
+            throw BusinessException.of(platformErr);
         }
         String normalizedPlatforms = QtAppUpdate.toPlatformsCsv(QtAppUpdate.parsePlatforms(platforms));
         // 所选平台必须逐一出现在最终产物清单中，不能被主表兜底地址绕过。
         String coverageErr = validatePlatformCoverage(normalizedPlatforms, artifacts);
         if (coverageErr != null) {
-            return Result.error(300, coverageErr);
+            throw BusinessException.of(coverageErr);
         }
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「清空版本说明/更新类型/文件大小/md5」保存后都还是旧值。白名单逐列显式 set。
@@ -305,7 +306,7 @@ public class QtAdminController {
     @PostMapping("/github-accels")
     public Result<QtGithubAccel> createGithubAccel(@RequestBody QtGithubAccel accel) {
         if (accel.getPrefixUrl() == null || accel.getPrefixUrl().isBlank()) {
-            return Result.error(300, "加速前缀不能为空");
+            throw BusinessException.of("加速前缀不能为空");
         }
         accel.setPrefixUrl(QtGithubAccelService.normalizePrefix(accel.getPrefixUrl()));
         if (accel.getIsShow() == null) accel.setIsShow(1L);
@@ -322,7 +323,7 @@ public class QtAdminController {
     public Result<Void> updateGithubAccel(@PathVariable Long id, @RequestBody QtGithubAccel accel) {
         // prefix_url 是 NOT NULL 列，整表单提交必带；这里不再容忍 null，避免白名单写入撞非空约束
         if (accel.getPrefixUrl() == null || accel.getPrefixUrl().isBlank()) {
-            return Result.error(300, "加速前缀不能为空");
+            throw BusinessException.of("加速前缀不能为空");
         }
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「清空备注」保存后仍是旧值。白名单逐列显式 set，可空列原样写入（含 null）。

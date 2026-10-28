@@ -1,5 +1,6 @@
 package com.astral.qt.controller;
 
+import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.astral.qt.entity.QtAppUpdate;
 import com.astral.qt.entity.QtAppUpdateArtifact;
@@ -13,6 +14,7 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -154,7 +156,7 @@ class QtAdminControllerUpdateTest {
             QtAppUpdate request = request("1101,1106", submitted);
             request.setDownloadUrl("https://example.test/legacy.apk");
             request.setBrowserUrl("https://example.test/releases");
-            assertRejected(controller.createUpdate(request), "缺少所选平台的产物");
+            assertRejected(() -> controller.createUpdate(request), "缺少所选平台的产物");
         }
         assertEquals(0, parentCount());
         verify(updateMapper, never()).insert(any(QtAppUpdate.class));
@@ -188,7 +190,7 @@ class QtAdminControllerUpdateTest {
     void combinedEditRejectsSubmittedListMissingCoverageDespiteExistingArtifact() {
         seedAndroid();
         insertArtifact(ID, artifact(HARMONY));
-        assertRejected(controller.updateAppUpdate(ID, request("1101,1106", List.of(artifact(ANDROID)))),
+        assertRejected(() -> controller.updateAppUpdate(ID, request("1101,1106", List.of(artifact(ANDROID)))),
                 "缺少所选平台的产物");
         assertEquals("1101", jdbc.queryForObject("SELECT platforms FROM qt_app_update", String.class));
         assertEquals(2, readArtifacts(ID).size());
@@ -202,7 +204,7 @@ class QtAdminControllerUpdateTest {
         for (List<QtAppUpdateArtifact> submitted : List.of(List.<QtAppUpdateArtifact>of(), List.of(artifact(null)))) {
             QtAppUpdate request = request("1101", submitted);
             request.setDownloadUrl("https://example.test/main.apk");
-            assertRejected(controller.updateAppUpdate(ID, request), "缺少所选平台的产物");
+            assertRejected(() -> controller.updateAppUpdate(ID, request), "缺少所选平台的产物");
         }
         verify(artifacts, never()).replaceAll(anyLong(), anyList());
         verifyNoInteractions(appService);
@@ -214,7 +216,7 @@ class QtAdminControllerUpdateTest {
         doReturn(List.of(artifact(HARMONY))).when(artifacts).listByUpdateId(ID);
         QtAppUpdate request = new QtAppUpdate();
         request.setPlatforms("1106");
-        assertRejected(controller.updateAppUpdate(ID, request), "缺少所选平台的产物");
+        assertRejected(() -> controller.updateAppUpdate(ID, request), "缺少所选平台的产物");
         verify(artifacts).listByUpdateIdForWrite(ID);
         verify(artifacts, never()).listByUpdateId(anyLong());
         verify(artifacts, never()).replaceAll(anyLong(), anyList());
@@ -227,7 +229,7 @@ class QtAdminControllerUpdateTest {
         jdbc.update("UPDATE qt_app_update_artifact SET download_url = '   ', browser_url = NULL WHERE update_id = ?", ID);
         QtAppUpdate request = new QtAppUpdate();
         request.setVersionName("renamed");
-        assertRejected(controller.updateAppUpdate(ID, request), "每个产物都要填写");
+        assertRejected(() -> controller.updateAppUpdate(ID, request), "每个产物都要填写");
         verify(artifacts).listByUpdateIdForWrite(ID);
         verify(artifacts, never()).replaceAll(anyLong(), anyList());
         verifyNoInteractions(appService);
@@ -253,9 +255,9 @@ class QtAdminControllerUpdateTest {
             invalid.setIsGithub(githubWithoutDirect ? 1L : 0L);
             if (githubWithoutDirect) invalid.setBrowserUrl("https://example.test/releases");
             String message = githubWithoutDirect ? "GitHub 产物必须填写直链下载地址" : "每个产物都要填写";
-            assertRejected(controller.createUpdate(request("1101", List.of(invalid))), message);
-            assertRejected(controller.updateAppUpdate(ID, request("1101", List.of(invalid))), message);
-            assertRejected(controller.saveUpdateArtifacts(ID, List.of(invalid)), message);
+            assertRejected(() -> controller.createUpdate(request("1101", List.of(invalid))), message);
+            assertRejected(() -> controller.updateAppUpdate(ID, request("1101", List.of(invalid))), message);
+            assertRejected(() -> controller.saveUpdateArtifacts(ID, List.of(invalid)), message);
         }
         assertEquals(1, parentCount());
         assertEquals(1, readArtifacts(ID).size());
@@ -268,9 +270,9 @@ class QtAdminControllerUpdateTest {
         seedAndroid();
         jdbc.update("UPDATE qt_app_update SET platforms = '1101,1106' WHERE id = ?", ID);
         insertArtifact(ID, artifact(HARMONY));
-        assertRejected(controller.saveUpdateArtifacts(ID, List.of(artifact(ANDROID))), "缺少所选平台的产物");
-        assertRejected(controller.saveUpdateArtifacts(ID, List.of(artifact(null))), "缺少所选平台的产物");
-        assertRejected(controller.saveUpdateArtifacts(ID, List.of()), "缺少所选平台的产物");
+        assertRejected(() -> controller.saveUpdateArtifacts(ID, List.of(artifact(ANDROID))), "缺少所选平台的产物");
+        assertRejected(() -> controller.saveUpdateArtifacts(ID, List.of(artifact(null))), "缺少所选平台的产物");
+        assertRejected(() -> controller.saveUpdateArtifacts(ID, List.of()), "缺少所选平台的产物");
         assertEquals(2, readArtifacts(ID).size());
         verify(updateMapper, times(3)).selectByIdForUpdate(ID);
         verify(artifacts, never()).replaceAll(anyLong(), anyList());
@@ -408,8 +410,9 @@ class QtAdminControllerUpdateTest {
         return artifact;
     }
 
-    private static void assertRejected(Result<?> response, String message) {
-        assertEquals(300, response.getCode());
-        assertTrue(response.getMsg().contains(message), response::getMsg);
+    private static void assertRejected(Executable call, String message) {
+        BusinessException error = assertThrows(BusinessException.class, call);
+        assertEquals(300, error.getCode().intValue());
+        assertTrue(error.getMessage().contains(message), error::getMessage);
     }
 }

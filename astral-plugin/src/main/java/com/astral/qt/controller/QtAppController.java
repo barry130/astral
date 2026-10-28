@@ -3,6 +3,7 @@ package com.astral.qt.controller;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.astral.auth.security.DataScopeResolver;
 import com.astral.auth.security.PermissionChecker;
+import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.astral.qt.dto.QtSourceReportDto;
 import com.astral.qt.dto.vo.QtGithubAccelVo;
@@ -74,7 +75,7 @@ public class QtAppController {
                                              @RequestParam(value = "arch", required = false) String arch,
                                              @RequestHeader(value = "satoken", required = false) String satoken) {
         if (!QtAppUpdate.isSupportedPlatform(type)) {
-            return Result.error(320, "暂不支持该类型");
+            throw BusinessException.of(320, "暂不支持该类型");
         }
         // 可见集合 = {stable} ∪ 用户被授予的渠道（如 user:qt:update:channel:beta → beta；超管为全部已登记渠道）。
         // 权限只决定「能看见哪些渠道」，最终发哪个版本由业务在集合内按版本号最大者决定：
@@ -99,7 +100,7 @@ public class QtAppController {
             @RequestParam(value = "arch", required = false) String arch) {
         QtAppUpdate official = appService.getOfficialVersion(type, version, versionName, arch);
         if (official == null) {
-            return Result.error(321, "非官方版本");
+            throw BusinessException.of(321, "非官方版本");
         }
         return Result.success(official);
     }

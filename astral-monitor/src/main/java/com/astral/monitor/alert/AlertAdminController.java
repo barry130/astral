@@ -1,6 +1,7 @@
 package com.astral.monitor.alert;
 
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.AlertChannel;
 import com.astral.dao.entity.AlertRecord;
@@ -77,11 +78,11 @@ public class AlertAdminController {
     public Result<Void> createChannel(@Valid @RequestBody ChannelRequest body) {
         String configError = alertEngine.getConfigParser().validate(body.getType(), body.getConfig());
         if (configError != null) {
-            return Result.fail(configError);
+            throw BusinessException.of(configError);
         }
         Long count = channelMapper.selectCount(new QueryWrapper<AlertChannel>().eq("name", body.getName()));
         if (count != null && count > 0) {
-            return Result.fail("渠道名称已存在");
+            throw BusinessException.of("渠道名称已存在");
         }
         AlertChannel channel = new AlertChannel();
         channel.setName(body.getName().trim());
@@ -99,16 +100,16 @@ public class AlertAdminController {
     public Result<Void> updateChannel(@PathVariable Long id, @Valid @RequestBody ChannelRequest body) {
         AlertChannel channel = channelMapper.selectById(id);
         if (channel == null) {
-            return Result.fail("渠道不存在");
+            throw BusinessException.of("渠道不存在");
         }
         String configError = alertEngine.getConfigParser().validate(body.getType(), body.getConfig());
         if (configError != null) {
-            return Result.fail(configError);
+            throw BusinessException.of(configError);
         }
         Long count = channelMapper.selectCount(new QueryWrapper<AlertChannel>()
                 .eq("name", body.getName()).ne("id", id));
         if (count != null && count > 0) {
-            return Result.fail("渠道名称已存在");
+            throw BusinessException.of("渠道名称已存在");
         }
         // 白名单更新（MP NOT_NULL 策略下 updateById 跳过 null，语义一致；不透传非预期字段）
         channel.setName(body.getName().trim());
@@ -127,7 +128,7 @@ public class AlertAdminController {
     public Result<Void> deleteChannel(@PathVariable Long id) {
         Long used = ruleMapper.selectCount(new QueryWrapper<AlertRule>().eq("channel_id", id));
         if (used != null && used > 0) {
-            return Result.fail("仍有规则绑定该渠道，请先调整规则");
+            throw BusinessException.of("仍有规则绑定该渠道，请先调整规则");
         }
         channelMapper.deleteById(id);
         return Result.success();
@@ -139,14 +140,14 @@ public class AlertAdminController {
     public Result<Void> testChannel(@PathVariable Long id) {
         AlertChannel channel = channelMapper.selectById(id);
         if (channel == null) {
-            return Result.fail("渠道不存在");
+            throw BusinessException.of("渠道不存在");
         }
         try {
             alertEngine.deliver(channel, "[Astral 告警] 测试通知",
                     "这是一条测试通知。渠道：" + channel.getName() + "，时间：" + LocalDateTime.now());
             return Result.success();
         } catch (Exception e) {
-            return Result.fail("发送失败：" + e.getMessage());
+            throw BusinessException.of("发送失败：" + e.getMessage());
         }
     }
 
@@ -200,13 +201,10 @@ public class AlertAdminController {
             description = "新建/修改/删除告警规则")
     @PostMapping("/rule")
     public Result<Void> createRule(@Valid @RequestBody RuleRequest body) {
-        Result<Void> validation = validateRule(body);
-        if (validation != null) {
-            return validation;
-        }
+        validateRule(body);
         Long count = ruleMapper.selectCount(new QueryWrapper<AlertRule>().eq("name", body.getName()));
         if (count != null && count > 0) {
-            return Result.fail("规则名称已存在");
+            throw BusinessException.of("规则名称已存在");
         }
         AlertRule rule = new AlertRule();
         rule.setName(body.getName().trim());
@@ -226,16 +224,13 @@ public class AlertAdminController {
     public Result<Void> updateRule(@PathVariable Long id, @Valid @RequestBody RuleRequest body) {
         AlertRule rule = ruleMapper.selectById(id);
         if (rule == null) {
-            return Result.fail("规则不存在");
+            throw BusinessException.of("规则不存在");
         }
-        Result<Void> validation = validateRule(body);
-        if (validation != null) {
-            return validation;
-        }
+        validateRule(body);
         Long count = ruleMapper.selectCount(new QueryWrapper<AlertRule>()
                 .eq("name", body.getName()).ne("id", id));
         if (count != null && count > 0) {
-            return Result.fail("规则名称已存在");
+            throw BusinessException.of("规则名称已存在");
         }
         rule.setName(body.getName().trim());
         rule.setMetric(AlertEngine.normalizeMetric(body.getMetric()));
@@ -257,22 +252,21 @@ public class AlertAdminController {
         return Result.success();
     }
 
-    private Result<Void> validateRule(RuleRequest body) {
+    private void validateRule(RuleRequest body) {
         String metric = AlertEngine.normalizeMetric(body.getMetric());
         if (!AlertEngine.SUPPORTED_METRICS.contains(metric)) {
-            return Result.fail("不支持的指标：" + body.getMetric()
+            throw BusinessException.of("不支持的指标：" + body.getMetric()
                     + "（可选 SERVER_ERROR_COUNT / CLIENT_ERROR_COUNT / HTTP_5XX_COUNT）");
         }
         if (channelMapper.selectById(body.getChannelId()) == null) {
-            return Result.fail("绑定的渠道不存在");
+            throw BusinessException.of("绑定的渠道不存在");
         }
         if (body.getWindowMinutes() != null && (body.getWindowMinutes() < 1 || body.getWindowMinutes() > 1440)) {
-            return Result.fail("统计窗口须在 1-1440 分钟之间");
+            throw BusinessException.of("统计窗口须在 1-1440 分钟之间");
         }
         if (body.getCooldownMinutes() != null && (body.getCooldownMinutes() < 0 || body.getCooldownMinutes() > 10080)) {
-            return Result.fail("冷却时间须在 0-10080 分钟之间");
+            throw BusinessException.of("冷却时间须在 0-10080 分钟之间");
         }
-        return null;
     }
 
     // ------------------------------------------------------------------

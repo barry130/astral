@@ -39,7 +39,7 @@ public class AiGlobalExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public Result<Void> handleBusiness(BusinessException e) {
         log.debug("[AI] 宿主业务异常: {}", e.getMessage());
-        return Result.error(300, e.getMessage());
+        return Result.error(e.getCode() != null ? e.getCode() : 300, e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

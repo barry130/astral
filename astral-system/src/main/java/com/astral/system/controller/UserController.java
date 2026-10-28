@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.annotation.RequiresSuper;
+import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.User;
 import com.astral.dao.entity.UserRole;
@@ -231,7 +232,7 @@ public class UserController {
     @PutMapping("/{id}/roles")
     public Result<Void> assignRoles(@PathVariable Long id, @RequestBody Map<String, List<Long>> body) {
         if (userService.getById(id) == null) {
-            return Result.fail("用户不存在");
+            throw BusinessException.of("用户不存在");
         }
         // 先删后插 + 角色存在性校验，整体在一个事务里（见 UserRoleServiceImpl.assignRoles）
         userRoleService.assignRoles(id, body.get("roleIds"));
@@ -254,12 +255,12 @@ public class UserController {
     public Result<Void> changeStatus(@PathVariable Long id, @RequestParam Integer status,
                                      @RequestParam(required = false) String reason) {
         if (userService.getById(id) == null) {
-            return Result.fail("用户不存在");
+            throw BusinessException.of("用户不存在");
         }
         // 封禁理由：封禁时必填落库（用户管理页展示），解封时清空
         if (status != null && status == 0) {
             if (reason == null || reason.isBlank()) {
-                return Result.fail("封禁时必须填写理由");
+                throw BusinessException.of("封禁时必须填写理由");
             }
         }
         // 只 patch 状态相关列：绝不能把 getById 出来的实体（password 是哈希）整个塞回
@@ -293,7 +294,7 @@ public class UserController {
         String password = body.get("password");
         User user = userService.getById(id);
         if (user == null) {
-            return Result.fail("用户不存在");
+            throw BusinessException.of("用户不存在");
         }
         // 密码强度策略（失败抛 IllegalArgumentException -> 400 文案）；
         // 传明文交给 UserServiceImpl.updateById 统一 BCrypt 一次：这里再 hashpw 会被
@@ -321,7 +322,7 @@ public class UserController {
     @PutMapping("/{id}/kick")
     public Result<Void> kickOut(@PathVariable Long id) {
         if (userService.getById(id) == null) {
-            return Result.fail("用户不存在");
+            throw BusinessException.of("用户不存在");
         }
         StpUtil.kickout(id);
         return Result.success();
@@ -341,13 +342,13 @@ public class UserController {
     public Result<Void> changeType(@PathVariable Long id, @RequestBody Map<String, String> body) {
         String userType = body.get("userType");
         if (userType == null || userType.isBlank()) {
-            return Result.fail("用户类型不能为空");
+            throw BusinessException.of("用户类型不能为空");
         }
         if (!"ADMIN".equals(userType) && !"APP".equals(userType)) {
-            return Result.fail("不支持的用户类型");
+            throw BusinessException.of("不支持的用户类型");
         }
         if (userService.getById(id) == null) {
-            return Result.fail("用户不存在");
+            throw BusinessException.of("用户不存在");
         }
         // 同 changeStatus：只 patch userType，避免把 password 哈希带回 updateById 被二次哈希
         User patch = new User();

@@ -209,7 +209,7 @@ public class RoleController {
     @PutMapping("/{id}/permissions")
     public Result<Void> assignPermissions(@PathVariable Long id, @RequestBody Map<String, List<Long>> body) {
         if (roleService.getById(id) == null) {
-            return Result.fail("角色不存在");
+            throw BusinessException.of("角色不存在");
         }
         // 先删后插 + 权限存在性校验，整体在一个事务里（见 RolePermissionServiceImpl.assignPermissions）
         rolePermissionService.assignPermissions(id, body.get("permissionIds"));

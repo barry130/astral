@@ -2,6 +2,7 @@ package com.astral.sequence.controller;
 
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.error.ErrorCodes;
+import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.astral.common.util.PatchValues;
 import com.astral.dao.entity.SequenceConfig;
@@ -105,7 +106,7 @@ public class SequenceConfigController {
     public Result<SequenceConfig> getByBizKey(@PathVariable String bizKey) {
         SequenceConfig config = sequenceConfigMapper.selectByBizKey(bizKey);
         if (config == null) {
-            return Result.error("SEQ007");
+            throw new BusinessException("SEQ007");
         }
         enrichCurrentValue(config);
         return Result.success(config);

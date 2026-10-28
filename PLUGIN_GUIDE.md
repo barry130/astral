@@ -121,6 +121,16 @@ public class UniappxMapperConfig {
 
 数据库结构变更应遵循 `astral-server/src/main/resources/db/migration/README.md` 的 Flyway 增量迁移规范（新增 `V{yyyyMMddNNN}__xxx.sql`，启动时自动应用；已发布脚本禁止修改）。插件自建 `*SchemaInitializer` 仅限幂等建表（`CREATE TABLE IF NOT EXISTS`）。
 
+**控制器返回与失败写法（强制）**：控制器统一返回 `Result<T>`（`com.astral.common.result`），成功用 `Result.success(...)`；**失败必须抛异常，禁止手工构造失败响应**——`return Result.fail(...)` / `return Result.error(...)` 视为不合规。
+
+| 场景 | 写法 | 出站 body |
+| --- | --- | --- |
+| 资源包内置错误码 | `throw new BusinessException("SYS009")` | `{code:300, errorCode:"SYS009", msg:"…"}` |
+| 现写中文提示 | `throw BusinessException.of("用户不存在")` | `{code:300, errorCode:null, msg:"用户不存在"}` |
+| 指定业务码 | `throw BusinessException.of(320, "参数错误")` | `{code:320, errorCode:null, msg:"参数错误"}` |
+
+HTTP 状态码恒为 `200`（业务失败也是 `200`），业务结论看 body 的 `code`；只有 `*ExceptionHandler` 允许把失败写成 `Result.error(...)`。完整响应契约见 [API.md](API.md) 开头。
+
 ### 5. 注册前端导航（可选）
 
 ```java

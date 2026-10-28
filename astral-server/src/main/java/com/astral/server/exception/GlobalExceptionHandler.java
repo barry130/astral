@@ -58,13 +58,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 业务异常：HTTP 200（服务端已处理），body.code 按 errorCode 语义映射。
+     * 业务异常：HTTP 200（服务端已处理），body.code 取显式业务码（{@code BusinessException.of(code, msg)}），
+     * 未显式指定时按 errorCode 语义映射。
      *
      * @see #mapBusinessCode(String)
      */
     @ExceptionHandler(BusinessException.class)
     public Result<?> handleBusinessException(BusinessException e) {
-        int code = mapBusinessCode(e.getErrorCode());
+        // 显式业务码优先（BusinessException.of(code, msg)），否则按 errorCode 语义映射
+        int code = e.getCode() != null ? e.getCode() : mapBusinessCode(e.getErrorCode());
         Result<?> body;
         if (e.getErrorCode() != null) {
             log.warn("Business exception: errorCode={}, message={}", e.getErrorCode(), e.getMessage());

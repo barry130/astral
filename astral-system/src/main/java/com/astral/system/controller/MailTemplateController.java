@@ -85,7 +85,7 @@ public class MailTemplateController {
     public Result<String> preview(@RequestBody MailPreviewDto dto) {
         SysMailTemplate tpl = templateService.getById(dto.getTemplateId());
         if (tpl == null) {
-            return Result.fail("模板不存在");
+            throw BusinessException.of("模板不存在");
         }
         return Result.success(render(tpl.getContent(), dto.getVariables()));
     }
