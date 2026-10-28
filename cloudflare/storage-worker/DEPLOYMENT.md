@@ -317,10 +317,26 @@ MVP 之外的第二类 Provider：浏览器凭 Astral 签发的 **S3 SigV4 预�
 ### 13.2 永久公开链接（/p/）
 
 - 管理端「文件」页签及用户端 `/files` → 文件操作菜单 **复制永久链接**：仅 `PUBLIC` 文件显示该操作，渠道还需支持并配置公开域名；私有文件须先改为公开；
-- **TELEGRAM 文件**：`{Worker域名}/p/{publicId}/{contentVersion}`——无签名、任何人可访问；Worker 回源校验可见性后从 Telegram 取流并写边缘缓存（1 天）；文件转私有或删除时 contentVersion 递增，旧链接在边缘缓存过期后失效（最长 1 天窗口）；
-- **上传预热**：Worker 上传登记成功后，把仍在内存中的文件字节直接写入边缘缓存（`/_mcache`、`/_tgcache`；PUBLIC 文件再写 `/_pcache`、`/_cache`），因此 `/p/` 与签名链接的**首次访问即边缘命中**，无需回源三跳——适合「上传后马上分享/嵌入页面」的场景；预热失败只影响首访速度，不影响正确性；
+- **TELEGRAM 文件**：`{Worker域名}/p/{publicId}/{contentVersion}`——无签名、任何人可访问；Worker 回源校验可见性后从 Telegram 取流并写边缘缓存（7 天）；文件转私有或删除时 contentVersion 递增，旧链接在边缘缓存过期后失效（另有主动 purge 兜底）；
+- **上传预热**：Worker 上传登记成功后，把仍在内存中的文件字节直接写入边缘缓存（`/_mcache`、`/_tgcache`；PUBLIC 文件再写 `/_pcache`、`/_cache`，PRIVATE 文件写 `/_ucache`），因此 `/p/` 与签名链接的**首次访问即边缘命中**，无需回源三跳——适合「上传后马上分享/嵌入页面」的场景；预热失败只影响首访速度，不影响正确性；
 - **R2/S3 及国内对象存储（COS/OSS/七牛/又拍云）文件**：`{publicBaseUrl}/{对象键}` 直链（需配置 publicBaseUrl 且桶开启公开访问）；
 - Worker 需要**重新部署**才有 `/p/` 路由（`npx wrangler deploy`）。
+
+### 13.3 国内访问速度：吞吐由「落到哪个 PoP」决定，不是 Worker 能改的
+
+Worker 只决定「命中缓存与否」，**决定不了的**是客户端连到哪个 Cloudflare 机房——那是 anycast 路由的结果。同一台机器、同一时刻实测（浙江电信，`speed.cloudflare.com` 8MB）：
+
+| 连的地址 | 落点 | 边缘 TTFB | 8MB 吞吐 |
+|---|---|---|---|
+| `104.21.20.124` / `172.67.192.219`（zone 默认下发） | AMS（阿姆斯特丹） | 0.63-1.30s | **415 KB/s** |
+| `104.18.32.0/20` | **SIN（新加坡）** | **0.29s** | **8.3 MB/s** |
+
+同一份内容差 20 倍。这意味着：
+
+- **不要试图在 Worker 里解决慢**——TTL、预热、Content-Length 只能把「没命中」变成「命中」，命中之后仍按上表的带宽传输；一张 2MB 截图在 AMS 上光是传输就要 5 秒。
+- **自查落的哪个机房**：`curl -s --resolve storage.canace.icu:443:<猜测的IP> https://storage.canace.icu/cdn-cgi/trace | grep colo`，`colo=SIN` 才是快路。
+- **能改的是客户端指向**：桌面端（qt-pc）在 HTTP 栈里用 `resolve(host, ip)` 钉住实测最快的 IP 池，失败再回落默认 DNS；浏览器/移动端改不了 SNI 目标，只能靠 hosts（临时验证）或另立子域委派 + SaaS 自定义主机名（长期方案）。
+- zone 默认下发哪两个 IP 由 Cloudflare 分配，无法在 Dashboard 指定；若新建 zone 分配到 `104.18.x` 段，那就是白捡的 20 倍。
 
 ---
 
@@ -329,5 +345,5 @@ MVP 之外的第二类 Provider：浏览器凭 Astral 签发的 **S3 SigV4 预�
 - 4 个值（3 密钥 + Bot Token）**永远不进 Git、聊天、截图**；只存在于后端环境变量与 Worker Secret；
 - Worker Secret 与后端环境变量必须成对一致，轮换时两端同步换；
 - `getUpdates` 链接内含 Token，只在自己浏览器临时打开；
-- 私有文件不进共享边缘缓存；公开文件的签名下载路由与回源元数据缓存 3600/300 秒，永久公开 `/p/` 路由缓存 86400 秒；Telegram getFile 结果缓存 1800 秒。删除/转私有/停用配置时，Astral 会**主动调用 Worker 的 purge 端点**（HMAC 鉴权同服务身份密钥）清除上述缓存，撤销延迟收敛到秒级——purge 请求失败只影响撤销速度（残余副本最多存活一个 TTL 窗口），不影响正确性；对象存储公开直链还取决于桶权限与渠道缓存配置；
+- 私有内容进**单 PoP** 短缓存（`/_ucache`，900 秒，对外仍声明 `Cache-Control: private`）；公开文件的签名下载路由缓存 7 天、回源元数据缓存 3600 秒，永久公开 `/p/` 路由缓存 7 天；Telegram getFile 结果缓存 1800 秒。删除/转私有/停用配置时，Astral 会**主动调用 Worker 的 purge 端点**（HMAC 鉴权同服务身份密钥）清除上述缓存（`/cache`、`/ucache`、`/pcache`、`/mcache`、`/tgcache`），撤销延迟收敛到秒级——purge 请求失败只影响撤销速度（残余副本最多存活一个 TTL 窗口），不影响正确性；对象存储公开直链还取决于桶权限与渠道缓存配置；
 - Telegram 不是带 SLA 的存储，重要文件请另行备份（后续可做 R2 双写）。
