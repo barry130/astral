@@ -8,6 +8,7 @@ import { request } from '@/api/client';
 import type { SysNotice } from '@/api/notice';
 import { noticeTypeLabel } from '@/api/notice';
 import { cn } from '@/lib/utils';
+import { parseNoticeLink } from '@/lib/notice-link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -68,6 +69,8 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
   const [readIds, setReadIds] = useState<Set<number>>(() => loadReadIds());
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<SysNotice | null>(null);
+  // astral:// 是宿主自定义协议，浏览器不认识，必须先解析成站内路由再渲染成按钮
+  const detailLink = useMemo(() => parseNoticeLink(detail?.url), [detail?.url]);
 
   const load = useCallback(() => {
     // 管理端收件箱：不按 channel 过滤，广播 + 发给当前管理员的点对点全可见
@@ -152,8 +155,18 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
                       key={String(n.id)}
                       onClick={() => {
                         markRead(n);
-                        setDetail(n);
                         setOpen(false);
+                        // 带站内跳转目标的通知直接跳转；纯文本通知才开详情弹层
+                        const link = parseNoticeLink(n.url);
+                        if (link?.kind === 'internal') {
+                          router.push(link.href);
+                          return;
+                        }
+                        if (link?.kind === 'external') {
+                          window.open(link.url, '_blank', 'noopener,noreferrer');
+                          return;
+                        }
+                        setDetail(n);
                       }}
                       className="cursor-pointer rounded-md px-2 py-2 transition-colors hover:bg-accent"
                     >
@@ -207,11 +220,30 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
             <span>{fmtTime(detail?.createTime)}</span>
           </div>
           <div className="whitespace-pre-wrap leading-relaxed">{detail?.content}</div>
-          {detail?.url && (
-            <div>
-              <a href={detail.url} target="_blank" rel="noreferrer" className="break-all text-primary underline underline-offset-4">
-                {detail.url}
-              </a>
+          {detailLink && (
+            <div className="text-sm">
+              {detailLink.kind === 'internal' && (
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-primary"
+                  onClick={() => {
+                    // 先关弹层再路由：详情来源于列表快照，跳转后由目标页自己拉最新数据
+                    setDetail(null);
+                    router.push(detailLink.href);
+                  }}
+                >
+                  {detailLink.label}
+                  <ChevronRight className="size-3.5" aria-hidden />
+                </Button>
+              )}
+              {detailLink.kind === 'external' && (
+                <a href={detailLink.url} target="_blank" rel="noreferrer" className="break-all text-primary underline underline-offset-4">
+                  {detailLink.url}
+                </a>
+              )}
+              {detailLink.kind === 'unsupported' && (
+                <span className="break-all text-muted-foreground">{detailLink.raw}</span>
+              )}
             </div>
           )}
         </DialogContent>

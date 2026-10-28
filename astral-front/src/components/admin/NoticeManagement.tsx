@@ -453,8 +453,8 @@ export default function NoticeManagement() {
 
           <Row gutter={16}>
             <Col xs={24} md={12}>
-              <Form.Item name="url" label="跳转链接">
-                <Input placeholder="点击后跳转链接（可选）" />
+              <Form.Item name="url" label="跳转链接" extra="站内用 astral://feedback/<id>；外链直接填 http(s) 地址">
+                <Input placeholder="astral://feedback/1000001 或 https://..." />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>

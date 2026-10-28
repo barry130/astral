@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { formatDateTime } from '@/lib/format';
 import { Card, Row, Col, Statistic, Tag, Button, Space, Select, Input, Switch, Popconfirm, Drawer, Timeline, Form, message, Typography, Divider, Tabs, Tooltip, Spin } from '@/components/antd-compat';
 import { ReloadOutlined, MessageOutlined, DeleteOutlined, SendOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@/components/antd-compat/icons';
@@ -35,6 +36,9 @@ const TRANSITIONS: Record<string, string[]> = {
 /** 反馈管理面板（Tabs 内嵌） */
 function FeedbackPanel() {
   const hasPerm = usePerm();
+  // 通知深链 ?feedbackId= 由这里消费（useSearchParams 需要外层 Suspense，见 FeedbackPage）
+  const searchParams = useSearchParams();
+  const router = useRouter();
   /** 是否具备反馈维护权限（须与后端 AdminFeedbackController 上的 @RequiresPermission("admin:feedback:edit") 一致） */
   const canEdit = hasPerm('admin:feedback:edit');
   const [loading, setLoading] = useState(false);
@@ -105,6 +109,25 @@ function FeedbackPanel() {
       setReplies([]);
     }
   }, []);
+
+  // 通知详情里的 astral://feedback/<id> 会带 ?feedbackId= 跳进来：直接拉该条并打开详情抽屉。
+  // 用 useSearchParams 而不是只在挂载时读 window.location——从「反馈管理」页内点通知跳转时
+  // 路由不重新挂载，只有 searchParams 变化能被监听到（挂载时读一次会表现为「点了没反应」）。
+  const deepLinkId = searchParams.get('feedbackId');
+  useEffect(() => {
+    if (!deepLinkId) return;
+    const feedbackId = Number(deepLinkId);
+    if (!Number.isInteger(feedbackId) || feedbackId <= 0) return;
+    // 消费完立即把 ?feedbackId= 摘掉：否则刷新会重开抽屉，且再点同一条通知时 URL 没变化、不会重新触发
+    router.replace('/dashboard/feedback');
+    feedbackAdminApi.detail(feedbackId)
+      .then((res) => {
+        if (res.code === 200 && res.data) openDetail(res.data);
+      })
+      .catch(() => {
+        // 深链失效（记录被删/无权限）时静默降级为普通列表，不打断使用
+      });
+  }, [deepLinkId, openDetail, router]);
 
   const handleStatusChange = useCallback(async (id: number, status: string) => {
     try {
@@ -373,5 +396,10 @@ function FeedbackPanel() {
  * 消息中心同时具备查询与发布能力后，反馈页不再保留通知页签，避免两处维护同一张表。</p>
  */
 export default function FeedbackPage() {
-  return <FeedbackPanel />;
+  // useSearchParams 在静态预渲染时要求 Suspense 边界（Next 16 App Router）
+  return (
+    <Suspense fallback={null}>
+      <FeedbackPanel />
+    </Suspense>
+  );
 }
