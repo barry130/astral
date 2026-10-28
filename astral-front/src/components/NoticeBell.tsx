@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bell, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Bell, Check, ChevronRight } from 'lucide-react';
 
 import { request } from '@/api/client';
-import type { SysNotice } from '@/api/feedback';
-import { noticeTypeLabel } from '@/api/feedback';
+import type { SysNotice } from '@/api/notice';
+import { noticeTypeLabel } from '@/api/notice';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +22,8 @@ import {
  * 顶栏消息提示铃铛
  * <p>数据源为统一通知（sys_notice）的 App 端消息中心接口（channel=pc，管理端会话同样放行），
  * 复用既有「已读由前端缓存判断」的机制：已读 id 记录在 localStorage，后端无已读状态。</p>
- * <p>反馈插件禁用或接口异常时静默降级为无角标，不影响控制台使用。</p>
+ * <p>通知接口异常时静默降级为无角标，不影响控制台使用；Popover 底部提供「全部通知」入口，
+ * 跳转到「消息中心 → 通知管理」页签（/dashboard/system/mail?tab=notice）。</p>
  */
 
 /** 已读记录的本地缓存键（PC 管理端收件箱） */
@@ -50,11 +52,9 @@ function saveReadIds(set: Set<number>) {
   }
 }
 
-/** 通知类型 → 徽章配色（纯展示） */
+/** 通知类型 → 徽章配色（纯展示；两档口径：公告=蓝，其余一律按「通知」=灰） */
 const TYPE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'success' | 'warning' | 'destructive'> = {
   announce: 'default',
-  feedback: 'warning',
-  request: 'success',
 };
 
 function fmtTime(v?: string): string {
@@ -63,6 +63,7 @@ function fmtTime(v?: string): string {
 }
 
 export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?: React.CSSProperties }) {
+  const router = useRouter();
   const [notices, setNotices] = useState<SysNotice[]>([]);
   const [readIds, setReadIds] = useState<Set<number>>(() => loadReadIds());
   const [open, setOpen] = useState(false);
@@ -74,7 +75,7 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
       .get('/api/v1/admin/message/inbox')
       .then((res: any) => setNotices(res.data || []))
       .catch(() => {
-        // 反馈插件禁用 / 网络异常：角标归零，不弹错误打扰
+        // 通知接口异常（模块未启用 / 网络失败）：角标归零，不弹错误打扰
         setNotices([]);
       });
   }, []);
@@ -164,7 +165,7 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
                         </span>
                       </div>
                       <div className="mt-1 flex items-center gap-1.5 pl-2 text-xs text-muted-foreground">
-                        <Badge variant={TYPE_VARIANT[n.noticeType || ''] || 'outline'} className="px-1.5 py-0">
+                        <Badge variant={TYPE_VARIANT[n.noticeType || ''] || 'secondary'} className="px-1.5 py-0">
                           {noticeTypeLabel(n.noticeType)}
                         </Badge>
                         <span>{fmtTime(n.createTime)}</span>
@@ -175,6 +176,22 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
               </ul>
             )}
           </div>
+          {/* 原 Popover 里只有列表、没有任何跳转入口（独立路由 /dashboard/message 已删除），
+              这里补「全部通知」→ 消息中心的「通知管理」页签（tab 参数由该页读取） */}
+          <div className="mt-1 border-t border-border pt-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-center gap-1 font-normal"
+              onClick={() => {
+                setOpen(false);
+                router.push('/dashboard/system/mail?tab=notice');
+              }}
+            >
+              全部通知
+              <ChevronRight className="size-3.5" aria-hidden />
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
 
@@ -184,7 +201,7 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
             <DialogTitle>{detail?.title}</DialogTitle>
           </DialogHeader>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant={TYPE_VARIANT[detail?.noticeType || ''] || 'outline'}>
+            <Badge variant={TYPE_VARIANT[detail?.noticeType || ''] || 'secondary'}>
               {noticeTypeLabel(detail?.noticeType)}
             </Badge>
             <span>{fmtTime(detail?.createTime)}</span>

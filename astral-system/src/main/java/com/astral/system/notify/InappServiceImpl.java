@@ -9,6 +9,7 @@ import com.astral.dao.entity.SysMailTemplate;
 import com.astral.dao.entity.SysNotice;
 import com.astral.dao.mapper.SysMailTemplateMapper;
 import com.astral.dao.mapper.SysNoticeMapper;
+import com.astral.system.notice.NoticeDisplay;
 import com.astral.system.notify.NotifyEventDef;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -29,8 +30,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class InappServiceImpl implements InappService {
 
-    /** 展示位：消息中心（与 feedback 插件 FeedbackNoticeService.DISPLAY_MESSAGE_CENTER 同值） */
-    private static final long DISPLAY_MESSAGE_CENTER = 4L;
+    /**
+     * 展示位：消息中心。
+     * <p>值来自 {@link NoticeDisplay#DISPLAY_MESSAGE_CENTER}（宿主通知模块的唯一定义处）：
+     * 站内信的写侧（本类落库）与读侧（{@code NoticeServiceImpl} 过滤消息中心位）必须同源，
+     * 各写一份私有常量迟早漂移成「写进去的消息中心行读不出来」。</p>
+     */
+    private static final long DISPLAY_MESSAGE_CENTER = NoticeDisplay.DISPLAY_MESSAGE_CENTER;
 
     private final SysNoticeMapper noticeMapper;
     private final SysMailTemplateMapper mailTemplateMapper;
@@ -84,8 +90,8 @@ public class InappServiceImpl implements InappService {
                         .eq(SysNotice::getUserId, userId)
                         .eq(SysNotice::getIsShow, 1L)
                         .orderByDesc(SysNotice::getCreateTime));
-        // display 是多值位掩码列，按展示位过滤放 Java 侧（与 feedback 插件读路径同款选择）
-        page.getRecords().removeIf(n -> n.getDisplay() == null || (n.getDisplay() & DISPLAY_MESSAGE_CENTER) != DISPLAY_MESSAGE_CENTER);
+        // display 是多值位掩码列，按展示位过滤放 Java 侧（与宿主 NoticeServiceImpl 读路径共用 NoticeDisplay 判定）
+        page.getRecords().removeIf(n -> !NoticeDisplay.hasDisplay(n.getDisplay(), DISPLAY_MESSAGE_CENTER));
         return page;
     }
 

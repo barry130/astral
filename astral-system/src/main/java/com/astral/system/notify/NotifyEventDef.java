@@ -15,8 +15,8 @@ import java.util.List;
  * @param description   事件说明（何时触发、谁在调用）
  * @param payloadFields 触发时携带的上下文字段（模板可用的 ${占位符} 全集）
  * @param channels      该事件可投递的渠道（见 {@link NotifyChannel}）
- * @param noticeType    站内信行的类型标签回退值（sys_notice.notice_type：
- *                      announce/feedback/request）。INAPP 投递时先取 payload 里的
+ * @param noticeType    站内信行的类型标签回退值（sys_notice.notice_type，取值只有
+ *                      {@code announce}(公告) / {@code notice}(通知) 两类）。INAPP 投递时先取 payload 里的
  *                      meta 字段 {@code noticeType}（调用方逐条指定），缺省再用本值，
  *                      再缺省 {@code announce}；仅事件类型固定时有意义，可传 null
  */

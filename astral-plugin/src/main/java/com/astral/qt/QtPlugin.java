@@ -12,7 +12,7 @@ import java.util.List;
  * 轻听（App）后端 API 插件
  * <p>
  * 参考 qt 后端项目，为 qt-uniappx 前端提供完整用户 / 签到 / 收藏 / 版本更新 API
- * （公告统一由 feedback 插件 sys_notice 提供，见 /api/v1/app/message/**）。
+ * （公告统一由宿主通知模块提供 sys_notice，本插件不再承载通知逻辑）。
  * 默认开启（astral.plugins.qt.enabled=true，允许在插件管理页禁用）。
  * </p>
  */

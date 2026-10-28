@@ -1,4 +1,4 @@
-package com.astral.feedback.service;
+package com.astral.system.notice;
 
 import com.astral.dao.entity.SysNotice;
 import com.astral.dao.mapper.SysNoticeMapper;
@@ -29,18 +29,22 @@ import static org.mockito.Mockito.*;
  * 反之若把「清空」写成空串，`termsVersion.trim().length > 0` 虽仍为假，
  * 但库里留下的 '' 与 NULL 在语义上不同（空串是「填过又删了」，NULL 是「从没填过」），
  * 排查时会误导。所以这里断言的是「清空 = 真的 set NULL」，不是「字段被跳过」。</p>
+ *
+ * <p><b>迁移说明</b>：本类原为 {@code com.astral.feedback.service.FeedbackNoticeDisclaimerFieldsTest}，
+ * 通知能力收归宿主后服务改名为 {@link NoticeServiceImpl}、包名改为 {@code com.astral.system.notice}，
+ * 断言内容一字未改 —— 它守的是「编辑表单清空 = 写 NULL」这条与模块归属无关的回归。</p>
  */
-class FeedbackNoticeDisclaimerFieldsTest {
+class NoticeDisclaimerFieldsTest {
 
     private SysNoticeMapper mapper;
-    private FeedbackNoticeService service;
+    private NoticeServiceImpl service;
 
     @BeforeEach
     void setUp() {
         TableInfoHelper.initTableInfo(
                 new MapperBuilderAssistant(new MybatisConfiguration(), "notice-disclaimer-test"), SysNotice.class);
         mapper = mock(SysNoticeMapper.class);
-        service = new FeedbackNoticeService();
+        service = new NoticeServiceImpl();
         ReflectionTestUtils.setField(service, "sysNoticeMapper", mapper);
     }
 
@@ -135,7 +139,7 @@ class FeedbackNoticeDisclaimerFieldsTest {
         edit.setReadSeconds(readSeconds);
         SysNoticeMapper localMapper = mock(SysNoticeMapper.class);
         when(localMapper.selectById(anyLong())).thenReturn(null);
-        FeedbackNoticeService localService = new FeedbackNoticeService();
+        NoticeServiceImpl localService = new NoticeServiceImpl();
         ReflectionTestUtils.setField(localService, "sysNoticeMapper", localMapper);
         localService.update(7L, edit);
         ArgumentCaptor<Wrapper<SysNotice>> captor = ArgumentCaptor.forClass(Wrapper.class);

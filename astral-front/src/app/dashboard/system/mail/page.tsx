@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Tabs } from '@/components/antd-compat';
 import {
   MailOutlined, FileTextOutlined, SafetyOutlined, MobileOutlined,
@@ -14,14 +15,24 @@ import SmsTemplatePage from './sms-template/page';
 import NoticeManagement from '@/components/admin/NoticeManagement';
 import NotifyRulePage from './notify-rule/page';
 
+/** 页签 key 白名单（同时作为 ?tab= 深链的合法取值） */
+const TAB_KEYS = ['account', 'template', 'auth', 'smsProvider', 'smsTemplate', 'notice', 'rule'] as const;
+
 /**
  * 消息中心页：邮箱帐户/邮箱模板/发信授权（EMAIL 本地渲染）、
  * 短信供应商/短信模板（SMS 供应商侧映射）、通知管理（统一通知表 sys_notice，
  * 广播公告 + 点对点站内信，与反馈管理/顶栏铃铛/轻听三端共用）、
  * 事件订阅规则（事件 × 渠道 → 模板 + 收件人，统一发布入口）。
+ *
+ * <p>支持 `?tab=` 深链（如顶栏铃铛的「全部通知」→ `/dashboard/system/mail?tab=notice`）：
+ * 原 /dashboard/message 独立路由已删除，入口收敛到本页「通知管理」页签 + 顶栏铃铛。</p>
  */
-export default function MailPage() {
-  const [activeTab, setActiveTab] = useState('account');
+function MailCenter() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  // 只接受白名单内的 key，非法/缺省一律落到「邮箱帐户」，避免脏参数导致空白页
+  const initialTab = tabParam && (TAB_KEYS as readonly string[]).includes(tabParam) ? tabParam : 'account';
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   return (
     <div style={{ background: 'var(--color-bg-base)', minHeight: '100%' }}>
@@ -58,5 +69,17 @@ export default function MailPage() {
         {activeTab === 'rule' && <NotifyRulePage />}
       </div>
     </div>
+  );
+}
+
+/**
+ * useSearchParams 在静态预渲染时要求包裹 Suspense（Next 16 App Router），
+ * 与 dashboard/profile 页的处理方式保持一致。
+ */
+export default function MailPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }} />}>
+      <MailCenter />
+    </Suspense>
   );
 }

@@ -1,8 +1,10 @@
 -- ============================================
 -- 问题反馈插件表结构（自动创建，幂等）
--- sys_feedback / sys_feedback_reply / sys_notice
+-- sys_feedback / sys_feedback_reply
 -- 主键由全局序列（业务键=表名_id，如 sys_feedback_id）自动填充，故不设自增
 -- PostgreSQL 方言；prod 为 MySQL profile 时需手动执行
+-- 注意：通知表（原 3.3 段）不在此处建表——通知能力已收归宿主，
+--       建表权在 astral-server/src/main/resources/db/migration/V20261027001__sys_notice_to_host.sql
 -- ============================================
 
 -- 3.1 反馈主表
@@ -41,43 +43,6 @@ CREATE INDEX IF NOT EXISTS idx_reply_feedback ON sys_feedback_reply(feedback_id)
 CREATE INDEX IF NOT EXISTS idx_reply_time ON sys_feedback_reply(reply_time);
 CREATE INDEX IF NOT EXISTS idx_reply_user ON sys_feedback_reply(user_id);
 
--- 3.3 统一通知表（qt_app_notice 超集）
-CREATE TABLE IF NOT EXISTS sys_notice (
-    id               BIGINT PRIMARY KEY,                   -- 序列 sys_notice_id
-    -- 新增维度
-    channel          VARCHAR(96) NOT NULL DEFAULT 'app-android,app-ios', -- 逗号分隔平台集合：app-android|app-ios|app-windows|app-linux|app-macos|app-harmony|web，或 all=不限平台（全选拼接 67 字符，留余量取 96）
-    notice_type      VARCHAR(16) NOT NULL DEFAULT 'announce', -- announce公告|feedback反馈|request需求
-    scene            VARCHAR(64),                          -- 站内信业务场景（站内信模板/事件注册表 scene）；广播公告为空
-    user_id          BIGINT,                               -- NULL=广播；有值=点对点
-    feedback_id      BIGINT,                               -- 关联 sys_feedback.id
-    -- 继承 qt_app_notice 投放能力（原 type 更名 display）
-    display          BIGINT NOT NULL DEFAULT 4,            -- 位掩码 1=开屏 2=通告栏 4=消息中心
-    title            VARCHAR(128) NOT NULL,
-    content          VARCHAR(65535),
-    url              VARCHAR(512),
-    is_show          BIGINT NOT NULL DEFAULT 1,
-    is_top           BIGINT NOT NULL DEFAULT 0,
-    dialog_closable  BIGINT NOT NULL DEFAULT 1,
-    first_login_only BIGINT NOT NULL DEFAULT 0,
-    marquee          BIGINT NOT NULL DEFAULT 0,
-    read_seconds     BIGINT,                               -- 开屏弹窗读秒（仅首次启动免责声明用；NULL/0=不读秒）
-    terms_version    VARCHAR(32),                          -- 条款版本号（仅首次启动免责声明用；版本变化则重新弹一次）
-    effective_start  TIMESTAMP,
-    effective_end    TIMESTAMP,
-    version_min      BIGINT,                               -- 版本码（如 300）
-    version_max      BIGINT,
-    audience         VARCHAR(16) NOT NULL DEFAULT 'ALL',
-    read_time        TIMESTAMP,                            -- 站内信已读时间（NULL=未读）；广播公告已读仍由客户端缓存判定
-    create_time      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_notice_channel ON sys_notice(channel);
-CREATE INDEX IF NOT EXISTS idx_notice_type ON sys_notice(notice_type);
-CREATE INDEX IF NOT EXISTS idx_notice_user ON sys_notice(user_id);
-CREATE INDEX IF NOT EXISTS idx_notice_show ON sys_notice(is_show, is_top);
-CREATE INDEX IF NOT EXISTS idx_notice_create_time ON sys_notice(create_time);
-CREATE INDEX IF NOT EXISTS idx_sys_notice_user_read ON sys_notice(user_id, read_time);
-
 -- 字段注释（幂等，启动可重复执行）
 COMMENT ON COLUMN sys_feedback.id IS '主键ID';
 COMMENT ON COLUMN sys_feedback.user_id IS '提交用户ID(sys_user.id)';
@@ -100,28 +65,3 @@ COMMENT ON COLUMN sys_feedback_reply.feedback_id IS '反馈ID';
 COMMENT ON COLUMN sys_feedback_reply.user_id IS '发送者ID(用户/管理员均为sys_user.id)';
 COMMENT ON COLUMN sys_feedback_reply.content IS '回复内容';
 COMMENT ON COLUMN sys_feedback_reply.reply_time IS '回复时间';
-COMMENT ON COLUMN sys_notice.id IS '主键ID';
-COMMENT ON COLUMN sys_notice.channel IS '投放平台(逗号分隔:app-android/app-ios/app-windows/app-linux/app-macos/app-harmony/web,或all=不限平台)';
-COMMENT ON COLUMN sys_notice.notice_type IS '类型(announce公告/feedback反馈/request需求)';
-COMMENT ON COLUMN sys_notice.scene IS '站内信业务场景(站内信模板/事件注册表scene,公告为空)';
-COMMENT ON COLUMN sys_notice.user_id IS '点对点目标用户ID(NULL=广播)';
-COMMENT ON COLUMN sys_notice.feedback_id IS '关联反馈ID';
-COMMENT ON COLUMN sys_notice.display IS '展示位掩码(1开屏/2通告栏/4消息中心,可叠加)';
-COMMENT ON COLUMN sys_notice.title IS '标题';
-COMMENT ON COLUMN sys_notice.content IS '内容';
-COMMENT ON COLUMN sys_notice.url IS '点击跳转链接';
-COMMENT ON COLUMN sys_notice.is_show IS '是否启用(0-隐藏 1-展示)';
-COMMENT ON COLUMN sys_notice.is_top IS '是否置顶(0-否 1-是)';
-COMMENT ON COLUMN sys_notice.dialog_closable IS '开屏弹窗是否可关闭';
-COMMENT ON COLUMN sys_notice.first_login_only IS '仅首次登录弹出';
-COMMENT ON COLUMN sys_notice.marquee IS '通告栏是否跑马灯';
-COMMENT ON COLUMN sys_notice.read_seconds IS '开屏弹窗读秒(仅首次启动免责声明用;NULL或0=不读秒,确认键立即可点)';
-COMMENT ON COLUMN sys_notice.terms_version IS '条款版本号(仅首次启动免责声明用;客户端记住已接受的版本,版本变化则重新弹一次)';
-COMMENT ON COLUMN sys_notice.effective_start IS '生效时间(空不限)';
-COMMENT ON COLUMN sys_notice.effective_end IS '失效时间(空不限)';
-COMMENT ON COLUMN sys_notice.version_min IS '生效版本码下限(如300)';
-COMMENT ON COLUMN sys_notice.version_max IS '生效版本码上限';
-COMMENT ON COLUMN sys_notice.audience IS '可见人群(ALL/LOGGED_IN/NOT_LOGGED_IN)';
-COMMENT ON COLUMN sys_notice.read_time IS '站内信已读时间(NULL=未读;广播公告不用,App 端已读在前端缓存)';
-COMMENT ON COLUMN sys_notice.create_time IS '创建时间';
-COMMENT ON COLUMN sys_notice.update_time IS '更新时间';

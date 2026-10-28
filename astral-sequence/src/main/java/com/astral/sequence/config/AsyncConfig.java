@@ -43,8 +43,9 @@ public class AsyncConfig implements org.springframework.scheduling.annotation.As
      * <p><b>为什么必须显式指定</b>：Spring 在找不到 {@code AsyncConfigurer} /
      * {@code TaskExecutor} Bean 时，会退化成 {@link org.springframework.core.task.SimpleAsyncTaskExecutor}
      * —— 它<b>每来一个任务就新建一条平台线程，既不复用也不限流</b>。
-     * 本工程里 {@code FeedbackNoticeService} 的 5 个通知方法是裸 {@code @Async}，
-     * 反馈提交/回复/状态变更都会触发，高并发下会无上限地建线程直至 OOM。
+     * 本工程里裸 {@code @Async} 的主力是宿主事件发布器 {@code NotifyPublisher#publishAsync}，
+     * 由 {@code FeedbackService} 在提交/用户回复/状态变更/公开发布/管理员回复这些业务节点触发
+     * （反馈插件自身已不持有任何通知服务，只发事件），高并发下会无上限地建线程直至 OOM。
      * 这里把它们统一收敛到受控的 {@code sequenceAsyncExecutor}。</p>
      *
      * @return 默认异步执行器

@@ -6,10 +6,10 @@ import { Card, Tag, Button, Space, Select, Input, Modal, Form, Row, Col, Switch,
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FileTextOutlined } from '@/components/antd-compat/icons';
 import dayjs from 'dayjs';
 import {
-  messageAdminApi, SysNotice,
-  noticeTypeLabel, noticeChannelLabel, noticeTypeOptions, noticeChannelOptions, loadFeedbackDicts,
+  noticeAdminApi, SysNotice,
+  noticeTypeLabel, noticeChannelLabel, noticeTypeOptions, noticeChannelOptions, loadNoticeDicts,
   NOTICE_CHANNEL_ALL,
-} from '@/api/feedback';
+} from '@/api/notice';
 import { ResizableTable } from '@/components/ResizableTable';
 import { usePerm } from '@/lib/perm';
 
@@ -34,14 +34,14 @@ const DEFAULT_CHANNELS = ['app-android', 'app-ios'];
 
 /**
  * 免责声明固定只投 App 六端（Android / iOS / 鸿蒙 / Windows / Linux / macOS），
- * 与后端 `NoticeChannel.allAppValue()` 保持一致；**不含 Web**（qt-web 不支持这套字段）。
+ * 与后端 `NoticeTargets.allAppValue()` 保持一致；**不含 Web**（qt-web 不支持这套字段）。
  *
  * 为什么要在服务端强制改写：各端 `X-App-Ut` 跟着编译目标走（Windows→app-windows、
  * 鸿蒙原生包→app-harmony……），少勾一个平台那个平台的用户就永远收不到声明；
  * 同时老版本 APK（3.0.7 及以前）不认识 termsVersion，会把声明当成普通开屏公告，
  * 而声明模板是 `dialogClosable=0` —— 那个弹窗点「我知道了」执行的是 exitApp()。
  *
- * 服务端 `FeedbackNoticeService.clampDisclaimerChannel` 已经强制改写渠道并把
+ * 服务端 `NoticeServiceImpl.clampDisclaimerChannel` 已经强制改写渠道并把
  * `dialogClosable` 顶回 1，这里同步是为了表单上显示的就是最终落库值（免得运营以为自己选的生效了）。
  */
 const DISCLAIMER_CHANNELS = [
@@ -118,8 +118,9 @@ function toggleChannel(next: string[], prev: string[]): string[] {
 }
 
 /**
- * 通知管理面板（反馈插件 sys_notice）
- * <p>被 dashboard/feedback 页 Tabs 与 dashboard/message 页共用。</p>
+ * 通知管理面板（统一通知表 sys_notice，宿主通知模块）
+ * <p>入口收敛到「消息中心 → 通知管理」页签（/dashboard/system/mail?tab=notice）与顶栏铃铛的
+ * 「全部通知」链接；原 /dashboard/message 独立路由已删除。</p>
  */
 export default function NoticeManagement() {
   const [loading, setLoading] = useState(false);
@@ -144,7 +145,7 @@ export default function NoticeManagement() {
   const isDisclaimerDraft = (termsVersionInput ?? '').trim().length > 0;
 
   const hasPerm = usePerm();
-  // 通知维护权限：必须与后端 AdminMessageController 写接口的 @RequiresPermission("admin:message:edit") 保持一致
+  // 通知维护权限：必须与后端 AdminNoticeController 写接口的 @RequiresPermission("admin:message:edit") 保持一致
   // （页面可见性另由 admin:message:view 控制，此处只加写权限闸门）
   const canEdit = hasPerm('admin:message:edit');
 
@@ -156,7 +157,7 @@ export default function NoticeManagement() {
     if (ch.length) params.channel = ch.join(',');
     if (ty) params.noticeType = ty;
     if (kw) params.keyword = kw;
-    messageAdminApi.page(params)
+    noticeAdminApi.page(params)
       .then((res) => {
         setData(res.data?.records || []);
         setTotal(res.data?.total || 0);
@@ -166,7 +167,8 @@ export default function NoticeManagement() {
 
   useEffect(() => {
     load(1, pageSize);
-    loadFeedbackDicts().catch(() => {});
+    // 只预热通知自身的字典（notice_channel / notice_type）；反馈业务字典与本页无关
+    loadNoticeDicts().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelFilter, typeFilter]);
 
@@ -219,7 +221,8 @@ export default function NoticeManagement() {
       audience: record.audience || 'ALL',
       channel: record.scene === 'feedbackAdminReplied' || record.scene === 'feedbackUserReplied'
         ? [NOTICE_CHANNEL_ALL] : parseChannels(record.channel),
-      noticeType: record.noticeType || 'announce',
+      // 类型口径只有两档：历史 feedback/request 行在编辑保存时自然归一为 notice（§4.6，不做批量 UPDATE）
+      noticeType: record.noticeType === 'announce' ? 'announce' : 'notice',
       effectiveRange: record.effectiveStart && record.effectiveEnd
         ? [dayjs(record.effectiveStart), dayjs(record.effectiveEnd)] : undefined,
     });
@@ -259,10 +262,10 @@ export default function NoticeManagement() {
     };
     try {
       if (editing?.id) {
-        await messageAdminApi.update(editing.id, payload);
+        await noticeAdminApi.update(editing.id, payload);
         message.success('已更新');
       } else {
-        await messageAdminApi.create(payload);
+        await noticeAdminApi.create(payload);
         message.success('已发布');
       }
       setModalOpen(false);
@@ -274,7 +277,7 @@ export default function NoticeManagement() {
 
   const handleDelete = useCallback(async (id: number) => {
     try {
-      await messageAdminApi.delete(id);
+      await noticeAdminApi.delete(id);
       message.success('已删除');
       load();
     } catch (e: any) {
@@ -300,8 +303,9 @@ export default function NoticeManagement() {
       },
     },
     {
+      // 类型口径只有两档：announce=公告（青），其余（notice/历史 feedback/request/未知）一律按「通知」渲染（蓝）
       title: '类型', dataIndex: 'noticeType', width: 90,
-      render: (v: string) => <Tag color={v === 'announce' ? 'cyan' : v === 'request' ? 'orange' : 'geekblue'}>{noticeTypeLabel(v)}</Tag>,
+      render: (v: string) => <Tag color={v === 'announce' ? 'cyan' : 'geekblue'}>{noticeTypeLabel(v)}</Tag>,
     },
     { title: '标题', dataIndex: 'title', ellipsis: true },
     {
@@ -354,7 +358,7 @@ export default function NoticeManagement() {
           <div>
             <h2 style={{ margin: 0 }}>通知管理</h2>
             <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-              统一通知 sys_notice：公告/反馈/需求通知（投放平台可多选，与接口统计口径一致，广播或点对点）
+              统一通知 sys_notice：公告（广播）/ 通知（点对点站内信）（投放平台可多选，与接口统计口径一致）
             </Paragraph>
           </div>
           <Space>
@@ -415,7 +419,7 @@ export default function NoticeManagement() {
                 name="channel"
                 label="投放平台（可多选）"
                 extra={isFeedbackReply
-                  ? '反馈回复通知使用全部平台'
+                  ? '系统事件自动生成的通知固定投「全部平台」'
                   : isDisclaimerDraft
                     // 这一格填了版本号就是免责声明，渠道会被服务端强制改写
                     ? '免责声明固定只投 App 六端，不含 Web（Android / iOS / 鸿蒙 / Windows / Linux / macOS），保存时会自动改写为这六项，并强制「可关闭」'

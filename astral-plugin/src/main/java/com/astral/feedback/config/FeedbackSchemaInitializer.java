@@ -12,7 +12,9 @@ import org.springframework.stereotype.Component;
 /**
  * 反馈插件表结构初始化器
  * <p>
- * 应用启动时自动执行 feedback-schema.sql（CREATE TABLE IF NOT EXISTS，幂等）。
+ * 应用启动时自动执行 feedback-schema.sql（CREATE TABLE IF NOT EXISTS，幂等），
+ * 只建反馈自己的两张表（sys_feedback / sys_feedback_reply）。
+ * sys_notice 已收归宿主 Flyway 管理（见 astral-server db/migration），本插件不再建该表。
  * 受 astral.plugins.feedback.enabled 控制：插件关闭时跳过建表。
  * </p>
  */
@@ -32,9 +34,9 @@ public class FeedbackSchemaInitializer {
             populator.setIgnoreFailedDrops(true);
             populator.addScript(new ClassPathResource("sql/feedback-schema.sql"));
             populator.execute(jdbcTemplate.getDataSource());
-            log.info("[FeedbackPlugin] 反馈/通知表结构初始化完成（sys_feedback/sys_feedback_reply/sys_notice）");
+            log.info("[FeedbackPlugin] 反馈表结构初始化完成（sys_feedback/sys_feedback_reply）");
         } catch (Exception e) {
-            log.error("[FeedbackPlugin] 反馈/通知表结构初始化失败", e);
+            log.error("[FeedbackPlugin] 反馈表结构初始化失败", e);
             throw e;
         }
     }

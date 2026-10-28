@@ -73,6 +73,8 @@ V{yyyyMMddNNN}__{下划线小写描述}.sql    例：V20260915001__add_user_avat
 | 20261011001 | `V20261011001__qt_update_platforms.sql` | 版本更新改「一行多平台」（与公告 `sys_notice.channel` 同款）：`qt_app_update` 加 `platforms VARCHAR(64) NOT NULL DEFAULT ''`（逗号分隔平台号 `1101,1106`），存量 `type` 单值平移到 `platforms` 后 **DROP COLUMN `type`**（旧列 NOT NULL 且被 `(type, version_code)` 索引覆盖，无法原地加宽，只能建新列→平移→删旧列），索引换成 `idx_qt_update_version (version_code, channel)`。⚠️ **破坏性删列**，代码侧 `QtAppUpdate` 的 `TYPE_*` 常量与 `isSupportedType()` 同批改为 `PLATFORM_*` / `isSupportedPlatform()` + `platforms` CSV 工具方法，**必须同一次部署**；`qt-pc`/`qt-uniappx` 契约不变（仍送单值 `type`，服务端在 `platforms` 里做包含判断）。平台匹配一律在 Java 侧精确拆分，**禁用 SQL LIKE**（平台号互为子串会误命中）。整段带 `to_regclass('qt_app_update')` 守卫：插件表由 Initializer 建、晚于 Flyway，全新空库跳过、由 `qt-schema.sql` 的新结构直接建 `platforms`。`platforms` 空值兜底 `1101` 只为「半途执行过」的库收口，否则 `SET NOT NULL` 会阻断启动 | 执行 |
 | 20261019003 | `V20261019003__qt_update_version_info_widen.sql` | 发版公告 `qt_app_update.version_info` 由 `VARCHAR(512)` 加宽到 `VARCHAR(5000)`：公告已是 HTML 富文本（整页 ~2.6K 字符），512 直接报 `22001 value too long`，后台发布一直「系统错误」。`to_regclass` 守卫（插件表由 Initializer 建、晚于 Flyway，全新空库跳过，`qt-schema.sql` 建表口径已同步为 `VARCHAR(5000)`）+ `qt_app_update.json` 的 `length` 同批改 5000 | 执行 |
 | 20261020001 | `V20261020001__notice_read_seconds_terms_version.sql` | `sys_notice` 增 `read_seconds BIGINT`（开屏弹窗读秒，NULL/0=不读秒）与 `terms_version VARCHAR(32)`（条款版本号）。用途：把 qt-pc 首次启动的免责声明/开源通知从硬编码改成后台下发——判定「这条公告是免责声明」的唯一依据是 `terms_version` 非空（不新增 `scene` 常量，避免牵连 `NotifyEventRegistry` 里反馈回复通知的全平台规则）；`terms_version` 一变客户端就重新弹一次。两列都可空、纯增列。**必须用 `to_regclass('sys_notice')` 守卫**：该表由 feedback 插件 `@PostConstruct` 初始化器建（`feedback-schema.sql`），**晚于 Flyway**，全新空库上裸 `ALTER` 会 `relation does not exist` 并阻断启动，而 `ADD COLUMN IF NOT EXISTS` 只对「列」幂等、不管「表不存在」；表缺失时跳过是安全的（`feedback-schema.sql` 的 CREATE 已是带两列的新结构）。`sys_notice.json` 同批加两字段 | 执行 |
+| 20261027001 | `V20261027001__sys_notice_to_host.sql` | **站内通知表建表权收归宿主**：`sys_notice` 此前由 feedback 插件的 `@PostConstruct` 初始化器创建（插件表、晚于 Flyway），导致「禁用反馈插件 → 通知能力一起消失」。本脚本用 `CREATE TABLE IF NOT EXISTS` + 6 个 `CREATE INDEX IF NOT EXISTS` + 每列 `COMMENT`（放在 `DO $$ … IF to_regclass('sys_notice') IS NOT NULL … EXECUTE format(…)` 块里，兼容语句顺序）承接建表口径；`feedback-schema.sql` 的 §3.3 与 `FeedbackSchemaInitializer` 的 `sys_notice` 段同批删除，宿主与插件的实体/mapper 仍在 `astral-dao`（`com.astral.dao.entity.SysNotice`）。**历史遗留不做修订**：更早的 `V20261001007`/`V20261002006` 仍是对 `sys_notice` 的裸 `ALTER`，全新空库按序执行时该表尚不存在，该版本会失败（已知遗留，与既有 `V20261001008` 同类问题一致；不动历史脚本是「只增不改」的红线） | 执行 |
+| 20261027002 | `V20261027002__notice_type_announce_notice.sql` | **通知类型三值收敛为两值**：`notice_type` 字典保留 `announce`（公告）并新增 `notice`（通知，sort 2），把 `feedback`(id=131)/`request`(id=132) 置 `status=0`（禁用而非删除，存量行值不变、历史数据仍可解释）。`sys_notice.notice_type` 的存量 `feedback`/`request` 行**不做 UPDATE**——服务端查询按 `notice_type IN ('notice','feedback','request')` 兼容、前端渲染把非 `announce` 一律显示「通知」。种子按 `COALESCE(MAX(id),0)+ROW_NUMBER()` 取号 + `dict_type_id+dict_value` 的 `NOT EXISTS` 守卫；`notice_type` 字典的 id 段与 `sequence_segment` 高水位同批抬高 | 执行 |
 
 ## 新增一个变更的流程
 
@@ -93,7 +95,8 @@ FROM astral.flyway_schema_history ORDER BY installed_rank;
 - 更早的手工机制（`sql/migrations/V*.sql` + 人工登记 `schema_migrations`）已移除：
   原 V1-V4 合并为本目录 `V20260914001__init.sql`（存量库基线化、不再执行），原 V5 重新编号为 20260914003，
   旧跟踪表由 V2 脚本在存量库上删除；
-- 插件自建表（qt/feedback 的 `*SchemaInitializer` 启动幂等建表）不受 Flyway 影响，维持原样；
+- 插件自建表（qt/feedback 的 `*SchemaInitializer` 启动幂等建表）不受 Flyway 影响，维持原样
+  （例外：`sys_notice` 已于 `V20261027001` 收归宿主建表，feedback 初始化器不再创建/改它）；
   注意：插件 Initializer 是 `@PostConstruct`，**晚于 Flyway**，因此任何动到插件表的迁移都必须先判表存在
   （`IF to_regclass('...') IS NULL THEN RETURN;`，见 `V20261001008`），否则全新空库会因表不存在启动中止；
 - `spring.sql.init.mode: never` 维持不变，避免任何双轨执行。

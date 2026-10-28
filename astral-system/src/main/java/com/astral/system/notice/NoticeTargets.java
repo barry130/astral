@@ -1,5 +1,6 @@
-package com.astral.feedback.common;
+package com.astral.system.notice;
 
+import com.astral.common.constant.NoticeConstants;
 import com.astral.common.util.ClientHeaders;
 
 import java.util.ArrayList;
@@ -10,7 +11,12 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * 通知渠道（sys_notice.channel）取值与匹配规则。
+ * 通知投放目标（sys_notice.channel）取值与匹配规则。
+ *
+ * <p><b>为什么叫 NoticeTargets 而不是 NoticeChannel</b>：本模块同包的
+ * {@link com.astral.system.notify.NotifyChannel} 已被「投递渠道」（EMAIL/SMS/INAPP）占用，
+ * 两者同名同包会编译冲突；而本类表达的其实是「这条通知投给哪些平台目标」，
+ * 与「通过什么渠道送达」是两个不同维度。</p>
  *
  * <p><b>值域与统计平台同源</b>：平台部分直接复用 {@link ClientHeaders} 的常量
  * （{@code app-android} / {@code app-ios} / {@code app-windows} / {@code app-linux} / {@code app-macos} / {@code app-harmony} / {@code web}），
@@ -18,7 +24,7 @@ import java.util.Set;
  * 完全一致；额外的 {@value #ALL} 是本表独有的「不限平台」哨兵，<b>不得写进
  * {@code stat_platform} 字典</b>（那会让它在统计筛选里变成一个真实平台）。</p>
  *
- * <p><b>存储形态</b>：单列 {@code VARCHAR(64)} 存逗号分隔的平台集合，
+ * <p><b>存储形态</b>：单列 {@code VARCHAR(96)} 存逗号分隔的平台集合，
  * 例：{@code app-android,app-ios}。管理员可多选；{@value #ALL} 与具体平台互斥。</p>
  *
  * <p><b>老客户端兼容</b>（本类存在的主要理由）：改造前渠道是
@@ -44,10 +50,10 @@ import java.util.Set;
  * {@link #DEFAULT_TARGETS}（等价于旧的 {@code channel=app}），
  * <b>而不是「全部平台」</b> —— 未知值一旦放宽成全体，等于把定向公告泄露给所有人。</p>
  */
-public final class NoticeChannel {
+public final class NoticeTargets {
 
     /** 「不限平台」哨兵：命中即对所有平台可见 */
-    public static final String ALL = com.astral.common.constant.NoticeConstants.CHANNEL_ALL;
+    public static final String ALL = NoticeConstants.CHANNEL_ALL;
 
     /** 平台取值（与 stat_platform 字典、X-App-Ut 同源）；顺序 = 字典 sort，输出稳定 */
     public static final List<String> PLATFORMS = List.of(
@@ -96,7 +102,7 @@ public final class NoticeChannel {
      */
     public static final int MAX_STORED_LENGTH = 96;
 
-    private NoticeChannel() {
+    private NoticeTargets() {
     }
 
     // ==================== 请求侧：解析出「要看哪些平台」 ====================
@@ -271,7 +277,7 @@ public final class NoticeChannel {
      * App 六端的落库值（{@code app-android,app-ios,app-windows,app-linux,app-macos,app-harmony}，
      * 共 63 字符 &lt; {@link #MAX_STORED_LENGTH}）。
      * <p>给「投给所有 App、但绝不投 Web」的通知用：目前唯一使用者是首次启动免责声明，
-     * 理由见 {@code FeedbackNoticeService#clampDisclaimerChannel}。</p>
+     * 理由见 {@code NoticeServiceImpl#clampDisclaimerChannel}。</p>
      */
     public static String allAppValue() {
         return join(APP_PLATFORMS);

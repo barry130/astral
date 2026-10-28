@@ -122,8 +122,7 @@ public class NotifyPublisher {
 
     /**
      * 角色展开：按渠道把启用用户映射成收件值——INAPP 用用户ID、EMAIL 用邮箱、
-     * SMS 用手机号，空联系方式跳过。与 feedback 插件 FeedbackNoticeService.adminUserIds
-     * 的取人口径一致（启用且未删除）。
+     * SMS 用手机号，空联系方式跳过。取人口径：启用且未删除的用户。
      */
     private List<String> expandRole(SysNotifyRule rule, String roleCode) {
         if (roleCode == null || roleCode.isBlank()) {

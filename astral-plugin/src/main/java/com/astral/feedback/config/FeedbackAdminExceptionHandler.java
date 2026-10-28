@@ -15,14 +15,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * 反馈插件管理端统一异常处理
- * <p>仅作用于两个管理端控制器（AdminFeedbackController / AdminMessageController），
- * 返回宿主 {@link Result} 包装，与系统管理端接口风格一致。</p>
+ * <p>仅作用于管理端反馈控制器（AdminFeedbackController），返回宿主 {@link Result} 包装，
+ * 与系统管理端接口风格一致。</p>
+ * <p>通知的管理端接口已随通知能力收归宿主（astral-system 的 AdminNoticeController），
+ * 其异常由宿主自己的 advice 处理，<b>不要</b>在这里再加它的 assignableTypes。</p>
+ * <p>V2 契约：HTTP 恒 200（表示服务端已处理），成败只由 body 的 code 表达
+ * （200 成功 / 300 业务失败 / 320 参数错误 / 401 未登录 / 403 无权限 / 500 系统错误），
+ * body.errorCode 保留细分码。</p>
  */
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
 @RestControllerAdvice(assignableTypes = {
-        com.astral.feedback.controller.AdminFeedbackController.class,
-        com.astral.feedback.controller.AdminMessageController.class
+        com.astral.feedback.controller.AdminFeedbackController.class
 })
 public class FeedbackAdminExceptionHandler {
 
@@ -38,7 +42,7 @@ public class FeedbackAdminExceptionHandler {
     public Result<Void> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
                 ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
-        return Result.error(400, msg);
+        return Result.error(320, msg);
     }
 
     @ExceptionHandler(BindException.class)
@@ -46,13 +50,13 @@ public class FeedbackAdminExceptionHandler {
     public Result<Void> handleBind(BindException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
                 ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
-        return Result.error(400, msg);
+        return Result.error(320, msg);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     @ResponseStatus(HttpStatus.OK)
     public Result<Void> handleMissingParam(MissingServletRequestParameterException e) {
-        return Result.error(400, "缺少请求参数: " + e.getParameterName());
+        return Result.error(320, "缺少请求参数: " + e.getParameterName());
     }
 
     @ExceptionHandler(Exception.class)

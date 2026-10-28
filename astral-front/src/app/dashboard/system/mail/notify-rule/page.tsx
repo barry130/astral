@@ -6,7 +6,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined, CheckCircleOu
 import { notifyRuleApi, SysNotifyRule, NotifyPublishResult } from '@/api/notify';
 import { mailApi, MailTemplate, NotifyEventDef } from '@/api/mail';
 import { smsApi, SmsTemplate } from '@/api/sms';
-import { loadFeedbackDicts, noticeChannelOptions, noticeChannelLabel, NOTICE_CHANNEL_ALL } from '@/api/feedback';
+import { loadNoticeDicts, noticeChannelOptions, noticeChannelLabel, NOTICE_CHANNEL_ALL } from '@/api/notice';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
@@ -42,7 +42,7 @@ export default function NotifyRulePage() {
   useEffect(() => {
     loadData();
     loadRefs();
-    loadFeedbackDicts().then(() => setDictReady(true)).catch(() => {});
+    loadNoticeDicts().then(() => setDictReady(true)).catch(() => {});
   }, []);
 
   const loadData = (page = 1, size = 10) => {
@@ -250,7 +250,7 @@ export default function NotifyRulePage() {
           {selectedChannel === 'INAPP' && (
             <Form.Item
               name="platform" label="平台定向（站内信）"
-              tooltip={FEEDBACK_REPLY_EVENTS.has(selectedEventCode) ? '反馈回复通知统一使用全部平台，收件人仍由规则决定' : '选「全部平台」即不限端，收件人仍由规则决定'}
+              tooltip={FEEDBACK_REPLY_EVENTS.has(selectedEventCode) ? '系统事件自动生成的通知统一使用全部平台，收件人仍由规则决定' : '选「全部平台」即不限端，收件人仍由规则决定'}
             >
               <Select mode="multiple" allowClear options={noticeChannelOptions()} placeholder="默认全部平台" maxTagCount="responsive"
                 disabled={FEEDBACK_REPLY_EVENTS.has(selectedEventCode)} />

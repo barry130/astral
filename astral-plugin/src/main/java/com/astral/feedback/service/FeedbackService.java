@@ -10,6 +10,8 @@ import com.astral.feedback.entity.Feedback;
 import com.astral.feedback.entity.FeedbackReply;
 import com.astral.feedback.mapper.FeedbackMapper;
 import com.astral.feedback.mapper.FeedbackReplyMapper;
+import com.astral.system.notify.NotifyEventRegistry;
+import com.astral.system.notify.NotifyPublisher;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
@@ -32,8 +34,10 @@ import java.util.stream.Collectors;
 
 /**
  * 反馈服务
- * <p>负责反馈的提交、查询、回复、状态流转、公开切换、软删与统计看板。
- * 状态流转/回复时触发 sys_notice 通知（异步）。</p>
+ * <p>负责反馈的提交、查询、回复、状态流转、公开切换、软删与统计看板。</p>
+ * <p>业务节点只发布「通知事件」（{@link NotifyPublisher#publishAsync}，异步、失败不挡主流程）：
+ * 发不发、发给谁、走哪个渠道、用什么文案全部由宿主的订阅规则 + 模板决定，
+ * 本插件不再持有任何通知服务与通知存储逻辑。</p>
  */
 @Slf4j
 @Service
@@ -48,8 +52,9 @@ public class FeedbackService {
     @Resource
     private UserMapper userMapper;
 
+    /** 宿主事件发布器：反馈只在业务节点发布事件，投递规则在宿主（astral-system）侧配置 */
     @Resource
-    private FeedbackNoticeService noticeService;
+    private NotifyPublisher notifyPublisher;
 
     /** 合法状态流转表 */
     private static final Map<String, List<String>> STATUS_TRANSITIONS = new HashMap<>();
@@ -96,8 +101,10 @@ public class FeedbackService {
         f.setCreateTime(LocalDateTime.now());
         f.setUpdateTime(LocalDateTime.now());
         feedbackMapper.insert(f);
-        // 异步通知管理端（所有 ADMIN 角色用户）
-        noticeService.notifyNewFeedback(f.getId(), f.getTitle(), toNoticeType(f.getType()));
+        // 触发点①：新反馈/需求提交 → 宿主事件（种子规则收件人 ROLE=ADMIN，群发管理员；无 userId）
+        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_NEW_SUBMISSION, Map.of(
+                "feedbackId", nullToEmpty(f.getId()),
+                "feedbackTitle", nullToEmpty(f.getTitle())));
         return f;
     }
 
@@ -153,9 +160,10 @@ public class FeedbackService {
             throw new FeedbackException(300, "该反馈已废弃，无法回复");
         }
         FeedbackReply r = insertReply(dto.getFeedbackId(), userId, dto.getContent());
-        // 异步通知管理员
-        // 用户回复通知管理员：notice_type 固定 feedback（文档 §4.4 用户回复行）
-        noticeService.notifyUserReply(f.getId(), f.getTitle(), "feedback");
+        // 触发点②：用户回复 → 宿主事件（种子规则收件人 ROLE=ADMIN 群发管理员；无 userId）
+        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_USER_REPLIED, Map.of(
+                "feedbackId", nullToEmpty(f.getId()),
+                "feedbackTitle", nullToEmpty(f.getTitle())));
         return r;
     }
 
@@ -239,17 +247,30 @@ public class FeedbackService {
         f.setUpdateTime(LocalDateTime.now());
         feedbackMapper.updateById(f);
 
-        // 通知规则：仅「已发布」「已废弃」时通知提交人；received/resolved 等中间状态不打扰用户
+        // 触发点③④⑤：仅「已发布」「已废弃」时通知提交人；received/resolved 等中间状态不打扰用户。
+        // payload 只带业务字段——noticeType 由宿主事件定义（NotifyEventDef.noticeType）决定，插件不再管类型标签。
         String statusName = STATUS_NAMES.getOrDefault(to, to);
-        String noticeType = toNoticeType(f.getType());
         if (Feedback.STATUS_PUBLISHED.equals(to)) {
-            noticeService.notifyStatusChange(f.getId(), f.getUserId(), f.getTitle(), noticeType, statusName);
-            // 发布且公开时，另发「已公开发布」通知
+            // 触发点③：状态变更 → 已发布（带 userId + statusName）
+            notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_STATUS_CHANGED, Map.of(
+                    "feedbackId", nullToEmpty(f.getId()),
+                    "userId", nullToEmpty(f.getUserId()),
+                    "feedbackTitle", nullToEmpty(f.getTitle()),
+                    "statusName", nullToEmpty(statusName)));
+            // 触发点④：发布且公开时，另发「已公开发布」事件（带 userId）
             if (Boolean.TRUE.equals(f.getIsPublic())) {
-                noticeService.notifyPublished(f.getId(), f.getUserId(), f.getTitle(), noticeType);
+                notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_PUBLISHED, Map.of(
+                        "feedbackId", nullToEmpty(f.getId()),
+                        "userId", nullToEmpty(f.getUserId()),
+                        "feedbackTitle", nullToEmpty(f.getTitle())));
             }
         } else if (Feedback.STATUS_DEPRECATED.equals(to)) {
-            noticeService.notifyStatusChange(f.getId(), f.getUserId(), f.getTitle(), noticeType, statusName);
+            // 触发点⑤：状态变更 → 已废弃（带 userId + statusName）
+            notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_STATUS_CHANGED, Map.of(
+                    "feedbackId", nullToEmpty(f.getId()),
+                    "userId", nullToEmpty(f.getUserId()),
+                    "feedbackTitle", nullToEmpty(f.getTitle()),
+                    "statusName", nullToEmpty(statusName)));
         }
     }
 
@@ -263,7 +284,11 @@ public class FeedbackService {
         feedbackMapper.updateById(f);
         // 切为公开且已发布时，通知提交人
         if (target && Feedback.STATUS_PUBLISHED.equals(f.getStatus())) {
-            noticeService.notifyPublished(f.getId(), f.getUserId(), f.getTitle(), toNoticeType(f.getType()));
+            // 触发点⑥：公开发布 → 宿主事件（带 userId）
+            notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_PUBLISHED, Map.of(
+                    "feedbackId", nullToEmpty(f.getId()),
+                    "userId", nullToEmpty(f.getUserId()),
+                    "feedbackTitle", nullToEmpty(f.getTitle())));
         }
     }
 
@@ -283,8 +308,11 @@ public class FeedbackService {
             throw new FeedbackException(300, "该反馈已废弃，无法回复");
         }
         FeedbackReply r = insertReply(dto.getFeedbackId(), adminId, dto.getContent());
-        // 异步通知提交人
-        noticeService.notifyAdminReply(f.getId(), f.getUserId(), f.getTitle(), toNoticeType(f.getType()));
+        // 触发点⑦：管理员回复 → 宿主事件（带 userId，收件人为提交人）
+        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_ADMIN_REPLIED, Map.of(
+                "feedbackId", nullToEmpty(f.getId()),
+                "userId", nullToEmpty(f.getUserId()),
+                "feedbackTitle", nullToEmpty(f.getTitle())));
         return r;
     }
 
@@ -398,9 +426,16 @@ public class FeedbackService {
     }
 
     /**
-     * 反馈类型 → 通知类型（文档 §4.4：issue→feedback / request→request）
+     * 事件 payload 的 null 转空串。
+     * <p>{@code Map.of} 不接受 null 值，而宿主 INAPP 模板按 {@code ${字段}} 渲染、
+     * 收件人按 payload 字段取值，空串比缺字段更安全。</p>
      */
-    private String toNoticeType(String feedbackType) {
-        return Feedback.TYPE_ISSUE.equals(feedbackType) ? "feedback" : "request";
+    private static String nullToEmpty(String v) {
+        return v == null ? "" : v;
+    }
+
+    /** 同上，专供 id 类字段：{@code String.valueOf((Long) null)} 会得到字面量 "null"，必须显式短路。 */
+    private static String nullToEmpty(Long v) {
+        return v == null ? "" : String.valueOf(v);
     }
 }

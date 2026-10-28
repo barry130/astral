@@ -1,5 +1,7 @@
 package com.astral.system.notify;
 
+import com.astral.common.constant.NoticeConstants;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -63,34 +65,34 @@ public final class NotifyEventRegistry {
                             new NotifyEventField("content", "告警内容纯文本，多行")),
                     List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), "announce"),
             new NotifyEventDef(FEEDBACK_STATUS_CHANGED, "反馈状态变更通知",
-                    "feedback 插件触发：反馈/需求状态变更时通知提交人。订阅规则收件人建议 PAYLOAD_FIELD=userId；payload 可带 meta 字段 noticeType（feedback/request）区分 App 端标签",
+                    "feedback 插件触发：反馈/需求状态变更时通知提交人。订阅规则收件人建议 PAYLOAD_FIELD=userId",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("userId", "提交人用户ID（INAPP 投递即收件人）"),
                             new NotifyEventField("feedbackTitle", "反馈标题"),
                             new NotifyEventField("statusName", "状态名（中文）")),
-                    List.of(NotifyChannel.INAPP), null),
+                    List.of(NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
             new NotifyEventDef(FEEDBACK_PUBLISHED, "反馈公开发布通知",
                     "feedback 插件触发：反馈审核通过并公开发布时通知提交人",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("userId", "提交人用户ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
-                    List.of(NotifyChannel.INAPP), null),
+                    List.of(NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
             new NotifyEventDef(FEEDBACK_ADMIN_REPLIED, "管理员回复通知",
                     "feedback 插件触发：管理员回复反馈时通知提交人，站内信使用全部平台",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("userId", "提交人用户ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
-                    List.of(NotifyChannel.INAPP), null),
+                    List.of(NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
             new NotifyEventDef(FEEDBACK_NEW_SUBMISSION, "新反馈/需求提交通知",
                     "feedback 插件触发：新反馈/需求提交后群发管理员。订阅规则收件人建议 ROLE=ADMIN（按角色展开全部启用用户）；本事件只在管理端站内信呈现，平台填 app-windows 或 web 均可（管理端不按客户端平台过滤）",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
-                    List.of(NotifyChannel.INAPP), null),
+                    List.of(NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
             new NotifyEventDef(FEEDBACK_USER_REPLIED, "用户回复反馈通知",
                     "feedback 插件触发：用户在反馈中回复后群发管理员。收件人建议 ROLE=ADMIN，站内信使用全部平台",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
-                    List.of(NotifyChannel.INAPP), null),
+                    List.of(NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
             new NotifyEventDef(USER_ROLES_CHANGED, "用户角色变更通知",
                     "管理员增加或移除用户角色后通知该用户；事务提交成功后触发，相同角色重复保存不触发。收件人建议 PAYLOAD_FIELD=userId",
                     List.of(new NotifyEventField("userId", "角色变更的用户ID"),

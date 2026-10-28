@@ -1,5 +1,20 @@
 import { request, ApiResult } from './client';
-import { dictApi, DictOption } from './dict';
+import { dictApi } from './dict';
+import type { DictOption } from './dict';
+// 通知相关的类型 / API / 字典 / 标签已切到 `@/api/notice`（见文件末尾的 @deprecated 兼容别名）。
+// 这里是「反馈」业务域：反馈单（sys_feedback）+ 反馈状态/类型/平台文案，不包含通知类型口径。
+import {
+  noticeAdminApi as noticeAdminApiOfNotice,
+  loadNoticeDicts as loadNoticeDictsOfNotice,
+  noticeTypeLabel as noticeTypeLabelOfNotice,
+  noticeChannelLabel as noticeChannelLabelOfNotice,
+  noticeTypeOptions as noticeTypeOptionsOfNotice,
+  noticeChannelOptions as noticeChannelOptionsOfNotice,
+  NOTICE_CHANNEL_ALL as NOTICE_CHANNEL_ALL_OF_NOTICE,
+  NOTICE_TYPE_TEXT as NOTICE_TYPE_TEXT_OF_NOTICE,
+  NOTICE_CHANNEL_TEXT as NOTICE_CHANNEL_TEXT_OF_NOTICE,
+} from '@/api/notice';
+import type { SysNotice as SysNoticeOfNotice } from '@/api/notice';
 
 /** 反馈/通知分页结果 */
 export interface FeedbackPage<T> {
@@ -44,45 +59,6 @@ export interface FeedbackReply {
   /** JOIN sys_user 填充 */
   nickname?: string;
   userType?: string;
-}
-
-/** 统一通知实体 */
-export interface SysNotice {
-  id?: number;
-  /** 投放平台：逗号分隔（app-android / app-ios / app-windows / app-linux / app-macos / app-harmony / web），或 all=不限平台 */
-  channel?: string;
-  /** announce | feedback | request */
-  noticeType?: string;
-  /** 点对点目标用户ID（NULL=广播） */
-  userId?: number;
-  feedbackId?: number;
-  /** 通知来源事件，由服务端写入 */
-  scene?: string;
-  /** 位掩码：1开屏 2通告栏 4消息中心 */
-  display?: number;
-  title?: string;
-  content?: string;
-  url?: string;
-  isShow?: number;
-  isTop?: number;
-  dialogClosable?: number;
-  firstLoginOnly?: number;
-  marquee?: number;
-  /** 开屏弹窗读秒（仅首次启动免责声明用；NULL/0 = 不读秒，确认键立即可点） */
-  readSeconds?: number;
-  /**
-   * 条款版本号（仅首次启动免责声明用）。
-   * 客户端把「开屏位 + 此字段非空」的公告认定为首次启动免责声明，并记住已接受的版本；
-   * 值一变就再弹一次，用来实现「改了条款要重新确认」。
-   */
-  termsVersion?: string;
-  effectiveStart?: string;
-  effectiveEnd?: string;
-  versionMin?: number;
-  versionMax?: number;
-  audience?: string;
-  createTime?: string;
-  updateTime?: string;
 }
 
 /** 反馈统计看板 */
@@ -134,26 +110,13 @@ export const feedbackAdminApi = {
     request.get('/api/v1/admin/feedback/stat'),
 };
 
-/** 通知管理端 API */
-export const messageAdminApi = {
-  /** 分页（channel/noticeType/keyword/时间） */
-  page: (params: Record<string, any>): Promise<ApiResult<FeedbackPage<SysNotice>>> =>
-    request.get('/api/v1/admin/message/page', { params }),
-
-  /** 发通知/公告 */
-  create: (data: SysNotice): Promise<ApiResult<SysNotice>> =>
-    request.post('/api/v1/admin/message', data),
-
-  /** 编辑通知 */
-  update: (id: number, data: SysNotice): Promise<ApiResult<void>> =>
-    request.put(`/api/v1/admin/message/${id}`, data),
-
-  /** 删除通知 */
-  delete: (id: number): Promise<ApiResult<void>> =>
-    request.delete(`/api/v1/admin/message/${id}`),
-};
-
-/** 反馈插件枚举字典编码（对应 dict-init.sql 中 feedback_status/feedback_type/notice_channel/notice_type/stat_platform） */
+/**
+ * 反馈业务枚举字典编码（对应 dict-init.sql 中 feedback_status/feedback_type/stat_platform）。
+ *
+ * <p>`notice_channel` / `notice_type` 仍列在这里只为兼容历史调用（本函数的返回值类型仍保留
+ * 这两格）；**通知模块已改用 `@/api/notice` 的 `loadNoticeDicts()` 与独立缓存**，
+ * 通知页面不要再依赖本函数预热通知字典。</p>
+ */
 export const FEEDBACK_DICT_CODES = [
   'feedback_status',
   'feedback_type',
@@ -228,28 +191,6 @@ export function feedbackPlatformLabel(v?: string): string {
   return FEEDBACK_PLATFORM_TEXT_FALLBACK[v] || v;
 }
 
-/** 通知类型文案：优先字典，miss 回退 */
-export function noticeTypeLabel(v?: string): string {
-  if (!v) return '-';
-  const hit = dictCache.noticeType?.find((o) => o.value === v);
-  return hit ? hit.label : (NOTICE_TYPE_TEXT_FALLBACK[v] || v);
-}
-
-/** 通知渠道文案：值为逗号分隔的平台集合，逐项翻译后拼接；优先字典，miss 回退 */
-export function noticeChannelLabel(v?: string): string {
-  if (!v) return '-';
-  const parts = v
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((one) => {
-      const hit = dictCache.platform?.find((o) => o.value === one)
-        || dictCache.noticeChannel?.find((o) => o.value === one);
-      return hit ? hit.label : (NOTICE_CHANNEL_TEXT_FALLBACK[one] || one);
-    });
-  return parts.length ? parts.join(' / ') : '-';
-}
-
 /** 选项列表（下拉用）：优先字典，miss 回退 */
 export function feedbackStatusOptions(): DictOption[] {
   return dictCache.feedbackStatus?.length
@@ -260,23 +201,6 @@ export function feedbackTypeOptions(): DictOption[] {
   return dictCache.feedbackType?.length
     ? dictCache.feedbackType
     : Object.entries(FEEDBACK_TYPE_TEXT_FALLBACK).map(([value, label]) => ({ value, label }));
-}
-export function noticeTypeOptions(): DictOption[] {
-  return dictCache.noticeType?.length
-    ? dictCache.noticeType
-    : Object.entries(NOTICE_TYPE_TEXT_FALLBACK).map(([value, label]) => ({ value, label }));
-}
-/** 通知渠道「不限平台」哨兵值：与后端 NoticeChannel.ALL 一致，不参与 stat_platform 字典 */
-export const NOTICE_CHANNEL_ALL = 'all';
-
-/** 通知渠道可选项：平台部分复用 stat_platform 字典（与统计/反馈同一份），末尾追加「全部平台」 */
-export function noticeChannelOptions(): DictOption[] {
-  const platforms = dictCache.platform?.length
-    ? dictCache.platform
-    : Object.entries(FEEDBACK_PLATFORM_TEXT_FALLBACK)
-        .filter(([v]) => v.includes('-') || v === 'web')
-        .map(([value, label]) => ({ value, label }));
-  return [...platforms, { value: NOTICE_CHANNEL_ALL, label: '全部平台' }];
 }
 
 /** 兜底文案（字典未加载/网络失败时的 fallback，与 dict-init.sql 一致） */
@@ -290,27 +214,6 @@ const FEEDBACK_STATUS_TEXT_FALLBACK: Record<string, string> = {
 const FEEDBACK_TYPE_TEXT_FALLBACK: Record<string, string> = {
   issue: '问题',
   request: '需求',
-};
-const NOTICE_TYPE_TEXT_FALLBACK: Record<string, string> = {
-  announce: '公告',
-  feedback: '反馈',
-  request: '需求',
-};
-/**
- * 通知渠道兜底文案。新值 = 投放平台（与 stat_platform 同源）+ all 哨兵；
- * 旧值是改造前的「端」枚举 app / pc / web，存量行与老客户端参数仍可能是它们。
- */
-const NOTICE_CHANNEL_TEXT_FALLBACK: Record<string, string> = {
-  'app-android': 'Android',
-  'app-ios': 'iOS',
-  'app-windows': 'Windows',
-  'app-linux': 'Linux',
-  'app-macos': 'macOS',
-  'app-harmony': 'HarmonyOS',
-  web: 'Web',
-  all: '全部平台',
-  app: 'App（旧）',
-  pc: 'PC（旧）',
 };
 /**
  * 客户端平台兜底文案。新值 = 统一客户端系统头 X-App-Ut（与 stat_platform 字典同源）；
@@ -332,5 +235,40 @@ const FEEDBACK_PLATFORM_TEXT_FALLBACK: Record<string, string> = {
 // 兼容旧导出名：仍可从字典/fallback 读，供未迁移的调用点使用
 export const FEEDBACK_STATUS_TEXT: Record<string, string> = FEEDBACK_STATUS_TEXT_FALLBACK;
 export const FEEDBACK_TYPE_TEXT: Record<string, string> = FEEDBACK_TYPE_TEXT_FALLBACK;
-export const NOTICE_TYPE_TEXT: Record<string, string> = NOTICE_TYPE_TEXT_FALLBACK;
-export const NOTICE_CHANNEL_TEXT: Record<string, string> = NOTICE_CHANNEL_TEXT_FALLBACK;
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * 以下为**通知**相关导出的兼容别名（实现已整体搬到 `@/api/notice`）。
+ *
+ * 保留原因：仓库里可能还有未迁移的引用点（如分支/插件页面），直接删除会造成编译错误。
+ * 新代码一律从 `@/api/notice` 导入；这些别名只做转发，不持有任何状态。
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** @deprecated 通知实体已迁至 `@/api/notice`，请直接从 `@/api/notice` 导入 `SysNotice`。 */
+export type SysNotice = SysNoticeOfNotice;
+
+/** @deprecated 通知管理端 API 已迁至 `@/api/notice`，请改用 `noticeAdminApi`。 */
+export const messageAdminApi = noticeAdminApiOfNotice;
+
+/** @deprecated 通知字典加载已迁至 `@/api/notice`，请改用 `loadNoticeDicts`（独立的 noticeDictCache）。 */
+export const loadNoticeDicts = loadNoticeDictsOfNotice;
+
+/** @deprecated 通知类型文案已迁至 `@/api/notice`，请改用 `noticeTypeLabel`（两档口径：公告 / 通知）。 */
+export const noticeTypeLabel = noticeTypeLabelOfNotice;
+
+/** @deprecated 通知渠道文案已迁至 `@/api/notice`，请改用 `noticeChannelLabel`。 */
+export const noticeChannelLabel = noticeChannelLabelOfNotice;
+
+/** @deprecated 通知类型下拉已迁至 `@/api/notice`，请改用 `noticeTypeOptions`（只有公告 / 通知两项）。 */
+export const noticeTypeOptions = noticeTypeOptionsOfNotice;
+
+/** @deprecated 通知渠道下拉已迁至 `@/api/notice`，请改用 `noticeChannelOptions`。 */
+export const noticeChannelOptions = noticeChannelOptionsOfNotice;
+
+/** @deprecated 通知渠道「不限平台」哨兵已迁至 `@/api/notice`，请改用 `NOTICE_CHANNEL_ALL`。 */
+export const NOTICE_CHANNEL_ALL = NOTICE_CHANNEL_ALL_OF_NOTICE;
+
+/** @deprecated 通知类型 fallback 表已迁至 `@/api/notice`，请改用 `NOTICE_TYPE_TEXT`。 */
+export const NOTICE_TYPE_TEXT: Record<string, string> = NOTICE_TYPE_TEXT_OF_NOTICE;
+
+/** @deprecated 通知渠道 fallback 表已迁至 `@/api/notice`，请改用 `NOTICE_CHANNEL_TEXT`。 */
+export const NOTICE_CHANNEL_TEXT: Record<string, string> = NOTICE_CHANNEL_TEXT_OF_NOTICE;
