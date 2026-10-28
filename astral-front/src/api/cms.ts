@@ -4,7 +4,7 @@ import { clientHeaders } from '@/lib/client-info';
 
 /**
  * CMS 内容管理插件 API（/api/v1/admin/cms）。
- * 契约见 docs/CMS_PLUGIN.md：响应统一 Result{code,errorCode,message,data,timestamp}，
+ * 契约见 docs/CMS_PLUGIN.md：响应统一 Result{code,errorCode,msg,data,timestamp}，
  * 分页为 MyBatis-Plus Page{records,total,size,current,pages}。
  */
 
@@ -448,8 +448,8 @@ export async function downloadCmsExport(
       headers: clientHeaders(),
     });
     if (!res.ok) {
-      // 后端业务异常是 HTTP 200 + Result.error，权限/未登录才走真实状态码，
-      // 这里统一尝试解析出可读消息，解析不出来就用状态码。
+      // 真实非 2xx 只剩传输层错误（404/413/500/503），这里统一尝试解析出可读消息，
+      // 解析不出来就用状态码。
       const message = await readErrorMessage(res);
       return { ok: false, error: message || `导出失败（HTTP ${res.status}）` };
     }
@@ -467,11 +467,11 @@ export async function downloadCmsExport(
   }
 }
 
-/** 尽力从错误响应里读出后端的 message（读不到返回空串） */
+/** 尽力从错误响应里读出后端的 msg（读不到返回空串） */
 async function readErrorMessage(res: Response): Promise<string> {
   try {
-    const data = (await res.json()) as { message?: string } | null;
-    return data?.message || '';
+    const data = (await res.json()) as { msg?: string } | null;
+    return data?.msg || '';
   } catch {
     return '';
   }

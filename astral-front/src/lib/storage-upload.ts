@@ -4,7 +4,7 @@ import { storageApi, type TicketView } from '@/api/storage';
 export async function uploadStorageFile(folderId: number, file: File, admin = false): Promise<string> {
   const result = await storageApi.managerTicket({ folderId, fileName: file.name,
     contentType: file.type || 'application/octet-stream', sizeBytes: file.size }, admin);
-  if (result.code !== 200) throw new Error(result.message);
+  if (result.code !== 200) throw new Error(result.msg);
   return uploadWithStorageTicket(result.data, file);
 }
 
@@ -29,6 +29,6 @@ export async function uploadWithStorageTicket(ticket: TicketView, file: File): P
     if (!response.ok) throw new Error(`上传返回 ${response.status}`);
   }
   const registered = await storageApi.registerUpload(ticket.uploadId);
-  if (registered.code !== 200) throw new Error(registered.message);
+  if (registered.code !== 200) throw new Error(registered.msg);
   return registered.data.publicId;
 }

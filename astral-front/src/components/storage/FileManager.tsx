@@ -96,7 +96,7 @@ export default function FileManager({ admin = false, canEdit = true }: { admin?:
   const loadFolders = useCallback(async () => {
     try {
       const result = admin ? await storageApi.listFolders() : await storageApi.listMyFolders();
-      if (result.code !== 200) throw new Error(result.message);
+      if (result.code !== 200) throw new Error(result.msg);
       const rows: MyStorageFolder[] = admin ? (result.data as StorageFolder[]).filter(f => f.id != null).map(f => ({
         id: f.id!, parentId: f.parentId, folderName: f.folderName || '', folderPath: f.folderPath || '',
         storageConfigId: f.storageConfigId!, visibility: f.visibility || '', status: f.status || '', myPermissions: 'ALL',
@@ -129,7 +129,7 @@ export default function FileManager({ admin = false, canEdit = true }: { admin?:
     storageApi.managerFiles({ folderId, keyword, category, visibility, sort, current: page, size: PAGE_SIZE }, admin)
       .then(result => {
         if (requestVersion.current !== version) return;
-        if (result.code !== 200) throw new Error(result.message);
+        if (result.code !== 200) throw new Error(result.msg);
         setFiles(result.data.records || []);
         setTotal(result.data.total || 0);
         const last = Math.max(1, Math.ceil(result.data.total / PAGE_SIZE));
@@ -159,7 +159,7 @@ export default function FileManager({ admin = false, canEdit = true }: { admin?:
 
   const runBatch = async (request: FileBatchRequest) => {
     const result = await storageApi.managerBatch(request, admin);
-    if (result.code !== 200) throw new Error(result.message);
+    if (result.code !== 200) throw new Error(result.msg);
     setFailures(result.data.failed);
     setSelected(new Set(result.data.failed.map(f => f.publicId)));
     if (result.data.succeeded.length) toast.success(`已处理 ${result.data.succeeded.length} 个文件`);
@@ -173,20 +173,20 @@ export default function FileManager({ admin = false, canEdit = true }: { admin?:
       if (editor.type === 'new-folder') {
         const result = admin ? await storageApi.createFolder({ parentId: folderId, folderName: name.trim(), configId: current?.storageConfigId })
           : await storageApi.createMyFolder({ parentId: folderId, folderName: name.trim() });
-        if (result.code !== 200) throw new Error(result.message);
+        if (result.code !== 200) throw new Error(result.msg);
         toast.success('文件夹已创建');
       } else if (editor.type === 'folder-name') {
         const result = admin ? await storageApi.updateFolder(editor.folder!.id, { folderName: name.trim() })
           : await storageApi.renameMyFolder(editor.folder!.id, name.trim());
-        if (result.code !== 200) throw new Error(result.message);
+        if (result.code !== 200) throw new Error(result.msg);
         toast.success('文件夹已重命名');
       } else if (editor.type === 'delete-folder') {
         const result = admin ? await storageApi.deleteFolder(editor.folder!.id) : await storageApi.deleteMyFolder(editor.folder!.id);
-        if (result.code !== 200) throw new Error(result.message);
+        if (result.code !== 200) throw new Error(result.msg);
         toast.success('文件夹已删除');
       } else if (editor.type === 'file-name') {
         const result = await storageApi.managerUpdate(editor.file!.publicId!, { originalName: name.trim() }, admin);
-        if (result.code !== 200) throw new Error(result.message);
+        if (result.code !== 200) throw new Error(result.msg);
         toast.success('文件已重命名');
       } else if (editor.type === 'move') {
         if (!targetId) throw new Error('请选择目标文件夹');
@@ -220,14 +220,14 @@ export default function FileManager({ admin = false, canEdit = true }: { admin?:
       }
       const result = await storageApi.managerUrl(file.publicId!, false, admin);
       if (version !== previewVersion.current) return;
-      if (result.code !== 200) throw new Error(result.message);
+      if (result.code !== 200) throw new Error(result.msg);
       setPreview({ file, url: result.data.url });
     } catch (error) { if (version === previewVersion.current) setPreview({ file, error: errorText(error) }); }
   };
   const getLink = async (file: StorageFile, action: 'copy' | 'permanent' | 'download') => {
     try {
       const result = await storageApi.managerUrl(file.publicId!, action === 'permanent', admin);
-      if (result.code !== 200) throw new Error(result.message);
+      if (result.code !== 200) throw new Error(result.msg);
       if (action === 'download') {
         const a = document.createElement('a'); a.href = result.data.url; a.download = file.originalName || 'download';
         a.target = '_blank'; a.rel = 'noopener noreferrer'; document.body.appendChild(a); a.click(); a.remove();

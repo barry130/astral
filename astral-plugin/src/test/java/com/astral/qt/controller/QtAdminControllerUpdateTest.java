@@ -1,6 +1,6 @@
 package com.astral.qt.controller;
 
-import com.astral.qt.common.QtRestResp;
+import com.astral.common.result.Result;
 import com.astral.qt.entity.QtAppUpdate;
 import com.astral.qt.entity.QtAppUpdateArtifact;
 import com.astral.qt.mapper.QtAppUpdateMapper;
@@ -164,7 +164,7 @@ class QtAdminControllerUpdateTest {
 
     @Test
     void createAcceptsEverySelectedPlatformAndNormalizesPlatforms() {
-        QtRestResp<QtAppUpdate> response = controller.createUpdate(
+        Result<QtAppUpdate> response = controller.createUpdate(
                 request(" 1101,1106,1101 ", List.of(artifact(ANDROID), artifact(HARMONY))));
         assertEquals(200, response.getCode());
         assertEquals("1101,1106", jdbc.queryForObject("SELECT platforms FROM qt_app_update", String.class));
@@ -408,7 +408,7 @@ class QtAdminControllerUpdateTest {
         return artifact;
     }
 
-    private static void assertRejected(QtRestResp<?> response, String message) {
+    private static void assertRejected(Result<?> response, String message) {
         assertEquals(300, response.getCode());
         assertTrue(response.getMsg().contains(message), response::getMsg);
     }

@@ -2,7 +2,7 @@ package com.astral.qt.common;
 
 /**
  * 轻听插件业务异常
- * <p>携带 HTTP code（默认 300），由全局异常处理器转成 QtRestResp。</p>
+ * <p>携带 HTTP code（默认 300），由全局异常处理器转成 Result。</p>
  */
 public class QtException extends RuntimeException {
 

@@ -21,8 +21,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // 1. 全局统一认证拦截器（宿主管理区 + 轻听插件用户区合并，含 token 自动续期）；
-        //    免认证白名单内置在 AuthInterceptor.PUBLIC_PATHS，QtRestResp/Result 两种 401
-        //    结构按区域自动区分。先于限流注册：确保 userId 属性已设置，user 类型限流才能正确识别。
+        //    免认证白名单内置在 AuthInterceptor.PUBLIC_PATHS，401 统一返回 Result 结构，
+        //    提示文案按区域区分。先于限流注册：确保 userId 属性已设置，user 类型限流才能正确识别。
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/api/**");
 

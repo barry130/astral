@@ -4,7 +4,7 @@ import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.qt.QtPlugin;
-import com.astral.qt.common.QtRestResp;
+import com.astral.common.result.Result;
 import com.astral.qt.dto.QtSourceReleaseCreateDto;
 import com.astral.qt.dto.vo.QtSourceReleaseVo;
 import com.astral.qt.entity.QtAppUpdate;
@@ -79,18 +79,18 @@ public class QtAdminController {
 
     @Operation(summary = "概览统计")
     @GetMapping("/overview")
-    public QtRestResp<Map<String, Object>> overview() {
+    public Result<Map<String, Object>> overview() {
         Map<String, Object> map = new HashMap<>();
         map.put("userCount", userMapper.selectCount(
                 new LambdaQueryWrapper<User>().eq(User::getUserType, "APP")));
         map.put("dakaCount", qtDakaMapper.selectCount(null));
         map.put("updateCount", qtUpdateMapper.selectCount(null));
-        return QtRestResp.success(map);
+        return Result.success(map);
     }
 
     @Operation(summary = "用户分页（仅 App 用户）")
     @GetMapping("/users")
-    public QtRestResp<Page<User>> users(@RequestParam(defaultValue = "1") Integer pageNum,
+    public Result<Page<User>> users(@RequestParam(defaultValue = "1") Integer pageNum,
                                          @RequestParam(defaultValue = "10") Integer pageSize,
                                          @RequestParam(required = false) String keyword) {
         Page<User> page = new Page<>(pageNum, pageSize);
@@ -100,41 +100,41 @@ public class QtAdminController {
             wrapper.and(w -> w.like(User::getUsername, keyword).or().like(User::getEmail, keyword));
         }
         wrapper.orderByDesc(User::getCreateTime);
-        return QtRestResp.success(userMapper.selectPage(page, wrapper));
+        return Result.success(userMapper.selectPage(page, wrapper));
     }
 
     @Operation(summary = "封禁/解封用户")
     @PutMapping("/users/{id}/state")
-    public QtRestResp<Void> changeUserState(@PathVariable Long id, @RequestParam Integer state) {
+    public Result<Void> changeUserState(@PathVariable Long id, @RequestParam Integer state) {
         User user = userMapper.selectById(id);
         if (user == null) {
-            return QtRestResp.error("用户不存在");
+            return Result.error(300, "用户不存在");
         }
         user.setStatus(state == null ? 1 : state);
         user.setUpdateTime(LocalDateTime.now());
         userMapper.updateById(user);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "版本更新列表")
     @GetMapping("/updates")
-    public QtRestResp<Page<QtAppUpdate>> updates(@RequestParam(defaultValue = "1") Integer pageNum,
+    public Result<Page<QtAppUpdate>> updates(@RequestParam(defaultValue = "1") Integer pageNum,
                                                   @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<QtAppUpdate> page = new Page<>(pageNum, pageSize);
         Page<QtAppUpdate> result = qtUpdateMapper.selectPage(page,
                 new LambdaQueryWrapper<QtAppUpdate>().orderByDesc(QtAppUpdate::getVersionCode));
         // 列表页要展示「该版本有几个产物」，所以每条都附上产物清单（只读，不挑选）
-        return QtRestResp.success((Page<QtAppUpdate>) result.setRecords(
+        return Result.success((Page<QtAppUpdate>) result.setRecords(
                 appService.attachArtifacts(result.getRecords())));
     }
 
     @Operation(summary = "某版本的产物列表（一版本多包：Windows x64/x86/arm64…）")
     @GetMapping("/updates/{id}/artifacts")
-    public QtRestResp<List<QtAppUpdateArtifact>> listUpdateArtifacts(@PathVariable Long id) {
+    public Result<List<QtAppUpdateArtifact>> listUpdateArtifacts(@PathVariable Long id) {
         if (qtUpdateMapper.selectById(id) == null) {
-            return QtRestResp.error(300, "版本信息不存在");
+            return Result.error(300, "版本信息不存在");
         }
-        return QtRestResp.success(artifactService.listByUpdateId(id));
+        return Result.success(artifactService.listByUpdateId(id));
     }
 
     /**
@@ -146,26 +146,26 @@ public class QtAdminController {
     @Operation(summary = "保存某版本的产物列表（全量覆盖）")
     @PutMapping("/updates/{id}/artifacts")
     @Transactional(rollbackFor = Exception.class)
-    public QtRestResp<List<QtAppUpdateArtifact>> saveUpdateArtifacts(
+    public Result<List<QtAppUpdateArtifact>> saveUpdateArtifacts(
             @PathVariable Long id, @RequestBody List<QtAppUpdateArtifact> items) {
         QtAppUpdate exist = qtUpdateMapper.selectByIdForUpdate(id);
         if (exist == null) {
-            return QtRestResp.error(300, "版本信息不存在");
+            return Result.error(300, "版本信息不存在");
         }
         // 覆盖保存前先按「新清单」核对多平台覆盖：删掉某平台唯一的产物后，
         // 该平台客户端会挑不中产物，回退到主表直链（可能拿到别的平台的包）
         String artifactErr = artifactService.validate(items);
         if (artifactErr != null) {
-            return QtRestResp.error(300, artifactErr);
+            return Result.error(300, artifactErr);
         }
         String coverageErr = validatePlatformCoverage(exist.getPlatforms(), items);
         if (coverageErr != null) {
-            return QtRestResp.error(300, coverageErr);
+            return Result.error(300, coverageErr);
         }
         List<QtAppUpdateArtifact> saved = artifactService.replaceAll(id, items);
         syncLegacyFields(exist, saved.isEmpty() ? null : saved.get(0));
         evictUpdateCacheAfterCommit();
-        return QtRestResp.success(saved);
+        return Result.success(saved);
     }
 
     /**
@@ -189,12 +189,12 @@ public class QtAdminController {
     @Operation(summary = "新增版本更新")
     @PostMapping("/updates")
     @Transactional(rollbackFor = Exception.class)
-    public QtRestResp<QtAppUpdate> createUpdate(@RequestBody QtAppUpdate update) {
+    public Result<QtAppUpdate> createUpdate(@RequestBody QtAppUpdate update) {
         // 多产物版本：下载地址由 artifacts 逐条提供，主表可以不填直链（保存后由兜底产物回填）
         List<QtAppUpdateArtifact> artifacts = artifactService.fromVos(update.getArtifacts());
         String err = artifactService.validate(artifacts);
         if (err != null) {
-            return QtRestResp.error(300, err);
+            return Result.error(300, err);
         }
         update.setId(null);
         // 平台多选：前端送逗号分隔 CSV（与公告 channel 同款），这里校验并归一（去重/去空/保持顺序）
@@ -203,14 +203,14 @@ public class QtAdminController {
                 : update.getPlatforms();
         String platformErr = validatePlatformsCsv(platforms);
         if (platformErr != null) {
-            return QtRestResp.error(300, platformErr);
+            return Result.error(300, platformErr);
         }
         update.setPlatforms(QtAppUpdate.toPlatformsCsv(QtAppUpdate.parsePlatforms(platforms)));
         // 勾了多个平台时，每个平台都得有能落地的包：产物是按平台分条维护的，
         // 只给安卓加了产物却勾上鸿蒙，鸿蒙客户端会挑不中产物而回退主表直链（下到安卓包）
         String coverageErr = validatePlatformCoverage(update.getPlatforms(), artifacts);
         if (coverageErr != null) {
-            return QtRestResp.error(300, coverageErr);
+            return Result.error(300, coverageErr);
         }
         if (update.getChannel() == null || update.getChannel().isBlank()) update.setChannel("stable");
         if (update.getIsGithub() == null) update.setIsGithub(0L);
@@ -224,17 +224,17 @@ public class QtAdminController {
         syncLegacyFields(update, saved.isEmpty() ? null : saved.get(0));
         update.setArtifacts(saved.stream().map(QtAppUpdateArtifact::toVo).toList());
         evictUpdateCacheAfterCommit();
-        return QtRestResp.success(update);
+        return Result.success(update);
     }
 
     @Operation(summary = "更新版本信息")
     @PutMapping("/updates/{id}")
     @Transactional(rollbackFor = Exception.class)
-    public QtRestResp<Void> updateAppUpdate(@PathVariable Long id, @RequestBody QtAppUpdate update) {
+    public Result<Void> updateAppUpdate(@PathVariable Long id, @RequestBody QtAppUpdate update) {
         // 编辑时以库中已有值为兜底校验（表单可能不回传未变更字段）
         QtAppUpdate exist = qtUpdateMapper.selectByIdForUpdate(id);
         if (exist == null) {
-            return QtRestResp.error("版本信息不存在");
+            return Result.error(300, "版本信息不存在");
         }
         // null = 本次没提交（保持原值），空串 = 显式清空（写 NULL，列本身可空）
         String downloadUrl = PatchValues.orCurrent(update.getDownloadUrl(), exist.getDownloadUrl());
@@ -246,19 +246,19 @@ public class QtAdminController {
                 : artifactService.fromVos(update.getArtifacts());
         String err = artifactService.validate(artifacts);
         if (err != null) {
-            return QtRestResp.error(300, err);
+            return Result.error(300, err);
         }
         // 平台多选：null = 本次没提交（保持原值），空串 = 显式清空（下面会兜底为必填校验失败）
         String platforms = PatchValues.orCurrent(update.getPlatforms(), exist.getPlatforms());
         String platformErr = validatePlatformsCsv(platforms);
         if (platformErr != null) {
-            return QtRestResp.error(300, platformErr);
+            return Result.error(300, platformErr);
         }
         String normalizedPlatforms = QtAppUpdate.toPlatformsCsv(QtAppUpdate.parsePlatforms(platforms));
         // 所选平台必须逐一出现在最终产物清单中，不能被主表兜底地址绕过。
         String coverageErr = validatePlatformCoverage(normalizedPlatforms, artifacts);
         if (coverageErr != null) {
-            return QtRestResp.error(300, coverageErr);
+            return Result.error(300, coverageErr);
         }
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「清空版本说明/更新类型/文件大小/md5」保存后都还是旧值。白名单逐列显式 set。
@@ -287,25 +287,25 @@ public class QtAdminController {
             syncLegacyFields(exist, saved.isEmpty() ? null : saved.get(0));
         }
         evictUpdateCacheAfterCommit();
-        return QtRestResp.success();
+        return Result.success();
     }
 
     // ==================== GitHub 加速节点（UPDATE_DESIGN.md §2.2） ====================
 
     @Operation(summary = "GitHub加速节点分页列表（直接查库，不走缓存）")
     @GetMapping("/github-accels")
-    public QtRestResp<Page<QtGithubAccel>> githubAccels(@RequestParam(defaultValue = "1") Integer pageNum,
+    public Result<Page<QtGithubAccel>> githubAccels(@RequestParam(defaultValue = "1") Integer pageNum,
                                                         @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<QtGithubAccel> page = new Page<>(pageNum, pageSize);
-        return QtRestResp.success(githubAccelService.page(page,
+        return Result.success(githubAccelService.page(page,
                 new LambdaQueryWrapper<QtGithubAccel>().orderByAsc(QtGithubAccel::getSort)));
     }
 
     @Operation(summary = "新增GitHub加速节点（自动刷新缓存）")
     @PostMapping("/github-accels")
-    public QtRestResp<QtGithubAccel> createGithubAccel(@RequestBody QtGithubAccel accel) {
+    public Result<QtGithubAccel> createGithubAccel(@RequestBody QtGithubAccel accel) {
         if (accel.getPrefixUrl() == null || accel.getPrefixUrl().isBlank()) {
-            return QtRestResp.error(300, "加速前缀不能为空");
+            return Result.error(300, "加速前缀不能为空");
         }
         accel.setPrefixUrl(QtGithubAccelService.normalizePrefix(accel.getPrefixUrl()));
         if (accel.getIsShow() == null) accel.setIsShow(1L);
@@ -314,15 +314,15 @@ public class QtAdminController {
         accel.setUpdateTime(LocalDateTime.now());
         githubAccelService.save(accel);
         githubAccelService.refreshCache();
-        return QtRestResp.success(accel);
+        return Result.success(accel);
     }
 
     @Operation(summary = "编辑GitHub加速节点（自动刷新缓存）")
     @PutMapping("/github-accels/{id}")
-    public QtRestResp<Void> updateGithubAccel(@PathVariable Long id, @RequestBody QtGithubAccel accel) {
+    public Result<Void> updateGithubAccel(@PathVariable Long id, @RequestBody QtGithubAccel accel) {
         // prefix_url 是 NOT NULL 列，整表单提交必带；这里不再容忍 null，避免白名单写入撞非空约束
         if (accel.getPrefixUrl() == null || accel.getPrefixUrl().isBlank()) {
-            return QtRestResp.error(300, "加速前缀不能为空");
+            return Result.error(300, "加速前缀不能为空");
         }
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「清空备注」保存后仍是旧值。白名单逐列显式 set，可空列原样写入（含 null）。
@@ -335,100 +335,100 @@ public class QtAdminController {
                 .set(QtGithubAccel::getRemark, PatchValues.blankToNull(accel.getRemark()))
                 .set(QtGithubAccel::getUpdateTime, LocalDateTime.now()));
         githubAccelService.refreshCache();
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "删除GitHub加速节点（自动刷新缓存）")
     @DeleteMapping("/github-accels/{id}")
-    public QtRestResp<Void> deleteGithubAccel(@PathVariable Long id) {
+    public Result<Void> deleteGithubAccel(@PathVariable Long id) {
         githubAccelService.removeById(id);
         githubAccelService.refreshCache();
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "手动失效GitHub加速缓存（清空+重新加载）")
     @PostMapping("/github-accels/cache/evict")
-    public QtRestResp<Void> evictGithubAccelCache() {
+    public Result<Void> evictGithubAccelCache() {
         githubAccelService.evictCache();
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "手动探活：并发探测所有启用节点（仅展示，不写库）")
     @PostMapping("/github-accels/probe")
-    public QtRestResp<List<QtGithubAccelProbeVo>> probeGithubAccels() {
-        return QtRestResp.success(githubAccelService.probe());
+    public Result<List<QtGithubAccelProbeVo>> probeGithubAccels() {
+        return Result.success(githubAccelService.probe());
     }
 
     @Operation(summary = "删除版本信息")
     @DeleteMapping("/updates/{id}")
-    public QtRestResp<Void> deleteUpdate(@PathVariable Long id) {
+    public Result<Void> deleteUpdate(@PathVariable Long id) {
         qtUpdateMapper.deleteById(id);
         appService.evictUpdateCache();
-        return QtRestResp.success();
+        return Result.success();
     }
 
     // ==================== 音源包热更新（SOURCE_UPDATE_DESIGN §5.3） ====================
 
     @Operation(summary = "音源包分页列表（按平台/渠道/发布状态筛选，full=1 全量）")
     @GetMapping("/source-releases")
-    public QtRestResp<Page<QtSourceReleaseVo>> sourceReleases(
+    public Result<Page<QtSourceReleaseVo>> sourceReleases(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Long platform,
             @RequestParam(required = false) String channel,
             @RequestParam(required = false) Boolean published,
             @RequestParam(defaultValue = "0") Integer full) {
-        return QtRestResp.success(sourceService.pageReleases(
+        return Result.success(sourceService.pageReleases(
                 pageNum, pageSize, platform, channel, published, full != null && full == 1));
     }
 
     @Operation(summary = "音源包装机分布统计（版本×平台×结果）")
     @GetMapping("/source-releases/stats")
-    public QtRestResp<List<Map<String, Object>>> sourceReleaseStats() {
-        return QtRestResp.success(sourceService.installStats());
+    public Result<List<Map<String, Object>>> sourceReleaseStats() {
+        return Result.success(sourceService.installStats());
     }
 
     @Operation(summary = "新建音源包 release（版本号后端生成，随响应返回）")
     @PostMapping("/source-releases")
-    public QtRestResp<QtSourceReleaseVo> createSourceRelease(@RequestBody QtSourceReleaseCreateDto dto) {
-        return QtRestResp.success(sourceService.createRelease(dto));
+    public Result<QtSourceReleaseVo> createSourceRelease(@RequestBody QtSourceReleaseCreateDto dto) {
+        return Result.success(sourceService.createRelease(dto));
     }
 
     @Operation(summary = "编辑音源包（platforms/channel/notes/appVersionCodes/artifacts 按 path 合并）")
     @PutMapping("/source-releases/{id}")
-    public QtRestResp<Void> updateSourceRelease(@PathVariable Long id,
+    public Result<Void> updateSourceRelease(@PathVariable Long id,
                                                 @RequestBody QtSourceReleaseCreateDto dto) {
         sourceService.updateRelease(id, dto);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "发布音源包")
     @PostMapping("/source-releases/{id}/publish")
-    public QtRestResp<Void> publishSourceRelease(@PathVariable Long id) {
+    public Result<Void> publishSourceRelease(@PathVariable Long id) {
         sourceService.publish(id);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "撤回发布（停止投递，已装设备保持现状）")
     @PostMapping("/source-releases/{id}/unpublish")
-    public QtRestResp<Void> unpublishSourceRelease(@PathVariable Long id) {
+    public Result<Void> unpublishSourceRelease(@PathVariable Long id) {
         sourceService.unpublish(id);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "标记坏包（可带 rollbackTo 指定回退版本）")
     @PostMapping("/source-releases/{id}/bad")
-    public QtRestResp<Void> markSourceReleaseBad(@PathVariable Long id,
+    public Result<Void> markSourceReleaseBad(@PathVariable Long id,
                                                  @RequestParam(required = false) Long rollbackTo) {
         sourceService.markBad(id, rollbackTo);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "删除音源包（仅未发布允许）")
     @DeleteMapping("/source-releases/{id}")
-    public QtRestResp<Void> deleteSourceRelease(@PathVariable Long id) {
+    public Result<Void> deleteSourceRelease(@PathVariable Long id) {
         sourceService.deleteRelease(id);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     // ==================== 平台校验（一行多平台：platforms 逗号分隔） ====================

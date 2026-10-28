@@ -235,7 +235,7 @@ export default function SequencePage() {
         loadConfigs();
         message.success('生成成功');
       } else {
-        message.error(res.message);
+        message.error(res.msg);
       }
     } finally {
       setLoading(false);
@@ -255,7 +255,7 @@ export default function SequencePage() {
         loadConfigs();
         message.success(`批量生成 ${values.count} 个序列号成功`);
       } else {
-        message.error(res.message);
+        message.error(res.msg);
       }
     } finally {
       setLoading(false);

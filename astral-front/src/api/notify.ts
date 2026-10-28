@@ -5,8 +5,8 @@ import type { PageResult } from './types';
  * 消息中心平台侧 API（订阅规则 + 站内信门户收件箱）。
  *
  * <p>站内信（INAPP 渠道）投递落统一通知表 sys_notice（点对点 + 消息中心位 +
- * 服务端 read_time），与 feedback 插件共用；广播通知/公告的管理走
- * `@/api/feedback` 的 messageAdminApi（/api/v1/admin/message），不在本文件重复。</p>
+ * 服务端 read_time），与通知模块共用；广播通知/公告的管理走
+ * `@/api/notice` 的 noticeAdminApi（/api/v1/admin/message），不在本文件重复。</p>
  */
 
 /** 站内信行（sys_notice 点对点行的收件箱视图） */

@@ -149,7 +149,7 @@ export default function QtAdminPage() {
       try {
         // 产物加载成功后才允许编辑，避免加载失败或尚未加载时误把清单清空。
         const res = await qtAdminApi.artifacts(record.id);
-        if (res.code !== 200) throw new Error(res.message || '产物清单加载失败');
+        if (res.code !== 200) throw new Error(res.msg || '产物清单加载失败');
         updateForm.resetFields();
         updateForm.setFieldsValue({ ...record, platforms: parsePlatforms(record.platforms), artifacts: res.data || [] });
         setUpdateIsEdit(true);
@@ -184,7 +184,7 @@ export default function QtAdminPage() {
       const res = editing
         ? await qtAdminApi.updateUpdate(values.id, payload)
         : await qtAdminApi.createUpdate(payload);
-      if (res.code !== 200) throw new Error(res.message || '操作失败');
+      if (res.code !== 200) throw new Error(res.msg || '操作失败');
       message.success(editing ? '版本信息已更新' : '版本信息已创建');
       setUpdateModal(false);
       loadUpdates();

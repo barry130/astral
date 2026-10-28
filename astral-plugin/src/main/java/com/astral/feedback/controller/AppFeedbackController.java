@@ -2,9 +2,9 @@ package com.astral.feedback.controller;
 
 import org.springframework.beans.factory.annotation.Value;
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.result.Result;
 import com.astral.common.util.ClientHeaders;
 import com.astral.common.util.ClientIp;
-import com.astral.feedback.common.FeedbackRestResp;
 import com.astral.feedback.dto.ReplyDto;
 import com.astral.feedback.dto.SubmitFeedbackDto;
 import com.astral.feedback.entity.Feedback;
@@ -62,8 +62,8 @@ public class AppFeedbackController {
     @Operation(summary = "提交反馈")
     @RequiresPermission(value = "user:feedback:submit", name = "反馈提交", description = "App 端提交反馈与追加回复")
     @PostMapping("/submit")
-    public FeedbackRestResp<Feedback> submit(@Valid @RequestBody SubmitFeedbackDto dto,
-                                             HttpServletRequest request) {
+    public Result<Feedback> submit(@Valid @RequestBody SubmitFeedbackDto dto,
+                                   HttpServletRequest request) {
         Long userId = currentUserId();
         String ip = clientIp(request);
         // 统一系统头：X-App-Ut（平台，回退遗留 X-Platform）/ X-App-Version（版本）/
@@ -76,42 +76,42 @@ public class AppFeedbackController {
                 request.getHeader(ClientHeaders.H_DEVICE), ClientHeaders.MAX_DEVICE);
         String os = ClientHeaders.normalize(
                 request.getHeader(ClientHeaders.H_OS), ClientHeaders.MAX_OS);
-        return FeedbackRestResp.success(
+        return Result.success(
                 feedbackService.submit(userId, dto, blankToNull(device), blankToNull(os),
                         blankToNull(appVersion), blankToNull(platform), ip));
     }
 
     @Operation(summary = "我的反馈（分页，全部状态）")
     @GetMapping("/my")
-    public FeedbackRestResp<Page<Feedback>> my(@RequestParam(defaultValue = "1") Integer pageNum,
-                                               @RequestParam(defaultValue = "10") Integer pageSize) {
-        return FeedbackRestResp.success(feedbackService.myPage(currentUserId(), pageNum, pageSize));
+    public Result<Page<Feedback>> my(@RequestParam(defaultValue = "1") Integer pageNum,
+                                     @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(feedbackService.myPage(currentUserId(), pageNum, pageSize));
     }
 
     @Operation(summary = "公开列表（published AND is_public）")
     @GetMapping("/public")
-    public FeedbackRestResp<Page<Feedback>> publicList(@RequestParam(defaultValue = "1") Integer pageNum,
-                                                       @RequestParam(defaultValue = "10") Integer pageSize) {
-        return FeedbackRestResp.success(feedbackService.publicPage(pageNum, pageSize));
+    public Result<Page<Feedback>> publicList(@RequestParam(defaultValue = "1") Integer pageNum,
+                                             @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(feedbackService.publicPage(pageNum, pageSize));
     }
 
     @Operation(summary = "详情（本人 或 published+public）")
     @GetMapping("/{id}")
-    public FeedbackRestResp<Feedback> detail(@PathVariable Long id) {
-        return FeedbackRestResp.success(feedbackService.detail(currentUserId(), id, false));
+    public Result<Feedback> detail(@PathVariable Long id) {
+        return Result.success(feedbackService.detail(currentUserId(), id, false));
     }
 
     @Operation(summary = "回复列表（升序，带昵称/用户类型）")
     @GetMapping("/{id}/replies")
-    public FeedbackRestResp<List<FeedbackReply>> replies(@PathVariable Long id) {
-        return FeedbackRestResp.success(feedbackService.replies(currentUserId(), id, false));
+    public Result<List<FeedbackReply>> replies(@PathVariable Long id) {
+        return Result.success(feedbackService.replies(currentUserId(), id, false));
     }
 
     @Operation(summary = "用户回复（同时通知管理员）")
     @RequiresPermission(value = "user:feedback:submit", name = "反馈提交", description = "App 端提交反馈与追加回复")
     @PostMapping("/reply")
-    public FeedbackRestResp<FeedbackReply> reply(@Valid @RequestBody ReplyDto dto) {
-        return FeedbackRestResp.success(feedbackService.userReply(currentUserId(), dto));
+    public Result<FeedbackReply> reply(@Valid @RequestBody ReplyDto dto) {
+        return Result.success(feedbackService.userReply(currentUserId(), dto));
     }
 
     /** 当前用户ID：优先从拦截器注入的 request attribute 读取 */

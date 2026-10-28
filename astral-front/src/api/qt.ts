@@ -110,7 +110,8 @@ export interface QtGithubAccelProbe {
  *  - qt_update_publish       版本发布状态
  *
  *  注：公告相关字典（qt_notice_channel / qt_notice_audience）随公告管理页一并移除，
- *  App 端统一通知已迁移至反馈插件的 sys_notice（/dashboard/message）。
+ *  App 端统一通知已迁移至宿主通知模块的 sys_notice（入口：消息中心 → 通知管理，
+ *  `/dashboard/system/mail?tab=notice`；原 /dashboard/message 路由已删除）。
  */
 
 /** 根据选项列表取展示文案，未匹配时回退原值 */

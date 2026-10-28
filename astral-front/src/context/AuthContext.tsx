@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    *
    * 认证令牌存在 HttpOnly Cookie（`satoken`）里，JS 读不到 —— 也就不需要
    * 「先判断有没有 token 再请求」：有没有凭据由浏览器决定，直接问一次 /info，
-   * 401 就说明未登录（拦截器只在 /dashboard 前缀下跳登录页，不会把落地页访客弹走）。
+   * `code` 为 401 就说明未登录（拦截器只在 /dashboard 前缀下跳登录页，不会把落地页访客弹走）。
    */
   useEffect(() => {
     authApi.getUserInfo()
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(res.data);
       return res.data;
     }
-    throw new Error(res.message);
+    throw new Error(res.msg);
   };
 
   /** 用户登出：调用API清理服务端session（后端同时清除认证 Cookie），再清空本地用户信息 */

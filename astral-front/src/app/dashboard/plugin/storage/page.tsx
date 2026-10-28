@@ -312,7 +312,7 @@ export default function StoragePage() {
         contentType: testFile.type,
         sizeBytes: testFile.size,
       }, true);
-      if (ticketRes.code !== 200) throw new Error(ticketRes.message);
+      if (ticketRes.code !== 200) throw new Error(ticketRes.msg);
       const isTelegram = ticketRes.data.method !== 'PUT' && !ticketRes.data.form;
       setStep(0, 'ok', `凭证已签发（${isTelegram ? 'TELEGRAM/Worker' : ticketRes.data.form ? 'UPYUN 表单直传' : '预签名 PUT'}，有效期至 ${new Date(ticketRes.data.expiresAt * 1000).toLocaleTimeString()}）`);
 
@@ -332,7 +332,7 @@ export default function StoragePage() {
       // 4. 下载验证
       setStep(3, 'run');
       const dlRes = await storageApi.managerUrl(publicId, false, true);
-      if (dlRes.code !== 200) throw new Error(dlRes.message);
+      if (dlRes.code !== 200) throw new Error(dlRes.msg);
       const dlResp = await fetch(dlRes.data.url);
       if (!dlResp.ok) throw new Error(`下载验证失败：HTTP ${dlResp.status}`);
       const blob = await dlResp.blob();

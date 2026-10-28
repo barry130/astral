@@ -6,7 +6,7 @@ import com.astral.common.annotation.RateLimit;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.dao.entity.User;
 import com.astral.qt.common.QtException;
-import com.astral.qt.common.QtRestResp;
+import com.astral.common.result.Result;
 import com.astral.qt.dto.QtAvatarTicketReqDto;
 import com.astral.qt.dto.QtChangePwByEmailDto;
 import com.astral.qt.dto.QtDeactivateDto;
@@ -84,13 +84,13 @@ public class QtAppUserController {
     @RateLimit(key = "ip", limit = 5, duration = 60, message = "登录尝试过于频繁，请60秒后再试")
     @LoginLog("轻听App账号密码登录")
     @PostMapping("/login")
-    public QtRestResp<QtUserInfoVo> login(@Valid @RequestBody QtLoginDto dto) {
-        return QtRestResp.success(userService.login(dto));
+    public Result<QtUserInfoVo> login(@Valid @RequestBody QtLoginDto dto) {
+        return Result.success(userService.login(dto));
     }
 
     @Operation(summary = "刷新 token")
     @PostMapping("/refresh")
-    public QtRestResp<QtUserInfoVo> refresh(@RequestHeader(value = "satoken", required = true) String satoken,
+    public Result<QtUserInfoVo> refresh(@RequestHeader(value = "satoken", required = true) String satoken,
                                             HttpServletRequest request) {
         // 检查当前 token 是否有效
         if (!StpUtil.isLogin()) {
@@ -114,38 +114,38 @@ public class QtAppUserController {
             vo.setRoles(userVo.getRoles());
             vo.setPermissions(userVo.getPermissions());
         }
-        return QtRestResp.success(vo);
+        return Result.success(vo);
     }
 
     @Operation(summary = "根据 token 获取用户信息")
     @RequiresPermission(value = "user:profile:view", name = "用户资料查看", description = "App 端查看本人资料、角色与权限列表")
     @GetMapping("/me")
-    public QtRestResp<QtUserInfoVo> me(@RequestHeader(value = "satoken", required = false) String satoken) {
+    public Result<QtUserInfoVo> me(@RequestHeader(value = "satoken", required = false) String satoken) {
         Long userId = currentUserId(satoken);
-        return QtRestResp.success(userService.getUserInfoByToken(userId, satoken));
+        return Result.success(userService.getUserInfoByToken(userId, satoken));
     }
 
     @Operation(summary = "退出登录")
     @PostMapping("/logout")
-    public QtRestResp<Void> logout(@RequestHeader(value = "satoken", required = false) String satoken) {
+    public Result<Void> logout(@RequestHeader(value = "satoken", required = false) String satoken) {
         Long userId = currentUserId(satoken);
         userService.logout(userId);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "发送邮箱验证码")
     @PostMapping("/email")
-    public QtRestResp<Void> sendEmail(@Valid @RequestBody QtSendEmailDto dto) {
+    public Result<Void> sendEmail(@Valid @RequestBody QtSendEmailDto dto) {
         userService.sendEmail(dto);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "用户注册")
     @RateLimit(key = "ip", limit = 5, duration = 60, message = "注册尝试过于频繁，请60秒后再试")
     @LoginLog("轻听App注册自动登录")
     @PostMapping("/register")
-    public QtRestResp<QtUserInfoVo> register(@Valid @RequestBody QtRegisterDto dto) {
-        return QtRestResp.success(userService.register(dto));
+    public Result<QtUserInfoVo> register(@Valid @RequestBody QtRegisterDto dto) {
+        return Result.success(userService.register(dto));
     }
 
     // ==================== 媒体直传（UPDATE_DESIGN.md §5，文件不经过 Astral 服务器） ====================
@@ -153,28 +153,28 @@ public class QtAppUserController {
     @Operation(summary = "头像上传取直传凭证（仅修改时可用；每日次数由文件夹策略限制）")
     @RequiresPermission(value = "user:profile:edit", name = "用户资料编辑", description = "App 端修改本人资料、头像上传与直传回执")
     @PostMapping("/avatar/ticket")
-    public QtRestResp<QtUploadTicketVo> avatarTicket(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtUploadTicketVo> avatarTicket(@RequestHeader(value = "satoken", required = false) String satoken,
                                                      @Valid @RequestBody QtAvatarTicketReqDto dto) {
-        return QtRestResp.success(mediaService.avatarTicket(
+        return Result.success(mediaService.avatarTicket(
                 currentUserId(satoken), dto.getFileName(), dto.getContentType(), dto.getSizeBytes()));
     }
 
     @Operation(summary = "头像直传完成回执：核对登记后直写 sys_user.avatar")
     @RequiresPermission(value = "user:profile:edit", name = "用户资料编辑", description = "App 端修改本人资料、头像上传与直传回执")
     @PostMapping("/avatar/complete")
-    public QtRestResp<QtUploadCompleteVo> avatarComplete(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtUploadCompleteVo> avatarComplete(@RequestHeader(value = "satoken", required = false) String satoken,
                                                          @Valid @RequestBody QtUploadCompleteReqDto dto,
                                                          jakarta.servlet.http.HttpServletRequest request) {
-        return QtRestResp.success(mediaService.avatarComplete(currentUserId(satoken), dto.getUploadId(), request));
+        return Result.success(mediaService.avatarComplete(currentUserId(satoken), dto.getUploadId(), request));
     }
 
     @Operation(summary = "歌单封面上传取直传凭证（仅修改自己收藏的歌单；每日全部歌单合计限次）")
     @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")
     @PostMapping("/like/playlist/{pid}/cover/ticket")
-    public QtRestResp<QtUploadTicketVo> coverTicket(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtUploadTicketVo> coverTicket(@RequestHeader(value = "satoken", required = false) String satoken,
                                                     @PathVariable String pid,
                                                     @Valid @RequestBody QtCoverTicketReqDto dto) {
-        return QtRestResp.success(mediaService.coverTicket(
+        return Result.success(mediaService.coverTicket(
                 currentUserId(satoken), pid, dto.getPlatform(),
                 dto.getFileName(), dto.getContentType(), dto.getSizeBytes()));
     }
@@ -182,35 +182,35 @@ public class QtAppUserController {
     @Operation(summary = "歌单封面直传完成回执：核对登记后直写 qt_like_playlist.pic_url")
     @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")
     @PostMapping("/like/playlist/{pid}/cover/complete")
-    public QtRestResp<QtUploadCompleteVo> coverComplete(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtUploadCompleteVo> coverComplete(@RequestHeader(value = "satoken", required = false) String satoken,
                                                         @PathVariable String pid,
                                                         @RequestParam("platform") String platform,
                                                         @Valid @RequestBody QtUploadCompleteReqDto dto,
                                                         jakarta.servlet.http.HttpServletRequest request) {
-        return QtRestResp.success(mediaService.coverComplete(
+        return Result.success(mediaService.coverComplete(
                 currentUserId(satoken), pid, platform, dto.getUploadId(), request));
     }
 
     @Operation(summary = "取消自定义歌单封面（恢复默认展示，不消耗每日次数）")
     @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")
     @DeleteMapping("/like/playlist/{pid}/cover")
-    public QtRestResp<Void> coverClear(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<Void> coverClear(@RequestHeader(value = "satoken", required = false) String satoken,
                                        @PathVariable String pid,
                                        @RequestParam("platform") String platform) {
         mediaService.coverClear(currentUserId(satoken), pid, platform);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "更新用户信息")
     @RequiresPermission(value = "user:profile:edit", name = "用户资料编辑", description = "App 端修改本人资料、头像上传与直传回执")
     @PostMapping("/update")
-    public QtRestResp<QtUserInfoVo> update(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtUserInfoVo> update(@RequestHeader(value = "satoken", required = false) String satoken,
                                            @Valid @RequestBody QtUpdateUserDto dto) {
         Long userId = currentUserId(satoken);
         User user = userService.updateUser(userId, dto);
         QtUserInfoVo vo = new QtUserInfoVo();
         vo.setUser(user);
-        return QtRestResp.success(vo);
+        return Result.success(vo);
     }
 
     @Operation(summary = "通过邮箱验证码重置密码")
@@ -218,42 +218,42 @@ public class QtAppUserController {
     // 邮箱维度的失败次数封顶在 service 层（QtUserService.recordCodeFailure），此处按 IP 挡住跨邮箱扫描。
     @RateLimit(key = "ip", limit = 5, duration = 60, message = "验证码尝试过于频繁，请60秒后再试")
     @PostMapping("/changePass")
-    public QtRestResp<User> changePwByEmail(@Valid @RequestBody QtChangePwByEmailDto dto) {
-        return QtRestResp.success(userService.changePwByEmail(dto));
+    public Result<User> changePwByEmail(@Valid @RequestBody QtChangePwByEmailDto dto) {
+        return Result.success(userService.changePwByEmail(dto));
     }
 
     @Operation(summary = "自助注销账号（凭密码确认，注销后停用+匿名化+全端下线）")
     @RequiresPermission(value = "user:profile:deactivate", name = "自助注销",
             description = "App 用户注销自己的账号（停用+匿名化）")
     @PostMapping("/deactivate")
-    public QtRestResp<Void> deactivate(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<Void> deactivate(@RequestHeader(value = "satoken", required = false) String satoken,
                                        @Valid @RequestBody QtDeactivateDto dto) {
         userService.deactivate(currentUserId(satoken), dto.getPassword());
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "用户签到")
     @RequiresPermission(value = "user:daka:submit", name = "签到提交", description = "App 端执行每日签到")
     @PostMapping("/daka")
-    public QtRestResp<Void> daka(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<Void> daka(@RequestHeader(value = "satoken", required = false) String satoken,
                                  @Valid @RequestBody QtUserDakaDto dto) {
         dakaService.daka(currentUserId(satoken), dto);
-        return QtRestResp.success();
+        return Result.success();
     }
 
     @Operation(summary = "获取连续签到天数和总有效积分")
     @RequiresPermission(value = "user:daka:view", name = "签到查看", description = "App 端查看签到天数、积分与月度签到详情")
     @GetMapping("/dakaInfo")
-    public QtRestResp<QtDakaDaysAndCodeVo> dakaInfo(@RequestHeader(value = "satoken", required = false) String satoken) {
-        return QtRestResp.success(dakaService.getDakaDaysAndCode(currentUserId(satoken)));
+    public Result<QtDakaDaysAndCodeVo> dakaInfo(@RequestHeader(value = "satoken", required = false) String satoken) {
+        return Result.success(dakaService.getDakaDaysAndCode(currentUserId(satoken)));
     }
 
     @Operation(summary = "获取某年某月签到详情")
     @RequiresPermission(value = "user:daka:view", name = "签到查看", description = "App 端查看签到天数、积分与月度签到详情")
     @GetMapping("/dakaInfoByMonth")
-    public QtRestResp<List<String>> dakaInfoByMonth(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<List<String>> dakaInfoByMonth(@RequestHeader(value = "satoken", required = false) String satoken,
                                                     @RequestParam("time") @NotBlank String time) {
-        return QtRestResp.success(dakaService.getDakaInfoByMonth(currentUserId(satoken), time));
+        return Result.success(dakaService.getDakaInfoByMonth(currentUserId(satoken), time));
     }
 
     // ==================== 收藏同步接口（LIKE_SYNC_DESIGN.md §2） ====================
@@ -261,45 +261,45 @@ public class QtAppUserController {
     @Operation(summary = "收藏/取消收藏单曲")
     @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")
     @PostMapping("/like/song")
-    public QtRestResp<QtLikeSeqVo> likeSong(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtLikeSeqVo> likeSong(@RequestHeader(value = "satoken", required = false) String satoken,
                                             @Valid @RequestBody QtLikeSongActionDto dto) {
-        return QtRestResp.success(likeService.likeSong(currentUserId(satoken), dto));
+        return Result.success(likeService.likeSong(currentUserId(satoken), dto));
     }
 
     @Operation(summary = "收藏/取消收藏歌单")
     @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")
     @PostMapping("/like/playlist")
-    public QtRestResp<QtLikeSeqVo> likePlaylist(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtLikeSeqVo> likePlaylist(@RequestHeader(value = "satoken", required = false) String satoken,
                                                 @Valid @RequestBody QtLikePlaylistActionDto dto) {
-        return QtRestResp.success(likeService.likePlaylist(currentUserId(satoken), dto));
+        return Result.success(likeService.likePlaylist(currentUserId(satoken), dto));
     }
 
     @Operation(summary = "批量收藏/取消（歌曲+歌单混排，单批最多200）")
     @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")
     @PostMapping("/like/batch")
-    public QtRestResp<QtLikeSeqVo> likeBatch(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtLikeSeqVo> likeBatch(@RequestHeader(value = "satoken", required = false) String satoken,
                                              @Valid @RequestBody QtLikeBatchDto dto) {
-        return QtRestResp.success(likeService.likeBatch(currentUserId(satoken), dto));
+        return Result.success(likeService.likeBatch(currentUserId(satoken), dto));
     }
 
     @Operation(summary = "增量拉取收藏变更")
     @RequiresPermission(value = "user:like:view", name = "收藏查看", description = "App 端拉取收藏歌单/歌曲（全量、分页、增量）")
     @GetMapping("/like/changes")
-    public QtRestResp<QtLikeChangesVo> getLikeChanges(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtLikeChangesVo> getLikeChanges(@RequestHeader(value = "satoken", required = false) String satoken,
                                                       @RequestParam(value = "since", required = false, defaultValue = "0") long since) {
         if (since < 0) {
             throw new QtException("since不能为负数");
         }
-        return QtRestResp.success(likeService.getChanges(currentUserId(satoken), since));
+        return Result.success(likeService.getChanges(currentUserId(satoken), since));
     }
 
     @Operation(summary = "全量分页拉取收藏")
     @RequiresPermission(value = "user:like:view", name = "收藏查看", description = "App 端拉取收藏歌单/歌曲（全量、分页、增量）")
     @GetMapping("/like/list")
-    public QtRestResp<QtLikePageVo> getLikePage(@RequestHeader(value = "satoken", required = false) String satoken,
+    public Result<QtLikePageVo> getLikePage(@RequestHeader(value = "satoken", required = false) String satoken,
                                                 @RequestParam(value = "page", required = false, defaultValue = "1") Integer page,
                                                 @RequestParam(value = "size", required = false, defaultValue = "500") Integer size) {
-        return QtRestResp.success(likeService.getLikePage(currentUserId(satoken), page, size));
+        return Result.success(likeService.getLikePage(currentUserId(satoken), page, size));
     }
 
     private Long currentUserId(String satoken) {

@@ -2,7 +2,7 @@ package com.astral.feedback.common;
 
 /**
  * 反馈插件业务异常
- * <p>携带 code（默认 300），由全局异常处理器转成 FeedbackRestResp。</p>
+ * <p>携带 code（默认 300），由全局异常处理器转成 {@code com.astral.common.result.Result}。</p>
  */
 public class FeedbackException extends RuntimeException {
 

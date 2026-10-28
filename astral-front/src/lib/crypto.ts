@@ -24,7 +24,7 @@ export const getPublicKey = async (): Promise<string> => {
       return cachedPublicKey!;
     }
     
-    throw new Error(result.message || '获取公钥失败');
+    throw new Error(result.msg || '获取公钥失败');
   } catch (error) {
     if (error instanceof Error) {
       throw error;

@@ -392,14 +392,14 @@ export default function SourceReleasesTab() {
       contentType: file.type || 'application/octet-stream',
       sizeBytes: file.size,
     });
-    if (ticketRes.code !== 200) throw new Error(ticketRes.message);
+    if (ticketRes.code !== 200) throw new Error(ticketRes.msg);
     const ticket = ticketRes.data;
     let publicId: string;
     if (ticket.method === 'PUT') {
       const putResp = await fetch(ticket.uploadUrl, { method: 'PUT', body: file });
       if (!putResp.ok) throw new Error(`对象存储返回 ${putResp.status}`);
       const regRes = await storageApi.registerUpload(ticket.uploadId);
-      if (regRes.code !== 200) throw new Error(regRes.message);
+      if (regRes.code !== 200) throw new Error(regRes.msg);
       publicId = regRes.data.publicId;
     } else if (ticket.form) {
       const form = new FormData();
@@ -409,7 +409,7 @@ export default function SourceReleasesTab() {
       const resp = await fetch(ticket.uploadUrl, { method: 'POST', body: form });
       if (!resp.ok) throw new Error(`又拍云返回 ${resp.status}`);
       const regRes = await storageApi.registerUpload(ticket.uploadId);
-      if (regRes.code !== 200) throw new Error(regRes.message);
+      if (regRes.code !== 200) throw new Error(regRes.msg);
       publicId = regRes.data.publicId;
     } else {
       const form = new FormData();
@@ -420,7 +420,7 @@ export default function SourceReleasesTab() {
       publicId = json.publicId;
     }
     const urlRes = await storageApi.permanentUrl(publicId);
-    if (urlRes.code !== 200 || !urlRes.data?.url) throw new Error(urlRes.message || '获取永久地址失败');
+    if (urlRes.code !== 200 || !urlRes.data?.url) throw new Error(urlRes.msg || '获取永久地址失败');
     return urlRes.data.url;
   };
 
@@ -490,7 +490,7 @@ export default function SourceReleasesTab() {
             <Popconfirm title="确认删除该 release？" disabled={!canEdit} onConfirm={async () => {
               const res = await sourceReleaseApi.remove(r.id!);
               if (res.code === 200) refreshAfter('已删除');
-              else message.error(res.message || '删除失败');
+              else message.error(res.msg || '删除失败');
             }}><Button type="link" size="small" danger disabled={!canEdit}>删除</Button></Popconfirm>
           )}
         </Space>
