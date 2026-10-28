@@ -5,6 +5,7 @@ import { formatDateTime } from '@/lib/format';
 import { Card, Button, Space, Modal, Form, Input, Select, Tag, message, Popconfirm } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
+import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
@@ -56,6 +57,9 @@ export default function ConfigPage() {
   const [editingConfig, setEditingConfig] = useState<SysConfig | null>(null);
   /** 表单实例 */
   const [form] = Form.useForm();
+  /** 配置类型枚举一律取数据字典 */
+  const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
+  const configTypeDict = dicts.config_type;
 
   const hasPerm = usePerm();
   /** 是否具备系统配置维护权限：权限码需与后端 @RequiresPermission("admin:system:config:edit") 一致 */
@@ -64,7 +68,15 @@ export default function ConfigPage() {
   /** 组件挂载时加载数据 */
   useEffect(() => {
     loadData();
+    loadDicts();
   }, []);
+
+  /** 加载数据字典（失败时回退显示原始值） */
+  const loadDicts = () => {
+    fetchDictOptions(['config_type'])
+      .then(setDicts)
+      .catch(() => { /* 字典失败时回退显示原始值 */ });
+  };
 
   /** 加载配置列表 */
   const loadData = (page = 1, size = 10, keyword = '') => {
@@ -129,7 +141,7 @@ export default function ConfigPage() {
     { title: '配置名称', dataIndex: 'configName', key: 'configName', width: 160 },
     { title: '配置键', dataIndex: 'configKey', key: 'configKey', width: 240, ellipsis: true, render: (v: string) => <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{v}</code> },
     { title: '配置值', dataIndex: 'configValue', key: 'configValue', width: 200, ellipsis: true },
-    { title: '类型', dataIndex: 'configType', key: 'configType', width: 90, render: (v: number) => <Tag color={v === 1 ? 'blue' : 'orange'}>{v === 1 ? '内置' : '自定义'}</Tag> },
+    { title: '类型', dataIndex: 'configType', key: 'configType', width: 90, render: (v: number) => <Tag color={dictColor(configTypeDict, v) || 'default'}>{dictLabel(configTypeDict, v, String(v))}</Tag> },
     { title: '描述', dataIndex: 'description', key: 'description', width: 300 },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: string) => formatDateTime(v) },
     {
@@ -170,7 +182,7 @@ export default function ConfigPage() {
             <Input.TextArea rows={3} />
           </Form.Item>
           <Form.Item name="configType" label="类型" initialValue={2}>
-            <Select options={[{ label: '内置', value: 1 }, { label: '自定义', value: 2 }]} />
+            <Select options={(configTypeDict || []).map((o) => ({ label: o.label, value: Number(o.value) }))} />
           </Form.Item>
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={2} />

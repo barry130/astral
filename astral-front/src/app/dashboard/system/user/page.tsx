@@ -5,6 +5,7 @@ import { formatDateTime } from '@/lib/format';
 import { Card, Button, Space, Modal, Form, Input, Select, Switch, Tag, message, Popconfirm, Tabs, Divider, Typography } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, LockOutlined, LoginOutlined } from '@/components/antd-compat/icons';
 import { request, ApiResult, readCsrfToken } from '@/api/client';
+import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { clientHeaders } from '@/lib/client-info';
 import { downloadResponse } from '@/lib/http-download';
 import { usePerm } from '@/lib/perm';
@@ -124,6 +125,11 @@ export default function UserPage() {
   const [passwordForm] = Form.useForm();
   /** 角色表单实例 */
   const [roleForm] = Form.useForm();
+  /** 用户类型枚举一律取数据字典 */
+  const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
+  const userTypeDict = dicts.user_type;
+  /** 用户类型下拉选项（值仍为 ADMIN / APP，文案与颜色来自字典） */
+  const userTypeOptions = (userTypeDict || []).map((o) => ({ label: o.label, value: o.value }));
 
   const hasPerm = usePerm();
   /** 是否具备用户维护权限：权限码需与后端 @RequiresPermission("admin:system:user:edit") 一致 */
@@ -132,10 +138,18 @@ export default function UserPage() {
   /** 组件挂载时加载用户列表和角色列表 */
   useEffect(() => {
     loadData();
+    loadDicts();
     roleApi.getAll().then((res: any) => {
       if (res.code === 200) setRoles(res.data || []);
     });
   }, []);
+
+  /** 加载数据字典（失败时回退显示原始值） */
+  const loadDicts = () => {
+    fetchDictOptions(['user_type'])
+      .then(setDicts)
+      .catch(() => { /* 字典失败时回退显示原始值 */ });
+  };
 
   /** 加载用户列表 */
   const loadData = (page = 1, size = 10, keyword = '', utype = typeFilter) => {
@@ -335,9 +349,7 @@ export default function UserPage() {
       dataIndex: 'userType',
       key: 'userType',
       render: (v: string) => (
-        v === 'APP'
-          ? <Tag color="blue">App用户</Tag>
-          : v === 'ADMIN' ? <Tag color="purple">管理端</Tag> : <Tag>{v || '-'}</Tag>
+        <Tag color={dictColor(userTypeDict, v) || 'default'}>{dictLabel(userTypeDict, v, v || '-')}</Tag>
       ),
     },
     {
@@ -375,10 +387,7 @@ export default function UserPage() {
       children: (
         <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
           <Form.Item name="userType" label="用户类型" extra="修改后保存可变更用户归属（管理端/App）">
-            <Select disabled={editingUser.userType === 'ADMIN' && editingUser.username === 'admin'} options={[
-              { label: '管理端', value: 'ADMIN' },
-              { label: 'App用户', value: 'APP' },
-            ]} />
+            <Select disabled={editingUser.userType === 'ADMIN' && editingUser.username === 'admin'} options={userTypeOptions} />
           </Form.Item>
           <Form.Item name="username" label="用户名">
             <Input disabled />
@@ -463,10 +472,7 @@ export default function UserPage() {
               style={{ width: 140 }}
               allowClear
               placeholder="用户类型"
-              options={[
-                { label: '管理端', value: 'ADMIN' },
-                { label: 'App用户', value: 'APP' },
-              ]}
+              options={userTypeOptions}
               onChange={(v) => { setTypeFilter(v || ''); loadData(1, pagination.pageSize, search, v || ''); }}
             />
           </div>
@@ -482,10 +488,7 @@ export default function UserPage() {
       <Modal title="新建用户" open={createVisible} onOk={handleCreateSubmit} onCancel={() => setCreateVisible(false)}>
         <Form form={createForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="userType" label="用户类型" rules={[{ required: true }]}>
-            <Select options={[
-              { label: '管理端', value: 'ADMIN' },
-              { label: 'App用户', value: 'APP' },
-            ]} />
+            <Select options={userTypeOptions} />
           </Form.Item>
           <Form.Item name="username" label="用户名" rules={[{ required: true }]}>
             <Input />

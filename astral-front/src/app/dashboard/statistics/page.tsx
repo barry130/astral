@@ -33,6 +33,7 @@ import {
   StatErrorLogItem,
 } from '@/api/statistics';
 import { ResizableTable } from '@/components/ResizableTable';
+import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { StatFilterBar, useVersionOptions, UT_ALL, type Option } from './StatFilterBar';
 
 const { Text } = Typography;
@@ -63,12 +64,19 @@ const diffText = (today?: number | null, yesterday?: number | null) => {
 export default function StatisticsPage() {
   /** 平台选项是全局字典，在页面级加载一次，三个 Tab 共用（避免每个 Tab 各请求一次） */
   const [utOptions, setUtOptions] = useState<Option[]>([{ value: UT_ALL, label: '全部平台' }]);
+  /** 错误来源枚举（stat_error_source）同样在页面级加载一次，错误 Tab 与明细分页共用 */
+  const [sourceOptions, setSourceOptions] = useState<DictOption[]>([]);
 
   useEffect(() => {
     let alive = true;
     loadUtOptions().then((opts) => {
       if (alive) setUtOptions(opts);
     });
+    fetchDictOptions(['stat_error_source'])
+      .then((d) => {
+        if (alive) setSourceOptions(d.stat_error_source || []);
+      })
+      .catch(() => { /* 字典失败时回退显示原始值 */ });
     return () => {
       alive = false;
     };
@@ -81,7 +89,7 @@ export default function StatisticsPage() {
         items={[
           { key: 'device', label: '设备统计', children: <DeviceTab utOptions={utOptions} /> },
           { key: 'api', label: '接口统计', children: <ApiTab utOptions={utOptions} /> },
-          { key: 'error', label: '错误统计', children: <ErrorTab utOptions={utOptions} /> },
+          { key: 'error', label: '错误统计', children: <ErrorTab utOptions={utOptions} sourceOptions={sourceOptions} /> },
         ]}
       />
     </Card>
@@ -390,7 +398,7 @@ const ERROR_TYPE_COLORS: Record<string, string> = {
   crash: 'red',
 };
 
-function ErrorTab({ utOptions }: { utOptions: Option[] }) {
+function ErrorTab({ utOptions, sourceOptions }: { utOptions: Option[]; sourceOptions: DictOption[] }) {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState<Dayjs>(dayjs());
   const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } = usePlatformVersion();
@@ -472,10 +480,7 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
             style={{ width: 140 }}
             allowClear
             placeholder="全部来源"
-            options={[
-              { value: 'server', label: '服务端异常' },
-              { value: 'client', label: '客户端上报' },
-            ]}
+            options={sourceOptions.map((o) => ({ value: o.value, label: o.label }))}
           />
         }
       />
@@ -496,6 +501,7 @@ function ErrorTab({ utOptions }: { utOptions: Option[] }) {
         version={version}
         source={source}
         utOptions={utOptions}
+        sourceOptions={sourceOptions}
         onClose={() => setDrawerOpen(false)}
       />
     </Spin>
@@ -510,6 +516,7 @@ function ErrorDetailDrawer({
   version,
   source,
   utOptions,
+  sourceOptions,
   onClose,
 }: {
   open: boolean;
@@ -518,6 +525,7 @@ function ErrorDetailDrawer({
   version: string;
   source: string;
   utOptions: Option[];
+  sourceOptions: DictOption[];
   onClose: () => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -576,8 +584,8 @@ function ErrorDetailDrawer({
     {
       title: '来源',
       dataIndex: 'source',
-      width: 90,
-      render: (v?: string) => <Tag color={v === 'server' ? 'red' : 'blue'}>{v === 'server' ? '服务端' : '客户端'}</Tag>,
+      width: 110,
+      render: (v?: string) => <Tag color={dictColor(sourceOptions, v) || 'default'}>{dictLabel(sourceOptions, v, v || '-')}</Tag>,
     },
     { title: '平台', dataIndex: 'ut', width: 100, render: (v?: string) => utLabel(utOptions, v) },
     { title: '版本', dataIndex: 'appVersion', width: 80 },

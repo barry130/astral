@@ -374,7 +374,7 @@ export default function StoragePage() {
     fetchDictOptions([
       'storage_provider_type', 'storage_status', 'storage_file_status',
       'storage_task_status', 'storage_visibility', 'storage_permission',
-      'storage_verify_content',
+      'storage_verify_content', 'storage_subject_type',
     ]).then(setDict).catch(() => {});
   }, []);
 
@@ -882,7 +882,7 @@ export default function StoragePage() {
           <Space key={idx} style={{ display: 'flex', marginBottom: 8 }}>
             <Select
               style={{ width: 110 }} value={row.subjectType}
-              options={[{ label: 'USER', value: 'USER' }, { label: 'PLUGIN', value: 'PLUGIN' }]}
+              options={dict['storage_subject_type'] || []}
               onChange={(v) => setPermModal((m) => ({ ...m, rows: m.rows.map((r, i) => (i === idx ? { ...r, subjectType: v } : r)) }))}
             />
             <Input

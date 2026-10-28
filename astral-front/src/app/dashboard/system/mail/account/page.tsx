@@ -4,12 +4,9 @@ import { useEffect, useState } from 'react';
 import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Tag, message, Popconfirm } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined } from '@/components/antd-compat/icons';
 import { mailApi, MailAccount } from '@/api/mail';
+import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { usePerm, MAIL_PERMISSIONS } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
-
-const yesNo = (v: number) => (
-  <Tag color={v === 1 ? 'green' : 'default'}>{v === 1 ? '启用' : '停用'}</Tag>
-);
 
 export default function MailAccountPage() {
   const [loading, setLoading] = useState(false);
@@ -21,11 +18,26 @@ export default function MailAccountPage() {
   const [testId, setTestId] = useState<number | null>(null);
   const [testVisible, setTestVisible] = useState(false);
   const [testForm] = Form.useForm();
+  /** 启用状态枚举一律取数据字典 */
+  const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
+  const enableDict = dicts.enable_status;
   const hasPerm = usePerm();
   /** 是否具备邮箱账户维护权限（无权限时隐藏维护按钮） */
   const canEdit = hasPerm(MAIL_PERMISSIONS.accountEdit);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); loadDicts(); }, []);
+
+  /** 加载数据字典（失败时回退显示原始值） */
+  const loadDicts = () => {
+    fetchDictOptions(['enable_status'])
+      .then(setDicts)
+      .catch(() => { /* 字典失败时回退显示原始值 */ });
+  };
+
+  /** 启用/停用标签：文案与颜色取字典 enable_status */
+  const yesNo = (v: number) => (
+    <Tag color={dictColor(enableDict, v) || 'default'}>{dictLabel(enableDict, v, String(v))}</Tag>
+  );
 
   const loadData = (page = 1, size = 10) => {
     setLoading(true);
@@ -168,13 +180,13 @@ export default function MailAccountPage() {
           </Space>
           <Space wrap style={{ display: 'flex' }}>
             <Form.Item name="sslEnable" label="SSL" rules={[{ required: true }]}>
-              <Select options={[{ label: '启用', value: 1 }, { label: '停用', value: 0 }]} style={{ width: 120 }} />
+              <Select options={(enableDict || []).map((o) => ({ label: o.label, value: Number(o.value) }))} style={{ width: 120 }} />
             </Form.Item>
             <Form.Item name="starttlsEnable" label="STARTTLS">
-              <Select options={[{ label: '启用', value: 1 }, { label: '停用', value: 0 }]} style={{ width: 120 }} />
+              <Select options={(enableDict || []).map((o) => ({ label: o.label, value: Number(o.value) }))} style={{ width: 120 }} />
             </Form.Item>
             <Form.Item name="enabled" label="状态">
-              <Select options={[{ label: '启用', value: 1 }, { label: '停用', value: 0 }]} style={{ width: 120 }} />
+              <Select options={(enableDict || []).map((o) => ({ label: o.label, value: Number(o.value) }))} style={{ width: 120 }} />
             </Form.Item>
             <Form.Item name="weight" label="权重"><InputNumber min={1} max={100} /></Form.Item>
           </Space>

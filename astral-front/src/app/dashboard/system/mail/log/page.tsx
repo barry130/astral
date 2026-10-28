@@ -5,6 +5,7 @@ import { formatDateTime } from '@/lib/format';
 import { Card, Table, Row, Col, Statistic, DatePicker, Input, Select, Button, Space, Tag, message } from '@/components/antd-compat';
 import { ReloadOutlined } from '@/components/antd-compat/icons';
 import { mailApi, MailLog, MailStatistics } from '@/api/mail';
+import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import type { RangePickerProps } from '@/components/antd-compat';
 
 const { RangePicker } = DatePicker;
@@ -15,8 +16,18 @@ export default function MailLogPage() {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [stats, setStats] = useState<MailStatistics>({});
   const [filters, setFilters] = useState<{ toEmail?: string; status?: number; range?: any }>({});
+  /** 发送状态枚举一律取数据字典 */
+  const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
+  const statusDict = dicts.notify_send_status;
 
-  useEffect(() => { loadStats(); loadData(); }, []);
+  useEffect(() => { loadStats(); loadData(); loadDicts(); }, []);
+
+  /** 加载数据字典（失败时回退显示原始值） */
+  const loadDicts = () => {
+    fetchDictOptions(['notify_send_status'])
+      .then(setDicts)
+      .catch(() => { /* 字典失败时回退显示原始值 */ });
+  };
 
   const loadStats = () => {
     mailApi.logStatistics().then((res: any) => { if (res.code === 200) setStats(res.data || {}); }).catch(() => {});
@@ -43,11 +54,10 @@ export default function MailLogPage() {
       .finally(() => setLoading(false));
   };
 
-  const statusTag = (s?: number) => {
-    if (s === 1) return <Tag color="green">成功</Tag>;
-    if (s === 0) return <Tag color="red">失败</Tag>;
-    return <Tag>{s}</Tag>;
-  };
+  /** 状态标签：文案与颜色统一取字典 notify_send_status，字典缺失时回退原值 */
+  const statusTag = (s?: number) => (
+    <Tag color={dictColor(statusDict, s) || 'default'}>{dictLabel(statusDict, s, '-')}</Tag>
+  );
 
   const columns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70 },
@@ -80,7 +90,7 @@ export default function MailLogPage() {
             onSearch={(v) => { const next = { ...filters, toEmail: v }; setFilters(next); loadData(1, pagination.pageSize, next); }} />
           <Select placeholder="状态" allowClear style={{ width: 120 }}
             onChange={(v) => { const next = { ...filters, status: v }; setFilters(next); loadData(1, pagination.pageSize, next); }}
-            options={[{ label: '成功', value: 1 }, { label: '失败', value: 0 }]} />
+            options={(statusDict || []).map((o) => ({ label: o.label, value: Number(o.value) }))} />
           <RangePicker showTime onChange={(v) => { const next = { ...filters, range: v }; setFilters(next); loadData(1, pagination.pageSize, next); }} />
           <div className="page-toolbar">
             <Button icon={<ReloadOutlined />} onClick={() => { setFilters({}); loadData(1, pagination.pageSize, {}); loadStats(); }}>刷新</Button>

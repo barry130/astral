@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Tag, message, Popconfirm, Switch } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@/components/antd-compat/icons';
 import { smsApi, SmsProvider } from '@/api/sms';
+import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
@@ -18,10 +19,21 @@ export default function SmsProviderPage() {
   /** 后端 SPI 已注册的供应商类型（MOCK/ALIYUN…） */
   const [types, setTypes] = useState<string[]>([]);
 
+  /** 启用状态枚举一律取数据字典 */
+  const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
+  const enableDict = dicts.enable_status;
+
   const hasPerm = usePerm();
   const canEdit = hasPerm('admin:system:notify:sms:edit');
 
-  useEffect(() => { loadData(); loadTypes(); }, []);
+  useEffect(() => { loadData(); loadTypes(); loadDicts(); }, []);
+
+  /** 加载数据字典（失败时回退显示原始值） */
+  const loadDicts = () => {
+    fetchDictOptions(['enable_status'])
+      .then(setDicts)
+      .catch(() => { /* 字典失败时回退显示原始值 */ });
+  };
 
   const loadData = (page = 1, size = 10) => {
     setLoading(true);
@@ -148,7 +160,7 @@ export default function SmsProviderPage() {
           </Form.Item>
           <Space size="large">
             <Form.Item name="enabled" label="启用" valuePropName="value">
-              <Select style={{ width: 100 }} options={[{ label: '启用', value: 1 }, { label: '停用', value: 0 }]} />
+              <Select style={{ width: 100 }} options={(enableDict || []).map((o) => ({ label: o.label, value: Number(o.value) }))} />
             </Form.Item>
             <Form.Item name="weight" label="权重" tooltip="越大被选中概率越高；失败自动降级到其他启用供应商">
               <InputNumber min={1} max={100} style={{ width: 100 }} />

@@ -5,6 +5,7 @@ import { formatDateTime } from '@/lib/format';
 import { Card, Button, Space, Tag, message, Popconfirm, Select } from '@/components/antd-compat';
 import { DeleteOutlined, LogoutOutlined, RollbackOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
+import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
@@ -77,6 +78,9 @@ export default function TokenPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
   /** 按状态筛选 */
   const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined);
+  /** Token 状态枚举一律取数据字典 */
+  const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
+  const tokenStatusDict = dicts.token_status;
 
   const hasPerm = usePerm();
   /** 是否具备 Token 维护权限：权限码需与后端 @RequiresPermission("admin:system:token:edit") 一致 */
@@ -87,10 +91,18 @@ export default function TokenPage() {
   /** 组件挂载时加载Token列表和用户列表 */
   useEffect(() => {
     loadData();
+    loadDicts();
     userApi.getPage(1, 1000).then((res: any) => {
       if (res.code === 200) setUsers(res.data?.records || []);
     });
   }, []);
+
+  /** 加载数据字典（失败时回退显示原始值） */
+  const loadDicts = () => {
+    fetchDictOptions(['token_status'])
+      .then(setDicts)
+      .catch(() => { /* 字典失败时回退显示原始值 */ });
+  };
 
   /** 加载Token列表（支持按用户和状态筛选） */
   const loadData = (page = 1, size = 10, userId?: number, status?: number) => {
@@ -167,7 +179,7 @@ export default function TokenPage() {
     { title: '登录IP', dataIndex: 'loginIp', key: 'loginIp' },
     { title: '登录端', dataIndex: 'device', key: 'device', width: 90, render: (v: string) => renderDevice(v) },
     { title: '过期时间', dataIndex: 'expireTime', key: 'expireTime', render: (v: string) => v ? formatDateTime(v) : '-' },
-    { title: '状态', dataIndex: 'status', key: 'status', render: (v: number) => <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '有效' : '已吊销'}</Tag> },
+    { title: '状态', dataIndex: 'status', key: 'status', render: (v: number) => <Tag color={dictColor(tokenStatusDict, v) || 'default'}>{dictLabel(tokenStatusDict, v, String(v))}</Tag> },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => v ? formatDateTime(v) : '-' },
     {
       title: '操作',
@@ -197,7 +209,7 @@ export default function TokenPage() {
         <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
             <Select placeholder="选择用户" allowClear style={{ width: 200 }} value={selectedUserId} onChange={(v) => { setSelectedUserId(v); loadData(1, pagination.pageSize, v, selectedStatus); }} options={users.map(u => ({ label: u.username, value: u.id }))} />
-            <Select placeholder="状态" allowClear style={{ width: 120 }} value={selectedStatus} onChange={(v) => { setSelectedStatus(v); loadData(1, pagination.pageSize, selectedUserId, v); }} options={[{ label: '有效', value: 1 }, { label: '已吊销', value: 0 }]} />
+            <Select placeholder="状态" allowClear style={{ width: 120 }} value={selectedStatus} onChange={(v) => { setSelectedStatus(v); loadData(1, pagination.pageSize, selectedUserId, v); }} options={(tokenStatusDict || []).map((o) => ({ label: o.label, value: Number(o.value) }))} />
           </Space>
           <Space>
             <Popconfirm title="确认清理所有过期Token?" disabled={!canEdit} onConfirm={handleCleanExpired}>

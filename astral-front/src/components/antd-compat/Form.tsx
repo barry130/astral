@@ -714,10 +714,16 @@ function FormItem({
   const injected: Record<string, any> = { ...(valueProps ?? {}) };
   if (!valueProps || !(valuePropName in valueProps)) injected[valuePropName] = value;
   if (fieldId) injected.id = fieldId;
+  // 子组件自己声明的 onChange 不会被 cloneElement 覆盖掉：与 antd 一致，
+  // 注入的 handler 只负责把事件写进表单，写完后继续执行子组件原本的 onChange。
+  const childTriggerHandler = isValidElement(children)
+    ? (children.props as Record<string, any> | null)?.[trigger]
+    : undefined;
   injected[trigger] = (...args: any[]) => {
     const next = getValueFromEvent ? getValueFromEvent(...args) : defaultGetValueFromEvent(valuePropName, args);
     inst.setFieldValue(path, next);
     if (inst._errors[key]) void inst.validateFields([path]);
+    if (typeof childTriggerHandler === 'function') childTriggerHandler(...args);
   };
 
   const isFormItemChild =
