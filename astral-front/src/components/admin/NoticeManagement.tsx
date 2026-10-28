@@ -64,6 +64,12 @@ const DISCLAIMER_CHANNELS = [
  * 点「我知道了」执行 exitApp()。服务端 `clampDisclaimerChannel` 也会强制顶回 1，
  * 这里同值是为了表单显示的就是最终落库值。
  */
+/** 首次启动弹窗的默认批次：改它 = 让所有客户端重新弹一次 */
+function defaultBatch(): string {
+  const d = new Date();
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 const DISCLAIMER_TEMPLATE: Partial<SysNotice> & { display?: number } = {
   title: '使用前请先阅读',
   noticeType: 'announce',
@@ -137,12 +143,30 @@ export default function NoticeManagement() {
   const [form] = Form.useForm();
   const isFeedbackReply = editing?.scene === 'feedbackAdminReplied' || editing?.scene === 'feedbackUserReplied';
   /**
-   * 表单里「条款版本号」这一格一旦填了，这条公告就是首次启动免责声明：
-   * 客户端按它认领，服务端按它把渠道强制改写为 App 六端。这里订阅它，是为了在渠道那一格
-   * 当场说明白「你选的平台会被改写」，而不是等提交后才发现落库值和选的不一样。
+   * 「仅首次启动弹出」开关：打开即把这条通知变成首次启动弹窗（免责声明的落地形态）——
+   * 客户端只在该设备首次启动时弹一次、确认后不再打扰。
+   *
+   * 落库仍是既有的 `display` 含开屏位 + `termsVersion` 非空这一组合（已发布客户端按它判定，
+   * 不能改协议），只是把「让运营手填版本号」这种隐性约定收成一个开关：版本号由表单自动生成，
+   * 需要「让所有客户端重新弹一次」时改一下「弹出批次」即可。
    */
-  const termsVersionInput = Form.useWatch('termsVersion', form) as string | undefined;
-  const isDisclaimerDraft = (termsVersionInput ?? '').trim().length > 0;
+  const firstLaunchOn = (Form.useWatch('firstLaunchPopup', form) ?? 0) === 1;
+
+  /**
+   * 打开开关时把「投放平台」和「可关闭」直接改写成首次启动弹窗应有的值。
+   *
+   * 服务端保存时也会强制改写（`NoticeServiceImpl.clampDisclaimerChannel`），但表单得先一致，
+   * 否则运营看到的是自己勾的两个平台、库里存的是六端 —— 下次打开表单又变一次，很像 bug。
+   */
+  useEffect(() => {
+    if (!firstLaunchOn) return;
+    form.setFieldValue('channel', [...DISCLAIMER_CHANNELS]);
+    form.setFieldValue('dialogClosable', 1);
+    // 开屏位（bit 0）必须选中：客户端只把「开屏」展示位当弹窗，少了这个位就不会弹
+    const display = (form.getFieldValue('display') as number[] | number | undefined) ?? [];
+    const bits = Array.isArray(display) ? display : [display].filter(Boolean);
+    if (!bits.includes(1)) form.setFieldValue('display', [1, ...bits.filter((n) => n !== 1)]);
+  }, [firstLaunchOn, form]);
 
   const hasPerm = usePerm();
   // 通知维护权限：必须与后端 AdminNoticeController 写接口的 @RequiresPermission("admin:message:edit") 保持一致
@@ -183,6 +207,7 @@ export default function NoticeManagement() {
       isTop: 0,
       dialogClosable: 1,
       firstLoginOnly: 0,
+      firstLaunchPopup: 0,
       marquee: 0,
       audience: 'ALL',
     });
@@ -199,6 +224,7 @@ export default function NoticeManagement() {
     form.resetFields();
     form.setFieldsValue({
       ...DISCLAIMER_TEMPLATE,
+      firstLaunchPopup: 1,
       channel: [...DISCLAIMER_CHANNELS],
       display: [DISCLAIMER_TEMPLATE.display ?? 1],
       effectiveRange: undefined,
@@ -217,6 +243,7 @@ export default function NoticeManagement() {
       isTop: record.isTop ?? 0,
       dialogClosable: record.dialogClosable ?? 1,
       firstLoginOnly: record.firstLoginOnly ?? 0,
+      firstLaunchPopup: (record.termsVersion ?? '').trim() ? 1 : 0,
       marquee: record.marquee ?? 0,
       audience: record.audience || 'ALL',
       channel: record.scene === 'feedbackAdminReplied' || record.scene === 'feedbackUserReplied'
@@ -232,11 +259,14 @@ export default function NoticeManagement() {
   const submit = async () => {
     const values = await form.validateFields();
     // 位掩码列表 → 数值
-    const display = Array.isArray(values.display)
+    let display = Array.isArray(values.display)
       ? (values.display as number[]).reduce((acc, b) => acc | b, 0) : values.display;
+    // 首次启动弹窗必须命中开屏位，否则客户端不会当成弹窗处理
+    if (values.firstLaunchPopup === 1) display = (display ?? 0) | 1;
     const payload: SysNotice = {
       id: editing?.id,
       channel: isFeedbackReply ? NOTICE_CHANNEL_ALL
+        : values.firstLaunchPopup === 1 ? DISCLAIMER_CHANNELS.join(',')
         : Array.isArray(values.channel) ? joinChannels(values.channel as string[]) : values.channel,
       noticeType: values.noticeType,
       title: values.title,
@@ -252,11 +282,15 @@ export default function NoticeManagement() {
       dialogClosable: values.dialogClosable ?? 1,
       firstLoginOnly: values.firstLoginOnly ?? 0,
       marquee: values.marquee ?? 0,
-      // 首次启动免责声明两列。清空输入框 = 取消声明身份，必须真的写回 NULL：
+      // 首次启动弹窗两列。关掉开关 = 取消首次启动语义，必须真的写回 NULL：
       // 后端的 update 对这两列是「无条件 set」，所以这里用 undefined 让 JSON 省略该键即可，
-      // 服务端收到 null 就会落 NULL（不要写成 0 或空串 —— 空串会让 qt-pc 侧误判成「有版本号」）
-      readSeconds: typeof values.readSeconds === 'number' ? values.readSeconds : undefined,
-      termsVersion: (values.termsVersion ?? '').trim() || undefined,
+      // 服务端收到 null 就会落 NULL（不要写成 0 或空串 —— 空串会让客户端误判成「有版本号」）
+      readSeconds: values.firstLaunchPopup === 1
+        ? (typeof values.readSeconds === 'number' ? values.readSeconds : 3)
+        : undefined,
+      termsVersion: values.firstLaunchPopup === 1
+        ? ((values.termsVersion ?? '').trim() || defaultBatch())
+        : undefined,
       effectiveStart: values.effectiveRange?.[0]?.format('YYYY-MM-DD HH:mm:ss') || undefined,
       effectiveEnd: values.effectiveRange?.[1]?.format('YYYY-MM-DD HH:mm:ss') || undefined,
     };
@@ -309,16 +343,15 @@ export default function NoticeManagement() {
     },
     { title: '标题', dataIndex: 'title', ellipsis: true },
     {
-      // 标出哪条是「首次启动免责声明」：判定在客户端，后台光看展示位看不出区别
-      // （一条 display 含开屏位、但没填条款版本号的公告，客户端当普通开屏弹窗处理）
-      title: '免责声明', dataIndex: 'termsVersion', width: 110,
+      // 首次启动弹窗：判定在客户端（开屏位 + 批次号非空），后台这里直接给出是否开启
+      title: '首次启动', dataIndex: 'termsVersion', width: 120,
       render: (v: string, record: SysNotice) => {
         const ver = (v ?? '').trim();
         if (!ver) return '-';
         const splash = ((record.display ?? 0) & 1) === 1;
         return (
           <Space size={4}>
-            <Tag color={splash ? 'green' : 'orange'}>{splash ? '开屏' : '缺开屏位'}</Tag>
+            <Tag color={splash ? 'green' : 'orange'}>{splash ? '是' : '缺开屏位'}</Tag>
             <Tag>{ver}</Tag>
           </Space>
         );
@@ -363,7 +396,7 @@ export default function NoticeManagement() {
           </div>
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => load()}>刷新</Button>
-            {canEdit && <Button icon={<FileTextOutlined />} onClick={openCreateDisclaimer}>免责声明</Button>}
+            {canEdit && <Button icon={<FileTextOutlined />} onClick={openCreateDisclaimer}>新建首次启动弹窗</Button>}
             {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>发布通知</Button>}
             {!canEdit && <Tag>只读</Tag>}
           </Space>
@@ -420,16 +453,16 @@ export default function NoticeManagement() {
                 label="投放平台（可多选）"
                 extra={isFeedbackReply
                   ? '系统事件自动生成的通知固定投「全部平台」'
-                  : isDisclaimerDraft
-                    // 这一格填了版本号就是免责声明，渠道会被服务端强制改写
-                    ? '免责声明固定只投 App 六端，不含 Web（Android / iOS / 鸿蒙 / Windows / Linux / macOS），保存时会自动改写为这六项，并强制「可关闭」'
+                  : firstLaunchOn
+                    // 首次启动弹窗的渠道会被服务端强制改写为 App 六端
+                    ? '首次启动弹窗固定只投 App 六端，不含 Web（Android / iOS / 鸿蒙 / Windows / Linux / macOS），保存时会自动改写为这六项，并强制「可关闭」'
                     : '与接口统计的平台口径一致；选「全部平台」即不限端'}
                 rules={[{ required: true, message: '请选择投放平台' }]}
                 // 兼容层不支持 normalize，「全部平台」与具体平台的互斥在这里做
                 getValueFromEvent={(next: string[]) =>
                   toggleChannel(next || [], (form.getFieldValue('channel') as string[]) || [])}
               >
-                <Select mode="multiple" disabled={isFeedbackReply} options={noticeChannelOptions()} placeholder="选择投放平台" maxTagCount="responsive" />
+                <Select mode="multiple" disabled={isFeedbackReply || firstLaunchOn} options={noticeChannelOptions()} placeholder="选择投放平台" maxTagCount="responsive" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -443,9 +476,58 @@ export default function NoticeManagement() {
             <Input placeholder="通知/公告标题" />
           </Form.Item>
 
-          <Form.Item name="display" label="展示类型（可多选）" rules={[{ required: true, message: '请至少选择一个展示渠道' }]}>
-            <Select mode="multiple" options={DISPLAY_OPTIONS} placeholder="选择展示位置" />
+          <Form.Item
+            name="display"
+            label="展示类型（可多选）"
+            rules={[{ required: true, message: '请至少选择一个展示渠道' }]}
+            extra={firstLaunchOn ? '已开启「仅首次启动弹出」：展示位固定包含「开屏」，此处改动以开屏为准' : undefined}
+          >
+            <Select
+              mode="multiple"
+              options={DISPLAY_OPTIONS}
+              placeholder="选择展示位置"
+              disabled={firstLaunchOn}
+            />
           </Form.Item>
+
+          {/*
+            首次启动弹窗（免责声明的落地形态）。对一个运营来说只需要一个开关：
+            打开 = 客户端首次启动时弹一次并要用户确认；关掉 = 普通通知/公告。
+            底下两列只是开关打开后才有意义的细节（读秒、重新弹的批次），自动带默认值。
+          */}
+          <Row gutter={16}>
+            <Col xs={24} md={12}>
+              <Form.Item
+                name="firstLaunchPopup"
+                label="仅首次启动弹出"
+                valuePropName="checked"
+                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+                getValueProps={(v: number) => ({ checked: v === 1 })}
+                extra="开启后：客户端只在首次启动时弹出一次，用户确认后不再出现；展示位固定含「开屏」，渠道固定 App 六端。用于免责声明、隐私政策这类必须首启告知的内容"
+              >
+                <Switch checkedChildren="仅首次启动" unCheckedChildren="关闭" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                name="readSeconds"
+                label="确认前读秒（秒）"
+                extra={firstLaunchOn ? '留空按 3 秒；0 = 不读秒，确认键立即可点' : '仅在开启「仅首次启动弹出」后生效'}
+              >
+                <InputNumber min={0} max={60} style={{ width: '100%' }} disabled={!firstLaunchOn} placeholder="如 3" />
+              </Form.Item>
+            </Col>
+          </Row>
+          {firstLaunchOn && (
+            <Form.Item
+              name="termsVersion"
+              label="弹出批次"
+              extra="自动按年月生成，一般不用改；改这个值 = 所有客户端重新弹一次（条款内容更新时用）"
+              rules={[{ max: 32, message: '批次最长 32 个字符' }]}
+            >
+              <Input placeholder={defaultBatch()} />
+            </Form.Item>
+          )}
 
           <Form.Item name="content" label="内容">
             <Input.TextArea rows={8} placeholder="通知内容（支持富文本）" />
@@ -506,8 +588,12 @@ export default function NoticeManagement() {
 
           <Row gutter={16}>
             <Col xs={24} md={12}>
-              <Form.Item name="dialogClosable" label="开屏弹窗可关闭" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
-                <Switch checkedChildren="可关闭" unCheckedChildren="不可关闭" />
+              <Form.Item
+                name="dialogClosable"
+                label="开屏弹窗可关闭"
+                extra={firstLaunchOn ? '首次启动弹窗固定「可关闭」：旧客户端不认批次号会把不可关闭的声明当普通开屏，而「我知道了」执行的是退出 App' : undefined}
+                valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
+                <Switch disabled={firstLaunchOn} checkedChildren="可关闭" unCheckedChildren="不可关闭" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -517,32 +603,6 @@ export default function NoticeManagement() {
             </Col>
           </Row>
 
-          {/*
-            首次启动免责声明专用的两列。判定条件写在客户端（qt-pc stores/disclaimer.ts）：
-            「开屏位 + 条款版本号非空」= 这条是免责声明，会从通用开屏弹窗里摘出去单独处理。
-            所以这两项只在真的要做免责声明时填，普通公告留空。
-          */}
-          <Row gutter={16}>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="readSeconds"
-                label="确认前读秒（秒）"
-                extra="留空或 0 = 不读秒，确认键立即可点。仅对首次启动免责声明生效"
-              >
-                <InputNumber min={0} max={60} style={{ width: '100%' }} placeholder="如 3" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="termsVersion"
-                label="条款版本号"
-                extra="填了才算「首次启动免责声明」；改这个值 = 所有客户端重新弹一次。如 2026.10"
-                rules={[{ max: 32, message: '版本号最长 32 个字符' }]}
-              >
-                <Input placeholder="留空 = 不是免责声明" />
-              </Form.Item>
-            </Col>
-          </Row>
         </Form>
       </Modal>
     </div>
