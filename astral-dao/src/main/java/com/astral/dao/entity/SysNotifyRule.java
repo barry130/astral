@@ -24,22 +24,8 @@ public class SysNotifyRule {
     @Size(max = 64)
     private String eventCode;
 
-    @Size(max = 16)
-    private String channel;
-
-    @TableField("template_id")
-    private Long templateId;
-
-    @TableField("recipient_type")
-    @Size(max = 16)
-    private String recipientType;
-
-    @TableField("recipient_value")
-    @Size(max = 128)
-    private String recipientValue;
-
-    @Size(max = 96)
-    private String platform;
+    @Size(max = 32)
+    private String sender;
 
     private Integer enabled;
 

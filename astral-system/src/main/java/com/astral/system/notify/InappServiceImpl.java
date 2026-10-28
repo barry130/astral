@@ -43,7 +43,8 @@ public class InappServiceImpl implements InappService {
 
     @Override
     public void sendRaw(Long userId, String title, String content, String scene) {
-        insert(userId, title == null ? "" : title, content == null ? "" : content, scene, NoticeConstants.TYPE_ANNOUNCE, null);
+        insert(userId, title == null ? "" : title, content == null ? "" : content, scene,
+                NoticeConstants.TYPE_ANNOUNCE, null, null, null);
     }
 
     @Override
@@ -58,17 +59,31 @@ public class InappServiceImpl implements InappService {
             noticeType = NotifyEventRegistry.find(tpl.getScene()).map(NotifyEventDef::noticeType)
                     .filter(v -> v != null && !v.isBlank()).orElse(NoticeConstants.TYPE_ANNOUNCE);
         }
+        // 跳转目标：payload 显式 url 优先，否则按 feedbackId 推「反馈详情」深链
+        // （协议见 NoticeConstants.LINK_SCHEME；客户端解析不出来就按不可点处理）
+        Long feedbackId = longOf(variables == null ? null : variables.get("feedbackId"));
+        String url = variables == null ? null : variables.get("url");
+        if ((url == null || url.isBlank()) && feedbackId != null) {
+            url = NoticeConstants.LINK_FEEDBACK + feedbackId;
+        }
         insert(userId, render(tpl.getSubject(), variables), render(tpl.getContent(), variables),
-                tpl.getScene(), noticeType, platform);
+                tpl.getScene(), noticeType, platform, feedbackId, url);
     }
 
-    private void insert(Long userId, String title, String content, String scene, String noticeType, String platform) {
+    private void insert(Long userId, String title, String content, String scene, String noticeType,
+            String platform, Long feedbackId, String url) {
         SysNotice row = new SysNotice();
         row.setUserId(userId);
         row.setTitle(title);
         row.setContent(content);
         row.setScene(scene);
         row.setNoticeType(noticeType);
+        // 反馈类通知带上关联 id + 跳转地址，消息中心才能点进详情
+        // （2026-10 之前的行两者都为空，属于历史断层，不做回填猜测）
+        row.setFeedbackId(feedbackId);
+        if (url != null && !url.isBlank()) {
+            row.setUrl(url);
+        }
         row.setChannel(NotifyEventRegistry.isFeedbackReply(scene) || platform == null || platform.isBlank()
                 ? NoticeConstants.CHANNEL_ALL : platform);
         row.setDisplay(DISPLAY_MESSAGE_CENTER);
@@ -126,6 +141,19 @@ public class InappServiceImpl implements InappService {
                 .eq(SysNotice::getIsShow, 1L)
                 .isNull(SysNotice::getReadTime)
                 .set(SysNotice::getReadTime, LocalDateTime.now()));
+    }
+
+    /** payload 是 {@code Map<String,String>}，id 从字符串解析；非法值当作「没有」 */
+    private static Long longOf(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        try {
+            long v = Long.parseLong(raw.trim());
+            return v > 0 ? v : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /** ${var} 占位替换，值 HTML 转义（收件人是普通用户，模板内容是管理员可写的） */

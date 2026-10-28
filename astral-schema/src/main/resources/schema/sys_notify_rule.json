@@ -1,6 +1,6 @@
 {
   "tableName": "sys_notify_rule",
-  "tableComment": "事件订阅规则",
+  "tableComment": "事件订阅规则（事件级策略卡：一个事件可有多条规则，渠道明细见 sys_notify_rule_channel）",
   "moduleName": "system",
   "className": "SysNotifyRule",
   "fields": [
@@ -31,43 +31,12 @@
       "length": 64
     },
     {
-      "columnName": "channel",
-      "fieldName": "channel",
+      "columnName": "sender",
+      "fieldName": "sender",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "投递渠道(EMAIL/SMS/INAPP)",
-      "length": 16
-    },
-    {
-      "columnName": "template_id",
-      "fieldName": "templateId",
-      "fieldType": "Long",
-      "jdbcType": "BIGINT",
-      "comment": "模板ID"
-    },
-    {
-      "columnName": "recipient_type",
-      "fieldName": "recipientType",
-      "fieldType": "String",
-      "jdbcType": "VARCHAR",
-      "comment": "收件人类型(FIXED/PAYLOAD_FIELD)",
-      "length": 16
-    },
-    {
-      "columnName": "recipient_value",
-      "fieldName": "recipientValue",
-      "fieldType": "String",
-      "jdbcType": "VARCHAR",
-      "comment": "收件人取值",
-      "length": 128
-    },
-    {
-      "columnName": "platform",
-      "fieldName": "platform",
-      "fieldType": "String",
-      "jdbcType": "VARCHAR",
-      "comment": "INAPP平台定向(逗号分隔:app-android/app-ios/app-windows/app-linux/app-macos/app-harmony/web,或all=不限平台)",
-      "length": 96
+      "comment": "触发方类型(system/qt/ai/feedback，仅审计用)",
+      "length": 32
     },
     {
       "columnName": "enabled",
@@ -99,6 +68,17 @@
       "jdbcType": "TIMESTAMP",
       "comment": "更新时间",
       "isAutoFill": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sys_notify_rule_name",
+      "columns": ["rule_name"],
+      "isUnique": true
+    },
+    {
+      "indexName": "idx_sys_notify_rule_event",
+      "columns": ["event_code", "enabled"]
     }
   ]
 }

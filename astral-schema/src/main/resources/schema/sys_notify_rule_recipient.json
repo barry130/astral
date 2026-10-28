@@ -1,0 +1,63 @@
+{
+  "tableName": "sys_notify_rule_recipient",
+  "tableComment": "通知规则渠道收件人（每渠道可配多个收件人）",
+  "moduleName": "system",
+  "className": "SysNotifyRuleRecipient",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "channel_id",
+      "fieldName": "channelId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "规则渠道ID"
+    },
+    {
+      "columnName": "recipient_type",
+      "fieldName": "recipientType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "收件人类型(FIXED固定值/PAYLOAD_FIELD取载荷字段/ROLE按角色展开)",
+      "length": 16
+    },
+    {
+      "columnName": "recipient_value",
+      "fieldName": "recipientValue",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "收件人取值",
+      "length": 128
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "idx_sys_notify_rule_recipient_channel",
+      "columns": ["channel_id"]
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "tableName": "sys_notify_rule_channel",
+  "tableComment": "通知规则渠道明细（一个规则下可配多个渠道，每渠道独立模板/限额/平台/收件人）",
+  "moduleName": "system",
+  "className": "SysNotifyRuleChannel",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": true,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "rule_id",
+      "fieldName": "ruleId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "规则ID"
+    },
+    {
+      "columnName": "channel",
+      "fieldName": "channel",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "投递渠道(EMAIL/SMS/INAPP)",
+      "length": 16
+    },
+    {
+      "columnName": "template_id",
+      "fieldName": "templateId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "模板ID(空=按事件+渠道自动解析)"
+    },
+    {
+      "columnName": "enabled",
+      "fieldName": "enabled",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "是否启用(1是0否)"
+    },
+    {
+      "columnName": "daily_limit",
+      "fieldName": "dailyLimit",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "每日限额(0=不限)"
+    },
+    {
+      "columnName": "daily_limit_scope",
+      "fieldName": "dailyLimitScope",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "限额口径(RECIPIENT按收件人/GLOBAL全局)",
+      "length": 16
+    },
+    {
+      "columnName": "platform",
+      "fieldName": "platform",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "INAPP平台定向(逗号分隔:app-android/app-ios/app-windows/app-linux/app-macos/app-harmony/web,或all=不限平台)",
+      "length": 96
+    },
+    {
+      "columnName": "remark",
+      "fieldName": "remark",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "备注",
+      "length": 256
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_sys_notify_rule_channel",
+      "columns": ["rule_id", "channel"],
+      "isUnique": true
+    }
+  ]
+}

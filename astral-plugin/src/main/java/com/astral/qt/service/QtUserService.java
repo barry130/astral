@@ -19,7 +19,7 @@ import com.astral.qt.dto.QtSendEmailDto;
 import com.astral.qt.dto.QtUpdateUserDto;
 import com.astral.qt.dto.vo.QtUserInfoVo;
 import com.astral.system.notify.NotifyEventRegistry;
-import com.astral.system.mail.MailService;
+import com.astral.system.notify.NotifyPublisher;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
@@ -64,8 +64,9 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
     @Resource
     private RsaKeyManager rsaKeyManager;
 
+    /** 通知投递入口：渠道/模板/收件人/限额全由「事件订阅规则」决定，插件只发事件 */
     @Resource
-    private MailService mailService;
+    private NotifyPublisher notifyPublisher;
 
     @Resource
     private StpInterface stpInterface;
@@ -335,7 +336,18 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
 
         // 委托系统邮件服务发送（插件授权/每日限额/随机账户/模板渲染/记录落库 均在系统侧完成）
         try {
-            mailService.send("qt", dto.getEmail(), dto.getBody(), Map.of("code", code));
+            List<NotifyPublisher.PublishResult> results = notifyPublisher.publish(dto.getBody(),
+                    Map.of("code", code, "email", dto.getEmail()), null);
+            boolean sent = results.stream()
+                    .anyMatch(r -> r.ok() && "EMAIL".equalsIgnoreCase(r.channel()));
+            if (!sent) {
+                String reason = results.stream()
+                        .filter(r -> !r.ok() && "EMAIL".equalsIgnoreCase(r.channel()))
+                        .map(NotifyPublisher.PublishResult::error)
+                        .filter(e -> e != null && !e.isBlank())
+                        .findFirst().orElse("未配置可用的邮件渠道规则");
+                throw new BusinessException("MAIL005", reason);
+            }
             // 发送成功后才落库验证码（TTL 控制有效期）；频控窗口已在上面原子占位
             stringRedisTemplate.opsForValue().set(CODE_KEY + dto.getEmail() + ":" + dto.getBody(), code, CODE_TTL);
             log.info("[QtPlugin] 邮箱验证码已发送: email={}, body={}", dto.getEmail(), dto.getBody());

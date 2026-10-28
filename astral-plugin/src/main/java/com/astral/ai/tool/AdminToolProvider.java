@@ -27,6 +27,7 @@ import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PluginRegistry;
 import com.astral.storage.service.StorageFileService;
 import com.astral.system.mail.MailService;
+import com.astral.system.notify.NotifyPublisher;
 import com.astral.system.service.RoleService;
 import com.astral.system.service.SysConfigService;
 import com.astral.system.service.UserRoleService;
@@ -85,6 +86,7 @@ public class AdminToolProvider implements AiToolProvider {
     private final AiOverviewService overviewService;
     private final SysNoticeMapper noticeMapper;
     private final MailService mailService;
+    private final NotifyPublisher notifyPublisher;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectProvider<StorageFileService> storageFileService;
 
@@ -915,7 +917,8 @@ public class AdminToolProvider implements AiToolProvider {
                     variables.put(name, AiJson.text(node, name, ""));
                 }
             }
-            mailService.send("ai", to.trim(), scene.trim(), variables);
+            List<NotifyPublisher.PublishResult> results =
+                    notifyPublisher.publish(scene.trim(), variables, List.of(to.trim()));
             return AiToolResult.ok("邮件已提交发送至 " + to,
                     AiToolTypes.payload(Map.of("toEmail", to, "sceneCode", scene, "submitted", true)));
         }

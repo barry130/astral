@@ -70,6 +70,17 @@ public class NoticeConstants {
     @Deprecated
     public static final String TYPE_LEGACY_REQUEST = "request";
 
+    /**
+     * 客户端内跳转协议前缀（写在 {@code sys_notice.url} 上）。
+     * <p>约定格式 {@code astral://<host>/<id>}，host 由两端客户端各自维护白名单映射到自己的路由：
+     * {@code feedback} = 反馈详情。解析不出来的一律按「不可点」处理，服务端下发字符串不会变成
+     * 可导航的任意路径。{@code url} 仍是 http(s) 时按外链打开，行为不变。</p>
+     */
+    public static final String LINK_SCHEME = "astral://";
+
+    /** 反馈详情跳转：{@code astral://feedback/<feedbackId>} */
+    public static final String LINK_FEEDBACK = LINK_SCHEME + "feedback/";
+
     private NoticeConstants() {
     }
 }
