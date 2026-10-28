@@ -14,20 +14,21 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <p><b>为什么事件要写死在代码里</b>：事件的语义（何时触发、携带哪些数据、谁在调用）
  * 由发送方代码决定，不是运营可配的东西——把它做成自由文本就会出现「后台随便建事件、
- * 建完没人用、事件和模板对不上」的状态。代码注册事件 + 模板按 (事件 × 渠道) 绑定 +
- * 授权按事件码圈范围（fail-closed），三层各管各的：</p>
+ * 建完没人用、事件和模板对不上」的状态。代码注册事件 + 模板按 (事件 × 渠道) 绑定，
+ * 两层各管各的：</p>
  *
  * <ul>
  *   <li>调用方（插件/告警引擎）：只写死事件码，如 {@link #QT_PASSWORD_RESET_CODE}；</li>
  *   <li>模板管理：后台新增/修改模板时 scene 必须选这里登记的事件、channel 必须是
  *       事件声明的渠道，且 variables 必须覆盖 payload 全部字段（发送侧按事件码解析模板，
  *       改文案不用动代码）；</li>
- *   <li>发信授权：allowed_scenes 只能从这里的登记事件里选，且<b>留空 = 一律拒绝</b>
- *       （fail-closed，缺省不猜）。</li>
+ *   <li>触发方（{@link NotifyEventDef#sender()}）：站内信的来源归属，随事件定义走，
+ *       写入 {@code sys_notice.sender}。</li>
  * </ul>
  *
- * <p>新增事件的步骤：这里加一条定义 → 调用方用 {@code mailService.send(..., 事件码, ...)}
- * 发送 → 管理端为该事件绑定模板 → （如需插件可发）在发信授权里勾上该事件。</p>
+ * <p>新增事件的步骤：这里加一条定义（含 {@link NotifyEventDef#sender()} 触发方）→ 业务侧
+ * {@code notifyPublisher.publish(事件码, payload)} → 管理端为该事件绑定模板 →
+ * （如需插件可发）在通知中心配置该事件的订阅规则。</p>
  *
  * <p>演进路线：本注册表即未来消息中心「事件订阅规则」的事件源声明；
  * 阶段②③接入 SMS/站内信时扩展 {@link NotifyChannel}，阶段④规则表按事件码订阅。</p>
@@ -54,54 +55,68 @@ public final class NotifyEventRegistry {
     /** 管理员调整用户角色后通知该用户（仅站内信）。 */
     public static final String USER_ROLES_CHANGED = "userRolesChanged";
 
+    /** 触发方标识：轻听客户端（与 {@code sys_notice.sender} 同值域） */
+    private static final String SENDER_QT = "qt";
+    /** 触发方标识：宿主系统自身（告警、账号安全等） */
+    private static final String SENDER_SYSTEM = "system";
+    /** 触发方标识：反馈插件 */
+    private static final String SENDER_FEEDBACK = "feedback";
+
     private static final List<NotifyEventDef> EVENTS = List.of(
             new NotifyEventDef(QT_PASSWORD_RESET_CODE, "找回密码验证码",
                     "轻听客户端邮箱验证码（修改密码/找回密码）。插件 qt 调用，验证码有效期 10 分钟",
                     List.of(new NotifyEventField("code", "6 位数字验证码，有效期 10 分钟"),
                             new NotifyEventField("email", "收件邮箱（规则收件人可用 PAYLOAD_FIELD=email）")),
                     List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), "announce",
-                    List.of(NotifyChannel.EMAIL)),
+                    List.of(NotifyChannel.EMAIL), SENDER_QT),
             new NotifyEventDef(SYSTEM_ALERT, "系统告警通知",
                     "告警引擎触发（/api/v1/admin/alert）。EMAIL 走模板渲染回退内置样式；SMS 走短信供应商池（systemAlert 短信模板必配，缺模板直接报 SMS002）；INAPP 按用户落库",
                     List.of(new NotifyEventField("title", "告警标题（规则名/指标摘要）"),
                             new NotifyEventField("content", "告警内容纯文本，多行")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), "announce"),
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), "announce",
+                    List.of(), SENDER_SYSTEM),
             new NotifyEventDef(FEEDBACK_STATUS_CHANGED, "反馈状态变更通知",
                     "feedback 插件触发：反馈/需求状态变更时通知提交人。订阅规则收件人建议 PAYLOAD_FIELD=userId",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("userId", "提交人用户ID（INAPP 投递即收件人）"),
                             new NotifyEventField("feedbackTitle", "反馈标题"),
                             new NotifyEventField("statusName", "状态名（中文）")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE,
+                    List.of(), SENDER_FEEDBACK),
             new NotifyEventDef(FEEDBACK_PUBLISHED, "反馈公开发布通知",
                     "feedback 插件触发：反馈审核通过并公开发布时通知提交人",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("userId", "提交人用户ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE,
+                    List.of(), SENDER_FEEDBACK),
             new NotifyEventDef(FEEDBACK_ADMIN_REPLIED, "管理员回复通知",
                     "feedback 插件触发：管理员回复反馈时通知提交人，站内信使用全部平台",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("userId", "提交人用户ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE,
+                    List.of(), SENDER_FEEDBACK),
             new NotifyEventDef(FEEDBACK_NEW_SUBMISSION, "新反馈/需求提交通知",
                     "feedback 插件触发：新反馈/需求提交后群发管理员。订阅规则收件人建议 ROLE=ADMIN（按角色展开全部启用用户）；本事件只在管理端站内信呈现，平台填 app-windows 或 web 均可（管理端不按客户端平台过滤）",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE,
+                    List.of(), SENDER_FEEDBACK),
             new NotifyEventDef(FEEDBACK_USER_REPLIED, "用户回复反馈通知",
                     "feedback 插件触发：用户在反馈中回复后群发管理员。收件人建议 ROLE=ADMIN，站内信使用全部平台",
                     List.of(new NotifyEventField("feedbackId", "反馈ID"),
                             new NotifyEventField("feedbackTitle", "反馈标题")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE),
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE,
+                    List.of(), SENDER_FEEDBACK),
             new NotifyEventDef(USER_ROLES_CHANGED, "用户角色变更通知",
                     "管理员增加或移除用户角色后通知该用户；事务提交成功后触发，相同角色重复保存不触发。收件人建议 PAYLOAD_FIELD=userId",
                     List.of(new NotifyEventField("userId", "角色变更的用户ID"),
                             new NotifyEventField("addedRoles", "本次增加的角色名称，无则为空"),
                             new NotifyEventField("removedRoles", "本次移除的角色名称，无则为空"),
                             new NotifyEventField("changeSummary", "角色权限变更说明")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), "announce"));
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), "announce",
+                    List.of(), SENDER_SYSTEM));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

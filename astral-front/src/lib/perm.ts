@@ -13,8 +13,6 @@ export const MAIL_PERMISSIONS = {
   accountEdit: 'admin:system:mail:account:edit',
   /** 邮箱模板维护 */
   templateEdit: 'admin:system:mail:template:edit',
-  /** 发信授权维护 */
-  pluginAuthEdit: 'admin:system:mail:plugin-auth:edit',
 } as const;
 
 /** 轻听插件权限编码 */

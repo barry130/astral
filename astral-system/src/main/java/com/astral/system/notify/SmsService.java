@@ -5,24 +5,15 @@ import java.util.Map;
 /**
  * 短信发送服务（系统级，SMS 渠道）
  *
- * <p>与邮件同构：插件发信授权（fail-closed，同一张 sys_mail_plugin_auth）→
- * 事件码解析短信模板（供应商模板映射）→ 每日额度（按手机号）→
- * 按权重选择启用的供应商 → SPI 发送 → 日志落库。</p>
+ * <p>与邮件同构：事件码解析短信模板（供应商模板映射）→
+ * 按权重选择启用的供应商 → SPI 发送 → 日志落库。
+ * 限额由通知规则渠道行上的 daily_limit 承担；旧的「插件发信授权 + 按手机号每日额度」
+ * 随插件发信授权表下线删除（那套闸门全仓已无调用方，留着只会误以为还在生效）。</p>
  */
 public interface SmsService {
 
     /**
-     * 插件通道发送（走授权与额度）
-     *
-     * @param pluginId  调用方插件ID
-     * @param phone     手机号
-     * @param eventCode 事件码（sys_sms_template.event_code 解析供应商模板映射）
-     * @param variables 模板变量（按名透传给供应商）
-     */
-    void send(String pluginId, String phone, String eventCode, Map<String, String> variables);
-
-    /**
-     * 系统内部告警短信（告警渠道用）：不走授权/额度。
+     * 系统内部告警短信（告警渠道用）：不走通知规则限额。
      * 命中 systemAlert 事件的短信模板则发送，未绑定模板抛异常（由告警记录 FAIL）。
      */
     void sendSystemAlert(String phone, String title, String content);

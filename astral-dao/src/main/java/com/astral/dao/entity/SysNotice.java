@@ -28,6 +28,9 @@ public class SysNotice {
     @Size(max = 64)
     private String scene;
 
+    @Size(max = 48)
+    private String sender;
+
     @TableField("user_id")
     private Long userId;
 

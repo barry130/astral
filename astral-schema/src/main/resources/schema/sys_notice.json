@@ -43,6 +43,14 @@
       "length": 64
     },
     {
+      "columnName": "sender",
+      "fieldName": "sender",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "来源标识(system/qt/ai/feedback，由事件定义声明，历史数据为空)",
+      "length": 48
+    },
+    {
       "columnName": "user_id",
       "fieldName": "userId",
       "fieldType": "Long",

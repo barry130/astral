@@ -876,6 +876,8 @@ public class AdminToolProvider implements AiToolProvider {
             notice.setChannel("INAPP");
             notice.setNoticeType(safe(context.arg("noticeType"), "SYSTEM"));
             notice.setScene("ADMIN");
+            // 发送方归属：AI 发布公告直接落库、不经过 NotifyPublisher，显式写 sender 才能在消息统计里与其它来源区分
+            notice.setSender("ai");
             notice.setTitle(AiJson.truncate(title, 200));
             notice.setContent(content);
             notice.setAudience(safe(context.arg("audience"), "ALL"));

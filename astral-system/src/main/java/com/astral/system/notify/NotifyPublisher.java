@@ -205,6 +205,15 @@ public class NotifyPublisher {
                 .toList();
     }
 
+    /**
+     * 事件所属触发方（{@code sys_notice.sender}）：取事件定义里显式声明的值，
+     * 未登记的事件返回 null（不猜来源，读侧显示 unknown）。
+     */
+    private static String eventSender(String eventCode) {
+        return NotifyEventRegistry.find(eventCode).map(NotifyEventDef::sender)
+                .filter(v -> v != null && !v.isBlank()).orElse(null);
+    }
+
     private PublishResult deliver(SysNotifyRule rule, SysNotifyRuleChannel channel,
                                   String recipient, Map<String, String> payload) {
         String channelCode = channel.getChannel() == null ? "" : channel.getChannel().toUpperCase();
@@ -228,7 +237,8 @@ public class NotifyPublisher {
                     } catch (NumberFormatException nfe) {
                         throw new IllegalStateException("站内信收件人必须是用户ID（收到: " + recipient + "）");
                     }
-                    inappService.sendTemplateRow(templateId, userId, payload, channel.getPlatform());
+                    inappService.sendTemplateRow(templateId, userId, payload, channel.getPlatform(),
+                            eventSender(rule.getEventCode()));
                 }
                 default -> {
                     return new PublishResult(rule.getId(), rule.getRuleName(), channelCode,

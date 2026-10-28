@@ -36,43 +36,6 @@ export interface MailTemplate {
   updateTime?: string;
 }
 
-/** 邮件发送记录 */
-export interface MailLog {
-  id?: number;
-  accountId?: number;
-  pluginId?: string;
-  scene?: string;
-  toEmail?: string;
-  subject?: string;
-  content?: string;
-  status?: number;
-  errorMsg?: string;
-  sendTime?: string;
-  createTime?: string;
-}
-
-/** 插件发信授权 */
-export interface MailPluginAuth {
-  id?: number;
-  pluginId?: string;
-  pluginName?: string;
-  dailyLimit?: number;
-  allowedScenes?: string;
-  enabled?: number;
-  createTime?: string;
-  updateTime?: string;
-}
-
-/** 邮件统计概览 */
-export interface MailStatistics {
-  total?: number;
-  success?: number;
-  fail?: number;
-  todayTotal?: number;
-  todaySuccess?: number;
-  todayFail?: number;
-}
-
 /** 通知事件的 payload 字段声明（模板里可用的 ${占位符}） */
 export interface NotifyEventField {
   name: string;
@@ -130,24 +93,4 @@ export const mailApi = {
     request.post('/api/v1/admin/system/mail/template/preview', { templateId, variables }),
   templateSend: (id: number, data: { toEmail: string; accountId?: number; variables?: Record<string, string> }) =>
     request.post(`/api/v1/admin/system/mail/template/${id}/send`, data),
-
-  // ===== 邮件日志 =====
-  logPage: (params: {
-    pageNum: number; pageSize: number;
-    accountId?: number; pluginId?: string; toEmail?: string; status?: number;
-    start?: string; end?: string;
-  }): Promise<ApiResult<PageResult<MailLog>>> =>
-    request.get('/api/v1/admin/system/mail/log/page', { params }),
-  logStatistics: (): Promise<ApiResult<MailStatistics>> =>
-    request.get('/api/v1/admin/system/mail/log/statistics'),
-
-  // ===== 插件发信授权 =====
-  pluginAuthList: (): Promise<ApiResult<MailPluginAuth[]>> =>
-    request.get('/api/v1/admin/system/mail/plugin-auth/list'),
-  pluginAuthCreate: (data: Partial<MailPluginAuth>) =>
-    request.post('/api/v1/admin/system/mail/plugin-auth', data),
-  pluginAuthUpdate: (id: number, data: Partial<MailPluginAuth>) =>
-    request.put(`/api/v1/admin/system/mail/plugin-auth/${id}`, data),
-  pluginAuthDelete: (id: number) =>
-    request.delete(`/api/v1/admin/system/mail/plugin-auth/${id}`),
 };

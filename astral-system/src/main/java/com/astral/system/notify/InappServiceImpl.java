@@ -44,11 +44,12 @@ public class InappServiceImpl implements InappService {
     @Override
     public void sendRaw(Long userId, String title, String content, String scene) {
         insert(userId, title == null ? "" : title, content == null ? "" : content, scene,
-                NoticeConstants.TYPE_ANNOUNCE, null, null, null);
+                NoticeConstants.TYPE_ANNOUNCE, null, null, null, null);
     }
 
     @Override
-    public void sendTemplateRow(Long templateId, Long userId, Map<String, String> variables, String platform) {
+    public void sendTemplateRow(Long templateId, Long userId, Map<String, String> variables, String platform,
+            String sender) {
         SysMailTemplate tpl = mailTemplateMapper.selectById(templateId);
         if (tpl == null || !NotifyChannel.INAPP.equals(tpl.getChannel())) {
             throw new IllegalStateException("站内信模板不存在或渠道不是 INAPP（templateId=" + templateId + "）");
@@ -67,16 +68,29 @@ public class InappServiceImpl implements InappService {
             url = NoticeConstants.LINK_FEEDBACK + feedbackId;
         }
         insert(userId, render(tpl.getSubject(), variables), render(tpl.getContent(), variables),
-                tpl.getScene(), noticeType, platform, feedbackId, url);
+                tpl.getScene(), noticeType, platform, feedbackId, url, sender);
+    }
+
+    /**
+     * 来源标识：显式传入优先；否则按 scene 回查事件定义（{@code sys_notice.sender} 空值意味着
+     * 「不知道谁发的」，读侧/统计侧显示 unknown——来源只能由发送方声明，不靠事件码前缀猜）。
+     */
+    private static String resolveSender(String sender, String scene) {
+        if (sender != null && !sender.isBlank()) {
+            return sender.trim();
+        }
+        return NotifyEventRegistry.find(scene).map(NotifyEventDef::sender)
+                .filter(v -> v != null && !v.isBlank()).orElse(null);
     }
 
     private void insert(Long userId, String title, String content, String scene, String noticeType,
-            String platform, Long feedbackId, String url) {
+            String platform, Long feedbackId, String url, String sender) {
         SysNotice row = new SysNotice();
         row.setUserId(userId);
         row.setTitle(title);
         row.setContent(content);
         row.setScene(scene);
+        row.setSender(resolveSender(sender, scene));
         row.setNoticeType(noticeType);
         // 反馈类通知带上关联 id + 跳转地址，消息中心才能点进详情
         // （2026-10 之前的行两者都为空，属于历史断层，不做回填猜测）

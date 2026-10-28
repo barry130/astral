@@ -117,7 +117,7 @@ class FeedbackReplyPlatformTest {
         template.setContent("content");
         when(templates.selectById(1L)).thenReturn(template);
         InappServiceImpl service = new InappServiceImpl(notices, templates);
-        service.sendTemplateRow(1L, 7L, Map.of(), platform);
+        service.sendTemplateRow(1L, 7L, Map.of(), platform, null);
         ArgumentCaptor<SysNotice> captor = ArgumentCaptor.forClass(SysNotice.class);
         verify(notices).insert(captor.capture());
         return captor.getValue();

@@ -40,12 +40,11 @@ import org.springframework.stereotype.Service;
  * 状态 / 插件 / 关键字在内存里过滤 —— 因为这三项在三张表上的语义不一致
  * （站内信恒成功、关键字要跨「收件人/标题/主题/正文」四列匹配）。</p>
  *
- * <p><b>站内信的「发送方」口径</b>：{@code sys_notice} 没有来源列（无 sender / plugin_id），
- * 但站内信已经是通用的投递渠道（任意事件都可能发），不能一律算成 feedback 插件，
- * 因此按事件码前缀归组：{@code scene} 以 {@code feedback} 开头 → {@code feedback}，
- * 其余事件（userRolesChanged / changePasswordByEmail / systemAlert …）→ {@code system}。
- * 该口径同时用于明细的 pluginId 字段、plugins 分项统计和 {@code pluginId} 筛选参数，
- * 三者不会分叉；将来站内信补上来源列，只需改这里一个方法。</p>
+ * <p><b>站内信的「发送方」口径</b>：直接读 {@code sys_notice.sender}（发送方在事件定义
+ * {@code NotifyEventDef.sender()} 里显式声明，INAPP 投递时落库），空值归一成 {@code unknown}。
+ * 为什么不用「事件码前缀」猜：事件码只是字符串约定，猜前缀会把 AI 或系统发的站内信错记成
+ * feedback 插件；来源归属只能由发送方自己声明。该口径同时用于明细的 pluginId 字段、plugins
+ * 分项统计和 {@code pluginId} 筛选参数，三者不会分叉。</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -58,12 +57,7 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
     /** 渠道枚举与展示顺序（无数据的渠道也在 channels 里出现，计数为 0） */
     private static final List<String> ALL_CHANNELS = List.of(CHANNEL_EMAIL, CHANNEL_SMS, CHANNEL_INAPP);
 
-    /** 站内信按事件码前缀归组的两个桶：反馈事件 → feedback，其余事件 → system */
-    private static final String INAPP_PLUGIN_FEEDBACK = "feedback";
-    private static final String INAPP_PLUGIN_SYSTEM = "system";
-    private static final String INAPP_FEEDBACK_SCENE_PREFIX = "feedback";
-
-    /** scene / pluginId 为空时的归类值（前端按未知值展示原始串，不额外造文案） */
+    /** scene / pluginId / sender 为空时的归类值（前端按未知值展示原始串，不额外造文案） */
     private static final String UNKNOWN = "unknown";
 
     /** 明细标题截断长度（短信/站内信没有独立标题时取正文摘要） */
@@ -264,7 +258,7 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
                 Delivery row = new Delivery(CHANNEL_INAPP, notice.getId(), notice.getScene(),
                         notice.getUserId() == null ? "all" : String.valueOf(notice.getUserId()),
                         notice.getTitle(), notice.getContent(), 1, null,
-                        notice.getCreateTime(), inappPluginId(notice.getScene()));
+                        notice.getCreateTime(), inappSender(notice.getSender()));
                 if (criteria.matches(row)) {
                     rows.add(row);
                 }
@@ -310,16 +304,13 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
     }
 
     /**
-     * 站内信的发送方（插件）归组：{@code sys_notice} 无来源列，按事件码前缀推导。
+     * 站内信发送方归一：读 {@code sys_notice.sender}（事件定义显式声明），空值 → {@code unknown}。
      *
-     * <p>反馈事件（feedbackNewSubmission / feedbackPublished / feedbackStatusChanged /
-     * feedbackAdminReplied / feedbackUserReplied）→ {@code feedback}；
-     * 其余事件（userRolesChanged / changePasswordByEmail / systemAlert …）与场景为空 → {@code system}。</p>
+     * <p>历史数据（加列之前写入的站内信）与 AI 直发公告等未声明来源的行都会落 unknown，
+     * 这是有意为之：来源未知就如实标记，而不是按事件码前缀猜一个。</p>
      */
-    private static String inappPluginId(String scene) {
-        return scene != null && scene.toLowerCase(Locale.ROOT).startsWith(INAPP_FEEDBACK_SCENE_PREFIX)
-                ? INAPP_PLUGIN_FEEDBACK
-                : INAPP_PLUGIN_SYSTEM;
+    private static String inappSender(String sender) {
+        return sender == null || sender.isBlank() ? UNKNOWN : sender.trim();
     }
 
     /** total / success / fail 三件套 */
@@ -408,25 +399,17 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
             return new Criteria(newStart, newEnd, channel, scene, status, pluginId, keyword);
         }
 
-        /** 需要参与统计的渠道（channel 为空=全部；指定 feedback/system 之外的插件时站内信不参与） */
+        /** 需要参与统计的渠道（channel 为空 = 全部；sender 已是显式列，插件筛选一律走内存匹配） */
         List<String> channels() {
-            if (channel != null) {
-                return List.of(channel);
-            }
-            if (pluginId != null
-                    && !INAPP_PLUGIN_FEEDBACK.equalsIgnoreCase(pluginId)
-                    && !INAPP_PLUGIN_SYSTEM.equalsIgnoreCase(pluginId)) {
-                // 插件筛选值不可能是站内信的两个桶（如 ai / storage），站内信整体不参与
-                return List.of(CHANNEL_EMAIL, CHANNEL_SMS);
-            }
-            return ALL_CHANNELS;
+            return channel != null ? List.of(channel) : ALL_CHANNELS;
         }
 
         /**
          * 状态 / 插件 / 关键字的内存过滤。
          *
-         * <p>站内信 status 恒为 1；其 pluginId 已在 {@link #inappPluginId(String)} 归一成
-         * feedback / system，因此这里用同一套等值匹配即可复用给三渠道。</p>
+         * <p>站内信 status 恒为 1；其 pluginId 取 {@code sys_notice.sender}（空归 unknown），
+         * 因此这里用同一套等值匹配即可复用给三渠道，sender 取值域不再有「只有 feedback/system」
+         * 的隐含假设。</p>
          */
         boolean matches(Delivery row) {
             if (status != null && !status.equals(row.status())) {

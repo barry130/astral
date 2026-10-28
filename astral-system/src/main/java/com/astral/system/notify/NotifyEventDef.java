@@ -22,6 +22,10 @@ import java.util.List;
  * @param requiredChannels 该事件<b>必须</b>保留的渠道：无论管理端如何配置规则，保存规则时这些渠道的
  *                         行都会被强制启用（目前只有「找回密码验证码」这类安全相关事件要求 EMAIL 必达，
  *                         避免运营误删规则后用户彻底收不到验证码）。可为空
+ * @param sender           触发方标识（{@code system} / {@code qt} / {@code ai} / {@code feedback}），
+ *                         INAPP 投递时原样写入 {@code sys_notice.sender}，供消息中心按来源归类与消息统计
+ *                         分组。为什么必须在这里显式声明、而不是从事件码前缀猜：事件码只是字符串约定，
+ *                         猜前缀会把「ai 发的站内信」错记成反馈插件来源，来源归属只能由发送方自己说
  */
 public record NotifyEventDef(
         String code,
@@ -30,12 +34,20 @@ public record NotifyEventDef(
         List<NotifyEventField> payloadFields,
         List<String> channels,
         String noticeType,
-        List<String> requiredChannels) {
+        List<String> requiredChannels,
+        String sender) {
 
-    /** 兼容旧签名（无必达渠道） */
+    /** 兼容旧签名（无必达渠道、未声明触发方） */
     public NotifyEventDef(String code, String name, String description,
                           List<NotifyEventField> payloadFields, List<String> channels, String noticeType) {
-        this(code, name, description, payloadFields, channels, noticeType, List.of());
+        this(code, name, description, payloadFields, channels, noticeType, List.of(), null);
+    }
+
+    /** 兼容旧签名（有必达渠道、未声明触发方） */
+    public NotifyEventDef(String code, String name, String description,
+                          List<NotifyEventField> payloadFields, List<String> channels, String noticeType,
+                          List<String> requiredChannels) {
+        this(code, name, description, payloadFields, channels, noticeType, requiredChannels, null);
     }
 
     /** payload 字段名列表（模板 variables 校验用） */

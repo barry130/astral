@@ -24,8 +24,12 @@ public interface InappService {
      * 平台定向，空则 all）。模板不存在或 channel != INAPP 时抛 IllegalStateException；
      * 类型标签：variables 的 meta 字段 {@code noticeType} > 模板 scene 对应事件定义的
      * 回退标签 > {@code announce}。
+     *
+     * @param sender 来源标识（事件定义上的 {@link NotifyEventDef#sender()}，如 feedback /
+     *               system / qt / ai），写入 {@code sys_notice.sender}；空则回退按模板 scene
+     *               查事件定义，仍未登记就留空（读侧显示 unknown，不猜来源）
      */
-    void sendTemplateRow(Long templateId, Long userId, Map<String, String> variables, String platform);
+    void sendTemplateRow(Long templateId, Long userId, Map<String, String> variables, String platform, String sender);
 
     /** 某用户收件箱（时间倒序，仅消息中心位） */
     Page<SysNotice> myPage(Long userId, int pageNum, int pageSize);
