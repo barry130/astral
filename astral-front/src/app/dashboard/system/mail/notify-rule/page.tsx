@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert, Button, Card, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tag, message,
+  Alert, Button, Card, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tag, Tooltip, message,
 } from '@/components/antd-compat';
 import { DeleteOutlined, EditOutlined, ExperimentOutlined, PlusOutlined, SendOutlined } from '@/components/antd-compat/icons';
 import {
@@ -20,6 +20,7 @@ import {
 } from '@/api/notify';
 import { dictColor, dictLabel, fetchDictOptions, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
+import { formatDateTime } from '@/lib/format';
 import { ResizableTable } from '@/components/ResizableTable';
 import ChannelEditor from './components/ChannelEditor';
 
@@ -446,15 +447,24 @@ export default function NotifyRulePage() {
           const platformText = c.channel === 'INAPP' && c.platform && c.platform !== 'all'
             ? `·${c.platform.split(',').map(platformLabel).join('/')}`
             : '';
+          // 明细放 title（悬停可看全），单元格只留「渠道 · 模板」，避免规则列表被长文案撑爆
+          const fullText = `${channelLabel(c.channel)} · ${c.templateName || '自动匹配'} · ${limitText}${platformText}${disabled ? '（停用）' : ''}`;
+          const shortText = `${channelLabel(c.channel)} · ${c.templateName || '自动匹配'} · ${limitText}`;
           return (
-            <Tag
-              key={`${c.channel}-${i}`}
-              color={disabled ? 'default' : (dictColor(channelDict, c.channel) || 'blue')}
-              style={disabled ? { opacity: 0.6 } : undefined}
-            >
-              {channelLabel(c.channel)} · {c.templateName || '自动匹配'} · {limitText}{platformText}
-              {disabled ? '（停用）' : ''}
-            </Tag>
+            <span key={`${c.channel}-${i}`} title={fullText} style={{ display: 'inline-block', maxWidth: '100%' }}>
+              <Tag
+                color={disabled ? 'default' : (dictColor(channelDict, c.channel) || 'blue')}
+                style={{
+                  ...(disabled ? { opacity: 0.6 } : undefined),
+                  maxWidth: 260,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  verticalAlign: 'middle',
+                }}
+              >
+                {shortText}
+              </Tag>
+            </span>
           );
         })}
       </Space>
@@ -491,6 +501,7 @@ export default function NotifyRulePage() {
       title: '渠道配置',
       dataIndex: 'channels',
       key: 'channels',
+      width: 300,
       render: (_: any, row: NotifyRuleVo) => renderChannels(row.channels),
     },
     {
@@ -498,13 +509,13 @@ export default function NotifyRulePage() {
       dataIndex: 'updateTime',
       key: 'updateTime',
       width: 170,
-      render: (v: string) => v || '-',
+      render: (v: string) => formatDateTime(v),
     },
     {
       title: '启用',
       dataIndex: 'enabled',
       key: 'enabled',
-      width: 90,
+      width: 108,
       render: (v: number, row: NotifyRuleVo) => (
         <Switch
           checked={Number(v) === 1}
@@ -519,18 +530,22 @@ export default function NotifyRulePage() {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 110,
       render: (_: any, row: NotifyRuleVo) => (
-        <Space>
+        <Space size={2}>
           {canEdit ? (
             <>
-              <Button type="link" icon={<EditOutlined />} onClick={() => openEdit(row)}>编辑</Button>
+              <Tooltip title="编辑">
+                <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openEdit(row)} />
+              </Tooltip>
               <Popconfirm title="确认删除该规则?" onConfirm={() => handleDelete(row)}>
-                <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+                <Tooltip title="删除">
+                  <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                </Tooltip>
               </Popconfirm>
             </>
           ) : (
-            <span style={{ color: '#999' }}>无操作权限</span>
+            <span style={{ color: '#999' }}>无权限</span>
           )}
         </Space>
       ),

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Tag, message, Popconfirm } from '@/components/antd-compat';
+import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Tag, Tooltip, message, Popconfirm } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SendOutlined } from '@/components/antd-compat/icons';
 import { mailApi, MailAccount } from '@/api/mail';
 import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
@@ -113,28 +113,46 @@ export default function MailAccountPage() {
   };
 
   const columns = [
-    { title: '账户名称', dataIndex: 'accountName', key: 'accountName' },
+    { title: '账户名称', dataIndex: 'accountName', key: 'accountName', width: 130, ellipsis: true },
     {
-      title: 'SMTP', key: 'smtp',
-      render: (_: any, r: MailAccount) => <span>{r.smtpHost}:{r.smtpPort}{r.sslEnable === 1 ? ' (SSL)' : ''}</span>,
-    },
-    { title: '登录账号', dataIndex: 'username', key: 'username' },
-    { title: '发件人', key: 'from', render: (_: any, r: MailAccount) => <span>{r.fromName} &lt;{r.fromAddr}&gt;</span> },
-    { title: '密码', key: 'pwd', render: () => <span>••••••••</span> },
-    { title: '权重', dataIndex: 'weight', key: 'weight' },
-    { title: '状态', dataIndex: 'enabled', key: 'enabled', render: (v: number) => yesNo(v) },
-    {
-      title: '操作', key: 'action', width: 160,
+      title: 'SMTP', key: 'smtp', width: 200,
       render: (_: any, r: MailAccount) => (
-        <Space>
-          {canEdit && <Button type="link" icon={<SendOutlined />} onClick={() => handleTest(r)}>测试</Button>}
-          {canEdit && <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(r)}>编辑</Button>}
+        <span title={`${r.smtpHost}:${r.smtpPort}`}>
+          {r.smtpHost}:{r.smtpPort}{r.sslEnable === 1 ? ' (SSL)' : ''}
+        </span>
+      ),
+    },
+    { title: '登录账号', dataIndex: 'username', key: 'username', width: 160, ellipsis: true },
+    {
+      title: '发件人', key: 'from', width: 170, ellipsis: true,
+      render: (_: any, r: MailAccount) => <span title={`${r.fromName} <${r.fromAddr}>`}>{r.fromName} &lt;{r.fromAddr}&gt;</span>,
+    },
+    { title: '密码', key: 'pwd', width: 80, render: () => <span>••••••••</span> },
+    { title: '权重', dataIndex: 'weight', key: 'weight', width: 60 },
+    { title: '状态', dataIndex: 'enabled', key: 'enabled', width: 70, render: (v: number) => yesNo(v) },
+    {
+      // 操作收成图标按钮：三枚文字链接会把表格顶出卡片右边（编辑/删除被裁掉）
+      title: '操作', key: 'action', width: 132,
+      render: (_: any, r: MailAccount) => (
+        <Space size={2}>
+          {canEdit && (
+            <Tooltip title="发送测试邮件">
+              <Button type="text" size="small" icon={<SendOutlined />} onClick={() => handleTest(r)} />
+            </Tooltip>
+          )}
+          {canEdit && (
+            <Tooltip title="编辑">
+              <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)} />
+            </Tooltip>
+          )}
           {canEdit && (
             <Popconfirm title="确认删除?" onConfirm={() => handleDelete(r.id)}>
-              <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+              <Tooltip title="删除">
+                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+              </Tooltip>
             </Popconfirm>
           )}
-          {!canEdit && <span style={{ color: '#999' }}>无操作权限</span>}
+          {!canEdit && <span style={{ color: '#999' }}>无权限</span>}
         </Space>
       ),
     },

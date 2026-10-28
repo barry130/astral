@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Button, Space, Modal, Form, Input, Select, Tag, message, Popconfirm } from '@/components/antd-compat';
+import { Card, Button, Space, Modal, Form, Input, Select, Tag, Tooltip, message, Popconfirm } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@/components/antd-compat/icons';
 import {
   messageTemplateApi,
@@ -182,17 +182,24 @@ export default function MessageTemplatePage() {
   })();
 
   const columns = [
-    { title: '模板编码', dataIndex: 'templateCode', key: 'templateCode', render: (v: string) => <code>{v}</code> },
-    { title: '模板名称', dataIndex: 'templateName', key: 'templateName' },
     {
-      title: '绑定事件', dataIndex: 'scene', key: 'scene',
+      title: '模板编码', dataIndex: 'templateCode', key: 'templateCode', width: 190,
+      render: (v: string) => <code title={v} style={{ fontSize: 12 }}>{v}</code>,
+    },
+    { title: '模板名称', dataIndex: 'templateName', key: 'templateName', width: 160 },
+    {
+      title: '绑定事件', dataIndex: 'scene', key: 'scene', width: 170,
       render: (v: string) => {
         const def = eventDefOf(v);
-        return <Tag color="blue">{def ? `${def.name}（${v}）` : v}</Tag>;
+        return (
+          <Tooltip title={def ? `${def.name}（${v}）` : v}>
+            <Tag color="blue">{def ? def.name : v}</Tag>
+          </Tooltip>
+        );
       },
     },
     {
-      title: '投递渠道', dataIndex: 'channels', key: 'channels', width: 200,
+      title: '投递渠道', dataIndex: 'channels', key: 'channels', width: 170,
       render: (list: string[]) => (
         <Space size={4}>
           {(list || []).map((c) => (
@@ -202,7 +209,7 @@ export default function MessageTemplatePage() {
       ),
     },
     {
-      title: '短信报备', key: 'sms', width: 120,
+      title: '短信报备', key: 'sms', width: 100,
       render: (_: any, r: MessageTemplate) => {
         if (!(r.channels || []).includes('SMS')) return '-';
         const status = r.smsAuditStatus ?? 0;
@@ -214,19 +221,30 @@ export default function MessageTemplatePage() {
       },
     },
     {
-      title: '操作', key: 'action', width: 200,
+      // 操作列收成图标按钮：三枚文字链接（预览/编辑/删除）在 1440 宽下会把表格顶出容器，
+      // 文案改由 Tooltip 承担，列宽从 200 降到 120 后不再横向溢出。
+      title: '操作', key: 'action', width: 120,
       render: (_: any, r: MessageTemplate) => (
-        <Space>
+        <Space size={2}>
           {(r.channels || []).some((c) => c === 'EMAIL' || c === 'INAPP') && (
-            <Button type="link" icon={<EyeOutlined />} onClick={() => { openEdit(r); setTimeout(() => handlePreview(), 0); }}>预览</Button>
+            <Tooltip title="预览">
+              <Button type="text" size="small" icon={<EyeOutlined />}
+                onClick={() => { openEdit(r); setTimeout(() => handlePreview(), 0); }} />
+            </Tooltip>
           )}
-          {canEdit && <Button type="link" icon={<EditOutlined />} onClick={() => openEdit(r)}>编辑</Button>}
+          {canEdit && (
+            <Tooltip title="编辑">
+              <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openEdit(r)} />
+            </Tooltip>
+          )}
           {canEdit && (
             <Popconfirm title="确认删除该模板的全部渠道内容?" onConfirm={() => handleDelete(r)}>
-              <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+              <Tooltip title="删除">
+                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+              </Tooltip>
             </Popconfirm>
           )}
-          {!canEdit && <span style={{ color: '#999' }}>无操作权限</span>}
+          {!canEdit && <span style={{ color: '#999' }}>无权限</span>}
         </Space>
       ),
     },

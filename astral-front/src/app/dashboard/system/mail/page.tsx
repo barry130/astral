@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Tabs } from '@/components/antd-compat';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   MailOutlined, FileTextOutlined, MobileOutlined,
   NotificationOutlined, ApiOutlined,
@@ -39,27 +39,34 @@ function MailCenter() {
   return (
     <div style={{ background: 'var(--color-bg-base)', minHeight: '100%' }}>
       <div style={{
-        background: 'var(--color-bg-white)',
-        padding: '16px 24px 0',
-        borderBottom: '1px solid var(--color-border)',
+        background: 'var(--color-bg-base)',
+        padding: '24px 24px 0',
         position: 'sticky',
         top: 56,
         zIndex: 100,
       }}>
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={[
-            { key: 'account', label: <span><MailOutlined /> 邮箱帐户</span> },
-            { key: 'messageTemplate', label: <span><FileTextOutlined /> 消息模板</span> },
-            { key: 'smsProvider', label: <span><MobileOutlined /> 短信供应商</span> },
-            { key: 'notice', label: <span><NotificationOutlined /> 通知管理</span> },
-            { key: 'rule', label: <span><ApiOutlined /> 订阅规则</span> },
-          ]}
-        />
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="h-9 bg-muted/60">
+            <TabsTrigger value="account" className="px-3 text-xs">
+              <MailOutlined /> 邮箱帐户
+            </TabsTrigger>
+            <TabsTrigger value="messageTemplate" className="px-3 text-xs">
+              <FileTextOutlined /> 消息模板
+            </TabsTrigger>
+            <TabsTrigger value="smsProvider" className="px-3 text-xs">
+              <MobileOutlined /> 短信供应商
+            </TabsTrigger>
+            <TabsTrigger value="notice" className="px-3 text-xs">
+              <NotificationOutlined /> 通知管理
+            </TabsTrigger>
+            <TabsTrigger value="rule" className="px-3 text-xs">
+              <ApiOutlined /> 订阅规则
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
-      <div style={{ padding: '24px' }}>
+      <div style={{ padding: '16px 24px 24px' }}>
         {activeTab === 'account' && <MailAccountPage />}
         {activeTab === 'messageTemplate' && <MessageTemplatePage />}
         {activeTab === 'smsProvider' && <SmsProviderPage />}
