@@ -319,6 +319,7 @@ public Result<Void> assignPermissions(...) { ... }
   （App 与外部集成共用），加权限会破坏既有调用方。因此这两个码当前是**纯客户端便利门控**，
   不构成安全边界；真正的边界是 `@RateLimit`。若将来要收紧，应新建 `/api/v1/admin/sequence/**`
   管理端接口并只对它加注解，而不是给通用取号口加权限。
-- `/dashboard/config` 与 `/dashboard/message` 两个路由没有任何菜单入口（`sys_menu`、`menuConfig`、
-  插件 `NavItem` 都没有），只能直接输 URL 访问。前者是序列配置页、与 `/dashboard/sequence` 部分重复，
-  建议后续合并删除。
+- `/dashboard/config` 这个路由没有任何菜单入口（`sys_menu`、`menuConfig`、
+  插件 `NavItem` 都没有），只能直接输 URL 访问。它是序列配置页、与 `/dashboard/sequence` 部分重复，
+  建议后续合并删除。（同类的 `/dashboard/message` 孤儿路由已于 2026-10-27 删除，
+  通知管理入口收敛到「消息中心 → 通知管理」页签 + 顶栏铃铛。）

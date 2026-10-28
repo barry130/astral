@@ -6,6 +6,7 @@ import { Card, Button, Space, Modal, Form, Input, Select, Switch, Tag, message, 
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, LockOutlined, LoginOutlined } from '@/components/antd-compat/icons';
 import { request, ApiResult, readCsrfToken } from '@/api/client';
 import { clientHeaders } from '@/lib/client-info';
+import { downloadResponse } from '@/lib/http-download';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 
@@ -289,13 +290,8 @@ export default function UserPage() {
       const csrf = readCsrfToken();
       if (csrf) headers['X-CSRF-Token'] = csrf;
       const resp = await fetch('/api/v1/admin/system/user/export', { headers, credentials: 'same-origin' });
-      if (!resp.ok) throw new Error(`导出失败（${resp.status}）`);
-      const blob = await resp.blob();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `users-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      // 新契约下业务失败是 HTTP 200 + Result JSON，成功/失败判定交给 downloadResponse
+      await downloadResponse(resp, `users-${new Date().toISOString().slice(0, 10)}.csv`);
       message.success('已导出');
     } catch (error: any) {
       message.error(error.message || '导出失败');

@@ -7,7 +7,6 @@ import com.astral.auth.security.LoginUserTypeResolver;
 import com.astral.auth.service.UserLoginMarker;
 import com.astral.common.result.Result;
 import com.astral.common.web.CsrfTokenSupport;
-import com.astral.qt.common.QtRestResp;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,11 +21,14 @@ import java.util.Set;
 /**
  * 全局统一认证拦截器（宿主管理端 + 轻听插件用户端合并）
  * <p>基于 Sa-Token 实现请求认证拦截：</p>
+ * <p><b>传输层契约</b>：认证/授权失败的响应一律为 HTTP 200（服务端已处理），
+ * 失败语义只写在 {@code body.code}（401 未登录 / 403 无权限），HTTP 状态码不再复述业务码。</p>
  * <ul>
- *   <li><b>宿主管理区</b>（/api/v1/** 除 Qt 用户区外）：未登录返回 {@code Result} 结构 401（AUTH001），
+ *   <li><b>宿主管理区</b>（/api/v1/** 除 Qt 用户区外）：未登录返回 HTTP 200 +
+ *       {@code Result} 业务码 401（errorCode=AUTH001），
  *       登录后把 userId/username 写入 request 属性（供限流拦截器与控制器使用）</li>
- *   <li><b>Qt 用户区</b>（/api/v1/app/user/**）：未携带/无效 satoken 返回
- *       {@code QtRestResp} 结构 401（“登录状态已失效”，与历史 App 客户端约定一致），
+ *   <li><b>Qt 用户区</b>（/api/v1/app/user/**）：未携带/无效 satoken 返回 HTTP 200 +
+ *       {@code Result} 业务码 401（“登录状态已失效”，与历史 App 客户端约定一致），
  *       登录后把 userId/username 写入 request 属性</li>
  *   <li><b>Token 自动续期</b>：任何 /api/** 请求只要携带有效 satoken（含匿名接口如 /api/v1/app/update），
  *       剩余有效期低于阈值（astral.auth.token-renew-threshold，默认 1 天）时自动续满
@@ -69,7 +71,7 @@ public class AuthInterceptor implements HandlerInterceptor {
     /** satoken 请求头名（与 sa-token.token-name 一致） */
     private static final String TOKEN_HEADER = "satoken";
 
-    /** Qt 用户区前缀：/api/v1/app/user，401 返回 QtRestResp 结构 */
+    /** Qt 用户区前缀：/api/v1/app/user，401 返回 Result 结构 */
     private static final String QT_USER_PREFIX_NEW = "/api/v1/app/user/";
 
     /** App 匿名公共区前缀：/api/v1/app/** 中非 user 区（如 /api/v1/app/update、/api/v1/app/stat/report）免认证 */
@@ -146,14 +148,14 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // 4. Qt 用户区：校验 satoken 有效性，401 返回 QtRestResp 结构（App 客户端历史约定）
+        // 4. Qt 用户区：校验 satoken 有效性，失败写 HTTP 200 + 业务码 401（App 客户端历史约定只读 body code）
         if (uri.startsWith(QT_USER_PREFIX_NEW)) {
             Long userId = resolveUserId(token);
             if (userId == null) {
                 response.setContentType("application/json;charset=UTF-8");
-                response.setStatus(401);
+                response.setStatus(200);
                 response.getWriter().write(objectMapper.writeValueAsString(
-                        QtRestResp.error(401, "登录状态已失效")
+                        Result.error(401, "登录状态已失效")
                 ));
                 return false;
             }
@@ -162,10 +164,10 @@ public class AuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 4. 宿主管理区：校验登录态，401 返回 Result 结构（AUTH001）
+        // 4. 宿主管理区：校验登录态，失败写 HTTP 200 + 业务码 401（errorCode=AUTH001）
         if (!StpUtil.isLogin()) {
             response.setContentType("application/json;charset=UTF-8");
-            response.setStatus(401);
+            response.setStatus(200);
             Result<?> result = Result.error("AUTH001");
             result.setCode(401);
             response.getWriter().write(objectMapper.writeValueAsString(result));
@@ -199,7 +201,7 @@ public class AuthInterceptor implements HandlerInterceptor {
      * <p>把 {@code astral.auth.admin-required-user-type} 配成空串可关闭本校验
      * （仅用于排障应急，不要在生产长期关闭）。</p>
      *
-     * @return 通过返回 true；否则已写入 403 响应并返回 false
+     * @return 通过返回 true；否则已写入 HTTP 200 + 业务码 403 的响应并返回 false
      */
     private boolean passAdminIdentityGate(HttpServletResponse response) throws Exception {
         if (adminRequiredUserType == null || adminRequiredUserType.isBlank()) {
@@ -215,7 +217,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                 loginId, userType, adminRequiredUserType);
 
         response.setContentType("application/json;charset=UTF-8");
-        response.setStatus(403);
+        response.setStatus(200);
         Result<?> result = Result.error("COMMON005");
         result.setCode(403);
         response.getWriter().write(objectMapper.writeValueAsString(result));
@@ -260,7 +262,7 @@ public class AuthInterceptor implements HandlerInterceptor {
                 cookieCsrf != null, headerCsrf != null);
 
         response.setContentType("application/json;charset=UTF-8");
-        response.setStatus(403);
+        response.setStatus(200);
         Result<?> result = Result.error("AUTH013");
         result.setCode(403);
         response.getWriter().write(objectMapper.writeValueAsString(result));

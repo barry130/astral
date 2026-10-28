@@ -58,7 +58,7 @@
 
 ## 管理 API（/api/v1/admin/cms，宿主 Sa-Token 鉴权）
 
-通用：列表/详情类接口需 `admin:cms:view`；写接口需对应 edit 权限。响应统一 `Result{code,errorCode,message,data,timestamp}`，分页为 MyBatis-Plus `Page{records,total,size,current,pages}`。
+通用：列表/详情类接口需 `admin:cms:view`；写接口需对应 edit 权限。响应统一 `Result{code,errorCode,msg,data,timestamp}`（HTTP 200 = 服务端已处理，业务失败也返回 200，看 body 的 `code`：200 成功 / 300 业务失败 / 320 参数错误 / 401 未登录 / 403 无权限），分页为 MyBatis-Plus `Page{records,total,size,current,pages}`。
 
 | 方法与路径 | 权限 | 说明 |
 | --- | --- | --- |

@@ -22,8 +22,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * 内容管理插件统一异常处理
- * <p>作用于 com.astral.cms.controller 下全部控制器，返回宿主 Result 结构
- * （code=200 成功；业务异常 code=400/500，HTTP 状态保持 200 由前端按 code 判定）。</p>
+ * <p>作用于 com.astral.cms.controller 下全部控制器，返回宿主 Result 结构。</p>
+ * <p>V2 契约：HTTP 恒 200（表示服务端已处理），成败只由 body 的 code 表达
+ * （200 成功 / 300 业务失败 / 320 参数错误 / 401 未登录 / 403 无权限 / 500 系统错误），
+ * body.errorCode 保留细分码；CmsException 的显式 code（如 401/404）原样透传。</p>
  */
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
@@ -51,7 +53,7 @@ public class CmsGlobalExceptionHandler {
     public Result<Void> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
                 ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
-        return Result.error(400, msg);
+        return Result.error(320, msg);
     }
 
     @ExceptionHandler(BindException.class)
@@ -59,7 +61,7 @@ public class CmsGlobalExceptionHandler {
     public Result<Void> handleBind(BindException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
                 ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
-        return Result.error(400, msg);
+        return Result.error(320, msg);
     }
 
     @ExceptionHandler(Exception.class)

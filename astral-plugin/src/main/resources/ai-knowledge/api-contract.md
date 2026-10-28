@@ -69,7 +69,9 @@
 | AI014 | AI 请求不存在或无权访问 |
 | AI015 | 会话不存在或无权访问 |
 
-统一响应体为 `{code,errorCode,message,data,timestamp}`，`code=200` 表示成功。
+统一响应体为 `{code,errorCode,msg,data,timestamp}`（字段名是 `msg`，不是 `message`）。
+HTTP 200 表示服务端已处理，业务结论看 body 的 `code`：200 成功 / 300 业务失败 / 320 参数错误 /
+401 未登录 / 403 无权限 / 429 限流 / 500 系统错误（业务失败同样返回 HTTP 200）。
 
 ## 管理端配置接口（/api/v1/admin/ai）
 

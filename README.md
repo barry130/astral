@@ -205,7 +205,7 @@ astral/
 | 轻听音乐 App | `/api/v1/app/user/**` `/api/v1/app/**` | App 端接口（Bearer Token） |
 | 轻听音乐后台 | `/api/v1/admin/qt/**` | 管理端（宿主 Sa-Token） |
 | 反馈 | `/api/v1/admin/feedback` `/api/v1/app/feedback` | 用户反馈与管理员回复 |
-| 站内消息 | `/api/v1/admin/message` `/api/v1/app/message` | 反馈插件的消息通知 |
+| 站内消息 | `/api/v1/admin/message` `/api/v1/app/message` | 宿主的通知能力（`astral-system` 的 `com.astral.system.notice`），禁停反馈插件不受影响 |
 | 存储管理 | `/api/v1/admin/plugin/storage/**` | 存储配置/文件/授权文件夹管理 |
 | 直传凭证 | `/api/v1/all/storage/**` | 用户端换取短时上传凭证、Worker 回执登记 |
 

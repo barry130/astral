@@ -6,6 +6,7 @@ import { DownloadOutlined, FileTextOutlined, SecurityScanOutlined, CheckCircleOu
 import { logApi, OperateLog, LoginLog } from '@/api/log';
 import { clientHeaders } from '@/lib/client-info';
 import { readCsrfToken } from '@/api/client';
+import { downloadResponse } from '@/lib/http-download';
 
 /**
  * CSV 导出（fetch 直连）：
@@ -15,19 +16,16 @@ import { readCsrfToken } from '@/api/client';
  * 认证凭据不再手动携带：它是 HttpOnly Cookie，浏览器同源请求自动带上
  * （这也是为什么这里不能加 `credentials: 'omit'`）。但正因为凭据是自动携带的，
  * 写语义的请求必须回填 CSRF 头，否则会被后端的双提交校验拦下。
+ *
+ * 成功/失败判定交给 downloadResponse：新契约下业务失败是 HTTP 200 + Result JSON，
+ * 只看 `resp.ok` 会把错误体当成 CSV 存下来。
  */
 const exportCsv = async (url: string, filename: string) => {
   const headers: Record<string, string> = { ...clientHeaders() };
   const csrf = readCsrfToken();
   if (csrf) headers['X-CSRF-Token'] = csrf;
   const resp = await fetch(url, { headers, credentials: 'same-origin' });
-  if (!resp.ok) throw new Error(`导出失败（${resp.status}）`);
-  const blob = await resp.blob();
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  await downloadResponse(resp, filename);
 };
 
 /**

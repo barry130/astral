@@ -155,8 +155,12 @@ export async function openEventStream(
       signal: controller.signal,
     });
 
-    if (!response.ok || !response.body) {
-      throw new Error(`事件流连接失败（HTTP ${response.status}）`);
+    // 新契约下业务失败（未登录 401、无权限 403、限流 429…）是 HTTP 200 + Result JSON，
+    // 因此必须校验 Content-Type：不是事件流就按错误体读 msg，避免把 JSON 当 SSE 解析。
+    const contentType = response.headers.get('Content-Type') || '';
+    if (!response.ok || !response.body || !contentType.includes('text/event-stream')) {
+      const data = (await response.json().catch(() => null)) as { msg?: string } | null;
+      throw new Error(data?.msg || `事件流连接失败（HTTP ${response.status}）`);
     }
 
     const reader = response.body.getReader();

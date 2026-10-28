@@ -4,7 +4,9 @@
 > 认证：**管理台（浏览器）** 凭 HttpOnly Cookie `satoken` 自动认证，写请求需回填 `X-CSRF-Token`；
 > **轻听 App / 脚本 / Swagger 等非浏览器调用方** 走 `satoken` 请求头（该路径豁免 CSRF 校验）。
 > 两种方式都由宿主 Sa-Token 解析，详见 [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md#token-管理httponly-cookie--csrf-双提交)。
-> 返回包装：管理端宿主 `Result<T>{code,msg,data}`；反馈/轻听 App 端用各自 `FeedbackRestResp`/`QtRestResp{code,msg,data}`。
+> 返回包装：全端统一 `Result<T>{code,errorCode,msg,data,timestamp}`（管理端与 App 端共用同一个类）；
+> **两层语义**：HTTP 状态码只表达传输层（`200`=服务端已处理，业务失败也是 `200`；`404/405/413/500/503` 才是传输错误），
+> 业务结论看 body 的 `code`（`200` 成功 / `300` 业务失败 / `320` 参数错误 / `401` 未登录 / `403` 无权限 / `429` 限流 / `500` 系统错误）。
 
 ---
 
@@ -336,7 +338,7 @@
 
 > **投放平台识别（老客户端兼容）**：三个查询接口都按
 > `X-App-Ut` 头 → 遗留 `X-Platform` 头 → `channel` 查询参数 → 缺省 App 的顺序解析，
-> 详见 `NoticeChannel.resolveTargets`。新客户端只发统一平台头即可；
+> 详见 `NoticeTargets.resolve`。新客户端只发统一平台头即可；
 > 老客户端写死的 `channel=app|pc|web|all` 继续被识别
 > （`app`→Android+iOS、`pc`→Windows、`web`→Web、`all`→不限平台），
 > 三者皆空时回落 Android+iOS（等价于旧的 `channel=app` 缺省）。
@@ -362,7 +364,10 @@
 | DELETE | `/{id}` | 删除通知 |
 
 > 状态机：`pending提出 → received已接收 → resolved已解决 → published已发布`；任意状态→`deprecated已废弃`；已废弃可转回任意状态。
-> 通知类型：`issue` 反馈映射为 `feedback`，`request` 反馈映射为 `request`。
+> 通知类型：`notice` 通知（点对点站内信）/ `announce` 公告（广播，`user_id` 为空）。
+> 存量行里的 `feedback` / `request` 是历史别名，服务端查询照样命中、渲染归并为「通知」，
+> 但新建通知只允许 `notice` / `announce` 两值（`notice_type` 字典里两项已 `status=0`）。
+> 「反馈 / 需求」的细分在反馈侧（`sys_feedback.type` + `feedback_type` 字典），不属于通知类型。
 > 通知渠道 `channel`：**逗号分隔的投放平台集合**，取值与 `stat_platform` 同源
 > （`app-android` / `app-ios` / `app-windows` / `app-linux` / `app-macos` / `app-harmony` / `web`），另有 `all` = 不限平台。
 > 分页的 `channel` 参数支持多选（逗号分隔，逐项「包含」匹配）；

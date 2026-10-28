@@ -9,7 +9,7 @@ astral-plugin-api                         # 稳定 SPI，仅定义插件契约
 astral-plugin/
 ├── src/main/java/com/astral/plugin/core # 注册中心与生命周期管理
 ├── src/main/java/com/astral/qt          # 轻听音乐插件
-├── src/main/java/com/astral/feedback    # 反馈与统一通知插件
+├── src/main/java/com/astral/feedback    # 反馈插件（通知能力已收归宿主 com.astral.system.notice）
 └── src/main/resources                   # 各插件的 schema、SQL 等资源
 astral-sequence                           # 系统必需插件及统一序列服务
 ```
@@ -178,7 +178,7 @@ public class QtPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
 ```java
 Set<String> channels = dataScopeResolver.resolveChannelsByToken(
         satoken, PermissionChecker.QT_UPDATE_CHANNEL_SCOPE);   // 无权限 → [stable]
-return QtRestResp.success(appService.getUpdate(type, version, channels)); // 集合内取最高版本
+return Result.success(appService.getUpdate(type, version, channels)); // 集合内取最高版本
 ```
 
 ## 系统必需插件
@@ -206,7 +206,9 @@ public boolean isRequired() {
 | Mapper 注册 | `com.astral.qt.config.QtMapperConfig` |
 | 数据库资源 | `resources/sql/qt-schema.sql`、`resources/schema/qt_*.json` |
 
-反馈与统一通知实现位于 `com.astral.feedback`，其资源为 `resources/sql/feedback-schema.sql`。
+反馈插件实现位于 `com.astral.feedback`，其资源为 `resources/sql/feedback-schema.sql`（只含 `sys_feedback*`）。
+站内通知的建表、实体、查询/发布服务与 HTTP 面都在宿主（`com.astral.system.notice` + `V20261027001`），
+插件只通过 `NotifyPublisher.publishAsync` 在业务节点触发事件 —— 见 `AGENTS.md`「站内通知统一存储」。
 
 ## 开发检查清单
 

@@ -128,60 +128,102 @@ client.interceptors.request.use(
   },
 );
 
+/**
+ * 把一次业务失败（HTTP 200 + body.code ≠ 200）翻译成统一的 Error。
+ *
+ * 后端契约（AGENTS.md「统一响应体」）：HTTP 状态码只表达传输层结果，**业务失败一律仍是
+ * HTTP 200**，由 body 的 `code` 表达 —— 300 业务失败 / 320 参数错误 / 401 未登录 /
+ * 403 无权限 / 429 限流 / 500 系统错误。`errorCode` 是细分码（AUTH001、AUTH013…），
+ * `msg` 是人类可读消息。因此「HTTP 200 但没有业务成功」必须在这里兜住，不能当成功放行。
+ */
+function businessFailure(result: ApiResult, fallbackCode?: string): Error {
+  const err = new Error(result.msg || '请求失败') as Error & { errorCode?: string };
+  const code = fallbackCode || result.errorCode;
+  if (code) {
+    // 业务错误码透传（如 AUTH010 需要动态验证码）：登录页等场景按码做特殊交互
+    err.errorCode = code;
+  }
+  return err;
+}
+
+/**
+ * 处理「HTTP 200 送达、body.code 非 200」的业务失败。
+ *
+ * 与错误分支保持同一套侧效应：AUTH013 刷新 CSRF 令牌后重放一次；401 只在已进入受保护区
+ * 时踢回登录页。其余一律 reject 带 msg/errorCode 的 Error，交给调用方展示。
+ */
+async function handleBusinessFailure(
+  result: ApiResult,
+  config: CsrfRetryConfig | undefined,
+): Promise<unknown> {
+  // 双提交校验失败（AUTH013）：多半是跨域直连下 Cookie 读不到、令牌缓存又为空。
+  // 刷新一次令牌，只有确实拿到新值才重放原请求（见 refreshCsrfToken 的自限说明）；
+  // 拿不到就落回下面的通用处理，把后端原始 msg 交给调用方。
+  if (result.code === 403 && result.errorCode === 'AUTH013' && config && !config.__csrfRetried) {
+    config.__csrfRetried = true;
+    if (await refreshCsrfToken()) {
+      return client.request(config);
+    }
+  }
+  if (result.code === 401) {
+    // 与错误分支一致：只在「确定已登录过」的页面上跳转，避免落地页匿名访客被弹走。
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
+      window.location.href = '/login';
+    }
+  }
+  throw businessFailure(result);
+}
+
+/**
+ * 响应拦截器按【新契约全量适配】：业务结论只从 body 读，传输层错误只从 HTTP 状态读。
+ *
+ * - HTTP 200：服务端已处理，成功还是失败看 `body.code`（200 成功 / 300 业务失败 /
+ *   320 参数错误 / 401 未登录 / 403 无权限 / 429 限流 / 500 系统错误）。
+ * - 真实非 2xx：只剩传输层错误 —— 404 路由不存在、405 方法不支持、413 上传超限、
+ *   500 未预期异常、503 服务不可用，以及网络层错误。
+ *
+ * 前端与后端同步发版，因此这里**不再兼容**旧服务端「业务失败也回 4xx」的行为。
+ */
 client.interceptors.response.use(
-  (response: AxiosResponse) => {
+  // axios 的类型签名要求返回 AxiosResponse，但这里刻意把 body 直接交给调用方
+  // （`request.*` 返回 Promise<ApiResult<T>>），因此显式放宽返回类型。
+  (response: AxiosResponse): any => {
     if (!isSilent(response.config)) {
       endRequest();
     }
-    const result = response.data;
+    const result = response.data as ApiResult;
     if (result.code === 200) {
       if (result.errorCode) {
-        return Promise.reject(new Error(result.message));
+        return Promise.reject(businessFailure(result));
       }
       return result;
     }
-    return Promise.reject(new Error(result.message || '请求失败'));
+    return handleBusinessFailure(result, response.config as CsrfRetryConfig | undefined);
   },
-  async (error) => {
+  (error) => {
     // 成功与失败都要归还计数，否则泄漏会让加载指示永久常驻
     if (!isSilent(error.config)) {
       endRequest();
     }
-    const errorCode = error.response?.data?.errorCode;
-    // 双提交校验失败（AUTH013）：多半是跨域直连下 Cookie 读不到、令牌缓存又为空。
-    // 刷新一次令牌，只有确实拿到新值才重放原请求（见 refreshCsrfToken 的自限说明）；
-    // 拿不到就落回下面的通用处理，把后端原始 message 交给调用方，而不是 axios 的英文原文。
-    const retryConfig = error.config as CsrfRetryConfig | undefined;
-    if (errorCode === 'AUTH013' && retryConfig && !retryConfig.__csrfRetried) {
-      retryConfig.__csrfRetried = true;
-      if (await refreshCsrfToken()) {
-        return client.request(retryConfig);
-      }
+    // 传输层错误也可能带 Result 响应体（404/413/500/503 都是 Result），能读到 msg 就直接用，
+    // errorCode 一并透传；读不到再按状态码/网络错误给兜底文案。
+    const body = error.response?.data as ApiResult | undefined;
+    if (body?.msg) {
+      return Promise.reject(businessFailure(body));
+    }
+    if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+      return Promise.reject(new Error('无法连接到服务器，请检查后端服务是否启动'));
     }
     if (error.response?.status === 401) {
-      // 令牌在 HttpOnly Cookie 里，前端删不掉也不需要删：
-      // 跳转登录页会重新走一次登录流程，登录成功时后端覆盖 Cookie。
-      // 登出请走后端 /logout（会清 Cookie），不要只做前端清理。
-      //
-      // 只在「确定已登录过」的页面上跳转：令牌不再能从 localStorage 判断存在性，
-      // 无差别 401 跳转会让落地页（/、/lightlisten）的匿名访客也被弹到登录页。
-      // 需要登录态的页面自己做了守卫（dashboard 布局、/imgbed），这里只兜底
-      // 「已进入受保护区但在途 token 失效」的会话中途踢出。
+      // 防御：容器/网关级 401（业务层 401 是 HTTP 200 + code 401，走上面的业务分支）。
+      // 令牌在 HttpOnly Cookie 里，前端删不掉也不需要删：跳登录页重新走一次登录流程，
+      // 登录成功时后端覆盖 Cookie。只在已进入受保护区时跳，避免匿名访客被弹走。
       if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
         window.location.href = '/login';
       }
     }
-    if (error.response?.data?.message) {
-      const err = new Error(error.response.data.message);
-      // 业务错误码透传（如 AUTH010 需要动态验证码）：登录页等场景按码做特殊交互
-      const errCode = error.response?.data?.errorCode;
-      if (errCode) {
-        (err as Error & { errorCode?: string }).errorCode = errCode;
-      }
-      return Promise.reject(err);
-    }
-    if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-      return Promise.reject(new Error('无法连接到服务器，请检查后端服务是否启动'));
+    if (error.response?.status) {
+      return Promise.reject(new Error(`服务暂时不可用（HTTP ${error.response.status}）`));
     }
     return Promise.reject(error);
   }
@@ -190,7 +232,7 @@ client.interceptors.response.use(
 export interface ApiResult<T = any> {
   code: number;
   errorCode?: string;
-  message: string;
+  msg: string;
   data: T;
   timestamp: number;
 }

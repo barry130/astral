@@ -1,16 +1,20 @@
 package com.astral.server.interceptor;
 
 import com.astral.common.annotation.RateLimit;
+import com.astral.common.constant.ApiConstants;
+import com.astral.common.result.Result;
 import com.astral.common.util.ClientIp;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.concurrent.locks.ReentrantLock;
@@ -27,7 +31,11 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class RateLimitInterceptor implements HandlerInterceptor {
+
+    /** JSON 序列化器：限流响应发生在控制器之前，需自行把 Result 写进响应体 */
+    private final ObjectMapper objectMapper;
 
     /** 窗口容器上限：超过后按访问时间淘汰最久未用的窗口（兜底，正常远达不到） */
     private static final long MAX_WINDOWS = 50_000L;
@@ -67,13 +75,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
         if (window == null || !window.tryAcquire()) {
             log.warn("限流拦截: key={}, limit={}/{}s", key, rateLimit.limit(), rateLimit.duration());
-            response.setStatus(429);
+            // 契约：HTTP 200（服务端已处理）+ body 业务码 429，传输层不复述业务码。
+            // 这里不能走 @RestControllerAdvice（拦截器先于控制器执行），只能手写 JSON，
+            // 因此按 Result 的结构手拼：{code,errorCode,msg,data,timestamp}。
+            response.setStatus(200);
             response.setContentType("application/json;charset=UTF-8");
             response.setHeader("X-RateLimit-Limit", String.valueOf(rateLimit.limit()));
             response.setHeader("X-RateLimit-Remaining", "0");
-            response.getWriter().write(
-                "{\"code\":429,\"message\":\"" + rateLimit.message() + "\"}"
-            );
+            response.getWriter().write(objectMapper.writeValueAsString(
+                    Result.error(ApiConstants.TOO_MANY_REQUESTS_CODE, "COMMON007", rateLimit.message())));
             return false;
         }
 
