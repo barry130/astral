@@ -112,7 +112,7 @@ const iconMap: Record<string, ReactNode> = {
 const PATH_ICON_OVERRIDE: Record<string, ReactNode> = {
   '/dashboard/system/role': <ShieldCheck />,
   '/dashboard/system/permission': <Lock />,
-  '/dashboard/system/mail/log': <PieChart />,
+  '/dashboard/system/message/statistics': <PieChart />,
 };
 
 /** 解析菜单图标：路径覆盖 > 图标名映射 > 兜底 */
@@ -212,7 +212,7 @@ const menuConfig: {
   { key: '/dashboard/system/token', icon: <KeyRound />, label: 'Token管理', permission: 'admin:system:token:view', group: 'system' },
   { key: '/dashboard/system/table-schema', icon: <Table2 />, label: '表结构管理', permission: 'admin:system:schema:view', group: 'system' },
   { key: '/dashboard/system/mail', icon: <Mail />, label: '邮箱管理', permission: 'admin:system:mail:view', group: 'system' },
-  { key: '/dashboard/system/mail/log', icon: <PieChart />, label: '邮箱统计', permission: 'admin:system:mail:statistics:view', group: 'system' },
+  { key: '/dashboard/system/message/statistics', icon: <PieChart />, label: '消息统计', permission: 'admin:system:mail:statistics:view', group: 'system' },
   { key: '/dashboard/log', icon: <FileText />, label: '日志管理', permission: 'admin:log:view', group: 'ops' },
   { key: '/dashboard/plugin', icon: <PlugZap />, label: '插件管理', permission: 'admin:plugin:view', group: 'plugin' },
 ];
