@@ -169,6 +169,19 @@ public final class AiConstants {
         }
     }
 
+    /** 工具状态（ai_tool.status：代码在册=ENABLED，代码下线=DISABLED） */
+    public static final class ToolStatus {
+        public static final String ENABLED = "ENABLED";
+        public static final String DISABLED = "DISABLED";
+
+        private ToolStatus() {
+        }
+
+        public static List<String> all() {
+            return List.of(ENABLED, DISABLED);
+        }
+    }
+
     /** 工具调用状态 */
     public static final class ToolCallStatus {
         public static final String PLANNED = "PLANNED";

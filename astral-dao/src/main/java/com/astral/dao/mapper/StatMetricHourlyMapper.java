@@ -2,7 +2,6 @@ package com.astral.dao.mapper;
 
 import com.astral.dao.entity.StatMetricHourly;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;

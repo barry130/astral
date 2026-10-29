@@ -2,7 +2,6 @@ package com.astral.log.aspect;
 
 import com.astral.common.util.ClientIp;
 import com.astral.common.util.LogSanitizer;
-import com.astral.log.service.LogService;
 import cn.hutool.core.util.StrUtil;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;

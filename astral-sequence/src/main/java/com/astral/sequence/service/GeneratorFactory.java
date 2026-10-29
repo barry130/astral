@@ -1,6 +1,5 @@
 package com.astral.sequence.service;
 
-import com.astral.common.error.ErrorCodes;
 import com.astral.common.exception.BusinessException;
 import com.astral.common.util.SequenceMetrics;
 import com.astral.dao.entity.SequenceConfig;
@@ -13,7 +12,6 @@ import com.astral.sequence.generator.SegmentGenerator;
 import com.astral.sequence.generator.SequenceGenerator;
 import com.astral.sequence.generator.SimpleGenerator;
 import com.astral.sequence.generator.SnowflakeGenerator;
-import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.RequiredArgsConstructor;

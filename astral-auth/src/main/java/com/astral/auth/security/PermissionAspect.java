@@ -2,7 +2,6 @@ package com.astral.auth.security;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.astral.common.annotation.RequiresPermission;
-import com.astral.common.annotation.RequiresSuper;
 import com.astral.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

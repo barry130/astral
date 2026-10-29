@@ -11,7 +11,9 @@ import com.astral.monitor.service.DashboardOverviewService;
 import com.astral.monitor.service.JvmMonitorService;
 import com.astral.monitor.service.SystemMonitorService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 
 /**
  * 监控控制器

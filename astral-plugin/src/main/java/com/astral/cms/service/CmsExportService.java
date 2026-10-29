@@ -4,7 +4,6 @@ import com.astral.cms.common.CmsException;
 import com.astral.cms.entity.CmsPage;
 import com.astral.cms.entity.CmsPost;
 import com.astral.cms.entity.CmsPostTag;
-import com.astral.cms.entity.CmsTag;
 import com.astral.cms.mapper.CmsPageMapper;
 import com.astral.cms.mapper.CmsPostMapper;
 import com.astral.cms.mapper.CmsPostTagMapper;

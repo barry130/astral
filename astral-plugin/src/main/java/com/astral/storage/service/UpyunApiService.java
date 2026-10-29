@@ -20,9 +20,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
-import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * 又拍云对象存储适配（官方 REST/FORM API 签名，文档 docs.upyun.com）
