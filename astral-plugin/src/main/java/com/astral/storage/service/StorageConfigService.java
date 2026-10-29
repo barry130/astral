@@ -61,7 +61,8 @@ public class StorageConfigService {
     @Resource
     private WorkerCachePurgeService workerCachePurgeService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Resource
+    private ObjectMapper objectMapper;
 
     public List<StorageConfigEntity> listAll() {
         List<StorageConfigEntity> list = configMapper.selectList(new LambdaQueryWrapper<StorageConfigEntity>()
@@ -313,6 +314,7 @@ public class StorageConfigService {
                 JsonNode old = objectMapper.readTree(existing.getProviderOptions());
                 old.propertyNames().forEach(n -> merged.put(n, old.path(n).asText(null)));
             } catch (Exception ignored) {
+                // 故意忽略：存量 provider_options 非合法 JSON 时跳过，仅保留本次传入的值
             }
         }
         if (options != null) {
@@ -412,6 +414,7 @@ public class StorageConfigService {
                     config.setProviderOptions(objectMapper.writeValueAsString(node));
                 }
             } catch (Exception ignored) {
+                // 故意忽略：解析/回写失败时放弃打码原样返回，避免整个配置列表接口报错
             }
         }
         return config;

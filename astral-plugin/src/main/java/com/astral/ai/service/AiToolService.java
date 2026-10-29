@@ -106,7 +106,7 @@ public class AiToolService {
             if (isNew) {
                 entity.setRiskLevel(def.riskLevel());
                 entity.setApprovalPolicy(def.approvalPolicy());
-                entity.setStatus("ENABLED");
+                entity.setStatus(AiConstants.ToolStatus.ENABLED);
             } else {
                 // 风险下限不可降低：代码要求 HIGH 的，后台不能配成 READ
                 entity.setRiskLevel(strongerRisk(entity.getRiskLevel(), def.riskLevel()));
@@ -121,8 +121,8 @@ public class AiToolService {
         }
         // 代码里已不存在的工具标记为禁用
         for (AiToolEntity entity : toolMapper.selectList(null)) {
-            if (!byCode.containsKey(entity.getToolCode()) && !"DISABLED".equals(entity.getStatus())) {
-                entity.setStatus("DISABLED");
+            if (!byCode.containsKey(entity.getToolCode()) && !AiConstants.ToolStatus.DISABLED.equals(entity.getStatus())) {
+                entity.setStatus(AiConstants.ToolStatus.DISABLED);
                 toolMapper.updateById(entity);
                 log.warn("[AI] 工具处理器已下线，置为 DISABLED: {}", entity.getToolCode());
             }

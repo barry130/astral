@@ -348,6 +348,7 @@ public class NoticeServiceImpl implements NoticeService {
         try {
             raw = sysConfigService.getConfigValue(KEY_RETENTION_DAYS);
         } catch (Exception ignored) {
+            // 故意忽略：读取保留期配置失败时按「不限保留」处理，避免公告被误清理
         }
         if (raw == null || raw.isBlank()) {
             return null;

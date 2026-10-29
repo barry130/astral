@@ -183,7 +183,8 @@ public class LoginLogAspect {
                 Method getUsername = param.getClass().getMethod("getUsername");
                 Object username = getUsername.invoke(param);
                 return username != null ? username.toString() : "";
-            } catch (Exception e) {
+            } catch (Exception ignored) {
+                // 故意忽略：参数没有 getUsername 方法或反射调用失败时退化为空用户名，登录日志仍记录其余字段
             }
         }
         return "";

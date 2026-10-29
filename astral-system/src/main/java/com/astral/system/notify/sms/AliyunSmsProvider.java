@@ -15,6 +15,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 import com.astral.dao.entity.SysSmsProvider;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -40,7 +41,8 @@ public class AliyunSmsProvider implements SmsProvider {
             .connectTimeout(java.time.Duration.ofSeconds(10))
             .build();
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Resource
+    private ObjectMapper objectMapper;
 
     @Override
     public String type() {

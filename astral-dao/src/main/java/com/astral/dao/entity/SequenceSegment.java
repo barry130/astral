@@ -13,6 +13,7 @@ import java.util.List;
 @TableName("sequence_segment")
 public class SequenceSegment {
 
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     @TableField("biz_key")

@@ -83,7 +83,8 @@ class AiUrlGuardTest {
 
     @Test
     void whitelistIsCaseInsensitive() {
-        // 白名单匹配忽略大小写；返回值保持用户填写的大小写，不做改写\n        assertEquals("http://LOCALHOST:11434", AiUrlGuard.validateBaseUrl("http://LOCALHOST:11434", "LocalHost"));
+        // 白名单匹配忽略大小写；返回值保持用户填写的大小写，不做改写
+        assertEquals("http://LOCALHOST:11434", AiUrlGuard.validateBaseUrl("http://LOCALHOST:11434", "LocalHost"));
     }
 
     @Test

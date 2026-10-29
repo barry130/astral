@@ -100,6 +100,7 @@ public class AppNoticeController {
                 uid = attrs.getRequest().getAttribute("userId");
             }
         } catch (Exception ignored) {
+            // 故意忽略：请求上下文不可用时回退到 Sa-Token 登录态解析（未登录返回 null）
         }
         if (uid == null) {
             Object loginId = StpUtil.getLoginIdDefaultNull();
