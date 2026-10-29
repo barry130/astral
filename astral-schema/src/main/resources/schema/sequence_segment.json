@@ -19,8 +19,8 @@
       "version": false,
       "logicDelete": false,
       "jsonIgnore": false,
-      "primaryKey": false,
-      "autoIncrement": false
+      "isPrimaryKey": true,
+      "isAutoIncrement": true
     },
     {
       "columnName": "biz_key",
