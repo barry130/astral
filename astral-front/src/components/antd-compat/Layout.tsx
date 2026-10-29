@@ -6,12 +6,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 
-import {
-  Card as ShadcnCard,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card as ShadcnCard, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
@@ -59,11 +54,13 @@ export function Card({
       {(title || extra) && (
         <CardHeader
           className={cn(
-            'flex flex-row items-center justify-between gap-3 border-b border-border px-4',
+            'border-border flex flex-row items-center justify-between gap-3 border-b px-4',
             size === 'small' ? 'py-2.5' : 'py-3',
           )}
         >
-          <CardTitle className={cn('text-[15px] font-semibold', size === 'small' && 'text-sm')}>{title}</CardTitle>
+          <CardTitle className={cn('text-[15px] font-semibold', size === 'small' && 'text-sm')}>
+            {title}
+          </CardTitle>
           {extra ? <div className="flex shrink-0 items-center gap-2">{extra}</div> : null}
         </CardHeader>
       )}
@@ -101,10 +98,22 @@ export function SpaceBase({
   const gap = typeof size === 'number' ? size : (SPACE_SIZE[size] ?? 8);
   return (
     <div
-      className={cn('flex', direction === 'vertical' ? 'flex-col' : 'flex-row', wrap && 'flex-wrap', className)}
+      className={cn(
+        'flex',
+        direction === 'vertical' ? 'flex-col' : 'flex-row',
+        wrap && 'flex-wrap',
+        className,
+      )}
       style={{
         gap,
-        alignItems: align === 'center' ? 'center' : align === 'end' ? 'flex-end' : align === 'baseline' ? 'baseline' : 'center',
+        alignItems:
+          align === 'center'
+            ? 'center'
+            : align === 'end'
+              ? 'flex-end'
+              : align === 'baseline'
+                ? 'baseline'
+                : 'center',
         ...style,
       }}
     >
@@ -248,7 +257,10 @@ export function Divider({ type = 'horizontal', className, style, children }: Div
     return <Separator className={cn('my-4', className)} style={style} />;
   }
   return (
-    <div className={cn('my-4 flex items-center gap-3 text-xs text-muted-foreground', className)} style={style}>
+    <div
+      className={cn('text-muted-foreground my-4 flex items-center gap-3 text-xs', className)}
+      style={style}
+    >
       <Separator className="flex-1" />
       <span className="shrink-0">{children}</span>
       <Separator className="flex-1" />
@@ -297,7 +309,19 @@ export interface TypographyTextProps {
   onClick?: () => void;
 }
 
-function Text({ type, strong, italic, underline, delete: del, code, disabled, className, style, children, onClick }: TypographyTextProps) {
+function Text({
+  type,
+  strong,
+  italic,
+  underline,
+  delete: del,
+  code,
+  disabled,
+  className,
+  style,
+  children,
+  onClick,
+}: TypographyTextProps) {
   const cls = cn(
     type === 'secondary' && 'text-muted-foreground',
     type === 'success' && 'text-emerald-600 dark:text-emerald-400',
@@ -326,7 +350,10 @@ function Text({ type, strong, italic, underline, delete: del, code, disabled, cl
     return (
       <button
         type="button"
-        className={cn(cls, 'cursor-pointer bg-transparent p-0 text-left disabled:cursor-not-allowed')}
+        className={cn(
+          cls,
+          'cursor-pointer bg-transparent p-0 text-left disabled:cursor-not-allowed',
+        )}
         style={style}
         onClick={onClick}
         disabled={disabled}

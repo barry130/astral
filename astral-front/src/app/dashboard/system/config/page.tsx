@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { formatDateTime } from '@/lib/format';
-import { Card, Button, Space, Modal, Form, Input, Select, Tag, message, Popconfirm } from '@/components/antd-compat';
+import {
+  Card,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Tag,
+  message,
+  Popconfirm,
+} from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
 import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
@@ -33,9 +44,10 @@ const configApi = {
   getPage: (pageNum: number, pageSize: number, configName?: string) =>
     request.get('/api/v1/admin/system/config/page', { params: { pageNum, pageSize, configName } }),
   /** 创建配置 */
-  create: (data: any) => request.post('/api/v1/admin/system/config', data),
+  create: (data: Record<string, unknown>) => request.post('/api/v1/admin/system/config', data),
   /** 更新配置 */
-  update: (id: number, data: any) => request.put(`/api/v1/admin/system/config/${id}`, data),
+  update: (id: number, data: Record<string, unknown>) =>
+    request.put(`/api/v1/admin/system/config/${id}`, data),
   /** 删除配置 */
   delete: (id: number) => request.delete(`/api/v1/admin/system/config/${id}`),
 };
@@ -75,17 +87,24 @@ export default function ConfigPage() {
   const loadDicts = () => {
     fetchDictOptions(['config_type'])
       .then(setDicts)
-      .catch(() => { /* 字典失败时回退显示原始值 */ });
+      .catch(() => {
+        /* 字典失败时回退显示原始值 */
+      });
   };
 
   /** 加载配置列表 */
   const loadData = (page = 1, size = 10, keyword = '') => {
     setLoading(true);
-    configApi.getPage(page, size, keyword)
-      .then((res: any) => {
+    configApi
+      .getPage(page, size, keyword)
+      .then((res) => {
         if (res.code === 200) {
           setData(res.data?.records || []);
-          setPagination({ current: res.data?.current || 1, pageSize: res.data?.size || 10, total: res.data?.total || 0 });
+          setPagination({
+            current: res.data?.current || 1,
+            pageSize: res.data?.size || 10,
+            total: res.data?.total || 0,
+          });
         }
       })
       .finally(() => setLoading(false));
@@ -111,8 +130,8 @@ export default function ConfigPage() {
       await configApi.delete(id);
       message.success('删除成功');
       loadData();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -129,8 +148,8 @@ export default function ConfigPage() {
       }
       setModalVisible(false);
       loadData();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -139,21 +158,58 @@ export default function ConfigPage() {
     // 全列显式 width：DataTable 在所有列都有宽度时启用 table-layout:fixed，列宽成为硬约束
     // （auto 布局下内容长的「描述」会把「配置值」挤到只剩几十px，实测 71px）
     { title: '配置名称', dataIndex: 'configName', key: 'configName', width: 160 },
-    { title: '配置键', dataIndex: 'configKey', key: 'configKey', width: 240, ellipsis: true, render: (v: string) => <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{v}</code> },
+    {
+      title: '配置键',
+      dataIndex: 'configKey',
+      key: 'configKey',
+      width: 240,
+      ellipsis: true,
+      render: (v: string) => <code className="bg-muted rounded px-1.5 py-0.5 text-xs">{v}</code>,
+    },
     { title: '配置值', dataIndex: 'configValue', key: 'configValue', width: 200, ellipsis: true },
-    { title: '类型', dataIndex: 'configType', key: 'configType', width: 90, render: (v: number) => <Tag color={dictColor(configTypeDict, v) || 'default'}>{dictLabel(configTypeDict, v, String(v))}</Tag> },
+    {
+      title: '类型',
+      dataIndex: 'configType',
+      key: 'configType',
+      width: 90,
+      render: (v: number) => (
+        <Tag color={dictColor(configTypeDict, v) || 'default'}>
+          {dictLabel(configTypeDict, v, String(v))}
+        </Tag>
+      ),
+    },
     { title: '描述', dataIndex: 'description', key: 'description', width: 300 },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 170, render: (v: string) => formatDateTime(v) },
+    {
+      title: '创建时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      width: 170,
+      render: (v: string) => formatDateTime(v),
+    },
     {
       title: '操作',
       key: 'action',
       width: 140,
-      render: (_: any, r: SysConfig) => (
+      render: (_: unknown, r: SysConfig) => (
         <Space>
           {/* 内置配置不允许编辑和删除 */}
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(r)} disabled={!canEdit || r.configType === 1}>编辑</Button>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(r)}
+            disabled={!canEdit || r.configType === 1}
+          >
+            编辑
+          </Button>
           <Popconfirm title="确认删除?" disabled={!canEdit} onConfirm={() => handleDelete(r.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit || r.configType === 1}>删除</Button>
+            <Button
+              type="link"
+              danger
+              icon={<DeleteOutlined />}
+              disabled={!canEdit || r.configType === 1}
+            >
+              删除
+            </Button>
           </Popconfirm>
         </Space>
       ),
@@ -163,14 +219,43 @@ export default function ConfigPage() {
   return (
     <div>
       <Card>
-        <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-          <Input.Search placeholder="搜索配置名称" allowClear onSearch={(v) => loadData(1, pagination.pageSize, v)} style={{ width: 300 }} />
-          {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建配置</Button>}
+        <div
+          className="filter-bar"
+          style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}
+        >
+          <Input.Search
+            placeholder="搜索配置名称"
+            allowClear
+            onSearch={(v) => loadData(1, pagination.pageSize, v)}
+            style={{ width: 300 }}
+          />
+          {canEdit && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              新建配置
+            </Button>
+          )}
         </div>
-        <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'] }} />
+        <ResizableTable
+          dataSource={data}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          scroll={{ x: 'max-content' }}
+          pagination={{
+            ...pagination,
+            showQuickJumper: true,
+            showSizeChanger: true,
+            pageSizeOptions: ['5', '10', '20', '50', '100'],
+          }}
+        />
       </Card>
 
-      <Modal title={editingConfig ? '编辑配置' : '新建配置'} open={modalVisible} onOk={handleSubmit} onCancel={() => setModalVisible(false)}>
+      <Modal
+        title={editingConfig ? '编辑配置' : '新建配置'}
+        open={modalVisible}
+        onOk={handleSubmit}
+        onCancel={() => setModalVisible(false)}
+      >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="configName" label="配置名称" rules={[{ required: true }]}>
             <Input />
@@ -182,7 +267,12 @@ export default function ConfigPage() {
             <Input.TextArea rows={3} />
           </Form.Item>
           <Form.Item name="configType" label="类型" initialValue={2}>
-            <Select options={(configTypeDict || []).map((o) => ({ label: o.label, value: Number(o.value) }))} />
+            <Select
+              options={(configTypeDict || []).map((o) => ({
+                label: o.label,
+                value: Number(o.value),
+              }))}
+            />
           </Form.Item>
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={2} />

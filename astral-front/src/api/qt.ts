@@ -134,8 +134,7 @@ export interface QtPage<T> {
 
 /** 轻听插件管理 API（后台 Admin，需宿主登录态） */
 export const qtAdminApi = {
-  overview: (): Promise<ApiResult<QtOverview>> =>
-    request.get('/api/v1/admin/qt/overview'),
+  overview: (): Promise<ApiResult<QtOverview>> => request.get('/api/v1/admin/qt/overview'),
 
   users: (pageNum = 1, pageSize = 10, keyword?: string): Promise<ApiResult<QtPage<QtUserInfo>>> =>
     request.get('/api/v1/admin/qt/users', { params: { pageNum, pageSize, keyword } }),

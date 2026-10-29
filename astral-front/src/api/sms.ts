@@ -67,8 +67,7 @@ export const smsApi = {
     request.post('/api/v1/admin/system/sms/provider', data),
   providerUpdate: (id: number, data: Partial<SmsProvider>) =>
     request.put(`/api/v1/admin/system/sms/provider/${id}`, data),
-  providerDelete: (id: number) =>
-    request.delete(`/api/v1/admin/system/sms/provider/${id}`),
+  providerDelete: (id: number) => request.delete(`/api/v1/admin/system/sms/provider/${id}`),
 
   // ===== 模板 =====
   templatePage: (pageNum: number, pageSize: number): Promise<ApiResult<PageResult<SmsTemplate>>> =>
@@ -79,15 +78,19 @@ export const smsApi = {
     request.post('/api/v1/admin/system/sms/template', data),
   templateUpdate: (id: number, data: Partial<SmsTemplate>) =>
     request.put(`/api/v1/admin/system/sms/template/${id}`, data),
-  templateDelete: (id: number) =>
-    request.delete(`/api/v1/admin/system/sms/template/${id}`),
-  templateSend: (id: number, data: { phone: string; providerId?: number; variables?: Record<string, string> }) =>
-    request.post(`/api/v1/admin/system/sms/template/${id}/send`, data),
+  templateDelete: (id: number) => request.delete(`/api/v1/admin/system/sms/template/${id}`),
+  templateSend: (
+    id: number,
+    data: { phone: string; providerId?: number; variables?: Record<string, string> },
+  ) => request.post(`/api/v1/admin/system/sms/template/${id}/send`, data),
 
   // ===== 日志 =====
   logPage: (params: {
-    pageNum: number; pageSize: number;
-    phone?: string; pluginId?: string; status?: number;
+    pageNum: number;
+    pageSize: number;
+    phone?: string;
+    pluginId?: string;
+    status?: number;
   }): Promise<ApiResult<PageResult<SmsLog>>> =>
     request.get('/api/v1/admin/system/sms/log/page', { params }),
 };

@@ -4,9 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, Link2, Plus, Trash2 } from 'lucide-react';
 
-import {
-  cmsApi, cmsDictLabel, loadCmsDicts, CmsShare,
-} from '@/api/cms';
+import { cmsApi, cmsDictLabel, loadCmsDicts, CmsShare } from '@/api/cms';
 import { usePerm } from '@/lib/perm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { confirmDialog } from '../confirm';
 import { formatDateTime, FormCard } from './shared';
 
 /** 分享目标类型（与 CmsShare.targetType 一致） */
@@ -25,7 +24,10 @@ type ShareTarget = 'post' | 'page';
  * 只在「编辑已存在的内容」时渲染 —— 新建时还没有 targetId，链接无从生成。
  * 文章表单与 Wiki 页面表单共用本组件，文案差异只在标题说明里。
  */
-export default function SharePanel({ targetType, targetId }: {
+export default function SharePanel({
+  targetType,
+  targetId,
+}: {
   targetType: ShareTarget;
   targetId: number;
 }) {
@@ -54,7 +56,9 @@ export default function SharePanel({ targetType, targetId }: {
   }, [targetType, targetId]);
 
   useEffect(() => {
-    void loadCmsDicts().catch(() => {/* 字典拉取失败时回退展示原始值 */});
+    void loadCmsDicts().catch(() => {
+      /* 字典拉取失败时回退展示原始值 */
+    });
     void load();
   }, [load]);
 
@@ -88,7 +92,13 @@ export default function SharePanel({ targetType, targetId }: {
   };
 
   const revoke = async (share: CmsShare) => {
-    if (!window.confirm('确认撤销该分享链接？撤销后已发出的链接立即失效。')) return;
+    if (
+      !(await confirmDialog({
+        title: '确认撤销该分享链接？',
+        description: '撤销后已发出的链接立即失效。',
+      }))
+    )
+      return;
     try {
       await cmsApi.revokeShare(share.id);
       toast.success('已撤销');
@@ -99,7 +109,8 @@ export default function SharePanel({ targetType, targetId }: {
   };
 
   const revokeAll = async () => {
-    if (!window.confirm(`确认撤销该内容的全部 ${shares.length} 条分享链接？`)) return;
+    if (!(await confirmDialog({ title: `确认撤销该内容的全部 ${shares.length} 条分享链接？` })))
+      return;
     try {
       const res = await cmsApi.revokeShareByTarget(targetType, targetId);
       toast.success(`已撤销 ${res.data ?? 0} 条`);
@@ -126,17 +137,23 @@ export default function SharePanel({ targetType, targetId }: {
     <FormCard
       title="分享"
       description="生成只读链接，把内容临时开放给未登录访客；可随时撤销、可设过期时间"
-      footer={canEdit && shares.length > 0 ? (
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground tabular-nums">
-            共 {shares.length} 条 · 有效 {activeCount} 条
-          </span>
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground"
-                  onClick={revokeAll}>
-            撤销全部
-          </Button>
-        </div>
-      ) : undefined}
+      footer={
+        canEdit && shares.length > 0 ? (
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-muted-foreground text-xs tabular-nums">
+              共 {shares.length} 条 · 有效 {activeCount} 条
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground h-7 px-2 text-xs"
+              onClick={revokeAll}
+            >
+              撤销全部
+            </Button>
+          </div>
+        ) : undefined
+      }
     >
       {loading ? (
         <div role="status" aria-busy="true" aria-label="分享链接加载中" className="space-y-3">
@@ -146,20 +163,28 @@ export default function SharePanel({ targetType, targetId }: {
       ) : (
         <>
           {shares.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               还没有分享链接。创建后可把链接发给需要查看的人，撤销即立即失效。
             </p>
           ) : (
-            <ul className="divide-y divide-border/60">
+            <ul className="divide-border/60 divide-y">
               {shares.map((share) => (
-                <li key={share.id} className={cn('space-y-1.5 py-2.5 first:pt-0 last:pb-0',
-                  share.expired && 'opacity-60')}>
+                <li
+                  key={share.id}
+                  className={cn(
+                    'space-y-1.5 py-2.5 first:pt-0 last:pb-0',
+                    share.expired && 'opacity-60',
+                  )}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 space-y-0.5">
-                      <p className="truncate text-sm text-foreground" title={share.remark || undefined}>
+                      <p
+                        className="text-foreground truncate text-sm"
+                        title={share.remark || undefined}
+                      >
                         {share.remark || '未填备注'}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {share.expired ? (
                           <span className="text-muted-foreground">
                             已过期（{formatDateTime(share.expireAt)}）
@@ -174,14 +199,25 @@ export default function SharePanel({ targetType, targetId }: {
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
-                      <Button variant="ghost" size="icon" className="size-7 text-muted-foreground"
-                              aria-label="复制链接" title="复制链接" onClick={() => void copy(share)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground size-7"
+                        aria-label="复制链接"
+                        title="复制链接"
+                        onClick={() => void copy(share)}
+                      >
                         <Copy className="size-3.5" />
                       </Button>
                       {canEdit && (
-                        <Button variant="ghost" size="icon" className="size-7 text-muted-foreground"
-                                aria-label="撤销分享链接" title="撤销"
-                                onClick={() => void revoke(share)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground size-7"
+                          aria-label="撤销分享链接"
+                          title="撤销"
+                          onClick={() => void revoke(share)}
+                        >
                           <Trash2 className="size-3.5" />
                         </Button>
                       )}
@@ -191,20 +227,20 @@ export default function SharePanel({ targetType, targetId }: {
                     <button
                       type="button"
                       onClick={() => void copy(share)}
-                      className="block w-full truncate rounded-md bg-muted/50 px-2 py-1 text-left font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                      className="bg-muted/50 text-muted-foreground hover:text-foreground block w-full truncate rounded-md px-2 py-1 text-left font-mono text-[11px] transition-colors"
                       title="点击复制"
                     >
                       {share.url}
                     </button>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-xs leading-relaxed text-muted-foreground">
+                      <p className="text-muted-foreground text-xs leading-relaxed">
                         请先在站点设置里配置博客前台地址（blog_url）
                       </p>
                       <button
                         type="button"
                         onClick={() => void copy(share)}
-                        className="block w-full truncate rounded-md bg-muted/50 px-2 py-1 text-left font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                        className="bg-muted/50 text-muted-foreground hover:text-foreground block w-full truncate rounded-md px-2 py-1 text-left font-mono text-[11px] transition-colors"
                         title="点击复制相对路径"
                       >
                         /share/{share.token}
@@ -216,23 +252,40 @@ export default function SharePanel({ targetType, targetId }: {
             </ul>
           )}
 
-          {canEdit && (
-            open ? (
-              <div className="space-y-3 rounded-lg border border-border/60 p-3">
+          {canEdit &&
+            (open ? (
+              <div className="border-border/60 space-y-3 rounded-lg border p-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="share-remark" className="text-xs">备注</Label>
-                  <Input id="share-remark" value={remark} maxLength={256}
-                         onChange={(e) => setRemark(e.target.value)}
-                         placeholder="用途说明，便于日后辨认，如：给小王临时看" />
+                  <Label htmlFor="share-remark" className="text-xs">
+                    备注
+                  </Label>
+                  <Input
+                    id="share-remark"
+                    value={remark}
+                    maxLength={256}
+                    onChange={(e) => setRemark(e.target.value)}
+                    placeholder="用途说明，便于日后辨认，如：给小王临时看"
+                  />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="share-expire" className="text-xs">过期时间</Label>
-                  <Input id="share-expire" value={expireAt} onChange={(e) => setExpireAt(e.target.value)}
-                         placeholder="yyyy-MM-dd HH:mm:ss，留空为永久" />
+                  <Label htmlFor="share-expire" className="text-xs">
+                    过期时间
+                  </Label>
+                  <Input
+                    id="share-expire"
+                    value={expireAt}
+                    onChange={(e) => setExpireAt(e.target.value)}
+                    placeholder="yyyy-MM-dd HH:mm:ss，留空为永久"
+                  />
                 </div>
                 <div className="flex items-center justify-end gap-2">
-                  <Button variant="ghost" size="sm" className="text-muted-foreground"
-                          disabled={creating} onClick={() => setOpen(false)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    disabled={creating}
+                    onClick={() => setOpen(false)}
+                  >
                     取消
                   </Button>
                   <Button size="sm" disabled={creating} onClick={() => void create()}>
@@ -242,10 +295,10 @@ export default function SharePanel({ targetType, targetId }: {
               </div>
             ) : (
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
-                <Plus className="size-3.5" />新建分享链接
+                <Plus className="size-3.5" />
+                新建分享链接
               </Button>
-            )
-          )}
+            ))}
         </>
       )}
     </FormCard>
@@ -258,7 +311,7 @@ export default function SharePanel({ targetType, targetId }: {
  */
 export function ShareTargetBadge({ targetType }: { targetType: string }) {
   return (
-    <Badge variant="outline" className="gap-1 font-normal text-muted-foreground">
+    <Badge variant="outline" className="text-muted-foreground gap-1 font-normal">
       <Link2 className="size-3" />
       {cmsDictLabel('cms_share_target_type', targetType)}
     </Badge>

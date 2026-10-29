@@ -9,7 +9,17 @@
 
 import React from 'react';
 
-import { Alert, Button, Card, Descriptions, Space, Spin, Statistic, Tag, Tooltip } from '@/components/antd-compat';
+import {
+  Alert,
+  Button,
+  Card,
+  Descriptions,
+  Space,
+  Spin,
+  Statistic,
+  Tag,
+  Tooltip,
+} from '@/components/antd-compat';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -72,8 +82,18 @@ export default function OverviewPanel() {
         />
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-        <StatCard title="提供方" value={data.providerCount} suffix={`/ ${data.enabledProviderCount ?? 0} 启用`} />
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: 12,
+        }}
+      >
+        <StatCard
+          title="提供方"
+          value={data.providerCount}
+          suffix={`/ ${data.enabledProviderCount ?? 0} 启用`}
+        />
         <StatCard title="模型" value={data.modelCount} />
         <StatCard title="路由" value={data.routeCount} />
         <StatCard
@@ -86,10 +106,20 @@ export default function OverviewPanel() {
         <StatCard title="工具" value={data.toolCount} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: 12,
+        }}
+      >
         <StatCard title="今日请求" value={data.todayRequestCount} />
         <StatCard title="进行中" value={data.runningRequestCount} />
-        <StatCard title="今日失败" value={data.failedRequestCount} danger={(data.failedRequestCount ?? 0) > 0} />
+        <StatCard
+          title="今日失败"
+          value={data.failedRequestCount}
+          danger={(data.failedRequestCount ?? 0) > 0}
+        />
         <StatCard title="今日输入 Token" value={data.todayInputTokens} plain />
         <StatCard title="今日输出 Token" value={data.todayOutputTokens} plain />
       </div>
@@ -263,7 +293,9 @@ function StatCard({
           fontWeight: 600,
           color: danger ? 'var(--destructive, #dc2626)' : undefined,
         }}
-        suffix={suffix ? <span style={{ fontSize: 11.5, opacity: 0.55 }}>{suffix}</span> : undefined}
+        suffix={
+          suffix ? <span style={{ fontSize: 11.5, opacity: 0.55 }}>{suffix}</span> : undefined
+        }
       />
     </Card>
   );
@@ -274,13 +306,17 @@ function buildBlockingIssues(data: AiOverview): string[] {
   const issues: string[] = [];
   if (!data.pluginEnabled) issues.push('AI 插件处于停用状态，到「插件管理」启用它。');
   if (!data.schemaReady) issues.push('数据表尚未初始化，检查启动日志里的建表结果。');
-  if ((data.providerCount ?? 0) === 0) issues.push('没有任何提供方，先在「提供方与模型」里新建一个。');
+  if ((data.providerCount ?? 0) === 0)
+    issues.push('没有任何提供方，先在「提供方与模型」里新建一个。');
   if ((data.modelCount ?? 0) === 0) issues.push('提供方下没有模型，客户端将无模型可用。');
   if ((data.routeCount ?? 0) === 0) issues.push('没有模型路由，智能体版本无法绑定路由。');
-  if ((data.publishedAgentCount ?? 0) === 0) issues.push('没有已发布的智能体，客户端不会出现入口。');
+  if ((data.publishedAgentCount ?? 0) === 0)
+    issues.push('没有已发布的智能体，客户端不会出现入口。');
   const unhealthy = (data.providerHealth ?? []).filter((item) => item.healthStatus === 'UNHEALTHY');
   if (unhealthy.length > 0) {
-    issues.push(`有 ${unhealthy.length} 个提供方健康检查未通过：${unhealthy.map((i) => i.name).join('、')}。`);
+    issues.push(
+      `有 ${unhealthy.length} 个提供方健康检查未通过：${unhealthy.map((i) => i.name).join('、')}。`,
+    );
   }
   return issues;
 }

@@ -5,8 +5,7 @@
  * 公开前台展示的也是同一批数据，因此两端输出必须完全一致。
  */
 
-import { Marked } from 'marked';
-import type { Token, Tokens } from 'marked';
+import { Marked, type Token, type Tokens } from 'marked';
 
 import { highlightCode, normalizeLanguage } from '@/lib/highlight';
 
@@ -48,15 +47,20 @@ function renderImage(href: string, title: string | null, text: string): string {
  * 表格自身保持 display:table 撑满整行，否则 thead 会按内容宽度收缩、列错位。
  */
 function renderTable(token: Tokens.Table, parser: InlineParser): string {
-  const align = (cell: Tokens.TableCell): string => (cell.align ? ` style="text-align:${cell.align}"` : '');
+  const align = (cell: Tokens.TableCell): string =>
+    cell.align ? ` style="text-align:${cell.align}"` : '';
   const head =
     `<thead><tr>` +
-    token.header.map((cell) => `<th${align(cell)}>${parser.parseInline(cell.tokens)}</th>`).join('') +
+    token.header
+      .map((cell) => `<th${align(cell)}>${parser.parseInline(cell.tokens)}</th>`)
+      .join('') +
     `</tr></thead>`;
   const body = token.rows
     .map(
       (row) =>
-        `<tr>` + row.map((cell) => `<td${align(cell)}>${parser.parseInline(cell.tokens)}</td>`).join('') + `</tr>`,
+        `<tr>` +
+        row.map((cell) => `<td${align(cell)}>${parser.parseInline(cell.tokens)}</td>`).join('') +
+        `</tr>`,
     )
     .join('');
   const bodyPart = body ? `<tbody>${body}</tbody>` : '';

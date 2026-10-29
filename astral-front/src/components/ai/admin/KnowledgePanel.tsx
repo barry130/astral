@@ -43,7 +43,15 @@ import {
 } from '@/api/ai';
 import { usePerm } from '@/lib/perm';
 
-import { Hint, ReadOnlyNote, StatusTag, formatNumber, formatTime, truncate, useAiDict } from './shared';
+import {
+  Hint,
+  ReadOnlyNote,
+  StatusTag,
+  formatNumber,
+  formatTime,
+  truncate,
+  useAiDict,
+} from './shared';
 
 export default function KnowledgePanel() {
   const hasPerm = usePerm();
@@ -54,7 +62,9 @@ export default function KnowledgePanel() {
   const [sources, setSources] = useState<AiKnowledgeSource[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<number | undefined>();
-  const [sourceModal, setSourceModal] = useState<{ open: boolean; row?: AiKnowledgeSource }>({ open: false });
+  const [sourceModal, setSourceModal] = useState<{ open: boolean; row?: AiKnowledgeSource }>({
+    open: false,
+  });
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
@@ -76,7 +86,10 @@ export default function KnowledgePanel() {
     void load();
   }, [load]);
 
-  const selected = useMemo(() => sources.find((item) => item.id === selectedId), [sources, selectedId]);
+  const selected = useMemo(
+    () => sources.find((item) => item.id === selectedId),
+    [sources, selectedId],
+  );
 
   const openModal = (row?: AiKnowledgeSource) => {
     setSourceModal({ open: true, row });
@@ -84,7 +97,12 @@ export default function KnowledgePanel() {
     if (row) {
       form.setFieldsValue({ ...row });
     } else {
-      form.setFieldsValue({ sourceType: 'PROJECT_DOCUMENT', enabled: true, syncMode: 'MANUAL', pathPattern: 'docs/**' });
+      form.setFieldsValue({
+        sourceType: 'PROJECT_DOCUMENT',
+        enabled: true,
+        syncMode: 'MANUAL',
+        pathPattern: 'docs/**',
+      });
     }
   };
 
@@ -125,7 +143,9 @@ export default function KnowledgePanel() {
       title: '类型',
       dataIndex: 'sourceType',
       width: 150,
-      render: (value: string) => <Tag color="default">{dict.label('ai_knowledge_source_type', value)}</Tag>,
+      render: (value: string) => (
+        <Tag color="default">{dict.label('ai_knowledge_source_type', value)}</Tag>
+      ),
     },
     {
       key: 'status',
@@ -151,7 +171,9 @@ export default function KnowledgePanel() {
       title: '上次同步',
       dataIndex: 'lastSyncTime',
       width: 150,
-      render: (value: string) => <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>,
+      render: (value: string) => (
+        <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>
+      ),
     },
     {
       key: 'action',
@@ -160,7 +182,13 @@ export default function KnowledgePanel() {
       width: 110,
       render: (_: unknown, row: AiKnowledgeSource) => (
         <Space size={2}>
-          <Button size="small" type="text" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openModal(row)} />
+          <Button
+            size="small"
+            type="text"
+            icon={<EditOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal(row)}
+          />
           <Button size="small" type="text" onClick={() => setSelectedId(row.id)}>
             文档
           </Button>
@@ -173,26 +201,52 @@ export default function KnowledgePanel() {
     <div>
       <Hint>
         知识源是「答疑能有依据」的前提。文档入库后会切块索引，检索时按 topK 与最低相关度过滤，
-        命中片段随回答一起返回，前端渲染成引用。<strong>智能体要单独绑定知识源才会用上</strong>，绑在「智能体 → 版本 → 知识源」里。
+        命中片段随回答一起返回，前端渲染成引用。<strong>智能体要单独绑定知识源才会用上</strong>
+        ，绑在「智能体 → 版本 → 知识源」里。
       </Hint>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
         <Space size={8}>
           <span style={{ fontSize: 13, fontWeight: 500 }}>知识源</span>
           <Tag color="default">{sources.length}</Tag>
           <ReadOnlyNote show={!canEdit} />
         </Space>
         <Space size={8}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
-          <Button size="small" type="primary" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => openModal()}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal()}
+          >
             新建知识源
           </Button>
         </Space>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.05fr)', gap: 16, alignItems: 'start' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.05fr)',
+          gap: 16,
+          alignItems: 'start',
+        }}
+      >
         <ResizableTable
           resizeKey="ai-knowledge"
           rowKey="id"
@@ -205,7 +259,13 @@ export default function KnowledgePanel() {
 
         <div style={{ position: 'sticky', top: 12 }}>
           {selected ? (
-            <DocumentBoard source={selected} canEdit={canEdit} canSync={canSync} dict={dict} onChanged={load} />
+            <DocumentBoard
+              source={selected}
+              canEdit={canEdit}
+              canSync={canSync}
+              dict={dict}
+              onChanged={load}
+            />
           ) : (
             <Card>
               <Empty description="左侧选一个知识源，这里管理它的文档与索引" />
@@ -238,13 +298,23 @@ export default function KnowledgePanel() {
             >
               <Input placeholder="例如 project_docs" disabled={Boolean(sourceModal.row)} />
             </Form.Item>
-            <Form.Item name="name" label="名称" style={{ flex: 1 }} rules={[{ required: true, message: '请输入名称' }]}>
+            <Form.Item
+              name="name"
+              label="名称"
+              style={{ flex: 1 }}
+              rules={[{ required: true, message: '请输入名称' }]}
+            >
               <Input placeholder="例如 项目文档" />
             </Form.Item>
           </Space>
 
           <Space size={12} style={{ display: 'flex' }}>
-            <Form.Item name="sourceType" label="类型" style={{ flex: 1 }} rules={[{ required: true }]}>
+            <Form.Item
+              name="sourceType"
+              label="类型"
+              style={{ flex: 1 }}
+              rules={[{ required: true }]}
+            >
               <Select options={dict.options('ai_knowledge_source_type')} />
             </Form.Item>
             <Form.Item name="syncMode" label="同步方式" style={{ flex: 1 }}>
@@ -257,7 +327,11 @@ export default function KnowledgePanel() {
             </Form.Item>
           </Space>
 
-          <Form.Item name="pathPattern" label="路径匹配" extra="例如 docs/**，用于说明这类文档的来源范围">
+          <Form.Item
+            name="pathPattern"
+            label="路径匹配"
+            extra="例如 docs/**，用于说明这类文档的来源范围"
+          >
             <Input placeholder="docs/**" maxLength={512} />
           </Form.Item>
 
@@ -399,7 +473,13 @@ function DocumentBoard({
       width: 90,
       render: (_: unknown, row: AiKnowledgeDocument) => (
         <Space size={2}>
-          <Button size="small" type="text" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openModal(row)} />
+          <Button
+            size="small"
+            type="text"
+            icon={<EditOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal(row)}
+          />
           <Popconfirm
             title="删除文档？"
             description="删除后该文档的知识片段不再被检索到。"
@@ -436,13 +516,30 @@ function DocumentBoard({
       }
       extra={
         <Space size={6}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
-          <Button size="small" icon={<DatabaseOutlined />} disabled={!canSync} loading={syncing} onClick={() => void doSync()}>
+          <Button
+            size="small"
+            icon={<DatabaseOutlined />}
+            disabled={!canSync}
+            loading={syncing}
+            onClick={() => void doSync()}
+          >
             重新索引
           </Button>
-          <Button size="small" type="primary" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => openModal()}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal()}
+          >
             添加文档
           </Button>
         </Space>
@@ -457,7 +554,8 @@ function DocumentBoard({
           message={`索引任务 ${job.status}`}
           description={
             <span style={{ fontSize: 12.5 }}>
-              共 {job.totalCount ?? 0} 篇，已处理 {job.processedCount ?? 0}，失败 {job.failedCount ?? 0}
+              共 {job.totalCount ?? 0} 篇，已处理 {job.processedCount ?? 0}，失败{' '}
+              {job.failedCount ?? 0}
               {job.errorSummary ? ` · ${truncate(job.errorSummary, 120)}` : ''}
             </span>
           }
@@ -494,10 +592,20 @@ function DocumentBoard({
       >
         <Form form={form} layout="vertical">
           <Space size={12} style={{ display: 'flex' }}>
-            <Form.Item name="docKey" label="文档键" style={{ flex: 1 }} rules={[{ required: true, message: '请输入文档键' }]}>
+            <Form.Item
+              name="docKey"
+              label="文档键"
+              style={{ flex: 1 }}
+              rules={[{ required: true, message: '请输入文档键' }]}
+            >
               <Input placeholder="例如 api-contract" disabled={Boolean(modal.row)} />
             </Form.Item>
-            <Form.Item name="title" label="标题" style={{ flex: 1 }} rules={[{ required: true, message: '请输入标题' }]}>
+            <Form.Item
+              name="title"
+              label="标题"
+              style={{ flex: 1 }}
+              rules={[{ required: true, message: '请输入标题' }]}
+            >
               <Input placeholder="例如 AI 模块接口契约" />
             </Form.Item>
           </Space>
@@ -520,7 +628,10 @@ function DocumentBoard({
             rules={[{ required: true, message: '请输入正文' }]}
             extra="按标题层级切块，写清楚小标题能让检索更准"
           >
-            <Input.TextArea rows={16} placeholder="# 标题&#10;&#10;正文……" />
+            <Input.TextArea
+              rows={16}
+              placeholder="# 标题&#10;&#10;正文……"
+            />
           </Form.Item>
         </Form>
       </Modal>

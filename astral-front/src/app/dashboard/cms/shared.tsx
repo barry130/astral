@@ -10,9 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table, TableCell, TableRow,
-} from '@/components/ui/table';
+import { Table, TableCell, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
 /**
@@ -24,7 +22,11 @@ import { cn } from '@/lib/utils';
  */
 
 /** 页头：标题 + 一句说明，右侧放主操作 */
-export function PageHeader({ title, description, actions }: {
+export function PageHeader({
+  title,
+  description,
+  actions,
+}: {
   title: string;
   description?: string;
   actions?: React.ReactNode;
@@ -32,9 +34,9 @@ export function PageHeader({ title, description, actions }: {
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
       <div className="min-w-0 space-y-1.5">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+        <h1 className="text-foreground text-xl font-semibold tracking-tight">{title}</h1>
         {description && (
-          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">{description}</p>
         )}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -78,7 +80,12 @@ export function StatusBadge({ code, value }: { code: CmsDictCode; value?: string
 }
 
 /** 分页条：左侧总数与页码，右侧上/下一页（列表页信息密度适中即可） */
-export function Pager({ page, pageSize, total, onPageChange }: {
+export function Pager({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+}: {
   page: number;
   pageSize: number;
   total: number;
@@ -88,15 +95,29 @@ export function Pager({ page, pageSize, total, onPageChange }: {
   if (total === 0) return null;
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-      <span className="text-muted-foreground tabular-nums">共 {total} 条 · 第 {page} / {pages} 页</span>
+      <span className="text-muted-foreground tabular-nums">
+        共 {total} 条 · 第 {page} / {pages} 页
+      </span>
       <div className="flex items-center gap-1.5">
-        <Button variant="outline" size="sm" className="gap-1" disabled={page <= 1}
-                onClick={() => onPageChange(page - 1)}>
-          <ChevronLeft className="size-3.5" />上一页
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft className="size-3.5" />
+          上一页
         </Button>
-        <Button variant="outline" size="sm" className="gap-1" disabled={page >= pages}
-                onClick={() => onPageChange(page + 1)}>
-          下一页<ChevronRight className="size-3.5" />
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1"
+          disabled={page >= pages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          下一页
+          <ChevronRight className="size-3.5" />
         </Button>
       </div>
     </div>
@@ -107,7 +128,12 @@ export function Pager({ page, pageSize, total, onPageChange }: {
  * 列表容器：筛选区 / 表格 / 分页三层，用发丝线分隔而不是分成三张卡片。
  * 卡片自身去掉上下 padding，让表格行贴边；单元格的左右 4 与容器 4 对齐。
  */
-export function ListCard({ toolbar, children, footer, className }: {
+export function ListCard({
+  toolbar,
+  children,
+  footer,
+  className,
+}: {
   toolbar?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
@@ -116,8 +142,8 @@ export function ListCard({ toolbar, children, footer, className }: {
   return (
     <Card className={cn('gap-0 overflow-hidden py-0', className)}>
       {toolbar && <div className="flex flex-wrap items-center gap-2 px-4 py-3">{toolbar}</div>}
-      <div className={cn(toolbar && 'border-t border-border/60')}>{children}</div>
-      {footer && <div className="border-t border-border/60 px-4 py-3">{footer}</div>}
+      <div className={cn(toolbar && 'border-border/60 border-t')}>{children}</div>
+      {footer && <div className="border-border/60 border-t px-4 py-3">{footer}</div>}
     </Card>
   );
 }
@@ -126,7 +152,13 @@ export function ListCard({ toolbar, children, footer, className }: {
  * 表单分区卡片：标题 + 说明固定在上方，下方一条发丝线把「区头」与字段分开。
  * 长表单用多张这样的卡片分段，避免所有字段堆在同一张卡里、失去层次。
  */
-export function FormCard({ title, description, children, footer, className }: {
+export function FormCard({
+  title,
+  description,
+  children,
+  footer,
+  className,
+}: {
   title: string;
   description?: string;
   children: React.ReactNode;
@@ -136,13 +168,13 @@ export function FormCard({ title, description, children, footer, className }: {
   return (
     <Card className={cn('gap-0 overflow-hidden py-0', className)}>
       <div className="space-y-1 px-5 py-4">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
+        <h2 className="text-foreground text-sm font-semibold tracking-tight">{title}</h2>
         {description && (
-          <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
+          <p className="text-muted-foreground text-xs leading-relaxed">{description}</p>
         )}
       </div>
-      <div className="space-y-5 border-t border-border/60 px-5 py-5">{children}</div>
-      {footer && <div className="border-t border-border/60 px-5 py-3">{footer}</div>}
+      <div className="border-border/60 space-y-5 border-t px-5 py-5">{children}</div>
+      {footer && <div className="border-border/60 border-t px-5 py-3">{footer}</div>}
     </Card>
   );
 }
@@ -176,7 +208,15 @@ function TableSkeletonRows({ rows = 6 }: { rows?: number }) {
  * 表格状态行（加载 / 错误 / 空态三合一）：列表页统一走这里，
  * 三种状态的高度与文案层级一致，翻页与筛选时不会突然跳动。
  */
-export function TableStateRow({ colSpan, loading, error, onRetry, emptyText, emptyHint, emptyAction }: {
+export function TableStateRow({
+  colSpan,
+  loading,
+  error,
+  onRetry,
+  emptyText,
+  emptyHint,
+  emptyAction,
+}: {
   colSpan: number;
   loading?: boolean;
   error?: string | null;
@@ -187,7 +227,7 @@ export function TableStateRow({ colSpan, loading, error, onRetry, emptyText, emp
 }) {
   return (
     <TableRow className="hover:bg-transparent">
-      <TableCell colSpan={colSpan} className="whitespace-normal px-4 py-0">
+      <TableCell colSpan={colSpan} className="px-4 py-0 whitespace-normal">
         {loading ? (
           <TableSkeletonRows />
         ) : error ? (
@@ -216,7 +256,10 @@ export interface FlatTreeNode<T> {
 }
 
 /** 树拍平为带深度的有序列表（表格缩进展示用） */
-export function flattenTree<T extends CmsTreeNode>(nodes: T[] | undefined, depth = 0): Array<FlatTreeNode<T>> {
+export function flattenTree<T extends CmsTreeNode>(
+  nodes: T[] | undefined,
+  depth = 0,
+): Array<FlatTreeNode<T>> {
   const out: Array<FlatTreeNode<T>> = [];
   for (const node of nodes || []) {
     out.push({ node, depth });
@@ -243,8 +286,12 @@ export function flattenCategoryOptions(
   for (const node of nodes || []) {
     out.push({ node, depth, path: ancestors });
     if (node.children?.length) {
-      out.push(...flattenCategoryOptions(node.children, depth + 1,
-        [...ancestors, node.name || `#${node.id}`]));
+      out.push(
+        ...flattenCategoryOptions(node.children, depth + 1, [
+          ...ancestors,
+          node.name || `#${node.id}`,
+        ]),
+      );
     }
   }
   return out;
@@ -263,7 +310,7 @@ export function collectSelfAndDescendantIds(node: CmsTreeNode): Set<number> {
 export function IndentLabel({ depth, label }: { depth: number; label?: string }) {
   return (
     <div className="flex min-w-0 items-center" style={{ paddingLeft: `${depth * 20}px` }}>
-      {depth > 0 && <span className="mr-1.5 shrink-0 text-muted-foreground/50">└</span>}
+      {depth > 0 && <span className="text-muted-foreground/50 mr-1.5 shrink-0">└</span>}
       <span className="truncate">{label || '-'}</span>
     </div>
   );
@@ -273,7 +320,13 @@ export function IndentLabel({ depth, label }: { depth: number; label?: string })
  * 标签/分类等「多值」列的展示：最多展示 max 个，其余折叠成 +N（悬停看全量）。
  * `highlightFirst` 用于分类列：第一项是主分类，用 secondary 底色稍作强调。
  */
-export function BadgeList({ labels, max = 2, empty = '-', highlightFirst = false, className }: {
+export function BadgeList({
+  labels,
+  max = 2,
+  empty = '-',
+  highlightFirst = false,
+  className,
+}: {
   labels: string[];
   max?: number;
   empty?: string;
@@ -299,8 +352,11 @@ export function BadgeList({ labels, max = 2, empty = '-', highlightFirst = false
         </Badge>
       ))}
       {rest.length > 0 && (
-        <Badge variant="outline" className="font-normal text-muted-foreground tabular-nums"
-               title={rest.join('、')}>
+        <Badge
+          variant="outline"
+          className="text-muted-foreground font-normal tabular-nums"
+          title={rest.join('、')}
+        >
           +{rest.length}
         </Badge>
       )}

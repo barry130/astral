@@ -23,12 +23,14 @@ export default function DashboardError({
   }, [error]);
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-lg border border-border bg-card px-6 py-16 text-center">
-      <h2 className="text-base font-semibold text-foreground">页面加载出错</h2>
-      <p className="max-w-md text-sm text-muted-foreground">
-        {error.message || '该页面渲染时发生异常，请重试。'}
+    <div className="border-border bg-card flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-lg border px-6 py-16 text-center">
+      <h2 className="text-foreground text-base font-semibold">页面加载出错</h2>
+      <p className="text-muted-foreground max-w-md text-sm">
+        {(error as Error).message || '该页面渲染时发生异常，请重试。'}
       </p>
-      {error.digest ? <p className="text-xs text-muted-foreground">错误编号：{error.digest}</p> : null}
+      {error.digest ? (
+        <p className="text-muted-foreground text-xs">错误编号：{error.digest}</p>
+      ) : null}
       <Button onClick={() => reset()}>重试</Button>
     </div>
   );

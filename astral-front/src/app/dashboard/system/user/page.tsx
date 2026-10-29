@@ -2,9 +2,31 @@
 
 import { useEffect, useState } from 'react';
 import { formatDateTime } from '@/lib/format';
-import { Card, Button, Space, Modal, Form, Input, Select, Switch, Tag, message, Popconfirm, Tabs, Divider, Typography } from '@/components/antd-compat';
-import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, LockOutlined, LoginOutlined } from '@/components/antd-compat/icons';
-import { request, ApiResult, readCsrfToken } from '@/api/client';
+import {
+  Card,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Switch,
+  Tag,
+  message,
+  Popconfirm,
+  Tabs,
+  Divider,
+  Typography,
+} from '@/components/antd-compat';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  KeyOutlined,
+  LockOutlined,
+  LoginOutlined,
+} from '@/components/antd-compat/icons';
+import { request, readCsrfToken } from '@/api/client';
 import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { clientHeaders } from '@/lib/client-info';
 import { downloadResponse } from '@/lib/http-download';
@@ -52,29 +74,37 @@ interface Role {
 /** 用户管理API封装 */
 const userApi = {
   /** 分页查询用户 */
-  getPage: (pageNum: number, pageSize: number, params?: Record<string, any>) =>
-    request.get<ApiResult<any>>('/api/v1/admin/system/user/page', { params: { pageNum, pageSize, ...params } }),
+  getPage: (pageNum: number, pageSize: number, params?: Record<string, unknown>) =>
+    request.get('/api/v1/admin/system/user/page', {
+      params: { pageNum, pageSize, ...params },
+    }),
   /** 创建用户 */
-  create: (data: any) => request.post('/api/v1/admin/system/user', data),
+  create: (data: Record<string, unknown>) => request.post('/api/v1/admin/system/user', data),
   /** 更新用户 */
-  update: (id: number, data: any) => request.put(`/api/v1/admin/system/user/${id}`, data),
+  update: (id: number, data: Record<string, unknown>) =>
+    request.put(`/api/v1/admin/system/user/${id}`, data),
   /** 删除用户 */
   delete: (id: number) => request.delete(`/api/v1/admin/system/user/${id}`),
   /** 重置用户密码 */
-  resetPassword: (id: number, password: string) => request.put(`/api/v1/admin/system/user/${id}/password`, { password }),
+  resetPassword: (id: number, password: string) =>
+    request.put(`/api/v1/admin/system/user/${id}/password`, { password }),
   /** 更新用户状态（封禁时 reason 必填，后端校验；解封传空） */
   updateStatus: (id: number, status: number, reason?: string) =>
-    request.put(`/api/v1/admin/system/user/${id}/status`, null, { params: { status, reason: reason || undefined } }),
+    request.put(`/api/v1/admin/system/user/${id}/status`, null, {
+      params: { status, reason: reason || undefined },
+    }),
   /**
    * 修改用户类型（ADMIN / APP）。
    * 必须走这个专用接口：`PUT /{id}` 会在后端把 userType 置 null 防 mass assignment，
    * 类型字段放在普通更新里会被静默丢弃（表现为下拉框改了但保存无效）。
    */
-  changeType: (id: number, userType: string) => request.put(`/api/v1/admin/system/user/${id}/type`, { userType }),
+  changeType: (id: number, userType: string) =>
+    request.put(`/api/v1/admin/system/user/${id}/type`, { userType }),
   /** 踢下线 */
   kickOut: (id: number) => request.put(`/api/v1/admin/system/user/${id}/kick`),
   /** 为用户分配角色 */
-  assignRoles: (id: number, roleIds: number[]) => request.put(`/api/v1/admin/system/user/${id}/roles`, { roleIds }),
+  assignRoles: (id: number, roleIds: number[]) =>
+    request.put(`/api/v1/admin/system/user/${id}/roles`, { roleIds }),
   /** 获取用户已有角色 */
   getUserRoles: (id: number) => request.get<Role[]>(`/api/v1/admin/system/user/${id}/roles`),
 };
@@ -112,7 +142,7 @@ export default function UserPage() {
   /** 所有角色列表 */
   const [roles, setRoles] = useState<Role[]>([]);
   /** 用户已有角色ID列表 */
-  const [userRoles, setUserRoles] = useState<number[]>([]);
+  const [_userRoles, setUserRoles] = useState<number[]>([]);
   /** 用户表单实例 */
   const [form] = Form.useForm();
   /** 封禁理由弹窗 */
@@ -139,29 +169,37 @@ export default function UserPage() {
   useEffect(() => {
     loadData();
     loadDicts();
-    roleApi.getAll().then((res: any) => {
+    roleApi.getAll().then((res) => {
       if (res.code === 200) setRoles(res.data || []);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** 加载数据字典（失败时回退显示原始值） */
   const loadDicts = () => {
     fetchDictOptions(['user_type'])
       .then(setDicts)
-      .catch(() => { /* 字典失败时回退显示原始值 */ });
+      .catch(() => {
+        /* 字典失败时回退显示原始值 */
+      });
   };
 
   /** 加载用户列表 */
   const loadData = (page = 1, size = 10, keyword = '', utype = typeFilter) => {
     setLoading(true);
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
     if (keyword) params.username = keyword;
     if (utype) params.userType = utype;
-    userApi.getPage(page, size, params)
-      .then((res: any) => {
+    userApi
+      .getPage(page, size, params)
+      .then((res) => {
         if (res.code === 200) {
           setData(res.data?.records || []);
-          setPagination({ current: res.data?.current || 1, pageSize: res.data?.size || 10, total: res.data?.total || 0 });
+          setPagination({
+            current: res.data?.current || 1,
+            pageSize: res.data?.size || 10,
+            total: res.data?.total || 0,
+          });
         }
       })
       .finally(() => setLoading(false));
@@ -181,7 +219,7 @@ export default function UserPage() {
     setActiveTab('info');
     // 加载该用户已有角色
     try {
-      const res: any = await userApi.getUserRoles(record.id);
+      const res = await userApi.getUserRoles(record.id);
       if (res.code === 200) {
         setUserRoles((res.data || []).map((r: Role) => r.id));
         roleForm.setFieldsValue({ roleIds: (res.data || []).map((r: Role) => r.id) });
@@ -213,9 +251,9 @@ export default function UserPage() {
       message.success(typeChanged ? '保存成功，用户类型已变更（该用户需重新登录）' : '保存成功');
       setEditingUser((prev) => (prev ? { ...prev, ...profile, userType } : prev));
       loadData();
-    } catch (error: any) {
-      if (error?.errorFields) return; // 表单校验失败
-      message.error(error.message);
+    } catch (error: unknown) {
+      if ((error as { errorFields?: unknown })?.errorFields) return; // 表单校验失败
+      message.error((error as Error).message);
     }
   };
 
@@ -227,9 +265,9 @@ export default function UserPage() {
       message.success('创建成功');
       setCreateVisible(false);
       loadData();
-    } catch (error: any) {
-      if (error?.errorFields) return;
-      message.error(error.message);
+    } catch (error: unknown) {
+      if ((error as { errorFields?: unknown })?.errorFields) return;
+      message.error((error as Error).message);
     }
   };
 
@@ -241,8 +279,8 @@ export default function UserPage() {
       setEditVisible(false);
       setEditingUser(null);
       loadData();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -254,9 +292,9 @@ export default function UserPage() {
       await userApi.resetPassword(editingUser.id, values.password);
       message.success('密码重置成功');
       passwordForm.resetFields();
-    } catch (error: any) {
-      if (error?.errorFields) return;
-      message.error(error.message);
+    } catch (error: unknown) {
+      if ((error as { errorFields?: unknown })?.errorFields) return;
+      message.error((error as Error).message);
     }
   };
 
@@ -266,8 +304,8 @@ export default function UserPage() {
       await userApi.updateStatus(id, 1);
       message.success('已启用');
       loadData();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -290,8 +328,8 @@ export default function UserPage() {
       message.success('已封禁并强制下线');
       setBanModalOpen(false);
       loadData();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -303,12 +341,15 @@ export default function UserPage() {
       const headers: Record<string, string> = { ...clientHeaders() };
       const csrf = readCsrfToken();
       if (csrf) headers['X-CSRF-Token'] = csrf;
-      const resp = await fetch('/api/v1/admin/system/user/export', { headers, credentials: 'same-origin' });
+      const resp = await fetch('/api/v1/admin/system/user/export', {
+        headers,
+        credentials: 'same-origin',
+      });
       // 新契约下业务失败是 HTTP 200 + Result JSON，成功/失败判定交给 downloadResponse
       await downloadResponse(resp, `users-${new Date().toISOString().slice(0, 10)}.csv`);
       message.success('已导出');
-    } catch (error: any) {
-      message.error(error.message || '导出失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '导出失败');
     }
   };
 
@@ -320,9 +361,9 @@ export default function UserPage() {
       await userApi.assignRoles(editingUser.id, values.roleIds || []);
       setUserRoles(values.roleIds || []);
       message.success('角色分配成功');
-    } catch (error: any) {
-      if (error?.errorFields) return;
-      message.error(error.message);
+    } catch (error: unknown) {
+      if ((error as { errorFields?: unknown })?.errorFields) return;
+      message.error((error as Error).message);
     }
   };
 
@@ -332,8 +373,8 @@ export default function UserPage() {
     try {
       await userApi.kickOut(editingUser.id);
       message.success('已踢下线');
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -349,7 +390,9 @@ export default function UserPage() {
       dataIndex: 'userType',
       key: 'userType',
       render: (v: string) => (
-        <Tag color={dictColor(userTypeDict, v) || 'default'}>{dictLabel(userTypeDict, v, v || '-')}</Tag>
+        <Tag color={dictColor(userTypeDict, v) || 'default'}>
+          {dictLabel(userTypeDict, v, v || '-')}
+        </Tag>
       ),
     },
     {
@@ -366,105 +409,187 @@ export default function UserPage() {
         />
       ),
     },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => formatDateTime(v) },
+    {
+      title: '创建时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      render: (v: string) => formatDateTime(v),
+    },
     {
       title: '操作',
       key: 'action',
       width: 120,
-      render: (_: any, r: User) => (
+      render: (_: unknown, r: User) => (
         <Space>
-          <Button type="link" icon={<EditOutlined />} onClick={() => openEdit(r)} disabled={!canEdit}>编辑</Button>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => openEdit(r)}
+            disabled={!canEdit}
+          >
+            编辑
+          </Button>
         </Space>
       ),
     },
   ];
 
   /** 编辑面板 Tab 配置 */
-  const editTabItems = editingUser ? [
-    {
-      key: 'info',
-      label: '基本信息',
-      children: (
-        <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
-          <Form.Item name="userType" label="用户类型" extra="修改后保存可变更用户归属（管理端/App）">
-            <Select disabled={editingUser.userType === 'ADMIN' && editingUser.username === 'admin'} options={userTypeOptions} />
-          </Form.Item>
-          <Form.Item name="username" label="用户名">
-            <Input disabled />
-          </Form.Item>
-          <Form.Item name="nickname" label="昵称"><Input /></Form.Item>
-          <Form.Item name="avatar" label="头像地址"><Input placeholder="头像图片URL" /></Form.Item>
-          <Form.Item name="email" label="邮箱"><Input /></Form.Item>
-          <Form.Item name="phone" label="手机号"><Input /></Form.Item>
-          <Space>
-            <Button type="primary" onClick={handleSubmitInfo} disabled={!canEdit}>保存</Button>
-          </Space>
-        </Form>
-      ),
-    },
-    {
-      key: 'roles',
-      label: '角色',
-      children: (
-        <Form form={roleForm} layout="vertical" style={{ marginTop: 8 }}>
-          <Form.Item name="roleIds" label="分配角色" rules={[{ required: true, message: '请选择角色' }]}>
-            <Select mode="multiple" placeholder="选择角色" options={roles.map(r => ({ label: r.roleName, value: r.id }))} />
-          </Form.Item>
-          {/* 分配角色后端要求超管，前端不做门控 */}
-          <Button type="primary" onClick={handleAssignRolesSubmit}>保存角色</Button>
-        </Form>
-      ),
-    },
-    {
-      key: 'account',
-      label: '账户操作',
-      children: (
-        <div>
-          <Typography.Title level={5}>账号状态</Typography.Title>
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{editingUser.status === 1 ? '当前状态：已启用' : '当前状态：已封禁'}</span>
-              {editingUser.status === 1
-                ? <Button danger icon={<LockOutlined />} disabled={!canEdit} onClick={() => requestBan(editingUser.id)}>封禁</Button>
-                : <Button icon={<DeleteOutlined />} onClick={() => handleUnban(editingUser.id)} disabled={!canEdit}>解封</Button>}
+  const editTabItems = editingUser
+    ? [
+        {
+          key: 'info',
+          label: '基本信息',
+          children: (
+            <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
+              <Form.Item
+                name="userType"
+                label="用户类型"
+                extra="修改后保存可变更用户归属（管理端/App）"
+              >
+                <Select
+                  disabled={editingUser.userType === 'ADMIN' && editingUser.username === 'admin'}
+                  options={userTypeOptions}
+                />
+              </Form.Item>
+              <Form.Item name="username" label="用户名">
+                <Input disabled />
+              </Form.Item>
+              <Form.Item name="nickname" label="昵称">
+                <Input />
+              </Form.Item>
+              <Form.Item name="avatar" label="头像地址">
+                <Input placeholder="头像图片URL" />
+              </Form.Item>
+              <Form.Item name="email" label="邮箱">
+                <Input />
+              </Form.Item>
+              <Form.Item name="phone" label="手机号">
+                <Input />
+              </Form.Item>
+              <Space>
+                <Button type="primary" onClick={handleSubmitInfo} disabled={!canEdit}>
+                  保存
+                </Button>
+              </Space>
+            </Form>
+          ),
+        },
+        {
+          key: 'roles',
+          label: '角色',
+          children: (
+            <Form form={roleForm} layout="vertical" style={{ marginTop: 8 }}>
+              <Form.Item
+                name="roleIds"
+                label="分配角色"
+                rules={[{ required: true, message: '请选择角色' }]}
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="选择角色"
+                  options={roles.map((r) => ({ label: r.roleName, value: r.id }))}
+                />
+              </Form.Item>
+              {/* 分配角色后端要求超管，前端不做门控 */}
+              <Button type="primary" onClick={handleAssignRolesSubmit}>
+                保存角色
+              </Button>
+            </Form>
+          ),
+        },
+        {
+          key: 'account',
+          label: '账户操作',
+          children: (
+            <div>
+              <Typography.Title level={5}>账号状态</Typography.Title>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <span>{editingUser.status === 1 ? '当前状态：已启用' : '当前状态：已封禁'}</span>
+                  {editingUser.status === 1 ? (
+                    <Button
+                      danger
+                      icon={<LockOutlined />}
+                      disabled={!canEdit}
+                      onClick={() => requestBan(editingUser.id)}
+                    >
+                      封禁
+                    </Button>
+                  ) : (
+                    <Button
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleUnban(editingUser.id)}
+                      disabled={!canEdit}
+                    >
+                      解封
+                    </Button>
+                  )}
+                </div>
+                {editingUser.status === 0 && (
+                  <div style={{ color: '#cf1322' }}>
+                    封禁/注销理由：{editingUser.statusReason || '-'}
+                  </div>
+                )}
+                <Button icon={<LoginOutlined />} onClick={handleKickOut} disabled={!canEdit}>
+                  踢下线
+                </Button>
+              </Space>
+
+              <Divider />
+              <Typography.Title level={5}>重置密码</Typography.Title>
+              <Form form={passwordForm} layout="vertical">
+                <Form.Item
+                  name="password"
+                  label="新密码"
+                  rules={[{ required: true, min: 6, message: '密码至少6位' }]}
+                >
+                  <Input.Password />
+                </Form.Item>
+                {/* 重置密码后端要求超管，前端不做门控 */}
+                <Button icon={<KeyOutlined />} onClick={handleResetPasswordSubmit}>
+                  重置密码
+                </Button>
+              </Form>
+
+              <Divider />
+              <Typography.Title level={5} type="danger">
+                危险操作
+              </Typography.Title>
+              <Popconfirm
+                title="确认删除该用户?"
+                disabled={!canEdit}
+                onConfirm={() => handleDelete(editingUser.id)}
+              >
+                <Button danger icon={<DeleteOutlined />} disabled={!canEdit}>
+                  删除该用户
+                </Button>
+              </Popconfirm>
             </div>
-            {editingUser.status === 0 && (
-              <div style={{ color: '#cf1322' }}>封禁/注销理由：{editingUser.statusReason || '-'}</div>
-            )}
-            <Button icon={<LoginOutlined />} onClick={handleKickOut} disabled={!canEdit}>踢下线</Button>
-          </Space>
-
-          <Divider />
-          <Typography.Title level={5}>重置密码</Typography.Title>
-          <Form form={passwordForm} layout="vertical">
-            <Form.Item name="password" label="新密码" rules={[{ required: true, min: 6, message: '密码至少6位' }]}>
-              <Input.Password />
-            </Form.Item>
-            {/* 重置密码后端要求超管，前端不做门控 */}
-            <Button icon={<KeyOutlined />} onClick={handleResetPasswordSubmit}>重置密码</Button>
-          </Form>
-
-          <Divider />
-          <Typography.Title level={5} type="danger">危险操作</Typography.Title>
-          <Popconfirm title="确认删除该用户?" disabled={!canEdit} onConfirm={() => handleDelete(editingUser.id)}>
-            <Button danger icon={<DeleteOutlined />} disabled={!canEdit}>删除该用户</Button>
-          </Popconfirm>
-        </div>
-      ),
-    },
-  ] : [];
+          ),
+        },
+      ]
+    : [];
 
   return (
     <div>
       <Card>
-        <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+        <div
+          className="filter-bar"
+          style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', gap: 12 }}
+        >
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {/* 必须写回 search 状态，否则翻页时 loadData(p, ps, search) 传回空串、丢失搜索条件 */}
             <Input.Search
               placeholder="搜索用户名"
               allowClear
               onChange={(e) => setSearch(e.target.value)}
-              onSearch={(v) => { setSearch(v); loadData(1, pagination.pageSize, v); }}
+              onSearch={(v) => {
+                setSearch(v);
+                loadData(1, pagination.pageSize, v);
+              }}
               style={{ width: 300 }}
             />
             <Select
@@ -473,19 +598,46 @@ export default function UserPage() {
               allowClear
               placeholder="用户类型"
               options={userTypeOptions}
-              onChange={(v) => { setTypeFilter(v || ''); loadData(1, pagination.pageSize, search, v || ''); }}
+              onChange={(v) => {
+                setTypeFilter(v || '');
+                loadData(1, pagination.pageSize, search, v || '');
+              }}
             />
           </div>
           <Space>
-            <Button icon={<DeleteOutlined />} onClick={handleExport}>导出 CSV</Button>
-            {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建用户</Button>}
+            <Button icon={<DeleteOutlined />} onClick={handleExport}>
+              导出 CSV
+            </Button>
+            {canEdit && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                新建用户
+              </Button>
+            )}
           </Space>
         </div>
-        <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, onChange: (p, ps) => loadData(p, ps, search), showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'] }} />
+        <ResizableTable
+          dataSource={data}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          scroll={{ x: 'max-content' }}
+          pagination={{
+            ...pagination,
+            onChange: (p, ps) => loadData(p, ps, search),
+            showQuickJumper: true,
+            showSizeChanger: true,
+            pageSizeOptions: ['5', '10', '20', '50', '100'],
+          }}
+        />
       </Card>
 
       {/* 新建用户弹窗 */}
-      <Modal title="新建用户" open={createVisible} onOk={handleCreateSubmit} onCancel={() => setCreateVisible(false)}>
+      <Modal
+        title="新建用户"
+        open={createVisible}
+        onOk={handleCreateSubmit}
+        onCancel={() => setCreateVisible(false)}
+      >
         <Form form={createForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="userType" label="用户类型" rules={[{ required: true }]}>
             <Select options={userTypeOptions} />
@@ -493,18 +645,27 @@ export default function UserPage() {
           <Form.Item name="username" label="用户名" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="password" label="密码"
-                     rules={[
-                       { required: true },
-                       { min: 8, message: '密码至少 8 位' },
-                       { pattern: /^(?=.*[a-zA-Z])(?=.*\d)\S+$/, message: '必须同时包含字母和数字' },
-                     ]}
-                     extra="至少 8 位，须同时包含字母和数字">
+          <Form.Item
+            name="password"
+            label="密码"
+            rules={[
+              { required: true },
+              { min: 8, message: '密码至少 8 位' },
+              { pattern: /^(?=.*[a-zA-Z])(?=.*\d)\S+$/, message: '必须同时包含字母和数字' },
+            ]}
+            extra="至少 8 位，须同时包含字母和数字"
+          >
             <Input.Password />
           </Form.Item>
-          <Form.Item name="nickname" label="昵称"><Input /></Form.Item>
-          <Form.Item name="email" label="邮箱"><Input /></Form.Item>
-          <Form.Item name="phone" label="手机号"><Input /></Form.Item>
+          <Form.Item name="nickname" label="昵称">
+            <Input />
+          </Form.Item>
+          <Form.Item name="email" label="邮箱">
+            <Input />
+          </Form.Item>
+          <Form.Item name="phone" label="手机号">
+            <Input />
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -529,7 +690,9 @@ export default function UserPage() {
         onCancel={() => setBanModalOpen(false)}
       >
         <div style={{ marginTop: 16 }}>
-          <div style={{ marginBottom: 8 }}>封禁后该用户将被强制下线且无法登录。请填写封禁理由（用户管理列表可见）：</div>
+          <div style={{ marginBottom: 8 }}>
+            封禁后该用户将被强制下线且无法登录。请填写封禁理由（用户管理列表可见）：
+          </div>
           <Input.TextArea
             rows={3}
             value={banReason}

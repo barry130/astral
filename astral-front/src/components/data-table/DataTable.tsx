@@ -115,7 +115,10 @@ export function DataTable<T extends object>({
   }, [rows, columns, sortKey, sortOrder]);
 
   /** 数值列标记（与 columns 同序）：用于表头与单元格同步右对齐 */
-  const numericCols = useMemo(() => columns.map((col) => resolveNumericColumn(col, rows)), [columns, rows]);
+  const numericCols = useMemo(
+    () => columns.map((col) => resolveNumericColumn(col, rows)),
+    [columns, rows],
+  );
 
   /** 初始展开全部行：数据就绪后统一置为展开 */
   useEffect(() => {
@@ -160,7 +163,9 @@ export function DataTable<T extends object>({
   };
 
   const dense = size === 'small';
-  const isLoading = loading === true || (typeof loading === 'object' && loading?.spinning !== false && loading !== undefined);
+  const isLoading =
+    loading === true ||
+    (typeof loading === 'object' && loading?.spinning !== false && loading !== undefined);
   const hasExpand = !!expandable?.expandedRowRender;
 
   /**
@@ -174,7 +179,10 @@ export function DataTable<T extends object>({
    * 是否树形数据：任一行带非空 `children` 即按树渲染（与 antd 同判据，无需额外开关）。
    * 非树形数据仍走原来的平铺路径，因此对存量列表页零影响。
    */
-  const hasTreeData = useMemo(() => sortedRows.some((r) => resolveChildren(r) !== undefined), [sortedRows]);
+  const hasTreeData = useMemo(
+    () => sortedRows.some((r) => resolveChildren(r) !== undefined),
+    [sortedRows],
+  );
 
   /**
    * 树形缩进与箭头所在的列：**第一个带 dataIndex 的列**。
@@ -233,14 +241,15 @@ export function DataTable<T extends object>({
     const walk = (nodes: readonly T[], depth: number, parentKey: string) => {
       nodes.forEach((record, index) => {
         const kids = resolveChildren(record);
-        const key = rowKey === undefined ? `${parentKey}${index}/` : resolveRowKey(record, index, rowKey);
+        const key =
+          rowKey === undefined ? `${parentKey}${index}/` : resolveRowKey(record, index, rowKey);
         out.push({ record, index, key, depth, hasChildren: !!kids });
         if (kids && innerTreeExpanded.has(key)) walk(kids, depth + 1, `${key}/`);
       });
     };
     walk(sortedRows, 0, '');
     return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [sortedRows, hasTreeData, rowKey, innerTreeExpanded]);
 
   const toggleTree = (key: string) => {
@@ -268,10 +277,13 @@ export function DataTable<T extends object>({
         className={cn(
           'relative overflow-hidden',
           bordered &&
-            'rounded-xl border border-border bg-card shadow-[0_1px_3px_rgba(24,24,27,0.05)] dark:shadow-none',
+            'border-border bg-card rounded-xl border shadow-[0_1px_3px_rgba(24,24,27,0.05)] dark:shadow-none',
         )}
       >
-        <div className="overflow-x-auto" style={scrollY ? { maxHeight: scrollY, overflowY: 'auto' } : undefined}>
+        <div
+          className="overflow-x-auto"
+          style={scrollY ? { maxHeight: scrollY, overflowY: 'auto' } : undefined}
+        >
           <Table
             className={
               // 所有列都声明了宽度时启用固定布局：table-layout:auto 下 <col> 宽度只是建议，
@@ -281,7 +293,7 @@ export function DataTable<T extends object>({
               // rt-body-wrap：底座 TableCell 自带 whitespace-nowrap，fixed 下非 ellipsis
               // 单元格的超宽文本会溢出画到相邻单元格上（表结构管理「注释」压到「类名」芯片
               // 实测），globals.css 里对该标记表格做单行裁切（不折行、不压邻格）。
-              isFixedLayout ? 'table-fixed rt-body-wrap' : undefined
+              isFixedLayout ? 'rt-body-wrap table-fixed' : undefined
             }
           >
             {/* 列宽：fill 模式由 ResizableTable 传百分比，scroll 模式传 px */}
@@ -300,7 +312,7 @@ export function DataTable<T extends object>({
             </colgroup>
 
             {/* 表头吸顶：底色必须实心，否则滚动时行内容会从表头下方透出 */}
-            <TableHeader className="sticky top-0 z-[1] bg-muted">
+            <TableHeader className="bg-muted sticky top-0 z-[1]">
               {/* hover:bg-transparent 用 important 后缀：表头行不该响应数据行的悬停底色，
                   两者同属 hover 变体的 background-color，不加 ! 会由 Tailwind 的输出顺序决定谁生效 */}
               <TableRow className="hover:bg-transparent!">
@@ -320,14 +332,16 @@ export function DataTable<T extends object>({
                         // min-content 归零，列会被其它不可收缩的列挤压到只剩一个字
                         // （参数管理页「配置值」实测）。省略只作用于正文单元格。
                       )}
-                      aria-sort={active ? (sortOrder === 'ascend' ? 'ascending' : 'descending') : undefined}
+                      aria-sort={
+                        active ? (sortOrder === 'ascend' ? 'ascending' : 'descending') : undefined
+                      }
                     >
                       {sortable ? (
                         <button
                           type="button"
                           onClick={() => toggleSort(key)}
                           className={cn(
-                            'inline-flex cursor-pointer items-center gap-1 hover:text-foreground',
+                            'hover:text-foreground inline-flex cursor-pointer items-center gap-1',
                             active && 'text-foreground',
                           )}
                           title={`按「${columnTitleText(col)}」排序`}
@@ -356,7 +370,9 @@ export function DataTable<T extends object>({
               {sortedRows.length === 0 && !isLoading ? (
                 <TableRow className="hover:bg-transparent!">
                   <TableCell colSpan={columns.length + (hasExpand ? 1 : 0)} className="p-0">
-                    {emptyText ?? <EmptyState description="暂无数据" padding={20} ariaLabel="暂无数据" />}
+                    {emptyText ?? (
+                      <EmptyState description="暂无数据" padding={20} ariaLabel="暂无数据" />
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -380,16 +396,23 @@ export function DataTable<T extends object>({
                                 }}
                                 aria-expanded={isExpanded}
                                 aria-label={isExpanded ? '收起' : '展开'}
-                                className="flex size-6 cursor-pointer items-center justify-center rounded-sm hover:bg-accent"
+                                className="hover:bg-accent flex size-6 cursor-pointer items-center justify-center rounded-sm"
                               >
-                                <ChevronRight className={cn('size-4 transition-transform', isExpanded && 'rotate-90')} />
+                                <ChevronRight
+                                  className={cn(
+                                    'size-4 transition-transform',
+                                    isExpanded && 'rotate-90',
+                                  )}
+                                />
                               </button>
                             )}
                           </TableCell>
                         )}
                         {columns.map((col, i) => {
                           const value = resolveCellValue(record, col.dataIndex);
-                          const rendered = col.render ? col.render(value, record, index) : (value as React.ReactNode);
+                          const rendered = col.render
+                            ? col.render(value, record, index)
+                            : (value as React.ReactNode);
                           const extra = col.onCell?.(record, index);
                           /**
                            * 树形缩进与展开箭头都落在**首列**（antd 树形表格的呈现方式）：
@@ -399,9 +422,20 @@ export function DataTable<T extends object>({
                           return (
                             <TableCell
                               key={resolveColumnKey(col, i)}
-                              className={cn(cellClass(col, numericCols[i], isFixedLayout), dense && 'px-3 py-1.5', extra?.className)}
-                              title={extra?.title ?? (col.ellipsis && typeof rendered === 'string' ? rendered : undefined)}
-                              style={treeCell && depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined}
+                              className={cn(
+                                cellClass(col, numericCols[i], isFixedLayout),
+                                dense && 'px-3 py-1.5',
+                                extra?.className,
+                              )}
+                              title={
+                                extra?.title ??
+                                (col.ellipsis && typeof rendered === 'string'
+                                  ? rendered
+                                  : undefined)
+                              }
+                              style={
+                                treeCell && depth > 0 ? { paddingLeft: 12 + depth * 16 } : undefined
+                              }
                             >
                               {treeCell &&
                                 (hasChildren ? (
@@ -412,8 +446,10 @@ export function DataTable<T extends object>({
                                       toggleTree(key);
                                     }}
                                     aria-expanded={innerTreeExpanded.has(key)}
-                                    aria-label={innerTreeExpanded.has(key) ? '收起子菜单' : '展开子菜单'}
-                                    className="mr-1 inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm align-middle hover:bg-accent"
+                                    aria-label={
+                                      innerTreeExpanded.has(key) ? '收起子菜单' : '展开子菜单'
+                                    }
+                                    className="hover:bg-accent mr-1 inline-flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-sm align-middle"
                                   >
                                     <ChevronRight
                                       className={cn(
@@ -424,20 +460,29 @@ export function DataTable<T extends object>({
                                   </button>
                                 ) : (
                                   /* 叶子行占位：与箭头等宽，保证同层文字左边缘对齐 */
-                                  <span className="mr-1 inline-block size-5 shrink-0 align-middle" aria-hidden />
+                                  <span
+                                    className="mr-1 inline-block size-5 shrink-0 align-middle"
+                                    aria-hidden
+                                  />
                                 ))}
-                              {isBlankValue(rendered) ? <span className="text-muted-foreground/60">—</span> : (rendered as React.ReactNode)}
+                              {isBlankValue(rendered) ? (
+                                <span className="text-muted-foreground/60">—</span>
+                              ) : (
+                                (rendered as React.ReactNode)
+                              )}
                             </TableCell>
                           );
                         })}
                       </TableRow>
-                      {hasExpand && isExpanded && (!expandable!.rowExpandable || expandable!.rowExpandable(record)) && (
-                        <TableRow className="hover:bg-transparent!">
-                          <TableCell colSpan={columns.length + 1} className="bg-muted/60 p-4">
-                            {expandable!.expandedRowRender!(record, index)}
-                          </TableCell>
-                        </TableRow>
-                      )}
+                      {hasExpand &&
+                        isExpanded &&
+                        (!expandable!.rowExpandable || expandable!.rowExpandable(record)) && (
+                          <TableRow className="hover:bg-transparent!">
+                            <TableCell colSpan={columns.length + 1} className="bg-muted/60 p-4">
+                              {expandable!.expandedRowRender!(record, index)}
+                            </TableCell>
+                          </TableRow>
+                        )}
                     </Fragment>
                   );
                 })
@@ -449,7 +494,7 @@ export function DataTable<T extends object>({
         {/* 加载遮罩：二次加载时保留既有数据，避免表格高度跳变 */}
         {isLoading && (
           <div className="bg-background/65 absolute inset-0 z-[2] flex items-start justify-center pt-16 backdrop-blur-[1px]">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            <Loader2 className="text-muted-foreground size-6 animate-spin" />
           </div>
         )}
       </div>

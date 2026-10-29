@@ -1,6 +1,5 @@
 import { request, ApiResult } from './client';
-import { dictApi } from './dict';
-import type { DictOption } from './dict';
+import { dictApi, type DictOption } from './dict';
 // 通知相关的类型 / API / 字典 / 标签已切到 `@/api/notice`（见文件末尾的 @deprecated 兼容别名）。
 // 这里是「反馈」业务域：反馈单（sys_feedback）+ 反馈状态/类型/平台文案，不包含通知类型口径。
 import {
@@ -13,8 +12,8 @@ import {
   NOTICE_CHANNEL_ALL as NOTICE_CHANNEL_ALL_OF_NOTICE,
   NOTICE_TYPE_TEXT as NOTICE_TYPE_TEXT_OF_NOTICE,
   NOTICE_CHANNEL_TEXT as NOTICE_CHANNEL_TEXT_OF_NOTICE,
+  type SysNotice as SysNoticeOfNotice,
 } from '@/api/notice';
-import type { SysNotice as SysNoticeOfNotice } from '@/api/notice';
 
 /** 反馈/通知分页结果 */
 export interface FeedbackPage<T> {
@@ -78,12 +77,11 @@ export interface FeedbackStat {
 /** 反馈管理端 API */
 export const feedbackAdminApi = {
   /** 分页查询（status/type/keyword/startDate/endDate） */
-  page: (params: Record<string, any>): Promise<ApiResult<FeedbackPage<Feedback>>> =>
+  page: (params: Record<string, unknown>): Promise<ApiResult<FeedbackPage<Feedback>>> =>
     request.get('/api/v1/admin/feedback/page', { params }),
 
   /** 详情 */
-  detail: (id: number): Promise<ApiResult<Feedback>> =>
-    request.get(`/api/v1/admin/feedback/${id}`),
+  detail: (id: number): Promise<ApiResult<Feedback>> => request.get(`/api/v1/admin/feedback/${id}`),
 
   /** 状态流转 */
   changeStatus: (id: number, status: string): Promise<ApiResult<void>> =>
@@ -94,8 +92,7 @@ export const feedbackAdminApi = {
     request.put(`/api/v1/admin/feedback/${id}/public`, { isPublic }),
 
   /** 软删 */
-  delete: (id: number): Promise<ApiResult<void>> =>
-    request.delete(`/api/v1/admin/feedback/${id}`),
+  delete: (id: number): Promise<ApiResult<void>> => request.delete(`/api/v1/admin/feedback/${id}`),
 
   /** 回复列表 */
   replies: (id: number): Promise<ApiResult<FeedbackReply[]>> =>
@@ -106,8 +103,7 @@ export const feedbackAdminApi = {
     request.post('/api/v1/admin/feedback/reply', { feedbackId, content }),
 
   /** 统计看板 */
-  stat: (): Promise<ApiResult<FeedbackStat>> =>
-    request.get('/api/v1/admin/feedback/stat'),
+  stat: (): Promise<ApiResult<FeedbackStat>> => request.get('/api/v1/admin/feedback/stat'),
 };
 
 /**
@@ -142,7 +138,10 @@ export async function loadFeedbackDicts(): Promise<Partial<FeedbackDictCache>> {
   const map: Record<string, DictOption[]> = {};
   const results = await Promise.all(FEEDBACK_DICT_CODES.map((c) => dictApi.byCode(c)));
   results.forEach((res, i) => {
-    map[FEEDBACK_DICT_CODES[i]] = (res.data || []).map((d) => ({ value: String(d.dictValue), label: d.dictLabel }));
+    map[FEEDBACK_DICT_CODES[i]] = (res.data || []).map((d) => ({
+      value: String(d.dictValue),
+      label: d.dictLabel,
+    }));
   });
   dictCache = {
     feedbackStatus: map.feedback_status || [],
@@ -167,14 +166,14 @@ export const FEEDBACK_STATUS_COLOR: Record<string, string> = {
 export function feedbackStatusLabel(v?: string): string {
   if (!v) return '-';
   const hit = dictCache.feedbackStatus?.find((o) => o.value === v);
-  return hit ? hit.label : (FEEDBACK_STATUS_TEXT_FALLBACK[v] || v);
+  return hit ? hit.label : FEEDBACK_STATUS_TEXT_FALLBACK[v] || v;
 }
 
 /** 反馈类型文案：优先字典，miss 回退 */
 export function feedbackTypeLabel(v?: string): string {
   if (!v) return '-';
   const hit = dictCache.feedbackType?.find((o) => o.value === v);
-  return hit ? hit.label : (FEEDBACK_TYPE_TEXT_FALLBACK[v] || v);
+  return hit ? hit.label : FEEDBACK_TYPE_TEXT_FALLBACK[v] || v;
 }
 
 /**

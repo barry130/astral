@@ -37,15 +37,17 @@ export interface TotpSetupInfo {
 /** 个人中心 API（后端 /api/v1/admin/profile/**，登录即可访问） */
 export const profileApi = {
   /** 我的资料 */
-  me: (): Promise<ApiResult<ProfileInfo>> =>
-    request.get('/api/v1/admin/profile/me'),
+  me: (): Promise<ApiResult<ProfileInfo>> => request.get('/api/v1/admin/profile/me'),
 
   /** 修改密码（oldPassword/newPassword 均为 RSA 加密串，与登录同一加密通道） */
   changePassword: (oldPassword: string, newPassword: string): Promise<ApiResult<void>> =>
     request.put('/api/v1/admin/profile/password', { oldPassword, newPassword }),
 
   /** 我的在线会话 */
-  sessions: (pageNum = 1, pageSize = 10): Promise<ApiResult<{ records: ProfileSession[]; total: number }>> =>
+  sessions: (
+    pageNum = 1,
+    pageSize = 10,
+  ): Promise<ApiResult<{ records: ProfileSession[]; total: number }>> =>
     request.get('/api/v1/admin/profile/sessions', { params: { pageNum, pageSize } }),
 
   /** 下线我的指定会话 */

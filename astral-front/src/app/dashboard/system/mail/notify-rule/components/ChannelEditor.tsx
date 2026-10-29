@@ -1,7 +1,17 @@
 'use client';
 
-import { Button, Card, Form, Input, InputNumber, Select, Space, Switch, Tag } from '@/components/antd-compat';
-import type { FormInstance } from '@/components/antd-compat';
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Space,
+  Switch,
+  Tag,
+  type FormInstance,
+} from '@/components/antd-compat';
 import { DeleteOutlined, PlusOutlined } from '@/components/antd-compat/icons';
 import { dictLabel, DictOption } from '@/api/dict';
 import type { NotifyPayloadField, NotifyRecipientType } from '@/api/notify';
@@ -54,12 +64,12 @@ export default function ChannelEditor({
   onRemove,
 }: ChannelEditorProps) {
   const channelName = dictLabel(dicts.notify_delivery_channel, channel, channel);
-  const recipientOptions = (dicts.notify_recipient_type?.length
+  const recipientOptions = dicts.notify_recipient_type?.length
     ? dicts.notify_recipient_type.map((o) => ({ label: o.label, value: o.value }))
-    : RECIPIENT_FALLBACK.map((o) => ({ label: o.label, value: o.value })));
-  const scopeOptions = (dicts.notify_limit_scope?.length
+    : RECIPIENT_FALLBACK.map((o) => ({ label: o.label, value: o.value }));
+  const scopeOptions = dicts.notify_limit_scope?.length
     ? dicts.notify_limit_scope.map((o) => ({ label: o.label, value: o.value }))
-    : SCOPE_FALLBACK.map((o) => ({ label: o.label, value: o.value })));
+    : SCOPE_FALLBACK.map((o) => ({ label: o.label, value: o.value }));
   // 平台定向取值来自字典 notice_channel；all 用「留空」表达，故不在选项里重复
   const platformOptions = (dicts.notice_channel || [])
     .filter((o) => o.value !== 'all')
@@ -73,18 +83,27 @@ export default function ChannelEditor({
     <Card
       size="small"
       style={{ marginBottom: 12 }}
-      title={(
+      title={
         <Space>
           <span>{channelName}</span>
           <Tag color={required ? 'red' : 'blue'}>{required ? '必达' : channel}</Tag>
-          {required && <span style={{ fontSize: 12, color: '#999' }}>该事件安全相关渠道，不可移除</span>}
+          {required && (
+            <span style={{ fontSize: 12, color: '#999' }}>该事件安全相关渠道，不可移除</span>
+          )}
         </Space>
-      )}
-      extra={(
-        <Button type="link" danger size="small" icon={<DeleteOutlined />} disabled={required} onClick={onRemove}>
+      }
+      extra={
+        <Button
+          type="link"
+          danger
+          size="small"
+          icon={<DeleteOutlined />}
+          disabled={required}
+          onClick={onRemove}
+        >
           移除渠道
         </Button>
-      )}
+      }
     >
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
         <Form.Item
@@ -156,12 +175,20 @@ export default function ChannelEditor({
               {fields.map((field) => {
                 const rowType = recipients?.[field.name]?.type || RECIPIENT_FALLBACK[0].value;
                 return (
-                  <div key={field.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                  <div
+                    key={field.key}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}
+                  >
                     <Form.Item name={[field.name, 'type']} style={{ marginBottom: 0 }}>
                       <Select
                         options={recipientOptions}
                         style={{ width: 170 }}
-                        onChange={() => form.setFieldValue(['channels', channel, 'recipients', field.name, 'value'], undefined)}
+                        onChange={() =>
+                          form.setFieldValue(
+                            ['channels', channel, 'recipients', field.name, 'value'],
+                            undefined,
+                          )
+                        }
                       />
                     </Form.Item>
                     <Form.Item name={[field.name, 'value']} style={{ marginBottom: 0 }}>
@@ -177,11 +204,18 @@ export default function ChannelEditor({
                       ) : (
                         <Input
                           style={{ width: 300 }}
-                          placeholder={rowType === 'ROLE' ? '角色编码，如 ADMIN' : '邮箱 / 手机号 / 用户 ID'}
+                          placeholder={
+                            rowType === 'ROLE' ? '角色编码，如 ADMIN' : '邮箱 / 手机号 / 用户 ID'
+                          }
                         />
                       )}
                     </Form.Item>
-                    <Button type="link" danger icon={<DeleteOutlined />} onClick={() => remove(field.name)}>
+                    <Button
+                      type="link"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => remove(field.name)}
+                    >
                       删除
                     </Button>
                   </div>

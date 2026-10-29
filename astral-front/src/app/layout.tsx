@@ -37,11 +37,7 @@ const THEME_BOOTSTRAP_SCRIPT = `(function(){try{var t=localStorage.getItem('astr
  * 根布局组件
  * 所有页面的最外层包裹，设置HTML语言、全局Provider等
  */
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>

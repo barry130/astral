@@ -22,11 +22,32 @@
  */
 import { useEffect, useState } from 'react';
 import {
-  Button, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tag, Typography, Upload, message,
+  Button,
+  Checkbox,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Tag,
+  Typography,
+  Upload,
+  UploadRequestOption,
+  message,
 } from '@/components/antd-compat';
 import { BarChartOutlined, PlusOutlined, UploadOutlined } from '@/components/antd-compat/icons';
-import { sourceReleaseApi, qtAdminApi, QtSourceRelease, QtSourceArtifact, QtSourceStatRow, enumLabel } from '@/api/qt';
+import {
+  sourceReleaseApi,
+  qtAdminApi,
+  QtSourceRelease,
+  QtSourceArtifact,
+  QtSourceStatRow,
+  enumLabel,
+} from '@/api/qt';
 import { fetchDictOptions, DictOption } from '@/api/dict';
+import { getErrorMessage } from '@/lib/error-message';
 import { usePerm, QT_PERMISSIONS } from '@/lib/perm';
 import { storageApi } from '@/api/storage';
 import { ResizableTable } from '@/components/ResizableTable';
@@ -64,7 +85,9 @@ const FALLBACK_CHANNEL_OPTS = [
 ];
 
 const FALLBACK_STATE_LABEL: Record<string, string> = {
-  unpublished: '未发布', published: '已发布', bad: '坏包',
+  unpublished: '未发布',
+  published: '已发布',
+  bad: '坏包',
 };
 
 /**
@@ -122,9 +145,12 @@ export default function SourceReleasesTab() {
   const canEdit = hasPerm(QT_PERMISSIONS.admin);
 
   // 由数据字典派生出的下拉/标签选项（数值类将 value 转为 number 以便比较）
-  const platformOpts = (dict.qt_update_platform?.length ? dict.qt_update_platform : FALLBACK_PLATFORM_OPTS)
-    .map((o) => ({ value: Number(o.value), label: o.label }));
-  const channelOpts = dict.qt_update_channel?.length ? dict.qt_update_channel : FALLBACK_CHANNEL_OPTS;
+  const platformOpts = (
+    dict.qt_update_platform?.length ? dict.qt_update_platform : FALLBACK_PLATFORM_OPTS
+  ).map((o) => ({ value: Number(o.value), label: o.label }));
+  const channelOpts = dict.qt_update_channel?.length
+    ? dict.qt_update_channel
+    : FALLBACK_CHANNEL_OPTS;
   const pathOpts = dict.qt_source_artifact_path || [];
   /**
    * 字典里仍启用的产物 path。字典未拉到（pathOpts 为空）时不做判断——否则会把所有行
@@ -153,21 +179,31 @@ export default function SourceReleasesTab() {
 
   const load = (p = page) => {
     setLoading(true);
-    sourceReleaseApi.list(p, 10, { channel: channelFilter }).then((res) => {
-      if (res.code === 200) {
-        setReleases(res.data.records || []);
-        setTotal(res.data.total || 0);
-      }
-    }).finally(() => setLoading(false));
+    sourceReleaseApi
+      .list(p, 10, { channel: channelFilter })
+      .then((res) => {
+        if (res.code === 200) {
+          setReleases(res.data.records || []);
+          setTotal(res.data.total || 0);
+        }
+      })
+      .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(1); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [channelFilter]);
+  useEffect(() => {
+    load(1); /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [channelFilter]);
 
   useEffect(() => {
     fetchDictOptions([
-      'qt_update_platform', 'qt_update_channel',
-      'qt_source_artifact_path', 'qt_source_report_result', 'qt_source_release_state',
-    ]).then(setDict).catch(() => {});
+      'qt_update_platform',
+      'qt_update_channel',
+      'qt_source_artifact_path',
+      'qt_source_report_result',
+      'qt_source_release_state',
+    ])
+      .then(setDict)
+      .catch(() => {});
   }, []);
 
   /**
@@ -208,7 +244,9 @@ export default function SourceReleasesTab() {
     }
   };
 
-  useEffect(() => { void loadAppVersions(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => {
+    void loadAppVersions();
+  }, []);
 
   // 平台增删时同步准入行：新增平台默认全选现存版本，删除平台连带移除。
   // 版本目录晚到（打开弹窗才刷新）时，把「用户还没动过」的行重新对齐到最新目录——
@@ -223,8 +261,12 @@ export default function SourceReleasesTab() {
         if (old) {
           // 用户没动过的行要跟着最新目录走：包括「打开弹窗时缓存还是空的，被默认成了不限制」
           // 这种情况——目录回来后要把它改回显式全选，否则下拉是空的、看起来像没有版本可选。
-          const stale = !old.touched && codes.length > 0
-            && (old.unlimited || old.codes.length !== codes.length || codes.some((c) => !old.codes.includes(c)));
+          const stale =
+            !old.touched &&
+            codes.length > 0 &&
+            (old.unlimited ||
+              old.codes.length !== codes.length ||
+              codes.some((c) => !old.codes.includes(c)));
           next[p] = stale ? { ...old, unlimited: false, codes: [...codes] } : old;
           continue;
         }
@@ -270,10 +312,11 @@ export default function SourceReleasesTab() {
   };
 
   /** 某平台的准入候选：本平台投放过的版本在前，其他平台的版本在后 */
-  const versionOptions = (p: number) => [
-    ...versionCatalog.filter((v) => v.platforms.includes(p)),
-    ...versionCatalog.filter((v) => !v.platforms.includes(p)),
-  ].map((v) => ({ value: v.code, label: versionLabel(v, p) }));
+  const versionOptions = (p: number) =>
+    [
+      ...versionCatalog.filter((v) => v.platforms.includes(p)),
+      ...versionCatalog.filter((v) => !v.platforms.includes(p)),
+    ].map((v) => ({ value: v.code, label: versionLabel(v, p) }));
 
   const openModal = (record?: QtSourceRelease) => {
     setModal(true);
@@ -299,7 +342,12 @@ export default function SourceReleasesTab() {
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ platforms: [...DEFAULT_PLATFORMS], channel: 'stable', hostApiVersion: 1, artifacts: [] });
+      form.setFieldsValue({
+        platforms: [...DEFAULT_PLATFORMS],
+        channel: 'stable',
+        hostApiVersion: 1,
+        artifacts: [],
+      });
       // 新建默认：已选平台各自全选现存版本（用户自行删除不需要的）。
       // 先用当前缓存垫一层，等刷新回来再用最新目录补一次默认全选（touched 的不会被覆盖）。
       setAdmission(() => {
@@ -356,23 +404,29 @@ export default function SourceReleasesTab() {
         const res = await sourceReleaseApi.create(body);
         if (res.code === 200) {
           const r = res.data;
-          message.success(`已创建，版本号 ${r.sourceVersionCode}（${r.sourceVersionName}），请上传文件到 source/${r.sourceVersionCode}/ 后回填 artifacts 并发布`, 6);
+          message.success(
+            `已创建，版本号 ${r.sourceVersionCode}（${r.sourceVersionName}），请上传文件到 source/${r.sourceVersionCode}/ 后回填 artifacts 并发布`,
+            6,
+          );
           load(1);
         }
       }
       setModal(false);
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '操作失败');
     }
   };
 
   const showStats = () => {
-    sourceReleaseApi.stats().then((res) => {
-      if (res.code === 200) {
-        setStats(res.data || []);
-        setStatsModal(true);
-      }
-    }).catch(() => message.error('统计加载失败'));
+    sourceReleaseApi
+      .stats()
+      .then((res) => {
+        if (res.code === 200) {
+          setStats(res.data || []);
+          setStatsModal(true);
+        }
+      })
+      .catch(() => message.error('统计加载失败'));
   };
 
   /**
@@ -424,7 +478,7 @@ export default function SourceReleasesTab() {
     return urlRes.data.url;
   };
 
-  const customUpload = (options: any, fieldName: number) => {
+  const customUpload = (options: UploadRequestOption, fieldName: number) => {
     setUploadingIdx(fieldName);
     uploadToMyFolder(options.file as File)
       .then((url) => {
@@ -432,9 +486,9 @@ export default function SourceReleasesTab() {
         message.success('上传成功，已填入永久地址');
         options.onSuccess?.(url);
       })
-      .catch((e: any) => {
-        message.error(e.message || '上传失败');
-        options.onError?.(e);
+      .catch((e) => {
+        message.error(getErrorMessage(e, '上传失败'));
+        options.onError?.(e as Error);
       })
       .finally(() => setUploadingIdx(null));
   };
@@ -444,54 +498,118 @@ export default function SourceReleasesTab() {
     { title: '版本号', dataIndex: 'sourceVersionCode', width: 120 },
     { title: '版本名', dataIndex: 'sourceVersionName', width: 120 },
     {
-      title: '平台', dataIndex: 'platforms', width: 160,
-      render: (list: number[]) => (list || []).map((p) => <Tag key={p} color="blue">{platformLabel(p)}</Tag>),
+      title: '平台',
+      dataIndex: 'platforms',
+      width: 160,
+      render: (list: number[]) =>
+        (list || []).map((p) => (
+          <Tag key={p} color="blue">
+            {platformLabel(p)}
+          </Tag>
+        )),
     },
-    { title: '渠道', dataIndex: 'channel', width: 90, render: (v: string) => (
-      <Tag color={v === 'beta' ? 'orange' : 'purple'}>{enumLabel(channelOpts, v)}</Tag>
-    ) },
+    {
+      title: '渠道',
+      dataIndex: 'channel',
+      width: 90,
+      render: (v: string) => (
+        <Tag color={v === 'beta' ? 'orange' : 'purple'}>{enumLabel(channelOpts, v)}</Tag>
+      ),
+    },
     { title: '说明', dataIndex: 'notes', ellipsis: true },
     {
-      title: '产物', dataIndex: 'artifacts', width: 120,
+      title: '产物',
+      dataIndex: 'artifacts',
+      width: 120,
       render: (list: QtSourceArtifact[]) => (
-        <span>{(list || []).length ? `${list.length} 个文件` : <Typography.Text type="secondary">未回填</Typography.Text>}</span>
+        <span>
+          {(list || []).length ? (
+            `${list.length} 个文件`
+          ) : (
+            <Typography.Text type="secondary">未回填</Typography.Text>
+          )}
+        </span>
       ),
     },
     {
-      title: '状态', dataIndex: 'published', width: 130,
-      render: (_: any, r: QtSourceRelease) => (
+      title: '状态',
+      dataIndex: 'published',
+      width: 130,
+      render: (_: unknown, r: QtSourceRelease) => (
         <Tag color={r.bad ? 'error' : r.published ? 'success' : 'default'}>{stateLabel(r)}</Tag>
       ),
     },
-    { title: '发布时间', dataIndex: 'publishedAt', width: 110, render: (v: string) => v?.slice(0, 10) || '-' },
     {
-      title: '操作', key: 'action', width: 300, fixed: 'right' as const,
-      render: (_: any, r: QtSourceRelease) => (
+      title: '发布时间',
+      dataIndex: 'publishedAt',
+      width: 110,
+      render: (v: string) => v?.slice(0, 10) || '-',
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 300,
+      fixed: 'right' as const,
+      render: (_: unknown, r: QtSourceRelease) => (
         <Space size={0} wrap>
-          <Button type="link" size="small" disabled={!canEdit} onClick={() => openModal(r)}>编辑</Button>
+          <Button type="link" size="small" disabled={!canEdit} onClick={() => openModal(r)}>
+            编辑
+          </Button>
           {r.published ? (
-            <Popconfirm title="撤回后客户端停止投递该版本，确认？" disabled={!canEdit} onConfirm={async () => {
-              const res = await sourceReleaseApi.unpublish(r.id!);
-              if (res.code === 200) refreshAfter('已撤回');
-            }}><Button type="link" size="small" disabled={!canEdit}>撤回</Button></Popconfirm>
+            <Popconfirm
+              title="撤回后客户端停止投递该版本，确认？"
+              disabled={!canEdit}
+              onConfirm={async () => {
+                const res = await sourceReleaseApi.unpublish(r.id!);
+                if (res.code === 200) refreshAfter('已撤回');
+              }}
+            >
+              <Button type="link" size="small" disabled={!canEdit}>
+                撤回
+              </Button>
+            </Popconfirm>
           ) : (
-            <Popconfirm title="发布后客户端立即可拉到该版本，确认？" disabled={!canEdit} onConfirm={async () => {
-              const res = await sourceReleaseApi.publish(r.id!);
-              if (res.code === 200) refreshAfter(`已发布 ${r.sourceVersionCode}`);
-            }}><Button type="link" size="small" disabled={!canEdit}>发布</Button></Popconfirm>
+            <Popconfirm
+              title="发布后客户端立即可拉到该版本，确认？"
+              disabled={!canEdit}
+              onConfirm={async () => {
+                const res = await sourceReleaseApi.publish(r.id!);
+                if (res.code === 200) refreshAfter(`已发布 ${r.sourceVersionCode}`);
+              }}
+            >
+              <Button type="link" size="small" disabled={!canEdit}>
+                发布
+              </Button>
+            </Popconfirm>
           )}
           {!r.bad && (
-            <Popconfirm title="标坏后客户端会回退并拉黑该版本，确认？" disabled={!canEdit} onConfirm={async () => {
-              const res = await sourceReleaseApi.markBad(r.id!);
-              if (res.code === 200) refreshAfter('已标记坏包');
-            }}><Button type="link" size="small" danger disabled={!canEdit}>标坏</Button></Popconfirm>
+            <Popconfirm
+              title="标坏后客户端会回退并拉黑该版本，确认？"
+              disabled={!canEdit}
+              onConfirm={async () => {
+                const res = await sourceReleaseApi.markBad(r.id!);
+                if (res.code === 200) refreshAfter('已标记坏包');
+              }}
+            >
+              <Button type="link" size="small" danger disabled={!canEdit}>
+                标坏
+              </Button>
+            </Popconfirm>
           )}
           {!r.published && (
-            <Popconfirm title="确认删除该 release？" disabled={!canEdit} onConfirm={async () => {
-              const res = await sourceReleaseApi.remove(r.id!);
-              if (res.code === 200) refreshAfter('已删除');
-              else message.error(res.msg || '删除失败');
-            }}><Button type="link" size="small" danger disabled={!canEdit}>删除</Button></Popconfirm>
+            <Popconfirm
+              title="确认删除该 release？"
+              disabled={!canEdit}
+              onConfirm={async () => {
+                const res = await sourceReleaseApi.remove(r.id!);
+                if (res.code === 200) refreshAfter('已删除');
+                else message.error(res.msg || '删除失败');
+              }}
+            >
+              <Button type="link" size="small" danger disabled={!canEdit}>
+                删除
+              </Button>
+            </Popconfirm>
           )}
         </Space>
       ),
@@ -502,10 +620,15 @@ export default function SourceReleasesTab() {
     { title: '版本号', dataIndex: 'source_version_code', width: 130 },
     { title: '平台', dataIndex: 'platform', width: 100, render: platformLabel },
     {
-      title: '结果', dataIndex: 'result', width: 120,
-      render: (v: string) => v === 'ok'
-        ? <Tag color="success">{enumLabel(resultOpts, v)}</Tag>
-        : <Tag color="error">{enumLabel(resultOpts, v)}</Tag>,
+      title: '结果',
+      dataIndex: 'result',
+      width: 120,
+      render: (v: string) =>
+        v === 'ok' ? (
+          <Tag color="success">{enumLabel(resultOpts, v)}</Tag>
+        ) : (
+          <Tag color="error">{enumLabel(resultOpts, v)}</Tag>
+        ),
     },
     { title: '设备数', dataIndex: 'cnt', width: 100 },
   ];
@@ -514,12 +637,22 @@ export default function SourceReleasesTab() {
     <div>
       <div className="filter-bar" style={{ marginBottom: 12 }}>
         <Space>
-          {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>新建 release</Button>}
+          {canEdit && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
+              新建 release
+            </Button>
+          )}
           {!canEdit && <Tag>只读</Tag>}
-          <Button icon={<BarChartOutlined />} onClick={showStats}>装机分布</Button>
+          <Button icon={<BarChartOutlined />} onClick={showStats}>
+            装机分布
+          </Button>
           <Select
-            allowClear placeholder="全部渠道" style={{ width: 140 }} value={channelFilter}
-            options={channelOpts} onChange={(v) => setChannelFilter(v)}
+            allowClear
+            placeholder="全部渠道"
+            style={{ width: 140 }}
+            value={channelFilter}
+            options={channelOpts}
+            onChange={(v) => setChannelFilter(v)}
           />
         </Space>
       </div>
@@ -529,7 +662,15 @@ export default function SourceReleasesTab() {
         dataSource={releases}
         loading={loading}
         scroll={{ x: 'max-content' }}
-        pagination={{ current: page, total, pageSize: 10, onChange: (p) => { setPage(p); load(p); } }}
+        pagination={{
+          current: page,
+          total,
+          pageSize: 10,
+          onChange: (p) => {
+            setPage(p);
+            load(p);
+          },
+        }}
       />
 
       {/* 新建/编辑弹窗 */}
@@ -543,13 +684,26 @@ export default function SourceReleasesTab() {
         destroyOnClose
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="id" hidden><Input /></Form.Item>
+          <Form.Item name="id" hidden>
+            <Input />
+          </Form.Item>
           <Space size="large" wrap style={{ display: 'flex' }}>
-            <Form.Item name="platforms" label="适用平台" rules={[{ required: true, message: '至少选一个平台' }]}>
-              <Select mode="multiple" options={platformOpts} style={{ minWidth: 220 }} placeholder="可多选，一个包服务多平台" />
+            <Form.Item
+              name="platforms"
+              label="适用平台"
+              rules={[{ required: true, message: '至少选一个平台' }]}
+            >
+              <Select
+                mode="multiple"
+                options={platformOpts}
+                style={{ minWidth: 220 }}
+                placeholder="可多选，一个包服务多平台"
+              />
             </Form.Item>
             <Form.Item
-              name="channel" label="发布渠道" rules={[{ required: true }]}
+              name="channel"
+              label="发布渠道"
+              rules={[{ required: true }]}
               tooltip="正式版（stable）所有用户都能收到；测试版（beta）仅对拥有 user:qt:source:channel:beta 权限（含超管）的用户可见，与版本更新渠道同源（正式包版本号更高时所有人都收到正式包）"
             >
               <Select options={channelOpts} style={{ width: 140 }} />
@@ -558,55 +712,80 @@ export default function SourceReleasesTab() {
               <InputNumber min={1} style={{ width: 100 }} />
             </Form.Item>
           </Space>
-          <Form.Item
-            name="notes" label="更新说明"
-            rules={[{ max: 1024, message: '最长 1024 字' }]}
-          >
-            <Input.TextArea rows={2} placeholder="客户端设置页展示，如：酷我母带接口修复；kw 链顺序调整" />
+          <Form.Item name="notes" label="更新说明" rules={[{ max: 1024, message: '最长 1024 字' }]}>
+            <Input.TextArea
+              rows={2}
+              placeholder="客户端设置页展示，如：酷我母带接口修复；kw 链顺序调整"
+            />
           </Form.Item>
           <Form.Item
             label="按平台准入的应用版本号"
             tooltip="候选包含未发布版本与测试版（会标注），可直接勾选。默认每个平台全选现存版本，可删除不需要的（灰度放量）；勾「不限制」或一个不选=该平台不限制（含未来新版本）"
           >
-            {watchedPlatforms.length ? watchedPlatforms.map((p) => {
-              const row = admission[p] || { unlimited: true, codes: [] as number[] };
-              const options = versionOptions(p);
-              const ownCount = versionCatalog.filter((v) => v.platforms.includes(p)).length;
-              return (
-                <Space key={p} align="baseline" style={{ display: 'flex', marginBottom: 4 }}>
-                  <Tag color="blue" style={{ marginRight: 0 }}>{platformLabel(p)}</Tag>
-                  <Checkbox
-                    checked={row.unlimited}
-                    onChange={(e) => setAdmission((prev) => ({
-                      ...prev, [p]: { ...row, unlimited: e.target.checked, touched: true },
-                    }))}
-                  >不限制</Checkbox>
-                  <Select
-                    mode="multiple" allowClear showSearch disabled={row.unlimited}
-                    value={row.unlimited ? [] : row.codes}
-                    placeholder={options.length ? '默认全选，可删除不需要的版本' : '暂无应用版本，可勾「不限制」'}
-                    style={{ minWidth: 260 }}
-                    options={options}
-                    onChange={(vals: number[]) => setAdmission((prev) => ({
-                      ...prev, [p]: { ...row, codes: vals, touched: true },
-                    }))}
-                  />
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    本平台 {ownCount} 个 / 共 {versionCatalog.length} 个
-                  </Typography.Text>
-                </Space>
-              );
-            }) : <Typography.Text type="secondary">先选择适用平台</Typography.Text>}
+            {watchedPlatforms.length ? (
+              watchedPlatforms.map((p) => {
+                const row = admission[p] || { unlimited: true, codes: [] as number[] };
+                const options = versionOptions(p);
+                const ownCount = versionCatalog.filter((v) => v.platforms.includes(p)).length;
+                return (
+                  <Space key={p} align="baseline" style={{ display: 'flex', marginBottom: 4 }}>
+                    <Tag color="blue" style={{ marginRight: 0 }}>
+                      {platformLabel(p)}
+                    </Tag>
+                    <Checkbox
+                      checked={row.unlimited}
+                      onChange={(e) =>
+                        setAdmission((prev) => ({
+                          ...prev,
+                          [p]: { ...row, unlimited: e.target.checked, touched: true },
+                        }))
+                      }
+                    >
+                      不限制
+                    </Checkbox>
+                    <Select
+                      mode="multiple"
+                      allowClear
+                      showSearch
+                      disabled={row.unlimited}
+                      value={row.unlimited ? [] : row.codes}
+                      placeholder={
+                        options.length
+                          ? '默认全选，可删除不需要的版本'
+                          : '暂无应用版本，可勾「不限制」'
+                      }
+                      style={{ minWidth: 260 }}
+                      options={options}
+                      onChange={(vals: number[]) =>
+                        setAdmission((prev) => ({
+                          ...prev,
+                          [p]: { ...row, codes: vals, touched: true },
+                        }))
+                      }
+                    />
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      本平台 {ownCount} 个 / 共 {versionCatalog.length} 个
+                    </Typography.Text>
+                  </Space>
+                );
+              })
+            ) : (
+              <Typography.Text type="secondary">先选择适用平台</Typography.Text>
+            )}
             <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              候选含<b>未发布</b>与<b>测试版</b>（下拉里会标注），可直接勾选：适用于「音源包先上、应用版本稍后发」的流程。
-              标了其他平台名的版本号在该平台没有真实客户端，仅用于预置。将写入：{JSON.stringify(admissionPreview)}（键缺省或空数组 = 该平台不限制）
+              候选含<b>未发布</b>与<b>测试版</b>
+              （下拉里会标注），可直接勾选：适用于「音源包先上、应用版本稍后发」的流程。
+              标了其他平台名的版本号在该平台没有真实客户端，仅用于预置。将写入：
+              {JSON.stringify(admissionPreview)}（键缺省或空数组 = 该平台不限制）
             </Paragraph>
           </Form.Item>
           <Paragraph type="secondary" style={{ marginBottom: 8 }}>
-            产物是「当前生效全集」。<b>编辑</b>时以本列表为准：删掉的行保存后即从该版本移除（未列出的 path 不再继承）；
-            <b>新建</b>时按 path 增量合并——只填本次变更的文件，其余自动继承上一版，这就是「只发 chain」。
-            地址可手填永久直链，也可行内上传（上传成功会覆盖手填值）；版本号由后端按 url 是否变化维护。
-            标为「已停用」的 path（字典 qt_source_artifact_path 里 status=0，如单包时代的 chain.json /
+            产物是「当前生效全集」。<b>编辑</b>
+            时以本列表为准：删掉的行保存后即从该版本移除（未列出的 path 不再继承）；
+            <b>新建</b>时按 path 增量合并——只填本次变更的文件，其余自动继承上一版，这就是「只发
+            chain」。 地址可手填永久直链，也可行内上传（上传成功会覆盖手填值）；版本号由后端按 url
+            是否变化维护。 标为「已停用」的 path（字典 qt_source_artifact_path 里
+            status=0，如单包时代的 chain.json /
             source-bundle.js）不会再被继承，也不会再提交——保存后即从该版本移除，无需手工删除。
           </Paragraph>
           <Form.List name="artifacts">
@@ -620,50 +799,92 @@ export default function SourceReleasesTab() {
                     ? [...pathOpts, { value: current!, label: `${current}（已停用）` }]
                     : pathOpts;
                   return (
-                  <Space key={field.key} align="baseline" style={{ display: 'flex', marginBottom: 4 }}>
-                    <Form.Item name={[field.name, 'path']} noStyle>
-                      <Select
-                        showSearch
-                        placeholder="选择产物 path"
-                        style={{ width: 200 }}
-                        options={(rowOpts.length ? rowOpts : [
-                          { value: 'meta-bundle.js', label: 'meta-bundle.js' },
-                          { value: 'play-bundle.js', label: 'play-bundle.js' },
-                        ])}
-                      />
-                    </Form.Item>
-                    {deprecated && <Tag color="warning" style={{ marginRight: 0 }}>已停用，保存后移除</Tag>}
-                    <Form.Item
-                      name={[field.name, 'url']}
-                      noStyle
-                      // 手填与上传共用同一格：上传成功会覆盖当前值（customUpload 里
-                      // setFieldValue 直接写回）。客户端只认 https 直链（明文 http
-                      // 两端都拒），所以这里做前缀校验而不是放任任意字符串进 artifacts。
-                      rules={[{
-                        validator: (_, v: string | undefined) => {
-                          const s = (v ?? '').trim();
-                          if (s.length === 0) return Promise.resolve();
-                          if (!/^https:\/\//.test(s)) {
-                            return Promise.reject(new Error('产物地址必须是 https:// 直链（客户端拒绝明文 http）'));
+                    <Space
+                      key={field.key}
+                      align="baseline"
+                      style={{ display: 'flex', marginBottom: 4 }}
+                    >
+                      <Form.Item name={[field.name, 'path']} noStyle>
+                        <Select
+                          showSearch
+                          placeholder="选择产物 path"
+                          style={{ width: 200 }}
+                          options={
+                            rowOpts.length
+                              ? rowOpts
+                              : [
+                                  { value: 'meta-bundle.js', label: 'meta-bundle.js' },
+                                  { value: 'play-bundle.js', label: 'play-bundle.js' },
+                                ]
                           }
-                          return Promise.resolve();
-                        },
-                      }]}
-                    >
-                      <Input placeholder="永久直链：可手填，上传后自动覆盖" style={{ width: 280 }} allowClear />
-                    </Form.Item>
-                    <Upload
-                      showUploadList={false}
-                      disabled={!canEdit}
-                      customRequest={(options) => customUpload(options, field.name)}
-                    >
-                      <Button icon={<UploadOutlined />} loading={uploadingIdx === field.name} size="middle" disabled={!canEdit}>上传</Button>
-                    </Upload>
-                    <Button type="text" danger disabled={!canEdit} onClick={() => remove(field.name)}>删除</Button>
-                  </Space>
+                        />
+                      </Form.Item>
+                      {deprecated && (
+                        <Tag color="warning" style={{ marginRight: 0 }}>
+                          已停用，保存后移除
+                        </Tag>
+                      )}
+                      <Form.Item
+                        name={[field.name, 'url']}
+                        noStyle
+                        // 手填与上传共用同一格：上传成功会覆盖当前值（customUpload 里
+                        // setFieldValue 直接写回）。客户端只认 https 直链（明文 http
+                        // 两端都拒），所以这里做前缀校验而不是放任任意字符串进 artifacts。
+                        rules={[
+                          {
+                            validator: (_, v: string | undefined) => {
+                              const s = (v ?? '').trim();
+                              if (s.length === 0) return Promise.resolve();
+                              if (!/^https:\/\//.test(s)) {
+                                return Promise.reject(
+                                  new Error('产物地址必须是 https:// 直链（客户端拒绝明文 http）'),
+                                );
+                              }
+                              return Promise.resolve();
+                            },
+                          },
+                        ]}
+                      >
+                        <Input
+                          placeholder="永久直链：可手填，上传后自动覆盖"
+                          style={{ width: 280 }}
+                          allowClear
+                        />
+                      </Form.Item>
+                      <Upload
+                        showUploadList={false}
+                        disabled={!canEdit}
+                        customRequest={(options) => customUpload(options, field.name)}
+                      >
+                        <Button
+                          icon={<UploadOutlined />}
+                          loading={uploadingIdx === field.name}
+                          size="middle"
+                          disabled={!canEdit}
+                        >
+                          上传
+                        </Button>
+                      </Upload>
+                      <Button
+                        type="text"
+                        danger
+                        disabled={!canEdit}
+                        onClick={() => remove(field.name)}
+                      >
+                        删除
+                      </Button>
+                    </Space>
                   );
                 })}
-                <Button type="dashed" disabled={!canEdit} onClick={() => add()} icon={<PlusOutlined />} block>添加产物条目</Button>
+                <Button
+                  type="dashed"
+                  disabled={!canEdit}
+                  onClick={() => add()}
+                  icon={<PlusOutlined />}
+                  block
+                >
+                  添加产物条目
+                </Button>
               </>
             )}
           </Form.List>
@@ -671,7 +892,13 @@ export default function SourceReleasesTab() {
       </Modal>
 
       {/* 装机分布弹窗 */}
-      <Modal title="音源包装机分布（版本 × 平台 × 结果）" open={statsModal} onCancel={() => setStatsModal(false)} footer={null} width={760}>
+      <Modal
+        title="音源包装机分布（版本 × 平台 × 结果）"
+        open={statsModal}
+        onCancel={() => setStatsModal(false)}
+        footer={null}
+        width={760}
+      >
         <ResizableTable
           rowKey={(r: QtSourceStatRow) => `${r.source_version_code}-${r.platform}-${r.result}`}
           columns={statsColumns}

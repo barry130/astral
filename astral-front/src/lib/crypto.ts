@@ -1,4 +1,3 @@
-import JSEncrypt from 'jsencrypt';
 import { clientHeaders } from '@/lib/client-info';
 
 let cachedPublicKey: string | null = null;
@@ -7,7 +6,7 @@ export const getPublicKey = async (): Promise<string> => {
   if (cachedPublicKey) {
     return cachedPublicKey;
   }
-  
+
   try {
     // 统一客户端系统头：这里用原生 fetch 而非 axios 实例，需要自己带上
     // （契约见 lib/client-info.ts；只给 astral 请求加，对象存储直传不加）。
@@ -18,12 +17,12 @@ export const getPublicKey = async (): Promise<string> => {
       throw new Error(`HTTP ${response.status}: 后端服务未启动或接口不可用`);
     }
     const result = await response.json();
-    
+
     if (result.code === 200 && result.data?.publicKey) {
       cachedPublicKey = result.data.publicKey;
       return cachedPublicKey!;
     }
-    
+
     throw new Error(result.msg || '获取公钥失败');
   } catch (error) {
     if (error instanceof Error) {
@@ -35,12 +34,15 @@ export const getPublicKey = async (): Promise<string> => {
 
 export const encryptPassword = async (password: string, retry = true): Promise<string> => {
   const publicKey = await getPublicKey();
-  
+
+  // 动态引入：jsencrypt 体积可观（~100KB），按需加载避免打进登录页首屏 bundle
+  const { default: JSEncrypt } = await import('jsencrypt');
+
   const encrypt = new JSEncrypt();
   encrypt.setPublicKey(`-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`);
-  
+
   const encrypted = encrypt.encrypt(password);
-  
+
   if (!encrypted) {
     if (retry) {
       clearPublicKeyCache();
@@ -48,7 +50,7 @@ export const encryptPassword = async (password: string, retry = true): Promise<s
     }
     throw new Error('密码加密失败');
   }
-  
+
   return encrypted.replace(/\n/g, '');
 };
 

@@ -2,12 +2,40 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatDateTime } from '@/lib/format';
-import { Card, Tag, Button, Space, Select, Input, Modal, Form, Row, Col, Switch, DatePicker, InputNumber, message, Popconfirm, Typography } from '@/components/antd-compat';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, FileTextOutlined } from '@/components/antd-compat/icons';
+import {
+  Card,
+  Tag,
+  Button,
+  Space,
+  Select,
+  Input,
+  Modal,
+  Form,
+  Row,
+  Col,
+  Switch,
+  DatePicker,
+  InputNumber,
+  message,
+  Popconfirm,
+  Typography,
+} from '@/components/antd-compat';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ReloadOutlined,
+  FileTextOutlined,
+} from '@/components/antd-compat/icons';
 import dayjs from 'dayjs';
 import {
-  noticeAdminApi, SysNotice,
-  noticeTypeLabel, noticeChannelLabel, noticeTypeOptions, noticeChannelOptions, loadNoticeDicts,
+  noticeAdminApi,
+  SysNotice,
+  noticeTypeLabel,
+  noticeChannelLabel,
+  noticeTypeOptions,
+  noticeChannelOptions,
+  loadNoticeDicts,
   NOTICE_CHANNEL_ALL,
 } from '@/api/notice';
 import { ResizableTable } from '@/components/ResizableTable';
@@ -45,7 +73,12 @@ const DEFAULT_CHANNELS = ['app-android', 'app-ios'];
  * `dialogClosable` 顶回 1，这里同步是为了表单上显示的就是最终落库值（免得运营以为自己选的生效了）。
  */
 const DISCLAIMER_CHANNELS = [
-  'app-android', 'app-ios', 'app-windows', 'app-linux', 'app-macos', 'app-harmony',
+  'app-android',
+  'app-ios',
+  'app-windows',
+  'app-linux',
+  'app-macos',
+  'app-harmony',
 ];
 
 /**
@@ -96,7 +129,10 @@ const DISCLAIMER_TEMPLATE: Partial<SysNotice> & { display?: number } = {
 /** 落库值（逗号分隔）→ 多选控件值 */
 function parseChannels(channel?: string): string[] {
   if (!channel) return DEFAULT_CHANNELS;
-  const parts = channel.split(',').map((s) => s.trim()).filter(Boolean);
+  const parts = channel
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (!parts.length) return DEFAULT_CHANNELS;
   // 兼容存量遗留值：app → Android+iOS，pc → Windows
   if (parts.includes('app')) return [...DEFAULT_CHANNELS];
@@ -141,7 +177,8 @@ export default function NoticeManagement() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SysNotice | null>(null);
   const [form] = Form.useForm();
-  const isFeedbackReply = editing?.scene === 'feedbackAdminReplied' || editing?.scene === 'feedbackUserReplied';
+  const isFeedbackReply =
+    editing?.scene === 'feedbackAdminReplied' || editing?.scene === 'feedbackUserReplied';
   /**
    * 「仅首次启动弹出」开关：打开即把这条通知变成首次启动弹窗（免责声明的落地形态）——
    * 客户端只在该设备首次启动时弹一次、确认后不再打扰。
@@ -174,20 +211,24 @@ export default function NoticeManagement() {
   const canEdit = hasPerm('admin:message:edit');
 
   // kw/ch/ty 可由调用方显式传入：setState 异步，紧随其后的 load 读闭包会拿到旧筛选值
-  const load = useCallback((p = page, s = pageSize, kw = keyword, ch = channelFilter, ty = typeFilter) => {
-    setLoading(true);
-    const params: Record<string, any> = { pageNum: p, pageSize: s };
-    // 渠道多选：后端按逗号分隔解析，逐项做包含匹配（筛选用原始多值，不做 all 独占折叠）
-    if (ch.length) params.channel = ch.join(',');
-    if (ty) params.noticeType = ty;
-    if (kw) params.keyword = kw;
-    noticeAdminApi.page(params)
-      .then((res) => {
-        setData(res.data?.records || []);
-        setTotal(res.data?.total || 0);
-      })
-      .finally(() => setLoading(false));
-  }, [page, pageSize, keyword, channelFilter, typeFilter]);
+  const load = useCallback(
+    (p = page, s = pageSize, kw = keyword, ch = channelFilter, ty = typeFilter) => {
+      setLoading(true);
+      const params: Record<string, unknown> = { pageNum: p, pageSize: s };
+      // 渠道多选：后端按逗号分隔解析，逐项做包含匹配（筛选用原始多值，不做 all 独占折叠）
+      if (ch.length) params.channel = ch.join(',');
+      if (ty) params.noticeType = ty;
+      if (kw) params.keyword = kw;
+      noticeAdminApi
+        .page(params)
+        .then((res) => {
+          setData(res.data?.records || []);
+          setTotal(res.data?.total || 0);
+        })
+        .finally(() => setLoading(false));
+    },
+    [page, pageSize, keyword, channelFilter, typeFilter],
+  );
 
   useEffect(() => {
     load(1, pageSize);
@@ -232,42 +273,54 @@ export default function NoticeManagement() {
     setModalOpen(true);
   };
 
-  const openEdit = useCallback((record: SysNotice) => {
-    setEditing(record);
-    form.resetFields();
-    const display = record.display ? [1, 2, 4].filter((b) => (record.display! & b) === b) : [4];
-    form.setFieldsValue({
-      ...record,
-      display,
-      isShow: record.isShow ?? 1,
-      isTop: record.isTop ?? 0,
-      dialogClosable: record.dialogClosable ?? 1,
-      firstLoginOnly: record.firstLoginOnly ?? 0,
-      firstLaunchPopup: (record.termsVersion ?? '').trim() ? 1 : 0,
-      marquee: record.marquee ?? 0,
-      audience: record.audience || 'ALL',
-      channel: record.scene === 'feedbackAdminReplied' || record.scene === 'feedbackUserReplied'
-        ? [NOTICE_CHANNEL_ALL] : parseChannels(record.channel),
-      // 类型口径只有两档：历史 feedback/request 行在编辑保存时自然归一为 notice（§4.6，不做批量 UPDATE）
-      noticeType: record.noticeType === 'announce' ? 'announce' : 'notice',
-      effectiveRange: record.effectiveStart && record.effectiveEnd
-        ? [dayjs(record.effectiveStart), dayjs(record.effectiveEnd)] : undefined,
-    });
-    setModalOpen(true);
-  }, [form]);
+  const openEdit = useCallback(
+    (record: SysNotice) => {
+      setEditing(record);
+      form.resetFields();
+      const display = record.display ? [1, 2, 4].filter((b) => (record.display! & b) === b) : [4];
+      form.setFieldsValue({
+        ...record,
+        display,
+        isShow: record.isShow ?? 1,
+        isTop: record.isTop ?? 0,
+        dialogClosable: record.dialogClosable ?? 1,
+        firstLoginOnly: record.firstLoginOnly ?? 0,
+        firstLaunchPopup: (record.termsVersion ?? '').trim() ? 1 : 0,
+        marquee: record.marquee ?? 0,
+        audience: record.audience || 'ALL',
+        channel:
+          record.scene === 'feedbackAdminReplied' || record.scene === 'feedbackUserReplied'
+            ? [NOTICE_CHANNEL_ALL]
+            : parseChannels(record.channel),
+        // 类型口径只有两档：历史 feedback/request 行在编辑保存时自然归一为 notice（§4.6，不做批量 UPDATE）
+        noticeType: record.noticeType === 'announce' ? 'announce' : 'notice',
+        effectiveRange:
+          record.effectiveStart && record.effectiveEnd
+            ? [dayjs(record.effectiveStart), dayjs(record.effectiveEnd)]
+            : undefined,
+      });
+      setModalOpen(true);
+    },
+    [form],
+  );
 
   const submit = async () => {
     const values = await form.validateFields();
     // 位掩码列表 → 数值
     let display = Array.isArray(values.display)
-      ? (values.display as number[]).reduce((acc, b) => acc | b, 0) : values.display;
+      ? (values.display as number[]).reduce((acc, b) => acc | b, 0)
+      : values.display;
     // 首次启动弹窗必须命中开屏位，否则客户端不会当成弹窗处理
     if (values.firstLaunchPopup === 1) display = (display ?? 0) | 1;
     const payload: SysNotice = {
       id: editing?.id,
-      channel: isFeedbackReply ? NOTICE_CHANNEL_ALL
-        : values.firstLaunchPopup === 1 ? DISCLAIMER_CHANNELS.join(',')
-        : Array.isArray(values.channel) ? joinChannels(values.channel as string[]) : values.channel,
+      channel: isFeedbackReply
+        ? NOTICE_CHANNEL_ALL
+        : values.firstLaunchPopup === 1
+          ? DISCLAIMER_CHANNELS.join(',')
+          : Array.isArray(values.channel)
+            ? joinChannels(values.channel as string[])
+            : values.channel,
       noticeType: values.noticeType,
       title: values.title,
       content: values.content,
@@ -285,12 +338,16 @@ export default function NoticeManagement() {
       // 首次启动弹窗两列。关掉开关 = 取消首次启动语义，必须真的写回 NULL：
       // 后端的 update 对这两列是「无条件 set」，所以这里用 undefined 让 JSON 省略该键即可，
       // 服务端收到 null 就会落 NULL（不要写成 0 或空串 —— 空串会让客户端误判成「有版本号」）
-      readSeconds: values.firstLaunchPopup === 1
-        ? (typeof values.readSeconds === 'number' ? values.readSeconds : 3)
-        : undefined,
-      termsVersion: values.firstLaunchPopup === 1
-        ? ((values.termsVersion ?? '').trim() || defaultBatch())
-        : undefined,
+      readSeconds:
+        values.firstLaunchPopup === 1
+          ? typeof values.readSeconds === 'number'
+            ? values.readSeconds
+            : 3
+          : undefined,
+      termsVersion:
+        values.firstLaunchPopup === 1
+          ? (values.termsVersion ?? '').trim() || defaultBatch()
+          : undefined,
       effectiveStart: values.effectiveRange?.[0]?.format('YYYY-MM-DD HH:mm:ss') || undefined,
       effectiveEnd: values.effectiveRange?.[1]?.format('YYYY-MM-DD HH:mm:ss') || undefined,
     };
@@ -304,116 +361,205 @@ export default function NoticeManagement() {
       }
       setModalOpen(false);
       load();
-    } catch (e: any) {
-      message.error(e.message);
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : String(e));
     }
   };
 
-  const handleDelete = useCallback(async (id: number) => {
-    try {
-      await noticeAdminApi.delete(id);
-      message.success('已删除');
-      load();
-    } catch (e: any) {
-      message.error(e.message);
-    }
-  }, [load]);
+  const handleDelete = useCallback(
+    async (id: number) => {
+      try {
+        await noticeAdminApi.delete(id);
+        message.success('已删除');
+        load();
+      } catch (e: unknown) {
+        message.error(e instanceof Error ? e.message : String(e));
+      }
+    },
+    [load],
+  );
 
   // 用 useMemo 固定列引用，否则每次渲染新建数组会让 ResizableTable 内的列 useMemo 全部失效
-  const columns = useMemo(() => [
-    { title: 'ID', dataIndex: 'id', width: 96 },
-    {
-      title: '渠道', dataIndex: 'channel', width: 230,
-      render: (v: string) => {
-        const parts = (v || '').split(',').map((s) => s.trim()).filter(Boolean);
-        if (!parts.length) return <Tag>未指定</Tag>;
-        return (
-          <>
-            {parts.map((p) => (
-              <Tag key={p} color={p === NOTICE_CHANNEL_ALL ? 'purple' : 'blue'}>{noticeChannelLabel(p)}</Tag>
-            ))}
-          </>
-        );
+  const columns = useMemo(
+    () => [
+      { title: 'ID', dataIndex: 'id', width: 96 },
+      {
+        title: '渠道',
+        dataIndex: 'channel',
+        width: 230,
+        render: (v: string) => {
+          const parts = (v || '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (!parts.length) return <Tag>未指定</Tag>;
+          return (
+            <>
+              {parts.map((p) => (
+                <Tag key={p} color={p === NOTICE_CHANNEL_ALL ? 'purple' : 'blue'}>
+                  {noticeChannelLabel(p)}
+                </Tag>
+              ))}
+            </>
+          );
+        },
       },
-    },
-    {
-      // 类型口径只有两档：announce=公告（青），其余（notice/历史 feedback/request/未知）一律按「通知」渲染（蓝）
-      title: '类型', dataIndex: 'noticeType', width: 90,
-      render: (v: string) => <Tag color={v === 'announce' ? 'cyan' : 'geekblue'}>{noticeTypeLabel(v)}</Tag>,
-    },
-    { title: '标题', dataIndex: 'title', ellipsis: true },
-    {
-      // 首次启动弹窗：判定在客户端（开屏位 + 批次号非空），后台这里直接给出是否开启
-      title: '首次启动', dataIndex: 'termsVersion', width: 120,
-      render: (v: string, record: SysNotice) => {
-        const ver = (v ?? '').trim();
-        if (!ver) return '-';
-        const splash = ((record.display ?? 0) & 1) === 1;
-        return (
-          <Space size={4}>
-            <Tag color={splash ? 'green' : 'orange'}>{splash ? '是' : '缺开屏位'}</Tag>
-            <Tag>{ver}</Tag>
+      {
+        // 类型口径只有两档：announce=公告（青），其余（notice/历史 feedback/request/未知）一律按「通知」渲染（蓝）
+        title: '类型',
+        dataIndex: 'noticeType',
+        width: 90,
+        render: (v: string) => (
+          <Tag color={v === 'announce' ? 'cyan' : 'geekblue'}>{noticeTypeLabel(v)}</Tag>
+        ),
+      },
+      { title: '标题', dataIndex: 'title', ellipsis: true },
+      {
+        // 首次启动弹窗：判定在客户端（开屏位 + 批次号非空），后台这里直接给出是否开启
+        title: '首次启动',
+        dataIndex: 'termsVersion',
+        width: 120,
+        render: (v: string, record: SysNotice) => {
+          const ver = (v ?? '').trim();
+          if (!ver) return '-';
+          const splash = ((record.display ?? 0) & 1) === 1;
+          return (
+            <Space size={4}>
+              <Tag color={splash ? 'green' : 'orange'}>{splash ? '是' : '缺开屏位'}</Tag>
+              <Tag>{ver}</Tag>
+            </Space>
+          );
+        },
+      },
+      {
+        title: '展示位',
+        dataIndex: 'display',
+        width: 140,
+        render: (v: number) =>
+          DISPLAY_OPTIONS.filter((o) => (v & o.value) === o.value)
+            .map((o) => o.label.replace(/ \(\d\)$/, ''))
+            .join(' / ') || '-',
+      },
+      {
+        title: '人群',
+        dataIndex: 'audience',
+        width: 100,
+        render: (v: string) => (v === 'ALL' ? '全部' : v === 'LOGGED_IN' ? '登录' : '游客'),
+      },
+      {
+        title: '目标用户',
+        dataIndex: 'userId',
+        width: 90,
+        render: (v: number) => v ?? <Tag>广播</Tag>,
+      },
+      {
+        title: '启用',
+        dataIndex: 'isShow',
+        width: 70,
+        render: (v: number) => (v === 1 ? <Tag color="green">是</Tag> : <Tag color="red">否</Tag>),
+      },
+      {
+        title: '时间',
+        dataIndex: 'createTime',
+        width: 170,
+        render: (v: string) => (v ? formatDateTime(v) : '-'),
+      },
+      {
+        title: '操作',
+        key: 'action',
+        width: 150,
+        render: (_: unknown, record: SysNotice) => (
+          <Space>
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              disabled={!canEdit}
+              onClick={() => openEdit(record)}
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确认删除该通知?"
+              disabled={!canEdit}
+              onConfirm={() => handleDelete(record.id!)}
+            >
+              <Button type="link" danger size="small" icon={<DeleteOutlined />} disabled={!canEdit}>
+                删除
+              </Button>
+            </Popconfirm>
           </Space>
-        );
+        ),
       },
-    },
-    {
-      title: '展示位', dataIndex: 'display', width: 140,
-      render: (v: number) => DISPLAY_OPTIONS.filter((o) => (v & o.value) === o.value).map((o) => o.label.replace(/ \(\d\)$/, '')).join(' / ') || '-',
-    },
-    {
-      title: '人群', dataIndex: 'audience', width: 100,
-      render: (v: string) => v === 'ALL' ? '全部' : v === 'LOGGED_IN' ? '登录' : '游客',
-    },
-    { title: '目标用户', dataIndex: 'userId', width: 90, render: (v: number) => v ?? <Tag>广播</Tag> },
-    {
-      title: '启用', dataIndex: 'isShow', width: 70,
-      render: (v: number) => v === 1 ? <Tag color="green">是</Tag> : <Tag color="red">否</Tag>,
-    },
-    { title: '时间', dataIndex: 'createTime', width: 170, render: (v: string) => (v ? formatDateTime(v) : '-') },
-    {
-      title: '操作', key: 'action', width: 150,
-      render: (_: any, record: SysNotice) => (
-        <Space>
-          <Button type="link" size="small" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openEdit(record)}>编辑</Button>
-          <Popconfirm title="确认删除该通知?" disabled={!canEdit} onConfirm={() => handleDelete(record.id!)}>
-            <Button type="link" danger size="small" icon={<DeleteOutlined />} disabled={!canEdit}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ], [openEdit, handleDelete, canEdit]);
+    ],
+    [openEdit, handleDelete, canEdit],
+  );
 
   return (
     <div>
       <Card>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            marginBottom: 16,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <div>
             <h2 style={{ margin: 0 }}>通知管理</h2>
             <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-              统一通知 sys_notice：公告（广播）/ 通知（点对点站内信）（投放平台可多选，与接口统计口径一致）
+              统一通知 sys_notice：公告（广播）/
+              通知（点对点站内信）（投放平台可多选，与接口统计口径一致）
             </Paragraph>
           </div>
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={() => load()}>刷新</Button>
-            {canEdit && <Button icon={<FileTextOutlined />} onClick={openCreateDisclaimer}>新建首次启动弹窗</Button>}
-            {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>发布通知</Button>}
+            <Button icon={<ReloadOutlined />} onClick={() => load()}>
+              刷新
+            </Button>
+            {canEdit && (
+              <Button icon={<FileTextOutlined />} onClick={openCreateDisclaimer}>
+                新建首次启动弹窗
+              </Button>
+            )}
+            {canEdit && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+                发布通知
+              </Button>
+            )}
             {!canEdit && <Tag>只读</Tag>}
           </Space>
         </div>
 
         <div style={{ marginBottom: 16 }}>
           <Space wrap>
-            <Input.Search placeholder="搜索标题/内容" allowClear style={{ width: 220 }}
-              onSearch={(v) => { setKeyword(v); load(1, pageSize, v); }} />
-            <Select mode="multiple" placeholder="渠道（可多选）" allowClear style={{ width: 260 }}
+            <Input.Search
+              placeholder="搜索标题/内容"
+              allowClear
+              style={{ width: 220 }}
+              onSearch={(v) => {
+                setKeyword(v);
+                load(1, pageSize, v);
+              }}
+            />
+            <Select
+              mode="multiple"
+              placeholder="渠道（可多选）"
+              allowClear
+              style={{ width: 260 }}
               value={channelFilter}
               onChange={(v) => setChannelFilter((v as string[]) || [])}
               options={noticeChannelOptions()}
-              maxTagCount="responsive" />
-            <Select placeholder="类型" allowClear style={{ width: 120 }} value={typeFilter}
+              maxTagCount="responsive"
+            />
+            <Select
+              placeholder="类型"
+              allowClear
+              style={{ width: 120 }}
+              value={typeFilter}
               onChange={(v) => setTypeFilter(v)}
-              options={noticeTypeOptions()} />
+              options={noticeTypeOptions()}
+            />
           </Space>
         </div>
 
@@ -430,7 +576,11 @@ export default function NoticeManagement() {
             showQuickJumper: true,
             pageSizeOptions: ['5', '10', '20', '50', '100'],
             showTotal: (t) => `共 ${t} 条`,
-            onChange: (p, ps) => { setPage(p); setPageSize(ps); load(p, ps); },
+            onChange: (p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+              load(p, ps);
+            },
           }}
         />
       </Card>
@@ -451,22 +601,35 @@ export default function NoticeManagement() {
               <Form.Item
                 name="channel"
                 label="投放平台（可多选）"
-                extra={isFeedbackReply
-                  ? '系统事件自动生成的通知固定投「全部平台」'
-                  : firstLaunchOn
-                    // 首次启动弹窗的渠道会被服务端强制改写为 App 六端
-                    ? '首次启动弹窗固定只投 App 六端，不含 Web（Android / iOS / 鸿蒙 / Windows / Linux / macOS），保存时会自动改写为这六项，并强制「可关闭」'
-                    : '与接口统计的平台口径一致；选「全部平台」即不限端'}
+                extra={
+                  isFeedbackReply
+                    ? '系统事件自动生成的通知固定投「全部平台」'
+                    : firstLaunchOn
+                      ? // 首次启动弹窗的渠道会被服务端强制改写为 App 六端
+                        '首次启动弹窗固定只投 App 六端，不含 Web（Android / iOS / 鸿蒙 / Windows / Linux / macOS），保存时会自动改写为这六项，并强制「可关闭」'
+                      : '与接口统计的平台口径一致；选「全部平台」即不限端'
+                }
                 rules={[{ required: true, message: '请选择投放平台' }]}
                 // 兼容层不支持 normalize，「全部平台」与具体平台的互斥在这里做
                 getValueFromEvent={(next: string[]) =>
-                  toggleChannel(next || [], (form.getFieldValue('channel') as string[]) || [])}
+                  toggleChannel(next || [], (form.getFieldValue('channel') as string[]) || [])
+                }
               >
-                <Select mode="multiple" disabled={isFeedbackReply || firstLaunchOn} options={noticeChannelOptions()} placeholder="选择投放平台" maxTagCount="responsive" />
+                <Select
+                  mode="multiple"
+                  disabled={isFeedbackReply || firstLaunchOn}
+                  options={noticeChannelOptions()}
+                  placeholder="选择投放平台"
+                  maxTagCount="responsive"
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="noticeType" label="类型" rules={[{ required: true, message: '请选择类型' }]}>
+              <Form.Item
+                name="noticeType"
+                label="类型"
+                rules={[{ required: true, message: '请选择类型' }]}
+              >
                 <Select options={noticeTypeOptions()} />
               </Form.Item>
             </Col>
@@ -480,7 +643,11 @@ export default function NoticeManagement() {
             name="display"
             label="展示类型（可多选）"
             rules={[{ required: true, message: '请至少选择一个展示渠道' }]}
-            extra={firstLaunchOn ? '已开启「仅首次启动弹出」：展示位固定包含「开屏」，此处改动以开屏为准' : undefined}
+            extra={
+              firstLaunchOn
+                ? '已开启「仅首次启动弹出」：展示位固定包含「开屏」，此处改动以开屏为准'
+                : undefined
+            }
           >
             <Select
               mode="multiple"
@@ -512,9 +679,19 @@ export default function NoticeManagement() {
               <Form.Item
                 name="readSeconds"
                 label="确认前读秒（秒）"
-                extra={firstLaunchOn ? '留空按 3 秒；0 = 不读秒，确认键立即可点' : '仅在开启「仅首次启动弹出」后生效'}
+                extra={
+                  firstLaunchOn
+                    ? '留空按 3 秒；0 = 不读秒，确认键立即可点'
+                    : '仅在开启「仅首次启动弹出」后生效'
+                }
               >
-                <InputNumber min={0} max={60} style={{ width: '100%' }} disabled={!firstLaunchOn} placeholder="如 3" />
+                <InputNumber
+                  min={0}
+                  max={60}
+                  style={{ width: '100%' }}
+                  disabled={!firstLaunchOn}
+                  placeholder="如 3"
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -535,7 +712,11 @@ export default function NoticeManagement() {
 
           <Row gutter={16}>
             <Col xs={24} md={12}>
-              <Form.Item name="url" label="跳转链接" extra="站内用 astral://feedback/<id>；外链直接填 http(s) 地址">
+              <Form.Item
+                name="url"
+                label="跳转链接"
+                extra="站内用 astral://feedback/<id>；外链直接填 http(s) 地址"
+              >
                 <Input placeholder="astral://feedback/1000001 或 https://..." />
               </Form.Item>
             </Col>
@@ -549,7 +730,11 @@ export default function NoticeManagement() {
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <Form.Item name="effectiveRange" label="生效时间区间（留空=长期）">
-                <DatePicker.RangePicker showTime format="YYYY-MM-DD HH:mm:ss" style={{ width: '100%' }} />
+                <DatePicker.RangePicker
+                  showTime
+                  format="YYYY-MM-DD HH:mm:ss"
+                  style={{ width: '100%' }}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -561,26 +746,48 @@ export default function NoticeManagement() {
 
           <Row gutter={16}>
             <Col xs={24} md={12}>
-              <Form.Item name="versionMin" label="生效版本码下限"><InputNumber style={{ width: '100%' }} placeholder="如 300（3.0.0），可选" /></Form.Item>
+              <Form.Item name="versionMin" label="生效版本码下限">
+                <InputNumber style={{ width: '100%' }} placeholder="如 300（3.0.0），可选" />
+              </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="versionMax" label="生效版本码上限"><InputNumber style={{ width: '100%' }} placeholder="如 399，可选" /></Form.Item>
+              <Form.Item name="versionMax" label="生效版本码上限">
+                <InputNumber style={{ width: '100%' }} placeholder="如 399，可选" />
+              </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col xs={24} sm={8}>
-              <Form.Item name="isShow" label="是否启用" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
+              <Form.Item
+                name="isShow"
+                label="是否启用"
+                valuePropName="checked"
+                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+                getValueProps={(v: number) => ({ checked: v === 1 })}
+              >
                 <Switch checkedChildren="启用" unCheckedChildren="停用" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="isTop" label="是否置顶" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
+              <Form.Item
+                name="isTop"
+                label="是否置顶"
+                valuePropName="checked"
+                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+                getValueProps={(v: number) => ({ checked: v === 1 })}
+              >
                 <Switch checkedChildren="置顶" unCheckedChildren="普通" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="marquee" label="通告栏跑马灯" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
+              <Form.Item
+                name="marquee"
+                label="通告栏跑马灯"
+                valuePropName="checked"
+                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+                getValueProps={(v: number) => ({ checked: v === 1 })}
+              >
                 <Switch checkedChildren="滚动" unCheckedChildren="静止" />
               </Form.Item>
             </Col>
@@ -591,18 +798,34 @@ export default function NoticeManagement() {
               <Form.Item
                 name="dialogClosable"
                 label="开屏弹窗可关闭"
-                extra={firstLaunchOn ? '首次启动弹窗固定「可关闭」：旧客户端不认批次号会把不可关闭的声明当普通开屏，而「我知道了」执行的是退出 App' : undefined}
-                valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
-                <Switch disabled={firstLaunchOn} checkedChildren="可关闭" unCheckedChildren="不可关闭" />
+                extra={
+                  firstLaunchOn
+                    ? '首次启动弹窗固定「可关闭」：旧客户端不认批次号会把不可关闭的声明当普通开屏，而「我知道了」执行的是退出 App'
+                    : undefined
+                }
+                valuePropName="checked"
+                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+                getValueProps={(v: number) => ({ checked: v === 1 })}
+              >
+                <Switch
+                  disabled={firstLaunchOn}
+                  checkedChildren="可关闭"
+                  unCheckedChildren="不可关闭"
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="firstLoginOnly" label="仅首次登录弹出" valuePropName="checked" getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(v: number) => ({ checked: v === 1 })}>
+              <Form.Item
+                name="firstLoginOnly"
+                label="仅首次登录弹出"
+                valuePropName="checked"
+                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+                getValueProps={(v: number) => ({ checked: v === 1 })}
+              >
                 <Switch checkedChildren="仅首次" unCheckedChildren="每次" />
               </Form.Item>
             </Col>
           </Row>
-
         </Form>
       </Modal>
     </div>

@@ -186,8 +186,9 @@ async function handleBusinessFailure(
  */
 client.interceptors.response.use(
   // axios 的类型签名要求返回 AxiosResponse，但这里刻意把 body 直接交给调用方
-  // （`request.*` 返回 Promise<ApiResult<T>>），因此显式放宽返回类型。
-  (response: AxiosResponse): any => {
+  // （`request.*` 返回 Promise<ApiResult<T>>），因此这里对 axios 的签名做一次显式断言：
+  // 拦截器实际返回的是 ApiResult（成功）或 reject（业务/传输失败）。
+  ((response: AxiosResponse): ApiResult<unknown> | Promise<unknown> => {
     if (!isSilent(response.config)) {
       endRequest();
     }
@@ -199,7 +200,7 @@ client.interceptors.response.use(
       return result;
     }
     return handleBusinessFailure(result, response.config as CsrfRetryConfig | undefined);
-  },
+  }) as unknown as (response: AxiosResponse) => AxiosResponse,
   (error) => {
     // 成功与失败都要归还计数，否则泄漏会让加载指示永久常驻
     if (!isSilent(error.config)) {
@@ -226,10 +227,10 @@ client.interceptors.response.use(
       return Promise.reject(new Error(`服务暂时不可用（HTTP ${error.response.status}）`));
     }
     return Promise.reject(error);
-  }
+  },
 );
 
-export interface ApiResult<T = any> {
+export interface ApiResult<T = unknown> {
   code: number;
   errorCode?: string;
   msg: string;
@@ -237,17 +238,25 @@ export interface ApiResult<T = any> {
   timestamp: number;
 }
 
+/**
+ * 裸调用 request.*（未显式指定泛型 T）时的响应载荷默认类型。
+ * 取 AxiosResponse['data']（即 any）：存量 api/* 包装函数与 storage-upload 等
+ * 大量调用点直接访问裸调用 result.data 的属性，本次改动不扩大范围去补齐
+ * 显式泛型，故默认值保留 any 语义；待调用方逐步补齐泛型后可收紧为 unknown。
+ */
+type ApiPayloadDefault = AxiosResponse['data'];
+
 export const request = {
-  get: <T = any>(url: string, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
+  get: <T = ApiPayloadDefault>(url: string, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
     client.get(url, config),
 
-  post: <T = any>(url: string, data?: any, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
+  post: <T = ApiPayloadDefault>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
     client.post(url, data, config),
 
-  put: <T = any>(url: string, data?: any, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
+  put: <T = ApiPayloadDefault>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
     client.put(url, data, config),
 
-  delete: <T = any>(url: string, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
+  delete: <T = ApiPayloadDefault>(url: string, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
     client.delete(url, config),
 };
 

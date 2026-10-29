@@ -1,4 +1,5 @@
 import { request, ApiResult } from './client';
+import type { PageResult } from './types';
 
 /** 序列生成请求参数 */
 export interface SequenceRequest {
@@ -63,11 +64,10 @@ export const sequenceApi = {
     request.post('/api/v1/all/sequence/batch', data),
 
   /** 获取所有支持的序列类型 */
-  getTypes: (): Promise<ApiResult<SequenceType[]>> =>
-    request.get('/api/v1/all/sequence/types'),
+  getTypes: (): Promise<ApiResult<SequenceType[]>> => request.get('/api/v1/all/sequence/types'),
 
   /** 分页查询序列历史记录 */
-  getHistoryPage: (pageNum = 1, pageSize = 20, bizKey?: string): Promise<ApiResult<any>> =>
+  getHistoryPage: (pageNum = 1, pageSize = 20, bizKey?: string): Promise<ApiResult<PageResult<SequenceHistory>>> =>
     request.get('/api/v1/admin/sequence/history/page', { params: { pageNum, pageSize, bizKey } }),
 
   /** 获取最近的序列历史记录 */

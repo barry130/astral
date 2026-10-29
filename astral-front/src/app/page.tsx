@@ -77,33 +77,61 @@ export default function HomePage() {
   const storageHref = isLogin ? '/files' : '/login';
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
+    <div className="bg-background text-foreground min-h-dvh">
       <a
         href="#main-content"
-        className={`${styles.skipLink} rounded-lg bg-primary px-4 py-3 text-primary-foreground`}
+        className={`${styles.skipLink} bg-primary text-primary-foreground rounded-lg px-4 py-3`}
       >
         跳至主要内容
       </a>
 
-      <header className="sticky top-0 z-20 border-b border-border bg-background">
+      <header className="border-border bg-background sticky top-0 z-20 border-b">
         <div className="mx-auto flex min-h-18 max-w-6xl items-center justify-between gap-3 px-5 sm:px-8">
-          <Link href="/" aria-label="Astral 首页" className={`${styles.focusLink} flex shrink-0 items-center gap-2.5 rounded-lg`}>
-            <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+          <Link
+            href="/"
+            aria-label="Astral 首页"
+            className={`${styles.focusLink} flex shrink-0 items-center gap-2.5 rounded-lg`}
+          >
+            <span className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-xl">
               <Orbit className="size-5" aria-hidden="true" />
             </span>
-            <span className="text-xl font-semibold tracking-tight">Astral<span className="text-primary">.</span></span>
+            <span className="text-xl font-semibold tracking-tight">
+              Astral<span className="text-primary">.</span>
+            </span>
           </Link>
 
-          <nav aria-label="首页导航" className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
-            <a href="#applications" className={`${styles.focusLink} rounded-sm transition-colors hover:text-foreground`}>应用入口</a>
-            <a href="#platform" className={`${styles.focusLink} rounded-sm transition-colors hover:text-foreground`}>平台能力</a>
-            <a href={QUIET_MUSIC_URL} className={`${styles.focusLink} inline-flex items-center gap-1 rounded-sm transition-colors hover:text-foreground`}>
+          <nav
+            aria-label="首页导航"
+            className="text-muted-foreground hidden items-center gap-7 text-sm md:flex"
+          >
+            <a
+              href="#applications"
+              className={`${styles.focusLink} hover:text-foreground rounded-sm transition-colors`}
+            >
+              应用入口
+            </a>
+            <a
+              href="#platform"
+              className={`${styles.focusLink} hover:text-foreground rounded-sm transition-colors`}
+            >
+              平台能力
+            </a>
+            <a
+              href={QUIET_MUSIC_URL}
+              className={`${styles.focusLink} hover:text-foreground inline-flex items-center gap-1 rounded-sm transition-colors`}
+            >
               轻听音乐 <ArrowUpRight className="size-3.5" aria-hidden="true" />
             </a>
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={toggle} aria-label="切换明暗主题" title="切换明暗主题">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggle}
+              aria-label="切换明暗主题"
+              title="切换明暗主题"
+            >
               <Sun className="hidden dark:block" aria-hidden="true" />
               <Moon className="dark:hidden" aria-hidden="true" />
             </Button>
@@ -118,112 +146,208 @@ export default function HomePage() {
       </header>
 
       <main id="main-content" className="mx-auto max-w-6xl px-5 sm:px-8">
-        <section aria-labelledby="hero-title" className="grid items-center gap-8 pb-12 pt-14 sm:pb-16 sm:pt-20 lg:grid-cols-[1.3fr_1fr] lg:gap-16 lg:pb-20 lg:pt-24">
+        <section
+          aria-labelledby="hero-title"
+          className="grid items-center gap-8 pt-14 pb-12 sm:pt-20 sm:pb-16 lg:grid-cols-[1.3fr_1fr] lg:gap-16 lg:pt-24 lg:pb-20"
+        >
           <div>
-            <p className="mb-5 flex items-center gap-2 text-sm font-medium text-primary">
-              <span className="h-px w-6 bg-primary" aria-hidden="true" />
+            <p className="text-primary mb-5 flex items-center gap-2 text-sm font-medium">
+              <span className="bg-primary h-px w-6" aria-hidden="true" />
               ASTRAL · 应用与服务
             </p>
-            <h1 id="hero-title" className="text-[clamp(2.5rem,5vw,4rem)] font-semibold leading-[1.2] tracking-tight">
-              日常所需，<br />
+            <h1
+              id="hero-title"
+              className="text-[clamp(2.5rem,5vw,4rem)] leading-[1.2] font-semibold tracking-tight"
+            >
+              日常所需，
+              <br />
               <span className="text-primary">触手可及。</span>
             </h1>
-            <p className="mt-6 max-w-md text-base leading-8 text-muted-foreground">
-              听音乐、管理文件，或进入管理控制台。<br className="hidden sm:block" />
+            <p className="text-muted-foreground mt-6 max-w-md text-base leading-8">
+              听音乐、管理文件，或进入管理控制台。
+              <br className="hidden sm:block" />
               从这里，找到你需要的应用与服务。
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button asChild size="lg" className="h-11 rounded-full px-6">
-                <a href="#applications">探索应用 <ArrowDown aria-hidden="true" /></a>
+                <a href="#applications">
+                  探索应用 <ArrowDown aria-hidden="true" />
+                </a>
               </Button>
               <Button asChild variant="ghost" size="lg" className="h-11 rounded-full">
-                <a href="#platform">了解平台 <ArrowRight aria-hidden="true" /></a>
+                <a href="#platform">
+                  了解平台 <ArrowRight aria-hidden="true" />
+                </a>
               </Button>
             </div>
           </div>
 
-          <aside aria-label="服务导航" className="rounded-2xl border border-border bg-muted/40 p-5 sm:p-7">
-            <p className="mb-5 text-xs font-medium tracking-[0.18em] text-muted-foreground">从喜欢的事开始</p>
-            <a href={QUIET_MUSIC_URL} className={`${styles.focusLink} group flex items-center gap-4 rounded-xl py-3`}>
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-primary">
+          <aside
+            aria-label="服务导航"
+            className="border-border bg-muted/40 rounded-2xl border p-5 sm:p-7"
+          >
+            <p className="text-muted-foreground mb-5 text-xs font-medium tracking-[0.18em]">
+              从喜欢的事开始
+            </p>
+            <a
+              href={QUIET_MUSIC_URL}
+              className={`${styles.focusLink} group flex items-center gap-4 rounded-xl py-3`}
+            >
+              <span className="border-border bg-background text-primary flex size-11 shrink-0 items-center justify-center rounded-xl border">
                 <Headphones className="size-5" aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">给日常一点旋律</span>
-                <span className="mt-1 block text-xs text-muted-foreground">打开轻听音乐官网</span>
+                <span className="text-muted-foreground mt-1 block text-xs">打开轻听音乐官网</span>
               </span>
-              <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
+              <ArrowUpRight
+                className="text-muted-foreground group-hover:text-primary size-4 shrink-0 transition-colors"
+                aria-hidden="true"
+              />
             </a>
-            <div className="my-2 border-t border-border" />
-            <Link href={storageHref} prefetch={false} className={`${styles.focusLink} group flex items-center gap-4 rounded-xl py-3`}>
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-primary">
+            <div className="border-border my-2 border-t" />
+            <Link
+              href={storageHref}
+              prefetch={false}
+              className={`${styles.focusLink} group flex items-center gap-4 rounded-xl py-3`}
+            >
+              <span className="border-border bg-background text-primary flex size-11 shrink-0 items-center justify-center rounded-xl border">
                 <FolderOpen className="size-5" aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">让文件井井有条</span>
-                <span className="mt-1 block text-xs text-muted-foreground">{isLogin ? '进入我的文件' : '登录后管理与分享文件'}</span>
+                <span className="text-muted-foreground mt-1 block text-xs">
+                  {isLogin ? '进入我的文件' : '登录后管理与分享文件'}
+                </span>
               </span>
-              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
+              <ArrowRight
+                className="text-muted-foreground group-hover:text-primary size-4 shrink-0 transition-colors"
+                aria-hidden="true"
+              />
             </Link>
           </aside>
         </section>
 
-        <section id="applications" aria-labelledby="applications-title" className="scroll-mt-24 pb-16 sm:pb-20">
+        <section
+          id="applications"
+          aria-labelledby="applications-title"
+          className="scroll-mt-24 pb-16 sm:pb-20"
+        >
           <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="mb-2 text-xs font-medium tracking-[0.14em] text-primary">EXPLORE</p>
-              <h2 id="applications-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">选一个，开始使用</h2>
+              <p className="text-primary mb-2 text-xs font-medium tracking-[0.14em]">EXPLORE</p>
+              <h2
+                id="applications-title"
+                className="text-2xl font-semibold tracking-tight sm:text-3xl"
+              >
+                选一个，开始使用
+              </h2>
             </div>
-            <p className="text-sm text-muted-foreground">专注日常，让每次打开都更简单。</p>
+            <p className="text-muted-foreground text-sm">专注日常，让每次打开都更简单。</p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
-            <a href={QUIET_MUSIC_URL} className={`${styles.appCard} group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-8`}>
+            <a
+              href={QUIET_MUSIC_URL}
+              className={`${styles.appCard} group border-border bg-card relative flex flex-col overflow-hidden rounded-2xl border p-6 sm:p-8`}
+            >
               <div className="relative z-10 flex items-start justify-between gap-4">
-                <Image src="/lightlisten/icon.png" alt="" width={56} height={56} className="rounded-2xl" />
-                <span className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground">音乐应用</span>
+                <Image
+                  src="/lightlisten/icon.png"
+                  alt=""
+                  width={56}
+                  height={56}
+                  className="rounded-2xl"
+                />
+                <span className="border-border bg-background text-muted-foreground rounded-full border px-3 py-1 text-xs">
+                  音乐应用
+                </span>
               </div>
-              <div className="relative z-10 mb-9 mt-7">
+              <div className="relative z-10 mt-7 mb-9">
                 <h3 className="text-2xl font-semibold tracking-tight">轻听音乐</h3>
-                <p className="mt-1 text-xs tracking-[0.12em] text-muted-foreground">QUIET MUSIC</p>
-                <p className="mt-4 max-w-sm text-sm leading-7 text-muted-foreground">发现喜欢的音乐，收藏常听的歌。<br />在手机与电脑上，享受自己的聆听时光。</p>
+                <p className="text-muted-foreground mt-1 text-xs tracking-[0.12em]">QUIET MUSIC</p>
+                <p className="text-muted-foreground mt-4 max-w-sm text-sm leading-7">
+                  发现喜欢的音乐，收藏常听的歌。
+                  <br />
+                  在手机与电脑上，享受自己的聆听时光。
+                </p>
               </div>
-              <div className="relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border pt-5">
-                <span className="text-sm font-medium text-primary">前往轻听官网</span>
-                <ArrowUpRight className="size-5 text-primary transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
+              <div className="border-border relative z-10 mt-auto flex items-center justify-between gap-3 border-t pt-5">
+                <span className="text-primary text-sm font-medium">前往轻听官网</span>
+                <ArrowUpRight
+                  className="text-primary size-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  aria-hidden="true"
+                />
               </div>
-              <AudioLines className="pointer-events-none absolute -right-4 top-20 size-44 text-primary/[0.04]" strokeWidth={1} aria-hidden="true" />
+              <AudioLines
+                className="text-primary/[0.04] pointer-events-none absolute top-20 -right-4 size-44"
+                strokeWidth={1}
+                aria-hidden="true"
+              />
             </a>
 
-            <Link href={storageHref} prefetch={false} className={`${styles.appCard} group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-8`}>
+            <Link
+              href={storageHref}
+              prefetch={false}
+              className={`${styles.appCard} group border-border bg-card relative flex flex-col overflow-hidden rounded-2xl border p-6 sm:p-8`}
+            >
               <div className="relative z-10 flex items-start justify-between gap-4">
-                <span className="flex size-14 items-center justify-center rounded-2xl bg-muted text-primary">
+                <span className="bg-muted text-primary flex size-14 items-center justify-center rounded-2xl">
                   <ImageIcon className="size-7" strokeWidth={1.5} aria-hidden="true" />
                 </span>
-                <span className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground">文件工具</span>
+                <span className="border-border bg-background text-muted-foreground rounded-full border px-3 py-1 text-xs">
+                  文件工具
+                </span>
               </div>
-              <div className="relative z-10 mb-9 mt-7">
+              <div className="relative z-10 mt-7 mb-9">
                 <h3 className="text-2xl font-semibold tracking-tight">文件管理</h3>
-                <p className="mt-1 text-xs tracking-[0.12em] text-muted-foreground">FILE MANAGER</p>
-                <p className="mt-4 max-w-sm text-sm leading-7 text-muted-foreground">集中存放文件，按文件夹整理内容。<br />从上传、管理到分享，让文件随用随取。</p>
+                <p className="text-muted-foreground mt-1 text-xs tracking-[0.12em]">FILE MANAGER</p>
+                <p className="text-muted-foreground mt-4 max-w-sm text-sm leading-7">
+                  集中存放文件，按文件夹整理内容。
+                  <br />
+                  从上传、管理到分享，让文件随用随取。
+                </p>
               </div>
-              <div className="relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border pt-5">
-                <span className="text-sm font-medium text-primary">{isLogin ? '进入我的文件' : '登录后使用'}</span>
-                <ArrowRight className="size-5 text-primary transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+              <div className="border-border relative z-10 mt-auto flex items-center justify-between gap-3 border-t pt-5">
+                <span className="text-primary text-sm font-medium">
+                  {isLogin ? '进入我的文件' : '登录后使用'}
+                </span>
+                <ArrowRight
+                  className="text-primary size-5 transition-transform group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
               </div>
-              <FolderOpen className="pointer-events-none absolute -right-4 top-20 size-44 text-primary/[0.04]" strokeWidth={1} aria-hidden="true" />
+              <FolderOpen
+                className="text-primary/[0.04] pointer-events-none absolute top-20 -right-4 size-44"
+                strokeWidth={1}
+                aria-hidden="true"
+              />
             </Link>
           </div>
         </section>
 
-        <section id="platform" aria-labelledby="platform-title" className="scroll-mt-24 border-t border-border py-12 sm:py-16">
+        <section
+          id="platform"
+          aria-labelledby="platform-title"
+          className="border-border scroll-mt-24 border-t py-12 sm:py-16"
+        >
           <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
             <div>
-              <p className="mb-2 text-xs font-medium tracking-[0.14em] text-primary">BUILT ON ASTRAL</p>
-              <h2 id="platform-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">应用背后，服务有序运转</h2>
-              <p className="mt-3 text-sm leading-7 text-muted-foreground">统一的管理平台，连接用户、数据与业务扩展。</p>
+              <p className="text-primary mb-2 text-xs font-medium tracking-[0.14em]">
+                BUILT ON ASTRAL
+              </p>
+              <h2 id="platform-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                应用背后，服务有序运转
+              </h2>
+              <p className="text-muted-foreground mt-3 text-sm leading-7">
+                统一的管理平台，连接用户、数据与业务扩展。
+              </p>
             </div>
-            <Button asChild variant="outline" className="h-11 self-start rounded-full px-5 sm:shrink-0">
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 self-start rounded-full px-5 sm:shrink-0"
+            >
               <Link href={consoleHref} prefetch={false}>
                 {isLogin ? '进入管理控制台' : '登录管理控制台'}
                 <ArrowRight aria-hidden="true" />
@@ -234,21 +358,29 @@ export default function HomePage() {
           <div className="mt-9 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, desc }) => (
               <article key={title} className="flex items-start gap-3.5">
-                <Icon className="mt-1 size-5 shrink-0 text-primary" strokeWidth={1.6} aria-hidden="true" />
+                <Icon
+                  className="text-primary mt-1 size-5 shrink-0"
+                  strokeWidth={1.6}
+                  aria-hidden="true"
+                />
                 <div>
                   <h3 className="text-sm font-semibold">{title}</h3>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">{desc}</p>
+                  <p className="text-muted-foreground mt-2 text-sm leading-7">{desc}</p>
                 </div>
               </article>
             ))}
           </div>
 
-          <div className="mt-12 grid gap-6 rounded-2xl border border-border bg-muted/40 p-5 sm:p-6 lg:grid-cols-[1.3fr_1.3fr_1fr]">
+          <div className="border-border bg-muted/40 mt-12 grid gap-6 rounded-2xl border p-5 sm:p-6 lg:grid-cols-[1.3fr_1.3fr_1fr]">
             {TECH_STACK.map(({ title, items }) => (
               <div key={title}>
-                <h3 className="mb-3 text-xs font-medium text-muted-foreground">{title}</h3>
+                <h3 className="text-muted-foreground mb-3 text-xs font-medium">{title}</h3>
                 <ul className="flex flex-wrap gap-x-3 gap-y-2">
-                  {items.map((item) => <li key={item} className="text-xs leading-5">{item}</li>)}
+                  {items.map((item) => (
+                    <li key={item} className="text-xs leading-5">
+                      {item}
+                    </li>
+                  ))}
                 </ul>
               </div>
             ))}
@@ -256,13 +388,36 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-border bg-muted/30">
-        <div className="mx-auto flex max-w-6xl flex-col justify-between gap-5 px-5 py-7 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-8">
-          <p><span className="font-semibold text-foreground">Astral</span><span className="mx-2" aria-hidden="true">/</span>连接应用与服务</p>
+      <footer className="border-border bg-muted/30 border-t">
+        <div className="text-muted-foreground mx-auto flex max-w-6xl flex-col justify-between gap-5 px-5 py-7 text-xs sm:flex-row sm:items-center sm:px-8">
+          <p>
+            <span className="text-foreground font-semibold">Astral</span>
+            <span className="mx-2" aria-hidden="true">
+              /
+            </span>
+            连接应用与服务
+          </p>
           <nav aria-label="页脚导航" className="flex flex-wrap items-center gap-x-5 gap-y-3">
-            <a href={QUIET_MUSIC_URL} className={`${styles.focusLink} rounded-sm hover:text-foreground`}>轻听音乐官网 ↗</a>
-            <Link href={storageHref} prefetch={false} className={`${styles.focusLink} rounded-sm hover:text-foreground`}>文件管理</Link>
-            <Link href={consoleHref} prefetch={false} className={`${styles.focusLink} rounded-sm hover:text-foreground`}>{isLogin ? '管理控制台' : '管理登录'}</Link>
+            <a
+              href={QUIET_MUSIC_URL}
+              className={`${styles.focusLink} hover:text-foreground rounded-sm`}
+            >
+              轻听音乐官网 ↗
+            </a>
+            <Link
+              href={storageHref}
+              prefetch={false}
+              className={`${styles.focusLink} hover:text-foreground rounded-sm`}
+            >
+              文件管理
+            </Link>
+            <Link
+              href={consoleHref}
+              prefetch={false}
+              className={`${styles.focusLink} hover:text-foreground rounded-sm`}
+            >
+              {isLogin ? '管理控制台' : '管理登录'}
+            </Link>
           </nav>
         </div>
       </footer>

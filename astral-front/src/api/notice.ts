@@ -1,6 +1,5 @@
 import { request, ApiResult } from './client';
-import { dictApi } from './dict';
-import type { DictOption } from './dict';
+import { dictApi, type DictOption } from './dict';
 
 /**
  * 站内通知（`sys_notice`）类型 / API / 字典 / 标签 —— 从 `@/api/feedback` 切出的独立模块。
@@ -74,7 +73,7 @@ export const NOTICE_CHANNEL_ALL = 'all';
 /** 通知管理端 API */
 export const noticeAdminApi = {
   /** 分页（channel/noticeType/keyword/时间） */
-  page: (params: Record<string, any>): Promise<ApiResult<NoticePage<SysNotice>>> =>
+  page: (params: Record<string, unknown>): Promise<ApiResult<NoticePage<SysNotice>>> =>
     request.get('/api/v1/admin/message/page', { params }),
 
   /** 发通知/公告 */
@@ -86,8 +85,7 @@ export const noticeAdminApi = {
     request.put(`/api/v1/admin/message/${id}`, data),
 
   /** 删除通知 */
-  delete: (id: number): Promise<ApiResult<void>> =>
-    request.delete(`/api/v1/admin/message/${id}`),
+  delete: (id: number): Promise<ApiResult<void>> => request.delete(`/api/v1/admin/message/${id}`),
 };
 
 /**
@@ -112,7 +110,10 @@ export async function loadNoticeDicts(): Promise<Partial<NoticeDictCache>> {
   const map: Record<string, DictOption[]> = {};
   const results = await Promise.all(NOTICE_DICT_CODES.map((c) => dictApi.byCode(c)));
   results.forEach((res, i) => {
-    map[NOTICE_DICT_CODES[i]] = (res.data || []).map((d) => ({ value: String(d.dictValue), label: d.dictLabel }));
+    map[NOTICE_DICT_CODES[i]] = (res.data || []).map((d) => ({
+      value: String(d.dictValue),
+      label: d.dictLabel,
+    }));
   });
   noticeDictCache = {
     noticeChannel: map.notice_channel || [],
@@ -159,7 +160,9 @@ export function noticeTypeLabel(v?: string): string {
   if (!v) return '-';
   const key = v === NOTICE_TYPE_ANNOUNCE ? NOTICE_TYPE_ANNOUNCE : NOTICE_TYPE_NOTICE;
   const hit = noticeDictCache.noticeType?.find((o) => o.value === key);
-  return hit ? hit.label : (NOTICE_TYPE_TEXT_FALLBACK[key] || NOTICE_TYPE_TEXT_FALLBACK[NOTICE_TYPE_NOTICE]);
+  return hit
+    ? hit.label
+    : NOTICE_TYPE_TEXT_FALLBACK[key] || NOTICE_TYPE_TEXT_FALLBACK[NOTICE_TYPE_NOTICE];
 }
 
 /** 通知渠道文案：值为逗号分隔的平台集合，逐项翻译后拼接；优先 notice_channel 字典，miss 回退 */
@@ -171,14 +174,17 @@ export function noticeChannelLabel(v?: string): string {
     .filter(Boolean)
     .map((one) => {
       const hit = noticeDictCache.noticeChannel?.find((o) => o.value === one);
-      return hit ? hit.label : (NOTICE_CHANNEL_TEXT_FALLBACK[one] || one);
+      return hit ? hit.label : NOTICE_CHANNEL_TEXT_FALLBACK[one] || one;
     });
   return parts.length ? parts.join(' / ') : '-';
 }
 
 /** 通知类型下拉：**固定两项**（公告 / 通知），字典只影响这两项的文案 */
 export function noticeTypeOptions(): DictOption[] {
-  return [NOTICE_TYPE_ANNOUNCE, NOTICE_TYPE_NOTICE].map((value) => ({ value, label: noticeTypeLabel(value) }));
+  return [NOTICE_TYPE_ANNOUNCE, NOTICE_TYPE_NOTICE].map((value) => ({
+    value,
+    label: noticeTypeLabel(value),
+  }));
 }
 
 /**

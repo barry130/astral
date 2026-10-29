@@ -4,8 +4,11 @@ import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  MailOutlined, FileTextOutlined, MobileOutlined,
-  NotificationOutlined, ApiOutlined,
+  MailOutlined,
+  FileTextOutlined,
+  MobileOutlined,
+  NotificationOutlined,
+  ApiOutlined,
 } from '@/components/antd-compat/icons';
 import MailAccountPage from './account/page';
 import MessageTemplatePage from './message-template/page';
@@ -14,10 +17,21 @@ import NoticeManagement from '@/components/admin/NoticeManagement';
 import NotifyRulePage from './notify-rule/page';
 
 /** 页签 key 白名单（同时作为 ?tab= 深链的合法取值；template/smsTemplate 为合并前的旧深链别名） */
-const TAB_KEYS = ['account', 'messageTemplate', 'smsProvider', 'notice', 'rule', 'template', 'smsTemplate'] as const;
+const TAB_KEYS = [
+  'account',
+  'messageTemplate',
+  'smsProvider',
+  'notice',
+  'rule',
+  'template',
+  'smsTemplate',
+] as const;
 
 /** 旧深链 ?tab=template|smsTemplate 统一落到合并后的消息模板页 */
-const TAB_ALIAS: Record<string, string> = { template: 'messageTemplate', smsTemplate: 'messageTemplate' };
+const TAB_ALIAS: Record<string, string> = {
+  template: 'messageTemplate',
+  smsTemplate: 'messageTemplate',
+};
 
 /**
  * 消息中心页：邮箱帐户/消息模板（邮箱 + 站内信 + 短信合并，投递渠道多选）、
@@ -32,21 +46,24 @@ function MailCenter() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
   // 只接受白名单内的 key，非法/缺省一律落到「邮箱帐户」，避免脏参数导致空白页
-  const rawTab = tabParam && (TAB_KEYS as readonly string[]).includes(tabParam) ? tabParam : 'account';
+  const rawTab =
+    tabParam && (TAB_KEYS as readonly string[]).includes(tabParam) ? tabParam : 'account';
   const initialTab = TAB_ALIAS[rawTab] || rawTab;
   const [activeTab, setActiveTab] = useState(initialTab);
 
   return (
     <div style={{ background: 'var(--color-bg-base)', minHeight: '100%' }}>
-      <div style={{
-        background: 'var(--color-bg-base)',
-        padding: '24px 24px 0',
-        position: 'sticky',
-        top: 56,
-        zIndex: 100,
-      }}>
+      <div
+        style={{
+          background: 'var(--color-bg-base)',
+          padding: '24px 24px 0',
+          position: 'sticky',
+          top: 56,
+          zIndex: 100,
+        }}
+      >
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="h-9 bg-muted/60">
+          <TabsList className="bg-muted/60 h-9">
             <TabsTrigger value="account" className="px-3 text-xs">
               <MailOutlined /> 邮箱帐户
             </TabsTrigger>

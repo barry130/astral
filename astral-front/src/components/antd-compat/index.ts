@@ -33,7 +33,17 @@ export type {
 } from './Layout';
 
 /* ------------------------------ 反馈 ------------------------------ */
-export { message, notification, Spin, Empty, Alert, Result, Tooltip, Popconfirm, Pagination } from './Feedback';
+export {
+  message,
+  notification,
+  Spin,
+  Empty,
+  Alert,
+  Result,
+  Tooltip,
+  Popconfirm,
+  Pagination,
+} from './Feedback';
 export type {
   SpinProps,
   EmptyProps,
@@ -108,4 +118,12 @@ export type { ModalProps, DrawerProps, TabsProps, TabItem } from './Overlay';
 
 /* ------------------------------ 展示 ------------------------------ */
 export { Tag, Statistic, Timeline, Badge, Descriptions, Table } from './Display';
-export type { TagProps, StatisticProps, TimelineProps, TimelineItem, BadgeProps, DescriptionsProps, TableProps } from './Display';
+export type {
+  TagProps,
+  StatisticProps,
+  TimelineProps,
+  TimelineItem,
+  BadgeProps,
+  DescriptionsProps,
+  TableProps,
+} from './Display';

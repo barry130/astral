@@ -12,19 +12,22 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
-  Card,
   Empty,
   Form,
   Input,
   Modal,
-  Popconfirm,
   Space,
   Spin,
   Tag,
   Tooltip,
   message,
 } from '@/components/antd-compat';
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SendOutlined } from '@/components/antd-compat/icons';
+import {
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SendOutlined,
+} from '@/components/antd-compat/icons';
 import { ResizableTable } from '@/components/ResizableTable';
 
 import { aiPromptApi, type AiPromptTemplate, type AiPromptVersion } from '@/api/ai';
@@ -41,9 +44,13 @@ export default function PromptPanel() {
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<number | undefined>();
 
-  const [templateModal, setTemplateModal] = useState<{ open: boolean; row?: AiPromptTemplate }>({ open: false });
+  const [templateModal, setTemplateModal] = useState<{ open: boolean; row?: AiPromptTemplate }>({
+    open: false,
+  });
   const [templateForm] = Form.useForm();
-  const [versionModal, setVersionModal] = useState<{ open: boolean; row?: AiPromptVersion }>({ open: false });
+  const [versionModal, setVersionModal] = useState<{ open: boolean; row?: AiPromptVersion }>({
+    open: false,
+  });
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -64,7 +71,10 @@ export default function PromptPanel() {
     void load();
   }, [load]);
 
-  const selected = useMemo(() => templates.find((item) => item.id === selectedId), [templates, selectedId]);
+  const selected = useMemo(
+    () => templates.find((item) => item.id === selectedId),
+    [templates, selectedId],
+  );
 
   const openTemplateModal = (row?: AiPromptTemplate) => {
     setTemplateModal({ open: true, row });
@@ -106,7 +116,8 @@ export default function PromptPanel() {
       title: '已发布版本',
       dataIndex: 'publishedVersionNo',
       width: 120,
-      render: (value: number) => (value ? <Tag color="success">v{value}</Tag> : <Tag color="warning">未发布</Tag>),
+      render: (value: number) =>
+        value ? <Tag color="success">v{value}</Tag> : <Tag color="warning">未发布</Tag>,
     },
     {
       key: 'count',
@@ -122,7 +133,13 @@ export default function PromptPanel() {
       width: 110,
       render: (_: unknown, row: AiPromptTemplate) => (
         <Space size={2}>
-          <Button size="small" type="text" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openTemplateModal(row)} />
+          <Button
+            size="small"
+            type="text"
+            icon={<EditOutlined />}
+            disabled={!canEdit}
+            onClick={() => openTemplateModal(row)}
+          />
           <Button
             size="small"
             type="text"
@@ -146,17 +163,35 @@ export default function PromptPanel() {
         <strong>提示词发布后，还要在智能体版本里重新指向它并发布</strong>，两者都到位才生效。
       </Hint>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
         <Space size={8}>
           <span style={{ fontSize: 13, fontWeight: 500 }}>模板</span>
           <Tag color="default">{templates.length}</Tag>
           <ReadOnlyNote show={!canEdit} />
         </Space>
         <Space size={8}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
-          <Button size="small" type="primary" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => openTemplateModal()}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!canEdit}
+            onClick={() => openTemplateModal()}
+          >
             新建模板
           </Button>
         </Space>
@@ -295,7 +330,9 @@ function VersionDrawer({
       title: '状态',
       dataIndex: 'status',
       width: 100,
-      render: (value: string) => <StatusTag dict={dict} code="ai_agent_version_status" value={value} />,
+      render: (value: string) => (
+        <StatusTag dict={dict} code="ai_agent_version_status" value={value} />
+      ),
     },
     {
       key: 'prompt',
@@ -311,7 +348,9 @@ function VersionDrawer({
       title: '发布时间',
       dataIndex: 'publishedAt',
       width: 150,
-      render: (value: string) => <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>,
+      render: (value: string) => (
+        <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>
+      ),
     },
     {
       key: 'action',
@@ -321,7 +360,13 @@ function VersionDrawer({
       render: (_: unknown, row: AiPromptVersion) => (
         <Space size={2}>
           {row.status === 'DRAFT' && (
-            <Button size="small" type="text" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openModal(row)} />
+            <Button
+              size="small"
+              type="text"
+              icon={<EditOutlined />}
+              disabled={!canEdit}
+              onClick={() => openModal(row)}
+            />
           )}
           {row.status === 'DRAFT' && (
             <Tooltip title="发布后该版本不可修改">
@@ -356,7 +401,12 @@ function VersionDrawer({
       footer={
         <Space>
           <Button onClick={onClose}>关闭</Button>
-          <Button type="primary" icon={<PlusOutlined />} disabled={!canEdit || !template} onClick={() => openModal()}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!canEdit || !template}
+            onClick={() => openModal()}
+          >
             新建版本
           </Button>
         </Space>
@@ -413,7 +463,11 @@ function VersionDrawer({
           >
             <Input.TextArea rows={14} placeholder="你是一个……" />
           </Form.Item>
-          <Form.Item name="userPromptTemplate" label="用户提示词模板" extra="可选，支持 {{变量}} 占位">
+          <Form.Item
+            name="userPromptTemplate"
+            label="用户提示词模板"
+            extra="可选，支持 {{变量}} 占位"
+          >
             <Input.TextArea rows={4} />
           </Form.Item>
           <Form.Item name="variablesJson" label="变量定义（JSON）">

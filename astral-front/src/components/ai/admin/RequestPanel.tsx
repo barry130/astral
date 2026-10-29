@@ -40,7 +40,15 @@ import {
 } from '@/api/ai';
 import { usePerm } from '@/lib/perm';
 
-import { Hint, JsonBlock, StatusTag, formatNumber, formatTime, truncate, useAiDict } from './shared';
+import {
+  Hint,
+  JsonBlock,
+  StatusTag,
+  formatNumber,
+  formatTime,
+  truncate,
+  useAiDict,
+} from './shared';
 
 const PAGE_SIZE = 20;
 
@@ -169,7 +177,11 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
       width: 90,
       align: 'right' as const,
       render: (value: number) =>
-        value ? <span style={{ fontSize: 12 }}>{(value / 1000).toFixed(1)}s</span> : <span style={{ opacity: 0.4 }}>-</span>,
+        value ? (
+          <span style={{ fontSize: 12 }}>{(value / 1000).toFixed(1)}s</span>
+        ) : (
+          <span style={{ opacity: 0.4 }}>-</span>
+        ),
     },
     {
       key: 'error',
@@ -178,7 +190,10 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
       width: 160,
       render: (value: string, row: AiRequest) =>
         value ? (
-          <span style={{ fontSize: 12, color: 'var(--destructive, #d4380d)' }} title={row.errorSummary}>
+          <span
+            style={{ fontSize: 12, color: 'var(--destructive, #d4380d)' }}
+            title={row.errorSummary}
+          >
             {value}
           </span>
         ) : (
@@ -190,7 +205,9 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
       title: '时间',
       dataIndex: 'createTime',
       width: 150,
-      render: (value: string) => <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>,
+      render: (value: string) => (
+        <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>
+      ),
     },
     {
       key: 'action',
@@ -198,18 +215,35 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
       dataIndex: 'id',
       width: 70,
       render: (_: unknown, row: AiRequest) => (
-        <Button size="small" type="text" icon={<EyeOutlined />} onClick={() => void openDetail(row.id)} />
+        <Button
+          size="small"
+          type="text"
+          icon={<EyeOutlined />}
+          onClick={() => void openDetail(row.id)}
+        />
       ),
     },
   ];
 
   const filtered = addon.trim()
-    ? rows.filter((row) => String(row.id ?? '').includes(addon.trim()) || (row.userId ?? 0) === Number(addon.trim()))
+    ? rows.filter(
+        (row) =>
+          String(row.id ?? '').includes(addon.trim()) || (row.userId ?? 0) === Number(addon.trim()),
+      )
     : rows;
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+          gap: 8,
+          flexWrap: 'wrap',
+        }}
+      >
         <Space size={8} wrap>
           <Tag color="default">{formatNumber(total)} 条</Tag>
           <Select
@@ -233,7 +267,12 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
           />
         </Space>
         <Space size={8}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
         </Space>
@@ -293,7 +332,13 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
   );
 }
 
-function RequestDetailBody({ detail, dict }: { detail: AiRequestDetail; dict: ReturnType<typeof useAiDict> }) {
+function RequestDetailBody({
+  detail,
+  dict,
+}: {
+  detail: AiRequestDetail;
+  dict: ReturnType<typeof useAiDict>;
+}) {
   const req = detail.request ?? {};
   return (
     <div>
@@ -302,11 +347,27 @@ function RequestDetailBody({ detail, dict }: { detail: AiRequestDetail; dict: Re
         size="small"
         bordered
         items={[
-          { key: 'status', label: '状态', children: <StatusTag dict={dict} code="ai_request_status" value={req.status} /> },
-          { key: 'client', label: '客户端', children: dict.label('ai_client_type', req.clientType) },
+          {
+            key: 'status',
+            label: '状态',
+            children: <StatusTag dict={dict} code="ai_request_status" value={req.status} />,
+          },
+          {
+            key: 'client',
+            label: '客户端',
+            children: dict.label('ai_client_type', req.clientType),
+          },
           { key: 'version', label: '版本', children: `v${req.agentVersionNo ?? '?'}` },
-          { key: 'tokens', label: 'token', children: `${formatNumber(req.tokenIn)} / ${formatNumber(req.tokenOut)}` },
-          { key: 'duration', label: '耗时', children: req.durationMs ? `${(req.durationMs / 1000).toFixed(1)}s` : '-' },
+          {
+            key: 'tokens',
+            label: 'token',
+            children: `${formatNumber(req.tokenIn)} / ${formatNumber(req.tokenOut)}`,
+          },
+          {
+            key: 'duration',
+            label: '耗时',
+            children: req.durationMs ? `${(req.durationMs / 1000).toFixed(1)}s` : '-',
+          },
           { key: 'error', label: '错误码', children: req.errorCode ?? '-' },
         ]}
       />
@@ -376,7 +437,9 @@ function RequestDetailBody({ detail, dict }: { detail: AiRequestDetail; dict: Re
                           <span style={{ fontWeight: 500 }}>{call.toolName ?? call.toolCode}</span>
                           <StatusTag dict={dict} code="ai_tool_risk_level" value={call.riskLevel} />
                           <Tag color="default">{call.status}</Tag>
-                          {call.approvalStatus && <Tag color="warning">审批：{call.approvalStatus}</Tag>}
+                          {call.approvalStatus && (
+                            <Tag color="warning">审批：{call.approvalStatus}</Tag>
+                          )}
                         </Space>
                         <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>参数</div>
                         <JsonBlock value={call.argumentsJson} maxHeight={140} />
@@ -387,7 +450,12 @@ function RequestDetailBody({ detail, dict }: { detail: AiRequestDetail; dict: Re
                           </>
                         )}
                         {call.errorMessage && (
-                          <Alert type="error" showIcon style={{ marginTop: 8 }} message={call.errorMessage} />
+                          <Alert
+                            type="error"
+                            showIcon
+                            style={{ marginTop: 8 }}
+                            message={call.errorMessage}
+                          />
                         )}
                       </div>
                     ))}
@@ -403,7 +471,11 @@ function RequestDetailBody({ detail, dict }: { detail: AiRequestDetail; dict: Re
                 detail.events && detail.events.length > 0 ? (
                   <Timeline
                     items={detail.events.map((event) => ({
-                      label: <span style={{ fontSize: 11, opacity: 0.55 }}>{formatTime(event.createdAt)}</span>,
+                      label: (
+                        <span style={{ fontSize: 11, opacity: 0.55 }}>
+                          {formatTime(event.createdAt)}
+                        </span>
+                      ),
                       children: (
                         <div>
                           <Space size={6}>
@@ -430,12 +502,27 @@ function RequestDetailBody({ detail, dict }: { detail: AiRequestDetail; dict: Re
                 detail.messages && detail.messages.length > 0 ? (
                   <Space direction="vertical" size={10} style={{ width: '100%' }}>
                     {detail.messages.map((item) => (
-                      <div key={item.id} style={{ borderLeft: '2px solid var(--border, rgba(127,127,127,0.2))', paddingLeft: 10 }}>
+                      <div
+                        key={item.id}
+                        style={{
+                          borderLeft: '2px solid var(--border, rgba(127,127,127,0.2))',
+                          paddingLeft: 10,
+                        }}
+                      >
                         <Space size={6}>
                           <Tag color={item.role === 'USER' ? 'blue' : 'green'}>{item.role}</Tag>
-                          <span style={{ fontSize: 11, opacity: 0.55 }}>{formatTime(item.createTime)}</span>
+                          <span style={{ fontSize: 11, opacity: 0.55 }}>
+                            {formatTime(item.createTime)}
+                          </span>
                         </Space>
-                        <div style={{ marginTop: 4, fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+                        <div
+                          style={{
+                            marginTop: 4,
+                            fontSize: 13,
+                            whiteSpace: 'pre-wrap',
+                            lineHeight: 1.7,
+                          }}
+                        >
                           {truncate(item.content, 1200)}
                         </div>
                       </div>
@@ -462,7 +549,9 @@ function ConversationList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
   const [total, setTotal] = useState(0);
   const [pageNum, setPageNum] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [detail, setDetail] = useState<{ row: AiConversationAudit; messages: AiAdminMessage[] } | undefined>();
+  const [detail, setDetail] = useState<
+    { row: AiConversationAudit; messages: AiAdminMessage[] } | undefined
+  >();
   const [detailLoading, setDetailLoading] = useState(false);
 
   const load = useCallback(
@@ -501,7 +590,13 @@ function ConversationList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
   };
 
   const columns = [
-    { key: 'id', title: '#', dataIndex: 'id', width: 80, render: (value: number) => <code style={{ fontSize: 12 }}>{value}</code> },
+    {
+      key: 'id',
+      title: '#',
+      dataIndex: 'id',
+      width: 80,
+      render: (value: number) => <code style={{ fontSize: 12 }}>{value}</code>,
+    },
     { key: 'title', title: '标题', dataIndex: 'title', width: 220, ellipsis: true },
     {
       key: 'agent',
@@ -523,13 +618,21 @@ function ConversationList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
       width: 110,
       render: (value: string) => <Tag color="default">{dict.label('ai_client_type', value)}</Tag>,
     },
-    { key: 'count', title: '消息数', dataIndex: 'messageCount', width: 80, align: 'right' as const },
+    {
+      key: 'count',
+      title: '消息数',
+      dataIndex: 'messageCount',
+      width: 80,
+      align: 'right' as const,
+    },
     {
       key: 'last',
       title: '最后消息',
       dataIndex: 'lastMessageTime',
       width: 150,
-      render: (value: string) => <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>,
+      render: (value: string) => (
+        <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>
+      ),
     },
     {
       key: 'action',
@@ -560,9 +663,21 @@ function ConversationList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
           description="查看正文需要 admin:ai:conversation:content:view 权限，后端会记录每次查阅。"
         />
       )}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
         <Tag color="default">{formatNumber(total)} 个会话</Tag>
-        <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+        <Button
+          size="small"
+          icon={<ReloadOutlined />}
+          onClick={() => void load()}
+          loading={loading}
+        >
           刷新
         </Button>
       </div>
@@ -612,9 +727,15 @@ function ConversationList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
                 <Space size={6}>
                   <Tag color={item.role === 'USER' ? 'blue' : 'green'}>{item.role}</Tag>
                   <span style={{ fontSize: 11, opacity: 0.55 }}>{formatTime(item.createTime)}</span>
-                  {item.modelName && <span style={{ fontSize: 11, opacity: 0.45 }}>{item.modelName}</span>}
+                  {item.modelName && (
+                    <span style={{ fontSize: 11, opacity: 0.45 }}>{item.modelName}</span>
+                  )}
                 </Space>
-                <div style={{ marginTop: 4, fontSize: 13, lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{item.content}</div>
+                <div
+                  style={{ marginTop: 4, fontSize: 13, lineHeight: 1.75, whiteSpace: 'pre-wrap' }}
+                >
+                  {item.content}
+                </div>
               </div>
             ))}
           </Space>

@@ -135,7 +135,10 @@ export async function loadUtOptions(): Promise<{ value: string; label: string }[
 }
 
 /** 平台值 → 文案（未知值回退展示原始值） */
-export function utLabel(options: { value: string; label: string }[], value?: string | null): string {
+export function utLabel(
+  options: { value: string; label: string }[],
+  value?: string | null,
+): string {
   if (!value) return '-';
   if (value === 'all') return UT_ALL_OPTION.label;
   return options.find((o) => o.value === value)?.label ?? value;
@@ -156,15 +159,21 @@ export const statApi = {
 
   /** 指标 24 小时趋势（gran 本期固定 hour） */
   getTrend: (metric: string, date?: string, ut: string = 'all', version?: string) =>
-    request.get<TrendData>('/api/v1/admin/stat/trend', { params: { metric, date, ut, version, gran: 'hour' } }),
+    request.get<TrendData>('/api/v1/admin/stat/trend', {
+      params: { metric, date, ut, version, gran: 'hour' },
+    }),
 
   /** 接口调用 Top 榜 */
   getApiTop: (limit: number = 10, date?: string, ut: string = 'all', version?: string) =>
-    request.get<ApiTopResult>('/api/v1/admin/stat/api/top', { params: { limit, date, ut, version } }),
+    request.get<ApiTopResult>('/api/v1/admin/stat/api/top', {
+      params: { limit, date, ut, version },
+    }),
 
   /** 单接口 24 小时趋势 */
   getApiTrend: (uri: string, method: string, date?: string, ut: string = 'all', version?: string) =>
-    request.get<ApiTrendData>('/api/v1/admin/stat/api/trend', { params: { uri, method, date, ut, version } }),
+    request.get<ApiTrendData>('/api/v1/admin/stat/api/trend', {
+      params: { uri, method, date, ut, version },
+    }),
 
   /** 错误明细分页（appVersion 为明细窗口内的版本约束） */
   getErrorPage: (params: {
@@ -179,7 +188,9 @@ export const statApi = {
 
   /** 错误分组汇总（source：'' 全部 / 'client' 客户端 / 'server' 服务端） */
   getErrorSummary: (date?: string, source: string = '', ut: string = 'all', version?: string) =>
-    request.get<ErrorSummaryItem[]>('/api/v1/admin/stat/error/summary', { params: { date, source, ut, version } }),
+    request.get<ErrorSummaryItem[]>('/api/v1/admin/stat/error/summary', {
+      params: { date, source, ut, version },
+    }),
 
   /**
    * 某平台下出现过的版本列表（版本下拉数据源）

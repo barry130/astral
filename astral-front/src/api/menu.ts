@@ -14,11 +14,9 @@ export interface SysMenu {
 }
 
 export const menuApi = {
-  getTree: (): Promise<ApiResult<SysMenu[]>> =>
-    request.get('/api/v1/admin/system/menu/tree'),
+  getTree: (): Promise<ApiResult<SysMenu[]>> => request.get('/api/v1/admin/system/menu/tree'),
 
-  getList: (): Promise<ApiResult<SysMenu[]>> =>
-    request.get('/api/v1/admin/system/menu/list'),
+  getList: (): Promise<ApiResult<SysMenu[]>> => request.get('/api/v1/admin/system/menu/list'),
 
   getById: (id: number): Promise<ApiResult<SysMenu>> =>
     request.get(`/api/v1/admin/system/menu/${id}`),

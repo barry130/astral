@@ -140,7 +140,9 @@ export async function openEventStream(
     else external.addEventListener('abort', forwardAbort, { once: true });
   }
 
-  const target = options.after ? `${url}${url.includes('?') ? '&' : '?'}after=${options.after}` : url;
+  const target = options.after
+    ? `${url}${url.includes('?') ? '&' : '?'}after=${options.after}`
+    : url;
 
   try {
     const { clientHeaders } = await import('@/lib/client-info');

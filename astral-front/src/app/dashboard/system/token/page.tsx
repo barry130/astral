@@ -42,10 +42,11 @@ interface User {
 /** Token管理API封装 */
 const tokenApi = {
   /** 分页查询Token */
-  getPage: (pageNum: number, pageSize: number, params?: Record<string, any>) =>
+  getPage: (pageNum: number, pageSize: number, params?: Record<string, unknown>) =>
     request.get('/api/v1/admin/system/token/page', { params: { pageNum, pageSize, ...params } }),
   /** 吊销指定Token */
-  revoke: (id: string) => request.put(`/api/v1/admin/system/token/${encodeURIComponent(id)}/revoke`),
+  revoke: (id: string) =>
+    request.put(`/api/v1/admin/system/token/${encodeURIComponent(id)}/revoke`),
   /** 踢出用户所有会话 */
   kickOut: (userId: number) => request.put(`/api/v1/admin/system/token/user/${userId}/kick`),
   /** 清理所有过期Token */
@@ -92,7 +93,7 @@ export default function TokenPage() {
   useEffect(() => {
     loadData();
     loadDicts();
-    userApi.getPage(1, 1000).then((res: any) => {
+    userApi.getPage(1, 1000).then((res) => {
       if (res.code === 200) setUsers(res.data?.records || []);
     });
   }, []);
@@ -101,20 +102,27 @@ export default function TokenPage() {
   const loadDicts = () => {
     fetchDictOptions(['token_status'])
       .then(setDicts)
-      .catch(() => { /* 字典失败时回退显示原始值 */ });
+      .catch(() => {
+        /* 字典失败时回退显示原始值 */
+      });
   };
 
   /** 加载Token列表（支持按用户和状态筛选） */
   const loadData = (page = 1, size = 10, userId?: number, status?: number) => {
     setLoading(true);
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
     if (userId) params.userId = userId;
     if (status !== undefined) params.status = status;
-    tokenApi.getPage(page, size, params)
-      .then((res: any) => {
+    tokenApi
+      .getPage(page, size, params)
+      .then((res) => {
         if (res.code === 200) {
           setData(res.data?.records || []);
-          setPagination({ current: res.data?.current || 1, pageSize: res.data?.size || 10, total: res.data?.total || 0 });
+          setPagination({
+            current: res.data?.current || 1,
+            pageSize: res.data?.size || 10,
+            total: res.data?.total || 0,
+          });
         }
       })
       .finally(() => setLoading(false));
@@ -126,8 +134,8 @@ export default function TokenPage() {
       await tokenApi.revoke(id);
       message.success('已吊销');
       loadData();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -137,8 +145,8 @@ export default function TokenPage() {
       await tokenApi.kickOut(userId);
       message.success('已踢出');
       loadData();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -148,8 +156,8 @@ export default function TokenPage() {
       await tokenApi.cleanExpired();
       message.success('已清理过期Token');
       loadData();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -159,8 +167,8 @@ export default function TokenPage() {
       await tokenApi.revokeAll();
       message.success('已重置全部会话，请重新登录');
       window.location.href = '/login';
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -175,27 +183,70 @@ export default function TokenPage() {
   const columns = [
     { title: '用户ID', dataIndex: 'userId', key: 'userId', width: 80 },
     { title: '用户', dataIndex: 'username', key: 'username' },
-    { title: 'Token', dataIndex: 'token', key: 'token', ellipsis: true, render: (v: string) => `${v.substring(0, 20)}...` },
+    {
+      title: 'Token',
+      dataIndex: 'token',
+      key: 'token',
+      ellipsis: true,
+      render: (v: string) => `${v.substring(0, 20)}...`,
+    },
     { title: '登录IP', dataIndex: 'loginIp', key: 'loginIp' },
-    { title: '登录端', dataIndex: 'device', key: 'device', width: 90, render: (v: string) => renderDevice(v) },
-    { title: '过期时间', dataIndex: 'expireTime', key: 'expireTime', render: (v: string) => v ? formatDateTime(v) : '-' },
-    { title: '状态', dataIndex: 'status', key: 'status', render: (v: number) => <Tag color={dictColor(tokenStatusDict, v) || 'default'}>{dictLabel(tokenStatusDict, v, String(v))}</Tag> },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => v ? formatDateTime(v) : '-' },
+    {
+      title: '登录端',
+      dataIndex: 'device',
+      key: 'device',
+      width: 90,
+      render: (v: string) => renderDevice(v),
+    },
+    {
+      title: '过期时间',
+      dataIndex: 'expireTime',
+      key: 'expireTime',
+      render: (v: string) => (v ? formatDateTime(v) : '-'),
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      render: (v: number) => (
+        <Tag color={dictColor(tokenStatusDict, v) || 'default'}>
+          {dictLabel(tokenStatusDict, v, String(v))}
+        </Tag>
+      ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      render: (v: string) => (v ? formatDateTime(v) : '-'),
+    },
     {
       title: '操作',
       key: 'action',
       width: 160,
-      render: (_: any, r: Token) => (
+      render: (_: unknown, r: Token) => (
         <Space>
           {/* 仅对有效状态的Token显示踢出和吊销操作 */}
           {r.status === 1 && (
-            <Popconfirm title="确认踢出该用户所有会话?" disabled={!canEdit} onConfirm={() => handleKickOut(r.userId)}>
-              <Button type="link" danger icon={<LogoutOutlined />} disabled={!canEdit}>踢出</Button>
+            <Popconfirm
+              title="确认踢出该用户所有会话?"
+              disabled={!canEdit}
+              onConfirm={() => handleKickOut(r.userId)}
+            >
+              <Button type="link" danger icon={<LogoutOutlined />} disabled={!canEdit}>
+                踢出
+              </Button>
             </Popconfirm>
           )}
           {r.status === 1 && (
-            <Popconfirm title="确认吊销此Token?" disabled={!canEdit} onConfirm={() => handleRevoke(r.id)}>
-              <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>吊销</Button>
+            <Popconfirm
+              title="确认吊销此Token?"
+              disabled={!canEdit}
+              onConfirm={() => handleRevoke(r.id)}
+            >
+              <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>
+                吊销
+              </Button>
             </Popconfirm>
           )}
         </Space>
@@ -206,25 +257,77 @@ export default function TokenPage() {
   return (
     <div>
       <Card>
-        <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          className="filter-bar"
+          style={{
+            marginBottom: 16,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <Space>
-            <Select placeholder="选择用户" allowClear style={{ width: 200 }} value={selectedUserId} onChange={(v) => { setSelectedUserId(v); loadData(1, pagination.pageSize, v, selectedStatus); }} options={users.map(u => ({ label: u.username, value: u.id }))} />
-            <Select placeholder="状态" allowClear style={{ width: 120 }} value={selectedStatus} onChange={(v) => { setSelectedStatus(v); loadData(1, pagination.pageSize, selectedUserId, v); }} options={(tokenStatusDict || []).map((o) => ({ label: o.label, value: Number(o.value) }))} />
+            <Select
+              placeholder="选择用户"
+              allowClear
+              style={{ width: 200 }}
+              value={selectedUserId}
+              onChange={(v) => {
+                setSelectedUserId(v);
+                loadData(1, pagination.pageSize, v, selectedStatus);
+              }}
+              options={users.map((u) => ({ label: u.username, value: u.id }))}
+            />
+            <Select
+              placeholder="状态"
+              allowClear
+              style={{ width: 120 }}
+              value={selectedStatus}
+              onChange={(v) => {
+                setSelectedStatus(v);
+                loadData(1, pagination.pageSize, selectedUserId, v);
+              }}
+              options={(tokenStatusDict || []).map((o) => ({
+                label: o.label,
+                value: Number(o.value),
+              }))}
+            />
           </Space>
           <Space>
-            <Popconfirm title="确认清理所有过期Token?" disabled={!canEdit} onConfirm={handleCleanExpired}>
-              <Button icon={<DeleteOutlined />} disabled={!canEdit}>清理过期</Button>
+            <Popconfirm
+              title="确认清理所有过期Token?"
+              disabled={!canEdit}
+              onConfirm={handleCleanExpired}
+            >
+              <Button icon={<DeleteOutlined />} disabled={!canEdit}>
+                清理过期
+              </Button>
             </Popconfirm>
             <Popconfirm
               title="全端会话重置会吊销所有在线Token，所有人（包括你自己）都需要重新登录，确认执行？"
               disabled={!isSuper}
               onConfirm={handleRevokeAll}
             >
-              <Button danger icon={<RollbackOutlined />} disabled={!isSuper}>全端会话重置</Button>
+              <Button danger icon={<RollbackOutlined />} disabled={!isSuper}>
+                全端会话重置
+              </Button>
             </Popconfirm>
           </Space>
         </div>
-        <ResizableTable dataSource={data} columns={columns} rowKey="id" loading={loading} scroll={{ x: 'max-content' }} pagination={{ ...pagination, showQuickJumper: true, showSizeChanger: true, pageSizeOptions: ['5', '10', '20', '50', '100'], onChange: (page, pageSize) => loadData(page, pageSize, selectedUserId, selectedStatus) }} />
+        <ResizableTable
+          dataSource={data}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          scroll={{ x: 'max-content' }}
+          pagination={{
+            ...pagination,
+            showQuickJumper: true,
+            showSizeChanger: true,
+            pageSizeOptions: ['5', '10', '20', '50', '100'],
+            onChange: (page, pageSize) => loadData(page, pageSize, selectedUserId, selectedStatus),
+          }}
+        />
       </Card>
     </div>
   );

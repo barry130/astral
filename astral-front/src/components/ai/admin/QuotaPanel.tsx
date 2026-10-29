@@ -26,7 +26,12 @@ import {
   Tag,
   message,
 } from '@/components/antd-compat';
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@/components/antd-compat/icons';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@/components/antd-compat/icons';
 import { ResizableTable } from '@/components/ResizableTable';
 
 import { aiQuotaApi, type AiQuotaPolicy } from '@/api/ai';
@@ -81,7 +86,12 @@ export default function QuotaPanel() {
     if (row) {
       form.setFieldsValue({ ...row });
     } else {
-      form.setFieldsValue({ scopeType: 'GLOBAL', enabled: true, maxInputChars: 20000, maxOutputTokens: 2048 });
+      form.setFieldsValue({
+        scopeType: 'GLOBAL',
+        enabled: true,
+        maxInputChars: 20000,
+        maxOutputTokens: 2048,
+      });
     }
   };
 
@@ -104,7 +114,10 @@ export default function QuotaPanel() {
     }
   };
 
-  const globalCount = useMemo(() => policies.filter((p) => p.scopeType === 'GLOBAL').length, [policies]);
+  const globalCount = useMemo(
+    () => policies.filter((p) => p.scopeType === 'GLOBAL').length,
+    [policies],
+  );
 
   const columns = [
     {
@@ -181,7 +194,8 @@ export default function QuotaPanel() {
       dataIndex: 'monthlyCostLimit',
       width: 120,
       align: 'right' as const,
-      render: (value: number) => (value ? <span style={{ fontSize: 12.5 }}>{formatNumber(value)}</span> : <Unlimited />),
+      render: (value: number) =>
+        value ? <span style={{ fontSize: 12.5 }}>{formatNumber(value)}</span> : <Unlimited />,
     },
     {
       key: 'enabled',
@@ -197,7 +211,13 @@ export default function QuotaPanel() {
       width: 90,
       render: (_: unknown, row: AiQuotaPolicy) => (
         <Space size={2}>
-          <Button size="small" type="text" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openModal(row)} />
+          <Button
+            size="small"
+            type="text"
+            icon={<EditOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal(row)}
+          />
           <Popconfirm
             title="删除策略？"
             description="删除后不再受这条限制约束，可能放宽用量。"
@@ -238,16 +258,34 @@ export default function QuotaPanel() {
         />
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
         <Space size={8}>
           <Tag color="default">{policies.length} 条策略</Tag>
           <ReadOnlyNote show={!canEdit} />
         </Space>
         <Space size={8}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
-          <Button size="small" type="primary" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => openModal()}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal()}
+          >
             新建策略
           </Button>
         </Space>
@@ -295,22 +333,47 @@ export default function QuotaPanel() {
             >
               <Input placeholder="例如 default_quota" disabled={Boolean(modal.row)} />
             </Form.Item>
-            <Form.Item name="name" label="名称" style={{ flex: 1 }} rules={[{ required: true, message: '请输入名称' }]}>
+            <Form.Item
+              name="name"
+              label="名称"
+              style={{ flex: 1 }}
+              rules={[{ required: true, message: '请输入名称' }]}
+            >
               <Input placeholder="例如 默认额度" />
             </Form.Item>
           </Space>
 
           <Space size={12} style={{ display: 'flex' }}>
-            <Form.Item name="scopeType" label="作用域" style={{ flex: 1 }} rules={[{ required: true }]}>
+            <Form.Item
+              name="scopeType"
+              label="作用域"
+              style={{ flex: 1 }}
+              rules={[{ required: true }]}
+            >
               <Select options={dict.options('ai_quota_scope_type')} />
             </Form.Item>
-            <Form.Item name="agentId" label="智能体 ID" style={{ flex: 1 }} extra="作用域为 AGENT 时必填">
+            <Form.Item
+              name="agentId"
+              label="智能体 ID"
+              style={{ flex: 1 }}
+              extra="作用域为 AGENT 时必填"
+            >
               <InputNumber min={0} style={{ width: '100%' }} placeholder="智能体 ID" />
             </Form.Item>
-            <Form.Item name="roleId" label="角色 ID" style={{ flex: 1 }} extra="作用域为 ROLE 时必填">
+            <Form.Item
+              name="roleId"
+              label="角色 ID"
+              style={{ flex: 1 }}
+              extra="作用域为 ROLE 时必填"
+            >
               <InputNumber min={0} style={{ width: '100%' }} placeholder="角色 ID" />
             </Form.Item>
-            <Form.Item name="userId" label="用户 ID" style={{ flex: 1 }} extra="作用域为 USER 时必填">
+            <Form.Item
+              name="userId"
+              label="用户 ID"
+              style={{ flex: 1 }}
+              extra="作用域为 USER 时必填"
+            >
               <InputNumber min={0} style={{ width: '100%' }} placeholder="用户 ID" />
             </Form.Item>
           </Space>
@@ -323,7 +386,12 @@ export default function QuotaPanel() {
             }}
           >
             {NUMBER_FIELDS.map((field) => (
-              <Form.Item key={field.name} name={field.name as string} label={field.label} extra={field.hint}>
+              <Form.Item
+                key={field.name}
+                name={field.name as string}
+                label={field.label}
+                extra={field.hint}
+              >
                 <InputNumber min={0} style={{ width: '100%' }} placeholder="不限" />
               </Form.Item>
             ))}
@@ -346,7 +414,8 @@ export default function QuotaPanel() {
 
 /** 作用域标签（独立写一个是为了不依赖字典 key 命名一致性） */
 function StatusScope({ dict, value }: { dict: ReturnType<typeof useAiDict>; value?: string }) {
-  const color = value === 'GLOBAL' ? 'blue' : value === 'AGENT' ? 'purple' : value === 'ROLE' ? 'cyan' : 'gold';
+  const color =
+    value === 'GLOBAL' ? 'blue' : value === 'AGENT' ? 'purple' : value === 'ROLE' ? 'cyan' : 'gold';
   return <Tag color={color}>{dict.label('ai_quota_scope_type', value)}</Tag>;
 }
 

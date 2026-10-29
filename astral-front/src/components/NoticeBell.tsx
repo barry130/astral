@@ -5,19 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Bell, Check, ChevronRight } from 'lucide-react';
 
 import { request } from '@/api/client';
-import type { SysNotice } from '@/api/notice';
-import { noticeTypeLabel } from '@/api/notice';
+import { type SysNotice, noticeTypeLabel } from '@/api/notice';
 import { cn } from '@/lib/utils';
 import { parseNoticeLink } from '@/lib/notice-link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 /**
  * 顶栏消息提示铃铛
@@ -54,7 +48,10 @@ function saveReadIds(set: Set<number>) {
 }
 
 /** 通知类型 → 徽章配色（纯展示；两档口径：公告=蓝，其余一律按「通知」=灰） */
-const TYPE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'success' | 'warning' | 'destructive'> = {
+const TYPE_VARIANT: Record<
+  string,
+  'default' | 'secondary' | 'outline' | 'success' | 'warning' | 'destructive'
+> = {
   announce: 'default',
 };
 
@@ -63,7 +60,11 @@ function fmtTime(v?: string): string {
   return v.slice(0, 16).replace('T', ' ');
 }
 
-export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?: React.CSSProperties }) {
+export default function NoticeBell({
+  buttonStyle: _buttonStyle,
+}: {
+  buttonStyle?: React.CSSProperties;
+}) {
   const router = useRouter();
   const [notices, setNotices] = useState<SysNotice[]>([]);
   const [readIds, setReadIds] = useState<Set<number>>(() => loadReadIds());
@@ -75,8 +76,8 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
   const load = useCallback(() => {
     // 管理端收件箱：不按 channel 过滤，广播 + 发给当前管理员的点对点全可见
     request
-      .get('/api/v1/admin/message/inbox')
-      .then((res: any) => setNotices(res.data || []))
+      .get<SysNotice[]>('/api/v1/admin/message/inbox')
+      .then((res) => setNotices(res.data || []))
       .catch(() => {
         // 通知接口异常（模块未启用 / 网络失败）：角标归零，不弹错误打扰
         setNotices([]);
@@ -123,7 +124,7 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
             <span className="relative">
               <Bell className="size-4" />
               {unread.length > 0 && (
-                <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-white">
+                <span className="bg-destructive absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-semibold text-white">
                   {unread.length > 99 ? '99+' : unread.length}
                 </span>
               )}
@@ -142,7 +143,7 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
           </div>
           <div className="max-h-[380px] overflow-y-auto">
             {notices.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-4 py-8 text-sm text-muted-foreground">
+              <div className="text-muted-foreground flex flex-col items-center gap-2 px-4 py-8 text-sm">
                 <Bell className="size-6 opacity-40" strokeWidth={1.5} aria-hidden />
                 <span>暂无通知</span>
               </div>
@@ -168,17 +169,30 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
                         }
                         setDetail(n);
                       }}
-                      className="cursor-pointer rounded-md px-2 py-2 transition-colors hover:bg-accent"
+                      className="hover:bg-accent cursor-pointer rounded-md px-2 py-2 transition-colors"
                     >
                       <div className="flex items-center gap-1.5">
-                        {isUnread && <span className="size-1.5 shrink-0 rounded-full bg-blue-500" aria-hidden />}
+                        {isUnread && (
+                          <span
+                            className="size-1.5 shrink-0 rounded-full bg-blue-500"
+                            aria-hidden
+                          />
+                        )}
                         {n.isTop === 1 && <Badge variant="destructive">置顶</Badge>}
-                        <span className={cn('truncate text-sm', isUnread ? 'font-semibold text-foreground' : 'text-foreground/90')}>
+                        <span
+                          className={cn(
+                            'truncate text-sm',
+                            isUnread ? 'text-foreground font-semibold' : 'text-foreground/90',
+                          )}
+                        >
                           {n.title}
                         </span>
                       </div>
-                      <div className="mt-1 flex items-center gap-1.5 pl-2 text-xs text-muted-foreground">
-                        <Badge variant={TYPE_VARIANT[n.noticeType || ''] || 'secondary'} className="px-1.5 py-0">
+                      <div className="text-muted-foreground mt-1 flex items-center gap-1.5 pl-2 text-xs">
+                        <Badge
+                          variant={TYPE_VARIANT[n.noticeType || ''] || 'secondary'}
+                          className="px-1.5 py-0"
+                        >
                           {noticeTypeLabel(n.noticeType)}
                         </Badge>
                         <span>{fmtTime(n.createTime)}</span>
@@ -191,7 +205,7 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
           </div>
           {/* 原 Popover 里只有列表、没有任何跳转入口（独立路由 /dashboard/message 已删除），
               这里补「全部通知」→ 消息中心的「通知管理」页签（tab 参数由该页读取） */}
-          <div className="mt-1 border-t border-border pt-1">
+          <div className="border-border mt-1 border-t pt-1">
             <Button
               variant="ghost"
               size="sm"
@@ -213,19 +227,19 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
           <DialogHeader>
             <DialogTitle>{detail?.title}</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
             <Badge variant={TYPE_VARIANT[detail?.noticeType || ''] || 'secondary'}>
               {noticeTypeLabel(detail?.noticeType)}
             </Badge>
             <span>{fmtTime(detail?.createTime)}</span>
           </div>
-          <div className="whitespace-pre-wrap leading-relaxed">{detail?.content}</div>
+          <div className="leading-relaxed whitespace-pre-wrap">{detail?.content}</div>
           {detailLink && (
             <div className="text-sm">
               {detailLink.kind === 'internal' && (
                 <Button
                   variant="link"
-                  className="h-auto p-0 text-primary"
+                  className="text-primary h-auto p-0"
                   onClick={() => {
                     // 先关弹层再路由：详情来源于列表快照，跳转后由目标页自己拉最新数据
                     setDetail(null);
@@ -237,12 +251,17 @@ export default function NoticeBell({ buttonStyle: _buttonStyle }: { buttonStyle?
                 </Button>
               )}
               {detailLink.kind === 'external' && (
-                <a href={detailLink.url} target="_blank" rel="noreferrer" className="break-all text-primary underline underline-offset-4">
+                <a
+                  href={detailLink.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary break-all underline underline-offset-4"
+                >
                   {detailLink.url}
                 </a>
               )}
               {detailLink.kind === 'unsupported' && (
-                <span className="break-all text-muted-foreground">{detailLink.raw}</span>
+                <span className="text-muted-foreground break-all">{detailLink.raw}</span>
               )}
             </div>
           )}

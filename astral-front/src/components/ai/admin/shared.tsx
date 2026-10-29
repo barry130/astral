@@ -9,7 +9,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Card, Space, Tag, Tooltip } from '@/components/antd-compat';
+import { Card, Tag, Tooltip } from '@/components/antd-compat';
 import { ExclamationCircleOutlined } from '@/components/antd-compat/icons';
 
 import { fetchDictOptions, type DictOption } from '@/api/dict';
@@ -141,13 +141,27 @@ export function StatusTag({ dict, code, value }: StatusTagProps) {
 }
 
 /** 布尔开关的只读展示 */
-export function BoolTag({ value, trueText = '开', falseText = '关' }: { value?: boolean; trueText?: string; falseText?: string }) {
+export function BoolTag({
+  value,
+  trueText = '开',
+  falseText = '关',
+}: {
+  value?: boolean;
+  trueText?: string;
+  falseText?: string;
+}) {
   return <Tag color={value ? 'success' : 'default'}>{value ? trueText : falseText}</Tag>;
 }
 
 /* ==================== 代码/JSON 展示 ==================== */
 
-export function JsonBlock({ value, maxHeight = 220 }: { value?: string | null; maxHeight?: number }) {
+export function JsonBlock({
+  value,
+  maxHeight = 220,
+}: {
+  value?: string | null;
+  maxHeight?: number;
+}) {
   if (!value) return <span style={{ opacity: 0.5 }}>-</span>;
   let pretty = value;
   try {
@@ -262,7 +276,11 @@ export interface AsyncState<T> {
  * 最小化的「加载一次 + 手动刷新」封装。
  * 不用 SWR/React Query 是因为项目没有这两个依赖，引入会多一个运行期负担。
  */
-export function useAsync<T>(loader: () => Promise<T>, initial: T, deps: unknown[] = []): AsyncState<T> {
+export function useAsync<T>(
+  loader: () => Promise<T>,
+  initial: T,
+  deps: unknown[] = [],
+): AsyncState<T> {
   const [data, setData] = useState<T>(initial);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();

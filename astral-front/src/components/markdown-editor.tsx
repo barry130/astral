@@ -178,20 +178,12 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
       const start = el.selectionStart;
       const before = value.slice(0, start);
       const lead =
-        before.length === 0 || before.endsWith('\n\n')
-          ? ''
-          : before.endsWith('\n')
-            ? '\n'
-            : '\n\n';
+        before.length === 0 || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
       const rest = value.slice(el.selectionEnd);
       const tail = rest.startsWith('\n') || rest.length === 0 ? '\n' : '\n\n';
       const next = before + lead + block + tail + rest;
       const base = before.length + lead.length;
-      apply(
-        next,
-        base + (selectFrom ?? block.length),
-        base + (selectTo ?? block.length),
-      );
+      apply(next, base + (selectFrom ?? block.length), base + (selectTo ?? block.length));
     },
     [apply, value],
   );
@@ -309,7 +301,9 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
 
         const lines = block.split('\n');
         const nextLines = event.shiftKey
-          ? lines.map((line) => (line.startsWith(INDENT) ? line.slice(INDENT.length) : line.replace(/^\s{1,2}/, '')))
+          ? lines.map((line) =>
+              line.startsWith(INDENT) ? line.slice(INDENT.length) : line.replace(/^\s{1,2}/, ''),
+            )
           : lines.map((line) => INDENT + line);
         const nextBlock = nextLines.join('\n');
         const next = value.slice(0, lineStart) + nextBlock + value.slice(lineEnd);
@@ -343,14 +337,31 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
     [apply, redo, undo, value, wrapSelection],
   );
 
-  const html = useMemo(() => renderMarkdown(value), [value]);
+  // 预览不可见时跳过整树 parse+highlight（否则每次按键都白算一遍）；
+  // 只读预览走独立分支、mode 可能仍是 'edit'，因此 readOnly 也参与门控
+  const html = useMemo(
+    () => (readOnly || mode !== 'edit' ? renderMarkdown(value) : ''),
+    [mode, readOnly, value],
+  );
 
   const tools: Tool[] = [
     { kind: 'action', icon: Undo2, label: '撤销', shortcut: 'Ctrl+Z', run: undo },
     { kind: 'action', icon: Redo2, label: '重做', shortcut: 'Ctrl+Shift+Z', run: redo },
     { kind: 'divider' },
-    { kind: 'action', icon: Bold, label: '加粗', shortcut: 'Ctrl+B', run: () => wrapSelection('**') },
-    { kind: 'action', icon: Italic, label: '斜体', shortcut: 'Ctrl+I', run: () => wrapSelection('*') },
+    {
+      kind: 'action',
+      icon: Bold,
+      label: '加粗',
+      shortcut: 'Ctrl+B',
+      run: () => wrapSelection('**'),
+    },
+    {
+      kind: 'action',
+      icon: Italic,
+      label: '斜体',
+      shortcut: 'Ctrl+I',
+      run: () => wrapSelection('*'),
+    },
     { kind: 'action', icon: Strikethrough, label: '删除线', run: () => wrapSelection('~~') },
     { kind: 'action', icon: Code, label: '行内代码', run: () => wrapSelection('`', '`', '代码') },
     { kind: 'divider' },
@@ -361,7 +372,13 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
     { kind: 'action', icon: ListOrdered, label: '有序列表', run: () => toggleLinePrefix('1. ') },
     { kind: 'action', icon: ListChecks, label: '任务列表', run: () => toggleLinePrefix('- [ ] ') },
     { kind: 'divider' },
-    { kind: 'action', icon: Link2, label: '链接', shortcut: 'Ctrl+K', run: () => setLinkOpen(true) },
+    {
+      kind: 'action',
+      icon: Link2,
+      label: '链接',
+      shortcut: 'Ctrl+K',
+      run: () => setLinkOpen(true),
+    },
     { kind: 'action', icon: ImageIcon, label: '图片', run: () => setImageOpen(true) },
     { kind: 'action', icon: Table, label: '表格', run: () => insertBlock(TABLE_SNIPPET, 2, 5) },
     {
@@ -457,7 +474,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
   // 只读态只出正文：没有工具栏也就没有可点的写操作，权限不足时不会误导用户
   if (readOnly) {
     return (
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
+      <div className="border-border bg-card overflow-hidden rounded-lg border">
         <div className="px-5 py-4">
           <div
             className="markdown"
@@ -466,7 +483,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
             dangerouslySetInnerHTML={{ __html: html || EMPTY_PREVIEW }}
           />
         </div>
-        <div className="flex items-center justify-between gap-3 border-t border-border/60 px-3 py-1.5 text-[11px] text-muted-foreground/70">
+        <div className="border-border/60 text-muted-foreground/70 flex items-center justify-between gap-3 border-t px-3 py-1.5 text-[11px]">
           <span className="inline-flex items-center gap-1">
             <Keyboard className="h-3 w-3" />
             只读（无编辑权限）
@@ -484,21 +501,21 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
       className={
         // textarea 自己 outline-none（避免和圆角边框打架），焦点反馈改由外层容器承担：
         // 键盘 Tab 进来时整块出现主题色描边，鼠标点进来也同样可见
-        'transition-[border-color,box-shadow] focus-within:border-ring/60 focus-within:ring-[3px] focus-within:ring-ring/20 ' +
+        'focus-within:border-ring/60 focus-within:ring-ring/20 transition-[border-color,box-shadow] focus-within:ring-[3px] ' +
         (expanded
-          ? 'fixed inset-0 z-50 flex flex-col bg-background px-4 py-3 sm:px-6'
-          : 'overflow-hidden rounded-lg border border-border bg-card')
+          ? 'bg-background fixed inset-0 z-50 flex flex-col px-4 py-3 sm:px-6'
+          : 'border-border bg-card overflow-hidden rounded-lg border')
       }
     >
       {expanded ? (
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[12px] text-muted-foreground">正文（Markdown）</span>
+          <span className="text-muted-foreground text-[12px]">正文（Markdown）</span>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setExpanded(false)}
-            className="h-7 gap-1.5 px-2 text-[12px] text-muted-foreground hover:text-primary"
+            className="text-muted-foreground hover:text-primary h-7 gap-1.5 px-2 text-[12px]"
           >
             <Minimize2 className="h-3.5 w-3.5" />
             退出全屏
@@ -507,10 +524,10 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
       ) : null}
 
       {/* 工具栏：所有按钮摊平后自动换行，形成 editor.md 那种两三排的手感 */}
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-border/60 px-2 py-1.5">
+      <div className="border-border/60 flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
         {tools.map((tool, index) =>
           tool.kind === 'divider' ? (
-            <span key={`d-${index}`} aria-hidden className="mx-1 h-4 w-px bg-border" />
+            <span key={`d-${index}`} aria-hidden className="bg-border mx-1 h-4 w-px" />
           ) : (
             <ToolButton
               key={tool.label}
@@ -522,7 +539,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
           ),
         )}
 
-        <span aria-hidden className="mx-1 h-4 w-px bg-border" />
+        <span aria-hidden className="bg-border mx-1 h-4 w-px" />
 
         {/* 标题级别收进下拉，省掉 6 个按钮 */}
         <DropdownMenu>
@@ -531,14 +548,14 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
               type="button"
               title="标题级别"
               aria-label="标题级别"
-              className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+              className="text-muted-foreground hover:bg-primary/10 hover:text-primary inline-flex h-7 items-center gap-1 rounded-md px-1.5 transition-colors"
             >
               <Heading2 className="h-3.5 w-3.5" />
               <span className="text-[10.5px] tabular-nums">H</span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[132px]">
-            <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground/70">
+            <DropdownMenuLabel className="text-muted-foreground/70 text-[11px] font-normal">
               标题级别
             </DropdownMenuLabel>
             {[1, 2, 3, 4, 5].map((level) => (
@@ -548,7 +565,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
                 className="cursor-pointer text-[12.5px]"
               >
                 标题 {level}
-                <span className="ml-auto pl-4 font-mono text-[11px] text-muted-foreground/70">
+                <span className="text-muted-foreground/70 ml-auto pl-4 font-mono text-[11px]">
                   {'#'.repeat(level)}
                 </span>
               </DropdownMenuItem>
@@ -563,7 +580,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
               type="button"
               title="插入表情"
               aria-label="插入表情"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+              className="text-muted-foreground hover:bg-primary/10 hover:text-primary inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors"
             >
               <Smile className="h-3.5 w-3.5" />
             </button>
@@ -576,7 +593,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
                     key={emoji}
                     type="button"
                     onClick={() => insertAtCursor(emoji)}
-                    className="flex h-6 w-6 items-center justify-center rounded text-[15px] leading-none transition-colors hover:bg-primary/10"
+                    className="hover:bg-primary/10 flex h-6 w-6 items-center justify-center rounded text-[15px] leading-none transition-colors"
                   >
                     {emoji}
                   </button>
@@ -593,13 +610,13 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
               type="button"
               title="Markdown 语法速查"
               aria-label="Markdown 语法速查"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+              className="text-muted-foreground hover:bg-primary/10 hover:text-primary inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors"
             >
               <Braces className="h-3.5 w-3.5" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="max-h-[380px] w-[330px] overflow-y-auto">
-            <DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground/70">
+            <DropdownMenuLabel className="text-muted-foreground/70 text-[11px] font-normal">
               点任意一行即可插入
             </DropdownMenuLabel>
             {CHEATSHEET.map((item) => (
@@ -608,14 +625,16 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
                 onSelect={() => insertAtCursor(item.snippet, item.snippet.length)}
                 className="flex cursor-pointer items-center gap-3 text-[12px]"
               >
-                <span className="w-[86px] shrink-0 text-muted-foreground">{item.label}</span>
-                <code className="truncate font-mono text-[11px] text-muted-foreground/70">{item.example}</code>
+                <span className="text-muted-foreground w-[86px] shrink-0">{item.label}</span>
+                <code className="text-muted-foreground/70 truncate font-mono text-[11px]">
+                  {item.example}
+                </code>
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => setShortcutsOpen(true)}
-              className="cursor-pointer text-[12px] text-muted-foreground"
+              className="text-muted-foreground cursor-pointer text-[12px]"
             >
               <Keyboard className="mr-2 h-3.5 w-3.5" />
               快捷键一览
@@ -625,7 +644,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
 
         <div className="ml-auto flex items-center gap-0.5">
           {/* 视图切换：编辑 / 分栏 / 预览 */}
-          <div className="flex items-center rounded-md bg-muted p-0.5">
+          <div className="bg-muted flex items-center rounded-md p-0.5">
             <ViewButton
               active={mode === 'edit'}
               icon={Pencil}
@@ -651,7 +670,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
             onClick={() => setExpanded((v) => !v)}
             title={expanded ? '退出全屏' : '全屏编辑'}
             aria-label={expanded ? '退出全屏' : '全屏编辑'}
-            className="ml-0.5 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+            className="text-muted-foreground hover:bg-primary/10 hover:text-primary ml-0.5 inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors"
           >
             {expanded ? (
               <Minimize2 className="h-3.5 w-3.5" />
@@ -665,7 +684,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
       {/* 编辑 / 预览 区域 */}
       <div
         className={`flex ${expanded ? 'min-h-0 flex-1' : ''} ${
-          mode === 'split' ? 'divide-x divide-border/60' : ''
+          mode === 'split' ? 'divide-border/60 divide-x' : ''
         }`}
       >
         {showEditor ? (
@@ -677,7 +696,7 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
             onScroll={() => syncScroll('editor')}
             placeholder={placeholder ?? '支持 Markdown：标题、列表、代码块、表格、图片……'}
             spellCheck={false}
-            className={`w-full resize-y bg-transparent px-4 py-3 font-mono text-[12.5px] leading-[1.8] text-foreground outline-none placeholder:text-muted-foreground/70 ${
+            className={`text-foreground placeholder:text-muted-foreground/70 w-full resize-y bg-transparent px-4 py-3 font-mono text-[12.5px] leading-[1.8] outline-none ${
               mode === 'split' ? 'min-w-0 flex-1' : ''
             } ${
               expanded
@@ -707,11 +726,11 @@ export function MarkdownEditor({ value, onChange, placeholder, readOnly }: Markd
         ) : null}
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-border/60 px-3 py-1.5 text-[11px] text-muted-foreground/70">
+      <div className="border-border/60 text-muted-foreground/70 flex items-center justify-between gap-3 border-t px-3 py-1.5 text-[11px]">
         <button
           type="button"
           onClick={() => setShortcutsOpen(true)}
-          className="inline-flex items-center gap-1 transition-colors hover:text-primary"
+          className="hover:text-primary inline-flex items-center gap-1 transition-colors"
         >
           <Keyboard className="h-3 w-3" />
           Markdown
@@ -763,14 +782,14 @@ function ToolButton({
           // preventDefault：避免点击按钮时文本域失焦，选区丢了会插到错误位置
           onMouseDown={(event) => event.preventDefault()}
           onClick={run}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+          className="text-muted-foreground hover:bg-primary/10 hover:text-primary inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors"
         >
           <Icon className="h-3.5 w-3.5" />
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="text-[11px]">
         {label}
-        {shortcut ? <span className="ml-1.5 text-muted-foreground/70">{shortcut}</span> : null}
+        {shortcut ? <span className="text-muted-foreground/70 ml-1.5">{shortcut}</span> : null}
       </TooltipContent>
     </Tooltip>
   );
@@ -798,7 +817,9 @@ function ViewButton({
           aria-pressed={active}
           onClick={onClick}
           className={`inline-flex h-6 w-7 items-center justify-center rounded transition-colors ${className ?? ''} ${
-            active ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground/70 hover:text-muted-foreground'
+            active
+              ? 'bg-card text-primary shadow-sm'
+              : 'text-muted-foreground/70 hover:text-muted-foreground'
           }`}
         >
           <Icon className="h-3.5 w-3.5" />
@@ -838,13 +859,11 @@ function LinkDialog({
       <DialogContent className="max-w-[420px]">
         <DialogHeader>
           <DialogTitle className="text-[15px]">插入链接</DialogTitle>
-          <DialogDescription className="text-[12px]">
-            链接文字留空时用地址本身。
-          </DialogDescription>
+          <DialogDescription className="text-[12px]">链接文字留空时用地址本身。</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div className="space-y-1.5">
-            <Label htmlFor="md-link-text" className="text-[12px] text-muted-foreground">
+            <Label htmlFor="md-link-text" className="text-muted-foreground text-[12px]">
               链接文字
             </Label>
             <Input
@@ -856,7 +875,7 @@ function LinkDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="md-link-url" className="text-[12px] text-muted-foreground">
+            <Label htmlFor="md-link-url" className="text-muted-foreground text-[12px]">
               链接地址
             </Label>
             <Input
@@ -917,7 +936,7 @@ function ImageDialog({
         </DialogHeader>
         <div className="space-y-3 py-1">
           <div className="space-y-1.5">
-            <Label htmlFor="md-image-alt" className="text-[12px] text-muted-foreground">
+            <Label htmlFor="md-image-alt" className="text-muted-foreground text-[12px]">
               图片说明
             </Label>
             <Input
@@ -929,7 +948,7 @@ function ImageDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="md-image-url" className="text-[12px] text-muted-foreground">
+            <Label htmlFor="md-image-url" className="text-muted-foreground text-[12px]">
               图片地址
             </Label>
             <Input
@@ -941,8 +960,7 @@ function ImageDialog({
             />
           </div>
           {valid ? (
-            <div className="overflow-hidden rounded-md border border-border/60 bg-muted p-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+            <div className="border-border/60 bg-muted overflow-hidden rounded-md border p-2">
               <img
                 src={url.trim()}
                 alt={alt || '预览'}
@@ -986,11 +1004,11 @@ function ShortcutsDialog({
             在编辑区生效；Mac 用 ⌘ 代替 Ctrl。
           </DialogDescription>
         </DialogHeader>
-        <div className="divide-y divide-border/60 py-1">
+        <div className="divide-border/60 divide-y py-1">
           {SHORTCUTS.map((item) => (
             <div key={item.keys} className="flex items-center justify-between py-1.5">
-              <span className="text-[12.5px] text-foreground">{item.action}</span>
-              <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+              <span className="text-foreground text-[12.5px]">{item.action}</span>
+              <kbd className="border-border bg-muted text-muted-foreground rounded border px-1.5 py-0.5 font-mono text-[11px]">
                 {item.keys}
               </kbd>
             </div>
@@ -1030,25 +1048,135 @@ function estimateReadingMinutes(markdown: string): number {
 
 const INDENT = '  ';
 
-const TABLE_SNIPPET = ['| 列 1 | 列 2 | 列 3 |', '| --- | --- | --- |', '| 内容 | 内容 | 内容 |'].join(
-  '\n',
-);
+const TABLE_SNIPPET = [
+  '| 列 1 | 列 2 | 列 3 |',
+  '| --- | --- | --- |',
+  '| 内容 | 内容 | 内容 |',
+].join('\n');
 
 const EMPTY_PREVIEW = '<p style="color:#8a8a92">还没有内容。</p>';
 
 const EMOJIS = [
-  '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊',
-  '😋', '😎', '😍', '😘', '🙂', '😐', '😑', '😶', '🙁', '😣',
-  '😥', '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜',
-  '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '🙄',
-  '😤', '😭', '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶',
-  '😳', '🤪', '😵', '😡', '😠', '🤬', '😷', '🤒', '🤕', '🤢',
-  '🤮', '🤧', '😇', '🤠', '🤡', '🤥', '🤫', '🤭', '🧐', '🤓',
-  '😈', '👻', '💀', '☠️', '👽', '🤖', '💩', '😺', '😸', '😹',
-  '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉',
-  '👆', '👇', '☝️', '✋', '🤚', '👋', '🤝', '🙏', '💪', '🎉',
-  '🎊', '🔥', '✨', '💯', '⭐', '🌟', '❤️', '💔', '💖', '💙',
-  '💚', '💛', '🧡', '💜', '🖤', '🤍', '✅', '❌', '⚠️', '❓',
+  '😀',
+  '😁',
+  '😂',
+  '🤣',
+  '😃',
+  '😄',
+  '😅',
+  '😆',
+  '😉',
+  '😊',
+  '😋',
+  '😎',
+  '😍',
+  '😘',
+  '🙂',
+  '😐',
+  '😑',
+  '😶',
+  '🙁',
+  '😣',
+  '😥',
+  '😮',
+  '🤐',
+  '😯',
+  '😪',
+  '😫',
+  '😴',
+  '😌',
+  '😛',
+  '😜',
+  '😝',
+  '🤤',
+  '😒',
+  '😓',
+  '😔',
+  '😕',
+  '🙃',
+  '🤑',
+  '😲',
+  '🙄',
+  '😤',
+  '😭',
+  '😨',
+  '😩',
+  '🤯',
+  '😬',
+  '😰',
+  '😱',
+  '🥵',
+  '🥶',
+  '😳',
+  '🤪',
+  '😵',
+  '😡',
+  '😠',
+  '🤬',
+  '😷',
+  '🤒',
+  '🤕',
+  '🤢',
+  '🤮',
+  '🤧',
+  '😇',
+  '🤠',
+  '🤡',
+  '🤥',
+  '🤫',
+  '🤭',
+  '🧐',
+  '🤓',
+  '😈',
+  '👻',
+  '💀',
+  '☠️',
+  '👽',
+  '🤖',
+  '💩',
+  '😺',
+  '😸',
+  '😹',
+  '👍',
+  '👎',
+  '👌',
+  '✌️',
+  '🤞',
+  '🤟',
+  '🤘',
+  '🤙',
+  '👈',
+  '👉',
+  '👆',
+  '👇',
+  '☝️',
+  '✋',
+  '🤚',
+  '👋',
+  '🤝',
+  '🙏',
+  '💪',
+  '🎉',
+  '🎊',
+  '🔥',
+  '✨',
+  '💯',
+  '⭐',
+  '🌟',
+  '❤️',
+  '💔',
+  '💖',
+  '💙',
+  '💚',
+  '💛',
+  '🧡',
+  '💜',
+  '🖤',
+  '🤍',
+  '✅',
+  '❌',
+  '⚠️',
+  '❓',
 ];
 
 const CHEATSHEET = [
@@ -1067,7 +1195,11 @@ const CHEATSHEET = [
   { label: '图片', snippet: '![说明](https://)', example: '![alt](url)' },
   { label: '表格', snippet: TABLE_SNIPPET, example: '| a | b |' },
   { label: '分割线', snippet: '---', example: '---' },
-  { label: '折叠块', snippet: '<details>\n<summary>展开</summary>\n\n内容\n\n</details>', example: '<details>' },
+  {
+    label: '折叠块',
+    snippet: '<details>\n<summary>展开</summary>\n\n内容\n\n</details>',
+    example: '<details>',
+  },
   { label: '脚注', snippet: '[^1]\n\n[^1]: 说明', example: '[^1]' },
 ];
 

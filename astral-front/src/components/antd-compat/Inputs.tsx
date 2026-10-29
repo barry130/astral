@@ -108,7 +108,9 @@ function InputBase({
   onClear,
   ...aria
 }: InputProps) {
-  const [inner, setInner] = useState<string>(defaultValue === undefined ? '' : String(defaultValue));
+  const [inner, setInner] = useState<string>(
+    defaultValue === undefined ? '' : String(defaultValue),
+  );
   const controlled = value !== undefined;
   const current = controlled ? (value === null || value === undefined ? '' : String(value)) : inner;
 
@@ -147,7 +149,6 @@ function InputBase({
       disabled={disabled}
       readOnly={readOnly}
       maxLength={maxLength}
-      // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       autoComplete={autoComplete}
       aria-label={aria['aria-label']}
@@ -172,14 +173,30 @@ function InputBase({
 
   const box = (
     <span className="relative flex w-full items-center">
-      {prefix ? <span className="pointer-events-none absolute left-2.5 flex text-muted-foreground">{prefix}</span> : null}
-      <span className={cn('w-full', prefix && '[&>input]:pl-8', (suffix || clearable) && '[&>input]:pr-8')}>{inputEl}</span>
-      {suffix ? <span className="pointer-events-none absolute right-2.5 flex text-muted-foreground">{suffix}</span> : null}
+      {prefix ? (
+        <span className="text-muted-foreground pointer-events-none absolute left-2.5 flex">
+          {prefix}
+        </span>
+      ) : null}
+      <span
+        className={cn(
+          'w-full',
+          prefix && '[&>input]:pl-8',
+          (suffix || clearable) && '[&>input]:pr-8',
+        )}
+      >
+        {inputEl}
+      </span>
+      {suffix ? (
+        <span className="text-muted-foreground pointer-events-none absolute right-2.5 flex">
+          {suffix}
+        </span>
+      ) : null}
       {clearable ? (
         <button
           type="button"
           aria-label="清空"
-          className="absolute right-2 cursor-pointer rounded-sm text-muted-foreground/60 hover:text-foreground"
+          className="text-muted-foreground/60 hover:text-foreground absolute right-2 cursor-pointer rounded-sm"
           onClick={() => {
             onChange?.({ target: { value: '' } } as unknown as ChangeEvent<HTMLInputElement>);
             onClear?.();
@@ -193,21 +210,31 @@ function InputBase({
 
   if (!addonBefore && !addonAfter) {
     // 同上：宽度由这个包装层决定（无 style 时 w-full 填满，有 style.width 时按调用方）
-    return <span className="relative inline-flex w-full" style={widthStyle}>{box}</span>;
+    return (
+      <span className="relative inline-flex w-full" style={widthStyle}>
+        {box}
+      </span>
+    );
   }
 
   return (
     <span className="flex w-full items-stretch" style={widthStyle}>
       {addonBefore ? (
-        <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+        <span className="border-input bg-muted text-muted-foreground inline-flex items-center rounded-l-md border border-r-0 px-3 text-sm">
           {addonBefore}
         </span>
       ) : null}
-      <span className={cn('min-w-0 flex-1', addonBefore && '[&>span>input]:rounded-l-none', addonAfter && '[&>span>input]:rounded-r-none')}>
+      <span
+        className={cn(
+          'min-w-0 flex-1',
+          addonBefore && '[&>span>input]:rounded-l-none',
+          addonAfter && '[&>span>input]:rounded-r-none',
+        )}
+      >
         {box}
       </span>
       {addonAfter ? (
-        <span className="inline-flex items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+        <span className="border-input bg-muted text-muted-foreground inline-flex items-center rounded-r-md border border-l-0 px-3 text-sm">
           {addonAfter}
         </span>
       ) : null}
@@ -289,7 +316,9 @@ export function InputTextArea({
     const conf = typeof autoSize === 'object' ? autoSize : {};
     const minRows = conf.minRows ?? 2;
     const maxRows = conf.maxRows ?? 6;
-    const lineCount = current.split('\n').reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 80)), 0);
+    const lineCount = current
+      .split('\n')
+      .reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / 80)), 0);
     return Math.min(maxRows, Math.max(minRows, lineCount));
   })();
 
@@ -308,11 +337,16 @@ export function InputTextArea({
         maxLength={maxLength}
         disabled={disabled}
         readOnly={readOnly}
-        className={cn(FIELD_BASE, 'h-auto py-2 leading-relaxed', autoSize ? 'resize-none' : 'resize-y', className)}
+        className={cn(
+          FIELD_BASE,
+          'h-auto py-2 leading-relaxed',
+          autoSize ? 'resize-none' : 'resize-y',
+          className,
+        )}
         style={style}
       />
       {showCount && maxLength ? (
-        <span className="absolute bottom-1 right-2 text-xs text-muted-foreground">
+        <span className="text-muted-foreground absolute right-2 bottom-1 text-xs">
           {current.length}/{maxLength}
         </span>
       ) : null}
@@ -328,8 +362,16 @@ export interface InputSearchProps extends InputProps {
   loading?: boolean;
 }
 
-export function InputSearch({ onSearch, enterButton, loading, allowClear, ...rest }: InputSearchProps) {
-  const [inner, setInner] = useState<string>(rest.defaultValue === undefined ? '' : String(rest.defaultValue));
+export function InputSearch({
+  onSearch,
+  enterButton,
+  loading,
+  allowClear,
+  ...rest
+}: InputSearchProps) {
+  const [inner, setInner] = useState<string>(
+    rest.defaultValue === undefined ? '' : String(rest.defaultValue),
+  );
   const controlled = rest.value !== undefined;
   const current = controlled ? String(rest.value ?? '') : inner;
 
@@ -371,7 +413,7 @@ export function InputSearch({ onSearch, enterButton, loading, allowClear, ...res
         disabled={rest.disabled}
         onClick={() => trigger(current)}
         className={cn(
-          'ml-[-1px] inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-r-md border border-input bg-secondary px-3 text-sm hover:bg-accent disabled:opacity-50',
+          'border-input bg-secondary hover:bg-accent ml-[-1px] inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-r-md border px-3 text-sm disabled:opacity-50',
           SIZE_H[rest.size ?? 'middle'],
         )}
       >
@@ -384,9 +426,27 @@ export function InputSearch({ onSearch, enterButton, loading, allowClear, ...res
 
 /* ---------------- Input.Group ---------------- */
 
-export function InputGroup({ children, className, style, compact }: { children?: ReactNode; className?: string; style?: CSSProperties; compact?: boolean }) {
+export function InputGroup({
+  children,
+  className,
+  style,
+  compact,
+}: {
+  children?: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+  compact?: boolean;
+}) {
   return (
-    <span className={cn('inline-flex w-full items-stretch', compact && '[&>*]:rounded-none [&>*:first-child]:rounded-l-md [&>*:last-child]:rounded-r-md', className)} style={style}>
+    <span
+      className={cn(
+        'inline-flex w-full items-stretch',
+        compact &&
+          '[&>*]:rounded-none [&>*:first-child]:rounded-l-md [&>*:last-child]:rounded-r-md',
+        className,
+      )}
+      style={style}
+    >
       {children}
     </span>
   );
@@ -468,7 +528,7 @@ export function InputNumber({
   return (
     <span className="flex w-full items-stretch" style={style}>
       <span className="min-w-0 flex-1 [&>input]:rounded-r-none">{numInput}</span>
-      <span className="inline-flex items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+      <span className="border-input bg-muted text-muted-foreground inline-flex items-center rounded-r-md border border-l-0 px-3 text-sm">
         {addonAfter}
       </span>
     </span>
@@ -546,7 +606,7 @@ function SelectBase({
   loading,
   size = 'middle',
   status,
-  tokenSeparators,
+  tokenSeparators: _tokenSeparators,
   maxTagCount,
   notFoundContent,
   className,
@@ -593,9 +653,14 @@ function SelectBase({
   const visibleOptions = useMemo(() => {
     if (!keyword) return optionList;
     if (filterOption === false) return optionList;
-    if (typeof filterOption === 'function') return optionList.filter((o) => filterOption(keyword, o));
+    if (typeof filterOption === 'function')
+      return optionList.filter((o) => filterOption(keyword, o));
     const kw = keyword.toLowerCase();
-    return optionList.filter((o) => String((o as Record<string, unknown>)[filterKey] ?? o.label ?? '').toLowerCase().includes(kw));
+    return optionList.filter((o) =>
+      String((o as Record<string, unknown>)[filterKey] ?? o.label ?? '')
+        .toLowerCase()
+        .includes(kw),
+    );
   }, [optionList, keyword, filterOption, filterKey]);
 
   const commit = (next: any, option?: SelectOption) => {
@@ -640,7 +705,8 @@ function SelectBase({
     commit(multiple ? [] : undefined);
   };
 
-  const shownTags = maxTagCount && typeof maxTagCount === 'number' ? selected.slice(0, maxTagCount) : selected;
+  const shownTags =
+    maxTagCount && typeof maxTagCount === 'number' ? selected.slice(0, maxTagCount) : selected;
 
   return (
     <Popover
@@ -661,7 +727,7 @@ function SelectBase({
           aria-disabled={disabled}
           tabIndex={disabled ? -1 : 0}
           className={cn(
-            'flex w-full cursor-pointer items-center gap-1 rounded-md border border-input bg-transparent px-2.5 py-1 shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40',
+            'border-input focus-visible:border-ring focus-visible:ring-ring/40 flex w-full cursor-pointer items-center gap-1 rounded-md border bg-transparent px-2.5 py-1 shadow-xs outline-none focus-visible:ring-[3px]',
             SIZE_H[size] ?? SIZE_H.middle,
             disabled && 'cursor-not-allowed opacity-50',
             status === 'error' && 'border-destructive',
@@ -671,13 +737,13 @@ function SelectBase({
         >
           <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1 overflow-hidden">
             {selected.length === 0 ? (
-              <span className="truncate text-muted-foreground">{placeholder}</span>
+              <span className="text-muted-foreground truncate">{placeholder}</span>
             ) : multiple ? (
               <>
                 {shownTags.map((v) => (
                   <span
                     key={String(v)}
-                    className="inline-flex max-w-[10rem] items-center gap-1 rounded bg-secondary px-1.5 py-0.5 text-xs"
+                    className="bg-secondary inline-flex max-w-[10rem] items-center gap-1 rounded px-1.5 py-0.5 text-xs"
                   >
                     <span className="truncate">{labelOf(v)}</span>
                     {/* disabled 时只读：antd 语义下禁用的 Select 标签不可移除，
@@ -686,7 +752,7 @@ function SelectBase({
                       <button
                         type="button"
                         aria-label="移除"
-                        className="cursor-pointer text-muted-foreground hover:text-foreground"
+                        className="text-muted-foreground hover:text-foreground cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           commit(selected.filter((s) => s !== v));
@@ -698,25 +764,32 @@ function SelectBase({
                   </span>
                 ))}
                 {selected.length > shownTags.length ? (
-                  <span className="text-xs text-muted-foreground">+{selected.length - shownTags.length}</span>
+                  <span className="text-muted-foreground text-xs">
+                    +{selected.length - shownTags.length}
+                  </span>
                 ) : null}
               </>
             ) : (
               <span className="truncate">{labelOf(selected[0])}</span>
             )}
           </span>
-          {loading ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : null}
+          {loading ? <Loader2 className="text-muted-foreground size-3.5 animate-spin" /> : null}
           {allowClear && selected.length > 0 && !disabled ? (
             <button
               type="button"
               aria-label="清空"
-              className="cursor-pointer text-muted-foreground/60 hover:text-foreground"
+              className="text-muted-foreground/60 hover:text-foreground cursor-pointer"
               onClick={clearAll}
             >
               <X className="size-3.5" />
             </button>
           ) : null}
-          <ChevronDown className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
+          <ChevronDown
+            className={cn(
+              'text-muted-foreground size-3.5 shrink-0 transition-transform',
+              open && 'rotate-180',
+            )}
+          />
         </div>
       </PopoverTrigger>
 
@@ -733,7 +806,7 @@ function SelectBase({
         }}
       >
         {(showSearch || mode === 'tags') && (
-          <div className="mb-1 border-b border-border pb-1">
+          <div className="border-border mb-1 border-b pb-1">
             <input
               autoFocus
               value={keyword}
@@ -748,13 +821,15 @@ function SelectBase({
                   commitKeywordAsTag();
                 }
               }}
-              className="h-7 w-full rounded-sm bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground"
+              className="placeholder:text-muted-foreground h-7 w-full rounded-sm bg-transparent px-2 text-sm outline-none"
             />
           </div>
         )}
         <div className="max-h-64 overflow-y-auto">
           {visibleOptions.length === 0 ? (
-            <div className="px-2 py-3 text-center text-sm text-muted-foreground">{notFoundContent ?? '无匹配数据'}</div>
+            <div className="text-muted-foreground px-2 py-3 text-center text-sm">
+              {notFoundContent ?? '无匹配数据'}
+            </div>
           ) : (
             visibleOptions.map((option, i) => {
               const active = selected.some((v) => v === option.value);
@@ -765,13 +840,15 @@ function SelectBase({
                   disabled={option.disabled}
                   onClick={() => pick(option)}
                   className={cn(
-                    'flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent',
+                    'hover:bg-accent flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm',
                     active && 'bg-accent/60 font-medium',
                     option.disabled && 'cursor-not-allowed opacity-40',
                   )}
                 >
-                  <span className="whitespace-normal break-words">{option.label ?? String(option.value)}</span>
-                  {active ? <Check className="size-3.5 shrink-0 text-primary" /> : null}
+                  <span className="break-words whitespace-normal">
+                    {option.label ?? String(option.value)}
+                  </span>
+                  {active ? <Check className="text-primary size-3.5 shrink-0" /> : null}
                 </button>
               );
             })
@@ -781,7 +858,7 @@ function SelectBase({
           <button
             type="button"
             onClick={commitKeywordAsTag}
-            className="mt-1 w-full cursor-pointer rounded-sm border-t border-border px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent"
+            className="border-border text-muted-foreground hover:bg-accent mt-1 w-full cursor-pointer rounded-sm border-t px-2 py-1.5 text-left text-xs"
           >
             添加「{keyword.trim()}」
           </button>
@@ -792,7 +869,12 @@ function SelectBase({
 }
 
 /** `<Select.Option>` 占位组件：仅用于让 JSX 结构合法，值由 Select 解析 children 得到 */
-function SelectOption(_props: { value?: any; disabled?: boolean; children?: ReactNode; key?: unknown }) {
+function SelectOption(_props: {
+  value?: any;
+  disabled?: boolean;
+  children?: ReactNode;
+  key?: unknown;
+}) {
   return null;
 }
 
@@ -866,7 +948,7 @@ export function Switch({
   const labelWidthPx = (v: ReactNode) => {
     if (typeof v !== 'string') return 0;
     let px = 0;
-    for (const ch of v) px += /[\x00-\xff]/.test(ch) ? 6.2 : 11; // ASCII ≈ 6.2px，中文/全角 ≈ 11px
+    for (const ch of v) px += (ch.codePointAt(0) ?? 0x110000) <= 0xff ? 6.2 : 11; // ASCII ≈ 6.2px，中文/全角 ≈ 11px
     return Math.ceil(px);
   };
   const textNeed = Math.max(labelWidthPx(checkedChildren), labelWidthPx(unCheckedChildren));
@@ -892,20 +974,34 @@ export function Switch({
     >
       <span
         className={cn(
-          'pointer-events-none inline-block rounded-full bg-background shadow-sm transition-transform',
+          'bg-background pointer-events-none inline-block rounded-full shadow-sm transition-transform',
           small ? 'size-3' : 'size-4',
-          on ? (hasText ? (small ? 'translate-x-9' : track.travel) : small ? 'translate-x-4' : 'translate-x-5') : 'translate-x-0',
+          on
+            ? hasText
+              ? small
+                ? 'translate-x-9'
+                : track.travel
+              : small
+                ? 'translate-x-4'
+                : 'translate-x-5'
+            : 'translate-x-0',
         )}
       />
       {hasText ? (
         <span
           className={cn(
             // whitespace-nowrap：标签永不折行；overflow-hidden 兜底，估算偏差时在轨道内裁掉而不是溢出按钮外
-            'pointer-events-none absolute inset-y-0 flex items-center overflow-hidden whitespace-nowrap text-[11px] font-medium text-primary-foreground',
-            on ? 'left-2 right-6 justify-start' : 'left-6 right-2 justify-end',
+            'text-primary-foreground pointer-events-none absolute inset-y-0 flex items-center overflow-hidden text-[11px] font-medium whitespace-nowrap',
+            on ? 'right-6 left-2 justify-start' : 'right-2 left-6 justify-end',
           )}
         >
-          {loading ? <Loader2 className="size-3 animate-spin" /> : on ? checkedChildren : unCheckedChildren}
+          {loading ? (
+            <Loader2 className="size-3 animate-spin" />
+          ) : on ? (
+            checkedChildren
+          ) : (
+            unCheckedChildren
+          )}
         </span>
       ) : null}
     </button>
@@ -925,13 +1021,29 @@ export interface CheckboxProps {
   style?: CSSProperties;
 }
 
-export function Checkbox({ checked, defaultChecked, onChange, disabled, indeterminate, children, className, style }: CheckboxProps) {
+export function Checkbox({
+  checked,
+  defaultChecked,
+  onChange,
+  disabled,
+  indeterminate,
+  children,
+  className,
+  style,
+}: CheckboxProps) {
   const [inner, setInner] = useState(!!defaultChecked);
   const controlled = checked !== undefined;
   const on = controlled ? !!checked : inner;
 
   return (
-    <label className={cn('inline-flex cursor-pointer items-center gap-2 text-sm', disabled && 'cursor-not-allowed opacity-50', className)} style={style}>
+    <label
+      className={cn(
+        'inline-flex cursor-pointer items-center gap-2 text-sm',
+        disabled && 'cursor-not-allowed opacity-50',
+        className,
+      )}
+      style={style}
+    >
       <button
         type="button"
         role="checkbox"
@@ -943,12 +1055,12 @@ export function Checkbox({ checked, defaultChecked, onChange, disabled, indeterm
           onChange?.({ target: { checked: next } });
         }}
         className={cn(
-          'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input transition-colors',
+          'border-input flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors',
           (on || indeterminate) && 'border-primary bg-primary text-primary-foreground',
         )}
       >
         {indeterminate && !on ? (
-          <span className="h-0.5 w-2 rounded bg-primary-foreground" />
+          <span className="bg-primary-foreground h-0.5 w-2 rounded" />
         ) : on ? (
           <Check className="size-3" strokeWidth={3} />
         ) : null}
@@ -1011,7 +1123,13 @@ export function RadioGroup({
   const controlled = value !== undefined;
   const current = controlled ? value : inner;
 
-  const items = options ?? optionsFromChildren(children).map((o) => ({ label: o.label, value: o.value, disabled: o.disabled }));
+  const items =
+    options ??
+    optionsFromChildren(children).map((o) => ({
+      label: o.label,
+      value: o.value,
+      disabled: o.disabled,
+    }));
 
   const select = (v: any) => {
     if (!controlled) setInner(v);
@@ -1022,7 +1140,11 @@ export function RadioGroup({
     return (
       <span
         role="radiogroup"
-        className={cn('inline-flex items-center overflow-hidden rounded-md border border-input', disabled && 'opacity-50', className)}
+        className={cn(
+          'border-input inline-flex items-center overflow-hidden rounded-md border',
+          disabled && 'opacity-50',
+          className,
+        )}
         style={style}
       >
         {items.map((item, i) => {
@@ -1036,10 +1158,14 @@ export function RadioGroup({
               disabled={disabled || item.disabled}
               onClick={() => select(item.value)}
               className={cn(
-                'cursor-pointer border-input px-3 transition-colors',
+                'border-input cursor-pointer px-3 transition-colors',
                 SIZE_H[size] ?? SIZE_H.middle,
                 i > 0 && 'border-l',
-                active ? (buttonStyle === 'solid' ? 'bg-primary text-primary-foreground' : 'bg-accent font-medium') : 'hover:bg-accent/60',
+                active
+                  ? buttonStyle === 'solid'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-accent font-medium'
+                  : 'hover:bg-accent/60',
                 (disabled || item.disabled) && 'cursor-not-allowed',
               )}
             >
@@ -1052,7 +1178,11 @@ export function RadioGroup({
   }
 
   return (
-    <span role="radiogroup" className={cn('inline-flex flex-wrap items-center gap-4', className)} style={style}>
+    <span
+      role="radiogroup"
+      className={cn('inline-flex flex-wrap items-center gap-4', className)}
+      style={style}
+    >
       {items.map((item, i) => {
         const active = current === item.value;
         return (
@@ -1063,10 +1193,18 @@ export function RadioGroup({
             aria-checked={active}
             disabled={disabled || item.disabled}
             onClick={() => select(item.value)}
-            className={cn('inline-flex cursor-pointer items-center gap-2 text-sm', (disabled || item.disabled) && 'cursor-not-allowed opacity-50')}
+            className={cn(
+              'inline-flex cursor-pointer items-center gap-2 text-sm',
+              (disabled || item.disabled) && 'cursor-not-allowed opacity-50',
+            )}
           >
-            <span className={cn('flex size-4 items-center justify-center rounded-full border transition-colors', active ? 'border-primary' : 'border-input')}>
-              {active ? <span className="size-2 rounded-full bg-primary" /> : null}
+            <span
+              className={cn(
+                'flex size-4 items-center justify-center rounded-full border transition-colors',
+                active ? 'border-primary' : 'border-input',
+              )}
+            >
+              {active ? <span className="bg-primary size-2 rounded-full" /> : null}
             </span>
             {item.label}
           </button>
@@ -1123,7 +1261,11 @@ export function AutoComplete({
     if (filterOption === false) return options;
     if (typeof filterOption === 'function') return options.filter((o) => filterOption(current, o));
     const kw = current.toLowerCase();
-    return options.filter((o) => String(o.label ?? o.value ?? '').toLowerCase().includes(kw));
+    return options.filter((o) =>
+      String(o.label ?? o.value ?? '')
+        .toLowerCase()
+        .includes(kw),
+    );
   }, [options, current, filterOption]);
 
   const setValue = (v: string) => {
@@ -1170,7 +1312,7 @@ export function AutoComplete({
                 onSelect?.(v, o);
                 setOpen(false);
               }}
-              className="w-full cursor-pointer whitespace-normal break-words rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent"
+              className="hover:bg-accent w-full cursor-pointer rounded-sm px-2 py-1.5 text-left text-sm break-words whitespace-normal"
             >
               {o.label ?? String(o.value)}
             </button>
@@ -1203,7 +1345,20 @@ export interface DatePickerProps {
   id?: string;
 }
 
-export function DatePickerBase({ value, defaultValue, onChange, showTime, placeholder, disabled, allowClear, size = 'middle', status, style, className, id }: DatePickerProps) {
+export function DatePickerBase({
+  value,
+  defaultValue,
+  onChange,
+  showTime,
+  placeholder,
+  disabled,
+  allowClear: _allowClear,
+  size = 'middle',
+  status,
+  style,
+  className,
+  id,
+}: DatePickerProps) {
   const [inner, setInner] = useState<Dayjs | null>(defaultValue ?? null);
   const controlled = value !== undefined;
   const current = controlled ? (value ?? null) : inner;
@@ -1258,7 +1413,16 @@ export interface RangePickerProps {
   className?: string;
 }
 
-export function RangePicker({ value, defaultValue, onChange, showTime, disabled, size = 'middle', style, className }: RangePickerProps) {
+export function RangePicker({
+  value,
+  defaultValue,
+  onChange,
+  showTime,
+  disabled,
+  size = 'middle',
+  style,
+  className,
+}: RangePickerProps) {
   const [inner, setInner] = useState<[Dayjs | null, Dayjs | null] | null>(defaultValue ?? null);
   const controlled = value !== undefined;
   const current = (controlled ? value : inner) ?? [null, null];
@@ -1353,7 +1517,10 @@ function TreeCheckList({
         return (
           <li key={node.key ?? `${String(node.value)}-${i}`}>
             <label
-              className={cn('flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 text-sm hover:bg-accent', node.disabled && 'cursor-not-allowed opacity-50')}
+              className={cn(
+                'hover:bg-accent flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 text-sm',
+                node.disabled && 'cursor-not-allowed opacity-50',
+              )}
               style={{ paddingLeft: depth * 16 + 6 }}
             >
               <button
@@ -1363,7 +1530,7 @@ function TreeCheckList({
                 disabled={node.disabled}
                 onClick={() => onToggle(node)}
                 className={cn(
-                  'flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input transition-colors',
+                  'border-input flex size-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors',
                   checked && 'border-primary bg-primary text-primary-foreground',
                 )}
               >
@@ -1371,7 +1538,14 @@ function TreeCheckList({
               </button>
               <span className="truncate">{node.title}</span>
             </label>
-            {hasChildren ? <TreeCheckList nodes={node.children!} selected={selected} onToggle={onToggle} depth={depth + 1} /> : null}
+            {hasChildren ? (
+              <TreeCheckList
+                nodes={node.children!}
+                selected={selected}
+                onToggle={onToggle}
+                depth={depth + 1}
+              />
+            ) : null}
           </li>
         );
       })}
@@ -1395,7 +1569,11 @@ export function TreeSelect({
   size = 'middle',
 }: TreeSelectProps) {
   const [open, setOpen] = useState(false);
-  const selected: any[] = Array.isArray(value) ? value : value === undefined || value === null ? [] : [value];
+  const selected: any[] = Array.isArray(value)
+    ? value
+    : value === undefined || value === null
+      ? []
+      : [value];
   void showCheckedStrategy;
   const checkable = treeCheckable !== false && treeCheckable !== undefined;
 
@@ -1436,7 +1614,7 @@ export function TreeSelect({
           aria-expanded={open}
           tabIndex={disabled ? -1 : 0}
           className={cn(
-            'flex w-full cursor-pointer items-center gap-1 rounded-md border border-input bg-transparent px-2.5 py-1 shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40',
+            'border-input focus-visible:border-ring focus-visible:ring-ring/40 flex w-full cursor-pointer items-center gap-1 rounded-md border bg-transparent px-2.5 py-1 shadow-xs outline-none focus-visible:ring-[3px]',
             // 多选：不能沿用固定高度——已选项一多会换行，固定 h-9 会溢出；
             // 改用「最小高度」+ 标签区自身上限/内部滚动（见下方 max-h-20）。
             // 单选保持原固定高度，不影响其它调用方。
@@ -1451,31 +1629,34 @@ export function TreeSelect({
               overflow-y-auto 会让 overflow-x 一并计算为 auto，标签绝不会横向漏出。 */}
           <span className="flex max-h-20 min-w-0 flex-1 flex-wrap items-center gap-1 overflow-y-auto">
             {selected.length === 0 ? (
-              <span className="truncate text-muted-foreground">{placeholder}</span>
+              <span className="text-muted-foreground truncate">{placeholder}</span>
             ) : (
-              selected.map((v) => titleMap.get(v) ?? String(v)).filter(Boolean).map((t, i) =>
-                checkable ? (
-                  // max-w-full + truncate：单个标签再长也不会把容器撑宽；
-                  // 换行（flex-wrap）让「标签总宽」不再等于 max-content，弹窗宽度因此不再被撑爆
-                  <span
-                    key={i}
-                    className="inline-flex max-w-full items-center truncate rounded-sm bg-muted px-1.5 py-0.5 text-xs leading-5"
-                  >
-                    {t}
-                  </span>
-                ) : (
-                  <span key={i} className="mr-1 truncate">
-                    {t}
-                  </span>
-                ),
-              )
+              selected
+                .map((v) => titleMap.get(v) ?? String(v))
+                .filter(Boolean)
+                .map((t, i) =>
+                  checkable ? (
+                    // max-w-full + truncate：单个标签再长也不会把容器撑宽；
+                    // 换行（flex-wrap）让「标签总宽」不再等于 max-content，弹窗宽度因此不再被撑爆
+                    <span
+                      key={i}
+                      className="bg-muted inline-flex max-w-full items-center truncate rounded-sm px-1.5 py-0.5 text-xs leading-5"
+                    >
+                      {t}
+                    </span>
+                  ) : (
+                    <span key={i} className="mr-1 truncate">
+                      {t}
+                    </span>
+                  ),
+                )
             )}
           </span>
           {allowClear && selected.length > 0 && !disabled ? (
             <button
               type="button"
               aria-label="清空"
-              className="cursor-pointer text-muted-foreground/60 hover:text-foreground"
+              className="text-muted-foreground/60 hover:text-foreground cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 onChange?.(treeCheckable ? [] : undefined);
@@ -1484,13 +1665,18 @@ export function TreeSelect({
               <X className="size-3.5" />
             </button>
           ) : null}
-          <ChevronDown className={cn('size-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
+          <ChevronDown
+            className={cn(
+              'text-muted-foreground size-3.5 shrink-0 transition-transform',
+              open && 'rotate-180',
+            )}
+          />
         </div>
       </PopoverTrigger>
       <PopoverContent
         align="start"
         collisionPadding={12}
-        className="w-[var(--radix-popover-trigger-width)] min-w-56 max-w-[min(560px,calc(100vw-2rem))] p-1"
+        className="w-[var(--radix-popover-trigger-width)] max-w-[min(560px,calc(100vw-2rem))] min-w-56 p-1"
       >
         <div className="max-h-72 overflow-y-auto">
           <TreeCheckList nodes={treeData} selected={selected} onToggle={toggle} />
@@ -1526,7 +1712,14 @@ export interface UploadProps {
   directory?: boolean;
 }
 
-function useUploader({ customRequest, multiple, accept, disabled, beforeUpload, onChange }: UploadProps) {
+function useUploader({
+  customRequest,
+  multiple,
+  accept,
+  disabled,
+  beforeUpload,
+  onChange,
+}: UploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const submit = useCallback(
@@ -1577,7 +1770,11 @@ function UploadBase(props: UploadProps) {
       <span
         role="button"
         tabIndex={props.disabled ? -1 : 0}
-        className={cn('inline-flex', props.disabled && 'cursor-not-allowed opacity-50', props.className)}
+        className={cn(
+          'inline-flex',
+          props.disabled && 'cursor-not-allowed opacity-50',
+          props.className,
+        )}
         style={props.style}
         onClick={() => {
           props.onClick?.();
@@ -1594,9 +1791,17 @@ function UploadBase(props: UploadProps) {
   );
 }
 
-export interface DraggerProps extends UploadProps {}
+export type DraggerProps = UploadProps;
 
-export function UploadDragger({ disabled, className, style, children, multiple, accept, ...rest }: DraggerProps) {
+export function UploadDragger({
+  disabled,
+  className,
+  style,
+  children,
+  multiple,
+  accept,
+  ...rest
+}: DraggerProps) {
   const [hovering, setHovering] = useState(false);
   const { open, input, submit } = useUploader({ multiple, accept, disabled, ...rest });
 
@@ -1625,7 +1830,7 @@ export function UploadDragger({ disabled, className, style, children, multiple, 
         onDragLeave={() => setHovering(false)}
         onDrop={handleDrop}
         className={cn(
-          'w-full cursor-pointer rounded-lg border border-dashed border-input p-6 text-center transition-colors',
+          'border-input w-full cursor-pointer rounded-lg border border-dashed p-6 text-center transition-colors',
           hovering && 'border-primary bg-accent/50',
           disabled && 'cursor-not-allowed opacity-50',
           className,
@@ -1654,7 +1859,16 @@ export interface ImageProps {
   fallback?: string;
 }
 
-export function Image({ src, alt, width, height, style, className, preview = true, fallback }: ImageProps) {
+export function Image({
+  src,
+  alt,
+  width,
+  height,
+  style,
+  className,
+  preview = true,
+  fallback,
+}: ImageProps) {
   const [open, setOpen] = useState(false);
   const [broken, setBroken] = useState(false);
 
@@ -1662,7 +1876,6 @@ export function Image({ src, alt, width, height, style, className, preview = tru
 
   return (
     <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={url}
         alt={alt ?? ''}
@@ -1677,7 +1890,6 @@ export function Image({ src, alt, width, height, style, className, preview = tru
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-[min(90vw,60rem)] p-2" showCloseButton>
             <DialogTitle className="sr-only">{alt ?? '图片预览'}</DialogTitle>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt={alt ?? ''} className="mx-auto max-h-[80vh] w-auto object-contain" />
           </DialogContent>
         </Dialog>

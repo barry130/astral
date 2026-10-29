@@ -165,18 +165,18 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
    * 而不少页面沿用 antd 习惯把 onChange 直接写在表格标签上——不在这里合流的话，
    * 这些页面的分页器就是死的（点了翻页没反应）。
    */
-  const resolvedPagination =
-    pagination
-      ? {
-          ...pagination,
-          onChange: (page: number, pageSize: number) => {
-            pagination.onChange?.(page, pageSize);
-            onTableChange?.({ current: page, pageSize }, undefined, undefined);
-          },
-        }
-      : pagination;
+  const resolvedPagination = pagination
+    ? {
+        ...pagination,
+        onChange: (page: number, pageSize: number) => {
+          pagination.onChange?.(page, pageSize);
+          onTableChange?.({ current: page, pageSize }, undefined, undefined);
+        },
+      }
+    : pagination;
 
-  const baseSuffix = resizeKey ?? (typeof window === 'undefined' ? 'server' : window.location.pathname);
+  const baseSuffix =
+    resizeKey ?? (typeof window === 'undefined' ? 'server' : window.location.pathname);
 
   /** 用户拖拽出的列宽（挂载后从 localStorage 恢复） */
   const [widths, setWidths] = useState<Record<ColumnKey, number>>({});
@@ -212,7 +212,19 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(widthKey);
-      if (raw) setWidths(JSON.parse(raw) as Record<ColumnKey, number>);
+      if (raw) {
+        // try/catch 只能兜住解析抛错，兜不住形状不符的合法 JSON（如 "null"），
+        // 校验「普通对象且全部值是有限数字」通过才采用
+        const parsed: unknown = JSON.parse(raw);
+        if (
+          parsed &&
+          typeof parsed === 'object' &&
+          !Array.isArray(parsed) &&
+          Object.values(parsed).every((v) => typeof v === 'number' && Number.isFinite(v))
+        ) {
+          setWidths(parsed as Record<ColumnKey, number>);
+        }
+      }
       const rawHidden = window.localStorage.getItem(hiddenKey);
       if (rawHidden) setHidden(new Set(JSON.parse(rawHidden) as ColumnKey[]));
     } catch {
@@ -265,7 +277,8 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
   const effectiveWidths = useMemo(() => {
     const result: Record<ColumnKey, number> = {};
     colsWithKey.forEach(({ col, key }) => {
-      result[key] = widths[key] ?? (typeof col.width === 'number' ? col.width : estimateWidth(col.title));
+      result[key] =
+        widths[key] ?? (typeof col.width === 'number' ? col.width : estimateWidth(col.title));
     });
     return result;
   }, [colsWithKey, widths]);
@@ -275,7 +288,10 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
   }, [effectiveWidths]);
 
   /** 当前渲染的可见列 */
-  const visibleCols = useMemo(() => colsWithKey.filter(({ key }) => !hidden.has(key)), [colsWithKey, hidden]);
+  const visibleCols = useMemo(
+    () => colsWithKey.filter(({ key }) => !hidden.has(key)),
+    [colsWithKey, hidden],
+  );
 
   /** 可见列的宽度总和（px） */
   const totalPx = useMemo(
@@ -359,7 +375,9 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
    */
   const emptyNode = loading
     ? null
-    : (locale?.emptyText ?? <EmptyState description="暂无数据" padding={20} ariaLabel="暂无数据" />);
+    : (locale?.emptyText ?? (
+        <EmptyState description="暂无数据" padding={20} ariaLabel="暂无数据" />
+      ));
 
   // ---------- 列设置面板 ----------
   const toggleCol = (key: ColumnKey) =>

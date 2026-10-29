@@ -1,8 +1,27 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Card, Button, Space, Modal, Form, Input, InputNumber, Select, Switch, Tag, Popconfirm, message } from '@/components/antd-compat';
-import { PlusOutlined, EditOutlined, DeleteOutlined, MenuOutlined, HolderOutlined } from '@/components/antd-compat/icons';
+import {
+  Card,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Switch,
+  Tag,
+  Popconfirm,
+  message,
+} from '@/components/antd-compat';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  MenuOutlined,
+  HolderOutlined,
+} from '@/components/antd-compat/icons';
 import { menuApi, SysMenu } from '@/api/menu';
 import { getNavExtensions, NavExtension } from '@/api/plugin';
 import { usePerm } from '@/lib/perm';
@@ -19,10 +38,22 @@ import { fetchDictOptions, DictOption } from '@/api/dict';
 const MENU_TYPE_DICT = 'menu_type';
 
 const iconOptions = [
-  'DashboardOutlined', 'ApiOutlined', 'BarChartOutlined', 'ClusterOutlined',
-  'SettingOutlined', 'TeamOutlined', 'SafetyOutlined', 'BookOutlined',
-  'KeyOutlined', 'TableOutlined', 'MenuOutlined', 'FileTextOutlined',
-  'BlockOutlined', 'UserOutlined', 'ToolOutlined', 'LogoutOutlined',
+  'DashboardOutlined',
+  'ApiOutlined',
+  'BarChartOutlined',
+  'ClusterOutlined',
+  'SettingOutlined',
+  'TeamOutlined',
+  'SafetyOutlined',
+  'BookOutlined',
+  'KeyOutlined',
+  'TableOutlined',
+  'MenuOutlined',
+  'FileTextOutlined',
+  'BlockOutlined',
+  'UserOutlined',
+  'ToolOutlined',
+  'LogoutOutlined',
 ];
 
 /** 在树中定位节点及其兄弟数组 */
@@ -82,9 +113,12 @@ export default function MenuPage() {
 
   const loadData = () => {
     setLoading(true);
-    menuApi.getTree().then(res => {
-      if (res.code === 200) setData(res.data);
-    }).finally(() => setLoading(false));
+    menuApi
+      .getTree()
+      .then((res) => {
+        if (res.code === 200) setData(res.data);
+      })
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -148,7 +182,7 @@ export default function MenuPage() {
     const opts: { value: number; label: string }[] = [{ value: 0, label: '顶级菜单' }];
     const exclude = excludeId ? getDescendantIds(data, excludeId) : new Set<number>();
     const walk = (nodes: SysMenu[], depth: number) => {
-      nodes.forEach(n => {
+      nodes.forEach((n) => {
         if (exclude.has(n.id)) return;
         opts.push({ value: n.id, label: '　'.repeat(depth) + n.name });
         if (n.children) walk(n.children, depth + 1);
@@ -174,7 +208,10 @@ export default function MenuPage() {
 
   const handleDelete = async (id: number) => {
     const res = await menuApi.delete(id);
-    if (res.code === 200) { message.success('已删除'); loadData(); }
+    if (res.code === 200) {
+      message.success('已删除');
+      loadData();
+    }
   };
 
   const handleSave = async () => {
@@ -182,7 +219,11 @@ export default function MenuPage() {
     const res = editRecord
       ? await menuApi.update(editRecord.id, values)
       : await menuApi.create(values);
-    if (res.code === 200) { message.success(editRecord ? '已更新' : '已创建'); setModalOpen(false); loadData(); }
+    if (res.code === 200) {
+      message.success(editRecord ? '已更新' : '已创建');
+      setModalOpen(false);
+      loadData();
+    }
   };
 
   /** 拖拽落下：同父级重排，跨父级则移动并改 parentId */
@@ -207,14 +248,20 @@ export default function MenuPage() {
     const updates: { id: number; sort: number; parentId?: number }[] = [];
     const reassign = (sibs: SysMenu[]) =>
       sibs.forEach((n, i) =>
-        updates.push({ id: n.id, sort: i, ...(n.id === moved.id ? { parentId: moved.parentId } : {}) }),
+        updates.push({
+          id: n.id,
+          sort: i,
+          ...(n.id === moved.id ? { parentId: moved.parentId } : {}),
+        }),
       );
     reassign(src.siblings);
     reassign(tgt.siblings);
 
     setData([...data]);
     try {
-      await Promise.all(updates.map(u => menuApi.update(u.id, { sort: u.sort, parentId: u.parentId })));
+      await Promise.all(
+        updates.map((u) => menuApi.update(u.id, { sort: u.sort, parentId: u.parentId })),
+      );
       message.success('排序已保存');
     } catch {
       message.error('保存失败');
@@ -228,9 +275,11 @@ export default function MenuPage() {
       key: 'drag',
       width: 50,
       render: (_: unknown, record: DisplayMenu) =>
-        record.pluginDeclared
-          ? <span className="text-muted-foreground">—</span>
-          : <HolderOutlined style={{ color: '#999', cursor: 'move' }} />,
+        record.pluginDeclared ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          <HolderOutlined style={{ color: '#999', cursor: 'move' }} />
+        ),
     },
     {
       title: '菜单名称',
@@ -239,38 +288,82 @@ export default function MenuPage() {
       render: (v: string, record: DisplayMenu) => (
         <span className="inline-flex items-center gap-1.5">
           <span>{v}</span>
-          {record.pluginDeclared && <Tag color="purple" style={{ marginInlineEnd: 0 }}>插件声明</Tag>}
+          {record.pluginDeclared && (
+            <Tag color="purple" style={{ marginInlineEnd: 0 }}>
+              插件声明
+            </Tag>
+          )}
         </span>
       ),
     },
     { title: '图标', dataIndex: 'icon', key: 'icon', render: (v: string) => v || '-' },
-    { title: '路由', dataIndex: 'path', key: 'path', render: (v: string) => v ? <Tag>{v}</Tag> : '-' },
-    { title: '权限', dataIndex: 'permission', key: 'permission', render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '-' },
-    { title: '排序', dataIndex: 'sort', key: 'sort', width: 60 },
     {
-      title: '可见', dataIndex: 'visible', key: 'visible', width: 60,
-      render: (v: number) => v === 1 ? <Tag color="green">是</Tag> : <Tag color="red">否</Tag>,
+      title: '路由',
+      dataIndex: 'path',
+      key: 'path',
+      render: (v: string) => (v ? <Tag>{v}</Tag> : '-'),
     },
     {
-      title: '操作', key: 'action', width: 160,
-      render: (_: unknown, record: DisplayMenu) => record.pluginDeclared ? (
-        <span className="text-xs text-muted-foreground">插件代码声明，只读</span>
-      ) : (
-        <Space>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={!canEdit}>编辑</Button>
-          <Popconfirm title="确认删除？" disabled={!canEdit} onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} disabled={!canEdit}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
+      title: '权限',
+      dataIndex: 'permission',
+      key: 'permission',
+      render: (v: string) => (v ? <Tag color="blue">{v}</Tag> : '-'),
+    },
+    { title: '排序', dataIndex: 'sort', key: 'sort', width: 60 },
+    {
+      title: '可见',
+      dataIndex: 'visible',
+      key: 'visible',
+      width: 60,
+      render: (v: number) => (v === 1 ? <Tag color="green">是</Tag> : <Tag color="red">否</Tag>),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 160,
+      render: (_: unknown, record: DisplayMenu) =>
+        record.pluginDeclared ? (
+          <span className="text-muted-foreground text-xs">插件代码声明，只读</span>
+        ) : (
+          <Space>
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              disabled={!canEdit}
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确认删除？"
+              disabled={!canEdit}
+              onConfirm={() => handleDelete(record.id)}
+            >
+              <Button type="link" size="small" danger icon={<DeleteOutlined />} disabled={!canEdit}>
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
+        ),
     },
   ];
 
   return (
     <div>
       <Card
-        title={<><MenuOutlined /> 菜单管理</>}
-        extra={canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新增菜单</Button>}
+        title={
+          <>
+            <MenuOutlined /> 菜单管理
+          </>
+        }
+        extra={
+          canEdit && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              新增菜单
+            </Button>
+          )
+        }
       >
         <ResizableTable
           columns={columns}
@@ -283,7 +376,9 @@ export default function MenuPage() {
           onRow={(record: DisplayMenu) => ({
             draggable: canEdit && !record.pluginDeclared,
             style: { cursor: canEdit && !record.pluginDeclared ? 'move' : 'default' },
-            onDragStart: () => { dragIdRef.current = record.id; },
+            onDragStart: () => {
+              dragIdRef.current = record.id;
+            },
             onDragOver: (e: React.DragEvent) => e.preventDefault(),
             onDrop: () => handleDrop(record.id),
           })}
@@ -310,7 +405,11 @@ export default function MenuPage() {
             <Input />
           </Form.Item>
           <Form.Item name="icon" label="图标名称">
-            <Select allowClear placeholder="选择图标" options={iconOptions.map(i => ({ value: i, label: i }))} />
+            <Select
+              allowClear
+              placeholder="选择图标"
+              options={iconOptions.map((i) => ({ value: i, label: i }))}
+            />
           </Form.Item>
           <Form.Item name="path" label="路由路径">
             <Input placeholder="/dashboard/xxx" />

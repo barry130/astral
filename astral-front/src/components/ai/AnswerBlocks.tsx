@@ -26,7 +26,7 @@ const BLOCK_LABEL: Record<string, string> = {
   chart: '图表',
 };
 
-const labelOf = (type?: string): string => (type ? BLOCK_LABEL[type] ?? type : '数据');
+const labelOf = (type?: string): string => (type ? (BLOCK_LABEL[type] ?? type) : '数据');
 
 /** 从块数据里尽可能找到「条目数组」，不同智能体的 schema 字段名不同 */
 function pickItems(data?: Record<string, unknown>): unknown[] | undefined {
@@ -99,7 +99,9 @@ function BlockCard({ block }: { block: AiBlock }) {
                 gap: 8,
                 paddingBottom: 8,
                 borderBottom:
-                  index === items.length - 1 ? 'none' : '1px solid var(--border, rgba(127,127,127,0.14))',
+                  index === items.length - 1
+                    ? 'none'
+                    : '1px solid var(--border, rgba(127,127,127,0.14))',
               }}
             >
               <span style={{ opacity: 0.55, fontSize: 12, minWidth: 18 }}>{index + 1}</span>
@@ -182,14 +184,18 @@ export function CitationList({ citations, required = false }: CitationListProps)
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <FileTextOutlined style={{ opacity: 0.6 }} />
-                <span style={{ fontWeight: 500 }}>{citation.title || citation.path || '未命名文档'}</span>
+                <span style={{ fontWeight: 500 }}>
+                  {citation.title || citation.path || '未命名文档'}
+                </span>
                 {citation.section && <Tag color="default">{citation.section}</Tag>}
                 {citation.version && (
                   <span style={{ opacity: 0.6 }}>v{citation.version.replace(/^v/i, '')}</span>
                 )}
               </div>
               {citation.path && (
-                <div style={{ opacity: 0.55, fontSize: 12, wordBreak: 'break-all' }}>{citation.path}</div>
+                <div style={{ opacity: 0.55, fontSize: 12, wordBreak: 'break-all' }}>
+                  {citation.path}
+                </div>
               )}
               {citation.matchedText && (
                 <Tooltip title={citation.matchedText}>

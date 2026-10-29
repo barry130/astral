@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Card,
+import {
+  Card,
   Row,
   Col,
   Statistic,
@@ -13,7 +14,8 @@ import { Card,
   Button,
   Drawer,
   Space,
-  Typography } from '@/components/antd-compat';
+  Typography,
+} from '@/components/antd-compat';
 import dynamic from 'next/dynamic';
 // echarts 体积大且本页非首屏，改为客户端动态加载（ssr: false 只允许在客户端组件中使用，本文件有 'use client'）
 const ReactECharts = dynamic(() => import('echarts-for-react'), {
@@ -76,7 +78,9 @@ export default function StatisticsPage() {
       .then((d) => {
         if (alive) setSourceOptions(d.stat_error_source || []);
       })
-      .catch(() => { /* 字典失败时回退显示原始值 */ });
+      .catch(() => {
+        /* 字典失败时回退显示原始值 */
+      });
     return () => {
       alive = false;
     };
@@ -89,7 +93,11 @@ export default function StatisticsPage() {
         items={[
           { key: 'device', label: '设备统计', children: <DeviceTab utOptions={utOptions} /> },
           { key: 'api', label: '接口统计', children: <ApiTab utOptions={utOptions} /> },
-          { key: 'error', label: '错误统计', children: <ErrorTab utOptions={utOptions} sourceOptions={sourceOptions} /> },
+          {
+            key: 'error',
+            label: '错误统计',
+            children: <ErrorTab utOptions={utOptions} sourceOptions={sourceOptions} />,
+          },
         ]}
       />
     </Card>
@@ -119,7 +127,8 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState<Dayjs>(dayjs());
   const [metric, setMetric] = useState('pv');
-  const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } = usePlatformVersion();
+  const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } =
+    usePlatformVersion();
   const [today, setToday] = useState<DayOverview>();
   const [yesterday, setYesterday] = useState<DayOverview>();
   const [trend, setTrend] = useState<{ hours: string[]; today: number[]; yesterday: number[] }>();
@@ -129,25 +138,28 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
    * <p>isAlive 由 effect 注入：返回时若已被更新的请求取代（或组件已卸载）则直接丢弃，
    * 避免慢响应覆盖新响应；刷新按钮调用时不传，等价于恒为 true。</p>
    */
-  const fetchData = useCallback(async (isAlive: () => boolean = () => true) => {
-    setLoading(true);
-    try {
-      const d = date.format('YYYY-MM-DD');
-      const v = version || undefined;
-      const [ov, tr] = await Promise.all([
-        statApi.getOverview(d, ut, v),
-        statApi.getTrend(metric, d, ut, v),
-      ]);
-      if (!isAlive()) return;
-      setToday(ov.data?.today);
-      setYesterday(ov.data?.yesterday);
-      setTrend(tr.data);
-    } catch {
-      if (isAlive()) toast.error('设备统计数据加载失败');
-    } finally {
-      if (isAlive()) setLoading(false);
-    }
-  }, [date, ut, version, metric]);
+  const fetchData = useCallback(
+    async (isAlive: () => boolean = () => true) => {
+      setLoading(true);
+      try {
+        const d = date.format('YYYY-MM-DD');
+        const v = version || undefined;
+        const [ov, tr] = await Promise.all([
+          statApi.getOverview(d, ut, v),
+          statApi.getTrend(metric, d, ut, v),
+        ]);
+        if (!isAlive()) return;
+        setToday(ov.data?.today);
+        setYesterday(ov.data?.yesterday);
+        setTrend(tr.data);
+      } catch {
+        if (isAlive()) toast.error('设备统计数据加载失败');
+      } finally {
+        if (isAlive()) setLoading(false);
+      }
+    },
+    [date, ut, version, metric],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -157,7 +169,12 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
     };
   }, [fetchData]);
 
-  const rows: Array<{ key: string; label: string; field: keyof DayOverview; fmtFn?: (v?: number | null) => string }> = [
+  const rows: Array<{
+    key: string;
+    label: string;
+    field: keyof DayOverview;
+    fmtFn?: (v?: number | null) => string;
+  }> = [
     { key: 'newDevices', label: '新增设备', field: 'newDevices' },
     { key: 'activeDevices', label: '活跃设备', field: 'activeDevices' },
     { key: 'totalDevices', label: '总设备数', field: 'totalDevices' },
@@ -205,7 +222,9 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
         utOptions={utOptions}
         versionOptions={versionOptions}
         versionLoading={versionLoading}
-        onRefresh={() => { void fetchData(); }}
+        onRefresh={() => {
+          void fetchData();
+        }}
       />
 
       <Row gutter={[12, 12]}>
@@ -214,11 +233,16 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
             <Card size="small">
               <Statistic
                 title={r.label}
-                value={r.fmtFn ? r.fmtFn(today?.[r.field] as number) : fmt(today?.[r.field] as number)}
+                value={
+                  r.fmtFn ? r.fmtFn(today?.[r.field] as number) : fmt(today?.[r.field] as number)
+                }
               />
               <div style={{ marginTop: 4 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  昨日 {r.fmtFn ? r.fmtFn(yesterday?.[r.field] as number) : fmt(yesterday?.[r.field] as number)}
+                  昨日{' '}
+                  {r.fmtFn
+                    ? r.fmtFn(yesterday?.[r.field] as number)
+                    : fmt(yesterday?.[r.field] as number)}
                 </Text>{' '}
                 {diffText(today?.[r.field] as number, yesterday?.[r.field] as number)}
               </div>
@@ -230,7 +254,12 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
       <Card size="small" style={{ marginTop: 16 }} title={null}>
         <Space style={{ marginBottom: 8 }}>
           <Text>趋势指标</Text>
-          <Select value={metric} onChange={setMetric} style={{ width: 150 }} options={METRIC_OPTIONS} />
+          <Select
+            value={metric}
+            onChange={setMetric}
+            style={{ width: 150 }}
+            options={METRIC_OPTIONS}
+          />
         </Space>
         <div className="chart-box" style={{ height: 340 }}>
           <ReactECharts option={trendOption} notMerge autoResize style={{ height: '100%' }} />
@@ -246,24 +275,45 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState<Dayjs>(dayjs());
   const [limit, setLimit] = useState(10);
-  const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } = usePlatformVersion();
+  const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } =
+    usePlatformVersion();
   const [topData, setTopData] = useState<ApiTopItem[]>([]);
-  const [summary, setSummary] = useState<ApiTopSummary>({ callCount: 0, successCount: 0, failureCount: 0, successRate: '0.00' });
+  const [summary, setSummary] = useState<ApiTopSummary>({
+    callCount: 0,
+    successCount: 0,
+    failureCount: 0,
+    successRate: '0.00',
+  });
 
   /** isAlive 同 DeviceTab：被更新的请求取代后丢弃慢响应，避免旧数据覆盖新数据 */
-  const fetchData = useCallback(async (isAlive: () => boolean = () => true) => {
-    setLoading(true);
-    try {
-      const res = await statApi.getApiTop(limit, date.format('YYYY-MM-DD'), ut, version || undefined);
-      if (!isAlive()) return;
-      setTopData(res.data?.list || []);
-      setSummary(res.data?.summary || { callCount: 0, successCount: 0, failureCount: 0, successRate: '0.00' });
-    } catch {
-      if (isAlive()) toast.error('接口统计数据加载失败');
-    } finally {
-      if (isAlive()) setLoading(false);
-    }
-  }, [date, limit, ut, version]);
+  const fetchData = useCallback(
+    async (isAlive: () => boolean = () => true) => {
+      setLoading(true);
+      try {
+        const res = await statApi.getApiTop(
+          limit,
+          date.format('YYYY-MM-DD'),
+          ut,
+          version || undefined,
+        );
+        if (!isAlive()) return;
+        setTopData(res.data?.list || []);
+        setSummary(
+          res.data?.summary || {
+            callCount: 0,
+            successCount: 0,
+            failureCount: 0,
+            successRate: '0.00',
+          },
+        );
+      } catch {
+        if (isAlive()) toast.error('接口统计数据加载失败');
+      } finally {
+        if (isAlive()) setLoading(false);
+      }
+    },
+    [date, limit, ut, version],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -279,26 +329,34 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
   const successRate = summary.successRate;
 
   // 列定义只依赖模块级常量，用 useMemo 固定引用，避免 ResizableTable 每次渲染重建表头
-  const columns = useMemo(() => [
-    { title: 'API路径', dataIndex: 'apiPath', ellipsis: true },
-    { title: '方法', dataIndex: 'apiMethod', width: 80 },
-    {
-      title: '调用次数',
-      dataIndex: 'callCount',
-      width: 110,
-      sorter: (a: ApiTopItem, b: ApiTopItem) => a.callCount - b.callCount,
-      render: (v: number) => fmt(v),
-    },
-    { title: '成功次数', dataIndex: 'successCount', width: 100, render: (v: number) => fmt(v) },
-    {
-      title: '失败次数',
-      dataIndex: 'failureCount',
-      width: 100,
-      render: (v: number) => (v > 0 ? <Text type="danger">{fmt(v)}</Text> : fmt(v)),
-    },
-    { title: '平均耗时(ms)', dataIndex: 'avgTime', width: 120, sorter: (a: ApiTopItem, b: ApiTopItem) => a.avgTime - b.avgTime },
-    { title: '最大耗时(ms)', dataIndex: 'maxTime', width: 120 },
-  ], []);
+  const columns = useMemo(
+    () => [
+      { title: 'API路径', dataIndex: 'apiPath', ellipsis: true },
+      { title: '方法', dataIndex: 'apiMethod', width: 80 },
+      {
+        title: '调用次数',
+        dataIndex: 'callCount',
+        width: 110,
+        sorter: (a: ApiTopItem, b: ApiTopItem) => a.callCount - b.callCount,
+        render: (v: number) => fmt(v),
+      },
+      { title: '成功次数', dataIndex: 'successCount', width: 100, render: (v: number) => fmt(v) },
+      {
+        title: '失败次数',
+        dataIndex: 'failureCount',
+        width: 100,
+        render: (v: number) => (v > 0 ? <Text type="danger">{fmt(v)}</Text> : fmt(v)),
+      },
+      {
+        title: '平均耗时(ms)',
+        dataIndex: 'avgTime',
+        width: 120,
+        sorter: (a: ApiTopItem, b: ApiTopItem) => a.avgTime - b.avgTime,
+      },
+      { title: '最大耗时(ms)', dataIndex: 'maxTime', width: 120 },
+    ],
+    [],
+  );
 
   const barOption = {
     title: { text: 'Top 接口调用量', left: 'center', textStyle: { fontSize: 14 } },
@@ -346,7 +404,9 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
         utOptions={utOptions}
         versionOptions={versionOptions}
         versionLoading={versionLoading}
-        onRefresh={() => { void fetchData(); }}
+        onRefresh={() => {
+          void fetchData();
+        }}
         extra={
           <Select
             value={limit}
@@ -358,9 +418,25 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
       />
 
       <Row gutter={12} style={{ marginBottom: 16 }}>
-        <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}><Card size="small"><Statistic title="总调用次数" value={fmt(totalCalls)} /></Card></Col>
-        <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}><Card size="small"><Statistic title="成功次数" value={fmt(totalSuccess)} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-        <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}><Card size="small"><Statistic title="成功率" value={`${successRate}%`} /></Card></Col>
+        <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
+          <Card size="small">
+            <Statistic title="总调用次数" value={fmt(totalCalls)} />
+          </Card>
+        </Col>
+        <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
+          <Card size="small">
+            <Statistic
+              title="成功次数"
+              value={fmt(totalSuccess)}
+              valueStyle={{ color: '#52c41a' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
+          <Card size="small">
+            <Statistic title="成功率" value={`${successRate}%`} />
+          </Card>
+        </Col>
       </Row>
 
       <ResizableTable<ApiTopItem>
@@ -398,10 +474,17 @@ const ERROR_TYPE_COLORS: Record<string, string> = {
   crash: 'red',
 };
 
-function ErrorTab({ utOptions, sourceOptions }: { utOptions: Option[]; sourceOptions: DictOption[] }) {
+function ErrorTab({
+  utOptions,
+  sourceOptions,
+}: {
+  utOptions: Option[];
+  sourceOptions: DictOption[];
+}) {
   const [loading, setLoading] = useState(false);
   const [date, setDate] = useState<Dayjs>(dayjs());
-  const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } = usePlatformVersion();
+  const { ut, version, setVersion, handleUtChange, versionOptions, versionLoading } =
+    usePlatformVersion();
   /** 错误来源筛选：''=全部 / client=客户端上报 / server=服务端自身异常 */
   const [source, setSource] = useState<string>('');
   const [summary, setSummary] = useState<ErrorSummaryItem[]>([]);
@@ -409,18 +492,26 @@ function ErrorTab({ utOptions, sourceOptions }: { utOptions: Option[]; sourceOpt
   const [currentFingerprint, setCurrentFingerprint] = useState<string>();
 
   /** isAlive 同 DeviceTab：被更新的请求取代后丢弃慢响应，避免旧数据覆盖新数据 */
-  const fetchSummary = useCallback(async (isAlive: () => boolean = () => true) => {
-    setLoading(true);
-    try {
-      const res = await statApi.getErrorSummary(date.format('YYYY-MM-DD'), source, ut, version || undefined);
-      if (!isAlive()) return;
-      setSummary(res.data || []);
-    } catch {
-      if (isAlive()) toast.error('错误统计数据加载失败');
-    } finally {
-      if (isAlive()) setLoading(false);
-    }
-  }, [date, source, ut, version]);
+  const fetchSummary = useCallback(
+    async (isAlive: () => boolean = () => true) => {
+      setLoading(true);
+      try {
+        const res = await statApi.getErrorSummary(
+          date.format('YYYY-MM-DD'),
+          source,
+          ut,
+          version || undefined,
+        );
+        if (!isAlive()) return;
+        setSummary(res.data || []);
+      } catch {
+        if (isAlive()) toast.error('错误统计数据加载失败');
+      } finally {
+        if (isAlive()) setLoading(false);
+      }
+    },
+    [date, source, ut, version],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -436,29 +527,42 @@ function ErrorTab({ utOptions, sourceOptions }: { utOptions: Option[]; sourceOpt
   };
 
   // 列定义只依赖 openDetail 与模块级常量，用 useMemo 固定引用，避免每次渲染新建数组击穿 ResizableTable 的列 useMemo
-  const columns = useMemo(() => [
-    { title: '次数', dataIndex: 'count', width: 80, render: (v: number) => fmt(v) },
-    { title: '影响设备', dataIndex: 'affectedDevices', width: 90, render: (v: number) => fmt(v) },
-    {
-      title: '类型',
-      dataIndex: 'errorType',
-      width: 90,
-      render: (v: string) => <Tag color={ERROR_TYPE_COLORS[v] || 'default'}>{v}</Tag>,
-    },
-    { title: '样例信息', dataIndex: 'sampleMessage', ellipsis: true },
-    { title: '版本', dataIndex: 'topAppVersion', width: 90 },
-    { title: '首次', dataIndex: 'firstSeen', width: 160, render: (v: string) => (v ? dayjs(v).format('HH:mm:ss') : '-') },
-    { title: '最近', dataIndex: 'lastSeen', width: 160, render: (v: string) => (v ? dayjs(v).format('HH:mm:ss') : '-') },
-    {
-      title: '操作',
-      width: 90,
-      render: (_: unknown, r: ErrorSummaryItem) => (
-        <Button type="link" size="small" onClick={() => openDetail(r.fingerprint)}>
-          明细
-        </Button>
-      ),
-    },
-  ], []);
+  const columns = useMemo(
+    () => [
+      { title: '次数', dataIndex: 'count', width: 80, render: (v: number) => fmt(v) },
+      { title: '影响设备', dataIndex: 'affectedDevices', width: 90, render: (v: number) => fmt(v) },
+      {
+        title: '类型',
+        dataIndex: 'errorType',
+        width: 90,
+        render: (v: string) => <Tag color={ERROR_TYPE_COLORS[v] || 'default'}>{v}</Tag>,
+      },
+      { title: '样例信息', dataIndex: 'sampleMessage', ellipsis: true },
+      { title: '版本', dataIndex: 'topAppVersion', width: 90 },
+      {
+        title: '首次',
+        dataIndex: 'firstSeen',
+        width: 160,
+        render: (v: string) => (v ? dayjs(v).format('HH:mm:ss') : '-'),
+      },
+      {
+        title: '最近',
+        dataIndex: 'lastSeen',
+        width: 160,
+        render: (v: string) => (v ? dayjs(v).format('HH:mm:ss') : '-'),
+      },
+      {
+        title: '操作',
+        width: 90,
+        render: (_: unknown, r: ErrorSummaryItem) => (
+          <Button type="link" size="small" onClick={() => openDetail(r.fingerprint)}>
+            明细
+          </Button>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
     <Spin spinning={loading}>
@@ -472,7 +576,9 @@ function ErrorTab({ utOptions, sourceOptions }: { utOptions: Option[]; sourceOpt
         utOptions={utOptions}
         versionOptions={versionOptions}
         versionLoading={versionLoading}
-        onRefresh={() => { void fetchSummary(); }}
+        onRefresh={() => {
+          void fetchSummary();
+        }}
         extra={
           <Select
             value={source}
@@ -535,28 +641,31 @@ function ErrorDetailDrawer({
   const pageSize = 10;
 
   /** isAlive：翻页/换组时丢弃被取代的慢响应，避免明细停在上一次请求的结果上 */
-  const fetchDetail = useCallback(async (isAlive: () => boolean = () => true) => {
-    if (!fingerprint || !open) return;
-    setLoading(true);
-    try {
-      const res = await statApi.getErrorPage({
-        pageNum,
-        pageSize,
-        fingerprint,
-        // 继承列表页的来源/平台/版本筛选，否则明细会展示其它维度的同类错误
-        source: source || undefined,
-        ut,
-        appVersion: version || undefined,
-      });
-      if (!isAlive()) return;
-      setRecords(res.data?.records || []);
-      setTotal(res.data?.total || 0);
-    } catch {
-      if (isAlive()) toast.error('错误明细加载失败');
-    } finally {
-      if (isAlive()) setLoading(false);
-    }
-  }, [fingerprint, open, pageNum, source, ut, version]);
+  const fetchDetail = useCallback(
+    async (isAlive: () => boolean = () => true) => {
+      if (!fingerprint || !open) return;
+      setLoading(true);
+      try {
+        const res = await statApi.getErrorPage({
+          pageNum,
+          pageSize,
+          fingerprint,
+          // 继承列表页的来源/平台/版本筛选，否则明细会展示其它维度的同类错误
+          source: source || undefined,
+          ut,
+          appVersion: version || undefined,
+        });
+        if (!isAlive()) return;
+        setRecords(res.data?.records || []);
+        setTotal(res.data?.total || 0);
+      } catch {
+        if (isAlive()) toast.error('错误明细加载失败');
+      } finally {
+        if (isAlive()) setLoading(false);
+      }
+    },
+    [fingerprint, open, pageNum, source, ut, version],
+  );
 
   useEffect(() => {
     let alive = true;
@@ -572,7 +681,12 @@ function ErrorDetailDrawer({
   }, [fingerprint]);
 
   const columns = [
-    { title: '时间', dataIndex: 'occurTime', width: 110, render: (v: string) => (v ? dayjs(v).format('MM-DD HH:mm:ss') : '-') },
+    {
+      title: '时间',
+      dataIndex: 'occurTime',
+      width: 110,
+      render: (v: string) => (v ? dayjs(v).format('MM-DD HH:mm:ss') : '-'),
+    },
     {
       title: '类型',
       dataIndex: 'errorType',
@@ -585,16 +699,32 @@ function ErrorDetailDrawer({
       title: '来源',
       dataIndex: 'source',
       width: 110,
-      render: (v?: string) => <Tag color={dictColor(sourceOptions, v) || 'default'}>{dictLabel(sourceOptions, v, v || '-')}</Tag>,
+      render: (v?: string) => (
+        <Tag color={dictColor(sourceOptions, v) || 'default'}>
+          {dictLabel(sourceOptions, v, v || '-')}
+        </Tag>
+      ),
     },
     { title: '平台', dataIndex: 'ut', width: 100, render: (v?: string) => utLabel(utOptions, v) },
     { title: '版本', dataIndex: 'appVersion', width: 80 },
-    { title: 'IP 地址', dataIndex: 'ip', width: 130, render: (v?: string) => (v ? <Text code>{v}</Text> : '-') },
+    {
+      title: 'IP 地址',
+      dataIndex: 'ip',
+      width: 130,
+      render: (v?: string) => (v ? <Text code>{v}</Text> : '-'),
+    },
   ];
 
   return (
     <Drawer
-      title={<Space><Text code style={{ fontSize: 12 }}>{fingerprint?.slice(0, 16)}…</Text><Text type="secondary">错误明细</Text></Space>}
+      title={
+        <Space>
+          <Text code style={{ fontSize: 12 }}>
+            {fingerprint?.slice(0, 16)}…
+          </Text>
+          <Text type="secondary">错误明细</Text>
+        </Space>
+      }
       width={860}
       open={open}
       onClose={onClose}
@@ -610,9 +740,20 @@ function ErrorDetailDrawer({
         expandable={{
           expandedRowRender: (r) => (
             <div>
-              <p><b>机型：</b>{r.model || '-'} / {r.os || '-'}</p>
+              <p>
+                <b>机型：</b>
+                {r.model || '-'} / {r.os || '-'}
+              </p>
               {r.stack ? (
-                <pre style={{ maxHeight: 240, overflow: 'auto', background: 'var(--color-bg-base)', padding: 8, fontSize: 12 }}>
+                <pre
+                  style={{
+                    maxHeight: 240,
+                    overflow: 'auto',
+                    background: 'var(--color-bg-base)',
+                    padding: 8,
+                    fontSize: 12,
+                  }}
+                >
                   {r.stack}
                 </pre>
               ) : null}

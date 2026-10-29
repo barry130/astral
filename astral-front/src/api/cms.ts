@@ -220,8 +220,7 @@ export const cmsApi = {
   postPage: (params: CmsPostPageParams): Promise<ApiResult<CmsPageResult<CmsPost>>> =>
     request.get(`${BASE}/post/page`, { params }),
 
-  postDetail: (id: number): Promise<ApiResult<CmsPost>> =>
-    request.get(`${BASE}/post/${id}`),
+  postDetail: (id: number): Promise<ApiResult<CmsPost>> => request.get(`${BASE}/post/${id}`),
 
   createPost: (data: CmsPostSaveDto): Promise<ApiResult<number>> =>
     request.post(`${BASE}/post`, data),
@@ -232,12 +231,10 @@ export const cmsApi = {
   changePostStatus: (id: number, status: string): Promise<ApiResult<void>> =>
     request.put(`${BASE}/post/${id}/status`, { status }),
 
-  deletePost: (id: number): Promise<ApiResult<void>> =>
-    request.delete(`${BASE}/post/${id}`),
+  deletePost: (id: number): Promise<ApiResult<void>> => request.delete(`${BASE}/post/${id}`),
 
   // ---------- 分类 ----------
-  categoryTree: (): Promise<ApiResult<CmsCategory[]>> =>
-    request.get(`${BASE}/category/tree`),
+  categoryTree: (): Promise<ApiResult<CmsCategory[]>> => request.get(`${BASE}/category/tree`),
 
   createCategory: (data: CmsCategorySaveDto): Promise<ApiResult<number>> =>
     request.post(`${BASE}/category`, data),
@@ -249,24 +246,19 @@ export const cmsApi = {
     request.delete(`${BASE}/category/${id}`),
 
   // ---------- 标签 ----------
-  tagList: (): Promise<ApiResult<CmsTag[]>> =>
-    request.get(`${BASE}/tag/list`),
+  tagList: (): Promise<ApiResult<CmsTag[]>> => request.get(`${BASE}/tag/list`),
 
-  createTag: (data: CmsTagSaveDto): Promise<ApiResult<number>> =>
-    request.post(`${BASE}/tag`, data),
+  createTag: (data: CmsTagSaveDto): Promise<ApiResult<number>> => request.post(`${BASE}/tag`, data),
 
   updateTag: (id: number, data: CmsTagSaveDto): Promise<ApiResult<void>> =>
     request.put(`${BASE}/tag/${id}`, data),
 
-  deleteTag: (id: number): Promise<ApiResult<void>> =>
-    request.delete(`${BASE}/tag/${id}`),
+  deleteTag: (id: number): Promise<ApiResult<void>> => request.delete(`${BASE}/tag/${id}`),
 
   // ---------- Wiki 页面 ----------
-  pageTree: (): Promise<ApiResult<CmsWikiPage[]>> =>
-    request.get(`${BASE}/page/tree`),
+  pageTree: (): Promise<ApiResult<CmsWikiPage[]>> => request.get(`${BASE}/page/tree`),
 
-  pageDetail: (id: number): Promise<ApiResult<CmsWikiPage>> =>
-    request.get(`${BASE}/page/${id}`),
+  pageDetail: (id: number): Promise<ApiResult<CmsWikiPage>> => request.get(`${BASE}/page/${id}`),
 
   createPage: (data: CmsWikiPageSaveDto): Promise<ApiResult<number>> =>
     request.post(`${BASE}/page`, data),
@@ -277,8 +269,7 @@ export const cmsApi = {
   changePageStatus: (id: number, status: string): Promise<ApiResult<void>> =>
     request.put(`${BASE}/page/${id}/status`, { status }),
 
-  deletePage: (id: number): Promise<ApiResult<void>> =>
-    request.delete(`${BASE}/page/${id}`),
+  deletePage: (id: number): Promise<ApiResult<void>> => request.delete(`${BASE}/page/${id}`),
 
   // ---------- 评论 ----------
   commentPage: (params: CmsCommentPageParams): Promise<ApiResult<CmsPageResult<CmsComment>>> =>
@@ -287,8 +278,7 @@ export const cmsApi = {
   auditComment: (id: number, status: 'approved' | 'rejected'): Promise<ApiResult<void>> =>
     request.put(`${BASE}/comment/${id}/audit`, { status }),
 
-  deleteComment: (id: number): Promise<ApiResult<void>> =>
-    request.delete(`${BASE}/comment/${id}`),
+  deleteComment: (id: number): Promise<ApiResult<void>> => request.delete(`${BASE}/comment/${id}`),
 
   // ---------- 站点设置 ----------
   settingList: (): Promise<ApiResult<Record<string, string>>> =>
@@ -299,22 +289,26 @@ export const cmsApi = {
 
   // ---------- 分享链接 ----------
   /** 全部分享链接（分享管理页） */
-  shareList: (): Promise<ApiResult<CmsShare[]>> =>
-    request.get(`${BASE}/share/list`),
+  shareList: (): Promise<ApiResult<CmsShare[]>> => request.get(`${BASE}/share/list`),
 
   /** 某个内容的分享链接（文章/页面编辑页的分享面板） */
-  shareListByTarget: (targetType: 'post' | 'page', targetId: number): Promise<ApiResult<CmsShare[]>> =>
+  shareListByTarget: (
+    targetType: 'post' | 'page',
+    targetId: number,
+  ): Promise<ApiResult<CmsShare[]>> =>
     request.get(`${BASE}/share/list-by-target`, { params: { targetType, targetId } }),
 
   createShare: (data: CmsShareCreateDto): Promise<ApiResult<CmsShare>> =>
     request.post(`${BASE}/share`, data),
 
   /** 撤销单条分享链接 */
-  revokeShare: (id: number): Promise<ApiResult<void>> =>
-    request.delete(`${BASE}/share/${id}`),
+  revokeShare: (id: number): Promise<ApiResult<void>> => request.delete(`${BASE}/share/${id}`),
 
   /** 撤销某个内容的全部链接，返回撤销条数 */
-  revokeShareByTarget: (targetType: 'post' | 'page', targetId: number): Promise<ApiResult<number>> =>
+  revokeShareByTarget: (
+    targetType: 'post' | 'page',
+    targetId: number,
+  ): Promise<ApiResult<number>> =>
     request.delete(`${BASE}/share/by-target`, { params: { targetType, targetId } }),
 };
 

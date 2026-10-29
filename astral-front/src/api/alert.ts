@@ -67,8 +67,7 @@ export const alertApi = {
     request.post(`/api/v1/admin/alert/channel/${id}/test`),
 
   // 规则
-  listRules: (): Promise<ApiResult<AlertRule[]>> =>
-    request.get('/api/v1/admin/alert/rule/list'),
+  listRules: (): Promise<ApiResult<AlertRule[]>> => request.get('/api/v1/admin/alert/rule/list'),
   createRule: (data: Partial<AlertRule>): Promise<ApiResult<void>> =>
     request.post('/api/v1/admin/alert/rule', data),
   updateRule: (id: number, data: Partial<AlertRule>): Promise<ApiResult<void>> =>
@@ -77,6 +76,10 @@ export const alertApi = {
     request.delete(`/api/v1/admin/alert/rule/${id}`),
 
   // 触发记录
-  pageRecords: (pageNum = 1, pageSize = 10, ruleId?: number): Promise<ApiResult<{ records: AlertRecord[]; total: number }>> =>
+  pageRecords: (
+    pageNum = 1,
+    pageSize = 10,
+    ruleId?: number,
+  ): Promise<ApiResult<{ records: AlertRecord[]; total: number }>> =>
     request.get('/api/v1/admin/alert/record/page', { params: { pageNum, pageSize, ruleId } }),
 };

@@ -1,8 +1,23 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Button, Modal, Form, Input, InputNumber, Select, message, Popconfirm, Tag } from '@/components/antd-compat';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@/components/antd-compat/icons';
+import {
+  Button,
+  Modal,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  message,
+  Popconfirm,
+  Tag,
+} from '@/components/antd-compat';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ReloadOutlined,
+} from '@/components/antd-compat/icons';
 import { request } from '@/api/client';
 import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, DictOption } from '@/api/dict';
@@ -22,11 +37,26 @@ const TYPE_COLORS: Record<string, string> = {
   '5': 'magenta',
 };
 
+/** 权限行（sys_permission）：与后端 SysPermissionVo 对齐 */
+interface PermissionRow {
+  id: number;
+  domain?: string;
+  permissionCode: string;
+  permissionName: string;
+  /** 权限类型（1 菜单 2 接口，其余见权限类型字典） */
+  type?: number;
+  url?: string;
+  method?: string;
+  sort?: number;
+  status?: number;
+  remark?: string;
+}
+
 export default function PermissionPage() {
-  const [permissions, setPermissions] = useState<any[]>([]);
+  const [permissions, setPermissions] = useState<PermissionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingPermission, setEditingPermission] = useState<any>(null);
+  const [editingPermission, setEditingPermission] = useState<PermissionRow | null>(null);
   const [typeOptions, setTypeOptions] = useState<DictOption[]>([]);
   const [domainFilter, setDomainFilter] = useState<string | undefined>(undefined);
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
@@ -41,7 +71,7 @@ export default function PermissionPage() {
       .catch(() => {});
   }, []);
 
-  const typeLabel = (type: any): string => {
+  const typeLabel = (type: number | undefined): string => {
     const key = String(type ?? '');
     const hit = typeOptions.find((o) => String(o.value) === key);
     return hit ? hit.label : key || '-';
@@ -51,18 +81,18 @@ export default function PermissionPage() {
     setLoading(true);
     try {
       const res = await request.get('/api/v1/admin/system/permission/page', {
-        params: { pageNum: 1, pageSize: 1000 }
+        params: { pageNum: 1, pageSize: 1000 },
       });
       setPermissions(res.data.records || []);
-    } catch (error: any) {
-      message.error(error.message || '获取权限列表失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '获取权限列表失败');
     } finally {
       setLoading(false);
     }
   };
 
   /** 权限域：后端 domain 字段为准，缺失时回退权限码首段 */
-  const domainOf = (record: any): string => {
+  const domainOf = (record: PermissionRow): string => {
     if (record?.domain) return record.domain;
     const code: string = record?.permissionCode || '';
     const idx = code.indexOf(':');
@@ -85,8 +115,14 @@ export default function PermissionPage() {
       .filter((p) => (sideFilter ? sideOfCode(p.permissionCode) === sideFilter : true))
       .filter((p) => {
         if (!kw) return true;
-        return String(p.permissionCode || '').toLowerCase().includes(kw)
-          || String(p.permissionName || '').toLowerCase().includes(kw);
+        return (
+          String(p.permissionCode || '')
+            .toLowerCase()
+            .includes(kw) ||
+          String(p.permissionName || '')
+            .toLowerCase()
+            .includes(kw)
+        );
       })
       .sort((a, b) => {
         const d = domainOf(a).localeCompare(domainOf(b));
@@ -106,7 +142,7 @@ export default function PermissionPage() {
     setModalVisible(true);
   };
 
-  const handleEdit = (record: any) => {
+  const handleEdit = (record: PermissionRow) => {
     setEditingPermission(record);
     form.setFieldsValue(record);
     setModalVisible(true);
@@ -117,8 +153,8 @@ export default function PermissionPage() {
       await request.delete(`/api/v1/admin/system/permission/${id}`);
       message.success('删除成功');
       fetchPermissions();
-    } catch (error: any) {
-      message.error(error.message || '删除失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '删除失败');
     }
   };
 
@@ -134,8 +170,8 @@ export default function PermissionPage() {
       }
       setModalVisible(false);
       fetchPermissions();
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '操作失败');
     }
   };
 
@@ -144,7 +180,7 @@ export default function PermissionPage() {
       title: '权限域',
       dataIndex: 'domain',
       width: 110,
-      render: (_: any, record: any) => <Tag color="cyan">{domainOf(record)}</Tag>,
+      render: (_: unknown, record: PermissionRow) => <Tag color="cyan">{domainOf(record)}</Tag>,
     },
     {
       // 显式 key：与下一列同 dataIndex（permissionCode），不写 key 会让两列派生出
@@ -153,7 +189,7 @@ export default function PermissionPage() {
       dataIndex: 'permissionCode',
       key: 'side',
       width: 90,
-      render: (_: any, record: any) => <PermissionSideTag code={record.permissionCode} />,
+      render: (_: unknown, record: PermissionRow) => <PermissionSideTag code={record.permissionCode} />,
     },
     { title: '权限编码', dataIndex: 'permissionCode', width: 260 },
     { title: '权限名称', dataIndex: 'permissionName' },
@@ -179,20 +215,33 @@ export default function PermissionPage() {
     {
       title: '操作',
       width: 150,
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: PermissionRow) => (
         <>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+            编辑
+          </Button>
           <Popconfirm title="确定删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />}>删除</Button>
+            <Button type="link" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
           </Popconfirm>
         </>
-      )
-    }
+      ),
+    },
   ];
 
   return (
     <div>
-      <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <div
+        className="filter-bar"
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: 12,
+          flexWrap: 'wrap',
+        }}
+      >
         <h2 className="page-title">权限管理</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Input
@@ -200,7 +249,7 @@ export default function PermissionPage() {
             allowClear
             style={{ width: 220 }}
             value={keyword}
-            onChange={(e: any) => setKeyword(e.target.value)}
+            onChange={(e) => setKeyword(e.target.value)}
           />
           <Select
             placeholder="权限域"
@@ -209,7 +258,11 @@ export default function PermissionPage() {
             value={domainFilter}
             onChange={(v: string | undefined) => setDomainFilter(v)}
           >
-            {domainOptions.map((d) => <Option key={d} value={d}>{d}</Option>)}
+            {domainOptions.map((d) => (
+              <Option key={d} value={d}>
+                {d}
+              </Option>
+            ))}
           </Select>
           <Select
             placeholder="端"
@@ -219,7 +272,9 @@ export default function PermissionPage() {
             onChange={(v: string | undefined) => setSideFilter(v)}
           >
             {Object.entries(SIDE_META).map(([value, meta]) => (
-              <Option key={value} value={value}>{meta.label}</Option>
+              <Option key={value} value={value}>
+                {meta.label}
+              </Option>
             ))}
           </Select>
           <Select
@@ -229,10 +284,18 @@ export default function PermissionPage() {
             value={typeFilter}
             onChange={(v: string | undefined) => setTypeFilter(v)}
           >
-            {typeOptions.map((o) => <Option key={o.value} value={String(o.value)}>{o.label}</Option>)}
+            {typeOptions.map((o) => (
+              <Option key={o.value} value={String(o.value)}>
+                {o.label}
+              </Option>
+            ))}
           </Select>
-          <Button icon={<ReloadOutlined />} onClick={fetchPermissions}>刷新</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新建权限</Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchPermissions}>
+            刷新
+          </Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            新建权限
+          </Button>
         </div>
       </div>
       <ResizableTable
@@ -250,20 +313,36 @@ export default function PermissionPage() {
         onCancel={() => setModalVisible(false)}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="permissionCode" label="权限编码" rules={[{ required: true }]}
-            extra="规范：端:域:资源:操作[:范围]，端=admin(管理端)/user(用户端)/all(通用)，如 admin:system:user:view、user:qt:update:channel:beta。全小写；范围段用于结果级权限">
+          <Form.Item
+            name="permissionCode"
+            label="权限编码"
+            rules={[{ required: true }]}
+            extra="规范：端:域:资源:操作[:范围]，端=admin(管理端)/user(用户端)/all(通用)，如 admin:system:user:view、user:qt:update:channel:beta。全小写；范围段用于结果级权限"
+          >
             <Input placeholder="如: admin:system:user:view" />
           </Form.Item>
           <Form.Item name="permissionName" label="权限名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="domain" label="权限域" extra="留空按权限码首段归域（管理端按域分组展示）">
+          <Form.Item
+            name="domain"
+            label="权限域"
+            extra="留空按权限码首段归域（管理端按域分组展示）"
+          >
             <Input placeholder="如: system / qt / storage" />
           </Form.Item>
-          <Form.Item name="type" label="类型" rules={[{ required: true }]}
-            extra="接口=控制 API 可达性；数据=结果级权限（同一接口按人群返回不同结果）">
+          <Form.Item
+            name="type"
+            label="类型"
+            rules={[{ required: true }]}
+            extra="接口=控制 API 可达性；数据=结果级权限（同一接口按人群返回不同结果）"
+          >
             <Select>
-              {typeOptions.map((o) => <Option key={o.value} value={Number(o.value)}>{o.label}</Option>)}
+              {typeOptions.map((o) => (
+                <Option key={o.value} value={Number(o.value)}>
+                  {o.label}
+                </Option>
+              ))}
             </Select>
           </Form.Item>
           <Form.Item name="url" label="路径">
@@ -277,7 +356,11 @@ export default function PermissionPage() {
               <Option value="DELETE">DELETE</Option>
             </Select>
           </Form.Item>
-          <Form.Item name="parentId" label="父级ID" extra="留空或 0 表示顶级；仅菜单树（目录/菜单/按钮）需要挂父级">
+          <Form.Item
+            name="parentId"
+            label="父级ID"
+            extra="留空或 0 表示顶级；仅菜单树（目录/菜单/按钮）需要挂父级"
+          >
             <InputNumber style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="icon" label="图标">

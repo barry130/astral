@@ -47,18 +47,16 @@ export function toPath(name: NamePath | undefined): (string | number)[] {
   if (name === undefined || name === null) return [];
   if (Array.isArray(name)) return name.map((s) => (typeof s === 'number' ? s : String(s)));
   if (typeof name === 'number') return [name];
-  return name
-    .split('.')
-    .flatMap((seg) => {
-      const out: (string | number)[] = [];
-      const re = /([^[\]]+)|\[(\d+)\]/g;
-      let m: RegExpExecArray | null;
-      while ((m = re.exec(seg))) {
-        if (m[1] !== undefined) out.push(m[1]);
-        else if (m[2] !== undefined) out.push(Number(m[2]));
-      }
-      return out.length ? out : [seg];
-    });
+  return name.split('.').flatMap((seg) => {
+    const out: (string | number)[] = [];
+    const re = /([^[\]]+)|\[(\d+)\]/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(seg))) {
+      if (m[1] !== undefined) out.push(m[1]);
+      else if (m[2] !== undefined) out.push(Number(m[2]));
+    }
+    return out.length ? out : [seg];
+  });
 }
 
 export const pathKey = (path: (string | number)[]): string => path.map(String).join(PATH_SEP);
@@ -87,7 +85,11 @@ export function setAtPath(root: any, path: (string | number)[], value: any): any
       : Array.isArray(root)
         ? [...root]
         : { ...root };
-  base[head as any] = setAtPath(root === null || root === undefined ? undefined : root[head as any], rest, value);
+  base[head as any] = setAtPath(
+    root === null || root === undefined ? undefined : root[head as any],
+    rest,
+    value,
+  );
   return base;
 }
 
@@ -106,7 +108,10 @@ function deleteAtPath(root: any, path: (string | number)[]): any {
 }
 
 const isPlainObject = (v: any): boolean =>
-  v !== null && typeof v === 'object' && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
+  v !== null &&
+  typeof v === 'object' &&
+  !Array.isArray(v) &&
+  Object.getPrototypeOf(v) === Object.prototype;
 
 export function deepClone<T>(v: T): T {
   if (Array.isArray(v)) return v.map((x) => deepClone(x)) as unknown as T;
@@ -167,7 +172,8 @@ export async function runRules(value: any, rules: FormRule[]): Promise<string | 
     if (rule.required && empty) return rule.message ?? '此项为必填项';
     if (empty) continue;
 
-    if (rule.whitespace && typeof v === 'string' && !v.trim()) return rule.message ?? '不能为纯空白字符';
+    if (rule.whitespace && typeof v === 'string' && !v.trim())
+      return rule.message ?? '不能为纯空白字符';
 
     switch (rule.type) {
       case 'email':
@@ -220,8 +226,9 @@ export async function runRules(value: any, rules: FormRule[]): Promise<string | 
     if (rule.validator) {
       try {
         await rule.validator(rule, v);
-      } catch (err: any) {
-        return err?.message ?? rule.message ?? '校验失败';
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : undefined;
+        return msg ?? rule.message ?? '校验失败';
       }
     }
   }
@@ -328,7 +335,8 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
       if (path.length === 0) return;
       inst._touched.add(pathKey(path));
       inst._store = setAtPath(inst._store, path, value);
-      if (inst._errors[pathKey(path)]) inst._errors = { ...inst._errors, [pathKey(path)]: undefined };
+      if (inst._errors[pathKey(path)])
+        inst._errors = { ...inst._errors, [pathKey(path)]: undefined };
       inst._notify();
     },
 
@@ -381,14 +389,19 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
       if (firstKey !== null) {
         throw {
           values: inst._values(),
-          errorFields: Object.keys(nextErrors).map((k) => ({ name: keyToPath(k), errors: [nextErrors[k]] })),
+          errorFields: Object.keys(nextErrors).map((k) => ({
+            name: keyToPath(k),
+            errors: [nextErrors[k]],
+          })),
         };
       }
       return inst._values() as Values;
     },
 
     submit() {
-      const formEl = document.querySelector<HTMLFormElement>(`form[data-form-id="${inst._formId ?? ''}"]`);
+      const formEl = document.querySelector<HTMLFormElement>(
+        `form[data-form-id="${inst._formId ?? ''}"]`,
+      );
       formEl?.requestSubmit?.();
     },
 
@@ -512,7 +525,7 @@ function FormRoot({
   layout = 'vertical',
   onFinish,
   onFinishFailed,
-  onValuesChange,
+  onValuesChange: _onValuesChange,
   disabled,
   labelCol,
   wrapperCol,
@@ -640,7 +653,7 @@ function FormItem({
   getValueFromEvent,
   getValueProps,
   noStyle,
-  shouldUpdate,
+  shouldUpdate: _shouldUpdate,
   tooltip,
   extra,
   help,
@@ -674,7 +687,11 @@ function FormItem({
     };
     const expanded: FormRule[] = (rules ?? []).map((r) => (typeof r === 'function' ? r(utils) : r));
     const effRules =
-      required !== undefined && required !== false ? [{ required: true }, ...expanded] : expanded.length ? expanded : undefined;
+      required !== undefined && required !== false
+        ? [{ required: true }, ...expanded]
+        : expanded.length
+          ? expanded
+          : undefined;
     inst._registerField(path, initialValue, effRules);
   }
 
@@ -691,14 +708,22 @@ function FormItem({
     };
     const rendered = (children as (u: FormItemRenderUtils) => ReactNode)(renderUtils);
     if (noStyle) return <>{rendered}</>;
-    return <FormItemFrame {...{ label, tooltip, extra, help, validateStatus, className, style, layoutCtx, fieldId }}>{rendered}</FormItemFrame>;
+    return (
+      <FormItemFrame
+        {...{ label, tooltip, extra, help, validateStatus, className, style, layoutCtx, fieldId }}
+      >
+        {rendered}
+      </FormItemFrame>
+    );
   }
 
   /* ---------- 无 name：纯布局包装（支持嵌套 Form.Item） ---------- */
   if (!key || !inst) {
     if (noStyle) return <>{children as ReactNode}</>;
     return (
-      <FormItemFrame {...{ label, tooltip, extra, help, validateStatus, className, style, layoutCtx, fieldId }}>
+      <FormItemFrame
+        {...{ label, tooltip, extra, help, validateStatus, className, style, layoutCtx, fieldId }}
+      >
         {children as ReactNode}
       </FormItemFrame>
     );
@@ -720,7 +745,9 @@ function FormItem({
     ? (children.props as Record<string, any> | null)?.[trigger]
     : undefined;
   injected[trigger] = (...args: any[]) => {
-    const next = getValueFromEvent ? getValueFromEvent(...args) : defaultGetValueFromEvent(valuePropName, args);
+    const next = getValueFromEvent
+      ? getValueFromEvent(...args)
+      : defaultGetValueFromEvent(valuePropName, args);
     inst.setFieldValue(path, next);
     if (inst._errors[key]) void inst.validateFields([path]);
     if (typeof childTriggerHandler === 'function') childTriggerHandler(...args);
@@ -739,15 +766,29 @@ function FormItem({
     return (
       <>
         {control}
-        {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : null}
+        {error ? <p className="text-destructive mt-1 text-xs">{error}</p> : null}
       </>
     );
   }
 
   return (
     <FormItemFrame
-      {...{ label, tooltip, extra, help: error ?? help, validateStatus: status, className, style, layoutCtx, fieldId }}
-      required={required !== undefined ? required : rules?.some((r) => typeof r !== 'function' && r.required)}
+      {...{
+        label,
+        tooltip,
+        extra,
+        help: error ?? help,
+        validateStatus: status,
+        className,
+        style,
+        layoutCtx,
+        fieldId,
+      }}
+      required={
+        required !== undefined
+          ? required
+          : rules?.some((r) => typeof r !== 'function' && r.required)
+      }
       hidden={hidden}
     >
       {control}
@@ -794,7 +835,7 @@ function FormItemFrame({
   const labelNode = label ? (
     <label
       className={cn(
-        'flex items-center gap-1 text-[13px] font-medium leading-none text-foreground',
+        'text-foreground flex items-center gap-1 text-[13px] leading-none font-medium',
         layoutCtx.layout === 'vertical' ? 'mb-1.5' : 'pt-2',
       )}
       htmlFor={fieldId}
@@ -802,8 +843,17 @@ function FormItemFrame({
       {required ? <span className="text-destructive">*</span> : null}
       <span>{label}</span>
       {tooltip ? (
-        <span className="cursor-help text-muted-foreground" title={typeof tooltip === 'string' ? tooltip : undefined}>
-          <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2">
+        <span
+          className="text-muted-foreground cursor-help"
+          title={typeof tooltip === 'string' ? tooltip : undefined}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="size-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <circle cx="12" cy="12" r="10" />
             <path d="M12 16v-4M12 8h.01" />
           </svg>
@@ -815,8 +865,8 @@ function FormItemFrame({
   const body = (
     <>
       {children}
-      {help && isError ? <p className="mt-1 text-xs text-destructive">{help}</p> : null}
-      {!isError && extra ? <p className="mt-1 text-xs text-muted-foreground">{extra}</p> : null}
+      {help && isError ? <p className="text-destructive mt-1 text-xs">{help}</p> : null}
+      {!isError && extra ? <p className="text-muted-foreground mt-1 text-xs">{extra}</p> : null}
     </>
   );
 
@@ -866,7 +916,11 @@ export interface FormListOperation {
 export interface FormListProps {
   name: NamePath;
   initialValue?: any[];
-  children: (fields: FormListField[], operation: FormListOperation, meta: { errors: ReactNode[] }) => ReactNode;
+  children: (
+    fields: FormListField[],
+    operation: FormListOperation,
+    meta: { errors: ReactNode[] },
+  ) => ReactNode;
 }
 
 function FormList({ name, initialValue, children }: FormListProps) {
@@ -889,15 +943,18 @@ function FormList({ name, initialValue, children }: FormListProps) {
   const operation: FormListOperation = {
     add: (defaultValue?: any, insertIndex?: number) => {
       if (!inst) return;
-      const current: any[] = getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? [];
+      const current: any[] =
+        getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? [];
       const next = [...current];
-      const idx = insertIndex === undefined ? next.length : Math.max(0, Math.min(insertIndex, next.length));
+      const idx =
+        insertIndex === undefined ? next.length : Math.max(0, Math.min(insertIndex, next.length));
       next.splice(idx, 0, defaultValue);
       inst.setFieldValue(path, next);
     },
     remove: (index: number) => {
       if (!inst) return;
-      const current: any[] = getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? [];
+      const current: any[] =
+        getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? [];
       inst.setFieldValue(
         path,
         current.filter((_, i) => i !== index),
@@ -905,7 +962,9 @@ function FormList({ name, initialValue, children }: FormListProps) {
     },
     move: (from: number, to: number) => {
       if (!inst) return;
-      const current: any[] = [...(getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? [])];
+      const current: any[] = [
+        ...(getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? []),
+      ];
       if (from < 0 || from >= current.length || to < 0 || to >= current.length) return;
       const [item] = current.splice(from, 1);
       current.splice(to, 0, item);
@@ -913,13 +972,19 @@ function FormList({ name, initialValue, children }: FormListProps) {
     },
     insert: (index: number, value: any) => {
       if (!inst) return;
-      const current: any[] = [...(getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? [])];
+      const current: any[] = [
+        ...(getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? []),
+      ];
       current.splice(index, 0, value);
       inst.setFieldValue(path, current);
     },
   };
 
-  return <FormListContext.Provider value={path}>{children(fields, operation, { errors: [] })}</FormListContext.Provider>;
+  return (
+    <FormListContext.Provider value={path}>
+      {children(fields, operation, { errors: [] })}
+    </FormListContext.Provider>
+  );
 }
 
 (FormList as any)[FORM_ITEM_FLAG] = true;

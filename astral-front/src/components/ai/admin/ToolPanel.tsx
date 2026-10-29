@@ -180,7 +180,9 @@ export default function ToolPanel() {
       title: '审批',
       dataIndex: 'approvalPolicy',
       width: 110,
-      render: (value: string) => <StatusTag dict={dict} code="ai_tool_approval_policy" value={value} />,
+      render: (value: string) => (
+        <StatusTag dict={dict} code="ai_tool_approval_policy" value={value} />
+      ),
     },
     {
       key: 'clients',
@@ -212,7 +214,9 @@ export default function ToolPanel() {
       title: '说明',
       dataIndex: 'description',
       ellipsis: true,
-      render: (value: string) => <span style={{ fontSize: 12, opacity: 0.7 }}>{truncate(value, 70)}</span>,
+      render: (value: string) => (
+        <span style={{ fontSize: 12, opacity: 0.7 }}>{truncate(value, 70)}</span>
+      ),
     },
     {
       key: 'action',
@@ -236,10 +240,20 @@ export default function ToolPanel() {
       <Hint>
         工具是模型能调用的动作白名单。<strong>只能改元数据，不能新增工具</strong>——
         新增工具必须在新代码里实现 `AiToolProvider` 并部署，否则等于给模型开一个任意执行口子。
-        标记为 HIGH 且审批为 ADMIN_CONFIRM 的工具，即使智能体配置里写了允许，也要人工点通过才会执行。
+        标记为 HIGH 且审批为 ADMIN_CONFIRM
+        的工具，即使智能体配置里写了允许，也要人工点通过才会执行。
       </Hint>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+          gap: 8,
+          flexWrap: 'wrap',
+        }}
+      >
         <Space size={8} wrap>
           <Tag color="default">共 {stats.total}</Tag>
           <Tag color={stats.high > 0 ? 'error' : 'default'}>高危 {stats.high}</Tag>
@@ -278,10 +292,21 @@ export default function ToolPanel() {
             onChange={(value) => setApprovalFilter(value)}
             options={dict.options('ai_tool_approval_policy')}
           />
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
-          <Button size="small" icon={<DatabaseOutlined />} loading={syncing} disabled={!canEdit} onClick={() => void doSync()}>
+          <Button
+            size="small"
+            icon={<DatabaseOutlined />}
+            loading={syncing}
+            disabled={!canEdit}
+            onClick={() => void doSync()}
+          >
             从代码同步
           </Button>
         </Space>
@@ -307,7 +332,11 @@ export default function ToolPanel() {
           <Spin />
         </div>
       ) : filtered.length === 0 ? (
-        <Empty description={tools.length === 0 ? '还没有登记任何工具，点「从代码同步」拉取' : '没有匹配的工具'} />
+        <Empty
+          description={
+            tools.length === 0 ? '还没有登记任何工具，点「从代码同步」拉取' : '没有匹配的工具'
+          }
+        />
       ) : (
         <ResizableTable
           resizeKey="ai-tool"
@@ -339,25 +368,50 @@ export default function ToolPanel() {
               message="只能改展示与策略"
               description={
                 <span style={{ fontSize: 12.5 }}>
-                  工具编码 <code>{modal.row.toolCode}</code> 与处理器 <code>{modal.row.handlerKey}</code> 由代码决定，
-                  这里改不了。要新增工具，请在后端实现 <code>AiToolProvider</code> 后点「从代码同步」。
+                  工具编码 <code>{modal.row.toolCode}</code> 与处理器{' '}
+                  <code>{modal.row.handlerKey}</code> 由代码决定，
+                  这里改不了。要新增工具，请在后端实现 <code>AiToolProvider</code>{' '}
+                  后点「从代码同步」。
                 </span>
               }
             />
-            <Form.Item name="name" label="显示名" rules={[{ required: true, message: '请输入显示名' }]}>
+            <Form.Item
+              name="name"
+              label="显示名"
+              rules={[{ required: true, message: '请输入显示名' }]}
+            >
               <Input maxLength={128} />
             </Form.Item>
-            <Form.Item name="description" label="描述" extra="这段描述会进模型的工具说明，写清楚「什么时候该用」">
+            <Form.Item
+              name="description"
+              label="描述"
+              extra="这段描述会进模型的工具说明，写清楚「什么时候该用」"
+            >
               <Input.TextArea rows={3} maxLength={512} />
             </Form.Item>
             <Space size={12} style={{ display: 'flex' }}>
-              <Form.Item name="riskLevel" label="风险等级" style={{ flex: 1 }} rules={[{ required: true }]}>
+              <Form.Item
+                name="riskLevel"
+                label="风险等级"
+                style={{ flex: 1 }}
+                rules={[{ required: true }]}
+              >
                 <Select options={dict.options('ai_tool_risk_level')} />
               </Form.Item>
-              <Form.Item name="approvalPolicy" label="审批策略" style={{ flex: 1 }} rules={[{ required: true }]}>
+              <Form.Item
+                name="approvalPolicy"
+                label="审批策略"
+                style={{ flex: 1 }}
+                rules={[{ required: true }]}
+              >
                 <Select options={dict.options('ai_tool_approval_policy')} />
               </Form.Item>
-              <Form.Item name="status" label="状态" style={{ flex: 1 }} rules={[{ required: true }]}>
+              <Form.Item
+                name="status"
+                label="状态"
+                style={{ flex: 1 }}
+                rules={[{ required: true }]}
+              >
                 <Select
                   options={[
                     { label: '启用', value: 'ENABLED' },

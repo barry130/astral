@@ -3,8 +3,6 @@
 import React, { type ReactNode } from 'react';
 import { InboxIcon } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
-
 /**
  * 统一空状态
  *
@@ -48,16 +46,18 @@ export function EmptyState({
       {image ? (
         <div className="mb-3">{image}</div>
       ) : icon ? (
-        <div className="mb-3 text-muted-foreground" aria-hidden>
+        <div className="text-muted-foreground mb-3" aria-hidden>
           {icon}
         </div>
       ) : (
-        <InboxIcon className="mb-3 size-8 text-muted-foreground/60" strokeWidth={1.5} aria-hidden />
+        <InboxIcon className="text-muted-foreground/60 mb-3 size-8" strokeWidth={1.5} aria-hidden />
       )}
 
       <div className="max-w-[420px] text-center">
-        <div className="text-[13.5px] leading-relaxed text-muted-foreground">{description}</div>
-        {hint ? <div className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground/70">{hint}</div> : null}
+        <div className="text-muted-foreground text-[13.5px] leading-relaxed">{description}</div>
+        {hint ? (
+          <div className="text-muted-foreground/70 mt-1 text-[12.5px] leading-relaxed">{hint}</div>
+        ) : null}
       </div>
 
       {action ? <div className="mt-3 flex flex-wrap justify-center gap-2">{action}</div> : null}

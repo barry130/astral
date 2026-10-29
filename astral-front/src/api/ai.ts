@@ -715,7 +715,8 @@ export const aiPromptApi = {
     request.post<AiPromptTemplate>('/api/v1/admin/ai/prompts', data),
   update: (id: number, data: Partial<AiPromptTemplate>) =>
     request.put<AiPromptTemplate>(`/api/v1/admin/ai/prompts/${id}`, data),
-  versions: (id: number) => request.get<AiPromptVersion[]>(`/api/v1/admin/ai/prompts/${id}/versions`),
+  versions: (id: number) =>
+    request.get<AiPromptVersion[]>(`/api/v1/admin/ai/prompts/${id}/versions`),
   createVersion: (id: number, data: Partial<AiPromptVersion>) =>
     request.post<AiPromptVersion>(`/api/v1/admin/ai/prompts/${id}/versions`, data),
   updateVersion: (versionId: number, data: Partial<AiPromptVersion>) =>
@@ -728,7 +729,8 @@ export const aiPromptApi = {
 
 export const aiKnowledgeApi = {
   listSources: () => request.get<AiKnowledgeSource[]>('/api/v1/admin/ai/knowledge/sources'),
-  source: (id: number) => request.get<AiKnowledgeSource>(`/api/v1/admin/ai/knowledge/sources/${id}`),
+  source: (id: number) =>
+    request.get<AiKnowledgeSource>(`/api/v1/admin/ai/knowledge/sources/${id}`),
   createSource: (data: Partial<AiKnowledgeSource>) =>
     request.post<AiKnowledgeSource>('/api/v1/admin/ai/knowledge/sources', data),
   updateSource: (id: number, data: Partial<AiKnowledgeSource>) =>
@@ -756,7 +758,10 @@ export const aiToolApi = {
   update: (id: number, data: Partial<AiTool>) =>
     request.put<AiTool>(`/api/v1/admin/ai/tools/${id}`, data),
   approve: (toolCallId: number, approved: boolean, comment?: string) =>
-    request.post<unknown>(`/api/v1/admin/ai/tool-calls/${toolCallId}/approve`, { approved, comment }),
+    request.post<unknown>(`/api/v1/admin/ai/tool-calls/${toolCallId}/approve`, {
+      approved,
+      comment,
+    }),
 };
 
 /* ==================== 管理端：额度 / 用量 / 请求 / 审计 / 总览 ==================== */
@@ -808,7 +813,10 @@ export const aiRequestApi = {
     clientType?: string;
     pageNum?: number;
     pageSize?: number;
-  }) => request.get<PageResult<AiConversationAudit>>('/api/v1/admin/ai/conversation-audits', { params }),
+  }) =>
+    request.get<PageResult<AiConversationAudit>>('/api/v1/admin/ai/conversation-audits', {
+      params,
+    }),
   /** 会话正文（需要 `admin:ai:conversation:content:view`，后端会记审计日志） */
   conversationMessages: (id: number, beforeId?: number, limit?: number) =>
     request.get<AiAdminMessage[]>(`/api/v1/admin/ai/conversation-audits/${id}/messages`, {
@@ -863,7 +871,12 @@ export const aiChatApi = {
       idempotencyKey?: string;
     },
     config?: ApiRequestConfig,
-  ) => request.post<AiSendResult>(`/api/v1/admin/ai/conversations/${conversationId}/messages`, data, config),
+  ) =>
+    request.post<AiSendResult>(
+      `/api/v1/admin/ai/conversations/${conversationId}/messages`,
+      data,
+      config,
+    ),
 
   /** 拉取事件（after 传已消费的最大 sequence，实现断线续传） */
   events: (requestId: number, after?: number, limit?: number) =>
@@ -873,8 +886,10 @@ export const aiChatApi = {
     }),
   cancel: (requestId: number, reason?: string) =>
     request.post<unknown>(`/api/v1/admin/ai/requests/${requestId}/cancel`, { reason }),
-  feedback: (messageId: number, data: { feedbackType: string; reasonCode?: string; comment?: string }) =>
-    request.post<unknown>(`/api/v1/admin/ai/messages/${messageId}/feedback`, data),
+  feedback: (
+    messageId: number,
+    data: { feedbackType: string; reasonCode?: string; comment?: string },
+  ) => request.post<unknown>(`/api/v1/admin/ai/messages/${messageId}/feedback`, data),
   executeAction: (data: {
     actionId: string;
     actionType: string;
@@ -924,7 +939,12 @@ export const aiAppApi = {
       idempotencyKey?: string;
     },
     config?: ApiRequestConfig,
-  ) => request.post<AiSendResult>(`/api/v1/app/ai/conversations/${conversationId}/messages`, data, config),
+  ) =>
+    request.post<AiSendResult>(
+      `/api/v1/app/ai/conversations/${conversationId}/messages`,
+      data,
+      config,
+    ),
   events: (requestId: number, after?: number, limit?: number) =>
     request.get<AiEventBatch>(`/api/v1/app/ai/requests/${requestId}/events`, {
       params: { after, limit },
@@ -932,8 +952,10 @@ export const aiAppApi = {
     }),
   cancel: (requestId: number, reason?: string) =>
     request.post<unknown>(`/api/v1/app/ai/requests/${requestId}/cancel`, { reason }),
-  feedback: (messageId: number, data: { feedbackType: string; reasonCode?: string; comment?: string }) =>
-    request.post<unknown>(`/api/v1/app/ai/messages/${messageId}/feedback`, data),
+  feedback: (
+    messageId: number,
+    data: { feedbackType: string; reasonCode?: string; comment?: string },
+  ) => request.post<unknown>(`/api/v1/app/ai/messages/${messageId}/feedback`, data),
   executeAction: (data: {
     actionId: string;
     actionType: string;

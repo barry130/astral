@@ -32,9 +32,7 @@ export const dictApi = {
 /**
  * 拉取多个字典编码对应的选项，返回 { [code]: DictOption[] }
  */
-export async function fetchDictOptions(
-  codes: string[],
-): Promise<Record<string, DictOption[]>> {
+export async function fetchDictOptions(codes: string[]): Promise<Record<string, DictOption[]>> {
   const results = await Promise.all(codes.map((c) => dictApi.byCode(c)));
   const map: Record<string, DictOption[]> = {};
   results.forEach((res, i) => {
@@ -49,7 +47,11 @@ export async function fetchDictOptions(
 }
 
 /** 取字典项文字；字典未加载或缺失时回退到原值 */
-export function dictLabel(options: DictOption[] | undefined, value: unknown, fallback = '-'): string {
+export function dictLabel(
+  options: DictOption[] | undefined,
+  value: unknown,
+  fallback = '-',
+): string {
   if (value === null || value === undefined || value === '') return fallback;
   const hit = options?.find((o) => o.value === String(value));
   return hit?.label ?? String(value);

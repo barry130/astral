@@ -1,5 +1,4 @@
 import { request, ApiResult } from './client';
-import type { PageResult } from './types';
 
 /** 邮箱账户 */
 export interface MailAccount {
@@ -71,12 +70,13 @@ export const mailApi = {
     request.post('/api/v1/admin/system/mail/account', data),
   accountUpdate: (id: number, data: Partial<MailAccount>) =>
     request.put(`/api/v1/admin/system/mail/account/${id}`, data),
-  accountDelete: (id: number) =>
-    request.delete(`/api/v1/admin/system/mail/account/${id}`),
+  accountDelete: (id: number) => request.delete(`/api/v1/admin/system/mail/account/${id}`),
   accountToggle: (id: number, enabled: number) =>
     request.post(`/api/v1/admin/system/mail/account/${id}/toggle`, null, { params: { enabled } }),
   accountTest: (accountId: number, toEmail: string) =>
-    request.post('/api/v1/admin/system/mail/account/test', null, { params: { accountId, toEmail } }),
+    request.post('/api/v1/admin/system/mail/account/test', null, {
+      params: { accountId, toEmail },
+    }),
 
   // ===== 邮件模板 =====
   templatePage: (pageNum: number, pageSize: number) =>
@@ -87,10 +87,11 @@ export const mailApi = {
     request.post('/api/v1/admin/system/mail/template', data),
   templateUpdate: (id: number, data: Partial<MailTemplate>) =>
     request.put(`/api/v1/admin/system/mail/template/${id}`, data),
-  templateDelete: (id: number) =>
-    request.delete(`/api/v1/admin/system/mail/template/${id}`),
+  templateDelete: (id: number) => request.delete(`/api/v1/admin/system/mail/template/${id}`),
   templatePreview: (templateId: number, variables: Record<string, string>) =>
     request.post('/api/v1/admin/system/mail/template/preview', { templateId, variables }),
-  templateSend: (id: number, data: { toEmail: string; accountId?: number; variables?: Record<string, string> }) =>
-    request.post(`/api/v1/admin/system/mail/template/${id}/send`, data),
+  templateSend: (
+    id: number,
+    data: { toEmail: string; accountId?: number; variables?: Record<string, string> },
+  ) => request.post(`/api/v1/admin/system/mail/template/${id}/send`, data),
 };

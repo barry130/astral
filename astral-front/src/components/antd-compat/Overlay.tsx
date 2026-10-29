@@ -5,7 +5,15 @@
  * Modal / Drawer / Tabs（含 TabPane 旧写法）
  */
 
-import { Children, isValidElement, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  Children,
+  isValidElement,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Loader2, X } from 'lucide-react';
 
@@ -61,7 +69,7 @@ export function Modal({
   onCancel,
   okText = '确定',
   cancelText = '取消',
-  okType = 'primary',
+  okType: _okType = 'primary',
   confirmLoading,
   okButtonProps,
   cancelButtonProps,
@@ -93,7 +101,8 @@ export function Modal({
   // 桌面端按调用方/默认宽度展示；手机上任何宽度都会被压到「视口 − 32px」，
   // 左右各留 16px 安全边距（否则 maxWidth 是内联样式，会盖掉 DialogContent 的
   // max-w-[calc(100%-2rem)] + w-full，弹窗会贴满整屏、圆角被裁掉）。
-  const resolvedWidth = typeof width === 'number' || typeof width === 'string' ? width : DEFAULT_MODAL_WIDTH_PX;
+  const resolvedWidth =
+    typeof width === 'number' || typeof width === 'string' ? width : DEFAULT_MODAL_WIDTH_PX;
   const widthCss = typeof resolvedWidth === 'number' ? `${resolvedWidth}px` : resolvedWidth;
   const maxWidth = `min(${widthCss}, calc(100vw - 2rem))`;
   const loading = confirmLoading || submitting;
@@ -121,7 +130,11 @@ export function Modal({
       <Button variant="outline" disabled={cancelButtonProps?.disabled} onClick={onCancel}>
         {cancelText}
       </Button>
-      <Button variant={okButtonProps?.danger ? 'destructive' : 'default'} disabled={okButtonProps?.disabled || loading} onClick={handleOk}>
+      <Button
+        variant={okButtonProps?.danger ? 'destructive' : 'default'}
+        disabled={okButtonProps?.disabled || loading}
+        onClick={handleOk}
+      >
         {loading ? <Loader2 className="animate-spin" /> : null}
         {okText}
       </Button>
@@ -140,7 +153,10 @@ export function Modal({
         // 底部「取消/确定」落在 top 958 处**点不到**（表单根本提交不了）。
         // 约束为视口高度内、把 body 放进可收缩的 1fr 行，头/脚各占 auto 行 ⇒ 头脚常驻、中间滚动。
         // 注意：不能加 overflow-hidden，否则 portal 进 dialog-content 的 Popover 弹层会被裁掉。
-        className={cn('grid-rows-[auto_minmax(0,1fr)_auto] max-h-[calc(100dvh-2rem)] gap-0 p-0', className)}
+        className={cn(
+          'max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 p-0',
+          className,
+        )}
         style={{ maxWidth, zIndex: style?.zIndex, ...style, ...styles?.content }}
         onInteractOutside={(e) => {
           if (!maskClosable) e.preventDefault();
@@ -149,11 +165,17 @@ export function Modal({
           if (!keyboard) e.preventDefault();
         }}
       >
-        <div className={cn('flex items-center justify-between gap-4 border-b border-border py-3.5', isCompact ? 'px-4' : 'px-5')} style={styles?.header}>
-          <DialogTitle className="text-[15px] font-semibold text-foreground">{title}</DialogTitle>
+        <div
+          className={cn(
+            'border-border flex items-center justify-between gap-4 border-b py-3.5',
+            isCompact ? 'px-4' : 'px-5',
+          )}
+          style={styles?.header}
+        >
+          <DialogTitle className="text-foreground text-[15px] font-semibold">{title}</DialogTitle>
           <DialogPrimitive.Close
             aria-label="关闭"
-            className="cursor-pointer rounded-sm text-muted-foreground opacity-70 transition-opacity hover:opacity-100"
+            className="text-muted-foreground cursor-pointer rounded-sm opacity-70 transition-opacity hover:opacity-100"
           >
             <X className="size-4" />
           </DialogPrimitive.Close>
@@ -162,10 +184,15 @@ export function Modal({
             任何超宽内容（如大量标签的 TreeSelect）都会把 640px 的弹窗整体撑到上千像素并漏出页面。
             加 min-w-0 后弹窗宽度由自身 maxWidth 决定，超宽内容只在内部溢出/滚动。
             overflow-y-auto 让超高表单在弹窗内部滚动（配合上面的 max-h + 1fr 行）。 */}
-        <div className={cn('min-w-0 overflow-y-auto py-4', isCompact ? 'px-4' : 'px-5')} style={{ ...bodyStyle, ...styles?.body }}>
+        <div
+          className={cn('min-w-0 overflow-y-auto py-4', isCompact ? 'px-4' : 'px-5')}
+          style={{ ...bodyStyle, ...styles?.body }}
+        >
           {children}
         </div>
-        {resolvedFooter ? <div className={cn('pb-4', isCompact ? 'px-4' : 'px-5')}>{resolvedFooter}</div> : null}
+        {resolvedFooter ? (
+          <div className={cn('pb-4', isCompact ? 'px-4' : 'px-5')}>{resolvedFooter}</div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
@@ -225,33 +252,40 @@ export function Drawer({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           className={cn(
-            'fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50',
           )}
           onClick={() => maskClosable && onClose?.()}
         />
         <DialogPrimitive.Content
           data-slot="dialog-content"
           className={cn(
-            'fixed z-50 flex flex-col border-border bg-card shadow-lg outline-none',
+            'border-border bg-card fixed z-50 flex flex-col shadow-lg outline-none',
             PLACEMENT_CLS[placement] ?? PLACEMENT_CLS.right,
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             className,
           )}
           style={{
             // maxWidth 用 min() 兜底：手机上（含 1080px 宽的横屏手机）抽屉不会超出视口。
-            ...(isVertical ? { height: size, maxHeight: '100%' } : { width: size, maxWidth: 'min(100%, 100vw)' }),
+            ...(isVertical
+              ? { height: size, maxHeight: '100%' }
+              : { width: size, maxWidth: 'min(100%, 100vw)' }),
             ...style,
           }}
           onInteractOutside={(e) => {
             if (!maskClosable) e.preventDefault();
           }}
         >
-          <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-3">
-            <DialogPrimitive.Title className="text-[15px] font-semibold text-foreground">{title}</DialogPrimitive.Title>
+          <div className="border-border flex shrink-0 items-center justify-between gap-4 border-b px-4 py-3">
+            <DialogPrimitive.Title className="text-foreground text-[15px] font-semibold">
+              {title}
+            </DialogPrimitive.Title>
             <div className="flex items-center gap-2">
               {extra}
               {closable ? (
-                <DialogPrimitive.Close aria-label="关闭" className="cursor-pointer rounded-sm text-muted-foreground opacity-70 hover:opacity-100">
+                <DialogPrimitive.Close
+                  aria-label="关闭"
+                  className="text-muted-foreground cursor-pointer rounded-sm opacity-70 hover:opacity-100"
+                >
                   <X className="size-4" />
                 </DialogPrimitive.Close>
               ) : null}
@@ -260,7 +294,9 @@ export function Drawer({
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4" style={bodyStyle}>
             {children}
           </div>
-          {footer ? <div className="shrink-0 border-t border-border px-4 py-3">{footer}</div> : null}
+          {footer ? (
+            <div className="border-border shrink-0 border-t px-4 py-3">{footer}</div>
+          ) : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
@@ -298,7 +334,13 @@ export interface TabsProps {
 }
 
 /** `<Tabs.TabPane>` 占位：仅承载 props，实际渲染由 Tabs 统一处理 */
-function TabPane(_props: { key?: unknown; tab?: ReactNode; children?: ReactNode; disabled?: boolean; closable?: boolean }) {
+function TabPane(_props: {
+  key?: unknown;
+  tab?: ReactNode;
+  children?: ReactNode;
+  disabled?: boolean;
+  closable?: boolean;
+}) {
   return null;
 }
 TabPane.displayName = 'TabPane';
@@ -311,9 +353,23 @@ function normalizeItems(items: TabItem[] | undefined, children: ReactNode): TabI
   const out: TabItem[] = [];
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return;
-    const p = child.props as { tab?: ReactNode; children?: ReactNode; disabled?: boolean; tabKey?: string; closable?: boolean };
-    const key = (child.key !== null && child.key !== undefined ? String(child.key) : p.tabKey) ?? String(out.length);
-    out.push({ key, label: p.tab, children: p.children, disabled: p.disabled, closable: p.closable });
+    const p = child.props as {
+      tab?: ReactNode;
+      children?: ReactNode;
+      disabled?: boolean;
+      tabKey?: string;
+      closable?: boolean;
+    };
+    const key =
+      (child.key !== null && child.key !== undefined ? String(child.key) : p.tabKey) ??
+      String(out.length);
+    out.push({
+      key,
+      label: p.tab,
+      children: p.children,
+      disabled: p.disabled,
+      closable: p.closable,
+    });
   });
   return out;
 }
@@ -347,7 +403,7 @@ function TabsBase({
 
   return (
     <div className={cn('w-full', className)} style={style}>
-      <div role="tablist" className="tabs-scroll flex items-center gap-1 border-b border-border">
+      <div role="tablist" className="tabs-scroll border-border flex items-center gap-1 border-b">
         {list.map((tab) => {
           const on = tab.key === active?.key;
           return (
@@ -359,22 +415,31 @@ function TabsBase({
               disabled={tab.disabled}
               onClick={() => select(tab.key)}
               className={cn(
-                'relative shrink-0 cursor-pointer whitespace-nowrap text-sm transition-colors',
+                'relative shrink-0 cursor-pointer text-sm whitespace-nowrap transition-colors',
                 size === 'small' ? 'px-2.5 py-1.5' : 'px-3.5 py-2',
                 tab.disabled && 'cursor-not-allowed opacity-40',
                 card
-                  ? cn('rounded-t-md border border-b-0 border-border', on ? 'bg-card font-medium text-foreground' : 'bg-muted/40 text-muted-foreground hover:text-foreground')
+                  ? cn(
+                      'border-border rounded-t-md border border-b-0',
+                      on
+                        ? 'bg-card text-foreground font-medium'
+                        : 'bg-muted/40 text-muted-foreground hover:text-foreground',
+                    )
                   : on
-                    ? 'font-medium text-foreground'
+                    ? 'text-foreground font-medium'
                     : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {tab.label}
-              {!card && on ? <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" /> : null}
+              {!card && on ? (
+                <span className="bg-primary absolute inset-x-2 -bottom-px h-0.5 rounded-full" />
+              ) : null}
             </button>
           );
         })}
-        {tabBarExtraContent ? <div className="ml-auto flex items-center gap-2 pb-1">{tabBarExtraContent}</div> : null}
+        {tabBarExtraContent ? (
+          <div className="ml-auto flex items-center gap-2 pb-1">{tabBarExtraContent}</div>
+        ) : null}
       </div>
 
       {(() => {

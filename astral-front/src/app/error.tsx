@@ -24,12 +24,14 @@ export default function AppError({
   }, [error]);
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-      <h1 className="text-lg font-semibold text-foreground">页面加载出错</h1>
-      <p className="max-w-md text-sm text-muted-foreground">
+    <div className="bg-background flex min-h-[70vh] flex-col items-center justify-center gap-4 px-6 text-center">
+      <h1 className="text-foreground text-lg font-semibold">页面加载出错</h1>
+      <p className="text-muted-foreground max-w-md text-sm">
         {error.message || '页面渲染时发生异常，请重试。'}
       </p>
-      {error.digest ? <p className="text-xs text-muted-foreground">错误编号：{error.digest}</p> : null}
+      {error.digest ? (
+        <p className="text-muted-foreground text-xs">错误编号：{error.digest}</p>
+      ) : null}
       <Button onClick={() => reset()}>重试</Button>
     </div>
   );

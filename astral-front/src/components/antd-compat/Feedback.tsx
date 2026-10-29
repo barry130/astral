@@ -6,7 +6,15 @@
  */
 
 import { Fragment, useState, type CSSProperties, type ReactNode } from 'react';
-import { AlertCircle, CheckCircle2, Info, Loader2, TriangleAlert, XCircle, Inbox } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  Loader2,
+  TriangleAlert,
+  XCircle,
+  Inbox,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Alert as ShadcnAlert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -20,10 +28,14 @@ import { cn } from '@/lib/utils';
 
 /** 消息提示：代理 sonner toast，保持 antd 的调用形状（第二参数为秒） */
 export const message = {
-  success: (content: ReactNode, duration?: number) => toast.success(content, { duration: (duration ?? 3) * 1000 }),
-  error: (content: ReactNode, duration?: number) => toast.error(content, { duration: (duration ?? 3) * 1000 }),
-  warning: (content: ReactNode, duration?: number) => toast.warning(content, { duration: (duration ?? 3) * 1000 }),
-  info: (content: ReactNode, duration?: number) => toast.info(content, { duration: (duration ?? 3) * 1000 }),
+  success: (content: ReactNode, duration?: number) =>
+    toast.success(content, { duration: (duration ?? 3) * 1000 }),
+  error: (content: ReactNode, duration?: number) =>
+    toast.error(content, { duration: (duration ?? 3) * 1000 }),
+  warning: (content: ReactNode, duration?: number) =>
+    toast.warning(content, { duration: (duration ?? 3) * 1000 }),
+  info: (content: ReactNode, duration?: number) =>
+    toast.info(content, { duration: (duration ?? 3) * 1000 }),
   loading: (content: ReactNode) => toast.loading(content),
   destroy: () => toast.dismiss(),
 };
@@ -53,7 +65,7 @@ export interface SpinProps {
 
 export function Spin({ size = 'default', spinning = true, className, style, children }: SpinProps) {
   const iconSize = size === 'small' ? 'size-4' : size === 'large' ? 'size-8' : 'size-5';
-  const icon = <Loader2 className={cn(iconSize, 'animate-spin text-muted-foreground')} />;
+  const icon = <Loader2 className={cn(iconSize, 'text-muted-foreground animate-spin')} />;
 
   if (!children) {
     return spinning ? (
@@ -67,7 +79,9 @@ export function Spin({ size = 'default', spinning = true, className, style, chil
     <div className={cn('relative', className)} style={style}>
       {children}
       {spinning && (
-        <div className="absolute inset-0 z-[2] flex items-center justify-center bg-background/60">{icon}</div>
+        <div className="bg-background/60 absolute inset-0 z-[2] flex items-center justify-center">
+          {icon}
+        </div>
       )}
     </div>
   );
@@ -88,8 +102,8 @@ export interface EmptyProps {
 export function Empty({ description = '暂无数据', image, className, style, children }: EmptyProps) {
   return (
     <div className={cn('flex flex-col items-center gap-3 py-8', className)} style={style}>
-      {image ?? <Inbox className="size-8 text-muted-foreground/50" strokeWidth={1.5} aria-hidden />}
-      <span className="text-sm text-muted-foreground">{description}</span>
+      {image ?? <Inbox className="text-muted-foreground/50 size-8" strokeWidth={1.5} aria-hidden />}
+      <span className="text-muted-foreground text-sm">{description}</span>
       {children}
     </div>
   );
@@ -131,7 +145,14 @@ export function Alert({
     error: <AlertCircle />,
   } as const;
 
-  const variant = type === 'error' ? 'destructive' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'default';
+  const variant =
+    type === 'error'
+      ? 'destructive'
+      : type === 'warning'
+        ? 'warning'
+        : type === 'success'
+          ? 'success'
+          : 'default';
 
   return (
     <ShadcnAlert variant={variant} className={cn(closable && 'pr-8', className)} style={style}>
@@ -144,7 +165,7 @@ export function Alert({
           type="button"
           aria-label="关闭"
           onClick={() => setClosed(true)}
-          className="absolute right-2 top-2 cursor-pointer rounded-sm p-0.5 text-muted-foreground opacity-60 hover:opacity-100"
+          className="text-muted-foreground absolute top-2 right-2 cursor-pointer rounded-sm p-0.5 opacity-60 hover:opacity-100"
         >
           <XCircle className="size-3.5" />
         </button>
@@ -167,19 +188,22 @@ export interface ResultProps {
 export function Result({ status = 'info', title, subTitle, extra, className, style }: ResultProps) {
   const iconMap = {
     success: <CheckCircle2 className="size-12 text-emerald-500" strokeWidth={1.5} />,
-    error: <XCircle className="size-12 text-destructive" strokeWidth={1.5} />,
+    error: <XCircle className="text-destructive size-12" strokeWidth={1.5} />,
     warning: <TriangleAlert className="size-12 text-amber-500" strokeWidth={1.5} />,
-    info: <Info className="size-12 text-muted-foreground" strokeWidth={1.5} />,
-    '404': <AlertCircle className="size-12 text-muted-foreground" strokeWidth={1.5} />,
-    '403': <AlertCircle className="size-12 text-muted-foreground" strokeWidth={1.5} />,
-    '500': <XCircle className="size-12 text-muted-foreground" strokeWidth={1.5} />,
+    info: <Info className="text-muted-foreground size-12" strokeWidth={1.5} />,
+    '404': <AlertCircle className="text-muted-foreground size-12" strokeWidth={1.5} />,
+    '403': <AlertCircle className="text-muted-foreground size-12" strokeWidth={1.5} />,
+    '500': <XCircle className="text-muted-foreground size-12" strokeWidth={1.5} />,
   } as const;
 
   return (
-    <div className={cn('flex flex-col items-center gap-3 py-12 text-center', className)} style={style}>
+    <div
+      className={cn('flex flex-col items-center gap-3 py-12 text-center', className)}
+      style={style}
+    >
       {iconMap[status]}
-      <div className="text-xl font-semibold text-foreground">{title}</div>
-      {subTitle ? <div className="text-sm text-muted-foreground">{subTitle}</div> : null}
+      <div className="text-foreground text-xl font-semibold">{title}</div>
+      {subTitle ? <div className="text-muted-foreground text-sm">{subTitle}</div> : null}
       {extra ? (
         <div className="mt-2 flex flex-wrap justify-center gap-3">
           {/* antd 的 extra 常写作数组（[<Button/>, <Button/>]），这里补上 key 避免 React 警告 */}
@@ -262,7 +286,7 @@ export function Popconfirm({
       <PopoverContent side={placement} className="w-64">
         <div className="space-y-1">
           <div className="text-sm font-medium">{title}</div>
-          {description ? <div className="text-xs text-muted-foreground">{description}</div> : null}
+          {description ? <div className="text-muted-foreground text-xs">{description}</div> : null}
         </div>
         <div className="mt-3 flex justify-end gap-2">
           <Button

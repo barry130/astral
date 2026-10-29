@@ -10,14 +10,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { confirmDialog } from '../../confirm';
 import { CmsTable, ListCard, PageHeader, TableStateRow } from '../shared';
 
-interface TagFormState { name: string; slug: string }
+interface TagFormState {
+  name: string;
+  slug: string;
+}
 const EMPTY_FORM: TagFormState = { name: '', slug: '' };
 
 /** 标签管理：扁平列表 + 新建/编辑弹窗 + 删除（后端级联清理文章关联） */
@@ -48,7 +54,9 @@ export default function CmsTagPage() {
     }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -63,7 +71,10 @@ export default function CmsTagPage() {
   };
 
   const submit = async () => {
-    if (!form.name.trim()) { toast.error('请填写标签名称'); return; }
+    if (!form.name.trim()) {
+      toast.error('请填写标签名称');
+      return;
+    }
     setSaving(true);
     const payload = { name: form.name.trim(), slug: form.slug.trim() || undefined };
     try {
@@ -81,7 +92,13 @@ export default function CmsTagPage() {
   };
 
   const remove = async (tag: CmsTag) => {
-    if (!window.confirm(`确认删除标签「${tag.name || tag.id}」？其与文章的关联会一并移除。`)) return;
+    if (
+      !(await confirmDialog({
+        title: `确认删除标签「${tag.name || tag.id}」？`,
+        description: '其与文章的关联会一并移除。',
+      }))
+    )
+      return;
     try {
       await cmsApi.deleteTag(tag.id);
       toast.success('已删除');
@@ -96,18 +113,17 @@ export default function CmsTagPage() {
       <PageHeader
         title="标签"
         description="文章的轻量归类方式，一篇文章可打多个标签；删除标签不会影响文章本身"
-        actions={canEdit && (
-          <Button className="gap-1.5" onClick={openCreate}>
-            <Plus className="size-4" />新建标签
-          </Button>
-        )}
+        actions={
+          canEdit && (
+            <Button className="gap-1.5" onClick={openCreate}>
+              <Plus className="size-4" />
+              新建标签
+            </Button>
+          )
+        }
       />
 
-      <ListCard
-        toolbar={(
-          <p className="text-xs text-muted-foreground">共 {tags.length} 个标签</p>
-        )}
-      >
+      <ListCard toolbar={<p className="text-muted-foreground text-xs">共 {tags.length} 个标签</p>}>
         <CmsTable>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -127,36 +143,50 @@ export default function CmsTagPage() {
                 colSpan={4}
                 emptyText="还没有标签"
                 emptyHint="标签是文章之外的轻量归类方式，可在文章表单里多选"
-                emptyAction={canEdit ? (
-                  <Button size="sm" className="gap-1.5" onClick={openCreate}>
-                    <Plus className="size-4" />新建标签
-                  </Button>
-                ) : undefined}
+                emptyAction={
+                  canEdit ? (
+                    <Button size="sm" className="gap-1.5" onClick={openCreate}>
+                      <Plus className="size-4" />
+                      新建标签
+                    </Button>
+                  ) : undefined
+                }
               />
-            ) : tags.map((tag) => (
-              <TableRow key={tag.id}>
-                <TableCell className="font-medium">{tag.name || '-'}</TableCell>
-                <TableCell className="text-muted-foreground">{tag.slug || '-'}</TableCell>
-                <TableCell className="text-right text-muted-foreground tabular-nums">
-                  {tag.postCount ?? 0}
-                </TableCell>
-                <TableCell>
-                  {canEdit && (
-                    <div className="flex items-center justify-end gap-0.5">
-                      <Button variant="ghost" size="sm" className="h-8 gap-1 px-2" onClick={() => openEdit(tag)}>
-                        <Pencil className="size-3.5" />编辑
-                      </Button>
-                      <Button variant="ghost" size="icon"
-                              className="size-8 text-muted-foreground hover:text-destructive"
-                              aria-label={`删除标签 ${tag.name || tag.id}`}
-                              onClick={() => remove(tag)}>
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+            ) : (
+              tags.map((tag) => (
+                <TableRow key={tag.id}>
+                  <TableCell className="font-medium">{tag.name || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">{tag.slug || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground text-right tabular-nums">
+                    {tag.postCount ?? 0}
+                  </TableCell>
+                  <TableCell>
+                    {canEdit && (
+                      <div className="flex items-center justify-end gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1 px-2"
+                          onClick={() => openEdit(tag)}
+                        >
+                          <Pencil className="size-3.5" />
+                          编辑
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-destructive size-8"
+                          aria-label={`删除标签 ${tag.name || tag.id}`}
+                          onClick={() => remove(tag)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </CmsTable>
       </ListCard>
@@ -169,19 +199,32 @@ export default function CmsTagPage() {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="tag-name">名称 *</Label>
-              <Input id="tag-name" value={form.name} maxLength={64}
-                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="标签名称" />
+              <Input
+                id="tag-name"
+                value={form.name}
+                maxLength={64}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="标签名称"
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="tag-slug">URL 别名</Label>
-              <Input id="tag-slug" value={form.slug} maxLength={64}
-                     onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))} placeholder="可选" />
+              <Input
+                id="tag-slug"
+                value={form.slug}
+                maxLength={64}
+                onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
+                placeholder="可选"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button variant="ghost" onClick={() => setDialogOpen(false)}>
+              取消
+            </Button>
             <Button onClick={submit} disabled={saving} className="gap-1.5">
-              <Tags className="size-4" />{saving ? '保存中…' : '保存'}
+              <Tags className="size-4" />
+              {saving ? '保存中…' : '保存'}
             </Button>
           </DialogFooter>
         </DialogContent>

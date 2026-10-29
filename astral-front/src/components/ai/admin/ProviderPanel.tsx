@@ -7,12 +7,10 @@
 
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import {
-  Alert,
   Button,
-  Card,
   Drawer,
   Empty,
   Form,
@@ -22,7 +20,6 @@ import {
   Popconfirm,
   Select,
   Space,
-  Spin,
   Switch,
   Tag,
   Tooltip,
@@ -47,7 +44,7 @@ import {
 } from '@/api/ai';
 import { usePerm } from '@/lib/perm';
 
-import { Hint, ReadOnlyNote, StatusTag, formatNumber, formatTime, useAiDict } from './shared';
+import { Hint, ReadOnlyNote, StatusTag, formatNumber, useAiDict } from './shared';
 
 export default function ProviderPanel() {
   const hasPerm = usePerm();
@@ -57,12 +54,16 @@ export default function ProviderPanel() {
 
   const [providers, setProviders] = useState<AiProvider[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | undefined>();
+  const [, setSelectedId] = useState<number | undefined>();
   const [testing, setTesting] = useState<number | undefined>();
   const [testResult, setTestResult] = useState<Record<number, ProviderTestResult>>({});
 
-  const [providerModal, setProviderModal] = useState<{ open: boolean; row?: AiProvider }>({ open: false });
-  const [modelDrawer, setModelDrawer] = useState<{ open: boolean; provider?: AiProvider }>({ open: false });
+  const [providerModal, setProviderModal] = useState<{ open: boolean; row?: AiProvider }>({
+    open: false,
+  });
+  const [modelDrawer, setModelDrawer] = useState<{ open: boolean; provider?: AiProvider }>({
+    open: false,
+  });
   const [saving, setSaving] = useState(false);
   const [providerForm] = Form.useForm();
   const [modelForm] = Form.useForm();
@@ -84,11 +85,6 @@ export default function ProviderPanel() {
   React.useEffect(() => {
     void load();
   }, [load]);
-
-  const selected = useMemo(
-    () => providers.find((item) => item.id === selectedId),
-    [providers, selectedId],
-  );
 
   /* ---------------- 提供方 ---------------- */
 
@@ -255,7 +251,9 @@ export default function ProviderPanel() {
       title: '启用',
       dataIndex: 'enabled',
       width: 70,
-      render: (value: boolean) => <Tag color={value ? 'success' : 'default'}>{value ? '是' : '否'}</Tag>,
+      render: (value: boolean) => (
+        <Tag color={value ? 'success' : 'default'}>{value ? '是' : '否'}</Tag>
+      ),
     },
     {
       key: 'action',
@@ -264,7 +262,12 @@ export default function ProviderPanel() {
       width: 210,
       render: (_: unknown, row: AiProvider) => (
         <Space size={4} wrap>
-          <Button size="small" icon={<ExperimentOutlined />} loading={testing === row.id} onClick={() => void testProvider(row)}>
+          <Button
+            size="small"
+            icon={<ExperimentOutlined />}
+            loading={testing === row.id}
+            onClick={() => void testProvider(row)}
+          >
             测试
           </Button>
           <Button
@@ -277,7 +280,13 @@ export default function ProviderPanel() {
           >
             模型
           </Button>
-          <Button size="small" type="text" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openProviderModal(row)} />
+          <Button
+            size="small"
+            type="text"
+            icon={<EditOutlined />}
+            disabled={!canEdit}
+            onClick={() => openProviderModal(row)}
+          />
           <Popconfirm
             title="删除提供方？"
             description="其下的模型与引用它的路由会一起失效。"
@@ -295,21 +304,40 @@ export default function ProviderPanel() {
   return (
     <div>
       <Hint>
-        这是所有模型调用的出口。密钥建议用 <code>secretRef</code> 引环境变量，落库的密钥会用 AES-256-GCM 加密存储，
-        接口永远只回「是否已配置」而不回明文。Base URL 会做私网与元数据地址拦截（SSRF 防护），填内网地址会直接报错。
+        这是所有模型调用的出口。密钥建议用 <code>secretRef</code> 引环境变量，落库的密钥会用
+        AES-256-GCM 加密存储， 接口永远只回「是否已配置」而不回明文。Base URL
+        会做私网与元数据地址拦截（SSRF 防护），填内网地址会直接报错。
       </Hint>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
         <Space size={8}>
           <span style={{ fontSize: 13, fontWeight: 500 }}>提供方</span>
           <Tag color="default">{providers.length}</Tag>
           <ReadOnlyNote show={!canEdit} />
         </Space>
         <Space size={8}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
-          <Button size="small" type="primary" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => openProviderModal()}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!canEdit}
+            onClick={() => openProviderModal()}
+          >
             新建提供方
           </Button>
         </Space>
@@ -350,13 +378,23 @@ export default function ProviderPanel() {
             >
               <Input placeholder="例如 openai_main" disabled={Boolean(providerModal.row)} />
             </Form.Item>
-            <Form.Item name="name" label="名称" style={{ flex: 1 }} rules={[{ required: true, message: '请输入名称' }, { max: 128 }]}>
+            <Form.Item
+              name="name"
+              label="名称"
+              style={{ flex: 1 }}
+              rules={[{ required: true, message: '请输入名称' }, { max: 128 }]}
+            >
               <Input placeholder="例如 OpenAI 主账号" />
             </Form.Item>
           </Space>
 
           <Space size={12} style={{ display: 'flex' }}>
-            <Form.Item name="providerType" label="类型" style={{ flex: 1 }} rules={[{ required: true }]}>
+            <Form.Item
+              name="providerType"
+              label="类型"
+              style={{ flex: 1 }}
+              rules={[{ required: true }]}
+            >
               <Select options={dict.options('ai_provider_type')} placeholder="选择类型" />
             </Form.Item>
             <Form.Item
@@ -369,7 +407,11 @@ export default function ProviderPanel() {
             </Form.Item>
           </Space>
 
-          <Form.Item name="apiKey" label="API Key" extra="留空表示不修改；用 secretRef 时可完全不填">
+          <Form.Item
+            name="apiKey"
+            label="API Key"
+            extra="留空表示不修改；用 secretRef 时可完全不填"
+          >
             <Input.Password placeholder="sk-..." maxLength={512} autoComplete="new-password" />
           </Form.Item>
 
@@ -397,7 +439,11 @@ export default function ProviderPanel() {
           </Form.Item>
 
           <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={2} maxLength={512} placeholder="例如：生产环境专用，月配额 100 万 token" />
+            <Input.TextArea
+              rows={2}
+              maxLength={512}
+              placeholder="例如：生产环境专用，月配额 100 万 token"
+            />
           </Form.Item>
         </Form>
       </Modal>
@@ -538,7 +584,9 @@ function ModelDrawer({
       title: '启用',
       dataIndex: 'enabled',
       width: 70,
-      render: (value: boolean) => <Tag color={value ? 'success' : 'default'}>{value ? '是' : '否'}</Tag>,
+      render: (value: boolean) => (
+        <Tag color={value ? 'success' : 'default'}>{value ? '是' : '否'}</Tag>
+      ),
     },
     {
       key: 'action',
@@ -547,7 +595,13 @@ function ModelDrawer({
       width: 100,
       render: (_: unknown, row: AiModel) => (
         <Space size={2}>
-          <Button size="small" type="text" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openModal(row)} />
+          <Button
+            size="small"
+            type="text"
+            icon={<EditOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal(row)}
+          />
           <Popconfirm
             title="删除模型？"
             okButtonProps={{ danger: true }}
@@ -578,10 +632,21 @@ function ModelDrawer({
       width={1080}
       extra={
         <Space size={8}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
-          <Button size="small" type="primary" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => openModal()}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal()}
+          >
             新建模型
           </Button>
         </Space>
@@ -613,10 +678,20 @@ function ModelDrawer({
       >
         <Form form={form} layout="vertical">
           <Space size={12} style={{ display: 'flex' }}>
-            <Form.Item name="modelCode" label="模型编码" style={{ flex: 1 }} rules={[{ required: true, message: '请输入模型编码' }]}>
+            <Form.Item
+              name="modelCode"
+              label="模型编码"
+              style={{ flex: 1 }}
+              rules={[{ required: true, message: '请输入模型编码' }]}
+            >
               <Input placeholder="gpt-4o-mini" />
             </Form.Item>
-            <Form.Item name="modelName" label="展示名" style={{ flex: 1 }} rules={[{ required: true, message: '请输入展示名' }]}>
+            <Form.Item
+              name="modelName"
+              label="展示名"
+              style={{ flex: 1 }}
+              rules={[{ required: true, message: '请输入展示名' }]}
+            >
               <Input placeholder="GPT-4o mini" />
             </Form.Item>
             <Form.Item name="modelKind" label="类型" style={{ width: 140 }}>

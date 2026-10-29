@@ -4,23 +4,29 @@ import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Check, RotateCcw, Search, Trash2, X } from 'lucide-react';
 
-import {
-  cmsApi, cmsDictLabel, cmsDictOptions, loadCmsDicts,
-  CmsComment,
-} from '@/api/cms';
+import { cmsApi, cmsDictLabel, cmsDictOptions, loadCmsDicts, CmsComment } from '@/api/cms';
 import { usePerm } from '@/lib/perm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import {
-  CmsTable, formatDateTime, ListCard, Pager, PageHeader, StatusBadge, TableStateRow,
+  CmsTable,
+  formatDateTime,
+  ListCard,
+  Pager,
+  PageHeader,
+  StatusBadge,
+  TableStateRow,
 } from '../shared';
+import { confirmDialog } from '../../confirm';
 
 const PAGE_SIZE = 10;
 const COMMENT_STATUS = 'cms_comment_status';
@@ -42,32 +48,37 @@ export default function CmsCommentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (targetPage: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await cmsApi.commentPage({
-        pageNum: targetPage,
-        pageSize: PAGE_SIZE,
-        status: status || undefined,
-        targetType: targetType || undefined,
-        keyword: keyword || undefined,
-      });
-      setComments(res.data?.records || []);
-      setTotal(res.data?.total || 0);
-    } catch (e) {
-      const message = (e as Error).message || '评论加载失败';
-      setError(message);
-      setComments([]);
-      setTotal(0);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [status, targetType, keyword]);
+  const load = useCallback(
+    async (targetPage: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await cmsApi.commentPage({
+          pageNum: targetPage,
+          pageSize: PAGE_SIZE,
+          status: status || undefined,
+          targetType: targetType || undefined,
+          keyword: keyword || undefined,
+        });
+        setComments(res.data?.records || []);
+        setTotal(res.data?.total || 0);
+      } catch (e) {
+        const message = (e as Error).message || '评论加载失败';
+        setError(message);
+        setComments([]);
+        setTotal(0);
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [status, targetType, keyword],
+  );
 
   useEffect(() => {
-    void loadCmsDicts().catch(() => {/* 字典拉取失败时回退展示原始值 */});
+    void loadCmsDicts().catch(() => {
+      /* 字典拉取失败时回退展示原始值 */
+    });
   }, []);
 
   useEffect(() => {
@@ -90,7 +101,8 @@ export default function CmsCommentPage() {
   };
 
   const remove = async (comment: CmsComment) => {
-    if (!window.confirm('确认删除该评论？删除后不可恢复。')) return;
+    if (!(await confirmDialog({ title: '确认删除该评论？', description: '删除后不可恢复。' })))
+      return;
     try {
       await cmsApi.deleteComment(comment.id);
       toast.success('已删除');
@@ -111,47 +123,75 @@ export default function CmsCommentPage() {
       />
 
       <ListCard
-        toolbar={(
+        toolbar={
           <>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
               <Input
                 value={keywordInput}
                 onChange={(e) => setKeywordInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') applyFilter(() => setKeyword(keywordInput.trim())); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') applyFilter(() => setKeyword(keywordInput.trim()));
+                }}
                 placeholder="搜索昵称 / 内容"
                 className="w-56 pl-8"
               />
             </div>
-            <Select value={status} onValueChange={(v) => applyFilter(() => setStatus(v === ALL ? '' : v))}>
-              <SelectTrigger className="w-32"><SelectValue placeholder="状态" /></SelectTrigger>
+            <Select
+              value={status}
+              onValueChange={(v) => applyFilter(() => setStatus(v === ALL ? '' : v))}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="状态" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>全部状态</SelectItem>
                 {cmsDictOptions(COMMENT_STATUS).map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={targetType} onValueChange={(v) => applyFilter(() => setTargetType(v === ALL ? '' : v))}>
-              <SelectTrigger className="w-32"><SelectValue placeholder="目标类型" /></SelectTrigger>
+            <Select
+              value={targetType}
+              onValueChange={(v) => applyFilter(() => setTargetType(v === ALL ? '' : v))}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="目标类型" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>全部类型</SelectItem>
                 {cmsDictOptions(TARGET_TYPE).map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="ghost" size="sm" className="ml-auto gap-1 text-muted-foreground"
-                    onClick={() => applyFilter(() => {
-                      setKeywordInput(''); setKeyword(''); setStatus('pending'); setTargetType('');
-                    })}>
-              <RotateCcw className="size-3.5" />重置
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground ml-auto gap-1"
+              onClick={() =>
+                applyFilter(() => {
+                  setKeywordInput('');
+                  setKeyword('');
+                  setStatus('pending');
+                  setTargetType('');
+                })
+              }
+            >
+              <RotateCcw className="size-3.5" />
+              重置
             </Button>
           </>
-        )}
-        footer={total > 0 ? (
-          <Pager page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
-        ) : undefined}
+        }
+        footer={
+          total > 0 ? (
+            <Pager page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+          ) : undefined
+        }
       >
         <CmsTable>
           <TableHeader>
@@ -165,7 +205,9 @@ export default function CmsCommentPage() {
               <TableHead className="w-32 text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className={cn(loading && comments.length > 0 && 'opacity-60 transition-opacity')}>
+          <TableBody
+            className={cn(loading && comments.length > 0 && 'opacity-60 transition-opacity')}
+          >
             {firstLoading ? (
               <TableStateRow colSpan={7} loading />
             ) : error ? (
@@ -174,74 +216,96 @@ export default function CmsCommentPage() {
               <TableStateRow
                 colSpan={7}
                 emptyText={status === 'pending' ? '待审核队列已清空' : '没有符合条件的评论'}
-                emptyHint={status === 'pending'
-                  ? '新评论提交后会出现在这里；「评论需审核」可在站点设置里关闭'
-                  : '试着放宽状态或类型筛选'}
+                emptyHint={
+                  status === 'pending'
+                    ? '新评论提交后会出现在这里；「评论需审核」可在站点设置里关闭'
+                    : '试着放宽状态或类型筛选'
+                }
               />
-            ) : comments.map((comment) => (
-              <TableRow key={comment.id}>
-                <TableCell>
-                  <div className="truncate font-medium" title={comment.nickname || undefined}>
-                    {comment.nickname || '-'}
-                  </div>
-                  {comment.email && (
-                    <div className="truncate text-xs text-muted-foreground" title={comment.email}>
-                      {comment.email}
+            ) : (
+              comments.map((comment) => (
+                <TableRow key={comment.id}>
+                  <TableCell>
+                    <div className="truncate font-medium" title={comment.nickname || undefined}>
+                      {comment.nickname || '-'}
                     </div>
-                  )}
-                </TableCell>
-                {/* 待审评论优先保证可读性：给到两行正文而不是单行截断 */}
-                <TableCell className="min-w-[240px] max-w-[420px]">
-                  <p className="line-clamp-2 whitespace-normal text-sm leading-relaxed"
-                     title={comment.content || undefined}>
-                    {comment.content || '-'}
-                  </p>
-                </TableCell>
-                <TableCell>
-                  <div className="truncate text-sm" title={comment.targetTitle || undefined}>
-                    {comment.targetTitle || '-'}
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {cmsDictLabel(TARGET_TYPE, comment.targetType)}
-                  </div>
-                </TableCell>
-                <TableCell><StatusBadge code={COMMENT_STATUS} value={comment.status} /></TableCell>
-                <TableCell className="truncate text-muted-foreground" title={comment.ip || undefined}>
-                  {comment.ip || '-'}
-                </TableCell>
-                <TableCell className="text-muted-foreground tabular-nums">
-                  {formatDateTime(comment.createTime)}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-end gap-0.5">
-                    {canEdit && (
-                      <>
-                        {comment.status === 'pending' && (
-                          <Button variant="ghost" size="sm"
-                                  className="h-8 gap-1 px-2 text-muted-foreground hover:text-foreground"
-                                  onClick={() => audit(comment, 'approved')}>
-                            <Check className="size-3.5" />通过
-                          </Button>
-                        )}
-                        {comment.status === 'pending' && (
-                          <Button variant="ghost" size="sm"
-                                  className="h-8 gap-1 px-2 text-muted-foreground hover:text-destructive"
-                                  onClick={() => audit(comment, 'rejected')}>
-                            <X className="size-3.5" />拒绝
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon"
-                                className="size-8 text-muted-foreground hover:text-destructive"
-                                aria-label="删除评论"
-                                onClick={() => remove(comment)}>
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </>
+                    {comment.email && (
+                      <div className="text-muted-foreground truncate text-xs" title={comment.email}>
+                        {comment.email}
+                      </div>
                     )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  {/* 待审评论优先保证可读性：给到两行正文而不是单行截断 */}
+                  <TableCell className="max-w-[420px] min-w-[240px]">
+                    <p
+                      className="line-clamp-2 text-sm leading-relaxed whitespace-normal"
+                      title={comment.content || undefined}
+                    >
+                      {comment.content || '-'}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <div className="truncate text-sm" title={comment.targetTitle || undefined}>
+                      {comment.targetTitle || '-'}
+                    </div>
+                    <div className="text-muted-foreground truncate text-xs">
+                      {cmsDictLabel(TARGET_TYPE, comment.targetType)}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge code={COMMENT_STATUS} value={comment.status} />
+                  </TableCell>
+                  <TableCell
+                    className="text-muted-foreground truncate"
+                    title={comment.ip || undefined}
+                  >
+                    {comment.ip || '-'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground tabular-nums">
+                    {formatDateTime(comment.createTime)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-0.5">
+                      {canEdit && (
+                        <>
+                          {comment.status === 'pending' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-muted-foreground hover:text-foreground h-8 gap-1 px-2"
+                              onClick={() => audit(comment, 'approved')}
+                            >
+                              <Check className="size-3.5" />
+                              通过
+                            </Button>
+                          )}
+                          {comment.status === 'pending' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-muted-foreground hover:text-destructive h-8 gap-1 px-2"
+                              onClick={() => audit(comment, 'rejected')}
+                            >
+                              <X className="size-3.5" />
+                              拒绝
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive size-8"
+                            aria-label="删除评论"
+                            onClick={() => remove(comment)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </CmsTable>
       </ListCard>

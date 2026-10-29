@@ -24,12 +24,17 @@ export interface SequenceConfig {
 /** 序列配置管理相关API */
 export const sequenceConfigApi = {
   /** 获取所有序列配置（不分页） */
-  getAll: (): Promise<ApiResult<SequenceConfig[]>> =>
-    request.get('/api/v1/admin/sequence/configs'),
+  getAll: (): Promise<ApiResult<SequenceConfig[]>> => request.get('/api/v1/admin/sequence/configs'),
 
   /** 分页查询序列配置 */
-  getPage: (pageNum = 1, pageSize = 20, params?: Record<string, any>): Promise<ApiResult<PageResult<SequenceConfig>>> =>
-    request.get('/api/v1/admin/sequence/configs/page', { params: { pageNum, pageSize, ...params } }),
+  getPage: (
+    pageNum = 1,
+    pageSize = 20,
+    params?: Record<string, unknown>,
+  ): Promise<ApiResult<PageResult<SequenceConfig>>> =>
+    request.get('/api/v1/admin/sequence/configs/page', {
+      params: { pageNum, pageSize, ...params },
+    }),
 
   /** 根据业务键获取配置 */
   getByBizKey: (bizKey: string): Promise<ApiResult<SequenceConfig>> =>

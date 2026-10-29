@@ -190,7 +190,9 @@ export const notifyRuleApi = {
     pageSize: number,
     query?: NotifyRuleQuery,
   ): Promise<ApiResult<PageResult<NotifyRuleVo>>> =>
-    request.get('/api/v1/admin/system/notify/rule/page', { params: { pageNum, pageSize, ...query } }),
+    request.get('/api/v1/admin/system/notify/rule/page', {
+      params: { pageNum, pageSize, ...query },
+    }),
   detail: (id: number): Promise<ApiResult<NotifyRuleVo>> =>
     request.get(`/api/v1/admin/system/notify/rule/${id}`),
   create: (data: NotifyRuleSaveDto): Promise<ApiResult<number>> =>

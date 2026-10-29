@@ -3,18 +3,12 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import QRCode from 'qrcode';
-import {
-  User as UserIcon,
-  KeyRound,
-  ShieldCheck,
-  MonitorSmartphone,
-  Lock,
-} from 'lucide-react';
+import { User as UserIcon, KeyRound, ShieldCheck, MonitorSmartphone, Lock } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
 import { profileApi, ProfileInfo, ProfileSession, TotpSetupInfo } from '@/api/profile';
 import { encryptPassword } from '@/lib/crypto';
+import { getErrorMessage } from '@/lib/error-message';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +16,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 
 /**
@@ -31,7 +30,7 @@ import {
  */
 export default function ProfilePage() {
   return (
-    <Suspense fallback={<div className="py-10 text-center text-muted-foreground">加载中…</div>}>
+    <Suspense fallback={<div className="text-muted-foreground py-10 text-center">加载中…</div>}>
       <ProfileContent />
     </Suspense>
   );
@@ -63,8 +62,8 @@ function ProfileContent() {
     try {
       const res = await profileApi.me();
       setInfo(res.data);
-    } catch (e: any) {
-      toast.error(e.message || '加载个人资料失败');
+    } catch (e) {
+      toast.error(getErrorMessage(e, '加载个人资料失败'))
     } finally {
       setLoading(false);
     }
@@ -75,8 +74,8 @@ function ProfileContent() {
     try {
       const res = await profileApi.sessions(1, 50);
       setSessions(res.data?.records || []);
-    } catch (e: any) {
-      toast.error(e.message || '加载会话失败');
+    } catch (e) {
+      toast.error(getErrorMessage(e, '加载会话失败'))
     } finally {
       setSessionsLoading(false);
     }
@@ -106,13 +105,16 @@ function ProfileContent() {
     }
     setSavingPassword(true);
     try {
-      const [oldEnc, newEnc] = await Promise.all([encryptPassword(oldPassword), encryptPassword(newPassword)]);
+      const [oldEnc, newEnc] = await Promise.all([
+        encryptPassword(oldPassword),
+        encryptPassword(newPassword),
+      ]);
       await profileApi.changePassword(oldEnc, newEnc);
       toast.success('密码已修改，请重新登录');
       await logout();
       router.push('/login');
-    } catch (e: any) {
-      toast.error(e.message || '修改失败');
+    } catch (e) {
+      toast.error(getErrorMessage(e, '修改失败'))
     } finally {
       setSavingPassword(false);
     }
@@ -124,10 +126,12 @@ function ProfileContent() {
       const res = await profileApi.totpSetup();
       setTotpInfo(res.data ?? null);
       if (res.data?.otpauthUri) {
+        // qrcode 只在 TOTP 绑定弹窗用到，动态引入避免打进个人中心首屏 bundle
+        const { default: QRCode } = await import('qrcode');
         setTotpQrDataUrl(await QRCode.toDataURL(res.data.otpauthUri, { width: 220 }));
       }
-    } catch (e: any) {
-      toast.error(e.message || '生成密钥失败');
+    } catch (e) {
+      toast.error(getErrorMessage(e, '生成密钥失败'))
     } finally {
       setTotpBusy(false);
     }
@@ -146,8 +150,8 @@ function ProfileContent() {
       setTotpCode('');
       setTotpQrDataUrl('');
       await loadMe();
-    } catch (e: any) {
-      toast.error(e.message || '验证失败');
+    } catch (e) {
+      toast.error(getErrorMessage(e, '验证失败'))
     } finally {
       setTotpBusy(false);
     }
@@ -165,8 +169,8 @@ function ProfileContent() {
       toast.success('TOTP 已关闭');
       setDisablePassword('');
       await loadMe();
-    } catch (e: any) {
-      toast.error(e.message || '关闭失败');
+    } catch (e) {
+      toast.error(getErrorMessage(e, '关闭失败'))
     } finally {
       setTotpBusy(false);
     }
@@ -177,20 +181,20 @@ function ProfileContent() {
       await profileApi.revokeSession(token);
       toast.success('会话已下线');
       await loadSessions();
-    } catch (e: any) {
-      toast.error(e.message || '下线失败');
+    } catch (e) {
+      toast.error(getErrorMessage(e, '下线失败'))
     }
   };
 
   if (loading) {
-    return <div className="py-10 text-center text-muted-foreground">加载中…</div>;
+    return <div className="text-muted-foreground py-10 text-center">加载中…</div>;
   }
 
   return (
     <div className="space-y-4">
       {forceChange && (
         <Card className="border-destructive">
-          <CardContent className="flex items-center gap-3 py-4 text-sm text-destructive">
+          <CardContent className="text-destructive flex items-center gap-3 py-4 text-sm">
             <Lock className="size-4 shrink-0" />
             当前账号仍在使用初始/临时密码，必须先修改密码才能使用其它功能。
           </CardContent>
@@ -199,17 +203,26 @@ function ProfileContent() {
 
       <Tabs defaultValue={forceChange ? 'password' : 'info'}>
         <TabsList>
-          <TabsTrigger value="info" disabled={forceChange}>基本资料</TabsTrigger>
+          <TabsTrigger value="info" disabled={forceChange}>
+            基本资料
+          </TabsTrigger>
           <TabsTrigger value="password">修改密码</TabsTrigger>
-          <TabsTrigger value="totp" disabled={forceChange}>动态验证码</TabsTrigger>
-          <TabsTrigger value="sessions" disabled={forceChange}>我的会话</TabsTrigger>
+          <TabsTrigger value="totp" disabled={forceChange}>
+            动态验证码
+          </TabsTrigger>
+          <TabsTrigger value="sessions" disabled={forceChange}>
+            我的会话
+          </TabsTrigger>
         </TabsList>
 
         {/* ---------------- 基本资料 ---------------- */}
         <TabsContent value="info">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><UserIcon className="size-4" />基本资料</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <UserIcon className="size-4" />
+                基本资料
+              </CardTitle>
               <CardDescription>账号归属信息由管理员维护，此处仅展示</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
@@ -217,13 +230,19 @@ function ProfileContent() {
               <Row label="昵称" value={info?.nickname || '-'} />
               <Row label="邮箱" value={info?.email || '-'} />
               <Row label="用户类型" value={info?.userType} />
-              <Row label="最后登录" value={info?.loginTime ? `${info.loginTime}（IP ${info.loginIp || '-'}）` : '-'} />
+              <Row
+                label="最后登录"
+                value={info?.loginTime ? `${info.loginTime}（IP ${info.loginIp || '-'}）` : '-'}
+              />
               <Row label="密码上次修改" value={info?.pwdUpdateTime || '-'} />
-              <Row label="动态验证码" value={
-                <Badge variant={info?.totpEnabled ? 'default' : 'secondary'}>
-                  {info?.totpEnabled ? '已启用' : '未启用'}
-                </Badge>
-              } />
+              <Row
+                label="动态验证码"
+                value={
+                  <Badge variant={info?.totpEnabled ? 'default' : 'secondary'}>
+                    {info?.totpEnabled ? '已启用' : '未启用'}
+                  </Badge>
+                }
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -232,7 +251,10 @@ function ProfileContent() {
         <TabsContent value="password">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><KeyRound className="size-4" />修改密码</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="size-4" />
+                修改密码
+              </CardTitle>
               <CardDescription>
                 至少 8 位，须同时包含字母和数字；修改成功后所有会话失效，需重新登录
               </CardDescription>
@@ -240,18 +262,33 @@ function ProfileContent() {
             <CardContent className="max-w-sm space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="old-password">当前密码</Label>
-                <Input id="old-password" type="password" value={oldPassword}
-                       onChange={(e) => setOldPassword(e.target.value)} autoComplete="current-password" />
+                <Input
+                  id="old-password"
+                  type="password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  autoComplete="current-password"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="new-password">新密码</Label>
-                <Input id="new-password" type="password" value={newPassword}
-                       onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" />
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="confirm-password">确认新密码</Label>
-                <Input id="confirm-password" type="password" value={confirmPassword}
-                       onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" />
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                />
               </div>
               <Button onClick={handleChangePassword} disabled={savingPassword}>
                 {savingPassword ? '提交中…' : '修改密码'}
@@ -264,7 +301,10 @@ function ProfileContent() {
         <TabsContent value="totp">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><ShieldCheck className="size-4" />动态验证码（TOTP）</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="size-4" />
+                动态验证码（TOTP）
+              </CardTitle>
               <CardDescription>
                 启用后登录除密码外还需输入验证器 App 的 6 位动态码，可显著降低密码泄露的风险
               </CardDescription>
@@ -275,8 +315,13 @@ function ProfileContent() {
                   <Badge>已启用</Badge>
                   <div className="space-y-1.5">
                     <Label htmlFor="disable-password">输入登录密码以关闭</Label>
-                    <Input id="disable-password" type="password" value={disablePassword}
-                           onChange={(e) => setDisablePassword(e.target.value)} autoComplete="current-password" />
+                    <Input
+                      id="disable-password"
+                      type="password"
+                      value={disablePassword}
+                      onChange={(e) => setDisablePassword(e.target.value)}
+                      autoComplete="current-password"
+                    />
                   </div>
                   <Button variant="destructive" onClick={handleTotpDisable} disabled={totpBusy}>
                     关闭动态验证码
@@ -284,20 +329,44 @@ function ProfileContent() {
                 </div>
               ) : totpInfo ? (
                 <div className="space-y-3">
-                  <p>1. 用验证器 App（Google Authenticator / 1Password 等）扫码，或手动输入密钥：</p>
+                  <p>
+                    1. 用验证器 App（Google Authenticator / 1Password 等）扫码，或手动输入密钥：
+                  </p>
                   {totpQrDataUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={totpQrDataUrl} alt="TOTP 绑定二维码" className="rounded-md border" width={220} height={220} />
+                    <img
+                      src={totpQrDataUrl}
+                      alt="TOTP 绑定二维码"
+                      className="rounded-md border"
+                      width={220}
+                      height={220}
+                    />
                   )}
-                  <p className="font-mono text-xs break-all rounded bg-muted px-2 py-1">{totpInfo.secret}</p>
+                  <p className="bg-muted rounded px-2 py-1 font-mono text-xs break-all">
+                    {totpInfo.secret}
+                  </p>
                   <div className="space-y-1.5">
                     <Label htmlFor="totp-code">2. 输入 App 上的 6 位动态码确认绑定</Label>
-                    <Input id="totp-code" inputMode="numeric" maxLength={6} value={totpCode}
-                           onChange={(e) => setTotpCode(e.target.value)} placeholder="如 123456" />
+                    <Input
+                      id="totp-code"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value)}
+                      placeholder="如 123456"
+                    />
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={handleTotpEnable} disabled={totpBusy}>确认启用</Button>
-                    <Button variant="ghost" onClick={() => { setTotpInfo(null); setTotpQrDataUrl(''); setTotpCode(''); }}>
+                    <Button onClick={handleTotpEnable} disabled={totpBusy}>
+                      确认启用
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setTotpInfo(null);
+                        setTotpQrDataUrl('');
+                        setTotpCode('');
+                      }}
+                    >
                       取消
                     </Button>
                   </div>
@@ -318,7 +387,10 @@ function ProfileContent() {
         <TabsContent value="sessions">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><MonitorSmartphone className="size-4" />我的在线会话</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <MonitorSmartphone className="size-4" />
+                我的在线会话
+              </CardTitle>
               <CardDescription>当前账号的所有登录会话，可下线非本人的设备</CardDescription>
             </CardHeader>
             <CardContent>
@@ -333,21 +405,35 @@ function ProfileContent() {
                 </TableHeader>
                 <TableBody>
                   {sessionsLoading ? (
-                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">加载中…</TableCell></TableRow>
-                  ) : sessions.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">无会话</TableCell></TableRow>
-                  ) : sessions.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell>{s.loginIp || '-'}</TableCell>
-                      <TableCell>{s.createTime || '-'}</TableCell>
-                      <TableCell>{s.expireTime || '-'}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => s.token && handleRevokeSession(s.token)}>
-                          下线
-                        </Button>
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-muted-foreground text-center">
+                        加载中…
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : sessions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-muted-foreground text-center">
+                        无会话
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    sessions.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>{s.loginIp || '-'}</TableCell>
+                        <TableCell>{s.createTime || '-'}</TableCell>
+                        <TableCell>{s.expireTime || '-'}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => s.token && handleRevokeSession(s.token)}
+                          >
+                            下线
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -361,7 +447,7 @@ function ProfileContent() {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-28 shrink-0 text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground w-28 shrink-0">{label}</span>
       <span>{value}</span>
     </div>
   );

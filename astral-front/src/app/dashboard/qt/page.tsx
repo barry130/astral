@@ -1,17 +1,45 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Row, Col, Statistic, Tabs, Tag, Button, Input,
-  Form, Modal, Space, message, Switch, Popconfirm, Typography, Select, Divider,
-  Alert } from '@/components/antd-compat';
 import {
-  UserOutlined, CalendarOutlined, CloudDownloadOutlined,
-  ReloadOutlined, PlusOutlined, ExperimentOutlined, ClearOutlined,
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Tabs,
+  Tag,
+  Button,
+  Input,
+  Form,
+  Modal,
+  Space,
+  message,
+  Switch,
+  Popconfirm,
+  Typography,
+  Select,
+  Divider,
+  Alert,
+} from '@/components/antd-compat';
+import {
+  UserOutlined,
+  CalendarOutlined,
+  CloudDownloadOutlined,
+  ReloadOutlined,
+  PlusOutlined,
+  ExperimentOutlined,
+  ClearOutlined,
   DeleteOutlined,
 } from '@/components/antd-compat/icons';
 import {
-  qtAdminApi, githubAccelApi, QtOverview, QtUpdate, QtPage, QtUpdateArtifact,
-  QtGithubAccel, QtGithubAccelProbe, enumLabel,
+  qtAdminApi,
+  githubAccelApi,
+  QtOverview,
+  QtUpdate,
+  QtUpdateArtifact,
+  QtGithubAccel,
+  QtGithubAccelProbe,
+  enumLabel,
 } from '@/api/qt';
 import { fetchDictOptions } from '@/api/dict';
 import { usePerm, QT_PERMISSIONS } from '@/lib/perm';
@@ -32,9 +60,7 @@ function parsePlatforms(csv?: string | null): number[] {
 }
 
 function joinPlatforms(list?: Array<number | string> | null): string {
-  const nums = (list || [])
-    .map((v) => Number(v))
-    .filter((n) => Number.isFinite(n) && n > 0);
+  const nums = (list || []).map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0);
   return Array.from(new Set(nums)).join(',');
 }
 
@@ -73,58 +99,83 @@ export default function QtAdminPage() {
 
   // 由数据字典派生出的下拉选项（数值类将 value 转为 number 以便比较）
   // 用 useMemo 固定引用：这些数组会被下面 columns 的 useMemo 作为依赖
-  const updatePlatformOpts = useMemo(() => (dict.qt_update_platform || []).map((o) => ({ value: Number(o.value), label: o.label })), [dict]);
+  const updatePlatformOpts = useMemo(
+    () => (dict.qt_update_platform || []).map((o) => ({ value: Number(o.value), label: o.label })),
+    [dict],
+  );
   const updateTypeOpts = useMemo(() => dict.qt_update_type || [], [dict]);
   const updateChannelOpts = useMemo(() => dict.qt_update_channel || [], [dict]);
-  const updatePublishOpts = useMemo(() => (dict.qt_update_publish || []).map((o) => ({ value: Number(o.value), label: o.label })), [dict]);
+  const updatePublishOpts = useMemo(
+    () => (dict.qt_update_publish || []).map((o) => ({ value: Number(o.value), label: o.label })),
+    [dict],
+  );
   /** 产物架构（qt_update_arch）：x64 / x86 / arm64，字典缺失时的兜底 */
   const updateArchOpts: { value: string; label: string }[] = useMemo(() => {
     const fromDict = dict.qt_update_arch || [];
-    return fromDict.length ? fromDict : [
-      { value: 'x64', label: 'x64' },
-      { value: 'x86', label: 'x86' },
-      { value: 'arm64', label: 'arm64' },
-    ];
+    return fromDict.length
+      ? fromDict
+      : [
+          { value: 'x64', label: 'x64' },
+          { value: 'x86', label: 'x86' },
+          { value: 'arm64', label: 'arm64' },
+        ];
   }, [dict]);
   // 发布状态：优先字典「qt_update_publish」，字典缺失时用固定映射兜底，绝不展示原始码值 0/1
-  const publishStateLabel = useCallback((v: number | undefined | null): string => {
-    const fromDict = enumLabel(updatePublishOpts, v);
-    // enumLabel 在字典缺失时回退为原值字符串，这里把 0/1 明确映射为文案
-    if (fromDict !== String(v)) return fromDict;
-    const map: Record<number, string> = { 1: '已发布', 0: '未发布' };
-    return map[v ?? -1] ?? '-';
-  }, [updatePublishOpts]);
+  const publishStateLabel = useCallback(
+    (v: number | undefined | null): string => {
+      const fromDict = enumLabel(updatePublishOpts, v);
+      // enumLabel 在字典缺失时回退为原值字符串，这里把 0/1 明确映射为文案
+      if (fromDict !== String(v)) return fromDict;
+      const map: Record<number, string> = { 1: '已发布', 0: '未发布' };
+      return map[v ?? -1] ?? '-';
+    },
+    [updatePublishOpts],
+  );
 
   const loadOverview = () => {
-    qtAdminApi.overview().then((res) => {
-      if (res.code === 200) setOverview(res.data);
-    }).catch(() => {});
+    qtAdminApi
+      .overview()
+      .then((res) => {
+        if (res.code === 200) setOverview(res.data);
+      })
+      .catch(() => {});
   };
 
-  const loadUpdates = useCallback((page = updatePage) => {
-    setUpdatesLoading(true);
-    qtAdminApi.updates(page, 10).then((res) => {
-      if (res.code === 200) {
-        setUpdates(res.data.records || []);
-        setUpdateTotal(res.data.total || 0);
-      }
-    }).finally(() => setUpdatesLoading(false));
-  }, [updatePage]);
+  const loadUpdates = useCallback(
+    (page = updatePage) => {
+      setUpdatesLoading(true);
+      qtAdminApi
+        .updates(page, 10)
+        .then((res) => {
+          if (res.code === 200) {
+            setUpdates(res.data.records || []);
+            setUpdateTotal(res.data.total || 0);
+          }
+        })
+        .finally(() => setUpdatesLoading(false));
+    },
+    [updatePage],
+  );
 
-  const loadAccels = useCallback((page = accelPage) => {
-    setAccelsLoading(true);
-    githubAccelApi.list(page, 20).then((res) => {
-      if (res.code === 200) {
-        setAccels(res.data.records || []);
-        setAccelTotal(res.data.total || 0);
-      }
-    }).finally(() => setAccelsLoading(false));
-  }, [accelPage]);
+  const loadAccels = useCallback(
+    (page = accelPage) => {
+      setAccelsLoading(true);
+      githubAccelApi
+        .list(page, 20)
+        .then((res) => {
+          if (res.code === 200) {
+            setAccels(res.data.records || []);
+            setAccelTotal(res.data.total || 0);
+          }
+        })
+        .finally(() => setAccelsLoading(false));
+    },
+    [accelPage],
+  );
 
   const refresh = () => {
     setLoading(true);
-    Promise.all([loadOverview(), loadUpdates(), loadAccels()])
-      .finally(() => setLoading(false));
+    Promise.all([loadOverview(), loadUpdates(), loadAccels()]).finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -132,9 +183,17 @@ export default function QtAdminPage() {
     loadUpdates(1);
     loadAccels(1);
     fetchDictOptions([
-      'qt_update_platform', 'qt_update_type', 'qt_update_channel', 'qt_update_publish',
+      'qt_update_platform',
+      'qt_update_type',
+      'qt_update_channel',
+      'qt_update_publish',
       'qt_update_arch',
-    ]).then(setDict).catch(() => {});
+    ])
+      .then(setDict)
+      .catch(() => {});
+    // 初次挂载时全量加载：loadOverview/loadUpdates/loadAccels 引用了分页 state，
+    // 加入依赖会在翻页时把列表重置回第一页，这里保持仅挂载执行一次。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ==================== 版本更新 ====================
@@ -144,36 +203,51 @@ export default function QtAdminPage() {
    * GET /updates/{id}/artifacts，否则编辑 Windows 三架构版本时会只看到一份产物、
    * 保存即把另外两份删掉（版本保存时产物是全量覆盖语义）。
    */
-  const openUpdateModal = useCallback(async (record?: QtUpdate) => {
-    if (record?.id != null) {
-      try {
-        // 产物加载成功后才允许编辑，避免加载失败或尚未加载时误把清单清空。
-        const res = await qtAdminApi.artifacts(record.id);
-        if (res.code !== 200) throw new Error(res.msg || '产物清单加载失败');
+  const openUpdateModal = useCallback(
+    async (record?: QtUpdate) => {
+      if (record?.id != null) {
+        try {
+          // 产物加载成功后才允许编辑，避免加载失败或尚未加载时误把清单清空。
+          const res = await qtAdminApi.artifacts(record.id);
+          if (res.code !== 200) throw new Error(res.msg || '产物清单加载失败');
+          updateForm.resetFields();
+          updateForm.setFieldsValue({
+            ...record,
+            platforms: parsePlatforms(record.platforms),
+            artifacts: res.data || [],
+          });
+          setUpdateIsEdit(true);
+        } catch (error: unknown) {
+          message.error((error as Error)?.message || '产物清单加载失败');
+          return;
+        }
+      } else {
         updateForm.resetFields();
-        updateForm.setFieldsValue({ ...record, platforms: parsePlatforms(record.platforms), artifacts: res.data || [] });
-        setUpdateIsEdit(true);
-      } catch (error: any) {
-        message.error(error?.message || '产物清单加载失败');
-        return;
+        updateForm.setFieldValue('artifacts', []);
+        setUpdateIsEdit(false);
       }
-    } else {
-      updateForm.resetFields();
-      updateForm.setFieldValue('artifacts', []);
-      setUpdateIsEdit(false);
-    }
-    setUpdateModal(true);
-  }, [updateForm]);
+      setUpdateModal(true);
+    },
+    [updateForm],
+  );
 
   const submitUpdate = async () => {
     const values = await updateForm.validateFields();
     const editing = values.id != null;
     const artifacts: QtUpdateArtifact[] = values.artifacts || [];
-    const missing = (values.platforms as number[]).filter((platform) =>
-      !artifacts.some((artifact) => Number(artifact.platform) === Number(platform)));
+    const missing = (values.platforms as number[]).filter(
+      (platform) => !artifacts.some((artifact) => Number(artifact.platform) === Number(platform)),
+    );
     if (missing.length > 0) {
-      message.error(`缺少所选平台的产物：${missing.map((platform) =>
-        updatePlatformOpts.find((option) => Number(option.value) === Number(platform))?.label || platform).join('、')}`);
+      message.error(
+        `缺少所选平台的产物：${missing
+          .map(
+            (platform) =>
+              updatePlatformOpts.find((option) => Number(option.value) === Number(platform))
+                ?.label || platform,
+          )
+          .join('、')}`,
+      );
       return;
     }
     // 平台和本次产物清单一次提交，由服务端在同一事务中校验并保存。
@@ -188,22 +262,25 @@ export default function QtAdminPage() {
       message.success(editing ? '版本信息已更新' : '版本信息已创建');
       setUpdateModal(false);
       loadUpdates();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // validateFields 失败时抛出的是 { values, errorFields } 普通对象，没有 message 字段
-      message.error(error?.message || '操作失败');
+      message.error((error as Error)?.message || '操作失败');
     }
   };
 
   // ==================== GitHub 加速节点 ====================
-  const openAccelModal = useCallback((record?: QtGithubAccel) => {
-    if (record) {
-      accelForm.setFieldsValue(record);
-    } else {
-      accelForm.resetFields();
-      accelForm.setFieldsValue({ isShow: 1, sort: 0 });
-    }
-    setAccelModal(true);
-  }, [accelForm]);
+  const openAccelModal = useCallback(
+    (record?: QtGithubAccel) => {
+      if (record) {
+        accelForm.setFieldsValue(record);
+      } else {
+        accelForm.resetFields();
+        accelForm.setFieldsValue({ isShow: 1, sort: 0 });
+      }
+      setAccelModal(true);
+    },
+    [accelForm],
+  );
 
   const submitAccel = async () => {
     const values = await accelForm.validateFields();
@@ -217,161 +294,250 @@ export default function QtAdminPage() {
         setAccelModal(false);
         loadAccels();
       }
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '操作失败');
     }
   };
 
   const runProbe = () => {
     setProbing(true);
     setProbeMap({});
-    githubAccelApi.probe().then((res) => {
-      if (res.code === 200) {
-        const map: Record<number, QtGithubAccelProbe> = {};
-        (res.data || []).forEach((p) => { if (p.id != null) map[p.id] = p; });
-        setProbeMap(map);
-        message.success('探活完成，结果已展示在列表中');
-      }
-    }).catch(() => message.error('探活请求失败')).finally(() => setProbing(false));
+    githubAccelApi
+      .probe()
+      .then((res) => {
+        if (res.code === 200) {
+          const map: Record<number, QtGithubAccelProbe> = {};
+          (res.data || []).forEach((p) => {
+            if (p.id != null) map[p.id] = p;
+          });
+          setProbeMap(map);
+          message.success('探活完成，结果已展示在列表中');
+        }
+      })
+      .catch(() => message.error('探活请求失败'))
+      .finally(() => setProbing(false));
   };
 
   const evictAccelCache = async () => {
     try {
       const res = await githubAccelApi.evictCache();
       if (res.code === 200) message.success('加速缓存已清空并重新加载');
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error: unknown) {
+      message.error((error as Error).message || '操作失败');
     }
   };
 
   // 用 useMemo 固定列引用，否则每次渲染新建数组会让 ResizableTable 内的列 useMemo 全部失效
-  const accelColumns = useMemo(() => [
-    { title: 'ID', dataIndex: 'id', width: 104 },
-    { title: '节点名称', dataIndex: 'name', width: 132 },
-    { title: '加速前缀', dataIndex: 'prefixUrl', ellipsis: true },
-    {
-      title: '启用', dataIndex: 'isShow', width: 80,
-      render: (v: number) => v === 1 ? <Tag color="success">启用</Tag> : <Tag>停用</Tag>,
-    },
-    { title: '排序', dataIndex: 'sort', width: 70 },
-    { title: '备注', dataIndex: 'remark', ellipsis: true },
-    {
-      title: '状态', width: 90,
-      render: (_: any, record: QtGithubAccel) => {
-        const p = probeMap[record.id!];
-        if (!p) return <Typography.Text type="secondary" style={{ fontSize: 12 }}>未探测</Typography.Text>;
-        return p.alive ? <Tag color="success">可用</Tag> : <Tag color="error">不可用</Tag>;
+  const accelColumns = useMemo(
+    () => [
+      { title: 'ID', dataIndex: 'id', width: 104 },
+      { title: '节点名称', dataIndex: 'name', width: 132 },
+      { title: '加速前缀', dataIndex: 'prefixUrl', ellipsis: true },
+      {
+        title: '启用',
+        dataIndex: 'isShow',
+        width: 80,
+        render: (v: number) => (v === 1 ? <Tag color="success">启用</Tag> : <Tag>停用</Tag>),
       },
-    },
-    {
-      title: '结果', width: 150,
-      render: (_: any, record: QtGithubAccel) => {
-        const p = probeMap[record.id!];
-        if (!p) return '-';
-        return <span style={{ fontSize: 12 }}>{p.message ?? ''}{p.latencyMs != null ? ` · ${p.latencyMs} ms` : ''}</span>;
+      { title: '排序', dataIndex: 'sort', width: 70 },
+      { title: '备注', dataIndex: 'remark', ellipsis: true },
+      {
+        title: '状态',
+        width: 90,
+        render: (_: unknown, record: QtGithubAccel) => {
+          const p = probeMap[record.id!];
+          if (!p)
+            return (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                未探测
+              </Typography.Text>
+            );
+          return p.alive ? <Tag color="success">可用</Tag> : <Tag color="error">不可用</Tag>;
+        },
       },
-    },
-    {
-      title: '操作', key: 'action', width: 160,
-      render: (_: any, record: QtGithubAccel) => (
-        <Space>
-          <Button type="link" disabled={!canEdit} onClick={() => openAccelModal(record)}>编辑</Button>
-          <Popconfirm title="确认删除该节点？" disabled={!canEdit} onConfirm={async () => {
-            await githubAccelApi.remove(record.id!);
-            message.success('已删除，缓存已刷新');
-            loadAccels();
-          }}>
-            <Button type="link" danger disabled={!canEdit}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ], [probeMap, openAccelModal, loadAccels, canEdit]);
+      {
+        title: '结果',
+        width: 150,
+        render: (_: unknown, record: QtGithubAccel) => {
+          const p = probeMap[record.id!];
+          if (!p) return '-';
+          return (
+            <span style={{ fontSize: 12 }}>
+              {p.message ?? ''}
+              {p.latencyMs != null ? ` · ${p.latencyMs} ms` : ''}
+            </span>
+          );
+        },
+      },
+      {
+        title: '操作',
+        key: 'action',
+        width: 160,
+        render: (_: unknown, record: QtGithubAccel) => (
+          <Space>
+            <Button type="link" disabled={!canEdit} onClick={() => openAccelModal(record)}>
+              编辑
+            </Button>
+            <Popconfirm
+              title="确认删除该节点？"
+              disabled={!canEdit}
+              onConfirm={async () => {
+                await githubAccelApi.remove(record.id!);
+                message.success('已删除，缓存已刷新');
+                loadAccels();
+              }}
+            >
+              <Button type="link" danger disabled={!canEdit}>
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
+        ),
+      },
+    ],
+    [probeMap, openAccelModal, loadAccels, canEdit],
+  );
 
   // 列宽是「期望最小宽度」：合计放得下容器就等比铺满，放不下横向滚动，不再压扁内容
-  const updateColumns = useMemo(() => [
-    { title: 'ID', dataIndex: 'id', width: 104 },
-    { title: '版本号', dataIndex: 'versionCode', width: 104 },
-    {
-      title: '平台', dataIndex: 'platforms', width: 160,
-      // platforms 是逗号分隔多值列：逐值渲染标签，一行可同时挂多个平台
-      render: (v: string) => {
-        const list = parsePlatforms(v);
-        if (list.length === 0) return <Tag>不限</Tag>;
-        return (
-          <Space size={4} wrap>
-            {list.map((p) => (
-              <Tag key={p} color={p === 1101 ? 'blue' : 'green'}>{enumLabel(updatePlatformOpts, p)}</Tag>
-            ))}
-          </Space>
-        );
+  const updateColumns = useMemo(
+    () => [
+      { title: 'ID', dataIndex: 'id', width: 104 },
+      { title: '版本号', dataIndex: 'versionCode', width: 104 },
+      {
+        title: '平台',
+        dataIndex: 'platforms',
+        width: 160,
+        // platforms 是逗号分隔多值列：逐值渲染标签，一行可同时挂多个平台
+        render: (v: string) => {
+          const list = parsePlatforms(v);
+          if (list.length === 0) return <Tag>不限</Tag>;
+          return (
+            <Space size={4} wrap>
+              {list.map((p) => (
+                <Tag key={p} color={p === 1101 ? 'blue' : 'green'}>
+                  {enumLabel(updatePlatformOpts, p)}
+                </Tag>
+              ))}
+            </Space>
+          );
+        },
       },
-    },
-    { title: '版本名', dataIndex: 'versionName', width: 116 },
-    { title: '更新说明', dataIndex: 'versionInfo', width: 176, ellipsis: true },
-    {
-      title: '提示方式', dataIndex: 'updateType', width: 96,
-      render: (v: string) => <Tag>{enumLabel(updateTypeOpts, v)}</Tag>,
-    },
-    {
-      title: '渠道', dataIndex: 'channel', width: 88,
-      render: (v: string) => <Tag color="purple">{enumLabel(updateChannelOpts, v)}</Tag>,
-    },
-    {
-      title: '下载链接', width: 178, ellipsis: true,
-      render: (_: any, r: QtUpdate) => (
-        <Space size={4} wrap>
-          {(r.artifacts?.length ?? 0) > 0 && <Tag color="geekblue">产物 {r.artifacts?.length}</Tag>}
-          {r.downloadUrl && <Tag color="blue">直链</Tag>}
-          {r.browserUrl && <Tag color="cyan">浏览器</Tag>}
-          {r.isGithub === 1 && <Tag color="purple">GitHub加速</Tag>}
-          {!r.downloadUrl && !r.browserUrl && <Tag>未配置</Tag>}
-        </Space>
-      ),
-    },
-    {
-      title: '发布', dataIndex: 'isPublished', width: 88,
-      render: (v: number) => v === 1
-        ? <Tag color="success">{publishStateLabel(v)}</Tag>
-        : <Tag color="default">{publishStateLabel(v)}</Tag>,
-    },
-    {
-      title: '强制', dataIndex: 'isForce', width: 88,
-      render: (v: number) => v === 1 ? <Tag color="red">强制</Tag> : <Tag>非强制</Tag>,
-    },
-    { title: '包大小', dataIndex: 'fileSize', width: 96, render: (v: number) => v ? `${(v / 1048576).toFixed(2)} MB` : '-' },
-    { title: 'MD5', dataIndex: 'md5', width: 132, ellipsis: true },
-    { title: '直链地址', dataIndex: 'downloadUrl', width: 180, ellipsis: true },
-    { title: '浏览器地址', dataIndex: 'browserUrl', width: 180, ellipsis: true },
-    {
-      title: '操作', key: 'action', width: 160,
-      render: (_: any, record: QtUpdate) => (
-        <Space>
-          <Button type="link" disabled={!canEdit} onClick={() => openUpdateModal(record)}>编辑</Button>
-          <Popconfirm title="确认删除？" disabled={!canEdit} onConfirm={async () => {
-            await qtAdminApi.deleteUpdate(record.id!);
-            message.success('已删除');
-            loadUpdates();
-          }}>
-            <Button type="link" danger disabled={!canEdit}>删除</Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ], [updatePlatformOpts, updateTypeOpts, updateChannelOpts, publishStateLabel, openUpdateModal, loadUpdates, canEdit]);
+      { title: '版本名', dataIndex: 'versionName', width: 116 },
+      { title: '更新说明', dataIndex: 'versionInfo', width: 176, ellipsis: true },
+      {
+        title: '提示方式',
+        dataIndex: 'updateType',
+        width: 96,
+        render: (v: string) => <Tag>{enumLabel(updateTypeOpts, v)}</Tag>,
+      },
+      {
+        title: '渠道',
+        dataIndex: 'channel',
+        width: 88,
+        render: (v: string) => <Tag color="purple">{enumLabel(updateChannelOpts, v)}</Tag>,
+      },
+      {
+        title: '下载链接',
+        width: 178,
+        ellipsis: true,
+        render: (_: unknown, r: QtUpdate) => (
+          <Space size={4} wrap>
+            {(r.artifacts?.length ?? 0) > 0 && (
+              <Tag color="geekblue">产物 {r.artifacts?.length}</Tag>
+            )}
+            {r.downloadUrl && <Tag color="blue">直链</Tag>}
+            {r.browserUrl && <Tag color="cyan">浏览器</Tag>}
+            {r.isGithub === 1 && <Tag color="purple">GitHub加速</Tag>}
+            {!r.downloadUrl && !r.browserUrl && <Tag>未配置</Tag>}
+          </Space>
+        ),
+      },
+      {
+        title: '发布',
+        dataIndex: 'isPublished',
+        width: 88,
+        render: (v: number) =>
+          v === 1 ? (
+            <Tag color="success">{publishStateLabel(v)}</Tag>
+          ) : (
+            <Tag color="default">{publishStateLabel(v)}</Tag>
+          ),
+      },
+      {
+        title: '强制',
+        dataIndex: 'isForce',
+        width: 88,
+        render: (v: number) => (v === 1 ? <Tag color="red">强制</Tag> : <Tag>非强制</Tag>),
+      },
+      {
+        title: '包大小',
+        dataIndex: 'fileSize',
+        width: 96,
+        render: (v: number) => (v ? `${(v / 1048576).toFixed(2)} MB` : '-'),
+      },
+      { title: 'MD5', dataIndex: 'md5', width: 132, ellipsis: true },
+      { title: '直链地址', dataIndex: 'downloadUrl', width: 180, ellipsis: true },
+      { title: '浏览器地址', dataIndex: 'browserUrl', width: 180, ellipsis: true },
+      {
+        title: '操作',
+        key: 'action',
+        width: 160,
+        render: (_: unknown, record: QtUpdate) => (
+          <Space>
+            <Button type="link" disabled={!canEdit} onClick={() => openUpdateModal(record)}>
+              编辑
+            </Button>
+            <Popconfirm
+              title="确认删除？"
+              disabled={!canEdit}
+              onConfirm={async () => {
+                await qtAdminApi.deleteUpdate(record.id!);
+                message.success('已删除');
+                loadUpdates();
+              }}
+            >
+              <Button type="link" danger disabled={!canEdit}>
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
+        ),
+      },
+    ],
+    [
+      updatePlatformOpts,
+      updateTypeOpts,
+      updateChannelOpts,
+      publishStateLabel,
+      openUpdateModal,
+      loadUpdates,
+      canEdit,
+    ],
+  );
 
   return (
     <div>
-      <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        className="filter-bar"
+        style={{
+          marginBottom: 16,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <div>
           <h2 style={{ margin: 0 }}>轻听 API 管理</h2>
           <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-            面向 qt-uniappx 的音乐 App 后端：签到/收藏/版本更新（astral-plugin 内置 Qt 插件；公告统一走 feedback 插件）
+            面向 qt-uniappx 的音乐 App 后端：签到/收藏/版本更新（astral-plugin 内置 Qt
+            插件；公告统一走 feedback 插件）
           </Paragraph>
         </div>
         <div className="page-toolbar">
           <Space>
-            <Button icon={<ReloadOutlined spin={loading} />} onClick={refresh}>刷新</Button>
+            <Button icon={<ReloadOutlined spin={loading} />} onClick={refresh}>
+              刷新
+            </Button>
             {!canEdit && <Tag>只读</Tag>}
           </Space>
         </div>
@@ -379,13 +545,31 @@ export default function QtAdminPage() {
 
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
-          <Card><Statistic title="用户数" value={overview?.userCount ?? '-'} prefix={<UserOutlined />} /></Card>
+          <Card>
+            <Statistic
+              title="用户数"
+              value={overview?.userCount ?? '-'}
+              prefix={<UserOutlined />}
+            />
+          </Card>
         </Col>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
-          <Card><Statistic title="签到记录" value={overview?.dakaCount ?? '-'} prefix={<CalendarOutlined />} /></Card>
+          <Card>
+            <Statistic
+              title="签到记录"
+              value={overview?.dakaCount ?? '-'}
+              prefix={<CalendarOutlined />}
+            />
+          </Card>
         </Col>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
-          <Card><Statistic title="版本更新" value={overview?.updateCount ?? '-'} prefix={<CloudDownloadOutlined />} /></Card>
+          <Card>
+            <Statistic
+              title="版本更新"
+              value={overview?.updateCount ?? '-'}
+              prefix={<CloudDownloadOutlined />}
+            />
+          </Card>
         </Col>
       </Row>
 
@@ -398,7 +582,15 @@ export default function QtAdminPage() {
               children: (
                 <div>
                   <div className="filter-bar" style={{ marginBottom: 12 }}>
-                    {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={() => openUpdateModal()}>新增版本</Button>}
+                    {canEdit && (
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => openUpdateModal()}
+                      >
+                        新增版本
+                      </Button>
+                    )}
                   </div>
                   <ResizableTable
                     rowKey="id"
@@ -410,7 +602,10 @@ export default function QtAdminPage() {
                       current: updatePage,
                       total: updateTotal,
                       pageSize: 10,
-                      onChange: (p) => { setUpdatePage(p); loadUpdates(p); },
+                      onChange: (p) => {
+                        setUpdatePage(p);
+                        loadUpdates(p);
+                      },
                     }}
                   />
                 </div>
@@ -428,9 +623,30 @@ export default function QtAdminPage() {
                 <div>
                   <div className="filter-bar" style={{ marginBottom: 12 }}>
                     <Space>
-                      {canEdit && <Button type="primary" icon={<PlusOutlined />} onClick={() => openAccelModal()}>新增节点</Button>}
-                      <Button icon={<ExperimentOutlined />} loading={probing} disabled={!canEdit} onClick={runProbe}>手动探活</Button>
-                      <Button icon={<ClearOutlined />} disabled={!canEdit} onClick={evictAccelCache}>刷新缓存</Button>
+                      {canEdit && (
+                        <Button
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={() => openAccelModal()}
+                        >
+                          新增节点
+                        </Button>
+                      )}
+                      <Button
+                        icon={<ExperimentOutlined />}
+                        loading={probing}
+                        disabled={!canEdit}
+                        onClick={runProbe}
+                      >
+                        手动探活
+                      </Button>
+                      <Button
+                        icon={<ClearOutlined />}
+                        disabled={!canEdit}
+                        onClick={evictAccelCache}
+                      >
+                        刷新缓存
+                      </Button>
                     </Space>
                   </div>
                   <ResizableTable
@@ -443,7 +659,10 @@ export default function QtAdminPage() {
                       current: accelPage,
                       total: accelTotal,
                       pageSize: 20,
-                      onChange: (p) => { setAccelPage(p); loadAccels(p); },
+                      onChange: (p) => {
+                        setAccelPage(p);
+                        loadAccels(p);
+                      },
                     }}
                   />
                 </div>
@@ -465,8 +684,21 @@ export default function QtAdminPage() {
            放宽到 860px（与「数据统计」弹窗一致）。 */
         width={860}
       >
-        <Form form={updateForm} layout="vertical" initialValues={{ platforms: [1101], channel: 'stable', isGithub: 0, isForce: 0, isPublished: 0, updateType: '1' }}>
-          <Form.Item name="id" hidden><Input /></Form.Item>
+        <Form
+          form={updateForm}
+          layout="vertical"
+          initialValues={{
+            platforms: [1101],
+            channel: 'stable',
+            isGithub: 0,
+            isForce: 0,
+            isPublished: 0,
+            updateType: '1',
+          }}
+        >
+          <Form.Item name="id" hidden>
+            <Input />
+          </Form.Item>
           {watchedUpdatePlatforms.length > 1 && (
             <Alert
               type="info"
@@ -480,12 +712,18 @@ export default function QtAdminPage() {
               现在压到约 8 行（超高时弹窗内部滚动，见antd-compat Modal 的 max-h 处理） */}
           <Row gutter={[16, 0]}>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
-              <Form.Item name="versionCode" label="版本号" rules={[{ required: true, message: '请输入版本号' }]}>
+              <Form.Item
+                name="versionCode"
+                label="版本号"
+                rules={[{ required: true, message: '请输入版本号' }]}
+              >
                 <Input type="number" />
               </Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
-              <Form.Item name="versionName" label="版本名称"><Input placeholder="如 2.3.0" /></Form.Item>
+              <Form.Item name="versionName" label="版本名称">
+                <Input placeholder="如 2.3.0" />
+              </Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
               {/* 新增和编辑均可多选平台，保存时逐一检查产物覆盖。 */}
@@ -500,7 +738,7 @@ export default function QtAdminPage() {
               >
                 <Select
                   mode="multiple"
-                  options={updatePlatformOpts as any}
+                  options={updatePlatformOpts}
                   placeholder="可多选，如安卓 + 鸿蒙"
                   allowClear
                   disabled={!canEdit}
@@ -508,25 +746,43 @@ export default function QtAdminPage() {
               </Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
-              <Form.Item name="updateType" label="提示方式" rules={[{ required: true, message: '请选择提示方式' }]}>
-                <Select options={updateTypeOpts as any} placeholder="请选择提示方式" />
+              <Form.Item
+                name="updateType"
+                label="提示方式"
+                rules={[{ required: true, message: '请选择提示方式' }]}
+              >
+                <Select options={updateTypeOpts} placeholder="请选择提示方式" />
               </Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
-              <Form.Item name="channel" label="发布渠道" rules={[{ required: true, message: '请选择渠道' }]}>
-                <Select options={updateChannelOpts as any} placeholder="请选择渠道" />
+              <Form.Item
+                name="channel"
+                label="发布渠道"
+                rules={[{ required: true, message: '请选择渠道' }]}
+              >
+                <Select options={updateChannelOpts} placeholder="请选择渠道" />
               </Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
-              <Form.Item name="fileSize" label="安装包大小(字节)"><Input type="number" placeholder="可选，如 48234457" /></Form.Item>
+              <Form.Item name="fileSize" label="安装包大小(字节)">
+                <Input type="number" placeholder="可选，如 48234457" />
+              </Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
-              <Form.Item name="md5" label="安装包 MD5"><Input placeholder="可选" /></Form.Item>
+              <Form.Item name="md5" label="安装包 MD5">
+                <Input placeholder="可选" />
+              </Form.Item>
             </Col>
           </Row>
           <Row gutter={[16, 0]}>
             <Col xs={{ span: 24 }} md={{ span: 8 }}>
-              <Form.Item name="isForce" label="是否强制更新" valuePropName="checked" getValueFromEvent={(checked: boolean) => checked ? 1 : 0} getValueProps={(v: number) => ({ checked: v === 1 })}>
+              <Form.Item
+                name="isForce"
+                label="是否强制更新"
+                valuePropName="checked"
+                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+                getValueProps={(v: number) => ({ checked: v === 1 })}
+              >
                 <Switch checkedChildren="强制" unCheckedChildren="非强制" />
               </Form.Item>
             </Col>
@@ -535,7 +791,7 @@ export default function QtAdminPage() {
                 name="isPublished"
                 label="是否发布"
                 valuePropName="checked"
-                getValueFromEvent={(checked: boolean) => checked ? 1 : 0}
+                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
                 getValueProps={(v: number) => ({ checked: v === 1 })}
                 tooltip="未发布：仅本地版本测试，用户收不到更新通知，也不校验非官方 APP；已发布：用户才能收到更新通知"
               >
@@ -547,7 +803,7 @@ export default function QtAdminPage() {
                 name="isGithub"
                 label="GitHub 下载"
                 valuePropName="checked"
-                getValueFromEvent={(checked: boolean) => checked ? 1 : 0}
+                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
                 getValueProps={(v: number) => ({ checked: v === 1 })}
                 tooltip="开启后：App 端「直接下载」前会并发探测所有启用的加速前缀（前缀+直链），命中可用节点即走加速地址，全部不可用回退原始链接"
               >
@@ -571,22 +827,40 @@ export default function QtAdminPage() {
                   {fields.length > 0 && <Tag>App 按「平台+架构」自动挑选</Tag>}
                 </Divider>
                 <Paragraph type="secondary">
-                  每个所选平台至少添加一条对应产物，并填写直链或浏览器下载地址。Windows / macOS 可按架构添加多条产物。
+                  每个所选平台至少添加一条对应产物，并填写直链或浏览器下载地址。Windows / macOS
+                  可按架构添加多条产物。
                 </Paragraph>
                 {fields.length === 0 && (
-                  <Alert type="warning" showIcon message="尚未添加产物，请为所选平台添加对应产物后保存" style={{ marginBottom: 12 }} />
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="尚未添加产物，请为所选平台添加对应产物后保存"
+                    style={{ marginBottom: 12 }}
+                  />
                 )}
                 {fields.map((field) => (
-                  <div key={field.key} className="rounded-md border border-border p-3 mb-3">
+                  <div key={field.key} className="border-border mb-3 rounded-md border p-3">
                     <Row gutter={[12, 0]}>
                       <Col xs={{ span: 24 }} md={{ span: 8 }}>
-                        <Form.Item name={[field.name, 'platform']} label="平台" style={{ marginBottom: 8 }}>
-                          <Select options={updatePlatformOpts as any} placeholder="不限平台（不计入所选平台覆盖）" allowClear />
+                        <Form.Item
+                          name={[field.name, 'platform']}
+                          label="平台"
+                          style={{ marginBottom: 8 }}
+                        >
+                          <Select
+                            options={updatePlatformOpts}
+                            placeholder="不限平台（不计入所选平台覆盖）"
+                            allowClear
+                          />
                         </Form.Item>
                       </Col>
                       <Col xs={{ span: 24 }} md={{ span: 8 }}>
-                        <Form.Item name={[field.name, 'arch']} label="架构" style={{ marginBottom: 8 }}>
-                          <Select options={updateArchOpts as any} placeholder="不限架构" allowClear />
+                        <Form.Item
+                          name={[field.name, 'arch']}
+                          label="架构"
+                          style={{ marginBottom: 8 }}
+                        >
+                          <Select options={updateArchOpts} placeholder="不限架构" allowClear />
                         </Form.Item>
                       </Col>
                       <Col xs={{ span: 24 }} md={{ span: 8 }}>
@@ -594,7 +868,7 @@ export default function QtAdminPage() {
                           name={[field.name, 'isGithub']}
                           label="GitHub 直链"
                           valuePropName="checked"
-                          getValueFromEvent={(checked: boolean) => checked ? 1 : 0}
+                          getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
                           getValueProps={(v: number) => ({ checked: v === 1 })}
                           style={{ marginBottom: 8 }}
                         >
@@ -609,7 +883,10 @@ export default function QtAdminPage() {
                           rules={[
                             ({ getFieldValue }) => ({
                               validator(_: unknown, value: string) {
-                                if (value || getFieldValue(['artifacts', field.name, 'browserUrl'])) {
+                                if (
+                                  value ||
+                                  getFieldValue(['artifacts', field.name, 'browserUrl'])
+                                ) {
                                   return Promise.resolve();
                                 }
                                 return Promise.reject(new Error('直链与浏览器至少填一个'));
@@ -621,17 +898,29 @@ export default function QtAdminPage() {
                         </Form.Item>
                       </Col>
                       <Col xs={{ span: 24 }} md={{ span: 12 }}>
-                        <Form.Item name={[field.name, 'browserUrl']} label="浏览器下载链接" style={{ marginBottom: 8 }}>
+                        <Form.Item
+                          name={[field.name, 'browserUrl']}
+                          label="浏览器下载链接"
+                          style={{ marginBottom: 8 }}
+                        >
                           <Input placeholder="可选" />
                         </Form.Item>
                       </Col>
                       <Col xs={{ span: 24 }} md={{ span: 12 }}>
-                        <Form.Item name={[field.name, 'fileSize']} label="包大小(字节)" style={{ marginBottom: 0 }}>
+                        <Form.Item
+                          name={[field.name, 'fileSize']}
+                          label="包大小(字节)"
+                          style={{ marginBottom: 0 }}
+                        >
                           <Input type="number" placeholder="可选" />
                         </Form.Item>
                       </Col>
                       <Col xs={{ span: 24 }} md={{ span: 12 }}>
-                        <Form.Item name={[field.name, 'md5']} label="MD5" style={{ marginBottom: 0 }}>
+                        <Form.Item
+                          name={[field.name, 'md5']}
+                          label="MD5"
+                          style={{ marginBottom: 0 }}
+                        >
                           <Input placeholder="可选" />
                         </Form.Item>
                       </Col>
@@ -655,7 +944,11 @@ export default function QtAdminPage() {
                     // 优先填尚未配置产物的平台，便于连续补齐多平台清单。
                     const picked: number[] = updateForm.getFieldValue('platforms') || [];
                     const current: QtUpdateArtifact[] = updateForm.getFieldValue('artifacts') || [];
-                    const platform = picked.find((item) => !current.some((artifact) => Number(artifact.platform) === Number(item))) ?? picked[0];
+                    const platform =
+                      picked.find(
+                        (item) =>
+                          !current.some((artifact) => Number(artifact.platform) === Number(item)),
+                      ) ?? picked[0];
                     add({ platform, isGithub: 0 });
                   }}
                 >
@@ -665,8 +958,8 @@ export default function QtAdminPage() {
             )}
           </Form.List>
           <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            「下载方式」字段已废弃：App 端按双链接并存展示按钮，不再按模式二选一。
-            平台 / 架构留空 = 不限，兜底给所有客户端（旧客户端不上送架构，只会命中不限架构的产物）。
+            「下载方式」字段已废弃：App 端按双链接并存展示按钮，不再按模式二选一。 平台 / 架构留空 =
+            不限，兜底给所有客户端（旧客户端不上送架构，只会命中不限架构的产物）。
           </Paragraph>
         </Form>
       </Modal>
@@ -681,16 +974,34 @@ export default function QtAdminPage() {
         destroyOnClose
       >
         <Form form={accelForm} layout="vertical" initialValues={{ isShow: 1, sort: 0 }}>
-          <Form.Item name="id" hidden><Input /></Form.Item>
-          <Form.Item name="name" label="节点名称"><Input placeholder="如 ghfast" /></Form.Item>
-          <Form.Item name="prefixUrl" label="加速前缀" rules={[{ required: true, message: '请输入加速前缀' }]}>
+          <Form.Item name="id" hidden>
+            <Input />
+          </Form.Item>
+          <Form.Item name="name" label="节点名称">
+            <Input placeholder="如 ghfast" />
+          </Form.Item>
+          <Form.Item
+            name="prefixUrl"
+            label="加速前缀"
+            rules={[{ required: true, message: '请输入加速前缀' }]}
+          >
             <Input placeholder="如 https://ghfast.top/（最终地址 = 前缀 + 原始链接直接拼接）" />
           </Form.Item>
-          <Form.Item name="isShow" label="是否启用" valuePropName="checked" getValueFromEvent={(checked: boolean) => checked ? 1 : 0} getValueProps={(v: number) => ({ checked: v === 1 })}>
+          <Form.Item
+            name="isShow"
+            label="是否启用"
+            valuePropName="checked"
+            getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+            getValueProps={(v: number) => ({ checked: v === 1 })}
+          >
             <Switch checkedChildren="启用" unCheckedChildren="停用" />
           </Form.Item>
-          <Form.Item name="sort" label="排序"><Input type="number" placeholder="探测顺序，小的在前" /></Form.Item>
-          <Form.Item name="remark" label="备注"><Input placeholder="可选" /></Form.Item>
+          <Form.Item name="sort" label="排序">
+            <Input type="number" placeholder="探测顺序，小的在前" />
+          </Form.Item>
+          <Form.Item name="remark" label="备注">
+            <Input placeholder="可选" />
+          </Form.Item>
         </Form>
       </Modal>
     </div>

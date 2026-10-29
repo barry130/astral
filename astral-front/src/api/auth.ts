@@ -44,10 +44,8 @@ export const authApi = {
     request.post('/api/v1/all/auth/login', data),
 
   /** 用户登出 */
-  logout: (): Promise<ApiResult<void>> =>
-    request.post('/api/v1/all/auth/logout'),
+  logout: (): Promise<ApiResult<void>> => request.post('/api/v1/all/auth/logout'),
 
   /** 获取当前用户信息（后端 /api/v1/all/auth/info 返回的同样是 LoginResponse） */
-  getUserInfo: (): Promise<ApiResult<LoginResponse>> =>
-    request.get('/api/v1/all/auth/info'),
+  getUserInfo: (): Promise<ApiResult<LoginResponse>> => request.get('/api/v1/all/auth/info'),
 };

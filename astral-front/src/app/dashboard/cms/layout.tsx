@@ -31,7 +31,8 @@ export default function CmsLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let alive = true;
-    cmsApi.settingList()
+    cmsApi
+      .settingList()
       .then((res) => {
         const url = (res.data?.blog_url || '').trim();
         if (alive && url) setBlogUrl(url);
@@ -46,7 +47,7 @@ export default function CmsLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="space-y-4">
-      <nav className="flex flex-wrap items-center gap-1 border-b border-border pb-3">
+      <nav className="border-border flex flex-wrap items-center gap-1 border-b pb-3">
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
@@ -56,7 +57,7 @@ export default function CmsLayout({ children }: { children: React.ReactNode }) {
               className={cn(
                 'rounded-md px-3 py-1.5 text-sm transition-colors',
                 active
-                  ? 'bg-secondary font-medium text-secondary-foreground'
+                  ? 'bg-secondary text-secondary-foreground font-medium'
                   : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
               )}
             >
@@ -68,7 +69,7 @@ export default function CmsLayout({ children }: { children: React.ReactNode }) {
           href={blogUrl}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+          className="text-muted-foreground hover:bg-secondary/60 hover:text-foreground ml-auto flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm transition-colors"
           title={blogUrl}
         >
           <ExternalLink className="size-3.5" />

@@ -71,21 +71,29 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
     /* 与表格之间用一条分隔线连接，让分页器成为表格的一部分而不是漂浮在下方；
        分隔线颜色与表体行间线同源（border-border/60），
        DataTable 已把「最后一行」的底线去掉，这里不会出现双线 */
-    <div className={cn('border-border/60 flex flex-wrap items-center justify-end gap-3 border-t py-3 text-sm', className)}>
+    <div
+      className={cn(
+        'border-border/60 flex flex-wrap items-center justify-end gap-3 border-t py-3 text-sm',
+        className,
+      )}
+    >
       <span className="text-muted-foreground">
         {pagination.showTotal
-          ? pagination.showTotal(total, [(current - 1) * pageSize + 1, Math.min(current * pageSize, total)])
+          ? pagination.showTotal(total, [
+              (current - 1) * pageSize + 1,
+              Math.min(current * pageSize, total),
+            ])
           : `共 ${total} 条`}{' '}
         · 第 {current}/{pageCount} 页
       </span>
 
       {pagination.showSizeChanger && (
-        <label className="flex items-center gap-1.5 text-muted-foreground">
+        <label className="text-muted-foreground flex items-center gap-1.5">
           每页
           <select
             value={String(pageSize)}
             onChange={(e) => changePageSize(Number(e.target.value))}
-            className="h-8 cursor-pointer rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 cursor-pointer rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-[3px]"
             aria-label="每页条数"
           >
             {pageSizes.map((s) => (
@@ -122,7 +130,7 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
 
         {buildPageList(current, pageCount).map((p, i) =>
           p === '...' ? (
-            <span key={`gap-${i}`} className="px-1 text-muted-foreground">
+            <span key={`gap-${i}`} className="text-muted-foreground px-1">
               …
             </span>
           ) : (
@@ -163,7 +171,7 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
         </Button>
 
         {pagination.showQuickJumper && (
-          <label className="ml-1 flex items-center gap-1.5 text-muted-foreground">
+          <label className="text-muted-foreground ml-1 flex items-center gap-1.5">
             跳至
             <Input
               className="h-8 w-14 text-center"

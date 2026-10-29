@@ -1,8 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Button, Card, Space, Table, Tag, Tabs, message } from '@/components/antd-compat';
-import { DownloadOutlined, FileTextOutlined, SecurityScanOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@/components/antd-compat/icons';
+import { useCallback, useEffect, useState } from 'react';
+import { Button, Card, Table, Tag, Tabs, message } from '@/components/antd-compat';
+import {
+  DownloadOutlined,
+  FileTextOutlined,
+  SecurityScanOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+} from '@/components/antd-compat/icons';
 import { logApi, OperateLog, LoginLog } from '@/api/log';
 import { clientHeaders } from '@/lib/client-info';
 import { readCsrfToken } from '@/api/client';
@@ -51,9 +57,10 @@ export default function LogPage() {
   const [pageSize, setPageSize] = useState(20);
 
   /** 加载操作日志 */
-  const loadOperateLogs = () => {
+  const loadOperateLogs = useCallback(() => {
     setLoading(true);
-    logApi.getOperateLogPage(pageNum, pageSize)
+    logApi
+      .getOperateLogPage(pageNum, pageSize)
       .then((res) => {
         if (res.code === 200) {
           setOperateLogs(res.data.records);
@@ -62,12 +69,13 @@ export default function LogPage() {
       })
       .catch(() => message.error('操作日志加载失败'))
       .finally(() => setLoading(false));
-  };
+  }, [pageNum, pageSize]);
 
   /** 加载登录日志 */
-  const loadLoginLogs = () => {
+  const loadLoginLogs = useCallback(() => {
     setLoading(true);
-    logApi.getLoginLogPage(pageNum, pageSize)
+    logApi
+      .getLoginLogPage(pageNum, pageSize)
       .then((res) => {
         if (res.code === 200) {
           setLoginLogs(res.data.records);
@@ -76,7 +84,7 @@ export default function LogPage() {
       })
       .catch(() => message.error('登录日志加载失败'))
       .finally(() => setLoading(false));
-  };
+  }, [pageNum, pageSize]);
 
   /** 标签页切换：重置页码为1 */
   const handleTabChange = (key: string) => {
@@ -91,52 +99,131 @@ export default function LogPage() {
     } else {
       loadLoginLogs();
     }
-  }, [activeTab, pageNum, pageSize]);
+  }, [activeTab, pageNum, pageSize, loadOperateLogs, loadLoginLogs]);
 
   /** 操作日志表格列定义 */
   const operateColumns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
-    { title: '用户名', dataIndex: 'username', key: 'username', width: 100, render: (v: string) => v || '-' },
-    { title: '模块', dataIndex: 'module', key: 'module', width: 100, render: (v: string) => <Tag color="blue">{v}</Tag> },
+    {
+      title: '用户名',
+      dataIndex: 'username',
+      key: 'username',
+      width: 100,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '模块',
+      dataIndex: 'module',
+      key: 'module',
+      width: 100,
+      render: (v: string) => <Tag color="blue">{v}</Tag>,
+    },
     { title: '操作类型', dataIndex: 'operateType', key: 'operateType', width: 80 },
-    { title: '请求方法', dataIndex: 'requestMethod', key: 'requestMethod', width: 70, render: (v: string) => <Tag>{v}</Tag> },
-    { title: '请求URL', dataIndex: 'requestUrl', key: 'requestUrl', ellipsis: true, width: 180, render: (v: string) => <code style={{ fontSize: 12 }}>{v}</code> },
+    {
+      title: '请求方法',
+      dataIndex: 'requestMethod',
+      key: 'requestMethod',
+      width: 70,
+      render: (v: string) => <Tag>{v}</Tag>,
+    },
+    {
+      title: '请求URL',
+      dataIndex: 'requestUrl',
+      key: 'requestUrl',
+      ellipsis: true,
+      width: 180,
+      render: (v: string) => <code style={{ fontSize: 12 }}>{v}</code>,
+    },
     { title: 'IP', dataIndex: 'ip', key: 'ip', width: 110, render: (v: string) => v || '-' },
-    { title: '耗时', dataIndex: 'executeTime', key: 'executeTime', width: 70, render: (v: number) => v ? <span style={{ color: '#52c41a' }}>{v}ms</span> : '-' },
-    { title: '状态', dataIndex: 'status', key: 'status', width: 60, render: (v: number) => (
-      v === 1 
-        ? <Tag icon={<CheckCircleOutlined />} color="success">成功</Tag> 
-        : <Tag icon={<CloseCircleOutlined />} color="error">失败</Tag>
-    )},
+    {
+      title: '耗时',
+      dataIndex: 'executeTime',
+      key: 'executeTime',
+      width: 70,
+      render: (v: number) => (v ? <span style={{ color: '#52c41a' }}>{v}ms</span> : '-'),
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 60,
+      render: (v: number) =>
+        v === 1 ? (
+          <Tag icon={<CheckCircleOutlined />} color="success">
+            成功
+          </Tag>
+        ) : (
+          <Tag icon={<CloseCircleOutlined />} color="error">
+            失败
+          </Tag>
+        ),
+    },
     { title: '时间', dataIndex: 'createTime', key: 'createTime', width: 150 },
   ];
 
   /** 登录日志表格列定义 */
   const loginColumns = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
-    { title: '用户名', dataIndex: 'username', key: 'username', width: 110, render: (v: string) => v || '-' },
-    { title: '登录类型', dataIndex: 'loginType', key: 'loginType', width: 90, render: (v: string) => <Tag>{v}</Tag> },
+    {
+      title: '用户名',
+      dataIndex: 'username',
+      key: 'username',
+      width: 110,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '登录类型',
+      dataIndex: 'loginType',
+      key: 'loginType',
+      width: 90,
+      render: (v: string) => <Tag>{v}</Tag>,
+    },
     { title: 'IP', dataIndex: 'ip', key: 'ip', width: 110, render: (v: string) => v || '-' },
-    { title: '位置', dataIndex: 'location', key: 'location', width: 140, render: (v: string) => v || '-' },
-    { title: '状态', dataIndex: 'status', key: 'status', width: 70, render: (v: number) => (
-      v === 1 
-        ? <Tag icon={<CheckCircleOutlined />} color="success">成功</Tag> 
-        : <Tag icon={<CloseCircleOutlined />} color="error">失败</Tag>
-    )},
-    { title: '消息', dataIndex: 'msg', key: 'msg', ellipsis: true, render: (v: string) => v || '-' },
+    {
+      title: '位置',
+      dataIndex: 'location',
+      key: 'location',
+      width: 140,
+      render: (v: string) => v || '-',
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 70,
+      render: (v: number) =>
+        v === 1 ? (
+          <Tag icon={<CheckCircleOutlined />} color="success">
+            成功
+          </Tag>
+        ) : (
+          <Tag icon={<CloseCircleOutlined />} color="error">
+            失败
+          </Tag>
+        ),
+    },
+    {
+      title: '消息',
+      dataIndex: 'msg',
+      key: 'msg',
+      ellipsis: true,
+      render: (v: string) => v || '-',
+    },
     { title: '时间', dataIndex: 'loginTime', key: 'loginTime', width: 150 },
   ];
 
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
-        <h2 className="page-title" style={{ marginBottom: 8 }}>日志管理</h2>
+        <h2 className="page-title" style={{ marginBottom: 8 }}>
+          日志管理
+        </h2>
         <p style={{ color: '#909399', margin: 0 }}>查看系统操作日志与登录日志</p>
       </div>
 
       <Card className="fade-in-up">
-        <Tabs 
-          activeKey={activeTab} 
+        <Tabs
+          activeKey={activeTab}
           onChange={handleTabChange}
           items={[
             {
@@ -149,30 +236,37 @@ export default function LogPage() {
               ),
               children: (
                 <div>
-                <div style={{ marginBottom: 8, textAlign: 'right' }}>
-                  <Button icon={<DownloadOutlined />} onClick={() => {
-                    exportCsv('/api/v1/admin/log/operate_log/export',
-                      `operate-logs-${new Date().toISOString().slice(0, 10)}.csv`)
-                      .then(() => message.success('已导出'))
-                      .catch((e) => message.error(e.message || '导出失败'));
-                  }}>导出 CSV</Button>
-                </div>
-                <Table
-                  dataSource={operateLogs}
-                  columns={operateColumns}
-                  rowKey="id"
-                  loading={loading}
-                  pagination={{
-                    current: pageNum,
-                    pageSize: pageSize,
-                    total: operateTotal,
-                    onChange: (page) => setPageNum(page),
-                    onShowSizeChange: (current, size) => setPageSize(size),
-                    showSizeChanger: true,
-                    showTotal: (total) => `共 ${total} 条`,
-                  }}
-                  scroll={{ x: 'max-content' }}
-                />
+                  <div style={{ marginBottom: 8, textAlign: 'right' }}>
+                    <Button
+                      icon={<DownloadOutlined />}
+                      onClick={() => {
+                        exportCsv(
+                          '/api/v1/admin/log/operate_log/export',
+                          `operate-logs-${new Date().toISOString().slice(0, 10)}.csv`,
+                        )
+                          .then(() => message.success('已导出'))
+                          .catch((e) => message.error((e as Error).message || '导出失败'));
+                      }}
+                    >
+                      导出 CSV
+                    </Button>
+                  </div>
+                  <Table
+                    dataSource={operateLogs}
+                    columns={operateColumns}
+                    rowKey="id"
+                    loading={loading}
+                    pagination={{
+                      current: pageNum,
+                      pageSize,
+                      total: operateTotal,
+                      onChange: (page) => setPageNum(page),
+                      onShowSizeChange: (current, size) => setPageSize(size),
+                      showSizeChanger: true,
+                      showTotal: (total) => `共 ${total} 条`,
+                    }}
+                    scroll={{ x: 'max-content' }}
+                  />
                 </div>
               ),
             },
@@ -186,30 +280,37 @@ export default function LogPage() {
               ),
               children: (
                 <div>
-                <div style={{ marginBottom: 8, textAlign: 'right' }}>
-                  <Button icon={<DownloadOutlined />} onClick={() => {
-                    exportCsv('/api/v1/admin/log/login_log/export',
-                      `login-logs-${new Date().toISOString().slice(0, 10)}.csv`)
-                      .then(() => message.success('已导出'))
-                      .catch((e) => message.error(e.message || '导出失败'));
-                  }}>导出 CSV</Button>
-                </div>
-                <Table
-                  dataSource={loginLogs}
-                  columns={loginColumns}
-                  rowKey="id"
-                  loading={loading}
-                  pagination={{
-                    current: pageNum,
-                    pageSize: pageSize,
-                    total: loginTotal,
-                    onChange: (page) => setPageNum(page),
-                    onShowSizeChange: (current, size) => setPageSize(size),
-                    showSizeChanger: true,
-                    showTotal: (total) => `共 ${total} 条`,
-                  }}
-                  scroll={{ x: 'max-content' }}
-                />
+                  <div style={{ marginBottom: 8, textAlign: 'right' }}>
+                    <Button
+                      icon={<DownloadOutlined />}
+                      onClick={() => {
+                        exportCsv(
+                          '/api/v1/admin/log/login_log/export',
+                          `login-logs-${new Date().toISOString().slice(0, 10)}.csv`,
+                        )
+                          .then(() => message.success('已导出'))
+                          .catch((e) => message.error((e as Error).message || '导出失败'));
+                      }}
+                    >
+                      导出 CSV
+                    </Button>
+                  </div>
+                  <Table
+                    dataSource={loginLogs}
+                    columns={loginColumns}
+                    rowKey="id"
+                    loading={loading}
+                    pagination={{
+                      current: pageNum,
+                      pageSize,
+                      total: loginTotal,
+                      onChange: (page) => setPageNum(page),
+                      onShowSizeChange: (current, size) => setPageSize(size),
+                      showSizeChanger: true,
+                      showTotal: (total) => `共 ${total} 条`,
+                    }}
+                    scroll={{ x: 'max-content' }}
+                  />
                 </div>
               ),
             },

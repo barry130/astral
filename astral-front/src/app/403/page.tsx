@@ -8,13 +8,15 @@ export default function ForbiddenPage() {
   const router = useRouter();
 
   return (
-    <div style={{ 
-      minHeight: '100dvh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      background: 'var(--color-bg-base)'
-    }}>
+    <div
+      style={{
+        minHeight: '100dvh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--color-bg-base)',
+      }}
+    >
       <Result
         status="403"
         title="403"

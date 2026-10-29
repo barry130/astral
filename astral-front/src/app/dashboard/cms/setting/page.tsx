@@ -23,7 +23,14 @@ const KEY_COMMENT_ENABLED = 'comment_enabled';
 const KEY_NEED_REVIEW = 'comment_need_review';
 
 /** 单个开关行：左侧标签 + 说明，右侧 Switch，上下用发丝线分隔 */
-function SwitchRow({ id, label, hint, checked, disabled, onCheckedChange }: {
+function SwitchRow({
+  id,
+  label,
+  hint,
+  checked,
+  disabled,
+  onCheckedChange,
+}: {
   id: string;
   label: string;
   hint: string;
@@ -34,8 +41,10 @@ function SwitchRow({ id, label, hint, checked, disabled, onCheckedChange }: {
   return (
     <div className="flex items-start justify-between gap-6 py-1">
       <div className="min-w-0 space-y-1">
-        <Label htmlFor={id} className="cursor-pointer">{label}</Label>
-        <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>
+        <Label htmlFor={id} className="cursor-pointer">
+          {label}
+        </Label>
+        <p className="text-muted-foreground text-xs leading-relaxed">{hint}</p>
       </div>
       <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
     </div>
@@ -58,7 +67,8 @@ export default function CmsSettingPage() {
   const [exporting, setExporting] = useState<CmsExportKind | null>(null);
 
   useEffect(() => {
-    cmsApi.settingList()
+    cmsApi
+      .settingList()
       .then((res) => {
         const data = res.data || {};
         setTitle(data[KEY_TITLE] || '');
@@ -68,7 +78,7 @@ export default function CmsSettingPage() {
         setCommentEnabled(data[KEY_COMMENT_ENABLED] !== 'false'); // 缺省视为开启
         setNeedReview(data[KEY_NEED_REVIEW] !== 'false');
       })
-      .catch((e: Error) => toast.error(e.message || '设置加载失败'))
+      .catch((e: Error) => toast.error((e as Error).message || '设置加载失败'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -110,15 +120,18 @@ export default function CmsSettingPage() {
       <PageHeader
         title="站点设置"
         description="CMS 插件的站点信息与评论策略，保存后立即生效"
-        actions={canEdit && (
-          <Button onClick={submit} disabled={saving || loading} className="gap-1.5">
-            <Save className="size-4" />{saving ? '保存中…' : '保存设置'}
-          </Button>
-        )}
+        actions={
+          canEdit && (
+            <Button onClick={submit} disabled={saving || loading} className="gap-1.5">
+              <Save className="size-4" />
+              {saving ? '保存中…' : '保存设置'}
+            </Button>
+          )
+        }
       />
 
       {!canEdit && (
-        <p className="rounded-md border border-border/60 bg-muted/40 px-4 py-2.5 text-xs text-muted-foreground">
+        <p className="border-border/60 bg-muted/40 text-muted-foreground rounded-md border px-4 py-2.5 text-xs">
           当前账号没有设置编辑权限，以下内容为只读。
         </p>
       )}
@@ -126,7 +139,7 @@ export default function CmsSettingPage() {
       {loading ? (
         <div role="status" aria-busy="true" aria-label="设置加载中" className="space-y-4">
           {[0, 1].map((card) => (
-            <div key={card} className="rounded-xl border border-border/60 p-5">
+            <div key={card} className="border-border/60 rounded-xl border p-5">
               <Skeleton className="h-4 w-24" />
               <div className="mt-5 space-y-4">
                 <Skeleton className="h-9 w-full" />
@@ -145,34 +158,53 @@ export default function CmsSettingPage() {
             >
               <div className="space-y-1.5">
                 <Label htmlFor="set-title">站点标题</Label>
-                <Input id="set-title" value={title} disabled={disabled} maxLength={128}
-                       onChange={(e) => setTitle(e.target.value)} placeholder="如：Astral 知识库" />
+                <Input
+                  id="set-title"
+                  value={title}
+                  disabled={disabled}
+                  maxLength={128}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="如：Astral 知识库"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="set-desc">站点描述</Label>
-                <Textarea id="set-desc" rows={3} value={description} disabled={disabled} maxLength={256}
-                          onChange={(e) => setDescription(e.target.value)}
-                          placeholder="用于前台 SEO 与站点介绍" />
+                <Textarea
+                  id="set-desc"
+                  rows={3}
+                  value={description}
+                  disabled={disabled}
+                  maxLength={256}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="用于前台 SEO 与站点介绍"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="set-footer">页脚文字</Label>
-                <Textarea id="set-footer" rows={2} value={footer} disabled={disabled}
-                          onChange={(e) => setFooter(e.target.value)}
-                          placeholder="如：© 2026 Astral" />
+                <Textarea
+                  id="set-footer"
+                  rows={2}
+                  value={footer}
+                  disabled={disabled}
+                  onChange={(e) => setFooter(e.target.value)}
+                  placeholder="如：© 2026 Astral"
+                />
               </div>
             </FormCard>
 
             <div className="space-y-4">
-              <FormCard
-                title="博客地址"
-                description="管理端「查看博客」入口指向该地址"
-              >
+              <FormCard title="博客地址" description="管理端「查看博客」入口指向该地址">
                 <div className="space-y-1.5">
                   <Label htmlFor="set-blog-url">前台地址</Label>
-                  <Input id="set-blog-url" value={blogUrl} disabled={disabled} maxLength={256}
-                         onChange={(e) => setBlogUrl(e.target.value)}
-                         placeholder="留空则使用本地默认 http://localhost:3001" />
-                  <p className="text-xs leading-relaxed text-muted-foreground">
+                  <Input
+                    id="set-blog-url"
+                    value={blogUrl}
+                    disabled={disabled}
+                    maxLength={256}
+                    onChange={(e) => setBlogUrl(e.target.value)}
+                    placeholder="留空则使用本地默认 http://localhost:3001"
+                  />
+                  <p className="text-muted-foreground text-xs leading-relaxed">
                     部署到 EdgeOne Pages / Cloudflare Pages 后填绑定域名
                   </p>
                 </div>
@@ -182,7 +214,7 @@ export default function CmsSettingPage() {
                 title="评论策略"
                 description="评论开关只影响前台展示与新评论提交，历史评论不会被删除"
               >
-                <div className="divide-y divide-border/60">
+                <div className="divide-border/60 divide-y">
                   <SwitchRow
                     id="set-comment-enabled"
                     label="启用评论"
@@ -212,27 +244,34 @@ export default function CmsSettingPage() {
             description="把全部内容导出成文件留存或迁移；导出当前全部数据，不受列表筛选影响"
           >
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-1.5"
-                      disabled={exporting !== null}
-                      onClick={() => void doExport('zip')}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={exporting !== null}
+                onClick={() => void doExport('zip')}
+              >
                 <FileArchive className="size-4" />
                 {exporting === 'zip' ? '打包中…' : '导出全站 ZIP'}
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5"
-                      disabled={exporting !== null}
-                      onClick={() => void doExport('markdown')}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={exporting !== null}
+                onClick={() => void doExport('markdown')}
+              >
                 <FileText className="size-4" />
                 {exporting === 'markdown' ? '生成中…' : '导出全部文章 Markdown'}
               </Button>
             </div>
-            <p className="text-xs leading-relaxed text-muted-foreground">
+            <p className="text-muted-foreground text-xs leading-relaxed">
               ZIP 包含文章、页面与图片目录结构；Markdown 合集把所有文章按发布时间合并成一个文件。
               单篇文章请在文章列表的「更多」菜单里导出。
             </p>
           </FormCard>
         </div>
       )}
-
     </div>
   );
 }

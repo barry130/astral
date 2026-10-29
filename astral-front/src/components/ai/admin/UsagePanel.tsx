@@ -30,7 +30,7 @@ import { ResizableTable } from '@/components/ResizableTable';
 
 import { aiAgentApi, aiUsageApi, type AiAgent, type AiUsage, type AiUsageSummary } from '@/api/ai';
 
-import { Hint, StatusTag, formatCost, formatNumber, formatTime, useAiDict } from './shared';
+import { Hint, formatCost, formatNumber, formatTime } from './shared';
 
 // echarts 体积大且本页非首屏，动态加载（本文件已有 'use client'）
 const ReactECharts = dynamic(() => import('echarts-for-react'), {
@@ -41,8 +41,6 @@ const ReactECharts = dynamic(() => import('echarts-for-react'), {
 const PAGE_SIZE = 20;
 
 export default function UsagePanel() {
-  const dict = useAiDict();
-
   const [agents, setAgents] = useState<AiAgent[]>([]);
   const [agentId, setAgentId] = useState<number | undefined>();
   const [userId, setUserId] = useState<number | undefined>();
@@ -79,7 +77,11 @@ export default function UsagePanel() {
         const res = await aiUsageApi.list({ agentId, userId, pageNum: page, pageSize: PAGE_SIZE });
         setRows(res.data ?? []);
         // 后端该接口只返回列表，没有总数；用「本页满页」推断是否还有下一页
-        setTotal((page - 1) * PAGE_SIZE + (res.data?.length ?? 0) + (res.data && res.data.length === PAGE_SIZE ? 1 : 0));
+        setTotal(
+          (page - 1) * PAGE_SIZE +
+            (res.data?.length ?? 0) +
+            (res.data && res.data.length === PAGE_SIZE ? 1 : 0),
+        );
         setPageNum(page);
       } catch (error) {
         message.error(error instanceof Error ? error.message : '用量明细加载失败');
@@ -153,7 +155,13 @@ export default function UsagePanel() {
   );
 
   const columns = [
-    { key: 'id', title: '#', dataIndex: 'id', width: 80, render: (value: number) => <code style={{ fontSize: 12 }}>{value}</code> },
+    {
+      key: 'id',
+      title: '#',
+      dataIndex: 'id',
+      width: 80,
+      render: (value: number) => <code style={{ fontSize: 12 }}>{value}</code>,
+    },
     {
       key: 'agent',
       title: '智能体',
@@ -161,7 +169,13 @@ export default function UsagePanel() {
       width: 150,
       render: (value: string) => value ?? '-',
     },
-    { key: 'model', title: '模型', dataIndex: 'modelCode', width: 150, render: (value: string) => <code style={{ fontSize: 11.5 }}>{value ?? '-'}</code> },
+    {
+      key: 'model',
+      title: '模型',
+      dataIndex: 'modelCode',
+      width: 150,
+      render: (value: string) => <code style={{ fontSize: 11.5 }}>{value ?? '-'}</code>,
+    },
     { key: 'user', title: '用户', dataIndex: 'userId', width: 80, align: 'right' as const },
     {
       key: 'in',
@@ -193,8 +207,16 @@ export default function UsagePanel() {
       dataIndex: 'status',
       width: 100,
       render: (value: string) => (
-        <Tag color={value === 'SETTLED' ? 'success' : value === 'RELEASED' ? 'default' : 'processing'}>
-          {value === 'SETTLED' ? '已结算' : value === 'RELEASED' ? '已释放' : value === 'RESERVED' ? '预占' : (value ?? '-')}
+        <Tag
+          color={value === 'SETTLED' ? 'success' : value === 'RELEASED' ? 'default' : 'processing'}
+        >
+          {value === 'SETTLED'
+            ? '已结算'
+            : value === 'RELEASED'
+              ? '已释放'
+              : value === 'RESERVED'
+                ? '预占'
+                : (value ?? '-')}
         </Tag>
       ),
     },
@@ -203,7 +225,9 @@ export default function UsagePanel() {
       title: '时间',
       dataIndex: 'createTime',
       width: 150,
-      render: (value: string) => <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>,
+      render: (value: string) => (
+        <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>
+      ),
     },
   ];
 
@@ -214,7 +238,16 @@ export default function UsagePanel() {
         筛选条件同时作用于上方汇总与下方明细，切换后趋势图会重算。
       </Hint>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8, flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 12,
+          gap: 8,
+          flexWrap: 'wrap',
+        }}
+      >
         <Space size={8} wrap>
           <Select
             size="small"

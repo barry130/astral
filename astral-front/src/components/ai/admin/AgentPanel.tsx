@@ -32,10 +32,8 @@ import {
 } from '@/components/antd-compat';
 import {
   CheckCircleOutlined,
-  CloseCircleOutlined,
   DeleteOutlined,
   EditOutlined,
-  ExclamationCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
   RollbackOutlined,
@@ -62,22 +60,32 @@ import {
 import { usePerm } from '@/lib/perm';
 
 import {
-  BoolTag,
   Hint,
   JsonBlock,
   ReadOnlyNote,
   StatusTag,
   formatTime,
   jsonObjectRule,
-  truncate,
   useAiDict,
 } from './shared';
 
 /* ==================== 版本表单的默认策略 ==================== */
 
-const DEFAULT_CONTEXT_POLICY = JSON.stringify({ keys: ['pageContext', 'selectedRecord'], maxAgeSeconds: 600 }, null, 2);
-const DEFAULT_TOOL_POLICY = JSON.stringify({ mode: 'whitelist', maxRounds: 3, highRiskExecute: false }, null, 2);
-const DEFAULT_KNOWLEDGE_POLICY = JSON.stringify({ topK: 5, citationRequired: true, allowEmptyAnswer: true }, null, 2);
+const DEFAULT_CONTEXT_POLICY = JSON.stringify(
+  { keys: ['pageContext', 'selectedRecord'], maxAgeSeconds: 600 },
+  null,
+  2,
+);
+const DEFAULT_TOOL_POLICY = JSON.stringify(
+  { mode: 'whitelist', maxRounds: 3, highRiskExecute: false },
+  null,
+  2,
+);
+const DEFAULT_KNOWLEDGE_POLICY = JSON.stringify(
+  { topK: 5, citationRequired: true, allowEmptyAnswer: true },
+  null,
+  2,
+);
 const DEFAULT_MODEL_PARAMS = JSON.stringify({ temperature: 0.3, topP: 0.9 }, null, 2);
 const DEFAULT_SAFETY_POLICY = JSON.stringify(
   { promptInjectionGuard: true, maskSecrets: true, denyArbitrarySql: true },
@@ -117,7 +125,10 @@ export default function AgentPanel() {
     void load();
   }, [load]);
 
-  const selected = useMemo(() => agents.find((item) => item.id === selectedId), [agents, selectedId]);
+  const selected = useMemo(
+    () => agents.find((item) => item.id === selectedId),
+    [agents, selectedId],
+  );
 
   const openAgentModal = (row?: AiAgent) => {
     setAgentModal({ open: true, row });
@@ -237,7 +248,13 @@ export default function AgentPanel() {
       width: 160,
       render: (_: unknown, row: AiAgent) => (
         <Space size={2} wrap>
-          <Button size="small" type="text" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openAgentModal(row)} />
+          <Button
+            size="small"
+            type="text"
+            icon={<EditOutlined />}
+            disabled={!canEdit}
+            onClick={() => openAgentModal(row)}
+          />
           <Button
             size="small"
             type="text"
@@ -287,26 +304,52 @@ export default function AgentPanel() {
     <div>
       <Hint>
         智能体的身份、入口、可见客户端在这里配；具体行为（模型路由、提示词、工具、知识、额度）在它下面的「版本」里配。
-        <strong>只有已发布版本会生效</strong>，草稿随便改都不影响线上。想回到旧行为就用「回滚」，它会复制历史版本成新草稿再发布，历史不会被覆盖。
+        <strong>只有已发布版本会生效</strong>
+        ，草稿随便改都不影响线上。想回到旧行为就用「回滚」，它会复制历史版本成新草稿再发布，历史不会被覆盖。
       </Hint>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
         <Space size={8}>
           <span style={{ fontSize: 13, fontWeight: 500 }}>智能体</span>
           <Tag color="default">{agents.length}</Tag>
           <ReadOnlyNote show={!canEdit} />
         </Space>
         <Space size={8}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
-          <Button size="small" type="primary" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => openAgentModal()}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!canEdit}
+            onClick={() => openAgentModal()}
+          >
             新建智能体
           </Button>
         </Space>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1fr)',
+          gap: 16,
+          alignItems: 'start',
+        }}
+      >
         <ResizableTable
           resizeKey="ai-agent"
           rowKey="id"
@@ -319,7 +362,13 @@ export default function AgentPanel() {
 
         <div style={{ position: 'sticky', top: 12 }}>
           {selected ? (
-            <VersionBoard agent={selected} canEdit={canEdit} canPublish={canPublish} dict={dict} onChanged={load} />
+            <VersionBoard
+              agent={selected}
+              canEdit={canEdit}
+              canPublish={canPublish}
+              dict={dict}
+              onChanged={load}
+            />
           ) : (
             <Card>
               <Empty description="左侧选一个智能体，这里会显示它的版本与发布状态" />
@@ -371,10 +420,20 @@ function AgentForm({
         >
           <Input placeholder="例如 music_assistant" disabled={editing} />
         </Form.Item>
-        <Form.Item name="name" label="名称" style={{ flex: 1 }} rules={[{ required: true, message: '请输入名称' }]}>
+        <Form.Item
+          name="name"
+          label="名称"
+          style={{ flex: 1 }}
+          rules={[{ required: true, message: '请输入名称' }]}
+        >
           <Input placeholder="例如 音乐助手" />
         </Form.Item>
-        <Form.Item name="agentType" label="类型" style={{ width: 160 }} rules={[{ required: true }]}>
+        <Form.Item
+          name="agentType"
+          label="类型"
+          style={{ width: 160 }}
+          rules={[{ required: true }]}
+        >
           <Select options={dict.options('ai_agent_type')} />
         </Form.Item>
       </Space>
@@ -390,9 +449,18 @@ function AgentForm({
           style={{ flex: 1 }}
           rules={[{ required: true, message: '至少选择一个客户端' }]}
         >
-          <Select mode="multiple" options={dict.options('ai_client_type')} placeholder="选择允许使用的客户端" />
+          <Select
+            mode="multiple"
+            options={dict.options('ai_client_type')}
+            placeholder="选择允许使用的客户端"
+          />
         </Form.Item>
-        <Form.Item name="permissionCode" label="使用权限码" style={{ flex: 1 }} extra="不填则按智能体类型回落默认权限">
+        <Form.Item
+          name="permissionCode"
+          label="使用权限码"
+          style={{ flex: 1 }}
+          extra="不填则按智能体类型回落默认权限"
+        >
           <Input placeholder="例如 user:ai:music:use" maxLength={128} />
         </Form.Item>
       </Space>
@@ -536,7 +604,9 @@ function VersionBoard({
       title: '状态',
       dataIndex: 'status',
       width: 96,
-      render: (value: string) => <StatusTag dict={dict} code="ai_agent_version_status" value={value} />,
+      render: (value: string) => (
+        <StatusTag dict={dict} code="ai_agent_version_status" value={value} />
+      ),
     },
     {
       key: 'route',
@@ -591,7 +661,12 @@ function VersionBoard({
       }
       extra={
         <Space size={6}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
           <Button
@@ -628,8 +703,21 @@ function VersionBoard({
       )}
 
       {active && (
-        <div style={{ marginTop: 12, borderTop: '1px solid var(--border, rgba(127,127,127,0.14))', paddingTop: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div
+          style={{
+            marginTop: 12,
+            borderTop: '1px solid var(--border, rgba(127,127,127,0.14))',
+            paddingTop: 12,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 8,
+            }}
+          >
             <Space size={8}>
               <span style={{ fontSize: 13, fontWeight: 500 }}>v{active.versionNo}</span>
               <StatusTag dict={dict} code="ai_agent_version_status" value={active.status} />
@@ -637,15 +725,35 @@ function VersionBoard({
             </Space>
             <Space size={6}>
               {isDraft && (
-                <Button size="small" icon={<EditOutlined />} disabled={!canEdit} onClick={() => { setEditing(active); setEditorOpen(true); }}>
+                <Button
+                  size="small"
+                  icon={<EditOutlined />}
+                  disabled={!canEdit}
+                  onClick={() => {
+                    setEditing(active);
+                    setEditorOpen(true);
+                  }}
+                >
                   编辑草稿
                 </Button>
               )}
-              <Button size="small" icon={<CheckCircleOutlined />} loading={busy} onClick={() => void doValidate()}>
+              <Button
+                size="small"
+                icon={<CheckCircleOutlined />}
+                loading={busy}
+                onClick={() => void doValidate()}
+              >
                 校验
               </Button>
               {isDraft && (
-                <Button size="small" type="primary" icon={<SendOutlined />} loading={busy} disabled={!canPublish} onClick={() => void doPublish()}>
+                <Button
+                  size="small"
+                  type="primary"
+                  icon={<SendOutlined />}
+                  loading={busy}
+                  disabled={!canPublish}
+                  onClick={() => void doPublish()}
+                >
                   发布
                 </Button>
               )}
@@ -660,12 +768,19 @@ function VersionBoard({
               message={validation.valid ? '校验通过' : '存在问题'}
               description={
                 (validation.issues ?? []).length === 0 ? undefined : (
-                  <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12.5, lineHeight: 1.85 }}>
+                  <ul
+                    style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 12.5, lineHeight: 1.85 }}
+                  >
                     {(validation.issues ?? []).map((issue, index) => (
                       <li key={`${issue.code}-${index}`}>
-                        <Tag color={issue.level === 'ERROR' ? 'error' : 'warning'}>{issue.level}</Tag>
-                        <code style={{ fontSize: 11.5, opacity: 0.6 }}>{issue.code}</code> {issue.message}
-                        {issue.field ? <span style={{ opacity: 0.5 }}>（{issue.field}）</span> : null}
+                        <Tag color={issue.level === 'ERROR' ? 'error' : 'warning'}>
+                          {issue.level}
+                        </Tag>
+                        <code style={{ fontSize: 11.5, opacity: 0.6 }}>{issue.code}</code>{' '}
+                        {issue.message}
+                        {issue.field ? (
+                          <span style={{ opacity: 0.5 }}>（{issue.field}）</span>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
@@ -691,8 +806,16 @@ function VersionBoard({
             column={2}
             bordered
             items={[
-              { key: 'route', label: '模型路由', children: active.routeName || active.providerRouteId || '-' },
-              { key: 'prompt', label: '提示词版本', children: active.promptName || active.systemPromptVersionId || '-' },
+              {
+                key: 'route',
+                label: '模型路由',
+                children: active.routeName || active.providerRouteId || '-',
+              },
+              {
+                key: 'prompt',
+                label: '提示词版本',
+                children: active.promptName || active.systemPromptVersionId || '-',
+              },
               {
                 key: 'published',
                 label: '发布时间',
@@ -721,7 +844,11 @@ function VersionBoard({
             style={{ marginTop: 10 }}
             items={[
               { key: 'policy', label: '策略', children: <PolicyView version={active} /> },
-              { key: 'tools', label: '工具', children: <ToolBinding version={active} canEdit={canEdit && isDraft} /> },
+              {
+                key: 'tools',
+                label: '工具',
+                children: <ToolBinding version={active} canEdit={canEdit && isDraft} />,
+              },
               {
                 key: 'knowledge',
                 label: '知识源',
@@ -737,7 +864,6 @@ function VersionBoard({
         open={editorOpen}
         agent={agent}
         version={editing}
-        dict={dict}
         onClose={() => setEditorOpen(false)}
         onSaved={async () => {
           setEditorOpen(false);
@@ -765,7 +891,9 @@ function PolicyView({ version }: { version: AiAgentVersion }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {rows.map((row) => (
         <div key={row.label}>
-          <div style={{ fontSize: 12.5, fontWeight: 500, marginBottom: 4, opacity: 0.8 }}>{row.label}</div>
+          <div style={{ fontSize: 12.5, fontWeight: 500, marginBottom: 4, opacity: 0.8 }}>
+            {row.label}
+          </div>
           <JsonBlock value={row.value} maxHeight={160} />
         </div>
       ))}
@@ -813,9 +941,16 @@ function ToolBinding({ version, canEdit }: { version: AiAgentVersion; canEdit: b
     if (!version.id) return;
     setLoading(true);
     try {
-      const [allRes, boundRes] = await Promise.all([aiToolApi.list(), aiAgentApi.versionTools(version.id)]);
+      const [allRes, boundRes] = await Promise.all([
+        aiToolApi.list(),
+        aiAgentApi.versionTools(version.id),
+      ]);
       setTools(allRes.data ?? []);
-      setBound((boundRes.data ?? []).filter((item) => item.enabled !== false).map((item) => item.toolId as number));
+      setBound(
+        (boundRes.data ?? [])
+          .filter((item) => item.enabled !== false)
+          .map((item) => item.toolId as number),
+      );
     } catch (error) {
       message.error(error instanceof Error ? error.message : '工具加载失败');
     } finally {
@@ -874,7 +1009,14 @@ function ToolBinding({ version, canEdit }: { version: AiAgentVersion; canEdit: b
             optionFilterProp="label"
           />
           {canEdit && (
-            <Button size="small" type="primary" icon={<SaveOutlined />} style={{ marginTop: 8 }} loading={saving} onClick={() => void save()}>
+            <Button
+              size="small"
+              type="primary"
+              icon={<SaveOutlined />}
+              style={{ marginTop: 8 }}
+              loading={saving}
+              onClick={() => void save()}
+            >
               保存工具绑定
             </Button>
           )}
@@ -1017,7 +1159,9 @@ function KnowledgeBinding({ version, canEdit }: { version: AiAgentVersion; canEd
                       onChange={(value) =>
                         setBindings((prev) =>
                           prev.map((item) =>
-                            item.sourceId === source.id ? { ...item, retrievalTopK: value ?? 5 } : item,
+                            item.sourceId === source.id
+                              ? { ...item, retrievalTopK: value ?? 5 }
+                              : item,
                           ),
                         )
                       }
@@ -1029,7 +1173,14 @@ function KnowledgeBinding({ version, canEdit }: { version: AiAgentVersion; canEd
             );
           })}
           {canEdit && (
-            <Button size="small" type="primary" icon={<SaveOutlined />} style={{ alignSelf: 'flex-start' }} loading={saving} onClick={() => void save()}>
+            <Button
+              size="small"
+              type="primary"
+              icon={<SaveOutlined />}
+              style={{ alignSelf: 'flex-start' }}
+              loading={saving}
+              onClick={() => void save()}
+            >
               保存知识绑定
             </Button>
           )}
@@ -1045,14 +1196,12 @@ function VersionEditor({
   open,
   agent,
   version,
-  dict,
   onClose,
   onSaved,
 }: {
   open: boolean;
   agent: AiAgent;
   version?: AiAgentVersion;
-  dict: ReturnType<typeof useAiDict>;
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
@@ -1061,7 +1210,7 @@ function VersionEditor({
   const [prompts, setPrompts] = useState<AiPromptTemplate[]>([]);
   const [promptVersions, setPromptVersions] = useState<{ label: string; value: number }[]>([]);
   const [saving, setSaving] = useState(false);
-  const [promptTemplateId, setPromptTemplateId] = useState<number | undefined>();
+  const [, setPromptTemplateId] = useState<number | undefined>();
 
   useEffect(() => {
     if (!open) return;
@@ -1161,14 +1310,22 @@ function VersionEditor({
       />
       <Form form={form} layout="vertical">
         <Space size={12} style={{ display: 'flex' }}>
-          <Form.Item name="versionName" label="版本名" style={{ flex: 1 }} rules={[{ required: true, message: '请输入版本名' }]}>
+          <Form.Item
+            name="versionName"
+            label="版本名"
+            style={{ flex: 1 }}
+            rules={[{ required: true, message: '请输入版本名' }]}
+          >
             <Input placeholder="例如 v1 / 增加退款问答" maxLength={64} />
           </Form.Item>
           <Form.Item name="providerRouteId" label="模型路由" style={{ flex: 1 }}>
             <Select
               allowClear
               placeholder="不选则用默认可用模型"
-              options={routes.map((item) => ({ label: `${item.name}（${item.modelCode}）`, value: item.id as number }))}
+              options={routes.map((item) => ({
+                label: `${item.name}（${item.modelCode}）`,
+                value: item.id as number,
+              }))}
             />
           </Form.Item>
         </Space>
@@ -1178,7 +1335,10 @@ function VersionEditor({
             <Select
               allowClear
               placeholder="选择模板"
-              options={prompts.map((item) => ({ label: item.name as string, value: item.id as number }))}
+              options={prompts.map((item) => ({
+                label: item.name as string,
+                value: item.id as number,
+              }))}
               onChange={(value) => {
                 setPromptTemplateId(value as number);
                 form.setFieldsValue({ systemPromptVersionId: undefined });
@@ -1186,7 +1346,12 @@ function VersionEditor({
               }}
             />
           </Form.Item>
-          <Form.Item name="systemPromptVersionId" label="提示词版本" style={{ flex: 1 }} extra="只能选已发布版本">
+          <Form.Item
+            name="systemPromptVersionId"
+            label="提示词版本"
+            style={{ flex: 1 }}
+            extra="只能选已发布版本"
+          >
             <Select allowClear placeholder="选择已发布版本" options={promptVersions} />
           </Form.Item>
         </Space>
@@ -1210,24 +1375,49 @@ function VersionEditor({
         </Form.Item>
 
         <Space size={12} style={{ display: 'flex' }}>
-          <Form.Item name="toolPolicyJson" label="工具策略" style={{ flex: 1 }} rules={[jsonObjectRule]}>
+          <Form.Item
+            name="toolPolicyJson"
+            label="工具策略"
+            style={{ flex: 1 }}
+            rules={[jsonObjectRule]}
+          >
             <Input.TextArea rows={4} />
           </Form.Item>
-          <Form.Item name="knowledgePolicyJson" label="知识策略" style={{ flex: 1 }} rules={[jsonObjectRule]}>
+          <Form.Item
+            name="knowledgePolicyJson"
+            label="知识策略"
+            style={{ flex: 1 }}
+            rules={[jsonObjectRule]}
+          >
             <Input.TextArea rows={4} />
           </Form.Item>
         </Space>
 
         <Space size={12} style={{ display: 'flex' }}>
-          <Form.Item name="modelParametersJson" label="模型参数" style={{ flex: 1 }} rules={[jsonObjectRule]}>
+          <Form.Item
+            name="modelParametersJson"
+            label="模型参数"
+            style={{ flex: 1 }}
+            rules={[jsonObjectRule]}
+          >
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Form.Item name="safetyPolicyJson" label="安全策略" style={{ flex: 1 }} rules={[jsonObjectRule]}>
+          <Form.Item
+            name="safetyPolicyJson"
+            label="安全策略"
+            style={{ flex: 1 }}
+            rules={[jsonObjectRule]}
+          >
             <Input.TextArea rows={3} />
           </Form.Item>
         </Space>
 
-        <Form.Item name="quotaOverrideJson" label="额度覆盖（可选）" rules={[jsonObjectRule]} extra="只会收紧，不会放宽全局额度">
+        <Form.Item
+          name="quotaOverrideJson"
+          label="额度覆盖（可选）"
+          rules={[jsonObjectRule]}
+          extra="只会收紧，不会放宽全局额度"
+        >
           <Input.TextArea rows={2} placeholder="{}" />
         </Form.Item>
       </Form>

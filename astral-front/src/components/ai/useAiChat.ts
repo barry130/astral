@@ -86,12 +86,7 @@ const num = (value: unknown): number | undefined =>
       ? Number(value)
       : undefined;
 
-const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
-
-const asRecord = (value: unknown): Record<string, unknown> | undefined =>
-  value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
+const asArray = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
 
 /* ==================== Hook ==================== */
 
@@ -149,7 +144,11 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
   /** 事件游标：断线续传与轮询降级都以它为准 */
   const cursorRef = useRef(0);
   /** 当前请求的会话上下文 */
-  const runningRef = useRef<{ requestId?: number; assistantMessageId?: number; conversationId?: number }>({});
+  const runningRef = useRef<{
+    requestId?: number;
+    assistantMessageId?: number;
+    conversationId?: number;
+  }>({});
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   /** 组件卸载标记，阻止已废弃的异步回写 */
@@ -196,26 +195,31 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
   );
 
   const patchMessage = useCallback((messageId: number, patch: Partial<ChatMessage>) => {
-    setMessages((prev) => prev.map((message) => (message.id === messageId ? { ...message, ...patch } : message)));
+    setMessages((prev) =>
+      prev.map((message) => (message.id === messageId ? { ...message, ...patch } : message)),
+    );
   }, []);
 
   /* ==================== 事件消费 ==================== */
 
-  const finishRun = useCallback((status?: string) => {
-    if (flushTimerRef.current) {
-      clearTimeout(flushTimerRef.current);
-      flushTimerRef.current = null;
-    }
-    flush();
-    setRun({ running: false, transport: undefined });
-    const assistantMessageId = runningRef.current.assistantMessageId;
-    if (assistantMessageId !== undefined) {
-      patchMessage(assistantMessageId, {
-        status: status && TERMINAL.has(status) ? status : 'COMPLETED',
-      });
-    }
-    runningRef.current = {};
-  }, [flush, patchMessage]);
+  const finishRun = useCallback(
+    (status?: string) => {
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+      flush();
+      setRun({ running: false, transport: undefined });
+      const assistantMessageId = runningRef.current.assistantMessageId;
+      if (assistantMessageId !== undefined) {
+        patchMessage(assistantMessageId, {
+          status: status && TERMINAL.has(status) ? status : 'COMPLETED',
+        });
+      }
+      runningRef.current = {};
+    },
+    [flush, patchMessage],
+  );
 
   const handleEvent = useCallback(
     (event: AiEvent) => {
@@ -253,7 +257,8 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
           break;
         }
         case 'message.citation': {
-          if (messageId !== undefined) patchMessage(messageId, { citations: asArray<AiCitation>(data.citations) });
+          if (messageId !== undefined)
+            patchMessage(messageId, { citations: asArray<AiCitation>(data.citations) });
           break;
         }
         case 'message.metadata': {
@@ -261,14 +266,18 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
           break;
         }
         case 'recommendation.updated': {
-          if (messageId !== undefined) patchMessage(messageId, { actions: asArray<ChatAction>(data.actions) });
+          if (messageId !== undefined)
+            patchMessage(messageId, { actions: asArray<ChatAction>(data.actions) });
           break;
         }
         case 'request.failed': {
           const message = str(data.message) ?? 'AI 请求失败';
           const code = str(data.errorCode);
           if (messageId !== undefined) {
-            patchMessage(messageId, { status: 'FAILED', error: code ? `${message}（${code}）` : message });
+            patchMessage(messageId, {
+              status: 'FAILED',
+              error: code ? `${message}（${code}）` : message,
+            });
           }
           setError(code ? `${message}（${code}）` : message);
           break;
@@ -449,7 +458,9 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
   const renameConversation = useCallback(async (id: number, title: string) => {
     const res = await aiChatApi.renameConversation(id, title);
     const updated = res.data;
-    setConversations((prev) => prev.map((item) => (item.id === id ? { ...item, ...updated } : item)));
+    setConversations((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...updated } : item)),
+    );
   }, []);
 
   const removeConversation = useCallback(
@@ -541,7 +552,11 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
         setMessages((prev) =>
           prev.map((message) => {
             if (message.id === tempUser) {
-              return { ...message, id: userMessageId ?? tempUser, pending: userMessageId === undefined };
+              return {
+                ...message,
+                id: userMessageId ?? tempUser,
+                pending: userMessageId === undefined,
+              };
             }
             if (message.id === tempAssistant) {
               return {
@@ -576,9 +591,12 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
     [activeConversationId, context, loadConversations, newConversation, run.running, watch],
   );
 
-  const feedback = useCallback(async (messageId: number, feedbackType: string, comment?: string) => {
-    await aiChatApi.feedback(messageId, { feedbackType, comment });
-  }, []);
+  const feedback = useCallback(
+    async (messageId: number, feedbackType: string, comment?: string) => {
+      await aiChatApi.feedback(messageId, { feedbackType, comment });
+    },
+    [],
+  );
 
   return useMemo(
     () => ({

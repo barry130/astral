@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  ReactNode,
+} from 'react';
 import { authApi, LoginResponse } from '@/api/auth';
 import { setCsrfToken, clearCsrfToken } from '@/api/client';
 
@@ -41,7 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * `code` 为 401 就说明未登录（拦截器只在 /dashboard 前缀下跳登录页，不会把落地页访客弹走）。
    */
   useEffect(() => {
-    authApi.getUserInfo()
+    authApi
+      .getUserInfo()
       .then((res) => {
         if (res.code === 200) {
           // 类型已与后端对齐，无需再用 as any 掩盖
@@ -65,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * 令牌由后端写入 HttpOnly `satoken` Cookie，响应体里的 token 字段仅作兼容保留；
    * 前端不再接触令牌明文 —— 这正是本次改造的目的（此前存 localStorage，XSS 可直接读走）。
    */
-  const login = async (username: string, password: string, totpCode?: string) => {
+  const login = useCallback(async (username: string, password: string, totpCode?: string) => {
     const res = await authApi.login({ username, password, totpCode });
     if (res.code === 200) {
       // 登录响应体里的 csrfToken 是管理端写请求的必备凭据（见 client.ts 的说明）
@@ -74,10 +83,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.data;
     }
     throw new Error(res.msg);
-  };
+  }, []);
 
   /** 用户登出：调用API清理服务端session（后端同时清除认证 Cookie），再清空本地用户信息 */
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authApi.logout();
     } finally {
@@ -85,13 +94,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearCsrfToken();
       setUser(null);
     }
-  };
+  }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, userInfo: user, isLogin: !!user, login, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
+  // value 用 useMemo 固定引用：内联对象字面量每次渲染都是新引用，
+  // 会让所有 useAuth 消费者跟着重渲染；login/logout 也已 useCallback 稳定下来
+  const authValue = useMemo(
+    () => ({ user, userInfo: user, isLogin: !!user, login, logout, loading }),
+    [user, login, logout, loading],
   );
+
+  return <AuthContext.Provider value={authValue}>{children}</AuthContext.Provider>;
 }
 
 /**

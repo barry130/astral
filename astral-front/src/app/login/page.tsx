@@ -17,7 +17,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [totpCode, setTotpCode] = useState('');
   const [needTotp, setNeedTotp] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string; totpCode?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{
+    username?: string;
+    password?: string;
+    totpCode?: string;
+  }>({});
   const { login, isLogin, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -57,13 +61,15 @@ export default function LoginPage() {
       toast.success('登录成功');
       // 强制改密账号：登录后必须先到个人中心改密码（后端 must_change_password=1）
       router.push(data?.mustChangePassword === 1 ? '/dashboard/profile?force=1' : '/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       // AUTH010 = 该账号启用了 TOTP 二次验证，展开动态码输入框
-      if (error?.errorCode === 'AUTH010') {
+      // （业务错误码挂在 Error.errorCode 上，见 @/api/client 的 businessFailure）
+      const errorCode = (error as { errorCode?: string })?.errorCode;
+      if (errorCode === 'AUTH010') {
         setNeedTotp(true);
         toast.info('该账号已启用动态验证码，请输入验证器 App 中的 6 位动态码');
       } else {
-        toast.error(error.message || '登录失败');
+        toast.error(error instanceof Error ? error.message || '登录失败' : '登录失败');
       }
     } finally {
       setLoading(false);
@@ -74,7 +80,7 @@ export default function LoginPage() {
   if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground size-8 animate-spin" />
       </div>
     );
   }
@@ -83,10 +89,8 @@ export default function LoginPage() {
     <div className="login-container">
       <div className="login-box fade-in-up">
         <div className="mb-8 text-center">
-          <div
-            className="mb-5 inline-flex size-14 items-center justify-center rounded-[14px] bg-primary shadow-[0_8px_20px_rgba(24,24,27,0.16)]"
-          >
-            <ShieldCheck className="size-6 text-primary-foreground" />
+          <div className="bg-primary mb-5 inline-flex size-14 items-center justify-center rounded-[14px] shadow-[0_8px_20px_rgba(24,24,27,0.16)]">
+            <ShieldCheck className="text-primary-foreground size-6" />
           </div>
           <h1 className="login-title">Astral</h1>
           <p className="login-subtitle">Astral 后台管理系统</p>
@@ -96,7 +100,7 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div className="space-y-1.5">
               <div className="relative">
-                <User className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <User className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
                 <Input
                   className="h-11 rounded-[10px] pl-10"
                   placeholder="用户名"
@@ -106,12 +110,14 @@ export default function LoginPage() {
                   aria-invalid={!!fieldErrors.username}
                 />
               </div>
-              {fieldErrors.username && <p className="text-xs text-destructive">{fieldErrors.username}</p>}
+              {fieldErrors.username && (
+                <p className="text-destructive text-xs">{fieldErrors.username}</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <div className="relative">
-                <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
                 <Input
                   type="password"
                   className="h-11 rounded-[10px] pl-10"
@@ -122,13 +128,15 @@ export default function LoginPage() {
                   aria-invalid={!!fieldErrors.password}
                 />
               </div>
-              {fieldErrors.password && <p className="text-xs text-destructive">{fieldErrors.password}</p>}
+              {fieldErrors.password && (
+                <p className="text-destructive text-xs">{fieldErrors.password}</p>
+              )}
             </div>
 
             {needTotp && (
               <div className="space-y-1.5">
                 <div className="relative">
-                  <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <KeyRound className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
                   <Input
                     className="h-11 rounded-[10px] pl-10"
                     placeholder="动态验证码（6 位）"
@@ -139,7 +147,9 @@ export default function LoginPage() {
                     autoComplete="one-time-code"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">来自验证器 App（Google Authenticator 等），30 秒刷新</p>
+                <p className="text-muted-foreground text-xs">
+                  来自验证器 App（Google Authenticator 等），30 秒刷新
+                </p>
               </div>
             )}
 
@@ -148,8 +158,7 @@ export default function LoginPage() {
               disabled={loading || publicKeyLoading}
               className="mt-4 h-11 w-full rounded-[10px] text-[15px] font-semibold"
             >
-              {(loading || publicKeyLoading) && <Loader2 className="animate-spin" />}
-              登 录
+              {(loading || publicKeyLoading) && <Loader2 className="animate-spin" />}登 录
             </Button>
           </div>
         </form>
@@ -157,7 +166,7 @@ export default function LoginPage() {
         <div className="mt-3 text-center">
           <a
             onClick={() => router.push('/')}
-            className="cursor-pointer text-xs text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground cursor-pointer text-xs"
           >
             ← 返回首页
           </a>

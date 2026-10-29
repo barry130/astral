@@ -58,10 +58,18 @@ export interface LoginLog {
 /** 日志管理相关API */
 export const logApi = {
   /** 分页查询操作日志 */
-  getOperateLogPage: (pageNum = 1, pageSize = 20, params?: Record<string, any>): Promise<ApiResult<PageResult<OperateLog>>> =>
+  getOperateLogPage: (
+    pageNum = 1,
+    pageSize = 20,
+    params?: Record<string, unknown>,
+  ): Promise<ApiResult<PageResult<OperateLog>>> =>
     request.get('/api/v1/admin/log/operate_log/page', { params: { pageNum, pageSize, ...params } }),
 
   /** 分页查询登录日志 */
-  getLoginLogPage: (pageNum = 1, pageSize = 20, params?: Record<string, any>): Promise<ApiResult<PageResult<LoginLog>>> =>
+  getLoginLogPage: (
+    pageNum = 1,
+    pageSize = 20,
+    params?: Record<string, unknown>,
+  ): Promise<ApiResult<PageResult<LoginLog>>> =>
     request.get('/api/v1/admin/log/login_log/page', { params: { pageNum, pageSize, ...params } }),
 };

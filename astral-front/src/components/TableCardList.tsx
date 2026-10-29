@@ -76,13 +76,14 @@ export function TableCardList<T extends object>({
   const total = pageProps?.total ?? dataSource.length;
 
   // loading 可能是 boolean 或对象；两种都视为「加载中」
-  const isLoading = loading === true || (typeof loading === 'object' && loading !== null && loading !== undefined);
+  const isLoading =
+    loading === true || (typeof loading === 'object' && loading !== null && loading !== undefined);
 
   return (
     <div className="rt-cards relative">
       {isLoading && (
         <div className="absolute inset-x-0 top-0 z-[2] flex justify-center pt-6">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+          <Loader2 className="text-muted-foreground size-6 animate-spin" />
         </div>
       )}
 
@@ -105,7 +106,9 @@ export function TableCardList<T extends object>({
                     </div>
                   ))}
                 </div>
-                {actionCol ? <div className="rt-card-action">{renderCell(actionCol, record, index)}</div> : null}
+                {actionCol ? (
+                  <div className="rt-card-action">{renderCell(actionCol, record, index)}</div>
+                ) : null}
               </div>
               {detailCols.length > 0 ? (
                 <dl className="rt-card-grid">

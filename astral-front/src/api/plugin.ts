@@ -31,8 +31,7 @@ export const getNavExtensions = async (): Promise<NavExtension[]> => {
 /** 插件管理相关API */
 export const pluginApi = {
   /** 获取所有插件 */
-  getPluginList: (): Promise<ApiResult<PluginInfo[]>> =>
-    request.get('/api/v1/admin/plugin/list'),
+  getPluginList: (): Promise<ApiResult<PluginInfo[]>> => request.get('/api/v1/admin/plugin/list'),
 
   /** 获取已启用插件 */
   getEnabledPlugins: (): Promise<ApiResult<PluginInfo[]>> =>
@@ -47,6 +46,6 @@ export const pluginApi = {
     request.post(`/api/v1/admin/plugin/${pluginId}/disable`),
 
   /** 获取前端导航扩展 */
-  getNavExtensions: (): Promise<ApiResult<any[]>> =>
+  getNavExtensions: (): Promise<ApiResult<NavExtension[]>> =>
     request.get('/api/v1/admin/plugin/nav-extensions'),
 };

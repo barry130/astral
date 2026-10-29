@@ -38,14 +38,12 @@ import {
   Bot,
   MessageSquare,
   BookOpen,
-  type LucideIcon,
 } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '../providers';
-import { getNavExtensions } from '@/api/plugin';
+import { getNavExtensions, type NavExtension } from '@/api/plugin';
 import { menuApi, SysMenu } from '@/api/menu';
-import type { NavExtension } from '@/api/plugin';
 import { initStatTracker, trackPage } from '@/lib/statTracker';
 import { hasPermissionIn } from '@/lib/perm';
 import NoticeBell from '@/components/NoticeBell';
@@ -116,7 +114,11 @@ const PATH_ICON_OVERRIDE: Record<string, ReactNode> = {
 };
 
 /** 解析菜单图标：路径覆盖 > 图标名映射 > 兜底 */
-const iconFor = (path: string | undefined, iconName: string | undefined, fallback: ReactNode = null): ReactNode => {
+const iconFor = (
+  path: string | undefined,
+  iconName: string | undefined,
+  fallback: ReactNode = null,
+): ReactNode => {
   if (path && PATH_ICON_OVERRIDE[path]) return PATH_ICON_OVERRIDE[path];
   if (iconName && iconMap[iconName]) return iconMap[iconName];
   return fallback;
@@ -191,6 +193,56 @@ interface MenuItemModel {
 }
 
 /**
+ * 将后端菜单树转换为侧边栏菜单项格式，并按传入权限过滤。
+ * 模块级纯函数：写在组件内会被 useMemo 闭包捕获，依赖数组漏掉权限时
+ * 用的就是过期闭包，这里把权限显式作为参数传入。
+ */
+const buildMenuItemsFromTree = (tree: SysMenu[], userPermissions: string[]): MenuItemModel[] => {
+  const result: MenuItemModel[] = [];
+  for (const node of tree) {
+    if (node.visible === 0) continue;
+    if (!hasPermissionIn(userPermissions, node.permission)) continue;
+    const hasChildren = !!(node.children && node.children.length > 0);
+    // 无 path 的节点不能导航到 /menu-<id> 这种不存在的路由：
+    // - 有子菜单的作为分组（展开即可，不跳转）
+    // - 叶子节点则禁用，避免点击 404
+    const item: MenuItemModel = {
+      key: node.path || `menu-group-${node.id}`,
+      icon: iconFor(node.path, node.icon),
+      label: node.name,
+      disabled: !node.path && !hasChildren,
+    };
+    if (hasChildren) {
+      const children = buildMenuItemsFromTree(node.children || [], userPermissions);
+      if (children.length > 0) item.children = children;
+    }
+    result.push(item);
+  }
+  return result;
+};
+
+/** 从后端菜单构建扁平标签列表（按 path 去重）；权限同样由参数传入 */
+const buildFlatTabItems = (
+  tree: SysMenu[],
+  userPermissions: string[],
+  seenKeys?: Set<string>,
+): TabItem[] => {
+  const seen = seenKeys ?? new Set<string>();
+  const result: TabItem[] = [];
+  for (const node of tree) {
+    if (node.visible === 0) continue;
+    if (!hasPermissionIn(userPermissions, node.permission)) continue;
+    if (node.path && !node.path.startsWith(GROUP_KEY_PREFIX)) {
+      if (seen.has(node.path)) continue;
+      seen.add(node.path);
+      result.push({ key: node.path, icon: iconFor(node.path, node.icon), label: node.name });
+    }
+    if (node.children) result.push(...buildFlatTabItems(node.children, userPermissions, seen));
+  }
+  return result;
+};
+
+/**
  * 侧边栏菜单配置：定义所有可访问的页面及其图标、名称、所属业务域
  * 约束：同一图标不允许在菜单里重复出现——语义相近的页面必须配不同图标，
  * 否则用户在菜单里只能靠位置而不是语义区分入口
@@ -203,23 +255,100 @@ const menuConfig: {
   group: MenuGroup;
 }[] = [
   { key: '/dashboard', icon: <LayoutDashboard />, label: '仪表盘', group: 'overview' },
-  { key: '/dashboard/statistics', icon: <BarChart3 />, label: '数据统计', permission: 'admin:statistics:view', group: 'overview' },
-  { key: '/dashboard/system/user', icon: <Users />, label: '用户管理', permission: 'admin:system:user:view', group: 'system' },
-  { key: '/dashboard/system/role', icon: <ShieldCheck />, label: '角色权限', permission: 'admin:system:role:view', group: 'system' },
-  { key: '/dashboard/system/permission', icon: <Lock />, label: '权限管理', permission: 'admin:system:permission:view', group: 'system' },
-  { key: '/dashboard/system/dict', icon: <BookText />, label: '数据字典', permission: 'admin:system:dict:view', group: 'system' },
-  { key: '/dashboard/system/config', icon: <Settings />, label: '系统配置', permission: 'admin:system:config:view', group: 'system' },
-  { key: '/dashboard/system/token', icon: <KeyRound />, label: 'Token管理', permission: 'admin:system:token:view', group: 'system' },
-  { key: '/dashboard/system/table-schema', icon: <Table2 />, label: '表结构管理', permission: 'admin:system:schema:view', group: 'system' },
-  { key: '/dashboard/system/mail', icon: <Mail />, label: '邮箱管理', permission: 'admin:system:mail:view', group: 'system' },
-  { key: '/dashboard/system/message/statistics', icon: <PieChart />, label: '消息统计', permission: 'admin:system:mail:statistics:view', group: 'system' },
-  { key: '/dashboard/log', icon: <FileText />, label: '日志管理', permission: 'admin:log:view', group: 'ops' },
-  { key: '/dashboard/plugin', icon: <PlugZap />, label: '插件管理', permission: 'admin:plugin:view', group: 'plugin' },
+  {
+    key: '/dashboard/statistics',
+    icon: <BarChart3 />,
+    label: '数据统计',
+    permission: 'admin:statistics:view',
+    group: 'overview',
+  },
+  {
+    key: '/dashboard/system/user',
+    icon: <Users />,
+    label: '用户管理',
+    permission: 'admin:system:user:view',
+    group: 'system',
+  },
+  {
+    key: '/dashboard/system/role',
+    icon: <ShieldCheck />,
+    label: '角色权限',
+    permission: 'admin:system:role:view',
+    group: 'system',
+  },
+  {
+    key: '/dashboard/system/permission',
+    icon: <Lock />,
+    label: '权限管理',
+    permission: 'admin:system:permission:view',
+    group: 'system',
+  },
+  {
+    key: '/dashboard/system/dict',
+    icon: <BookText />,
+    label: '数据字典',
+    permission: 'admin:system:dict:view',
+    group: 'system',
+  },
+  {
+    key: '/dashboard/system/config',
+    icon: <Settings />,
+    label: '系统配置',
+    permission: 'admin:system:config:view',
+    group: 'system',
+  },
+  {
+    key: '/dashboard/system/token',
+    icon: <KeyRound />,
+    label: 'Token管理',
+    permission: 'admin:system:token:view',
+    group: 'system',
+  },
+  {
+    key: '/dashboard/system/table-schema',
+    icon: <Table2 />,
+    label: '表结构管理',
+    permission: 'admin:system:schema:view',
+    group: 'system',
+  },
+  {
+    key: '/dashboard/system/mail',
+    icon: <Mail />,
+    label: '邮箱管理',
+    permission: 'admin:system:mail:view',
+    group: 'system',
+  },
+  {
+    key: '/dashboard/system/message/statistics',
+    icon: <PieChart />,
+    label: '消息统计',
+    permission: 'admin:system:mail:statistics:view',
+    group: 'system',
+  },
+  {
+    key: '/dashboard/log',
+    icon: <FileText />,
+    label: '日志管理',
+    permission: 'admin:log:view',
+    group: 'ops',
+  },
+  {
+    key: '/dashboard/plugin',
+    icon: <PlugZap />,
+    label: '插件管理',
+    permission: 'admin:plugin:view',
+    group: 'plugin',
+  },
 ];
 
 /** 分组元信息：分组 key（非路由）、图标、名称、展示顺序 */
 const MENU_GROUPS: Array<{ group: MenuGroup; key: string; icon: ReactNode; label: string }> = [
-  { group: 'overview', key: `${GROUP_KEY_PREFIX}overview`, icon: <LayoutDashboard />, label: '概览' },
+  {
+    group: 'overview',
+    key: `${GROUP_KEY_PREFIX}overview`,
+    icon: <LayoutDashboard />,
+    label: '概览',
+  },
   { group: 'system', key: `${GROUP_KEY_PREFIX}system`, icon: <Settings />, label: '系统管理' },
   { group: 'ops', key: `${GROUP_KEY_PREFIX}ops`, icon: <FileText />, label: '运维' },
   { group: 'plugin', key: `${GROUP_KEY_PREFIX}plugin`, icon: <Blocks />, label: '插件管理' },
@@ -246,15 +375,19 @@ function NavLeaf({
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'dashboard-nav-item flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors cursor-pointer',
+        'dashboard-nav-item flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors',
         'disabled:pointer-events-none disabled:opacity-50',
         collapsed && 'justify-center px-0',
         active
           ? 'bg-[var(--menu-selected-bg)] font-semibold text-[var(--color-brand-text)]'
-          : 'text-muted-foreground hover:bg-[var(--menu-hover-bg)] hover:text-foreground',
+          : 'text-muted-foreground hover:text-foreground hover:bg-[var(--menu-hover-bg)]',
       )}
     >
-      {item.icon && <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">{item.icon}</span>}
+      {item.icon && (
+        <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+          {item.icon}
+        </span>
+      )}
       {!collapsed && <span className="truncate">{item.label}</span>}
     </button>
   );
@@ -294,7 +427,8 @@ function NavGroup({
    * 带页面路由的组头可跳转；/dashboard/group/ 下的目录只做展开/收起。
    * 插件管理使用目录节点，实际页面由同名二级菜单打开。
    */
-  const isNavigateGroup = !!item.key && item.key.startsWith('/') && !item.key.startsWith(GROUP_KEY_PREFIX);
+  const isNavigateGroup =
+    !!item.key && item.key.startsWith('/') && !item.key.startsWith(GROUP_KEY_PREFIX);
   const headerOnClick = () => {
     if (isNavigateGroup) onLeafClick(item);
     onToggle();
@@ -305,16 +439,24 @@ function NavGroup({
       onClick={headerOnClick}
       aria-expanded={open}
       className={cn(
-        'dashboard-nav-item flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors cursor-pointer',
+        'dashboard-nav-item flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors',
         collapsed && 'justify-center px-0',
-        groupActive ? 'font-medium text-foreground' : 'text-muted-foreground hover:bg-[var(--menu-hover-bg)] hover:text-foreground',
+        groupActive
+          ? 'text-foreground font-medium'
+          : 'text-muted-foreground hover:text-foreground hover:bg-[var(--menu-hover-bg)]',
       )}
     >
-      {item.icon && <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">{item.icon}</span>}
+      {item.icon && (
+        <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+          {item.icon}
+        </span>
+      )}
       {!collapsed && (
         <>
           <span className="flex-1 truncate">{item.label}</span>
-          <ChevronDown className={cn('size-3.5 shrink-0 transition-transform', open && 'rotate-180')} />
+          <ChevronDown
+            className={cn('size-3.5 shrink-0 transition-transform', open && 'rotate-180')}
+          />
         </>
       )}
     </button>
@@ -334,7 +476,13 @@ function NavGroup({
         <div className="mt-0.5 space-y-0.5 pl-4">
           {(item.children || []).map((child) =>
             child.key.startsWith(GROUP_KEY_PREFIX) ? null : (
-              <NavLeaf key={child.key} item={child} active={child.key === activePath} collapsed={false} onClick={() => onLeafClick(child)} />
+              <NavLeaf
+                key={child.key}
+                item={child}
+                active={child.key === activePath}
+                collapsed={false}
+                onClick={() => onLeafClick(child)}
+              />
             ),
           )}
         </div>
@@ -362,8 +510,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   /** 视口是否处于移动端（≤768px）：驱动侧边栏抽屉模式与头部/内容区留白 */
   const [isMobile, setIsMobile] = useState(false);
-  /** 视口是否处于平板带（769–1024px）：内容区偏窄，进入时自动把侧边栏收拢成图标栏（仍可手动展开） */
-  const [isTablet, setIsTablet] = useState(false);
   /** 移动端侧边栏抽屉是否展开 */
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -378,7 +524,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 769px) and (max-width: 1024px)');
     const apply = () => {
-      setIsTablet(mq.matches);
       // 只在「进入平板带」时收拢一次，不劫持用户在带内的手动展开/收起
       if (mq.matches) setCollapsed(true);
     };
@@ -400,8 +545,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // 每次渲染新建数组会击穿下游 3 个 useMemo 和标签页初始化 effect。
   const userPermissions = useMemo(() => user?.permissions || [], [user?.permissions]);
   const filteredMenuConfig = useMemo(
-    () =>
-      menuConfig.filter((item) => hasPermissionIn(userPermissions, item.permission)),
+    () => menuConfig.filter((item) => hasPermissionIn(userPermissions, item.permission)),
     [userPermissions],
   );
 
@@ -426,49 +570,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [pathname]);
 
-  /**
-   * 将后端菜单树转换为侧边栏菜单项格式，并过滤权限
-   */
-  const buildMenuItemsFromTree = (tree: SysMenu[]): MenuItemModel[] => {
-    const result: MenuItemModel[] = [];
-    for (const node of tree) {
-      if (node.visible === 0) continue;
-      if (!hasPermissionIn(userPermissions, node.permission)) continue;
-      const hasChildren = !!(node.children && node.children.length > 0);
-      // 无 path 的节点不能导航到 /menu-<id> 这种不存在的路由：
-      // - 有子菜单的作为分组（展开即可，不跳转）
-      // - 叶子节点则禁用，避免点击 404
-      const item: MenuItemModel = {
-        key: node.path || `menu-group-${node.id}`,
-        icon: iconFor(node.path, node.icon),
-        label: node.name,
-        disabled: !node.path && !hasChildren,
-      };
-      if (hasChildren) {
-        const children = buildMenuItemsFromTree(node.children || []);
-        if (children.length > 0) item.children = children;
-      }
-      result.push(item);
-    }
-    return result;
-  };
-
-  /** 从后端菜单构建扁平标签列表（按 path 去重） */
-  const buildFlatTabItems = (tree: SysMenu[], seenKeys?: Set<string>): TabItem[] => {
-    seenKeys = seenKeys || new Set();
-    const result: TabItem[] = [];
-    for (const node of tree) {
-      if (node.visible === 0) continue;
-      if (!hasPermissionIn(userPermissions, node.permission)) continue;
-      if (node.path && !node.path.startsWith(GROUP_KEY_PREFIX)) {
-        if (seenKeys.has(node.path)) continue;
-        seenKeys.add(node.path);
-        result.push({ key: node.path, icon: iconFor(node.path, node.icon), label: node.name });
-      }
-      if (node.children) result.push(...buildFlatTabItems(node.children, seenKeys));
-    }
-    return result;
-  };
   const [pluginNavItems, setPluginNavItems] = useState<NavExtension[]>([]);
   useEffect(() => {
     getNavExtensions()
@@ -494,8 +595,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     if (backendMenuTree && backendMenuTree.length > 0) {
       // 使用后端菜单配置
-      const treeItems = buildMenuItemsFromTree(backendMenuTree);
-      const flatItems = buildFlatTabItems(backendMenuTree);
+      const treeItems = buildMenuItemsFromTree(backendMenuTree, userPermissions);
+      const flatItems = buildFlatTabItems(backendMenuTree, userPermissions);
       // 插件导航项按 NavItem.parentPath 挂载到宿主提供的目录。
       if (visiblePluginNavItems.length > 0) {
         attachPluginNav(treeItems, visiblePluginNavItems);
@@ -505,11 +606,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         icon: iconFor(n.path, n.icon, <Blocks />),
         label: n.label,
       }));
-      allTabItems = flatItems.length > 0 ? [...flatItems, ...pluginFlatItems] : [...filteredMenuConfig, ...pluginFlatItems];
+      allTabItems =
+        flatItems.length > 0
+          ? [...flatItems, ...pluginFlatItems]
+          : [...filteredMenuConfig, ...pluginFlatItems];
       menuItems = treeItems;
     } else {
       // 使用硬编码配置（fallback）：按业务域分组，避免 14 项扁平一级列表难以定位
-      const byGroup = (group: MenuGroup) => filteredMenuConfig.filter((item) => item.group === group);
+      const byGroup = (group: MenuGroup) =>
+        filteredMenuConfig.filter((item) => item.group === group);
       const fallbackMenu: MenuItemModel[] = MENU_GROUPS.flatMap((meta) => {
         const items = byGroup(meta.group);
         if (items.length === 0) return [];
@@ -541,8 +646,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     return { allTabItems, menuItems };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [backendMenuTree, filteredMenuConfig, visiblePluginNavItems]);
+  }, [backendMenuTree, filteredMenuConfig, visiblePluginNavItems, userPermissions]);
 
   /**
    * 菜单搜索：菜单超过 10 项后逐项翻找成本高，输入关键词时把分组树扁平成
@@ -616,7 +720,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setActiveTab(pathname);
     // 依赖：pathname（路由跳转触发追加）、initialized（首次初始化）、
     // openTabs（关闭后重跑但被 prevPathname 守卫拦下）、allTabItems（菜单就绪后补初始化）。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [pathname, initialized, openTabs, allTabItems]);
 
   /**
@@ -635,7 +739,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       for (const item of items) {
         if (!item.children || item.children.length === 0) continue;
         const childHit = item.children.some((c) => c.key === pathname);
-        const grandHit = item.children.some((c) => (c.children || []).some((g) => g.key === pathname));
+        const grandHit = item.children.some((c) =>
+          (c.children || []).some((g) => g.key === pathname),
+        );
         if (childHit || grandHit || item.key === pathname) acc.add(item.key);
         walk(item.children, acc);
       }
@@ -662,7 +768,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         style={{ height: '100dvh' }}
         className="flex items-center justify-center bg-[var(--color-bg-base)]"
       >
-        <RotateCw className="size-8 animate-spin text-muted-foreground" />
+        <RotateCw className="text-muted-foreground size-8 animate-spin" />
       </div>
     );
   }
@@ -775,7 +881,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   /** 面包屑渲染数据（分组节点不是路由，不做可点击项） */
-  const breadcrumbAncestors = breadcrumbTrail.slice(0, -1).filter((item) => !String(item.key).startsWith(GROUP_KEY_PREFIX));
+  const breadcrumbAncestors = breadcrumbTrail
+    .slice(0, -1)
+    .filter((item) => !String(item.key).startsWith(GROUP_KEY_PREFIX));
   const breadcrumbLast = breadcrumbTrail[breadcrumbTrail.length - 1];
   const showBreadcrumb = !isMobile && breadcrumbTrail.length > 1;
 
@@ -784,7 +892,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* 跳转正文：键盘用户不必逐个 Tab 穿过整条侧边栏与顶部菜单 */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[300] focus:rounded-md focus:border focus:border-border focus:bg-card focus:px-3 focus:py-2 focus:text-sm focus:text-foreground focus:shadow-md"
+        className="focus:border-border focus:bg-card focus:text-foreground sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[300] focus:rounded-md focus:border focus:px-3 focus:py-2 focus:text-sm focus:shadow-md"
       >
         跳到正文
       </a>
@@ -801,7 +909,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ==================== 侧边栏 ==================== */}
       <aside
         className={cn(
-          'dashboard-sider flex flex-col border-r border-border bg-[var(--color-bg-sidebar)]',
+          'dashboard-sider border-border flex flex-col border-r bg-[var(--color-bg-sidebar)]',
           isMobile ? 'drawer-open' : '',
         )}
         style={{
@@ -816,25 +924,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }}
       >
         {/* Logo */}
-        <div className={cn('sider-logo flex h-16 shrink-0 items-center gap-3 px-5', siderCollapsed && 'justify-center px-0')}>
-          <div aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-sm">
+        <div
+          className={cn(
+            'sider-logo flex h-16 shrink-0 items-center gap-3 px-5',
+            siderCollapsed && 'justify-center px-0',
+          )}
+        >
+          <div
+            aria-hidden
+            className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-xl text-base font-bold shadow-sm"
+          >
             A<span className="mb-2 text-xs opacity-60">✦</span>
           </div>
           {!siderCollapsed && (
             <div className="min-w-0">
-              <h1 className="text-lg font-bold tracking-tight text-foreground">Astral</h1>
-              <p className="text-[10px] font-medium tracking-[0.16em] text-muted-foreground">管理工作台</p>
+              <h1 className="text-foreground text-lg font-bold tracking-tight">Astral</h1>
+              <p className="text-muted-foreground text-[10px] font-medium tracking-[0.16em]">
+                管理工作台
+              </p>
             </div>
           )}
         </div>
 
         {/* 搜索 + 菜单 */}
-        <div className="sider-menu-wrap flex-1 overflow-y-auto overflow-x-hidden pb-4">
+        <div className="sider-menu-wrap flex-1 overflow-x-hidden overflow-y-auto pb-4">
           {!siderCollapsed && (
             <div className="relative mx-3 mb-1.5">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
               <Input
-                className="sider-search h-9 border-transparent bg-muted/70 pl-8 text-xs shadow-none focus-visible:border-ring"
+                className="sider-search bg-muted/70 focus-visible:border-ring h-9 border-transparent pl-8 text-xs shadow-none"
                 placeholder="搜索菜单"
                 value={menuKeyword}
                 onChange={(e) => setMenuKeyword(e.target.value)}
@@ -843,14 +961,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
           {menuKeyword.trim() && displayedMenuItems.length === 0 && !siderCollapsed ? (
-            <div className="sider-search-empty flex flex-col items-center gap-1.5 px-4 py-6 text-xs text-muted-foreground">
+            <div className="sider-search-empty text-muted-foreground flex flex-col items-center gap-1.5 px-4 py-6 text-xs">
               <Inbox className="size-5" strokeWidth={1.5} aria-hidden />
               <span>未找到匹配的菜单</span>
             </div>
           ) : (
             <nav className="mt-2 space-y-0.5 px-3">
               {displayedMenuItems.map((item) =>
-                (item.children && item.children.length > 0) || item.key.startsWith(GROUP_KEY_PREFIX) ? (
+                (item.children && item.children.length > 0) ||
+                item.key.startsWith(GROUP_KEY_PREFIX) ? (
                   <NavGroup
                     key={item.key}
                     item={item}
@@ -885,12 +1004,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ==================== 主区 ==================== */}
       <div
-        style={{ marginLeft: isMobile ? 0 : siderCollapsed ? 80 : 220, transition: 'margin-left 0.2s' }}
+        style={{
+          marginLeft: isMobile ? 0 : siderCollapsed ? 80 : 220,
+          transition: 'margin-left 0.2s',
+        }}
       >
         {/* 头部 */}
-        <header className="dashboard-header safe-top flex h-14 items-center gap-1 border-b border-border bg-[var(--color-bg-white)] px-4">
+        <header className="dashboard-header safe-top border-border flex h-14 items-center gap-1 border-b bg-[var(--color-bg-white)] px-4">
           {!showBreadcrumb && (
-            <div className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+            <div className="text-foreground min-w-0 flex-1 truncate text-sm font-semibold">
               {breadcrumbLast?.label || '工作台'}
             </div>
           )}
@@ -899,7 +1021,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Breadcrumb className="ml-1 min-w-0 flex-1">
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <a onClick={() => router.push('/dashboard')} className="cursor-pointer hover:text-foreground">
+                  <a
+                    onClick={() => router.push('/dashboard')}
+                    className="hover:text-foreground cursor-pointer"
+                  >
                     首页
                   </a>
                 </BreadcrumbItem>
@@ -907,7 +1032,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <Fragment key={item.key}>
                     <BreadcrumbSeparator />
                     <BreadcrumbItem>
-                      <a onClick={() => router.push(item.key)} className="cursor-pointer hover:text-foreground">
+                      <a
+                        onClick={() => router.push(item.key)}
+                        className="hover:text-foreground cursor-pointer"
+                      >
                         {item.label}
                       </a>
                     </BreadcrumbItem>
@@ -945,16 +1073,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="header-user flex cursor-pointer items-center gap-2 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                <button
+                  type="button"
+                  className="header-user focus-visible:ring-ring/50 flex cursor-pointer items-center gap-2 rounded-md outline-none focus-visible:ring-[3px]"
+                >
                   <span
                     className={cn(
-                      'flex items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground',
+                      'bg-primary text-primary-foreground flex items-center justify-center rounded-full font-semibold',
                       isMobile ? 'size-8' : 'size-9',
                     )}
                   >
                     <User className="size-4" />
                   </span>
-                  <span className={cn('username-text font-medium text-foreground', isMobile && 'hidden')}>
+                  <span
+                    className={cn(
+                      'username-text text-foreground font-medium',
+                      isMobile && 'hidden',
+                    )}
+                  >
                     {user?.username || '管理员'}
                   </span>
                 </button>
@@ -975,10 +1111,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* 页签条 */}
         {openTabs.length > 0 && (
-          <div
-            className="tabs-wrapper sticky top-14 z-10 flex items-center overflow-hidden border-b border-border px-5 py-2"
-          >
-            <div className="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="tabs-wrapper border-border sticky top-14 z-10 flex items-center overflow-hidden border-b px-5 py-2">
+            <div className="flex min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden">
               <div className="flex gap-1 whitespace-nowrap">
                 {openTabs.map((tab) => {
                   const active = tab.key === activeTab;
@@ -997,7 +1131,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         'dashboard-tab group inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors',
                         active
                           ? 'border-border bg-card font-semibold text-[var(--color-brand-text)] shadow-sm'
-                          : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
+                          : 'text-muted-foreground hover:bg-accent hover:text-foreground border-transparent',
                       )}
                     >
                       <span className="flex size-4 items-center [&_svg]:size-4">{tab.icon}</span>
@@ -1010,7 +1144,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             e.stopPropagation();
                             handleTabClose(tab.key);
                           }}
-                          className="ml-0.5 rounded-sm p-0.5 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-60 focus:opacity-100 cursor-pointer"
+                          className="hover:bg-accent ml-0.5 cursor-pointer rounded-sm p-0.5 opacity-0 transition-opacity group-hover:opacity-60 focus:opacity-100"
                         >
                           <X className="size-3.5" />
                         </button>
@@ -1022,7 +1156,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="ml-2 shrink-0" title="标签操作" aria-label="标签操作">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-2 shrink-0"
+                  title="标签操作"
+                  aria-label="标签操作"
+                >
                   <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
@@ -1032,15 +1172,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   刷新当前
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={openTabs.length <= 1} onClick={() => handleTabAction('closeCurrent')}>
+                <DropdownMenuItem
+                  disabled={openTabs.length <= 1}
+                  onClick={() => handleTabAction('closeCurrent')}
+                >
                   <X />
                   关闭当前
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={openTabs.length <= 1} onClick={() => handleTabAction('closeOther')}>
+                <DropdownMenuItem
+                  disabled={openTabs.length <= 1}
+                  onClick={() => handleTabAction('closeOther')}
+                >
                   <X />
                   关闭其他
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={activeTabIndex <= 0} onClick={() => handleTabAction('closeLeft')}>
+                <DropdownMenuItem
+                  disabled={activeTabIndex <= 0}
+                  onClick={() => handleTabAction('closeLeft')}
+                >
                   <X />
                   关闭左侧
                 </DropdownMenuItem>

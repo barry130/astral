@@ -46,7 +46,16 @@ export interface TagProps {
   children?: ReactNode;
 }
 
-export function Tag({ color, icon, closable, onClose, bordered = true, className, style, children }: TagProps) {
+export function Tag({
+  color,
+  icon,
+  closable,
+  onClose,
+  bordered = true,
+  className,
+  style,
+  children,
+}: TagProps) {
   const preset = color ? TAG_COLORS[color] : undefined;
   const isHex = !!color && /^#|^rgb|^hsl/.test(color);
 
@@ -67,7 +76,12 @@ export function Tag({ color, icon, closable, onClose, bordered = true, className
       {icon}
       <span className="truncate">{children}</span>
       {closable ? (
-        <button type="button" aria-label="删除" className="cursor-pointer opacity-60 hover:opacity-100" onClick={onClose}>
+        <button
+          type="button"
+          aria-label="删除"
+          className="cursor-pointer opacity-60 hover:opacity-100"
+          onClick={onClose}
+        >
           ×
         </button>
       ) : null}
@@ -88,21 +102,35 @@ export interface StatisticProps {
   style?: CSSProperties;
 }
 
-export function Statistic({ title, value, precision, prefix, suffix, valueStyle, className, style }: StatisticProps) {
+export function Statistic({
+  title,
+  value,
+  precision,
+  prefix,
+  suffix,
+  valueStyle,
+  className,
+  style,
+}: StatisticProps) {
   const display =
     typeof value === 'number'
       ? precision !== undefined
         ? value.toFixed(precision)
         : value.toLocaleString('zh-CN')
-      : value ?? '-';
+      : (value ?? '-');
 
   return (
     <div className={cn('flex flex-col gap-1', className)} style={style}>
-      {title ? <span className="text-xs text-muted-foreground">{title}</span> : null}
-      <span className="flex items-baseline gap-1 text-xl font-semibold tabular-nums" style={valueStyle}>
+      {title ? <span className="text-muted-foreground text-xs">{title}</span> : null}
+      <span
+        className="flex items-baseline gap-1 text-xl font-semibold tabular-nums"
+        style={valueStyle}
+      >
         {prefix ? <span className="text-sm font-normal">{prefix}</span> : null}
         {display}
-        {suffix ? <span className="text-sm font-normal text-muted-foreground">{suffix}</span> : null}
+        {suffix ? (
+          <span className="text-muted-foreground text-sm font-normal">{suffix}</span>
+        ) : null}
       </span>
     </div>
   );
@@ -132,7 +160,7 @@ export function Timeline({ items, children, className, style }: TimelineProps) {
     items ??
     Children.toArray(children)
       .filter(isValidElement)
-      .map((c) => (c.props as { children?: ReactNode; color?: string; label?: ReactNode }));
+      .map((c) => c.props as { children?: ReactNode; color?: string; label?: ReactNode });
 
   return (
     <ul className={cn('relative space-y-4 pl-1', className)} style={style}>
@@ -140,13 +168,22 @@ export function Timeline({ items, children, className, style }: TimelineProps) {
         <li key={i} className="relative flex gap-3">
           <span className="relative flex w-3 shrink-0 justify-center">
             <span
-              className="mt-1.5 size-2 shrink-0 rounded-full ring-4 ring-background"
-              style={{ backgroundColor: item.color === 'red' ? '#ef4444' : item.color === 'green' ? '#22c55e' : 'var(--color-text-tertiary, #a1a1aa)' }}
+              className="ring-background mt-1.5 size-2 shrink-0 rounded-full ring-4"
+              style={{
+                backgroundColor:
+                  item.color === 'red'
+                    ? '#ef4444'
+                    : item.color === 'green'
+                      ? '#22c55e'
+                      : 'var(--color-text-tertiary, #a1a1aa)',
+              }}
             />
-            {i < list.length - 1 ? <span className="absolute top-4 bottom-[-1rem] w-px bg-border" /> : null}
+            {i < list.length - 1 ? (
+              <span className="bg-border absolute top-4 bottom-[-1rem] w-px" />
+            ) : null}
           </span>
           <div className="min-w-0 flex-1 pb-1">
-            {item.label ? <div className="text-xs text-muted-foreground">{item.label}</div> : null}
+            {item.label ? <div className="text-muted-foreground text-xs">{item.label}</div> : null}
             <div className="text-sm">{item.children}</div>
           </div>
         </li>
@@ -212,7 +249,7 @@ export function Badge({
       {!hidden ? (
         <span
           className={cn(
-            'absolute -top-1.5 -right-1.5 z-[1] flex items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium leading-4 text-white',
+            'bg-destructive absolute -top-1.5 -right-1.5 z-[1] flex items-center justify-center rounded-full px-1 text-[10px] leading-4 font-medium text-white',
             size === 'small' && 'text-[9px]',
             dot && 'size-2 p-0',
           )}
@@ -281,11 +318,19 @@ export function Descriptions({
             className={cn(
               'flex min-w-0 gap-2 py-2',
               layout === 'vertical' ? 'flex-col gap-1' : 'items-baseline',
-              bordered && 'border-b border-border',
+              bordered && 'border-border border-b',
             )}
-            style={{ gridColumn: `span ${Math.min(item.span ?? 1, cols)} / span ${Math.min(item.span ?? 1, cols)}` }}
+            style={{
+              gridColumn: `span ${Math.min(item.span ?? 1, cols)} / span ${Math.min(item.span ?? 1, cols)}`,
+            }}
           >
-            <span className={cn('shrink-0 text-muted-foreground', layout === 'horizontal' && 'w-24 text-right')} style={labelStyle}>
+            <span
+              className={cn(
+                'text-muted-foreground shrink-0',
+                layout === 'horizontal' && 'w-24 text-right',
+              )}
+              style={labelStyle}
+            >
               {item.label}
             </span>
             <span className="min-w-0 flex-1 break-words" style={contentStyle}>
@@ -326,7 +371,7 @@ export interface TableProps<T = any> {
   defaultExpandAllRows?: boolean;
   onRow?: (record: T, index: number) => Record<string, unknown>;
   /** 分页/排序变化（antd 同形：第一参为分页对象）；项目内仅使用分页信息 */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   onChange?: (pagination: any, filters?: any, sorter?: any, extra?: any) => void;
   rowClassName?: string | ((record: T, index: number) => string);
   title?: () => ReactNode;
@@ -387,7 +432,10 @@ export function Table<T extends Record<string, any>>({
         bordered={bordered}
         expandable={expandable}
         defaultExpandAllRows={defaultExpandAllRows}
-        onRow={(record, index) => ({ ...onRow?.(record, index), className: resolveClassName(record, index) })}
+        onRow={(record, index) => ({
+          ...onRow?.(record, index),
+          className: resolveClassName(record, index),
+        })}
       />
     </div>
   );

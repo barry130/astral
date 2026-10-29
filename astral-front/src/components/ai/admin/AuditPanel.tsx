@@ -34,18 +34,21 @@ export default function AuditPanel() {
   const [keyword, setKeyword] = useState('');
   const [actionFilter, setActionFilter] = useState<string | undefined>();
 
-  const load = useCallback(async (page = pageNum) => {
-    setLoading(true);
-    try {
-      const res = await aiAuditApi.list(page, PAGE_SIZE);
-      setRows(res.data ?? []);
-      setPageNum(page);
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '审计日志加载失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [pageNum]);
+  const load = useCallback(
+    async (page = pageNum) => {
+      setLoading(true);
+      try {
+        const res = await aiAuditApi.list(page, PAGE_SIZE);
+        setRows(res.data ?? []);
+        setPageNum(page);
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : '审计日志加载失败');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pageNum],
+  );
 
   useEffect(() => {
     void load(1);
@@ -73,7 +76,13 @@ export default function AuditPanel() {
   }, [rows, keyword, actionFilter]);
 
   const columns = [
-    { key: 'id', title: '#', dataIndex: 'id', width: 84, render: (value: number) => <code style={{ fontSize: 12 }}>{value}</code> },
+    {
+      key: 'id',
+      title: '#',
+      dataIndex: 'id',
+      width: 84,
+      render: (value: number) => <code style={{ fontSize: 12 }}>{value}</code>,
+    },
     {
       key: 'action',
       title: '操作',
@@ -129,25 +138,39 @@ export default function AuditPanel() {
       title: 'IP',
       dataIndex: 'clientIp',
       width: 130,
-      render: (value: string) => <span style={{ fontSize: 11.5, opacity: 0.55 }}>{value ?? '-'}</span>,
+      render: (value: string) => (
+        <span style={{ fontSize: 11.5, opacity: 0.55 }}>{value ?? '-'}</span>
+      ),
     },
     {
       key: 'time',
       title: '时间',
       dataIndex: 'createTime',
       width: 150,
-      render: (value: string) => <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>,
+      render: (value: string) => (
+        <span style={{ fontSize: 11.5, opacity: 0.6 }}>{formatTime(value)}</span>
+      ),
     },
   ];
 
   return (
     <div>
       <Hint>
-        审计日志来自宿主统一操作日志，只覆盖<strong>改了配置</strong>的动作（新建、修改、发布、删除、审批）。
+        审计日志来自宿主统一操作日志，只覆盖<strong>改了配置</strong>
+        的动作（新建、修改、发布、删除、审批）。
         用户对话内容不在其中——那属于会话审计，需要单独权限。
       </Hint>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+          gap: 8,
+          flexWrap: 'wrap',
+        }}
+      >
         <Space size={8} wrap>
           <Tag color="default">{formatNumber(filtered.length)} 条</Tag>
           <Select
@@ -170,7 +193,12 @@ export default function AuditPanel() {
             onChange={(event) => setKeyword(event.target.value)}
           />
         </Space>
-        <Button size="small" icon={<ReloadOutlined />} onClick={() => void load(1)} loading={loading}>
+        <Button
+          size="small"
+          icon={<ReloadOutlined />}
+          onClick={() => void load(1)}
+          loading={loading}
+        >
           刷新
         </Button>
       </div>

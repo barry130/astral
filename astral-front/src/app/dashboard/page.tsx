@@ -98,8 +98,8 @@ function ratioTone(rate: number, good: number, warn: number): Tone {
 /** 统计卡图标芯片：中性浅灰底 + 次级前景图标 */
 function StatIcon({ icon }: { icon: React.ReactNode }) {
   return (
-    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/10 bg-primary/5">
-      <span className="inline-flex text-primary [&_svg]:size-5">{icon}</span>
+    <div className="border-primary/10 bg-primary/5 flex size-10 shrink-0 items-center justify-center rounded-xl border">
+      <span className="text-primary inline-flex [&_svg]:size-5">{icon}</span>
     </div>
   );
 }
@@ -132,7 +132,7 @@ function StatCard({
           <div className="text-muted-foreground text-sm">{label}</div>
           <div
             className={cn(
-              'mt-1 text-[28px] font-semibold leading-tight tabular-nums',
+              'mt-1 text-[28px] leading-tight font-semibold tabular-nums',
               tone?.text ?? 'text-foreground',
             )}
           >
@@ -145,7 +145,7 @@ function StatCard({
               indicatorClassName={cn('transition-[width] duration-300 ease-out', tone?.bar)}
             />
           )}
-          {sub && <div className="mt-1.5 text-xs text-muted-foreground/80">{sub}</div>}
+          {sub && <div className="text-muted-foreground/80 mt-1.5 text-xs">{sub}</div>}
         </div>
         <StatIcon icon={icon} />
       </CardContent>
@@ -171,13 +171,15 @@ function TrendBadge({
 
   if (prev <= 0) {
     return (
-      <span className="text-xs text-muted-foreground/70">{cur > 0 ? '昨日无数据' : '暂无数据'}</span>
+      <span className="text-muted-foreground/70 text-xs">
+        {cur > 0 ? '昨日无数据' : '暂无数据'}
+      </span>
     );
   }
 
   const delta = ((cur - prev) / prev) * 100;
   if (Math.abs(delta) < 0.05) {
-    return <span className="text-xs text-muted-foreground/70">与昨日持平</span>;
+    return <span className="text-muted-foreground/70 text-xs">与昨日持平</span>;
   }
 
   const rising = delta > 0;
@@ -217,11 +219,11 @@ function OverviewItem({
 }) {
   return (
     <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
-      <div className="mb-1 text-[13px] text-muted-foreground">{label}</div>
-      <div className="text-xl font-semibold tabular-nums text-foreground">{value}</div>
+      <div className="text-muted-foreground mb-1 text-[13px]">{label}</div>
+      <div className="text-foreground text-xl font-semibold tabular-nums">{value}</div>
       <div className="mt-1.5">
         {footnote ? (
-          <span className="text-xs text-muted-foreground/70">{footnote}</span>
+          <span className="text-muted-foreground/70 text-xs">{footnote}</span>
         ) : (
           <TrendBadge current={current} previous={previous} invert={invert} />
         )}
@@ -234,19 +236,29 @@ function OverviewItem({
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className="shrink-0 text-[13px] text-muted-foreground">{label}</span>
-      <span className="min-w-0 truncate text-right text-sm font-medium text-foreground">{children}</span>
+      <span className="text-muted-foreground shrink-0 text-[13px]">{label}</span>
+      <span className="text-foreground min-w-0 truncate text-right text-sm font-medium">
+        {children}
+      </span>
     </div>
   );
 }
 
 /** 明细卡内的数值块 */
-function DetailBlock({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
+function DetailBlock({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+}) {
   return (
     <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
-      <div className="mb-1 text-[13px] text-muted-foreground">{label}</div>
-      <div className="text-lg font-semibold tabular-nums text-foreground">{value}</div>
-      {hint && <div className="text-xs text-muted-foreground/80">{hint}</div>}
+      <div className="text-muted-foreground mb-1 text-[13px]">{label}</div>
+      <div className="text-foreground text-lg font-semibold tabular-nums">{value}</div>
+      {hint && <div className="text-muted-foreground/80 text-xs">{hint}</div>}
     </div>
   );
 }
@@ -257,7 +269,7 @@ function DetailBlock({ label, value, hint }: { label: string; value: React.React
  */
 function StatusBadge({ available }: { available: boolean | null | undefined }) {
   if (available === null || available === undefined) {
-    return <span className="text-xs font-normal text-muted-foreground/70">未配置</span>;
+    return <span className="text-muted-foreground/70 text-xs font-normal">未配置</span>;
   }
   return (
     <span
@@ -266,7 +278,9 @@ function StatusBadge({ available }: { available: boolean | null | undefined }) {
         available ? 'text-emerald-600' : 'text-destructive',
       )}
     >
-      <span className={cn('size-1.5 rounded-full', available ? 'bg-emerald-500' : 'bg-destructive')} />
+      <span
+        className={cn('size-1.5 rounded-full', available ? 'bg-emerald-500' : 'bg-destructive')}
+      />
       {available ? '连接正常' : '连接异常'}
     </span>
   );
@@ -326,10 +340,11 @@ export default function DashboardPage() {
   if (!canViewMonitor) {
     return (
       <div className="my-24 flex flex-col items-center gap-3 text-center">
-        <ShieldAlert className="size-10 text-muted-foreground" />
-        <p className="text-base font-medium text-foreground">无仪表盘查看权限</p>
-        <p className="max-w-md text-sm text-muted-foreground">
-          首页展示的是系统与业务监控指标，需要 <code className="rounded bg-muted px-1">admin:monitor:view</code> 权限。
+        <ShieldAlert className="text-muted-foreground size-10" />
+        <p className="text-foreground text-base font-medium">无仪表盘查看权限</p>
+        <p className="text-muted-foreground max-w-md text-sm">
+          首页展示的是系统与业务监控指标，需要{' '}
+          <code className="bg-muted rounded px-1">admin:monitor:view</code> 权限。
           请联系管理员在「角色权限」中为你的角色勾选该权限。
         </p>
       </div>
@@ -339,7 +354,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="my-24 flex justify-center">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        <Loader2 className="text-muted-foreground size-8 animate-spin" />
       </div>
     );
   }
@@ -376,14 +391,22 @@ export default function DashboardPage() {
     <div className="dashboard-overview">
       <div className="overview-heading mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground">工作台 / 系统概览</p>
+          <p className="text-muted-foreground mb-1.5 text-xs font-medium tracking-wide">
+            工作台 / 系统概览
+          </p>
           <h2 className="page-title">仪表盘</h2>
-          <p className="mt-2 text-sm text-muted-foreground">系统运行状态与今日业务表现，一目了然。</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            系统运行状态与今日业务表现，一目了然。
+          </p>
         </div>
-        <div className="flex items-center gap-2.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-          <Activity aria-hidden className="size-3.5 text-primary" />
-          <span>{updatedAt ? `${updatedAt.toLocaleTimeString('zh-CN', { hour12: false })} 更新` : '等待数据更新'}</span>
-          <span aria-hidden className="h-3 w-px bg-border" />
+        <div className="border-border bg-card text-muted-foreground flex items-center gap-2.5 rounded-full border px-3 py-1.5 text-xs">
+          <Activity aria-hidden className="text-primary size-3.5" />
+          <span>
+            {updatedAt
+              ? `${updatedAt.toLocaleTimeString('zh-CN', { hour12: false })} 更新`
+              : '等待数据更新'}
+          </span>
+          <span aria-hidden className="bg-border h-3 w-px" />
           <span>每 30 秒刷新</span>
         </div>
       </div>
@@ -435,9 +458,9 @@ export default function DashboardPage() {
       <Card className="fade-in-up stagger-5 mt-4">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-[15px]">
-            <Activity className="size-4 text-muted-foreground" />
+            <Activity className="text-muted-foreground size-4" />
             今日业务概览
-            <span className="ml-auto text-xs font-normal text-muted-foreground">
+            <span className="text-muted-foreground ml-auto text-xs font-normal">
               {today?.date || new Date().toLocaleDateString('zh-CN')}
             </span>
           </CardTitle>
@@ -489,15 +512,19 @@ export default function DashboardPage() {
         <Card className="fade-in-up stagger-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[15px]">
-              <Gauge className="size-4 text-muted-foreground" />
+              <Gauge className="text-muted-foreground size-4" />
               接口健康度
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DetailBlock label="今日调用总量" value={formatNumber(apiSummary?.callCount)} hint="全部接口合计" />
+            <DetailBlock
+              label="今日调用总量"
+              value={formatNumber(apiSummary?.callCount)}
+              hint="全部接口合计"
+            />
             <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
               <div className="flex items-baseline justify-between">
-                <span className="text-[13px] text-muted-foreground">调用成功率</span>
+                <span className="text-muted-foreground text-[13px]">调用成功率</span>
                 <span className={cn('text-lg font-semibold tabular-nums', rateTone.text)}>
                   {successRate.toFixed(2)}%
                 </span>
@@ -507,7 +534,7 @@ export default function DashboardPage() {
                 className="mt-2 h-1.5"
                 indicatorClassName={cn('transition-[width] duration-300 ease-out', rateTone.bar)}
               />
-              <div className="mt-3 flex justify-between text-xs text-muted-foreground">
+              <div className="text-muted-foreground mt-3 flex justify-between text-xs">
                 <span>成功 {formatNumber(apiSummary?.successCount)}</span>
                 <span>失败 {formatNumber(apiSummary?.failureCount)}</span>
               </div>
@@ -518,7 +545,7 @@ export default function DashboardPage() {
         <Card className="fade-in-up stagger-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[15px]">
-              <Coffee className="size-4 text-muted-foreground" />
+              <Coffee className="text-muted-foreground size-4" />
               JVM 监控
             </CardTitle>
           </CardHeader>
@@ -530,7 +557,11 @@ export default function DashboardPage() {
                 hint={`上限 ${formatBytes(jvm?.heapMax ?? 0)}`}
               />
               <DetailBlock label="GC 次数" value={formatNumber(jvm?.gcCount)} hint="累计回收次数" />
-              <DetailBlock label="活跃线程数" value={formatNumber(jvm?.threadCount)} hint="JVM 线程总数" />
+              <DetailBlock
+                label="活跃线程数"
+                value={formatNumber(jvm?.threadCount)}
+                hint="JVM 线程总数"
+              />
               <DetailBlock label="JVM 运行时长" value={formatUptime(jvm?.uptime ?? 0)} />
             </div>
           </CardContent>
@@ -539,7 +570,7 @@ export default function DashboardPage() {
         <Card className="fade-in-up stagger-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[15px]">
-              <Info className="size-4 text-muted-foreground" />
+              <Info className="text-muted-foreground size-4" />
               运行环境
             </CardTitle>
           </CardHeader>
@@ -557,7 +588,7 @@ export default function DashboardPage() {
         <Card className="fade-in-up stagger-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[15px]">
-              <Database className="size-4 text-muted-foreground" />
+              <Database className="text-muted-foreground size-4" />
               数据库
               <span className="ml-auto">
                 <StatusBadge available={database?.available} />
@@ -565,20 +596,23 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               {database?.productName
                 ? `${database.productName}${database.productVersion ? ` ${database.productVersion}` : ''}`
                 : '—'}
               {database?.poolName && (
-                <span className="ml-2 text-xs text-muted-foreground/70">连接池 {database.poolName}</span>
+                <span className="text-muted-foreground/70 ml-2 text-xs">
+                  连接池 {database.poolName}
+                </span>
               )}
             </div>
 
             <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
               <div className="flex items-baseline justify-between">
-                <span className="text-[13px] text-muted-foreground">连接池水位</span>
+                <span className="text-muted-foreground text-[13px]">连接池水位</span>
                 <span className={cn('text-lg font-semibold tabular-nums', poolTone.text)}>
-                  {formatNumber(database?.activeConnections)} / {formatNumber(database?.maxConnections)}
+                  {formatNumber(database?.activeConnections)} /{' '}
+                  {formatNumber(database?.maxConnections)}
                 </span>
               </div>
               <Progress
@@ -586,7 +620,7 @@ export default function DashboardPage() {
                 className="mt-2 h-1.5"
                 indicatorClassName={cn('transition-[width] duration-300 ease-out', poolTone.bar)}
               />
-              <div className="mt-3 flex justify-between text-xs text-muted-foreground">
+              <div className="text-muted-foreground mt-3 flex justify-between text-xs">
                 <span>空闲 {formatNumber(database?.idleConnections)}</span>
                 <span>总计 {formatNumber(database?.totalConnections)}</span>
                 <span className={cn((database?.waitingThreads ?? 0) > 0 && 'text-amber-600')}>
@@ -597,7 +631,11 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <DetailBlock label="数据量" value={formatSize(database?.databaseSize)} />
-              <DetailBlock label="探测耗时" value={formatMs(database?.pingMs)} hint="含取连接 + 一次查询" />
+              <DetailBlock
+                label="探测耗时"
+                value={formatMs(database?.pingMs)}
+                hint="含取连接 + 一次查询"
+              />
             </div>
           </CardContent>
         </Card>
@@ -605,7 +643,7 @@ export default function DashboardPage() {
         <Card className="fade-in-up stagger-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-[15px]">
-              <Zap className="size-4 text-muted-foreground" />
+              <Zap className="text-muted-foreground size-4" />
               Redis
               <span className="ml-auto">
                 <StatusBadge available={redis?.available} />
@@ -613,11 +651,15 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               {redis?.version ? `v${redis.version}` : '—'}
-              {redis?.mode && <span className="ml-2 text-xs text-muted-foreground/70">{redis.mode}</span>}
+              {redis?.mode && (
+                <span className="text-muted-foreground/70 ml-2 text-xs">{redis.mode}</span>
+              )}
               {redis?.databaseIndex !== null && redis?.databaseIndex !== undefined && (
-                <span className="ml-2 text-xs text-muted-foreground/70">DB {redis.databaseIndex}</span>
+                <span className="text-muted-foreground/70 ml-2 text-xs">
+                  DB {redis.databaseIndex}
+                </span>
               )}
             </div>
 
@@ -636,7 +678,7 @@ export default function DashboardPage() {
 
             <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
               <div className="flex items-baseline justify-between">
-                <span className="text-[13px] text-muted-foreground">缓存命中率</span>
+                <span className="text-muted-foreground text-[13px]">缓存命中率</span>
                 <span className={cn('text-lg font-semibold tabular-nums', hitTone.text)}>
                   {hitRate === null ? '—' : `${hitRate.toFixed(2)}%`}
                 </span>
@@ -648,13 +690,13 @@ export default function DashboardPage() {
                   indicatorClassName={cn('transition-[width] duration-300 ease-out', hitTone.bar)}
                 />
               )}
-              <div className="mt-3 flex justify-between text-xs text-muted-foreground">
+              <div className="text-muted-foreground mt-3 flex justify-between text-xs">
                 <span>命中 {formatNumber(redis?.keyspaceHits)}</span>
                 <span>未命中 {formatNumber(redis?.keyspaceMisses)}</span>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground/80">
+            <div className="text-muted-foreground/80 flex flex-wrap gap-x-4 gap-y-1 text-xs">
               <span>每秒 {formatNumber(redis?.instantaneousOpsPerSec)} 命令</span>
               <span>碎片率 {redis?.memFragmentationRatio ?? '—'}</span>
               <span>探测 {formatMs(redis?.pingMs)}</span>

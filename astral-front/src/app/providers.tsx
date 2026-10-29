@@ -51,7 +51,6 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
-  const [isMobile, setIsMobile] = useState(false);
 
   /** 主题持久化 + 应用到 <html>（供 CSS 变量与选择器生效） */
   useEffect(() => {
@@ -64,15 +63,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       /* 隐私模式等场景下存储不可用，静默降级 */
     }
   }, [themeMode]);
-
-  /** 视口断点：桌面/移动端布局切换 */
-  useEffect(() => {
-    const mq = window.matchMedia(MOBILE_QUERY);
-    const apply = () => setIsMobile(mq.matches);
-    apply();
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
 
   /** 跟随系统外观：仅在用户未显式选择主题时生效 */
   useEffect(() => {

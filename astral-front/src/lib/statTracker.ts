@@ -19,6 +19,8 @@ const QUEUE_KEY = 'qt_stat_queue';
 const FLUSH_INTERVAL = 10_000;
 /** 单批上限 */
 const BATCH_LIMIT = 50;
+/** 队列长度上限：发送持续失败回灌时防膨胀，超限截断 */
+const MAX_PENDING_EVENTS = 1000;
 
 /* ---------- 事件类型 ---------- */
 
@@ -42,8 +44,8 @@ export interface StatEvent {
 
 let deviceId = '';
 let lastShowTime = 0;
+// let：flush 失败回灌超过上限时会整体截断（见 MAX_PENDING_EVENTS）
 let pendingEvents: StatEvent[] = [];
-let flushTimer: ReturnType<typeof setInterval> | null = null;
 let initialized = false;
 
 /* ---------- 工具函数 ---------- */
@@ -89,7 +91,10 @@ let currentModel = 'Unknown';
 function detectOsBasic(): string {
   if (typeof navigator === 'undefined') return 'Unknown';
   const ua = navigator.userAgent || '';
-  const plat = (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform || navigator.platform || '';
+  const plat =
+    (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData?.platform ||
+    navigator.platform ||
+    '';
   if (/Android/i.test(ua)) return 'Android';
   if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
   if (/Mac|Macintosh|Mac OS X/i.test(plat) || /Mac OS X/i.test(ua)) return 'macOS';
@@ -111,9 +116,13 @@ function detectOsBasic(): string {
 async function detectOs(): Promise<string> {
   const base = detectOsBasic();
   if (base !== 'Windows') return base;
-  const uad = (navigator as unknown as {
-    userAgentData?: { getHighEntropyValues?: (hints: string[]) => Promise<{ platformVersion?: string }> };
-  }).userAgentData;
+  const uad = (
+    navigator as unknown as {
+      userAgentData?: {
+        getHighEntropyValues?: (hints: string[]) => Promise<{ platformVersion?: string }>;
+      };
+    }
+  ).userAgentData;
   if (uad && typeof uad.getHighEntropyValues === 'function') {
     try {
       const { platformVersion } = await uad.getHighEntropyValues(['platformVersion']);
@@ -156,7 +165,9 @@ function restoreQueue(): StatEvent[] {
     const raw = localStorage.getItem(QUEUE_KEY);
     if (raw) {
       localStorage.removeItem(QUEUE_KEY);
-      return JSON.parse(raw) as StatEvent[];
+      // localStorage 里可能是 "null" 等合法 JSON 但形状不对的内容，只认数组
+      const parsed: unknown = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as StatEvent[]) : [];
     }
   } catch {
     // ignore
@@ -190,6 +201,10 @@ async function flush() {
   } catch {
     // 发送失败→放回队列末尾（重试上限由服务端/客户端共同兜底）
     pendingEvents.unshift(...batch);
+    // 长时间连不上后端时队列只增不减，超限截断防止内存与 localStorage 无限膨胀
+    if (pendingEvents.length > MAX_PENDING_EVENTS) {
+      pendingEvents = pendingEvents.slice(0, MAX_PENDING_EVENTS);
+    }
   }
 }
 
@@ -279,8 +294,8 @@ export function initStatTracker() {
   };
   document.addEventListener('visibilitychange', onVisibility);
 
-  // 定时 flush
-  flushTimer = setInterval(flush, FLUSH_INTERVAL);
+  // 定时 flush（模块单例随页面常驻，无需保留句柄做清理）
+  setInterval(flush, FLUSH_INTERVAL);
 
   // 页面关闭前尝试发送剩余队列
   const onBeforeUnload = () => {

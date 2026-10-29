@@ -1,13 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import {
-  Bot,
-  Grid2x2,
-  Headphones,
-  Star,
-  Smartphone,
-  CloudDownload,
-} from 'lucide-react';
+import { Bot, Grid2x2, Headphones, Star, Smartphone, CloudDownload } from 'lucide-react';
 
 /**
  * 轻听音乐介绍页（路由 /lightlisten）

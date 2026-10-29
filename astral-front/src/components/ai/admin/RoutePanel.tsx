@@ -22,17 +22,28 @@ import {
   Tag,
   message,
 } from '@/components/antd-compat';
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@/components/antd-compat/icons';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from '@/components/antd-compat/icons';
 import { ResizableTable } from '@/components/ResizableTable';
 
-import { aiModelApi, aiProviderApi, aiRouteApi, type AiModel, type AiProvider, type AiRoute } from '@/api/ai';
+import {
+  aiModelApi,
+  aiProviderApi,
+  aiRouteApi,
+  type AiModel,
+  type AiProvider,
+  type AiRoute,
+} from '@/api/ai';
 import { usePerm } from '@/lib/perm';
 
-import { Hint, JsonBlock, ReadOnlyNote, formatNumber, jsonObjectRule, useAiDict } from './shared';
+import { Hint, JsonBlock, ReadOnlyNote, formatNumber, jsonObjectRule } from './shared';
 
 export default function RoutePanel() {
   const hasPerm = usePerm();
-  const dict = useAiDict();
   const canEdit = hasPerm('admin:ai:route:edit');
 
   const [routes, setRoutes] = useState<AiRoute[]>([]);
@@ -68,7 +79,10 @@ export default function RoutePanel() {
   const modelOptions = (providerId?: number) =>
     models
       .filter((item) => (providerId ? item.providerId === providerId : true))
-      .map((item) => ({ label: `${item.modelName}（${item.modelCode}）`, value: item.id as number }));
+      .map((item) => ({
+        label: `${item.modelName}（${item.modelCode}）`,
+        value: item.id as number,
+      }));
 
   const openModal = (row?: AiRoute) => {
     setModal({ open: true, row });
@@ -159,7 +173,9 @@ export default function RoutePanel() {
       title: '启用',
       dataIndex: 'enabled',
       width: 70,
-      render: (value: boolean) => <Tag color={value ? 'success' : 'default'}>{value ? '是' : '否'}</Tag>,
+      render: (value: boolean) => (
+        <Tag color={value ? 'success' : 'default'}>{value ? '是' : '否'}</Tag>
+      ),
     },
     {
       key: 'action',
@@ -168,7 +184,13 @@ export default function RoutePanel() {
       width: 100,
       render: (_: unknown, row: AiRoute) => (
         <Space size={2}>
-          <Button size="small" type="text" icon={<EditOutlined />} disabled={!canEdit} onClick={() => openModal(row)} />
+          <Button
+            size="small"
+            type="text"
+            icon={<EditOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal(row)}
+          />
           <Popconfirm
             title="删除路由？"
             description="引用它的智能体版本将无法发布。"
@@ -196,20 +218,39 @@ export default function RoutePanel() {
     <div>
       <Hint>
         路由把「智能体版本」和「具体模型」解耦：换模型只改路由，不用重发智能体新版本。
-        额外参数会原样并入请求体，但不能覆盖 temperature / top_p / max_tokens 这些已显式设置的同名键。
+        额外参数会原样并入请求体，但不能覆盖 temperature / top_p / max_tokens
+        这些已显式设置的同名键。
       </Hint>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
         <Space size={8}>
           <span style={{ fontSize: 13, fontWeight: 500 }}>路由</span>
           <Tag color="default">{routes.length}</Tag>
           <ReadOnlyNote show={!canEdit} />
         </Space>
         <Space size={8}>
-          <Button size="small" icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => void load()}
+            loading={loading}
+          >
             刷新
           </Button>
-          <Button size="small" type="primary" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => openModal()}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!canEdit}
+            onClick={() => openModal()}
+          >
             新建路由
           </Button>
         </Space>
@@ -248,16 +289,30 @@ export default function RoutePanel() {
             >
               <Input placeholder="例如 default_route" disabled={Boolean(modal.row)} />
             </Form.Item>
-            <Form.Item name="name" label="名称" style={{ flex: 1 }} rules={[{ required: true, message: '请输入名称' }]}>
+            <Form.Item
+              name="name"
+              label="名称"
+              style={{ flex: 1 }}
+              rules={[{ required: true, message: '请输入名称' }]}
+            >
               <Input placeholder="例如 默认对话路由" />
             </Form.Item>
           </Space>
 
-          <Form.Item name="providerId" label="提供方" rules={[{ required: true, message: '请选择提供方' }]}>
+          <Form.Item
+            name="providerId"
+            label="提供方"
+            rules={[{ required: true, message: '请选择提供方' }]}
+          >
             <Select
               placeholder="选择提供方"
-              options={providers.map((item) => ({ label: item.name as string, value: item.id as number }))}
-              onChange={() => form.setFieldsValue({ modelId: undefined, fallbackModelId: undefined })}
+              options={providers.map((item) => ({
+                label: item.name as string,
+                value: item.id as number,
+              }))}
+              onChange={() =>
+                form.setFieldsValue({ modelId: undefined, fallbackModelId: undefined })
+              }
             />
           </Form.Item>
 
@@ -276,7 +331,13 @@ export default function RoutePanel() {
           </Form.Item>
 
           <Form.Item name="fallbackModelId" label="备用模型" extra="主模型不可用时自动切换">
-            <Select allowClear placeholder="可不填" options={modelOptions(form.getFieldValue('providerId'))} showSearch optionFilterProp="label" />
+            <Select
+              allowClear
+              placeholder="可不填"
+              options={modelOptions(form.getFieldValue('providerId'))}
+              showSearch
+              optionFilterProp="label"
+            />
           </Form.Item>
 
           <Space size={12} style={{ display: 'flex' }}>

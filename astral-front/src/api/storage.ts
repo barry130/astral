@@ -165,32 +165,60 @@ export const storageApi = {
   // 配置
   listConfigs: () => request.get('/api/v1/admin/plugin/storage/configs'),
   createConfig: (data: {
-    name: string; providerType?: string; chatId?: string; workerBaseUrl?: string;
-    providerOptions?: S3ProviderOptions; maxFileSize?: number; remark?: string;
+    name: string;
+    providerType?: string;
+    chatId?: string;
+    workerBaseUrl?: string;
+    providerOptions?: S3ProviderOptions;
+    maxFileSize?: number;
+    remark?: string;
   }) => request.post('/api/v1/admin/plugin/storage/configs', data),
-  updateConfig: (id: number, data: {
-    chatId?: string; workerBaseUrl?: string; providerOptions?: S3ProviderOptions;
-    maxFileSize?: number; remark?: string; status?: string;
-  }) => request.put(`/api/v1/admin/plugin/storage/configs/${id}`, data),
+  updateConfig: (
+    id: number,
+    data: {
+      chatId?: string;
+      workerBaseUrl?: string;
+      providerOptions?: S3ProviderOptions;
+      maxFileSize?: number;
+      remark?: string;
+      status?: string;
+    },
+  ) => request.put(`/api/v1/admin/plugin/storage/configs/${id}`, data),
   deleteConfig: (id: number) => request.delete(`/api/v1/admin/plugin/storage/configs/${id}`),
   testConfig: (id: number) => request.post(`/api/v1/admin/plugin/storage/configs/${id}/test`),
-  setDefaultConfig: (id: number) => request.post(`/api/v1/admin/plugin/storage/configs/${id}/default`),
+  setDefaultConfig: (id: number) =>
+    request.post(`/api/v1/admin/plugin/storage/configs/${id}/default`),
 
   // 文件夹与授权
   listFolders: () => request.get('/api/v1/admin/plugin/storage/folders'),
-  createFolder: (data: { parentId?: number; folderName: string; configId?: number; visibility?: string; policy?: FolderUploadPolicy }) =>
-    request.post('/api/v1/admin/plugin/storage/folders', data),
-  updateFolder: (id: number, data: { folderName?: string; visibility?: string; status?: string; configId?: number; policy?: FolderUploadPolicy }) =>
-    request.put(`/api/v1/admin/plugin/storage/folders/${id}`, data),
+  createFolder: (data: {
+    parentId?: number;
+    folderName: string;
+    configId?: number;
+    visibility?: string;
+    policy?: FolderUploadPolicy;
+  }) => request.post('/api/v1/admin/plugin/storage/folders', data),
+  updateFolder: (
+    id: number,
+    data: {
+      folderName?: string;
+      visibility?: string;
+      status?: string;
+      configId?: number;
+      policy?: FolderUploadPolicy;
+    },
+  ) => request.put(`/api/v1/admin/plugin/storage/folders/${id}`, data),
   deleteFolder: (id: number) => request.delete(`/api/v1/admin/plugin/storage/folders/${id}`),
-  getFolderPermissions: (id: number) => request.get(`/api/v1/admin/plugin/storage/folders/${id}/permissions`),
+  getFolderPermissions: (id: number) =>
+    request.get(`/api/v1/admin/plugin/storage/folders/${id}/permissions`),
   saveFolderPermissions: (id: number, rows: FolderPermRow[]) =>
     request.put(`/api/v1/admin/plugin/storage/folders/${id}/permissions`, { rows }),
 
   // 文件
   pageFiles: (params: { current?: number; size?: number; folderId?: number; keyword?: string }) =>
     request.get('/api/v1/admin/plugin/storage/files', { params }),
-  deleteFile: (publicId: string) => request.delete(`/api/v1/admin/plugin/storage/files/${publicId}`),
+  deleteFile: (publicId: string) =>
+    request.delete(`/api/v1/admin/plugin/storage/files/${publicId}`),
 
   // 任务与审计
   pageTasks: (params: { current?: number; size?: number }) =>
@@ -205,8 +233,12 @@ export const storageApi = {
   deleteMyFile: (publicId: string) => request.delete(`/api/v1/all/storage/files/${publicId}`),
   changeFileVisibility: (publicId: string, value: string) =>
     request.put(`/api/v1/all/storage/files/${publicId}/visibility`, null, { params: { value } }),
-  uploadTicket: (data: { folderId: number; fileName: string; contentType: string; sizeBytes: number }) =>
-    request.post('/api/v1/all/storage/upload-ticket', data),
+  uploadTicket: (data: {
+    folderId: number;
+    fileName: string;
+    contentType: string;
+    sizeBytes: number;
+  }) => request.post('/api/v1/all/storage/upload-ticket', data),
   downloadUrl: (publicId: string) =>
     request.post(`/api/v1/all/storage/files/${publicId}/download-url`),
   permanentUrl: (publicId: string) =>
@@ -215,16 +247,37 @@ export const storageApi = {
     request.post('/api/v1/all/storage/files/register', { uploadId }),
 
   // 共用文件管理；后台写入沿用 admin:storage:edit，用户端按文件夹授权。
-  managerFiles: (params: FileManagerQuery, admin = false) => request.get<StoragePageResult<StorageFile>>(
-    admin ? '/api/v1/admin/plugin/storage/manager/files' : '/api/v1/all/storage/files', { params }),
-  managerUpdate: (publicId: string, data: { originalName?: string; folderId?: number }, admin = false) =>
-    request.put<StorageFile>(`${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/${publicId}`, data),
+  managerFiles: (params: FileManagerQuery, admin = false) =>
+    request.get<StoragePageResult<StorageFile>>(
+      admin ? '/api/v1/admin/plugin/storage/manager/files' : '/api/v1/all/storage/files',
+      { params },
+    ),
+  managerUpdate: (
+    publicId: string,
+    data: { originalName?: string; folderId?: number },
+    admin = false,
+  ) =>
+    request.put<StorageFile>(
+      `${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/${publicId}`,
+      data,
+    ),
   managerBatch: (data: FileBatchRequest, admin = false) =>
-    request.post<FileBatchResult>(`${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/batch`, data),
+    request.post<FileBatchResult>(
+      `${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/batch`,
+      data,
+    ),
   managerUrl: (publicId: string, permanent = false, admin = false) =>
-    request.post<{ url: string; expiresAt?: number }>(`${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/${publicId}/${permanent ? 'permanent-url' : 'download-url'}`),
-  managerTicket: (data: { folderId: number; fileName: string; contentType: string; sizeBytes: number }, admin = false) =>
-    request.post<TicketView>(`${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/upload-ticket`, data),
+    request.post<{ url: string; expiresAt?: number }>(
+      `${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/${publicId}/${permanent ? 'permanent-url' : 'download-url'}`,
+    ),
+  managerTicket: (
+    data: { folderId: number; fileName: string; contentType: string; sizeBytes: number },
+    admin = false,
+  ) =>
+    request.post<TicketView>(
+      `${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/upload-ticket`,
+      data,
+    ),
   createMyFolder: (data: { parentId?: number; folderName: string }) =>
     request.post<StorageFolder>('/api/v1/all/storage/folders', data),
   renameMyFolder: (id: number, folderName: string) =>

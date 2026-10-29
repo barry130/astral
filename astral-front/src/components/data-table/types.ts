@@ -40,7 +40,10 @@ export interface DataTableColumn<T> {
   /** 追加到该列单元格/表头的类名 */
   className?: string;
   /** 单元格属性（与 antd 同形，取常用子集） */
-  onCell?: (record: T, index: number) => { className?: string; title?: string; style?: CSSProperties };
+  onCell?: (
+    record: T,
+    index: number,
+  ) => { className?: string; title?: string; style?: CSSProperties };
   /** 表头属性（与 antd 同形，取常用子集） */
   onHeaderCell?: () => { className?: string; style?: CSSProperties };
 }
@@ -127,11 +130,15 @@ export function resolveRowKey<T>(
 }
 
 /** 按 dataIndex 取值（支持层级数组） */
-export function resolveCellValue<T>(record: T, dataIndex: DataTableColumn<T>['dataIndex']): unknown {
+export function resolveCellValue<T>(
+  record: T,
+  dataIndex: DataTableColumn<T>['dataIndex'],
+): unknown {
   if (dataIndex === undefined || dataIndex === null) return undefined;
   if (Array.isArray(dataIndex)) {
     return dataIndex.reduce<unknown>(
-      (acc, k) => (acc === null || acc === undefined ? undefined : (acc as Record<string, unknown>)[String(k)]),
+      (acc, k) =>
+        acc === null || acc === undefined ? undefined : (acc as Record<string, unknown>)[String(k)],
       record,
     );
   }

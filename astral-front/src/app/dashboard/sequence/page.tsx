@@ -1,10 +1,37 @@
 'use client';
 
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { formatDateTime } from '@/lib/format';
-import { Card, Form, Input, Select, Button, message, Spin, InputNumber, Row, Col, Tag, Empty, Tabs, Popconfirm, Switch, Space, Modal, AutoComplete } from '@/components/antd-compat';
-import { ApiOutlined, SendOutlined, BulbOutlined, HistoryOutlined, PlusOutlined, EditOutlined, DeleteOutlined, ToolOutlined } from '@/components/antd-compat/icons';
-import { sequenceApi, SequenceType, SequenceResponse } from '@/api/sequence';
+import {
+  Card,
+  Form,
+  Input,
+  Select,
+  Button,
+  message,
+  Spin,
+  InputNumber,
+  Row,
+  Col,
+  Tag,
+  Empty,
+  Tabs,
+  Popconfirm,
+  Switch,
+  Space,
+  Modal,
+  AutoComplete,
+} from '@/components/antd-compat';
+import {
+  ApiOutlined,
+  SendOutlined,
+  BulbOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ToolOutlined,
+} from '@/components/antd-compat/icons';
+import { sequenceApi, SequenceType, SequenceResponse, SequenceHistory } from '@/api/sequence';
 import { sequenceConfigApi, SequenceConfig } from '@/api/sequenceConfig';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
@@ -23,7 +50,7 @@ export default function SequencePage() {
   /** 最近一次生成结果 */
   const [result, setResult] = useState<SequenceResponse | null>(null);
   /** 序列生成历史记录 */
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<SequenceHistory[]>([]);
   /** 业务键下拉选项（从配置中提取） */
   const [bizKeys, setBizKeys] = useState<string[]>([]);
   /** 序列配置列表 */
@@ -40,12 +67,12 @@ export default function SequencePage() {
   const [batchForm] = Form.useForm();
   /** 配置表单实例 */
   const [configForm] = Form.useForm();
-  
+
   /** 配置分页状态 */
   const [configPagination, setConfigPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   /** 配置搜索关键词 */
   const [configSearch, setConfigSearch] = useState('');
-  
+
   /** 单个生成类型锁定状态（业务键已配置类型时锁定） */
   const [singleTypeLocked, setSingleTypeLocked] = useState(false);
   /** 批量生成类型锁定状态 */
@@ -63,9 +90,40 @@ export default function SequencePage() {
   /** 是否具备序列配置维护权限（须与后端 SequenceConfigController 上的 @RequiresPermission("admin:sequence:edit") 一致） */
   const canEditConfig = hasPerm('admin:sequence:edit');
 
+  /** 加载配置列表（分页+搜索） */
+  const loadConfigs = useCallback((page = 1, size = 10, search?: string) => {
+    setConfigLoading(true);
+    sequenceConfigApi
+      .getPage(page, size, search ? { bizKey: search } : undefined)
+      .then((res) => {
+        if (res.code === 200) {
+          setConfigs(res.data?.records || []);
+          setConfigPagination({
+            current: res.data?.current || 1,
+            pageSize: res.data?.size || 10,
+            total: res.data?.total || 0,
+          });
+          // 同时更新下拉列表的业务键
+          sequenceConfigApi
+            .getAll()
+            .then((r) => {
+              if (r.code === 200) {
+                setBizKeys(r.data?.map((c: SequenceConfig) => c.bizKey) || []);
+              }
+            })
+            .catch(() => {
+              /* 业务键下拉失败不影响列表展示 */
+            });
+        }
+      })
+      .catch(() => message.error('序列配置加载失败'))
+      .finally(() => setConfigLoading(false));
+  }, []);
+
   /** 组件挂载时加载序列类型、配置列表和历史记录 */
   useEffect(() => {
-    sequenceApi.getTypes()
+    sequenceApi
+      .getTypes()
       .then((res) => {
         if (res.code === 200) {
           setTypes(res.data);
@@ -73,35 +131,15 @@ export default function SequencePage() {
       })
       .catch(() => message.error('序列类型加载失败'));
     loadConfigs();
-    sequenceApi.getHistoryRecent(undefined, 100)
+    sequenceApi
+      .getHistoryRecent(undefined, 100)
       .then((res) => {
         if (res.code === 200) {
           setHistory(res.data || []);
         }
       })
       .catch(() => message.error('历史记录加载失败'));
-  }, []);
-
-  /** 加载配置列表（分页+搜索） */
-  const loadConfigs = (page = 1, size = 10, search?: string) => {
-    setConfigLoading(true);
-    sequenceConfigApi.getPage(page, size, search ? { bizKey: search } : undefined).then((res) => {
-      if (res.code === 200) {
-        setConfigs(res.data?.records || []);
-        setConfigPagination({
-          current: res.data?.current || 1,
-          pageSize: res.data?.size || 10,
-          total: res.data?.total || 0
-        });
-        // 同时更新下拉列表的业务键
-        sequenceConfigApi.getAll().then((r) => {
-          if (r.code === 200) {
-            setBizKeys(r.data?.map((c: SequenceConfig) => c.bizKey) || []);
-          }
-        }).catch(() => { /* 业务键下拉失败不影响列表展示 */ });
-      }
-    }).catch(() => message.error('序列配置加载失败')).finally(() => setConfigLoading(false));
-  };
+  }, [loadConfigs]);
 
   /** 配置搜索处理 */
   const handleConfigSearch = (value: string) => {
@@ -122,33 +160,42 @@ export default function SequencePage() {
   };
 
   /** 打开编辑配置弹窗 */
-  const handleConfigEdit = (record: SequenceConfig) => {
-    setEditingConfig(record);
-    configForm.setFieldsValue(record);
-    setModalVisible(true);
-  };
+  const handleConfigEdit = useCallback(
+    (record: SequenceConfig) => {
+      setEditingConfig(record);
+      configForm.setFieldsValue(record);
+      setModalVisible(true);
+    },
+    [configForm],
+  );
 
   /** 删除配置 */
-  const handleConfigDelete = async (id: number) => {
-    try {
-      await sequenceConfigApi.delete(id);
-      message.success('删除成功');
-      loadConfigs();
-    } catch (error: any) {
-      message.error(error.message);
-    }
-  };
+  const handleConfigDelete = useCallback(
+    async (id: number) => {
+      try {
+        await sequenceConfigApi.delete(id);
+        message.success('删除成功');
+        loadConfigs();
+      } catch (error: unknown) {
+        message.error((error as Error).message);
+      }
+    },
+    [loadConfigs],
+  );
 
   /** 切换配置启用状态 */
-  const handleConfigToggle = async (id: number, enabled: boolean) => {
-    try {
-      await sequenceConfigApi.toggle(id, enabled);
-      message.success(enabled ? '已启用' : '已禁用');
-      loadConfigs();
-    } catch (error: any) {
-      message.error(error.message);
-    }
-  };
+  const handleConfigToggle = useCallback(
+    async (id: number, enabled: boolean) => {
+      try {
+        await sequenceConfigApi.toggle(id, enabled);
+        message.success(enabled ? '已启用' : '已禁用');
+        loadConfigs();
+      } catch (error: unknown) {
+        message.error((error as Error).message);
+      }
+    },
+    [loadConfigs],
+  );
 
   /** 提交配置表单 */
   const handleConfigSubmit = async () => {
@@ -164,8 +211,8 @@ export default function SequencePage() {
       setModalVisible(false);
       loadConfigs();
       loadHistory();
-    } catch (error: any) {
-      message.error(error.message);
+    } catch (error: unknown) {
+      message.error((error as Error).message);
     }
   };
 
@@ -182,17 +229,20 @@ export default function SequencePage() {
     }
     if (resolveTypeRef.current) clearTimeout(resolveTypeRef.current);
     resolveTypeRef.current = setTimeout(() => {
-      sequenceConfigApi.getByBizKey(v).then((res) => {
-        if (res.code === 200 && res.data?.sequenceType) {
-          targetForm.setFieldValue('type', res.data.sequenceType);
-          setLock(true);
-        } else {
+      sequenceConfigApi
+        .getByBizKey(v)
+        .then((res) => {
+          if (res.code === 200 && res.data?.sequenceType) {
+            targetForm.setFieldValue('type', res.data.sequenceType);
+            setLock(true);
+          } else {
+            setLock(false);
+            targetForm.setFieldValue('type', undefined);
+          }
+        })
+        .catch(() => {
           setLock(false);
-          targetForm.setFieldValue('type', undefined);
-        }
-      }).catch(() => {
-        setLock(false);
-      });
+        });
     }, 300);
   };
 
@@ -209,10 +259,11 @@ export default function SequencePage() {
   const handleBatchBizKeyInputChange = (value: string) => resolveType(value, true);
   /** 业务键选择（下拉选中）变化 */
   const handleBizKeyChange = (value: string | null, isBatch = false) => resolveType(value, isBatch);
-  
+
   /** 刷新历史记录 */
   const loadHistory = () => {
-    sequenceApi.getHistoryRecent(undefined, 100)
+    sequenceApi
+      .getHistoryRecent(undefined, 100)
       .then((res) => {
         if (res.code === 200) {
           setHistory(res.data || []);
@@ -226,7 +277,7 @@ export default function SequencePage() {
     setLoading(true);
     try {
       // 优先使用配置中的类型，其次使用表单选择的类型，最后使用默认SNOWFLAKE
-      const config = configs.find(c => c.bizKey === values.bizKey);
+      const config = configs.find((c) => c.bizKey === values.bizKey);
       const type = config?.sequenceType || values.type || 'SNOWFLAKE';
       const res = await sequenceApi.next({ ...values, type });
       if (res.code === 200) {
@@ -246,7 +297,7 @@ export default function SequencePage() {
   const handleBatch = async (values: { bizKey: string; type: string; count: number }) => {
     setLoading(true);
     try {
-      const config = configs.find(c => c.bizKey === values.bizKey);
+      const config = configs.find((c) => c.bizKey === values.bizKey);
       const type = config?.sequenceType || values.type || 'SNOWFLAKE';
       const res = await sequenceApi.batch({ ...values, type });
       if (res.code === 200) {
@@ -264,64 +315,131 @@ export default function SequencePage() {
 
   /** 历史记录表格列定义 */
   const historyColumns = [
-    { title: '业务键', dataIndex: 'bizKey', key: 'bizKey', render: (v: string) => <Tag color="blue">{v}</Tag> },
-    { title: '类型', dataIndex: 'sequenceType', key: 'sequenceType', render: (v: string) => <Tag>{v}</Tag> },
-    { title: '序列号', dataIndex: 'sequenceValue', key: 'sequenceValue', render: (v: number) => <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{v}</code> },
-    { title: '时间', dataIndex: 'createTime', key: 'createTime', render: (v: string) => formatDateTime(v) },
+    {
+      title: '业务键',
+      dataIndex: 'bizKey',
+      key: 'bizKey',
+      render: (v: string) => <Tag color="blue">{v}</Tag>,
+    },
+    {
+      title: '类型',
+      dataIndex: 'sequenceType',
+      key: 'sequenceType',
+      render: (v: string) => <Tag>{v}</Tag>,
+    },
+    {
+      title: '序列号',
+      dataIndex: 'sequenceValue',
+      key: 'sequenceValue',
+      render: (v: number) => <code className="bg-muted rounded px-1.5 py-0.5 text-xs">{v}</code>,
+    },
+    {
+      title: '时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      render: (v: string) => formatDateTime(v),
+    },
   ];
 
   // 配置表格列定义用 useMemo 固定引用，
   // 避免每次渲染新建数组击穿 ResizableTable 内部按 columns 引用做的列 useMemo（键入时会整表重渲）。
   // 依赖显式列出 canEditConfig：不依赖「dashboard/layout 的 loading 阻塞保证 user 就绪」这一隐式时序
-  const configColumns = useMemo(() => [
-    { title: '业务键', dataIndex: 'bizKey', key: 'bizKey', render: (v: string) => <Tag color="blue">{v}</Tag> },
-    { title: '序列类型', dataIndex: 'sequenceType', key: 'sequenceType', render: (v: string) => <Tag>{v}</Tag> },
-    { title: '当前值', dataIndex: 'currentValue', key: 'currentValue', render: (v: number, r: SequenceConfig) => r.sequenceType === 'SEGMENT' ? (v ?? '-') : '—' },
-    { title: '步长', dataIndex: 'step', key: 'step', render: (v: number) => v || '-' },
-    {
-      title: '状态',
-      dataIndex: 'enabled',
-      key: 'enabled',
-      render: (v: boolean, r: SequenceConfig) => (
-        <Switch
-          checked={v}
-          onChange={(checked) => handleConfigToggle(r.id!, checked)}
-          disabled={!canEditConfig}
-          checkedChildren="启用"
-          unCheckedChildren="禁用"
-        />
-      )
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_: any, r: SequenceConfig) => (
-        <Space>
-          <Button type="link" icon={<EditOutlined />} disabled={!canEditConfig} onClick={() => handleConfigEdit(r)}>编辑</Button>
-          <Popconfirm title="确认删除?" disabled={!canEditConfig} onConfirm={() => handleConfigDelete(r.id!)}>
-            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEditConfig}>删除</Button>
-          </Popconfirm>
-        </Space>
-      )
-    }
-  ], [canEditConfig]);
+  const configColumns = useMemo(
+    () => [
+      {
+        title: '业务键',
+        dataIndex: 'bizKey',
+        key: 'bizKey',
+        render: (v: string) => <Tag color="blue">{v}</Tag>,
+      },
+      {
+        title: '序列类型',
+        dataIndex: 'sequenceType',
+        key: 'sequenceType',
+        render: (v: string) => <Tag>{v}</Tag>,
+      },
+      {
+        title: '当前值',
+        dataIndex: 'currentValue',
+        key: 'currentValue',
+        render: (v: number, r: SequenceConfig) => (r.sequenceType === 'SEGMENT' ? (v ?? '-') : '—'),
+      },
+      { title: '步长', dataIndex: 'step', key: 'step', render: (v: number) => v || '-' },
+      {
+        title: '状态',
+        dataIndex: 'enabled',
+        key: 'enabled',
+        render: (v: boolean, r: SequenceConfig) => (
+          <Switch
+            checked={v}
+            onChange={(checked) => handleConfigToggle(r.id!, checked)}
+            disabled={!canEditConfig}
+            checkedChildren="启用"
+            unCheckedChildren="禁用"
+          />
+        ),
+      },
+      {
+        title: '操作',
+        key: 'action',
+        render: (_: unknown, r: SequenceConfig) => (
+          <Space>
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              disabled={!canEditConfig}
+              onClick={() => handleConfigEdit(r)}
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确认删除?"
+              disabled={!canEditConfig}
+              onConfirm={() => handleConfigDelete(r.id!)}
+            >
+              <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEditConfig}>
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
+        ),
+      },
+    ],
+    [canEditConfig, handleConfigDelete, handleConfigEdit, handleConfigToggle],
+  );
 
   return (
     <div style={{ background: 'var(--color-bg-base)', minHeight: '100%' }}>
-      <div style={{
-        background: 'var(--color-bg-white)',
-        padding: '16px 24px 0',
-        borderBottom: '1px solid var(--color-border)',
-        position: 'sticky',
-        top: 64,
-        zIndex: 100
-      }}>
+      <div
+        style={{
+          background: 'var(--color-bg-white)',
+          padding: '16px 24px 0',
+          borderBottom: '1px solid var(--color-border)',
+          position: 'sticky',
+          top: 64,
+          zIndex: 100,
+        }}
+      >
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
           items={[
-            { key: 'generate', label: <span><ApiOutlined /> 序列生成</span> },
-            { key: 'config', label: <span><ToolOutlined /> 序列配置</span> }
+            {
+              key: 'generate',
+              label: (
+                <span>
+                  <ApiOutlined /> 序列生成
+                </span>
+              ),
+            },
+            {
+              key: 'config',
+              label: (
+                <span>
+                  <ToolOutlined /> 序列配置
+                </span>
+              ),
+            },
           ]}
         />
       </div>
@@ -336,34 +454,53 @@ export default function SequencePage() {
                     <Form.Item name="bizKey" label="业务键" rules={[{ required: true }]}>
                       <AutoComplete
                         placeholder="选择或输入业务键"
-                        options={bizKeys.map(k => ({ value: k }))}
+                        options={bizKeys.map((k) => ({ value: k }))}
                         allowClear
                         onSelect={(value) => handleBizKeyChange(value, false)}
                         onChange={handleBizKeyInputChange}
                         onClear={() => resolveType(undefined, false)}
                       />
                     </Form.Item>
-                    <Form.Item name="type" label="序列类型" rules={[{ required: true, message: '请选择序列类型' }]} extra={singleTypeLocked ? <span style={{ color: '#faad14' }}>⚠ 该业务键已绑定此类型，不可更改</span> : null}>
+                    <Form.Item
+                      name="type"
+                      label="序列类型"
+                      rules={[{ required: true, message: '请选择序列类型' }]}
+                      extra={
+                        singleTypeLocked ? (
+                          <span style={{ color: '#faad14' }}>⚠ 该业务键已绑定此类型，不可更改</span>
+                        ) : null
+                      }
+                    >
                       <Select placeholder="选择类型" disabled={singleTypeLocked}>
                         {types.map((t) => (
-                          <Select.Option key={t.code} value={t.code}>{t.description}</Select.Option>
+                          <Select.Option key={t.code} value={t.code}>
+                            {t.description}
+                          </Select.Option>
                         ))}
                       </Select>
                     </Form.Item>
                     <Form.Item style={{ marginBottom: 0 }}>
-                      <Button type="primary" htmlType="submit" block icon={<SendOutlined />} disabled={!canGenerate}>
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        block
+                        icon={<SendOutlined />}
+                        disabled={!canGenerate}
+                      >
                         生成下一个
                       </Button>
                     </Form.Item>
                   </Form>
 
-                  <div style={{ margin: '20px 0', textAlign: 'center', color: '#999' }}>批量生成</div>
+                  <div style={{ margin: '20px 0', textAlign: 'center', color: '#999' }}>
+                    批量生成
+                  </div>
 
                   <Form form={batchForm} layout="vertical" onFinish={handleBatch}>
                     <Form.Item name="bizKey" label="业务键" rules={[{ required: true }]}>
                       <AutoComplete
                         placeholder="选择或输入业务键"
-                        options={bizKeys.map(k => ({ value: k }))}
+                        options={bizKeys.map((k) => ({ value: k }))}
                         allowClear
                         onSelect={(value) => handleBizKeyChange(value, true)}
                         onChange={handleBatchBizKeyInputChange}
@@ -372,10 +509,23 @@ export default function SequencePage() {
                     </Form.Item>
                     <Row gutter={8}>
                       <Col xs={{ span: 24 }} sm={{ span: 12 }}>
-                        <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择序列类型' }]} extra={batchTypeLocked ? <span style={{ color: '#faad14' }}>⚠ 该业务键已绑定此类型，不可更改</span> : null}>
+                        <Form.Item
+                          name="type"
+                          label="类型"
+                          rules={[{ required: true, message: '请选择序列类型' }]}
+                          extra={
+                            batchTypeLocked ? (
+                              <span style={{ color: '#faad14' }}>
+                                ⚠ 该业务键已绑定此类型，不可更改
+                              </span>
+                            ) : null
+                          }
+                        >
                           <Select placeholder="类型" disabled={batchTypeLocked}>
                             {types.map((t) => (
-                              <Select.Option key={t.code} value={t.code}>{t.description}</Select.Option>
+                              <Select.Option key={t.code} value={t.code}>
+                                {t.description}
+                              </Select.Option>
                             ))}
                           </Select>
                         </Form.Item>
@@ -387,7 +537,9 @@ export default function SequencePage() {
                       </Col>
                     </Row>
                     <Form.Item style={{ marginBottom: 0 }}>
-                      <Button htmlType="submit" block icon={<BulbOutlined />} disabled={!canBatch}>批量生成</Button>
+                      <Button htmlType="submit" block icon={<BulbOutlined />} disabled={!canBatch}>
+                        批量生成
+                      </Button>
                     </Form.Item>
                   </Form>
                 </Card>
@@ -407,15 +559,17 @@ export default function SequencePage() {
                           <div style={{ fontWeight: 500 }}>{result.type}</div>
                         </Col>
                       </Row>
-                      <div style={{
-                        background: 'var(--color-bg-base)',
-                        padding: 16,
-                        borderRadius: 8,
-                        fontSize: 24,
-                        fontWeight: 600,
-                        fontFamily: 'monospace',
-                        textAlign: 'center'
-                      }}>
+                      <div
+                        style={{
+                          background: 'var(--color-bg-base)',
+                          padding: 16,
+                          borderRadius: 8,
+                          fontSize: 24,
+                          fontWeight: 600,
+                          fontFamily: 'monospace',
+                          textAlign: 'center',
+                        }}
+                      >
                         {result.sequence}
                       </div>
                     </div>
@@ -439,7 +593,10 @@ export default function SequencePage() {
             </Row>
           ) : (
             <Card>
-              <div className="filter-bar" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
+              <div
+                className="filter-bar"
+                style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}
+              >
                 <Input.Search
                   placeholder="搜索业务键"
                   allowClear
@@ -466,7 +623,7 @@ export default function SequencePage() {
                   total: configPagination.total,
                   onChange: handleConfigPageChange,
                   showSizeChanger: true,
-                  showTotal: (total: number) => `共 ${total} 条`
+                  showTotal: (total: number) => `共 ${total} 条`,
                 }}
                 scroll={{ x: 'max-content' }}
               />
@@ -489,7 +646,11 @@ export default function SequencePage() {
           </Form.Item>
           <Form.Item name="sequenceType" label="序列类型" rules={[{ required: true }]}>
             <Select>
-              {types.map(t => <Select.Option key={t.code} value={t.code}>{t.description}</Select.Option>)}
+              {types.map((t) => (
+                <Select.Option key={t.code} value={t.code}>
+                  {t.description}
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
           <Form.Item name="enabled" label="启用" valuePropName="checked" initialValue>
