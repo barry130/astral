@@ -67,13 +67,13 @@ public final class NotifyEventRegistry {
                     "轻听客户端邮箱验证码（修改密码/找回密码）。插件 qt 调用，验证码有效期 10 分钟",
                     List.of(new NotifyEventField("code", "6 位数字验证码，有效期 10 分钟"),
                             new NotifyEventField("email", "收件邮箱（规则收件人可用 PAYLOAD_FIELD=email）")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), "announce",
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE,
                     List.of(NotifyChannel.EMAIL), SENDER_QT),
             new NotifyEventDef(SYSTEM_ALERT, "系统告警通知",
                     "告警引擎触发（/api/v1/admin/alert）。EMAIL 走模板渲染回退内置样式；SMS 走短信供应商池（systemAlert 短信模板必配，缺模板直接报 SMS002）；INAPP 按用户落库",
                     List.of(new NotifyEventField("title", "告警标题（规则名/指标摘要）"),
                             new NotifyEventField("content", "告警内容纯文本，多行")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), "announce",
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE,
                     List.of(), SENDER_SYSTEM),
             new NotifyEventDef(FEEDBACK_STATUS_CHANGED, "反馈状态变更通知",
                     "feedback 插件触发：反馈/需求状态变更时通知提交人。订阅规则收件人建议 PAYLOAD_FIELD=userId",
@@ -115,7 +115,7 @@ public final class NotifyEventRegistry {
                             new NotifyEventField("addedRoles", "本次增加的角色名称，无则为空"),
                             new NotifyEventField("removedRoles", "本次移除的角色名称，无则为空"),
                             new NotifyEventField("changeSummary", "角色权限变更说明")),
-                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), "announce",
+                    List.of(NotifyChannel.EMAIL, NotifyChannel.SMS, NotifyChannel.INAPP), NoticeConstants.TYPE_NOTICE,
                     List.of(), SENDER_SYSTEM));
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
