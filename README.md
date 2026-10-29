@@ -49,7 +49,7 @@ Astral 是一套基于 Spring Boot 4.1（Java 25）+ Next.js 16 的全栈后台�
 | **图表** | ECharts 6（echarts-for-react） |
 | **构建工具** | Maven 3.9+（后端，无 wrapper）/ npm（前端，`package-lock.json`） |
 
-> 前端已从 Ant Design 全量迁移到 shadcn/ui + Tailwind v4（Next 16 起 `next lint` 已移除，故 `package.json` 无 lint 脚本）。
+> 前端已从 Ant Design 全量迁移到 shadcn/ui + Tailwind v4（Next 16 起 `next lint` 已移除，改用 ESLint 9 flat config + Prettier，见下文「代码质量」）。
 
 ## 🚀 快速开始
 
@@ -292,6 +292,27 @@ mvn test -pl astral-sequence
 # 单个测试类
 mvn -pl astral-sequence -Dtest=GeneratorFactoryTest test
 ```
+
+## 🧹 代码质量
+
+后端（Java）— 静态分析（配置在根 `pom.xml` + `checkstyle.xml` + `spotbugs-exclude.xml`）：
+
+```bash
+mvn checkstyle:check           # 命名 / 复杂度 / 空块 / 未用导入（review 档，warn 不拦截）
+mvn spotbugs:spotbugs          # SpotBugs（排除生成代码）
+mvn spotless:check             # 格式一致性（导入排序 / 行尾 / 文件末尾换行）
+```
+
+前端（astral-front）— ESLint 9 flat config（`eslint.config.mjs`）+ Prettier（`.prettierrc`）：
+
+```bash
+npm run lint           # ESLint 检查 src/
+npm run lint:fix       # ESLint 自动修复
+npm run format         # Prettier 格式化
+npm run format:check   # Prettier 校验
+```
+
+规范要点：禁用 `any`（用具体类型或 `unknown`）、禁裸 `alert/confirm`、动态大依赖用 `await import`、Java 禁 star import 与 `printStackTrace`。详见 `AGENTS.md`「代码质量工具链」。
 
 ## 🚀 部署
 

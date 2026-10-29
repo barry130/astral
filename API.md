@@ -26,19 +26,20 @@
 > 凡走 Cookie 凭据的登录用户都会拿到该值（不限于管理员）——网页端普通用户的 `/files`（兼容入口 `/imgbed`）写操作同样需要它。
 > 带了 `satoken` 请求头的请求不参与该校验。
 
-### 1.2 Token 管理 `/api/v1/system/token`
+### 1.2 Token 管理 `/api/v1/admin/system/token`
 | 方法 | URL | 作用 |
 |---|---|---|
-| GET | `/page?pageNum=&pageSize=&userId=` | 分页查询 Token（可按 userId 筛选） |
-| PUT | `/{id}/revoke` | 吊销指定 Token |
-| PUT | `/user/{userId}/kick` | 踢出指定用户（使其所有 Token 失效） |
-| DELETE | `/expired` | 清理所有过期 Token |
+| GET | `/page` | 会话分页（含 device 列） |
+| PUT | `/revoke` | 吊销指定 token |
+| PUT | `/kick` | 踢指定用户下线 |
+| DELETE | `/expired` | 清理过期会话 |
+| PUT | `/revoke-all` | 全端会话重置（超管） |
 
 ---
 
 ## 2. 系统管理 `astral-system`
 
-### 2.1 用户 `/api/v1/system/user`
+### 2.1 用户 `/api/v1/admin/system/user`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/page?pageNum=&pageSize=&userType=&username=` | 分页查询（userType=ADMIN/APP 筛选，支持用户名/昵称/邮箱模糊） |
@@ -53,7 +54,7 @@
 | PUT | `/{id}/kick` | 踢下线 |
 | PUT | `/{id}/type` | 修改用户类型（ADMIN/APP） |
 
-### 2.2 角色 `/api/v1/system/role`
+### 2.2 角色 `/api/v1/admin/system/role`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/page` | 分页查询 |
@@ -65,7 +66,7 @@
 | GET | `/{id}/permissions` | 获取角色权限列表 |
 | PUT | `/{id}/permissions` | 分配权限（body：`{permissionIds:[]}`） |
 
-### 2.3 权限 `/api/v1/system/permission`
+### 2.3 权限 `/api/v1/admin/system/permission`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/page` | 分页查询 |
@@ -75,7 +76,7 @@
 | DELETE | `/{id}` | 删除（已被角色引用则报 SYS006） |
 | GET | `/tree` | 权限树 |
 
-### 2.4 菜单 `/api/v1/system/menu`
+### 2.4 菜单 `/api/v1/admin/system/menu`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/tree` | 菜单树 |
@@ -88,25 +89,25 @@
 ### 2.5 数据字典
 | 模块 | 方法 | URL | 作用 |
 |---|---|---|---|
-| 字典 | GET | `/api/v1/system/dict/page` | 分页查询字典数据 |
-| 字典 | GET | `/api/v1/system/dict/{id}` | 字典数据详情 |
-| 字典 | POST | `/api/v1/system/dict` | 创建字典数据 |
-| 字典 | PUT | `/api/v1/system/dict/{id}` | 更新字典数据 |
-| 字典 | DELETE | `/api/v1/system/dict/{id}` | 删除字典数据 |
-| 类型 | GET | `/api/v1/system/dict/type/page` | 分页查询字典类型 |
-| 类型 | GET | `/api/v1/system/dict/type/all` | 全部字典类型 |
-| 类型 | GET | `/api/v1/system/dict/type/{id}` | 类型详情 |
-| 类型 | POST | `/api/v1/system/dict/type` | 创建类型 |
-| 类型 | PUT | `/api/v1/system/dict/type/{id}` | 更新类型 |
-| 类型 | DELETE | `/api/v1/system/dict/type/{id}` | 删除类型 |
-| 数据 | GET | `/api/v1/system/dict/data/page?dictTypeId=` | 分页查询（可按类型筛选） |
-| 数据 | GET | `/api/v1/system/dict/data/{id}` | 详情 |
-| 数据 | GET | `/api/v1/system/dict/data/byCode?code=` | 按字典类型编码查启用数据（下拉用） |
-| 数据 | POST | `/api/v1/system/dict/data` | 创建 |
-| 数据 | PUT | `/api/v1/system/dict/data/{id}` | 更新 |
-| 数据 | DELETE | `/api/v1/system/dict/data/{id}` | 删除 |
+| 字典 | GET | `/api/v1/admin/system/dict/page` | 分页查询字典数据 |
+| 字典 | GET | `/api/v1/admin/system/dict/{id}` | 字典数据详情 |
+| 字典 | POST | `/api/v1/admin/system/dict` | 创建字典数据 |
+| 字典 | PUT | `/api/v1/admin/system/dict/{id}` | 更新字典数据 |
+| 字典 | DELETE | `/api/v1/admin/system/dict/{id}` | 删除字典数据 |
+| 类型 | GET | `/api/v1/admin/system/dict/type/page` | 分页查询字典类型 |
+| 类型 | GET | `/api/v1/admin/system/dict/type/all` | 全部字典类型 |
+| 类型 | GET | `/api/v1/admin/system/dict/type/{id}` | 类型详情 |
+| 类型 | POST | `/api/v1/admin/system/dict/type` | 创建类型 |
+| 类型 | PUT | `/api/v1/admin/system/dict/type/{id}` | 更新类型 |
+| 类型 | DELETE | `/api/v1/admin/system/dict/type/{id}` | 删除类型 |
+| 数据 | GET | `/api/v1/admin/system/dict/data/page?dictTypeId=` | 分页查询（可按类型筛选） |
+| 数据 | GET | `/api/v1/admin/system/dict/data/{id}` | 详情 |
+| 数据 | GET | `/api/v1/admin/system/dict/data/byCode?code=` | 按字典类型编码查启用数据（下拉用） |
+| 数据 | POST | `/api/v1/admin/system/dict/data` | 创建 |
+| 数据 | PUT | `/api/v1/admin/system/dict/data/{id}` | 更新 |
+| 数据 | DELETE | `/api/v1/admin/system/dict/data/{id}` | 删除 |
 
-### 2.6 系统配置 `/api/v1/system/config`
+### 2.6 系统配置 `/api/v1/admin/system/config`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/page` | 分页查询 |
@@ -115,7 +116,7 @@
 | PUT | `/{id}` | 更新 |
 | DELETE | `/{id}` | 删除 |
 
-### 2.7 表结构 `/api/v1/system/table-schema`
+### 2.7 表结构 `/api/v1/admin/system/table-schema`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/` | 获取所有表结构定义 |
@@ -129,46 +130,102 @@
 | GET | `/{tableName}/service` | 生成 Service 接口代码 |
 | GET | `/{tableName}/service-impl` | 生成 ServiceImpl 代码 |
 | GET | `/{tableName}/controller` | 生成 Controller 代码 |
-| GET | `/{tableName}/sql` | 生成建表 SQL（推断） |
+| GET | `/{tableName}/sql` | 生成建表 SQL（`?dialect=mysql|postgresql`，默认 postgresql） |
 
 ### 2.8 关联表（简单 CRUD）
-| 模块 | 前缀 | 方法 | URL | 作用 |
-|---|---|---|---|---|
-| 用户角色 | `/api/v1/system/user_role` | GET | `/page` | 分页 |
-| | | GET | `/{id}` | 详情 |
-| | | POST | `/` | 创建 |
-| | | PUT | `/{id}` | 更新 |
-| | | DELETE | `/{id}` | 删除 |
-| 角色权限 | `/api/v1/system/role_permission` | 同上 | 同上 | 同上（分页/详情/增删改） |
+| 模块 | 前缀 | 作用 |
+|---|---|---|
+| 用户角色 | `/api/v1/admin/system/user_role` | 分页/详情/增删改 |
+| 角色权限 | `/api/v1/admin/system/role_permission` | 同上 |
 
-### 2.9 邮件
-| 模块 | 前缀 | 方法 | URL | 作用 |
-|---|---|---|---|---|
-| 账户 | `/api/v1/system/mail/account` | GET | `/page` | 分页 |
-| | | GET | `/{id}` | 详情 |
-| | | POST | `/` | 新增 |
-| | | PUT | `/{id}` | 更新 |
-| | | DELETE | `/{id}` | 删除 |
-| | | POST | `/{id}/toggle?enabled=` | 启用/停用 |
-| | | POST | `/test?accountId=&toEmail=` | 测试发送 |
-| 模板 | `/api/v1/system/mail/template` | GET | `/page` | 分页 |
-| | | GET | `/{id}` | 详情 |
-| | | POST | `/` | 新增 |
-| | | PUT | `/{id}` | 更新 |
-| | | DELETE | `/{id}` | 删除 |
-| | | POST | `/preview` | 模板预览（body：`{templateId,variables}`） |
-| 日志 | `/api/v1/system/mail/log` | GET | `/page` | 分页（accountId/pluginId/toEmail/status/时间区间筛选） |
-| | | GET | `/statistics` | 发送统计概览 |
-| 授权 | `/api/v1/system/mail/plugin-auth` | GET | `/list` | 列表 |
-| | | POST | `/` | 新增 |
-| | | PUT | `/{id}` | 更新 |
-| | | DELETE | `/{id}` | 删除 |
+### 2.9 邮件 `/api/v1/admin/system/mail`
+| 模块 | 方法 | URL | 作用 |
+|---|---|---|---|
+| 账户 | GET | `/account/page` | 分页 |
+| | GET | `/account/{id}` | 详情 |
+| | POST | `/account` | 新增 |
+| | PUT | `/account/{id}` | 更新 |
+| | DELETE | `/account/{id}` | 删除 |
+| | POST | `/account/{id}/toggle?enabled=` | 启用/停用 |
+| | POST | `/account/test?accountId=&toEmail=` | 测试发送 |
+| 模板 | GET | `/template/page` | 分页 |
+| | GET | `/template/{id}` | 详情 |
+| | POST | `/template` | 新增 |
+| | PUT | `/template/{id}` | 更新 |
+| | DELETE | `/template/{id}` | 删除 |
+| | POST | `/template/preview` | 模板预览（body：`{templateId,variables}`） |
+| | POST | `/template/{id}/send` | 模板试发 |
+| 日志 | GET | `/log/page` | 分页（accountId/pluginId/toEmail/status/时间区间筛选） |
+
+> 事件注册表 `GET /api/v1/admin/system/notify/event`（见 §2.10）。发信授权不再走独立表——投递权限/收件人/限额统一由事件订阅规则决定。
+
+### 2.10 事件订阅规则 `/api/v1/admin/system/notify`（权限 `admin:system:notify:rule:view/edit`）
+| 方法 | URL | 作用 |
+|---|---|---|
+| GET | `/event` | 全部注册事件（代码注册的只读契约：事件码/payload字段/可用渠道/必达渠道/发送方） |
+| GET | `/event/list` | 事件下拉选项 |
+| GET | `/channel/list` | 渠道下拉选项 |
+| GET | `/template?eventCode=&channel=` | 按事件+渠道查可用模板（渠道下拉数据源） |
+| GET | `/rule/page?pageNum=&pageSize=&eventCode=&enabled=` | 规则分页 |
+| GET | `/rule/{id}` | 规则详情（含渠道与收件人） |
+| POST | `/rule` | 新建规则（同一事件可建多条；每条规则可挂多渠道，每渠道可设日限额/平台） |
+| PUT | `/rule/{id}` | 更新规则 |
+| DELETE | `/rule/{id}` | 删除规则 |
+| POST | `/publish` | 发布测试（按规则投递一条真实消息） |
+
+> 三表模型：`sys_notify_rule`（规则）→ `sys_notify_rule_channel`（渠道：template_id/daily_limit/platform）→ `sys_notify_rule_recipient`（收件人：FIXED/PAYLOAD_FIELD/ROLE）。
+> ROLE 按角色展开启用用户；platform 仅 INAPP 生效；每日限额按「规则×渠道×收件人」Redis 计数。
+
+### 2.11 消息模板 `/api/v1/admin/system/message/template`
+| 方法 | URL | 作用 |
+|---|---|---|
+| GET | `/list?scene=&channel=` | 模板列表（scene=事件码） |
+| GET | `/options?scene=&channel=` | 模板下拉（事件+渠道绑定用） |
+| POST | `/save` | 新建/更新（校验 scene∈注册表、channel∈事件声明渠道、variables 覆盖 payload 全字段、(scene,channel) 唯一） |
+| DELETE | `?id=` | 删除 |
+| POST | `/preview` | 变量渲染预览 |
+
+### 2.12 短信 `/api/v1/admin/system/sms`（权限 `admin:system:notify:sms:view/edit`）
+| 模块 | 方法 | URL | 作用 |
+|---|---|---|---|
+| 供应商 | GET | `/provider/page` | 分页 |
+| | GET | `/provider/{id}` | 详情（access_secret 出参永远抹除） |
+| | GET | `/provider/types` | 供应商类型列表（MOCK/ALIYUN） |
+| | POST | `/provider` | 新增 |
+| | PUT | `/provider/{id}` | 更新（access_secret 留空不改） |
+| | DELETE | `/provider/{id}` | 删除 |
+| 模板 | GET | `/template/page` | 分页 |
+| | GET | `/template/{id}` | 详情 |
+| | POST | `/template` | 新增（事件 → 供应商模板code + 签名） |
+| | PUT | `/template/{id}` | 更新 |
+| | DELETE | `/template/{id}` | 删除 |
+| | POST | `/template/{id}/send` | 模板试发 |
+| 日志 | GET | `/log/page` | 分页 |
+
+> 短信正文在供应商侧备案审核，本地不渲染；`sys_sms_template` 只存「事件 → provider_template_code + 签名 + 审核状态」映射。
+
+### 2.13 消息统计 `/api/v1/admin/system/message/statistics`（权限 `admin:system:mail:statistics:view`）
+| 方法 | URL | 作用 |
+|---|---|---|
+| GET | `/overview?startDate=&endDate=&channel=&scene=&plugin=&status=` | 概览（total/success/fail + channels/scenes/plugins 三个维度 breakdown） |
+| GET | `/trend?granularity=&startDate=&endDate=&channel=&scene=&plugin=&status=` | 按天趋势（稠密补 0） |
+| GET | `/list?pageNum=&pageSize=&channel=&scene=&plugin=&status=&startDate=&endDate=` | 跨渠道合并明细（按 sendTime 倒序） |
+
+> EMAIL/SMS 日志 + INAPP sys_notice 合并统计；站内信无失败态（status=0 只统计邮件/短信）。
+
+### 2.14 站内信门户 `/api/v1/all/notify/inapp`
+| 方法 | URL | 作用 |
+|---|---|---|
+| GET | `/my/page` | 我的站内信分页 |
+| GET | `/unread-count` | 未读数 |
+| POST | `/{id}/read` | 标记已读 |
+| POST | `/read-all` | 全部已读 |
 
 ---
 
 ## 3. 日志 `astral-log`
 
-### 3.1 操作日志 `/api/v1/log/operate_log`
+### 3.1 操作日志 `/api/v1/admin/log/operate_log`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/page` | 分页 |
@@ -177,7 +234,7 @@
 | PUT | `/{id}` | 更新 |
 | DELETE | `/{id}` | 删除 |
 
-### 3.2 登录日志 `/api/v1/log/login_log`
+### 3.2 登录日志 `/api/v1/admin/log/login_log`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/page` | 分页 |
@@ -190,14 +247,14 @@
 
 ## 4. 序列生成 `astral-sequence`
 
-### 4.1 生成 `/api/v1/sequence`
+### 4.1 生成 `/api/v1/all/sequence`
 | 方法 | URL | 作用 |
 |---|---|---|
 | POST | `/next` | 获取单个序列号（body：`{bizKey,type}`，限流 100/60s） |
 | POST | `/batch` | 批量获取序列（body：`{bizKey,count,type}`，限流 50/60s） |
 | GET | `/types` | 所有支持的类型（SNOWFLAKE/SEGMENT/REDIS/DATABASE/SIMPLE） |
 
-### 4.2 配置管理 `/api/v1/sequence/configs`
+### 4.2 配置管理 `/api/v1/admin/sequence/configs`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/` | 全部配置 |
@@ -208,10 +265,10 @@
 | DELETE | `/{id}` | 删除 |
 | PUT | `/{id}/toggle?enabled=` | 启用/禁用 |
 
-### 4.3 号段 `/api/v1/sequence/segment` 与统计 `/api/v1/sequence/statistics`
+### 4.3 号段 `/api/v1/admin/sequence/segment` 与统计 `/api/v1/admin/sequence/statistics`
 均为标准 CRUD（page/getById/create/update/delete）。
 
-### 4.4 历史 `/api/v1/sequence/history`
+### 4.4 历史 `/api/v1/admin/sequence/history`
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/page?bizKey=` | 分页（按业务键） |
@@ -260,7 +317,7 @@
 
 ## 7. 轻听插件 `astral-plugin / qt`
 
-### 8.1 App 用户 `/api/v1/app/user`（App 用户，satoken）
+### 7.1 App 用户 `/api/v1/app/user`（App 用户，satoken）
 | 方法 | URL | 作用 |
 |---|---|---|
 | POST | `/login` | 登录（返回 token+用户信息） |
@@ -281,7 +338,7 @@
 | POST | `/like/playlist` | 收藏/取消收藏歌单 |
 | POST | `/like/batch` | 批量收藏/取消（单批≤200） |
 
-### 8.2 App 公共 `/api/v1/app`（免认证）
+### 7.2 App 公共 `/api/v1/app`（免认证）
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/update?type=&version=&channel=` | APK 更新信息（type=1101/1102） |
@@ -290,7 +347,7 @@
 | GET | `/source/manifest?platform=` | 音源包清单 |
 | POST | `/source/report` | 音源包可用性上报 |
 
-### 8.3 管理端 `/api/v1/admin/qt`（宿主管理员）
+### 7.3 管理端 `/api/v1/admin/qt`（宿主管理员）
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/overview` | 概览统计（用户/签到/更新数） |
@@ -318,7 +375,7 @@
 
 ## 8. 反馈插件 `astral-plugin / feedback`
 
-### 9.1 App 反馈 `/api/v1/app/feedback`（App 用户，satoken）
+### 8.1 App 反馈 `/api/v1/app/feedback`（App 用户，satoken）
 | 方法 | URL | 作用 |
 |---|---|---|
 | POST | `/submit` | 提交反馈（type/title/content/contact；统一客户端系统头 X-App-Ut/X-App-Version/X-Device/X-OS，见 COMPONENTS_GUIDE.md） |
@@ -328,22 +385,7 @@
 | GET | `/{id}/replies` | 回复列表 |
 | POST | `/reply` | 用户回复（同时通知管理员） |
 
-### 9.2 App 通知 `/api/v1/app/message`
-| 方法 | URL | 作用 |
-|---|---|---|
-| GET | `/active?versionCode=` | 当前生效通知（**公开**，三展示位共用） |
-| GET | `/center` | 消息中心（需登录） |
-| GET | `/unread-count` | 未读数 |
-| POST | `/read-ack` | 已读回执（body：`{ids:[]}`） |
-
-> **投放平台识别（老客户端兼容）**：三个查询接口都按
-> `X-App-Ut` 头 → 遗留 `X-Platform` 头 → `channel` 查询参数 → 缺省 App 的顺序解析，
-> 详见 `NoticeTargets.resolve`。新客户端只发统一平台头即可；
-> 老客户端写死的 `channel=app|pc|web|all` 继续被识别
-> （`app`→Android+iOS、`pc`→Windows、`web`→Web、`all`→不限平台），
-> 三者皆空时回落 Android+iOS（等价于旧的 `channel=app` 缺省）。
-
-### 9.3 管理端反馈 `/api/v1/admin/feedback`（宿主管理员）
+### 8.2 管理端反馈 `/api/v1/admin/feedback`（宿主管理员）
 | 方法 | URL | 作用 |
 |---|---|---|
 | GET | `/page?pageNum=&pageSize=&status=&type=&keyword=&startDate=&endDate=` | 分页（含提交人 username/email） |
@@ -355,9 +397,29 @@
 | POST | `/reply` | 管理端回复（通知提交人） |
 | GET | `/stat` | 统计看板 |
 
-### 9.4 管理端通知 `/api/v1/admin/message`（宿主管理员）
+---
+
+## 9. 站内通知（宿主 `astral-system / notice`）
+
+### 9.1 App 通知 `/api/v1/app/message`
 | 方法 | URL | 作用 |
 |---|---|---|
+| GET | `/active?versionCode=&channel=` | 当前生效通知（**公开**，三展示位共用；`channel=pc|app` 旧值兼容） |
+| GET | `/center` | 消息中心（需登录；含 `url` 跳转链接字段，如 `astral://feedback/1000002`） |
+| GET | `/unread-count` | 未读数 |
+| POST | `/read-ack` | 已读回执（body：`{ids:[]}`） |
+
+> **投放平台识别（老客户端兼容）**：三个查询接口都按
+> `X-App-Ut` 头 → 遗留 `X-Platform` 头 → `channel` 查询参数 → 缺省 App 的顺序解析，
+> 详见 `NoticeTargets.resolve`。新客户端只发统一平台头即可；
+> 老客户端写死的 `channel=app|pc|web|all` 继续被识别
+> （`app`→Android+iOS、`pc`→Windows、`web`→Web、`all`→不限平台），
+> 三者皆空时回落 Android+iOS（等价于旧的 `channel=app` 缺省）。
+
+### 9.2 管理端通知 `/api/v1/admin/message`（宿主管理员）
+| 方法 | URL | 作用 |
+|---|---|---|
+| GET | `/inbox` | 管理端铃铛收件箱 |
 | GET | `/page?pageNum=&pageSize=&channel=&noticeType=&keyword=&startDate=&endDate=` | 通知分页 |
 | POST | `/` | 发布通知 |
 | PUT | `/{id}` | 编辑通知 |
@@ -372,6 +434,8 @@
 > （`app-android` / `app-ios` / `app-windows` / `app-linux` / `app-macos` / `app-harmony` / `web`），另有 `all` = 不限平台。
 > 分页的 `channel` 参数支持多选（逗号分隔，逐项「包含」匹配）；
 > 存量遗留值 `app` / `pc` 仍可提交，落库时分别归一为 `app-android,app-ios` / `app-windows`。
+> 「仅首次启动弹出」开关（`termsVersion` 非空 = 客户端首启免责声明）：打开时渠道强制 App 六端、
+> `dialog_closable` 强制 1、`read_seconds` 夹 [0,60]；关闭时这些字段写回 NULL。
 
 ---
 
@@ -447,4 +511,14 @@
 
 重命名/移动不修改对象键、provider 定位、publicId 或内容版本，因此既有链接保持有效；跨存储配置移动未实现。删除与可见性变更仍走原有渠道及版本流程，不能用目录移动替代物理对象迁移。
 
-部署需同时更新前后端，并执行 Flyway 迁移 `V20261018003__storage_file_manager_dict.sql`（只新增字典，无表结构变更）。本次没有交付回收站、匿名目录浏览、独立分享、分片/断点续传或自动缩略图。
+---
+
+## 11. CMS 博客插件 `astral-plugin / cms`
+
+管理端 `/api/v1/admin/cms/{post,page,category,tag,comment,share,setting,export}`、App 端 `/api/v1/app/cms`（10 个公开接口）。
+完整接口契约见 [docs/CMS_PLUGIN.md](docs/CMS_PLUGIN.md)。
+
+## 12. AI 助手插件 `astral-plugin / ai`
+
+管理端 `/api/v1/admin/ai`（供应商/智能体/提示词/工具/知识库/用量/请求日志，70+ 端点）、App 端 `/api/v1/app/ai`（SSE 对话/会话/用量，12 端点）。
+设计文档见 [AI_MODULE_DESIGN.md](AI_MODULE_DESIGN.md)。
