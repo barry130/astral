@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+        "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+  astral Checkstyle 配置（review 档，报告不拦截）。
+  设计原则：只放「几乎所有 Java 团队都认」的规则，不追格式的绝对一致（那是 Spotless 的活）。
+  Lombok 代码库：跳过 Javadoc/missing-method 类检查。
+-->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="warning"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- 排除生成代码（astral-schema 生成器产出的实体） -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value=".*[\\/]generated[\\/].*"/>
+    </module>
+
+    <!-- 文件级 -->
+    <module name="FileTabCharacter">
+        <property name="eachLine" value="true"/>
+    </module>
+    <module name="NewlineAtEndOfFile">
+        <property name="lineSeparator" value="lf"/>
+    </module>
+    <module name="LineLength">
+        <property name="max" value="160"/>
+        <property name="fileExtensions" value="java"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- 命名规范 -->
+        <module name="ConstantName"/>
+        <module name="LocalFinalVariableName"/>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="MethodName"/>
+        <module name="PackageName">
+            <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
+        </module>
+        <module name="ParameterName"/>
+        <module name="StaticVariableName"/>
+        <module name="TypeName"/>
+
+        <!-- Import -->
+        <module name="AvoidStarImport"/>
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+        <module name="IllegalImport">
+            <property name="illegalPkgs" value="sun,com.sun"/>
+        </module>
+
+        <!-- 编码规范 -->
+        <module name="EqualsHashCode"/>
+        <module name="EmptyStatement"/>
+        <module name="DefaultComesLast"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="StringLiteralEquality"/>
+        <module name="PackageDeclaration"/>
+        <module name="OneTopLevelClass"/>
+        <module name="ArrayTypeStyle"/>
+        <module name="UpperEll"/>
+        <module name="DeclarationOrder"/>
+        <module name="ModifierOrder"/>
+        <module name="RedundantModifier"/>
+        <module name="EmptyCatchBlock">
+            <property name="exceptionVariableName" value="expected|ignore|ignored"/>
+        </module>
+        <module name="EqualsAvoidNull"/>
+        <module name="FallThrough"/>
+        <module name="MultipleVariableDeclarations"/>
+        <module name="ParameterAssignment"/>
+        <module name="ReturnCount">
+            <property name="max" value="10"/>
+        </module>
+
+        <!-- 大小限制（报告档，不卡死） -->
+        <module name="MethodLength">
+            <property name="max" value="200"/>
+        </module>
+        <module name="ExecutableStatementCount">
+            <property name="max" value="150"/>
+        </module>
+        <module name="AnonInnerLength">
+            <property name="max" value="60"/>
+        </module>
+        <module name="OuterTypeNumber">
+            <property name="max" value="1"/>
+        </module>
+        <module name="ClassDataAbstractionCoupling">
+            <property name="max" value="20"/>
+        </module>
+        <module name="CyclomaticComplexity">
+            <property name="max" value="25"/>
+        </module>
+        <module name="NPathComplexity">
+            <property name="max" value="200"/>
+        </module>
+
+        <!-- 代码坏味道 -->
+        <module name="BooleanExpressionComplexity">
+            <property name="max" value="6"/>
+        </module>
+        <module name="NestedIfDepth">
+            <property name="max" value="4"/>
+        </module>
+        <module name="NestedTryDepth">
+            <property name="max" value="3"/>
+        </module>
+        <module name="ExplicitInitialization"/>
+        <module name="MagicNumber">
+            <property name="severity" value="ignore"/>
+        </module>
+
+        <!-- 空 block -->
+        <module name="EmptyBlock">
+            <property name="option" value="text"/>
+        </module>
+    </module>
+</module>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpotBugs 排除规则：astral 项目评审专用。
+  Lombok 生成代码 / MyBatis-Plus / Spring Data Binding 常见误报在此排除。
+-->
+<FindBugsFilter>
+    <!-- Lombok @Data 生成的 equals/hashCode（可能只在同 hash 容器内使用） -->
+    <Match>
+        <Bug pattern="HE_EQUALS_NO_HASH,EP_HE_NO_HASHCODE"/>
+    </Match>
+    <!-- MyBatis-Plus 实体（生成的 getter/setter、Builder 模式） -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+        <Or>
+            <ClassName name="~.*\.entity\..*"/>
+            <ClassName name="~.*\.dto\..*"/>
+            <ClassName name="~.*\.vo\..*"/>
+        </Or>
+    </Match>
+    <!-- Spring @Configuration / 拦截器单例注入（并发写由 Spring 管理） -->
+    <Match>
+        <Bug pattern="MS_SHOULD_BE_FINAL"/>
+        <ClassName name="~.*Controller"/>
+    </Match>
+    <!-- 遗留：JUnit 3 风格或反射测试代码 -->
+    <Match>
+        <ClassName name="~.*Test"/>
+        <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE,UWF_UNWRITTEN_FIELD"/>
+    </Match>
+</FindBugsFilter>
