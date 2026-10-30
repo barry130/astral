@@ -27,6 +27,11 @@
   `NoticeService`——它按 `@RequiredArgsConstructor` 注入 2 个依赖，构造签名被
   `FeedbackReplyPlatformTest` 直接 `new`，故通知展示位判断退回「60s TTL 缓存 + `NoticeDisplay.hasDisplay`」读库；
   ③ 反馈触发点按代码走查是 7 处（方案写 6 处）。
+- **后续演进（2026-10-28 起）**：全端响应体统一为宿主 `Result{code,errorCode,msg,data,timestamp}`，
+  **HTTP 状态码只表达传输层**（业务失败也是 200，401/403/429 落在 body `code`）；通知规则由单表升级为
+  三表（`sys_notify_rule` / `sys_notify_rule_channel` / `sys_notify_rule_recipient`，同一事件可多规则）；
+  邮箱/站内信/短信模板合并为「消息模板」；「邮箱统计」升级为「消息统计」；插件发信授权表已删除。
+  本文正文的对照表（如单表 `sys_notify_rule` 带 `channel`/`template_id`、`AppRestResp`）仅作历史设计参考。
 - **已知遗留**：`V20261001007`/`V20261002006` 仍是对 `sys_notice` 的裸 `ALTER`，在全新空库上先于
   `V20261027001` 执行会因表不存在而失败（与既有 `V20261001008` 同类，按「只增不改」不在本次处理）；
 

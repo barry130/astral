@@ -15,7 +15,7 @@ Astral 站点的公开博客 + Wiki 前台。类 Typecho/WordPress 风格的轻�
 - **浏览器不直连后端**：所有对 astral 后端的请求都在服务端完成 —— 列表/详情页在 RSC 中 `fetch`，评论提交走本应用自己的 Route Handler（`src/app/api/comment/route.ts`）转发。天然无 CORS 问题。
 - **数据页全部动态渲染**（`export const dynamic = 'force-dynamic'`）：构建期不发任何必需数据请求，**后端不可达也能正常 `pnpm build`**；运行时后端不可达时页面展示友好空态而非 500。
 - 后端地址由环境变量 **`CMS_API_BASE`** 控制（默认 `http://localhost:27000`），见 `src/lib/cms.ts`。
-- 评论的业务失败（站点关闭评论、触发限流等）会把后端 `Result.message` 原样透传给用户展示。
+- 评论的业务失败（站点关闭评论、触发限流等）会把后端 `Result.msg` 原样透传给用户展示。
 
 ## 页面路由
 

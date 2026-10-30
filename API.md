@@ -20,7 +20,7 @@
 | POST | `/logout` | 登出，使当前 token 失效并清除认证 Cookie |
 | GET | `/info` | 获取当前登录用户信息（含角色/权限列表；响应体额外带 `csrfToken`，见下） |
 
-> 浏览器调用方：登录后凭 Cookie 自动认证；`POST`/`PUT`/`DELETE` 需带 `X-CSRF-Token`，缺失或不匹配返回 403 `AUTH013`。
+> 浏览器调用方：登录后凭 Cookie 自动认证；`POST`/`PUT`/`DELETE` 需带 `X-CSRF-Token`，缺失或不匹配返回 body `code=403` `AUTH013`（HTTP 200）。
 > 令牌取值有两处，按顺序回退：**同源部署**读非 HttpOnly 的 `astral_csrf` Cookie；**跨域直连部署**下该 Cookie
 > 属于 API 域、页面读不到，改从登录响应体与 `GET /info` 响应体的 `csrfToken` 字段取（前端缓存在内存即可）。
 > 凡走 Cookie 凭据的登录用户都会拿到该值（不限于管理员）——网页端普通用户的 `/files`（兼容入口 `/imgbed`）写操作同样需要它。

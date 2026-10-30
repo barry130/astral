@@ -15,9 +15,9 @@ Astral 是一套基于 Spring Boot 4.1（Java 25）+ Next.js 16 的全栈后台�
 - ⚙️ **系统配置**：动态配置项管理
 - 🎫 **Token 管理**：在线会话查看、吊销、踢人、清理过期
 - 🧑‍💼 **个人中心**：管理端自助修改资料与密码（登录即可，无需权限码）
-- 📧 **邮件服务**：多账户、模板、发送日志、插件发送授权
+- 📧 **邮件服务**：多账户、发送日志（模板统一到「消息模板」，插件发信授权已删除）
 - 💬 **短信服务**：多渠道服务商、模板、发送日志
-- 🔔 **站内通知**：通知规则/事件（`sys_notify_rule`）、站内信门户（收件箱、未读数、已读回执）
+- 🔔 **消息中心**：消息模板（邮箱/站内信/短信合一）、通知规则（事件×渠道×收件人三表，同一事件可多规则）、消息统计（三类日志合并、多维筛选）、站内信门户（收件箱/未读数/已读回执）、公告与通知管理
 - 📝 **日志管理**：操作日志、登录日志，AOP 异步记录
 - 🔌 **插件体系**：SPI 扩展 + 插件注册中心 + 前端导航注入，可在管理页启停
 - 🎵 **轻听音乐插件（qt）**：App 用户体系、版本更新、打卡、收藏（`/api/v1/app/**`；公告由 feedback 插件统一提供）
@@ -155,12 +155,13 @@ astral/
 | 表结构管理 | `/api/v1/admin/system/table-schema` | 查看/编辑、生成代码/SQL |
 | 邮件账户 | `/api/v1/admin/system/mail/account` | 发件账户管理 |
 | 邮件模板 | `/api/v1/admin/system/mail/template` | 模板管理 |
-| 邮件日志 | `/api/v1/admin/system/mail/log` | 发送记录 |
-| 邮件插件授权 | `/api/v1/admin/system/mail/plugin-auth` | 插件发送授权 |
+| 邮件日志 | `/api/v1/admin/system/mail/log` | 发送记录（页面入口并入「消息统计」） |
 | 短信服务商 | `/api/v1/admin/system/sms/provider` | 短信渠道账户管理 |
 | 短信模板 | `/api/v1/admin/system/sms/template` | 短信模板管理 |
 | 短信日志 | `/api/v1/admin/system/sms/log` | 发送记录 |
-| 通知规则 | `/api/v1/admin/system/notify` | 通知规则/事件管理 |
+| 通知规则 | `/api/v1/admin/system/notify` | 事件注册表 + 通知规则（事件×渠道×收件人） |
+| 消息模板 | `/api/v1/admin/system/message/template` | 邮箱/站内信/短信模板合一 |
+| 消息统计 | `/api/v1/admin/system/message/statistics` | EMAIL/SMS/INAPP 合并统计（概览/趋势/明细） |
 | 站内信门户 | `/api/v1/all/notify/inapp` | 个人收件箱、未读数、已读回执 |
 
 ### 认证（astral-auth）

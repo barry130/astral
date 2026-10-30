@@ -307,8 +307,8 @@ public Result<Void> assignPermissions(...) { ... }
   4 个新写码存在且父级正确、非法 `type` 行 0 条、仪表盘菜单 `permission='admin:monitor:view'`。
 - **端到端 10/10 通过**（真实 PG + Redis，RSA 登录）：
   - 结果级权限：无 Token → stable/versionCode 100；持 `user:qt:update:channel:beta` → beta/200；超管 → beta/200；
-  - 接口权限：持 `admin:system:user:view` → 用户页 200；缺 `admin:system:dict:edit` → HTTP 403 `COMMON005`；
-  - 非超管踢人 → 403 `COMMON005`；超管踢人 → 200；
+  - 接口权限：持 `admin:system:user:view` → 用户页 200；缺 `admin:system:dict:edit` → body `code=403` `COMMON005`（HTTP 状态码仍为 200）；
+  - 非超管踢人 → body `code=403` `COMMON005`；超管踢人 → body `code=200`；
   - 权限树：`groupBy=domain` 返回 10 个分组（分组节点 `id=null`），qt 组 3 个子节点。
 - 前端 `npx tsc --noEmit` **通过**。
 

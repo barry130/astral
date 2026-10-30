@@ -181,7 +181,8 @@ npm run dev
 
 > 技术栈：Next.js 16.4（App Router + Turbopack，`output: 'standalone'`）+ React 19.2 + TypeScript 5.6 +
 > Tailwind CSS v4 + shadcn/ui（Radix UI）。要求 Node.js 24 LTS（最低 20.9+），包管理用 npm。
-> Next 16 已移除 `next lint`，仓库因此没有 lint 脚本，类型检查用 `npx tsc --noEmit`。
+> Next 16 已移除 `next lint`，项目改用 **ESLint 9 flat config**（`astral-front/eslint.config.mjs`）+ **Prettier**：
+> `npm run lint` / `npm run format:check`，类型检查 `npx tsc --noEmit`，构建 `npm run build`。
 
 ### 方式二：嵌入现有前端
 
@@ -207,9 +208,10 @@ npm run dev
 
 1. 登录时后端额外下发一枚**非 HttpOnly** 的 `astral_csrf` Cookie（JS 读得到），并把同一个值随**响应体**的 `csrfToken` 字段一并返回；
 2. 前端把它的值回填到 `X-CSRF-Token` 请求头；
-3. 后端对「凭据来自 Cookie 且方法非只读」的请求校验两者一致，不一致返回 403（`AUTH013`）。
+3. 后端对「凭据来自 Cookie 且方法非只读」的请求校验两者一致，不一致返回 body `code=403` + `errorCode=AUTH013`
+   （HTTP 状态码恒为 `200`，业务结论只看 body —— 见 [API.md](API.md#1-认证鉴权-astral-auth)）。
 
-**为什么令牌要同时走 Cookie 和响应体**：Cookie 能不能被前端读到取决于部署形态。同源部署（Next.js rewrites 代理）下读得到；**跨域直连**部署（如 `web.canace.cn` 直连 `astral.canace.cn`）下 `astral_csrf` 属于 API 域，页面所在域的 `document.cookie` **看不到它**，于是回填不了请求头 —— 所有写请求被 403（`AUTH013`）拦下，而只读请求（GET 是安全方法，豁免校验）一切正常，现象正是「能看不能改」。响应体里的 `csrfToken` 就是给这种部署形态用的：跨站页面同样读不到响应体，双提交的安全模型不变。
+**为什么令牌要同时走 Cookie 和响应体**：Cookie 能不能被前端读到取决于部署形态。同源部署（Next.js rewrites 代理）下读得到；**跨域直连**部署（如 `web.canace.cn` 直连 `astral.canace.cn`）下 `astral_csrf` 属于 API 域，页面所在域的 `document.cookie` **看不到它**，于是回填不了请求头 —— 所有写请求被 body `code=403`（`AUTH013`）拦下，而只读请求（GET 是安全方法，豁免校验）一切正常，现象正是「能看不能改」。响应体里的 `csrfToken` 就是给这种部署形态用的：跨站页面同样读不到响应体，双提交的安全模型不变。
 
 `GET /api/v1/all/auth/info` 也会返回该令牌，因此页面刷新后能自动拿回凭据，无需重新登录。这里**不按 `user_type` 过滤**：双提交校验的触发条件是「凭据来自 Cookie 且方法非只读」，与是不是管理员无关 —— 网页端的普通用户（APP）同样用 Cookie 登录，`/files`（兼容入口 `/imgbed`）的删除、改可见性都是写请求，只给管理员发令牌会让这批用户刷新后必然撞 403。
 

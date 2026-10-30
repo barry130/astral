@@ -123,11 +123,12 @@ Spring 的 `@Async` 是**靠代理实现的**：只有「外部 Bean 调用代�
   public Result<Void> update(@PathVariable Long id, @Valid @RequestBody Permission entity) { ... }
   ```
 - **不加的后果**：超长/缺失直接打到 DB，PostgreSQL 报 `value too long for type character varying(N)` 或 `null value in column "xxx" violates not-null constraint` → **未捕获 500**（隔离回归脚本记作 FAIL）。
-  加上后变 `MethodArgumentNotValidException`/`BindException` → `GlobalExceptionHandler` 已映射为 **HTTP 400 `COMMON002`「参数校验失败」**（回归记作 WARN，不再是 FAIL）。
+  加上后变 `MethodArgumentNotValidException`/`BindException` → `GlobalExceptionHandler` 映射为 **HTTP 200 + body `code=320` `COMMON002`「参数校验失败」**
+  （2026-10 响应体统一后：HTTP 状态码只表传输层，参数错误落在 body `code`；回归记作 WARN，不再是 FAIL）。
 - **JSON ↔ DDL 宽度必须一致**：`sys_permission.method` 与 `sys_operate_log.request_method` 原先 schema JSON `length=10`，但 Flyway DDL（`V20260914001__init.sql`）是 `VARCHAR(16)`——发散会让生成的 `@Size(max=10)` 比库窄、误杀合法值。**已把两个 JSON 的 `length` 改成 16 对齐 DDL**。改 DDL 宽度时务必同步改对应 schema JSON 的 `length`。
 - 依赖：`astral-dao`/`astral-system`/`astral-log`/`astral-sequence` 已加 `spring-boot-starter-validation`（`astral-dao` 让生成的实体能编译 `@Size`/`@NotNull`；其余三个让控制器 `@Valid` 能触发）。
 - **新开表 / 加字段**时：在 schema JSON 里写对 `length` 与 `isRequired`，生成器会自动带校验；手写 Controller 时记得 `@Valid`。别等回归 500 再补。
-- 本次补齐后，隔离回归 **FAIL 5 → 0**（3 个长度溢出 + 2 个 `role_permission`/`user_role` 空外键，全部 500→400），后端未捕获异常 0 类。
+- 本次补齐后，隔离回归 **FAIL 5 → 0**（3 个长度溢出 + 2 个 `role_permission`/`user_role` 空外键，全部 500→业务错误；响应体统一后同一场景的 body `code` 为 `320`），后端未捕获异常 0 类。
 
 ---
 

@@ -57,6 +57,7 @@ V{yyyyMMddNNN}__{下划线小写描述}.sql    例：V20260915001__add_user_avat
 - 破坏性操作（删列/改类型/清数据）先在本地验证，并在脚本头部注释写明影响；
 - 真实凭据不进脚本。
 
+| 20261001010 | `V20261001010__admin_console_hardening.sql` | 管理端硬化批次：① `stat_error_log` 增加来源列（服务端自身 500 也登记，此前只收客户端上报）；② `sys_user` 增加安全列（TOTP 二次验证 / 首登强制改密 / 封禁理由）等 | 执行 |
 | 20261002001 | `V20261002001__mail_scene_registry.sql` | 邮件模板按 `scene`（事件码）× channel 绑定，唯一索引 + 存量模板回填 scene | 执行 |
 | 20261002002 | `V20261002002__notify_channel_failclosed.sql` | 通知渠道 fail-closed 收口 | 执行 |
 | 20261002003 | `V20261002003__sms_channel.sql` | 短信渠道（provider/template/log 表 + 字典 + 权限） | 执行 |
@@ -71,8 +72,15 @@ V{yyyyMMddNNN}__{下划线小写描述}.sql    例：V20260915001__add_user_avat
 | 20261010001 | `V20261010001__update_artifact_arch.sql` | 版本更新「一版本多产物」（UPDATE_ARTIFACT_DESIGN）：Windows 三架构 / macOS 双架构下同一 versionCode 只能存一条 `download_url`，x86/arm64 会拿到 x64 包并在 MD5 校验失败。下载字段下沉到子表 `qt_app_update_artifact`（由 `QtSchemaInitializer` 幂等建表，见 `qt-schema.sql`），本脚本只补架构字典 `qt_update_arch`（x64/x86/arm64，留空=不限）。同样 `MAX(id)+ROW_NUMBER()` 动态取号 + `dict_type_id+dict_value` 的 `NOT EXISTS` 守卫；插件表由 Initializer 建、晚于 Flyway，故本脚本不涉及 DDL | 执行 |
 | 20261010002 | `V20261010002__update_artifact_backfill.sql` | 同上改造的**数据面**：把主表 `qt_app_update` 的历史单产物回填成 `qt_app_update_artifact` 一行（只迁「主表有地址 + 产物表零行」的版本，`NOT EXISTS` 守卫可重复执行；`platform`=主表 `type`，`arch` 留空=不限架构，`sort=0`）。不回填则后台编辑该版本时看不到任何产物行，而 `PUT /updates/{id}/artifacts` 是**全量覆盖**语义，一点保存就把历史地址清掉。**本脚本自带 `CREATE TABLE IF NOT EXISTS`（DDL 与 `qt-schema.sql`:45-59 一致）**——插件表由 Initializer 建且晚于 Flyway，不先建表就 INSERT 会让迁移失败并阻断启动；Initializer 随后执行同一句只是 no-op（故这两处是同一份定义的两个入口，改列须同步）。`id` 显式取 `MAX(id)+ROW_NUMBER()`（落预留段内）并按规范把 `sequence_segment.max_value` 抬到 `MAX(id)+1000`；`to_regclass('qt_app_update')` 判表存在，全新空库跳过回填 | 执行 |
 | 20261011001 | `V20261011001__qt_update_platforms.sql` | 版本更新改「一行多平台」（与公告 `sys_notice.channel` 同款）：`qt_app_update` 加 `platforms VARCHAR(64) NOT NULL DEFAULT ''`（逗号分隔平台号 `1101,1106`），存量 `type` 单值平移到 `platforms` 后 **DROP COLUMN `type`**（旧列 NOT NULL 且被 `(type, version_code)` 索引覆盖，无法原地加宽，只能建新列→平移→删旧列），索引换成 `idx_qt_update_version (version_code, channel)`。⚠️ **破坏性删列**，代码侧 `QtAppUpdate` 的 `TYPE_*` 常量与 `isSupportedType()` 同批改为 `PLATFORM_*` / `isSupportedPlatform()` + `platforms` CSV 工具方法，**必须同一次部署**；`qt-pc`/`qt-uniappx` 契约不变（仍送单值 `type`，服务端在 `platforms` 里做包含判断）。平台匹配一律在 Java 侧精确拆分，**禁用 SQL LIKE**（平台号互为子串会误命中）。整段带 `to_regclass('qt_app_update')` 守卫：插件表由 Initializer 建、晚于 Flyway，全新空库跳过、由 `qt-schema.sql` 的新结构直接建 `platforms`。`platforms` 空值兜底 `1101` 只为「半途执行过」的库收口，否则 `SET NOT NULL` 会阻断启动 | 执行 |
+| 20261018001 | `V20261018001__user_role_change_notify.sql` | 用户角色变更站内信：种 `userRolesChangedInapp` 模板 + 默认启用规则，只通知角色发生变更的用户，全部平台可见 | 执行 |
+| 20261018002 | `V20261018002__plugin_menu_directory.sql` | 「插件管理」一级节点改为纯目录，原插件列表页迁为同名二级菜单（保留原目录 ID，已有子菜单继续挂在原节点下） | 执行 |
+| 20261018003 | `V20261018003__storage_file_manager_dict.sql` | 文件管理筛选项改由字典提供（`storage_file_category` / `storage_file_sort`），不调整存储对象与既有文件标识 | 执行 |
+| 20261019001 | `V20261019001__ai_dict.sql` | AI 模块数据字典（`ai_agent_type` / `ai_agent_status` 等），前端下拉不得硬编码 | 执行 |
+| 20261019002 | `V20261019002__ai_schema.sql` | AI 模块表结构（Flyway 迁移版，与 `ai-schema.sql` 定义一致）；主键由全局序列填充，不设自增 | 执行 |
 | 20261019003 | `V20261019003__qt_update_version_info_widen.sql` | 发版公告 `qt_app_update.version_info` 由 `VARCHAR(512)` 加宽到 `VARCHAR(5000)`：公告已是 HTML 富文本（整页 ~2.6K 字符），512 直接报 `22001 value too long`，后台发布一直「系统错误」。`to_regclass` 守卫（插件表由 Initializer 建、晚于 Flyway，全新空库跳过，`qt-schema.sql` 建表口径已同步为 `VARCHAR(5000)`）+ `qt_app_update.json` 的 `length` 同批改 5000 | 执行 |
 | 20261020001 | `V20261020001__notice_read_seconds_terms_version.sql` | `sys_notice` 增 `read_seconds BIGINT`（开屏弹窗读秒，NULL/0=不读秒）与 `terms_version VARCHAR(32)`（条款版本号）。用途：把 qt-pc 首次启动的免责声明/开源通知从硬编码改成后台下发——判定「这条公告是免责声明」的唯一依据是 `terms_version` 非空（不新增 `scene` 常量，避免牵连 `NotifyEventRegistry` 里反馈回复通知的全平台规则）；`terms_version` 一变客户端就重新弹一次。两列都可空、纯增列。**必须用 `to_regclass('sys_notice')` 守卫**：该表由 feedback 插件 `@PostConstruct` 初始化器建（`feedback-schema.sql`），**晚于 Flyway**，全新空库上裸 `ALTER` 会 `relation does not exist` 并阻断启动，而 `ADD COLUMN IF NOT EXISTS` 只对「列」幂等、不管「表不存在」；表缺失时跳过是安全的（`feedback-schema.sql` 的 CREATE 已是带两列的新结构）。`sys_notice.json` 同批加两字段 | 执行 |
+| 20261022001 | `V20261022001__cms_dict.sql` | 内容管理（CMS）数据字典（`cms_content_status` / `cms_comment_status` 等），前端下拉不得硬编码 | 执行 |
+| 20261024001 | `V20261024001__cms_private_share_dict.sql` | CMS 新增「私密」内容状态 + 分享目标类型字典（`dict_code` 守卫 + `(dict_type_id, dict_value)` 幂等） | 执行 |
 | 20261027001 | `V20261027001__sys_notice_to_host.sql` | **站内通知表建表权收归宿主**：`sys_notice` 此前由 feedback 插件的 `@PostConstruct` 初始化器创建（插件表、晚于 Flyway），导致「禁用反馈插件 → 通知能力一起消失」。本脚本用 `CREATE TABLE IF NOT EXISTS` + 6 个 `CREATE INDEX IF NOT EXISTS` + 每列 `COMMENT`（放在 `DO $$ … IF to_regclass('sys_notice') IS NOT NULL … EXECUTE format(…)` 块里，兼容语句顺序）承接建表口径；`feedback-schema.sql` 的 §3.3 与 `FeedbackSchemaInitializer` 的 `sys_notice` 段同批删除，宿主与插件的实体/mapper 仍在 `astral-dao`（`com.astral.dao.entity.SysNotice`）。**历史遗留不做修订**：更早的 `V20261001007`/`V20261002006` 仍是对 `sys_notice` 的裸 `ALTER`，全新空库按序执行时该表尚不存在，该版本会失败（已知遗留，与既有 `V20261001008` 同类问题一致；不动历史脚本是「只增不改」的红线） | 执行 |
 | 20261027002 | `V20261027002__notice_type_announce_notice.sql` | **通知类型三值收敛为两值**：`notice_type` 字典保留 `announce`（公告）并新增 `notice`（通知，sort 2），把 `feedback`(id=131)/`request`(id=132) 置 `status=0`（禁用而非删除，存量行值不变、历史数据仍可解释）。`sys_notice.notice_type` 的存量 `feedback`/`request` 行**不做 UPDATE**——服务端查询按 `notice_type IN ('notice','feedback','request')` 兼容、前端渲染把非 `announce` 一律显示「通知」。种子按 `COALESCE(MAX(id),0)+ROW_NUMBER()` 取号 + `dict_type_id+dict_value` 的 `NOT EXISTS` 守卫；`notice_type` 字典的 id 段与 `sequence_segment` 高水位同批抬高 | 执行 |
 
@@ -100,3 +108,13 @@ FROM astral.flyway_schema_history ORDER BY installed_rank;
   注意：插件 Initializer 是 `@PostConstruct`，**晚于 Flyway**，因此任何动到插件表的迁移都必须先判表存在
   （`IF to_regclass('...') IS NULL THEN RETURN;`，见 `V20261001008`），否则全新空库会因表不存在启动中止；
 - `spring.sql.init.mode: never` 维持不变，避免任何双轨执行。
+
+| 20261028001 | `V20261028001__message_template_channel_merge.sql` | **消息模板合并**：邮箱模板 / 站内信模板 / 短信模板 → 一套「消息模板」（事件 × 渠道 + 模板明细），为管理端「消息模板」页提供统一数据源 | 执行 |
+| 20261028002 | `V20261028002__notify_delivery_dicts.sql` | 消息模板/通知规则枚举字典化（`notify_delivery_channel` 等）；只补字典，不动 `sys_mail_template` / `sys_sms_template` / `sys_notify_rule` 数据 | 执行 |
+| 20261028003 | `V20261028003__admin_enum_dicts.sql` | 管理端剩余写死枚举全部字典化（`user_type` 等），前端不再硬编码「值→文案」映射 | 执行 |
+| 20261029001 | `V20261029001__notify_rule_channel_split.sql` | **通知规则三表拆分**：`sys_notify_rule`（事件级规则）→ `sys_notify_rule_channel`（渠道明细：template_id / daily_limit / platform）→ `sys_notify_rule_recipient`（收件人 FIXED / PAYLOAD_FIELD / ROLE）。同一事件可建多条规则、每条规则可挂多渠道多收件人；旧单表 `channel` / `template_id` / `recipient` 数据迁移后删除 | 执行 |
+| 20261029002 | `V20261029002__notify_rule_dicts.sql` | 通知规则拆分配套字典：投递渠道 / 收件人类型 / 限额口径（只补字典，幂等） | 执行 |
+| 20261029003 | `V20261029003__notice_sender.sql` | `sys_notice` 补「来源标识」列 `sender`——站内信已是通用投递渠道（反馈/告警/账号安全/AI 都会发），来源改由发送方在事件定义里显式声明，消息中心与统计不再靠事件码前缀猜发送方 | 执行 |
+| 20261029004 | `V20261029004__drop_mail_plugin_auth.sql` | **删除「插件发信授权」整套**（表 `sys_mail_plugin_auth` + 权限码）——授权入口 `MailService.send(pluginId,…)` / `SmsService.send(pluginId,…)` 已全仓零调用，发信改由通知规则决定渠道 | 执行 |
+| 20261029005 | `V20261029005__menu_message_statistics.sql` | 菜单数据修正：「邮箱统计」→「消息统计」，路径 `/dashboard/system/mail/log` → `/dashboard/system/message/statistics`（侧边栏渲染的是 `sys_menu` 表，只改前端代码不生效） | 执行 |
+| 20261029006 | `V20261029006__notice_type_personal_fix.sql` | 「用户角色变更 / 系统告警 / 找回密码验证码」历史站内信 `notice_type` 由 `announce` 改回 `notice`（事件定义 `NotifyEventRegistry` 已同批修正）；手工新建公告不受影响 | 执行 |

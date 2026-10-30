@@ -242,9 +242,9 @@ curl http://localhost:27000/actuator/prometheus
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/api/v1/all/sequence/next` | 获取序列号（有限流） |
-| POST | `/api/v1/sequence/batch` | 批量获取 |
-| GET | `/api/v1/sequence/types` | 支持的类型 |
-| GET/POST/PUT/DELETE | `/api/v1/sequence/configs` | 序列配置管理 |
+| POST | `/api/v1/all/sequence/batch` | 批量获取 |
+| GET | `/api/v1/all/sequence/types` | 支持的类型 |
+| GET/POST/PUT/DELETE | `/api/v1/admin/sequence/configs` | 序列配置管理 |
 | GET | `/api/v1/admin/sequence/statistics` | 使用统计 |
 
 ---
@@ -274,26 +274,50 @@ curl http://localhost:27000/actuator/prometheus
 
 ---
 
-## 6. 邮件服务（astral-system）
+## 6. 邮件 / 短信 / 消息中心（astral-system）
 
-### 功能
+### 6.1 邮件
 
-- 多发件账户管理（SMTP 主机/端口/SSL 均存库）
-- 邮件模板 + 变量渲染（`${var}` 占位符）
-- 发送日志
-- 插件发送授权（qt 等插件经授权后可发邮件，如 App 注册验证码）
-
-### API 接口
+- 多发件账户管理（SMTP 主机/端口/SSL 均存库），失败自动切换下一账户
+- 邮件发送日志 + 统计
+- 模板统一走「消息模板」（见 6.3）；**「插件发信授权」已整体删除**（`V20261029004`），
+  发不发由「通知规则」决定，不再有 `MailService.send(pluginId,…)` 授权入口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| CRUD | `/api/v1/admin/system/mail/account` | 发件账户管理 |
-| CRUD | `/api/v1/admin/system/mail/template` | 模板管理 |
-| GET | `/api/v1/admin/system/mail/log` | 发送日志 |
-| CRUD | `/api/v1/admin/system/mail/plugin-auth` | 插件发送授权 |
+| CRUD | `/api/v1/admin/system/mail/account` | 发件账户管理（含 `/{id}/toggle`、`/test`） |
+| CRUD | `/api/v1/admin/system/mail/template` | 邮件模板管理（含 `/preview`、`/{id}/send`） |
+| GET | `/api/v1/admin/system/mail/log` | 发送日志分页 / 统计（页面入口已并入「消息统计」） |
 
 > 发送实现：`MailServiceImpl` 按场景从 `sys_mail_account` 选择可用账户，自建
 > `JavaMailSenderImpl` 发送（不使用 `spring.mail.*` 自动装配），失败自动尝试下一账户并记录日志。
+
+### 6.2 短信
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| CRUD | `/api/v1/admin/system/sms/provider` | 短信服务商账户 |
+| CRUD | `/api/v1/admin/system/sms/template` | 事件 → 供应商模板号映射 |
+| GET | `/api/v1/admin/system/sms/log` | 发送日志分页 / 统计 |
+
+### 6.3 消息模板 / 消息统计 / 通知规则 / 站内通知
+
+- **消息模板**：邮箱/站内信/短信模板合并为一套（事件 × 渠道 + 模板正文），
+  前端「消息中心 → 消息模板」页；`sys_mail_template` / `sys_sms_template` 仍是底层存储
+- **通知规则（三表）**：`sys_notify_rule`（事件级）→ `sys_notify_rule_channel`（渠道 + 模板 + 日限额 + 平台）
+  → `sys_notify_rule_recipient`（固定人 / 事件载荷字段 / 角色）；同一事件可建多条规则
+- **消息统计**：EMAIL / SMS / INAPP 三类日志合并统计（概览、趋势、明细，支持渠道/事件/状态/时间筛选）
+- **站内通知**：宿主 `com.astral.system.notice` 承接 App（`/api/v1/app/message`）与管理端（`/api/v1/admin/message`）；
+  通知类型只有「公告 `announce`（广播）/ 通知 `notice`（点对点）」
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/admin/system/message/template/list` | 消息模板列表（`/options`、`POST /save`、`POST /preview`） |
+| GET | `/api/v1/admin/system/message/statistics/overview` | 消息统计概览（`/trend`、`/list`） |
+| GET | `/api/v1/admin/system/notify/event` | 事件注册表（`/template` 取模板选项） |
+| CRUD | `/api/v1/admin/system/notify/rule` | 通知规则（`/page`、`/rule/{id}`、`POST /publish` 手动补发） |
+| GET | `/api/v1/all/notify/inapp/my/page` | 个人站内信（`/unread-count`、`/{id}/read`、`/read-all`） |
+| GET/CRUD | `/api/v1/admin/message` | 管理端通知/公告（`/inbox` 我的收件箱、`/page` 管理分页、`POST`、`PUT /{id}`、`DELETE /{id}`） |
 
 ---
 
@@ -338,7 +362,9 @@ astral-server (Web 层, 入口)
 | CRUD | `/api/v1/admin/system/config` | 系统配置 | ✅ |
 | CRUD | `/api/v1/admin/system/token` | Token 管理 | ✅ |
 | CRUD | `/api/v1/admin/system/table-schema` | 表结构管理 | ✅ |
-| CRUD | `/api/v1/admin/system/mail/*` | 邮件服务（账户/模板/日志/插件授权） | ✅ |
+| CRUD | `/api/v1/admin/system/mail/*` | 邮件服务（账户/模板/日志） | ✅ |
+| GET | `/api/v1/admin/system/message/*` | 消息模板 / 消息统计 | ✅ |
+| CRUD | `/api/v1/admin/system/notify/*` | 事件注册表 / 通知规则 | ✅ |
 
 ### 日志
 
@@ -368,9 +394,9 @@ astral-server (Web 层, 入口)
 | 方法 | 路径 | 说明 | 需要认证 |
 |------|------|------|----------|
 | POST | `/api/v1/all/sequence/next` | 获取序列号 | ✅ |
-| POST | `/api/v1/sequence/batch` | 批量获取 | ✅ |
-| GET | `/api/v1/sequence/types` | 支持的类型 | ✅ |
-| CRUD | `/api/v1/sequence/configs` | 序列配置 | ✅ |
+| POST | `/api/v1/all/sequence/batch` | 批量获取 | ✅ |
+| GET | `/api/v1/all/sequence/types` | 支持的类型 | ✅ |
+| CRUD | `/api/v1/admin/sequence/configs` | 序列配置 | ✅ |
 
 ### 插件
 
@@ -450,7 +476,8 @@ Sa-Token 认证拦截器作用于 `/api/**`，排除项（见 `astral-server` �
 | 运行时 | Node.js（镜像 `node:24-alpine`，三阶段版本必须一致） | 24 LTS |
 | 包管理 | npm（`package-lock.json` 已提交，镜像走 `npm ci`） | — |
 
-注：Next 16 起 `next lint` 已移除，`package.json` 因此没有 lint 脚本；类型检查用 `npx tsc --noEmit`。
+注：Next 16 起 `next lint` 已移除，项目改用 **ESLint 9 flat config**（`eslint.config.mjs`）+ **Prettier**：
+改完代码跑 `npm run lint` / `npm run format:check`，类型检查 `npx tsc --noEmit`，构建 `npm run build`。
 
 ---
 
