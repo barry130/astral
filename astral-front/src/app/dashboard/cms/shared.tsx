@@ -79,24 +79,47 @@ export function StatusBadge({ code, value }: { code: CmsDictCode; value?: string
   );
 }
 
-/** 分页条：左侧总数与页码，右侧上/下一页（列表页信息密度适中即可） */
+/** 分页条：左侧总数/页码/每页条数，右侧上/下一页（与全站标准分页能力对齐） */
+const PAGER_PAGE_SIZES = [10, 20, 50, 100];
+
 export function Pager({
   page,
   pageSize,
   total,
   onPageChange,
+  onPageSizeChange,
 }: {
   page: number;
   pageSize: number;
   total: number;
   onPageChange: (page: number) => void;
+  /** 缺省时隐藏每页条数选择器 */
+  onPageSizeChange?: (pageSize: number) => void;
 }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   if (total === 0) return null;
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-      <span className="text-muted-foreground tabular-nums">
+      <span className="text-muted-foreground flex items-center gap-2 tabular-nums">
         共 {total} 条 · 第 {page} / {pages} 页
+        {onPageSizeChange && (
+          <select
+            value={String(pageSize)}
+            onChange={(e) => {
+              onPageChange(1);
+              onPageSizeChange(Number(e.target.value));
+            }}
+            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 cursor-pointer rounded-md border bg-transparent px-2 outline-none focus-visible:ring-[3px]"
+            aria-label="每页条数"
+          >
+            {[...new Set([pageSize, ...PAGER_PAGE_SIZES])].sort((a, b) => a - b).map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        )}
+        {onPageSizeChange && '条/页'}
       </span>
       <div className="flex items-center gap-1.5">
         <Button

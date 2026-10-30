@@ -46,7 +46,7 @@ import {
 } from '../shared';
 import { confirmDialog } from '../../confirm';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 20, 50, 100];
 const CONTENT_STATUS = 'cms_content_status';
 /** Select 的「全部」哨兵值（Radix Select 不接受空字符串 value） */
 const ALL = '__all__';
@@ -67,6 +67,7 @@ export default function CmsPostListPage() {
   const [status, setStatus] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
   const [posts, setPosts] = useState<CmsPost[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -74,13 +75,13 @@ export default function CmsPostListPage() {
   const [categories, setCategories] = useState<CmsCategory[]>([]);
 
   const load = useCallback(
-    async (targetPage: number) => {
+    async (targetPage: number, size: number = pageSize) => {
       setLoading(true);
       setError(null);
       try {
         const res = await cmsApi.postPage({
           pageNum: targetPage,
-          pageSize: PAGE_SIZE,
+          pageSize: size,
           keyword: keyword || undefined,
           status: status || undefined,
           // 后端按关系表匹配「包含该分类」，前端保持单选即可
@@ -98,7 +99,7 @@ export default function CmsPostListPage() {
         setLoading(false);
       }
     },
-    [keyword, status, categoryId],
+    [keyword, status, categoryId, pageSize],
   );
 
   useEffect(() => {
@@ -241,7 +242,16 @@ export default function CmsPostListPage() {
             </Button>
           </>
         }
-        footer={<Pager page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />}
+        footer={<Pager
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(1);
+              }}
+            />}
       >
         <CmsTable>
           <TableHeader>

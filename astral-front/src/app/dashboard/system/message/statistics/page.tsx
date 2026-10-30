@@ -14,6 +14,7 @@ import {
 } from '@/api/message-statistics';
 import { notifyRuleApi, NotifyEventVo } from '@/api/notify';
 import { fetchDictOptions, dictLabel, DictOption } from '@/api/dict';
+import { TablePagination } from '@/components/data-table/TablePagination';
 import { formatDateTime } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -180,8 +181,6 @@ export default function MessageStatisticsPage() {
     setPage(1);
     setApplied(EMPTY_FILTER);
   };
-
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   /** 趋势折线：日期轴取自返回的稠密网格，缺渠道补 0 */
   const trendOption = useMemo(() => {
@@ -537,50 +536,22 @@ export default function MessageStatisticsPage() {
             </Table>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-            <div className="text-muted-foreground flex items-center gap-2">
-              <span>共 {fmt(total)} 条</span>
-              <span>·</span>
-              <span>每页</span>
-              <Select
-                value={String(pageSize)}
-                onValueChange={(v) => {
-                  setPageSize(Number(v));
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="h-8 w-[80px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={loading || page <= 1}
-                onClick={() => setPage(page - 1)}
-              >
-                上一页
-              </Button>
-              <span className="text-muted-foreground">
-                第 {page} / {pageCount} 页
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={loading || page >= pageCount}
-                onClick={() => setPage(page + 1)}
-              >
-                下一页
-              </Button>
-            </div>
-          </div>
+          <TablePagination
+            className="border-t-0"
+            pagination={{
+              current: page,
+              pageSize,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              showTotal: (t) => `共 ${fmt(t)} 条`,
+              onChange: (p, ps) => {
+                setPage(p);
+                setPageSize(ps);
+              },
+            }}
+            total={total}
+          />
         </CardContent>
       </Card>
     </div>

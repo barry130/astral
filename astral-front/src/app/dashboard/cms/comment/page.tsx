@@ -28,7 +28,7 @@ import {
 } from '../shared';
 import { confirmDialog } from '../../confirm';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZES = [10, 20, 50, 100];
 const COMMENT_STATUS = 'cms_comment_status';
 const TARGET_TYPE = 'cms_comment_target_type';
 /** Select 的「全部」哨兵值（Radix Select 不接受空字符串 value） */
@@ -43,19 +43,20 @@ export default function CmsCommentPage() {
   const [status, setStatus] = useState('pending');
   const [targetType, setTargetType] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
   const [comments, setComments] = useState<CmsComment[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
-    async (targetPage: number) => {
+    async (targetPage: number, size: number = pageSize) => {
       setLoading(true);
       setError(null);
       try {
         const res = await cmsApi.commentPage({
           pageNum: targetPage,
-          pageSize: PAGE_SIZE,
+          pageSize: size,
           status: status || undefined,
           targetType: targetType || undefined,
           keyword: keyword || undefined,
@@ -72,7 +73,7 @@ export default function CmsCommentPage() {
         setLoading(false);
       }
     },
-    [status, targetType, keyword],
+    [status, targetType, keyword, pageSize],
   );
 
   useEffect(() => {
@@ -189,7 +190,16 @@ export default function CmsCommentPage() {
         }
         footer={
           total > 0 ? (
-            <Pager page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+            <Pager
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(1);
+              }}
+            />
           ) : undefined
         }
       >

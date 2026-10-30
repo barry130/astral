@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Bell, Webhook, History, Plus, Pencil, Trash2, Send } from 'lucide-react';
 
 import { alertApi, AlertChannel, AlertRule, AlertRecord, ALERT_METRICS } from '@/api/alert';
+import { TablePagination } from '@/components/data-table/TablePagination';
 import { hasPermissionIn } from '@/lib/perm';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ export default function AlertPage() {
   const [records, setRecords] = useState<AlertRecord[]>([]);
   const [recordsTotal, setRecordsTotal] = useState(0);
   const [recordsPage, setRecordsPage] = useState(1);
+  const [recordsPageSize, setRecordsPageSize] = useState(10);
   const [loading, setLoading] = useState(true);
 
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
@@ -89,12 +91,13 @@ export default function AlertPage() {
     }
   }, []);
 
-  const loadRecords = useCallback(async (page = 1) => {
+  const loadRecords = useCallback(async (page = 1, pageSize = 10) => {
     try {
-      const res = await alertApi.pageRecords(page, 10);
+      const res = await alertApi.pageRecords(page, pageSize);
       setRecords(res.data?.records || []);
       setRecordsTotal(res.data?.total || 0);
       setRecordsPage(page);
+      setRecordsPageSize(pageSize);
     } catch (e: unknown) {
       toast.error((e as Error).message || '加载触发记录失败');
     }
@@ -511,27 +514,17 @@ export default function AlertPage() {
                   )}
                 </TableBody>
               </Table>
-              {recordsTotal > 10 && (
-                <div className="mt-3 flex items-center justify-end gap-2 text-sm">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={recordsPage <= 1}
-                    onClick={() => loadRecords(recordsPage - 1)}
-                  >
-                    上一页
-                  </Button>
-                  <span className="text-muted-foreground">第 {recordsPage} 页</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={recordsPage * 10 >= recordsTotal}
-                    onClick={() => loadRecords(recordsPage + 1)}
-                  >
-                    下一页
-                  </Button>
-                </div>
-              )}
+              <TablePagination
+                pagination={{
+                  current: recordsPage,
+                  pageSize: recordsPageSize,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (t) => `共 ${t} 条`,
+                  onChange: (p, ps) => loadRecords(p, ps),
+                }}
+                total={recordsTotal}
+              />
             </CardContent>
           </Card>
         </TabsContent>
