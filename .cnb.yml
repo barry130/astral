@@ -57,9 +57,10 @@
     exports:
       info: IMAGE_URL
   - name: docker build（前端，上下文=astral-front）
+    # 不再传 NEXT_PUBLIC_API_URL：同源形态（空串）烤进 bundle，镜像与后端域名解耦，
+    # /api 由容器内 proxy.js 按启动时 BACKEND_URL 转发，换后端不重打包
     script: >-
       docker build -f astral-front/Dockerfile
-      --build-arg NEXT_PUBLIC_API_URL=https://astral.canace.cn
       -t "$IMAGE_URL" -t "$IMAGE_PREFIX/astral-frontend:latest" astral-front
   - name: docker push（双 tag；第二个 tag 复用刚上传的层，几乎零开销）
     script: |
@@ -67,9 +68,9 @@
       docker push "$IMAGE_PREFIX/astral-frontend:latest"
 
 # 博客前台（astral-blog）：独立发布站点，构建上下文=astral-blog。
-# 与前端不同的是它不需要 NEXT_PUBLIC_API_URL——所有后端请求都在服务端完成，
+# 它不需要 NEXT_PUBLIC_API_URL——所有后端请求都在服务端完成，
 # 运行期由 CMS_API_BASE 决定（compose 里固定 http://backend:27000），
-# 所以镜像本身与域名无关，换域名不用重新构建。
+# 所以镜像本身与域名无关，换域名不用重新构建（前端镜像同源化改造后也是这一形态）。
 .blog-stages: &blog-stages
   - name: 生成发布 tag（日期-短SHA，兼作回滚锚点）
     script: echo -n "$IMAGE_PREFIX/astral-blog:$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"

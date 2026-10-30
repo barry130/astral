@@ -81,8 +81,9 @@ astral:
     # 允许的跨域来源，逗号分隔。
     # 默认只放开 Next.js 开发服务器（http://localhost:3000）。
     # 【不要在生产配成 *】：CorsConfig 里 allowCredentials=true，通配等于对任意站点
-    # 开放带凭据的跨域调用。生产的前端与后端同源（NEXT_PUBLIC_API_URL 留空，
-    # 浏览器走相对路径 /api，由 Next.js rewrites 转发），因此同源部署根本不需要 CORS。
+    # 开放带凭据的跨域调用。生产的前端与后端同源（2026-10 前端镜像同源化改造后，
+    # bundle 固定相对路径 /api，由前端容器内 proxy.js 按 BACKEND_URL 转发），
+    # 因此同源部署根本不需要 CORS。
     # 只有当浏览器需要「直连另一个域名」时才需要显式配置，例如：
     #   CORS_ALLOWED_ORIGINS=https://admin.example.com
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}

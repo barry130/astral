@@ -22,9 +22,12 @@
 
 nginx 终结 TLS 并做网络层限流，三个容器端口只绑 `127.0.0.1`（不对外暴露）。
 
-> 三个域名与现网一致（`www` 博客、`web` 管理端、`astral` 接口域），
-> 其中 `web` 与 `astral` 是**跨域直连**形态——前端镜像构建时把 `NEXT_PUBLIC_API_URL=https://astral.canace.cn` 内联，
-> 所以接口仍独立成域，不改成同源 `/api`（改了要重建镜像并调整 CORS / CSRF 策略）。
+> 三个域名与现网一致（`www` 博客、`web` 管理端、`astral` 接口域）。
+> 2026-10 前端镜像同源化改造后：管理端 bundle 固定为同源相对路径 `/api`，
+> 由容器内 `proxy.js` 按启动时 `BACKEND_URL` 把 `/api/**` 转发到后端，
+> nginx 的 `web.canace.cn` 加了 `/api/` location 一并反代到前端容器；
+> `astral.canace.cn` 接口域保留（旧客户端/直连调试用），换后端只改
+> `BACKEND_URL` 环境变量重启，不再需要重新构建镜像。
 > `canace.cn` 的子域之间同为「同站」，`SameSite=Strict` 的会话 Cookie 仍能正常携带。
 
 **简化形态（无 nginx，端口直接对外）：**
@@ -102,7 +105,7 @@ vi .env      # 填入数据库、Redis 的真实地址与密码
 | `STORAGE_ORIGIN_SHARED_SECRET` | 同上（另生成） | 文件存储：Worker 回调鉴权密钥，需与 Worker Secret 一致 |
 | `STORAGE_DOWNLOAD_SIGNING_KEY_V1` | 同上（另生成） | 文件存储：下载地址签名密钥，需与 Worker Secret 一致 |
 | `ASTRAL_AI_SECRET_KEY` | `openssl rand -base64 32` 生成，**生成后永不更换** | AI 插件：提供方 API Key 的加密主密钥（KEK）。换值或未配置时，已保存的密文全部解不开，后台报「提供方密钥无法解密，请重新保存」；必须同时出现在 `docker-compose.yml` backend 的 `environment:` 透传列表里 |
-| `NEXT_PUBLIC_API_URL` | 留空（推荐）或 `https://<你的API域名>` | 浏览器访问 API 的基地址（构建时内联）。**改用 CI 构建镜像后本项在 `.env` 中不再生效**，需写进 `.cnb.yml` 前端流水线的构建参数（`--build-arg`），见下文「CI 构建 + 服务器 pull 更新」 |
+| `NEXT_PUBLIC_API_URL` | **已废弃**（2026-10 同源化改造） | 前端 bundle 已固定同源相对路径 `/api`，由容器内 `proxy.js` 按 `BACKEND_URL` 转发；换后端改 `BACKEND_URL` 重启即可，本变量不再参与构建/运行 |
 | `REGISTRY` | `docker.cnb.cool/canace/astral` | （可选）镜像仓库前缀，只到命名空间；配合 `docker-compose.registry.yml` 使用 |
 | `TAG` | `latest` 或 `20260926-a1b2c3d4` | （可选）镜像 tag，兼作回滚开关 |
 
@@ -110,11 +113,11 @@ vi .env      # 填入数据库、Redis 的真实地址与密码
 >
 > 若 PostgreSQL/Redis 与容器在**同一台宿主机**上，主机名可用 `host.docker.internal`（compose 已为 backend 配置 `host-gateway` 映射）；否则填其可达的内网或公网地址。
 
-前端通过构建参数 `NEXT_PUBLIC_API_URL` 指定浏览器访问 API 的基地址，**默认留空** → 浏览器使用同源相对路径（如 `/api/v1/all/auth/login`），由 Next.js 服务端 rewrites 转发到 `BACKEND_URL`（默认 `http://backend:27000`）。该变量会在 `npm run build` 时内联，修改后必须重新构建 frontend 镜像（`docker compose build --no-cache frontend`）。
+前端 bundle 固定为同源相对路径（如 `/api/v1/all/auth/login`），由容器内 `proxy.js` 按启动时 `BACKEND_URL`（默认 `http://backend:27000`）把 `/api/**` 转发到后端（后端路由自带 `/api` 前缀，代理不 strip），WebSocket 升级一并透传。
 
-`BACKEND_URL` 是 Next.js 服务端 rewrites 的转发目标，容器内默认 `http://backend:27000`，浏览器永远不直接访问它。
+`BACKEND_URL` 是前端容器内 `proxy.js` 的转发目标，浏览器永远不直接访问它。**改 `BACKEND_URL` 只需重启 frontend 容器，无需重建镜像。**
 
-> 默认（`NEXT_PUBLIC_API_URL` 留空）时浏览器只与前端域名同源通信，后端 `27000` 无需对公网开放，建议安全组收紧。仅当显式设置 `NEXT_PUBLIC_API_URL` 让浏览器直连后端时才需要放行，且该地址必须为 `https://`（HTTPS 页面下 `http://` 请求会被浏览器 Mixed Content 拦截）。
+> 浏览器只与前端域名同源通信，后端 `27000` 无需对公网开放，建议安全组收紧。
 
 ## 部署步骤
 
@@ -391,7 +394,7 @@ docker compose up -d --build
 4. **开启自动触发**：CNB 仓库「设置」里勾选**允许自动触发（云原生构建）**，否则 push 不会触发构建
 5. **首次推送验证**：`git push`。master 在 CNB 属于新分支，必定触发三条流水线全量构建（后端、前端、博客并行）。成功后在 CNB 仓库「制品」页能看到三个镜像（`astral-backend` / `astral-frontend` / `astral-blog`），各有两个 tag：`latest` 与「日期-短SHA」如 `20261001-1a2b3c4d`（后者用于精确发布/回滚）。制品路径与仓库路径一致（`docker.cnb.cool/canace/astral/astral-backend` 等），首次 push 自动创建，无需手动建仓
    - 之后每次 push 按**改动路径**过滤：动 `astral-front/**` 只重建前端，动 `astral-blog/**` 只重建博客，动后端模块只重建后端，互不连坐；手动全量构建用 master 分支详情页的「构建并推送镜像」按钮
-   - 博客镜像**不带域名**：它的后端地址在运行期由 `CMS_API_BASE` 决定（compose 固定 `http://backend:27000`），换域名不用重新构建。管理端镜像则相反，`NEXT_PUBLIC_API_URL` 是构建期内联的
+   - 博客镜像**不带域名**：它的后端地址在运行期由 `CMS_API_BASE` 决定（compose 固定 `http://backend:27000`），换域名不用重新构建。前端镜像同源化改造后也是这一形态（`/api` 由容器内 `proxy.js` 按 `BACKEND_URL` 转发）
 6. 服务器无需登录：仓库当前为公开仓，`docker pull docker.cnb.cool/canace/astral/astral-backend` 可匿名拉取。（若改回私有仓再执行一次登录：`echo "<CNB访问令牌>" | docker login docker.cnb.cool -u cnb --password-stdin`，令牌需勾选 `registry-package` 读权限）
 
 7. 服务器 `deploy/.env` 补两行：`REGISTRY=docker.cnb.cool/canace/astral`、`TAG=latest`
@@ -492,7 +495,7 @@ docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
 
 ### 关键注意点
 
-- **构建期参数搬到 CI**：改成 pull 之后 `docker-compose.yml` 里的 `build.args` 不再生效，`NEXT_PUBLIC_API_URL` 需写进 `.cnb.yml` 前端流水线的 `docker build`（加 `--build-arg NEXT_PUBLIC_API_URL=...`；留空即走同源 `/api` + Next rewrites，当前默认留空）
+- **镜像已通用化（2026-10 同源化改造）**：`.cnb.yml` 前端流水线不再传 `NEXT_PUBLIC_API_URL`，bundle 固定同源相对路径 `/api`，运行期由容器内 `proxy.js` 按启动时 `BACKEND_URL` 转发到后端；换后端改 compose 的 `BACKEND_URL` 重启即可，不用重新构建
 - **CPU 架构必须匹配**：CNB 构建节点产出 `linux/amd64`。服务器若是 ARM（aarch64），需在 `.cnb.yml` 的 `docker build` 命令加 `--platform linux/arm64`，否则容器报 `exec format error` 起不来
 - **CNB 额度与并发**：免费额度以官方文档为准（构建约 160 核时/月，计费 = 核数 × 耗时；镜像存储走对象存储 100GiB 免费额度）；`.cnb.yml` 流水线已显式降配 4 核 8G（默认 8 核 16G，核时消耗减半），并已用 `lock.cancel-in-progress` 取消同镜像的在途构建（后端/前端互不取消）、用 `ifModify` 按改动路径过滤。构建机与制品库都在国内，推送/拉取不走跨境链路；首次构建要拉基础镜像和依赖会稍慢，Docker 层缓存仅在当前构建节点有效、命中率不稳定，属正常现象
 - **磁盘回收**：每次 pull 都会留下旧镜像，`update.sh` 已带 7 天回收；手动回收用 `docker image prune -af --filter "until=168h"`
@@ -532,9 +535,9 @@ docker inspect astral-backend --format '{{ range .Mounts }}{{ .Type }} {{ .Name 
 docker images | grep -Ei 'astral|deploy'
 docker inspect astral-backend astral-frontend --format '{{ .Name }} <- {{ .Config.Image }} ({{ .Image }})'
 
-# 4) 前端构建期内联地址：NEXT_PUBLIC_API_URL 若在 .env 里非空，
-#    必须先把它写进 .cnb.yml 前端构建参数并重跑 CI，否则新镜像会退回同源 /api 行为
-grep -n 'NEXT_PUBLIC_API_URL' .env
+# 4) 前端 API 转发地址：同源化改造后由容器内 proxy.js 按 BACKEND_URL 转发，
+#    检查 .env / compose 里 BACKEND_URL 是否指向迁移后可达的后端地址
+grep -n 'BACKEND_URL' .env ../deploy/docker-compose.yml
 ```
 
 若第 1 步查不到 `com.docker.compose.project` 标签，说明当前容器是 `docker run` 直接起的（不归 compose 管）。此时先 `docker rm -f astral-backend astral-frontend`（**卷独立于容器，不会丢**），再执行下面的 `./update.sh`，由 compose 重新创建。
@@ -598,18 +601,18 @@ rm -f /opt/astral-docker-*.tar.gz                # 归档建议另存一份做�
 
 完整步骤见上文「反向代理 + HTTPS（www / web / astral）」一节（证书 → 反代配置 → 端口收回回环）。这里只列与域名相关的几个判断点：
 
-- **当前形态是跨域直连**：管理端页面在 `web.canace.cn`，接口在 `astral.canace.cn`。`NEXT_PUBLIC_API_URL` 是**构建期内联**（`.cnb.yml` 前端 job 的 `--build-arg NEXT_PUBLIC_API_URL=https://astral.canace.cn`），所以浏览器请求直接打到接口域，不走管理端的 `/api` rewrites
-- 因此后端 `CORS_ALLOWED_ORIGINS` **必须**包含 `https://web.canace.cn`（见 `deploy/.env.example` 的 CORS 段）。nginx **不要**给 `astral.canace.cn` 加任何 CORS 响应头，否则会出现两份 `Access-Control-Allow-Origin`，浏览器直接判定失败
+- **当前形态是同源 + 容器内代理（2026-10 同源化改造后）**：管理端页面在 `web.canace.cn`，浏览器请求同源 `/api/**`，由 nginx 的 `/api/` location 反代到前端容器，再由容器内 `proxy.js` 按 `BACKEND_URL` 转发到 `backend:27000`；`astral.canace.cn` 接口域保留（旧客户端 / 直连调试用）
+- 因此后端 `CORS_ALLOWED_ORIGINS` **必须**包含 `https://web.canace.cn`（见 `deploy/.env.example` 的 CORS 段）——同源请求理论不带 Origin 跨域校验问题，但旧版客户端或直连 `astral.canace.cn` 的场景仍依赖它。nginx **不要**给 `astral.canace.cn` 加任何 CORS 响应头，否则会出现两份 `Access-Control-Allow-Origin`，浏览器直接判定失败
 - **博客是另一种形态**：`www.canace.cn` 下的 `/api/*` 是博客自己的 Next Route Handler（登录 / 评论 / 页内保存 / 导出），必须转发到 **blog 容器 3001**，绝不能指向 27000；博客取后端数据全在服务端完成（`CMS_API_BASE`），浏览器不直接访问后端
 - 会话 Cookie 是 `SameSite=Strict`，`canace.cn` 的子域彼此同为「同站」，所以 `web.canace.cn` 页面访问 `astral.canace.cn` 时 Cookie 照常携带
-- **不要**把 `NEXT_PUBLIC_API_URL` 设为 `http://` 开头：HTTPS 页面下浏览器会以 Mixed Content 拦截全部明文请求，前端表现为"无法连接到服务器，请检查后端服务是否启动"（实际是浏览器拦截，后端本身是正常的）
+- **不要**把任何 API 地址配成 `http://` 开头（若将来引入直连形态）：HTTPS 页面下浏览器会以 Mixed Content 拦截全部明文请求，前端表现为"无法连接到服务器，请检查后端服务是否启动"（实际是浏览器拦截，后端本身是正常的）
 - 收紧安全组：走 nginx 时 `3000` / `3001` / `27000` 都无需对公网开放（`docker-compose.yml` 里已把端口绑到 `127.0.0.1`）
 
-换域名时：博客镜像**不用重建**（后端地址运行期由 `CMS_API_BASE` 决定）；管理端镜像**必须重建**（`NEXT_PUBLIC_API_URL` 已内联进产物）。
+换域名时：博客镜像**不用重建**（后端地址运行期由 `CMS_API_BASE` 决定）；前端镜像同源化后也**不用重建**（同源 `/api` 由容器内 `proxy.js` 按 `BACKEND_URL` 转发，改 `BACKEND_URL` 重启即可）。
 
 ```bash
-# 改了 NEXT_PUBLIC_API_URL 之后
-docker compose build --no-cache frontend && docker compose up -d frontend
+# 改了 BACKEND_URL 之后
+docker compose up -d frontend
 ```
 
 ## 从旧 Typecho 站切到新博客（www.canace.cn）
@@ -705,10 +708,9 @@ docker version --format '{{.Server.Version}}'
 **前端无法调用后端 API？**
 
 - 确认 backend 容器已 `healthy`（frontend 的 `depends_on` 依赖其健康检查）。
-- 确认 compose 中 `NEXT_PUBLIC_API_URL` 位于 frontend 的 `build.args` 中，而不是只配置在运行时 `environment` 中；修改后执行 `docker compose build --no-cache frontend`。
-- 浏览器控制台出现 `Mixed Content ... blocked`：页面是 HTTPS，而构建时内联的 `NEXT_PUBLIC_API_URL` 是 `http://` 地址。改为留空（走同源 rewrites）或改成 `https://` 地址后重新构建 frontend 镜像。
-- 页面报"无法连接到服务器"但浏览器控制台无 Mixed Content/NET::ERR 报错？先打开控制台 Network 面板确认请求最终落点，再对照下方两条排查。
-- 仅 `NEXT_PUBLIC_API_URL` 直连模式需要服务器安全组放行 `27000`。
+- 确认 compose 中 `BACKEND_URL` 指向的后端地址在 frontend 容器内网可达（默认 `http://backend:27000`）；改过之后执行 `docker compose up -d frontend` 重启（proxy.js 启动时读取，无需重建镜像）。
+- 容器日志 `docker logs astral-frontend` 出现 `[proxy] ... 502 Bad gateway`：proxy.js 连不上后端，按上一条核对 `BACKEND_URL` 与后端容器状态。
+- 页面报"无法连接到服务器"但浏览器控制台无 Mixed Content/NET::ERR 报错？先打开控制台 Network 面板确认请求最终落点（同源化后应全部落在 `web.canace.cn/api/**`），再对照上方两条排查。
 - 出现 CORS 错误时，检查后端 `CORS_ALLOWED_ORIGINS` 配置包含前端域名（默认 `*`）。
 
 **RSA 公钥登录异常？**

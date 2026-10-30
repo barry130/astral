@@ -89,21 +89,17 @@ services:
       dockerfile: Dockerfile
       network: host
       args:
+        # 构建期 BACKEND_URL 只影响 next build 时 rewrites 的字面量占位；
+        # 真正生效的是 environment.BACKEND_URL（容器内 proxy.js 启动时读取）。
         BACKEND_URL: http://backend:27000
-        # 生产（CI 镜像）当前为「跨域直连」形态：GitHub 仓库变量 NEXT_PUBLIC_API_URL
-        # 设为 https://astral.canace.cn，浏览器直连后端域，须同步维护后端 CORS 白名单
-        # （backend 的 CORS_ALLOWED_ORIGINS 与 .env.example）。
-        # 本地构建留空则回到同源形态：浏览器走相对路径 /api，由 Next.js 服务端 rewrites
-        # 转发到 backend 容器，无跨域 / Mixed Content 问题。
-        # 切换形态需重建前端镜像（该值构建时内联进静态资源，重启容器不会变）。
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     container_name: astral-frontend
     restart: unless-stopped
     # 只绑回环，理由同 backend
     ports:
       - "127.0.0.1:3000:3000"
     environment:
-      # 后端容器地址: 供 Next.js rewrites 将 /api 转发到后端
+      # 后端地址：容器内 proxy.js 把 /api/** 转发到这里（启动时读取，改后重启即可，无需重建镜像）。
+      # 独立部署换后端：只改这个变量，不用重新 build。
       BACKEND_URL: http://backend:27000
       NODE_ENV: production
     depends_on:
