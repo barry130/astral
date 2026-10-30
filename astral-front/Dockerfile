@@ -64,8 +64,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # 复制 public (builder 阶段已保证存在, 当前为空目录)
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# 前置代理（零依赖 node:http，含 WebSocket/SSE 升级透传）
-COPY --from=builder --chown=nextjs:nodejs /app/proxy.js ./proxy.js
+# 前置代理（零依赖 node:http，含 WebSocket/SSE 升级透传）。
+# 必须放在 bin/ 下：项目根的 proxy.js 是 Next 16 的保留文件名
+# （middleware 的继任者，构建会被 Turbopack 当作 proxy 入口打包并报
+# 「Proxy is missing expected function export name」），见 95eb32f 之后的 CNB 构建失败。
+COPY --from=builder --chown=nextjs:nodejs /app/bin/proxy.js ./proxy.js
 
 USER nextjs
 EXPOSE 3000
