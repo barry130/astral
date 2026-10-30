@@ -51,6 +51,9 @@ export default function SequencePage() {
   const [result, setResult] = useState<SequenceResponse | null>(null);
   /** 序列生成历史记录 */
   const [history, setHistory] = useState<SequenceHistory[]>([]);
+  /** 历史记录分页状态（本地会话数据，UI 对齐全站分页规范） */
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(5);
   /** 业务键下拉选项（从配置中提取） */
   const [bizKeys, setBizKeys] = useState<string[]>([]);
   /** 序列配置列表 */
@@ -136,6 +139,7 @@ export default function SequencePage() {
       .then((res) => {
         if (res.code === 200) {
           setHistory(res.data || []);
+          setHistoryPage(1);
         }
       })
       .catch(() => message.error('历史记录加载失败'));
@@ -267,6 +271,7 @@ export default function SequencePage() {
       .then((res) => {
         if (res.code === 200) {
           setHistory(res.data || []);
+          setHistoryPage(1);
         }
       })
       .catch(() => message.error('历史记录加载失败'));
@@ -584,7 +589,19 @@ export default function SequencePage() {
                     columns={historyColumns}
                     rowKey="id"
                     size="small"
-                    pagination={{ pageSize: 5 }}
+                    pagination={{
+                      current: historyPage,
+                      pageSize: historyPageSize,
+                      total: history.length,
+                      showSizeChanger: true,
+                      showQuickJumper: true,
+                      pageSizeOptions: ['5', '10', '20', '50'],
+                      showTotal: (t) => `共 ${t} 条`,
+                      onChange: (p, ps) => {
+                        setHistoryPage(p);
+                        setHistoryPageSize(ps);
+                      },
+                    }}
                     locale={{ emptyText: '暂无历史记录' }}
                     scroll={{ x: 'max-content' }}
                   />

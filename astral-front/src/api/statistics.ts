@@ -192,6 +192,16 @@ export const statApi = {
       params: { date, source, ut, version },
     }),
 
+  /** 错误分组汇总分页（同 summary 过滤条件，服务端分页） */
+  getErrorSummaryPage: (params: {
+    pageNum?: number;
+    pageSize?: number;
+    date?: string;
+    source?: string;
+    ut?: string;
+    version?: string;
+  }) => request.get<PageResult<ErrorSummaryItem>>('/api/v1/admin/stat/error/summary/page', { params }),
+
   /**
    * 某平台下出现过的版本列表（版本下拉数据源）
    * <p>ut 为 all / 空时后端返回空数组 —— 全部平台下版本只能为空。</p>

@@ -439,15 +439,19 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
         </Col>
       </Row>
 
-      <ResizableTable<ApiTopItem>
-        rowKey={(r) => `${r.apiMethod}-${r.apiPath}`}
-        columns={columns}
-        dataSource={topData}
-        pagination={false}
-        size="small"
-        style={{ marginBottom: 16 }}
-        scroll={{ x: 'max-content' }}
-      />
+      <div style={{ marginBottom: 16 }}>
+        <ResizableTable<ApiTopItem>
+          rowKey={(r) => `${r.apiMethod}-${r.apiPath}`}
+          columns={columns}
+          dataSource={topData}
+          pagination={false}
+          size="small"
+          scroll={{ x: 'max-content' }}
+        />
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          Top {limit} 接口（数据量由「条数」下拉控制），当日全部接口共 {fmt(totalCalls)} 次调用
+        </Text>
+      </div>
 
       <Row gutter={12}>
         <Col xs={{ span: 24 }} lg={{ span: 14 }}>
@@ -488,38 +492,49 @@ function ErrorTab({
   /** 错误来源筛选：''=全部 / client=客户端上报 / server=服务端自身异常 */
   const [source, setSource] = useState<string>('');
   const [summary, setSummary] = useState<ErrorSummaryItem[]>([]);
+  const [summaryTotal, setSummaryTotal] = useState(0);
+  const [summaryPage, setSummaryPage] = useState(1);
+  const [summaryPageSize, setSummaryPageSize] = useState(10);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentFingerprint, setCurrentFingerprint] = useState<string>();
 
   /** isAlive 同 DeviceTab：被更新的请求取代后丢弃慢响应，避免旧数据覆盖新数据 */
   const fetchSummary = useCallback(
-    async (isAlive: () => boolean = () => true) => {
+    async (page = summaryPage, pageSize = summaryPageSize, isAlive: () => boolean = () => true) => {
       setLoading(true);
       try {
-        const res = await statApi.getErrorSummary(
-          date.format('YYYY-MM-DD'),
-          source,
+        const res = await statApi.getErrorSummaryPage({
+          pageNum: page,
+          pageSize,
+          date: date.format('YYYY-MM-DD'),
+          source: source || undefined,
           ut,
-          version || undefined,
-        );
+          version: version || undefined,
+        });
         if (!isAlive()) return;
-        setSummary(res.data || []);
+        setSummary(res.data?.records || []);
+        setSummaryTotal(res.data?.total || 0);
       } catch {
         if (isAlive()) toast.error('错误统计数据加载失败');
       } finally {
         if (isAlive()) setLoading(false);
       }
     },
-    [date, source, ut, version],
+    [date, source, ut, version, summaryPage, summaryPageSize],
   );
 
   useEffect(() => {
     let alive = true;
-    void fetchSummary(() => alive);
+    void fetchSummary();
     return () => {
       alive = false;
     };
   }, [fetchSummary]);
+
+  /** 筛选变化时回第一页：date/source/ut/version 任一变化都重置分页（fetchSummary 依赖含分页，无需重复请求） */
+  useEffect(() => {
+    setSummaryPage(1);
+  }, [date, source, ut, version]);
 
   const openDetail = (fingerprint: string) => {
     setCurrentFingerprint(fingerprint);
@@ -577,7 +592,7 @@ function ErrorTab({
         versionOptions={versionOptions}
         versionLoading={versionLoading}
         onRefresh={() => {
-          void fetchSummary();
+          void fetchSummary(summaryPage, summaryPageSize);
         }}
         extra={
           <Select
@@ -595,7 +610,20 @@ function ErrorTab({
         rowKey="fingerprint"
         columns={columns}
         dataSource={summary}
-        pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 组` }}
+        pagination={{
+          current: summaryPage,
+          pageSize: summaryPageSize,
+          total: summaryTotal,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          pageSizeOptions: ['5', '10', '20', '50', '100'],
+          showTotal: (t) => `共 ${t} 组`,
+          onChange: (p, ps) => {
+            setSummaryPage(p);
+            setSummaryPageSize(ps);
+            void fetchSummary(p, ps);
+          },
+        }}
         size="small"
         scroll={{ x: 'max-content' }}
       />
@@ -638,7 +666,7 @@ function ErrorDetailDrawer({
   const [records, setRecords] = useState<StatErrorLogItem[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNum, setPageNum] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   /** isAlive：翻页/换组时丢弃被取代的慢响应，避免明细停在上一次请求的结果上 */
   const fetchDetail = useCallback(
@@ -664,7 +692,7 @@ function ErrorDetailDrawer({
         if (isAlive()) setLoading(false);
       }
     },
-    [fingerprint, open, pageNum, source, ut, version],
+    [fingerprint, open, pageNum, pageSize, source, ut, version],
   );
 
   useEffect(() => {
@@ -675,10 +703,10 @@ function ErrorDetailDrawer({
     };
   }, [fetchDetail]);
 
-  // 切换 fingerprint 时回到第一页，否则会停在上一组的页码上
+  // 切换 fingerprint 或每页条数时回到第一页，否则会停在上一组的页码上
   useEffect(() => {
     setPageNum(1);
-  }, [fingerprint]);
+  }, [fingerprint, pageSize]);
 
   const columns = [
     {
@@ -765,8 +793,13 @@ function ErrorDetailDrawer({
           current: pageNum,
           pageSize,
           total,
-          showSizeChanger: false,
-          onChange: (p) => setPageNum(p),
+          showSizeChanger: true,
+          showQuickJumper: true,
+          pageSizeOptions: ['5', '10', '20', '50', '100'],
+          onChange: (p, ps) => {
+            setPageNum(p);
+            setPageSize(ps);
+          },
           showTotal: (t) => `共 ${t} 条`,
         }}
       />

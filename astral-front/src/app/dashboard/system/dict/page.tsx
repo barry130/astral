@@ -415,13 +415,14 @@ export default function DictPage() {
     },
   ];
 
-  /** 展开行渲染：显示该类型下的字典数据 */
+  /** 展开行渲染：显示该类型下的字典数据（预览前 100 条，完整列表在右侧数据表） */
   const expandedRowRender = (record: DictType) => {
     const data = expandedRowData[record.id] || [];
     return (
-      <ResizableTable
-        dataSource={data}
-        columns={[
+      <div>
+        <ResizableTable
+          dataSource={data}
+          columns={[
           { title: '字典标签', dataIndex: 'dictLabel', key: 'dictLabel' },
           { title: '字典值', dataIndex: 'dictValue', key: 'dictValue' },
           { title: '排序', dataIndex: 'dictSort', key: 'dictSort' },
@@ -447,7 +448,11 @@ export default function DictPage() {
         pagination={false}
         size="small"
         locale={{ emptyText: '暂无字典数据' }}
-      />
+        />
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #999)', marginTop: 4 }}>
+          仅预览前 100 条，查看全部请选中左侧类型后在右侧「字典数据」表翻页
+        </div>
+      </div>
     );
   };
 

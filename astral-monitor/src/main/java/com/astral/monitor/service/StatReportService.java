@@ -350,6 +350,27 @@ public class StatReportService {
     }
 
     /**
+     * 错误分组汇总分页（按 fingerprint，页面直接可用）
+     * <p>
+     * 复用 {@link #getErrorSummary} 的全量缓存：Redis 缓存的是当日全部分组，
+     * 这里只做内存切片，避免为每个页码重跑带相关子查询的 GROUP BY，
+     * 也无需在 SQL 里重复一遍 sampleMessage/topAppVersion 的过滤条件。
+     * 全量列表本身按 count 降序，切片即第 pageNum 页。
+     * </p>
+     */
+    public Page<ErrorSummaryDTO> getErrorSummaryPage(LocalDate date, String source, String ut, String version,
+                                                     long pageNum, long pageSize) {
+        List<ErrorSummaryDTO> all = getErrorSummary(date, source, ut, version);
+        long safePage = Math.max(pageNum, 1);
+        long safeSize = Math.max(pageSize, 1);
+        int from = (int) Math.min((safePage - 1) * safeSize, all.size());
+        int to = (int) Math.min(from + safeSize, all.size());
+        Page<ErrorSummaryDTO> page = new Page<>(safePage, safeSize, all.size());
+        page.setRecords(new ArrayList<>(all.subList(from, to)));
+        return page;
+    }
+
+    /**
      * 某平台下出现过的客户端版本列表（版本下拉数据源）
      * <p>
      * 「全部平台」时返回空列表 —— 版本必须依附于具体平台，

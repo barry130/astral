@@ -138,6 +138,24 @@ public class StatReportController {
     }
 
     /**
+     * 错误分组汇总分页（按 fingerprint）
+     */
+    @Operation(summary = "错误分组汇总分页")
+    @RequiresPermission("admin:statistics:view")
+    @GetMapping("/error/summary/page")
+    public Result<Page<ErrorSummaryDTO>> errorSummaryPage(
+            @RequestParam(defaultValue = "1") long pageNum,
+            @RequestParam(defaultValue = "10") long pageSize,
+            @RequestParam(required = false) LocalDate date,
+            @RequestParam(required = false) String source,
+            @RequestParam(defaultValue = "all") String ut,
+            @RequestParam(required = false) String version) {
+        LocalDate d = date != null ? date : LocalDate.now();
+        return Result.success(statReportService.getErrorSummaryPage(
+                d, source, ut, version, PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize)));
+    }
+
+    /**
      * 平台下可选版本列表（版本下拉数据源）
      * <p>ut 为 all / 空时返回空列表：全部平台下版本只能为空。</p>
      */
