@@ -3,6 +3,7 @@ package com.astral.system.notify;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -119,8 +120,9 @@ public class MessageTemplateService {
         String name = require(dto.getTemplateName(), "MAIL016");
         List<String> channels = normalizeChannels(dto.getChannels(), event);
         boolean renderChannel = channels.stream().anyMatch(RENDER_CHANNELS::contains);
+        String variables = null;
         if (renderChannel) {
-            requireVariables(dto.getVariables(), event);
+            variables = normalizeVariables(dto.getVariables(), dto.getSubject(), dto.getContent(), event);
         }
         checkCodeAvailable(code, scene, channels);
 
@@ -162,7 +164,7 @@ public class MessageTemplateService {
                 row.setChannel(channel);
                 row.setSubject(dto.getSubject());
                 row.setContent(dto.getContent());
-                row.setVariables(dto.getVariables());
+                row.setVariables(variables);
                 row.setRemark(dto.getRemark());
                 if (row.getId() == null) {
                     mailTemplateService.save(row);
@@ -254,6 +256,28 @@ public class MessageTemplateService {
         if (!missing.isEmpty()) {
             throw new BusinessException("MAIL010", String.join(", ", missing));
         }
+    }
+
+    /**
+     * 校验并归一化模板变量。
+     *
+     * <p>规则是「**模板里用到的变量**必须是事件 payload 字段的子集」，而不是「必须覆盖事件的
+     * 全部字段」：主题/正文没用到 {@code ${email}} 的模板不该因为事件 payload 里有 email
+     * 就存不进去（收件人地址由发送侧从 payload 取，正文通常只用验证码）。</p>
+     *
+     * <p>返回归一化后的声明串（JSON 数组，与 {@code sys_mail_template.variables} 历史格式一致）：
+     * 显式声明 ∪ 正文/主题中实际出现的变量，供后台展示与试发默认值使用。</p>
+     */
+    private String normalizeVariables(String declaredRaw, String subject, String content, NotifyEventDef event) {
+        LinkedHashSet<String> used = new LinkedHashSet<>(NotifyEventRegistry.parseList(declaredRaw));
+        used.addAll(NotifyEventRegistry.extractVariables(subject));
+        used.addAll(NotifyEventRegistry.extractVariables(content));
+        List<String> known = event.payloadFieldNames();
+        List<String> unknown = used.stream().filter(v -> !known.contains(v)).toList();
+        if (!unknown.isEmpty()) {
+            throw new BusinessException("MAIL022", String.join(", ", unknown), String.join(", ", known));
+        }
+        return used.isEmpty() ? null : NotifyEventRegistry.toJsonArray(new ArrayList<>(used));
     }
 
     /**

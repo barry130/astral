@@ -2,9 +2,13 @@ package com.astral.system.notify;
 
 import com.astral.common.constant.NoticeConstants;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -157,6 +161,34 @@ public final class NotifyEventRegistry {
                     .filter(s -> !s.isEmpty())
                     .toList();
         }
+    }
+
+    /** 模板变量占位符：${varName} */
+    private static final Pattern VARIABLE_PATTERN = Pattern.compile("\\$\\{([A-Za-z0-9_.\\-]+)}");
+
+    /** 提取文本中 {@code ${var}} 形式的变量名（保序去重），模板变量校验的共同入口。 */
+    public static List<String> extractVariables(String text) {
+        if (text == null || text.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<String> found = new LinkedHashSet<>();
+        Matcher matcher = VARIABLE_PATTERN.matcher(text);
+        while (matcher.find()) {
+            found.add(matcher.group(1));
+        }
+        return new ArrayList<>(found);
+    }
+
+    /** 变量名序列化为 JSON 数组串，保持 {@code sys_mail_template.variables} 的历史存储格式。 */
+    public static String toJsonArray(List<String> values) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append('"').append(values.get(i)).append('"');
+        }
+        return sb.append(']').toString();
     }
 
     /** 反馈双方的回复通知跨平台可见，平台定向统一为 all。 */

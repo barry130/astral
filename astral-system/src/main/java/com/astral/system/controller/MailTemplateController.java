@@ -1,5 +1,7 @@
 package com.astral.system.controller;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -133,8 +135,11 @@ public class MailTemplateController {
             throw new BusinessException("MAIL019", entity.getChannel());
         }
         if (codePresent) {
+            // 唯一性按 (编码, 渠道) 判断：合并模板把同一编码拆成 EMAIL/INAPP 两行，
+            // 只按编码判重会把「另一渠道的兄弟行」误判成重复（id 非空时已按 id 排除自身）。
             Long dup = templateService.lambdaQuery()
                     .eq(SysMailTemplate::getTemplateCode, entity.getTemplateCode())
+                    .eq(channelPresent, SysMailTemplate::getChannel, entity.getChannel())
                     .ne(id != null, SysMailTemplate::getId, id)
                     .count();
             if (dup != null && dup > 0) {
@@ -155,14 +160,28 @@ public class MailTemplateController {
             if (bound != null && bound > 0) {
                 throw new BusinessException("MAIL013", entity.getScene());
             }
-            List<String> declared = NotifyEventRegistry.parseList(entity.getVariables());
-            List<String> missing = event.payloadFieldNames().stream()
-                    .filter(v -> !declared.contains(v))
-                    .toList();
-            if (!missing.isEmpty()) {
-                throw new BusinessException("MAIL010", String.join(", ", missing));
-            }
+            // 变量校验：模板里用到的变量必须是事件 payload 字段的子集（不要求覆盖全部字段，
+            // 正文没用到 ${email} 的模板同样允许保存），校验后回写归一化结果。
+            entity.setVariables(normalizeVariables(entity.getVariables(), entity.getSubject(),
+                    entity.getContent(), event));
         }
+    }
+
+    /**
+     * 校验并归一化模板变量：显式声明 ∪ 正文/主题中出现的变量，且必须是事件 payload 字段的子集。
+     *
+     * @return 归一化后的变量声明串（JSON 数组，无人使用时返回 null）
+     */
+    private String normalizeVariables(String declaredRaw, String subject, String content, NotifyEventDef event) {
+        LinkedHashSet<String> used = new LinkedHashSet<>(NotifyEventRegistry.parseList(declaredRaw));
+        used.addAll(NotifyEventRegistry.extractVariables(subject));
+        used.addAll(NotifyEventRegistry.extractVariables(content));
+        List<String> known = event.payloadFieldNames();
+        List<String> unknown = used.stream().filter(v -> !known.contains(v)).toList();
+        if (!unknown.isEmpty()) {
+            throw new BusinessException("MAIL022", String.join(", ", unknown), String.join(", ", known));
+        }
+        return used.isEmpty() ? null : NotifyEventRegistry.toJsonArray(new ArrayList<>(used));
     }
 
     private String render(String template, Map<String, String> vars) {

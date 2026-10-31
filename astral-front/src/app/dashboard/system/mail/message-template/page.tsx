@@ -133,6 +133,16 @@ export default function MessageTemplatePage() {
     }
   };
 
+  /** 提取文本中的 ${变量}（与后端 NotifyEventRegistry.extractVariables 同规则） */
+  const extractVars = (text?: string): string[] =>
+    text ? Array.from(text.matchAll(/\$\{([A-Za-z0-9_.-]+)\}/g), (m) => m[1]) : [];
+
+  /** 变量声明 = 显式声明 ∪ 正文/主题中实际用到的，保序去重后回写为 JSON 数组 */
+  const mergeUsedVars = (declaredRaw: string | undefined, texts: string[]): string =>
+    JSON.stringify(
+      Array.from(new Set([...parseDeclaredVars(declaredRaw), ...texts.flatMap(extractVars)])),
+    );
+
   /** 选事件：变量自动补全为 payload 字段，渠道收窄到事件声明的渠道 */
   const handleScenePicked = (code: string) => {
     setSelectedScene(code);
@@ -181,8 +191,16 @@ export default function MessageTemplatePage() {
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
+    // 变量声明与正文保持一致：后端按「用到的变量」校验并归一化，这里同步回显，避免表单里
+    // 留着过期的声明（编辑老模板时最容易踩：声明缺字段被误判为"必须覆盖全部字段"）。
+    const merged = mergeUsedVars(
+      values.variables as string | undefined,
+      [values.subject, values.content].filter(Boolean) as string[],
+    );
+    form.setFieldsValue({ variables: merged });
     const payload = {
       ...values,
+      variables: merged,
       channels: values.channels || channels,
       originalCode:
         editing && editing.templateCode !== values.templateCode ? editing.templateCode : undefined,
@@ -440,7 +458,7 @@ export default function MessageTemplatePage() {
               <Form.Item
                 name="variables"
                 label="变量声明（JSON 数组）"
-                tooltip="必须覆盖事件 payload 的全部字段"
+                tooltip="保存时自动合并正文/主题中用到的 ${变量}；用到的变量必须在事件声明的可用变量内"
               >
                 <Input placeholder='["featureTitle","statusName"]' />
               </Form.Item>
