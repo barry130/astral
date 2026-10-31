@@ -47,7 +47,7 @@ export default function CmsLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="space-y-4">
-      <nav className="border-border flex flex-wrap items-center gap-1 border-b pb-3">
+      <nav className="flex flex-wrap items-center gap-1.5">
         {NAV_ITEMS.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
@@ -55,10 +55,10 @@ export default function CmsLayout({ children }: { children: React.ReactNode }) {
               key={item.href}
               href={item.href}
               className={cn(
-                'rounded-md px-3 py-1.5 text-sm transition-colors',
+                'rounded-full px-3.5 py-1.5 text-[13px] transition-colors',
                 active
-                  ? 'bg-secondary text-secondary-foreground font-medium'
-                  : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                  ? 'font-semibold text-[var(--color-brand-text)] shadow-[0_1px_2px_rgba(16,32,26,0.1)] ring-1 ring-[color:var(--color-border-light)] bg-card'
+                  : 'text-[color:var(--color-text-tertiary)] hover:bg-card/80 hover:text-[color:var(--color-text)]',
               )}
             >
               {item.label}
@@ -69,7 +69,7 @@ export default function CmsLayout({ children }: { children: React.ReactNode }) {
           href={blogUrl}
           target="_blank"
           rel="noreferrer"
-          className="text-muted-foreground hover:bg-secondary/60 hover:text-foreground ml-auto flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm transition-colors"
+          className="ml-auto flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] text-[color:var(--color-text-tertiary)] transition-colors hover:bg-card hover:text-[color:var(--color-brand-text)]"
           title={blogUrl}
         >
           <ExternalLink className="size-3.5" />
