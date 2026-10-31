@@ -30,6 +30,7 @@ import { usePerm } from '@/lib/perm';
 import { PermissionSideTag } from '@/lib/permission-side';
 import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, DictOption } from '@/api/dict';
+import { PageHeader } from '@/components/page-header';
 
 const { Option } = Select;
 
@@ -336,7 +337,11 @@ export default function RolePage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
+      <PageHeader
+        title="角色权限"
+        description="角色及其权限点、数据范围的分配"
+      />
       <Card>
         <div
           className="filter-bar"

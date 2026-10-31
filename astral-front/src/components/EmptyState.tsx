@@ -50,7 +50,13 @@ export function EmptyState({
           {icon}
         </div>
       ) : (
-        <InboxIcon className="text-muted-foreground/60 mb-3 size-8" strokeWidth={1.5} aria-hidden />
+        <div className="bg-[var(--color-brand-soft)] mb-3 flex size-12 items-center justify-center rounded-full">
+          <InboxIcon
+            className="text-[color:var(--color-brand-text)]/70 size-6"
+            strokeWidth={1.5}
+            aria-hidden
+          />
+        </div>
       )}
 
       <div className="max-w-[420px] text-center">

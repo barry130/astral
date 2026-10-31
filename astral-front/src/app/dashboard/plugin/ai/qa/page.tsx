@@ -14,10 +14,11 @@
 import React from 'react';
 
 import { Alert, Space, Tag } from '@/components/antd-compat';
-import { DownloadOutlined, FileTextOutlined } from '@/components/antd-compat/icons';
+import { DownloadOutlined } from '@/components/antd-compat/icons';
 
 import ChatPanel from '@/components/ai/ChatPanel';
 import { usePerm } from '@/lib/perm';
+import { PageHeader } from '@/components/page-header';
 
 /** 与后端 `AiPlugin.SeedAgents.QA` 一致 */
 const AGENT_CODE = 'admin_qa';
@@ -37,25 +38,22 @@ export default function AdminQaPage() {
   const canExport = hasPerm('admin:ai:qa:export');
 
   return (
-    <div>
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <FileTextOutlined style={{ fontSize: 18, opacity: 0.75 }} />
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>答疑</h2>
-          <Tag color="default">基于文档</Tag>
-          {canExport && (
+    <div className="space-y-4">
+      <PageHeader
+        title="答疑"
+        eyebrow="基于文档"
+        description="回答项目文档、接口契约、插件与部署相关的问题。每条结论都会附带文档出处，点引用可以直接看原文。"
+        actions={
+          canExport ? (
             <Tag color="default">
               <Space size={4}>
                 <DownloadOutlined style={{ fontSize: 11 }} />
                 可导出
               </Space>
             </Tag>
-          )}
-        </div>
-        <p style={{ color: 'var(--muted-foreground, #909399)', margin: '6px 0 0', fontSize: 13 }}>
-          回答项目文档、接口契约、插件与部署相关的问题。每条结论都会附带文档出处，点引用可以直接看原文。
-        </p>
-      </div>
+          ) : undefined
+        }
+      />
 
       {allowed ? (
         <ChatPanel

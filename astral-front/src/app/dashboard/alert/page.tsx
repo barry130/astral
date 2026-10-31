@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/table';
 
 import { confirmDialog } from '../confirm';
+import { PageHeader } from '@/components/page-header';
 
 /**
  * 告警管理：通知渠道（EMAIL/WEBHOOK）/ 告警规则 / 触发记录
@@ -251,6 +252,10 @@ export default function AlertPage() {
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="告警管理"
+        description="告警渠道、告警规则与触发记录的集中管理"
+      />
       <Tabs defaultValue="channels">
         <TabsList>
           <TabsTrigger value="channels" className="gap-1.5">

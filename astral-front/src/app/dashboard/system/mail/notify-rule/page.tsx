@@ -640,7 +640,7 @@ export default function NotifyRulePage() {
     publishDef?.payloadFields?.map((f) => f.name) || publishDef?.payloadKeys || [];
 
   return (
-    <div>
+    <div className="space-y-4">
       <Card>
         <div
           style={{

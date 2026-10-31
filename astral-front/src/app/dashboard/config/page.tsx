@@ -26,6 +26,7 @@ import {
 import { sequenceConfigApi, SequenceConfig } from '@/api/sequenceConfig';
 import { sequenceApi, SequenceType } from '@/api/sequence';
 import { ResizableTable } from '@/components/ResizableTable';
+import { PageHeader } from '@/components/page-header';
 
 /**
  * 序列配置管理页面组件
@@ -178,13 +179,8 @@ export default function ConfigPage() {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <h2 className="page-title" style={{ marginBottom: 8 }}>
-          配置管理
-        </h2>
-        <p style={{ color: '#909399', margin: 0 }}>管理序列生成器配置信息</p>
-      </div>
+    <div className="space-y-4">
+      <PageHeader title="配置管理" description="管理序列生成器的配置信息" />
 
       <Card className="fade-in-up">
         <div

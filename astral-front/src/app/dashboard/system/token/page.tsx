@@ -8,6 +8,7 @@ import { request } from '@/api/client';
 import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { PageHeader } from '@/components/page-header';
 
 /** Token会话实体接口 */
 interface Token {
@@ -255,7 +256,11 @@ export default function TokenPage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
+      <PageHeader
+        title="Token 管理"
+        description="在线会话与访问令牌的查看与吊销"
+      />
       <Card>
         <div
           className="filter-bar"

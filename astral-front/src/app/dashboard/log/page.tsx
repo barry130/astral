@@ -13,6 +13,7 @@ import { logApi, OperateLog, LoginLog } from '@/api/log';
 import { clientHeaders } from '@/lib/client-info';
 import { readCsrfToken } from '@/api/client';
 import { downloadResponse } from '@/lib/http-download';
+import { PageHeader } from '@/components/page-header';
 
 /**
  * CSV 导出（fetch 直连）：
@@ -213,13 +214,8 @@ export default function LogPage() {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <h2 className="page-title" style={{ marginBottom: 8 }}>
-          日志管理
-        </h2>
-        <p style={{ color: '#909399', margin: 0 }}>查看系统操作日志与登录日志</p>
-      </div>
+    <div className="space-y-4">
+      <PageHeader title="日志管理" description="查看系统操作日志与登录日志" />
 
       <Card className="fade-in-up">
         <Tabs

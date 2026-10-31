@@ -15,6 +15,7 @@ import MessageTemplatePage from './message-template/page';
 import SmsProviderPage from './sms-provider/page';
 import NoticeManagement from '@/components/admin/NoticeManagement';
 import NotifyRulePage from './notify-rule/page';
+import { PageHeader } from '@/components/page-header';
 
 /** 页签 key 白名单（同时作为 ?tab= 深链的合法取值；template/smsTemplate 为合并前的旧深链别名） */
 const TAB_KEYS = [
@@ -53,10 +54,16 @@ function MailCenter() {
 
   return (
     <div style={{ background: 'var(--color-bg-base)', minHeight: '100%' }}>
+      <div style={{ padding: '24px 24px 0' }}>
+        <PageHeader
+          title="消息中心"
+          description="邮箱、短信与站内信的发送通道、模板与订阅规则配置"
+        />
+      </div>
       <div
         style={{
           background: 'var(--color-bg-base)',
-          padding: '24px 24px 0',
+          padding: '0 24px',
           position: 'sticky',
           top: 56,
           zIndex: 100,

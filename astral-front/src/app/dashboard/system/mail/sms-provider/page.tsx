@@ -185,7 +185,7 @@ export default function SmsProviderPage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
       <Card>
         <div
           style={{

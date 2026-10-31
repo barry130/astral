@@ -45,6 +45,7 @@ import { fetchDictOptions } from '@/api/dict';
 import { usePerm, QT_PERMISSIONS } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import SourceReleasesTab from './SourceReleasesTab';
+import { PageHeader } from '@/components/page-header';
 
 const { Paragraph } = Typography;
 
@@ -516,32 +517,19 @@ export default function QtAdminPage() {
   );
 
   return (
-    <div>
-      <div
-        className="filter-bar"
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>轻听 API 管理</h2>
-          <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-            面向 qt-uniappx 的音乐 App 后端：签到/收藏/版本更新（astral-plugin 内置 Qt
-            插件；公告统一走 feedback 插件）
-          </Paragraph>
-        </div>
-        <div className="page-toolbar">
+    <div className="space-y-4">
+      <PageHeader
+        title="轻听 API 管理"
+        description="面向 qt-uniappx 的音乐 App 后端：签到、收藏与版本更新（astral-plugin 内置 Qt 插件；公告统一走 feedback 插件）"
+        actions={
           <Space>
             <Button icon={<ReloadOutlined spin={loading} />} onClick={refresh}>
               刷新
             </Button>
             {!canEdit && <Tag>只读</Tag>}
           </Space>
-        </div>
-      </div>
+        }
+      />
 
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>

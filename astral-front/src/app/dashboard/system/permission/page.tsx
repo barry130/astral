@@ -22,6 +22,7 @@ import { request } from '@/api/client';
 import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, DictOption } from '@/api/dict';
 import { PermissionSideTag, SIDE_META, sideOfCode } from '@/lib/permission-side';
+import { PageHeader } from '@/components/page-header';
 
 const { Option } = Select;
 
@@ -231,18 +232,18 @@ export default function PermissionPage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
+      <PageHeader title="权限管理" description="接口权限点与权限分组的维护" />
       <div
         className="filter-bar"
         style={{
           marginBottom: 16,
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           gap: 12,
           flexWrap: 'wrap',
         }}
       >
-        <h2 className="page-title">权限管理</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Input
             placeholder="搜索权限编码/名称"

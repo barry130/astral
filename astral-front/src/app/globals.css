@@ -975,8 +975,11 @@ summary {
 }
 .rt-toolbar {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  /* 与表头同宽收进卡片：右对齐、无独立底色，避免在筛选条与表头之间浮出一片空白 */
+  padding: 6px 12px 2px;
 }
 .rt-cols-panel {
   width: 220px;

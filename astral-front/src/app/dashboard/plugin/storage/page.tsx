@@ -30,6 +30,7 @@ import { fetchDictOptions, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
 import FileManager from '@/components/storage/FileManager';
 import { uploadWithStorageTicket } from '@/lib/storage-upload';
+import { PageHeader } from '@/components/page-header';
 import {
   storageApi,
   type StorageConfig,
@@ -709,25 +710,11 @@ export default function StoragePage() {
   ];
 
   return (
-    <div>
-      <div
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>文件存储</h2>
-          <p style={{ color: '#909399', margin: '4px 0 0' }}>
-            支持 Telegram（Worker 中转）、Cloudflare R2、S3 兼容存储（AWS/MinIO/七牛）、腾讯云
-            COS、阿里云 OSS、又拍云；文件由浏览器直传目标存储，Astral 只管理权限与元数据
-          </p>
-        </div>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="文件存储"
+        description="支持 Telegram（Worker 中转）、Cloudflare R2、S3 兼容存储（AWS/MinIO/七牛）、腾讯云 COS、阿里云 OSS、又拍云；文件由浏览器直传目标存储，Astral 只管理权限与元数据"
+      />
 
       <Alert
         style={{ marginBottom: 16 }}

@@ -20,6 +20,7 @@ import {
 import { pluginApi, PluginInfo } from '@/api/plugin';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { PageHeader } from '@/components/page-header';
 
 export default function PluginPage() {
   const [loading, setLoading] = useState(false);
@@ -116,27 +117,16 @@ export default function PluginPage() {
   ];
 
   return (
-    <div>
-      <div
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>插件管理</h2>
-          <p style={{ color: '#909399', margin: '4px 0 0' }}>
-            管理系统插件，支持启用/禁用及后续扩展
-          </p>
-        </div>
-        <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>
-          刷新
-        </Button>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="插件管理"
+        description="管理系统插件，支持启用/禁用及后续扩展"
+        actions={
+          <Button icon={<ReloadOutlined />} onClick={loadData} loading={loading}>
+            刷新
+          </Button>
+        }
+      />
       <Card>
         {plugins.length === 0 ? (
           <Empty description="暂无插件，可在 astral-plugin 中新增业务插件" />

@@ -22,27 +22,7 @@ import { cn } from '@/lib/utils';
  */
 
 /** 页头：标题 + 一句说明，右侧放主操作 */
-export function PageHeader({
-  title,
-  description,
-  actions,
-}: {
-  title: string;
-  description?: string;
-  actions?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-      <div className="min-w-0 space-y-1.5">
-        <h1 className="text-foreground text-xl font-semibold tracking-tight">{title}</h1>
-        {description && (
-          <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">{description}</p>
-        )}
-      </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-    </div>
-  );
-}
+export { PageHeader } from '@/components/page-header';
 
 /**
  * 状态徽标：文案走数据字典，仅「值 → 外观」是纯前端语义。

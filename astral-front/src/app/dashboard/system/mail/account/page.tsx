@@ -217,7 +217,7 @@ export default function MailAccountPage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
       <Card>
         <div
           className="filter-bar"

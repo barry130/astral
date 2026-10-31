@@ -40,6 +40,7 @@ const SyntaxHighlighter = dynamic(() => import('react-syntax-highlighter').then(
 // 直接引 styles/prism 会把上百套主题全部打进包，这里只引用到的那一套
 import vscDarkPlus from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus';
 import { ResizableTable } from '@/components/ResizableTable';
+import { PageHeader } from '@/components/page-header';
 
 const { TabPane } = Tabs;
 
@@ -624,7 +625,11 @@ export default function TableSchemaPage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
+      <PageHeader
+        title="表结构管理"
+        description="自定义表结构与字段定义维护"
+      />
       <Card>
         <div
           style={{

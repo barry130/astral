@@ -13,7 +13,6 @@
 import React, { useMemo, useState } from 'react';
 
 import { Alert, Card, Tabs, Tag } from '@/components/antd-compat';
-import { SettingOutlined } from '@/components/antd-compat/icons';
 
 import { usePerm } from '@/lib/perm';
 
@@ -29,6 +28,7 @@ import RoutePanel from '@/components/ai/admin/RoutePanel';
 import ToolPanel from '@/components/ai/admin/ToolPanel';
 import UsagePanel from '@/components/ai/admin/UsagePanel';
 import { Hint } from '@/components/ai/admin/shared';
+import { PageHeader } from '@/components/page-header';
 
 export default function AiConfigPage() {
   const hasPerm = usePerm();
@@ -145,13 +145,10 @@ export default function AiConfigPage() {
 function PageHeading() {
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <SettingOutlined style={{ fontSize: 18, opacity: 0.75 }} />
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>AI 助手配置</h2>
-      </div>
-      <p style={{ color: 'var(--muted-foreground, #909399)', margin: '6px 0 0', fontSize: 13 }}>
-        提供方、模型、智能体版本、提示词、知识库与额度都在这里维护。智能体发布后才会被客户端使用，历史版本只读留档。
-      </p>
+      <PageHeader
+        title="AI 助手配置"
+        description="提供方、模型、智能体版本、提示词、知识库与额度都在这里维护。智能体发布后才会被客户端使用，历史版本只读留档。"
+      />
       <div style={{ marginTop: 12 }}>
         <Hint>
           改完智能体配置记得「校验 → 发布」：只有 PUBLISHED 版本会生效，草稿改动不会影响线上。

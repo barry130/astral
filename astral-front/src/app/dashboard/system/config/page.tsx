@@ -19,6 +19,7 @@ import { request } from '@/api/client';
 import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { PageHeader } from '@/components/page-header';
 
 /** 系统配置实体接口 */
 interface SysConfig {
@@ -217,7 +218,11 @@ export default function ConfigPage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
+      <PageHeader
+        title="系统配置"
+        description="系统级参数项与取值的维护"
+      />
       <Card>
         <div
           className="filter-bar"

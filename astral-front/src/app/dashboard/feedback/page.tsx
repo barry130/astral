@@ -52,6 +52,7 @@ import {
 } from '@/api/feedback';
 import { ResizableTable } from '@/components/ResizableTable';
 import { usePerm } from '@/lib/perm';
+import { PageHeader } from '@/components/page-header';
 
 const { Text, Paragraph } = Typography;
 
@@ -400,7 +401,11 @@ function FeedbackPanel() {
   );
 
   return (
-    <div>
+    <div className="space-y-4">
+      <PageHeader
+        title="反馈管理"
+        description="收集并处理用户提交的问题、建议与需求，支持回复与状态流转"
+      />
       {/* 统计卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 12 }}>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}>

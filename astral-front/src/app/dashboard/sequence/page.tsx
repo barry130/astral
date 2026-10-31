@@ -35,6 +35,7 @@ import { sequenceApi, SequenceType, SequenceResponse, SequenceHistory } from '@/
 import { sequenceConfigApi, SequenceConfig } from '@/api/sequenceConfig';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { PageHeader } from '@/components/page-header';
 
 /**
  * 序列管理页面组件
@@ -415,6 +416,7 @@ export default function SequencePage() {
 
   return (
     <div style={{ background: 'var(--color-bg-base)', minHeight: '100%' }}>
+      <PageHeader title="序列管理" description="序列号规则配置与号段生成" />
       <div
         style={{
           background: 'var(--color-bg-white)',

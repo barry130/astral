@@ -10,11 +10,11 @@
 
 import React from 'react';
 
-import { Alert, Tag } from '@/components/antd-compat';
-import { ToolOutlined } from '@/components/antd-compat/icons';
+import { Alert } from '@/components/antd-compat';
 
 import ChatPanel from '@/components/ai/ChatPanel';
 import { usePerm } from '@/lib/perm';
+import { PageHeader } from '@/components/page-header';
 
 /** 智能体编码（与后端 `AiPlugin.SeedAgents.ADMIN` 一致，可在后台改名但不能改编码） */
 const AGENT_CODE = 'admin_assistant';
@@ -32,17 +32,12 @@ export default function AdminAssistantPage() {
   const allowed = hasPerm('admin:ai:assistant:use');
 
   return (
-    <div>
-      <div style={{ marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ToolOutlined style={{ fontSize: 18, opacity: 0.75 }} />
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>管理助手</h2>
-          <Tag color="default">只读为主</Tag>
-        </div>
-        <p style={{ color: 'var(--muted-foreground, #909399)', margin: '6px 0 0', fontSize: 13 }}>
-          用自然语言查询系统状态、用户与插件情况，起草公告和邮件。涉及写操作时会先给出确认卡片，不会直接执行。
-        </p>
-      </div>
+    <div className="space-y-4">
+      <PageHeader
+        title="管理助手"
+        eyebrow="只读为主"
+        description="用自然语言查询系统状态、用户与插件情况，起草公告和邮件。涉及写操作时会先给出确认卡片，不会直接执行。"
+      />
 
       {allowed ? (
         <ChatPanel

@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/page-header';
 import {
   Table,
   TableBody,
@@ -192,6 +193,7 @@ function ProfileContent() {
 
   return (
     <div className="space-y-4">
+      <PageHeader title="个人中心" description="个人资料、密码与登录设备的管理" />
       {forceChange && (
         <Card className="border-destructive">
           <CardContent className="text-destructive flex items-center gap-3 py-4 text-sm">

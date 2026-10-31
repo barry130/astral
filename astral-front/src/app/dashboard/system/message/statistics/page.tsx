@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
 import {
   Select,
   SelectContent,
@@ -209,6 +210,10 @@ export default function MessageStatisticsPage() {
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="消息统计"
+        description="消息投递量、成功率与场景分布的综合统计"
+      />
       {/* ---------------- 概览卡 ---------------- */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         <StatCard title="投递总数" value={fmt(overview.total)} />

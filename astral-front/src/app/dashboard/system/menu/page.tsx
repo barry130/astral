@@ -27,6 +27,7 @@ import { getNavExtensions, NavExtension } from '@/api/plugin';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, DictOption } from '@/api/dict';
+import { PageHeader } from '@/components/page-header';
 
 /**
  * 菜单类型字典编码（文案来自数据字典 menu_type，禁止前端硬编码）。
@@ -350,7 +351,11 @@ export default function MenuPage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
+      <PageHeader
+        title="菜单管理"
+        description="后台菜单结构、图标与权限标识维护"
+      />
       <Card
         title={
           <>

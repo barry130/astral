@@ -37,17 +37,23 @@ import {
 import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { StatFilterBar, useVersionOptions, UT_ALL, type Option } from './StatFilterBar';
+import { PageHeader } from '@/components/page-header';
 
 const { Text } = Typography;
 
 /** 千分位 */
 const fmt = (n?: number | null) => (n ?? 0).toLocaleString('zh-CN');
-/** 毫秒时长 → 人读格式 */
+/** 毫秒时长 → 人读格式（超过 1 小时后继续进位到小时/天，避免出现「4548552m18s」这种读不出来的值） */
 const fmtDuration = (ms?: number | null) => {
-  const v = ms ?? 0;
+  const v = Math.max(0, Math.round(ms ?? 0));
   if (v < 1000) return `${v}ms`;
-  if (v < 60000) return `${(v / 1000).toFixed(1)}s`;
-  return `${Math.floor(v / 60000)}m${Math.round((v % 60000) / 1000)}s`;
+  const totalSec = v / 1000;
+  if (totalSec < 60) return `${totalSec.toFixed(1)}s`;
+  const totalMin = Math.floor(totalSec / 60);
+  if (totalMin < 60) return `${totalMin}m${Math.round(totalSec % 60)}s`;
+  const totalHour = Math.floor(totalMin / 60);
+  if (totalHour < 24) return `${totalHour}h${totalMin % 60}m`;
+  return `${Math.floor(totalHour / 24)}d${totalHour % 24}h`;
 };
 /** 数值对比（今日 vs 昨日） */
 const diffText = (today?: number | null, yesterday?: number | null) => {
@@ -87,7 +93,12 @@ export default function StatisticsPage() {
   }, []);
 
   return (
-    <Card>
+    <div className="space-y-4">
+      <PageHeader
+        title="数据统计"
+        description="设备、接口与错误维度的访问趋势与明细统计"
+      />
+      <Card>
       <Tabs
         defaultActiveKey="device"
         items={[
@@ -100,7 +111,8 @@ export default function StatisticsPage() {
           },
         ]}
       />
-    </Card>
+      </Card>
+    </div>
   );
 }
 
@@ -229,7 +241,7 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
 
       <Row gutter={[12, 12]}>
         {rows.map((r) => (
-          <Col key={r.key} xs={12} sm={8} md={6} xl={3}>
+          <Col key={r.key} xs={12} sm={12} md={8} xl={6}>
             <Card size="small">
               <Statistic
                 title={r.label}
@@ -237,7 +249,7 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
                   r.fmtFn ? r.fmtFn(today?.[r.field] as number) : fmt(today?.[r.field] as number)
                 }
               />
-              <div style={{ marginTop: 4 }}>
+              <div className="mt-1 truncate">
                 <Text type="secondary" style={{ fontSize: 12 }}>
                   昨日{' '}
                   {r.fmtFn
@@ -524,11 +536,7 @@ function ErrorTab({
   );
 
   useEffect(() => {
-    let alive = true;
     void fetchSummary();
-    return () => {
-      alive = false;
-    };
   }, [fetchSummary]);
 
   /** 筛选变化时回第一页：date/source/ut/version 任一变化都重置分页（fetchSummary 依赖含分页，无需重复请求） */

@@ -23,6 +23,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { usePerm } from '@/lib/perm';
+import { PageHeader } from '@/components/page-header';
 
 /** 轮询间隔：统计口径按天聚合，秒级刷新没有意义；系统指标 30 秒足以感知异常 */
 const REFRESH_INTERVAL_MS = 30_000;
@@ -479,27 +480,24 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-overview">
-      <div className="overview-heading mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-muted-foreground mb-1.5 text-xs font-medium tracking-wide">
-            工作台 / 系统概览
-          </p>
-          <h2 className="page-title">仪表盘</h2>
-          <p className="text-muted-foreground mt-2 text-sm">
-            系统运行状态与今日业务表现，一目了然。
-          </p>
-        </div>
-        <div className="border-border bg-card text-muted-foreground flex items-center gap-2.5 rounded-full border px-3 py-1.5 text-xs">
-          <Activity aria-hidden className="text-primary size-3.5" />
-          <span>
-            {updatedAt
-              ? `${updatedAt.toLocaleTimeString('zh-CN', { hour12: false })} 更新`
-              : '等待数据更新'}
-          </span>
-          <span aria-hidden className="bg-border h-3 w-px" />
-          <span>每 30 秒刷新</span>
-        </div>
-      </div>
+      <PageHeader
+        className="mb-6"
+        eyebrow="工作台 / 系统概览"
+        title="仪表盘"
+        description="系统运行状态与今日业务表现，一目了然。"
+        actions={
+          <div className="border-border bg-card text-muted-foreground flex items-center gap-2.5 rounded-full border px-3 py-1.5 text-xs">
+            <Activity aria-hidden className="text-primary size-3.5" />
+            <span>
+              {updatedAt
+                ? `${updatedAt.toLocaleTimeString('zh-CN', { hour12: false })} 更新`
+                : '等待数据更新'}
+            </span>
+            <span aria-hidden className="bg-border h-3 w-px" />
+            <span>每 30 秒刷新</span>
+          </div>
+        }
+      />
 
       {/* 核心资源指标：4 列响应式栅格 */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

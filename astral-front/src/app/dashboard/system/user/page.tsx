@@ -32,6 +32,7 @@ import { clientHeaders } from '@/lib/client-info';
 import { downloadResponse } from '@/lib/http-download';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { PageHeader } from '@/components/page-header';
 
 /** 用户实体接口 */
 interface User {
@@ -574,7 +575,11 @@ export default function UserPage() {
     : [];
 
   return (
-    <div>
+    <div className="space-y-4">
+      <PageHeader
+        title="用户管理"
+        description="后台账号、启用状态与角色归属维护"
+      />
       <Card>
         <div
           className="filter-bar"

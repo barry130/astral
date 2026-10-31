@@ -19,6 +19,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@/components/antd-co
 import { request } from '@/api/client';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { PageHeader } from '@/components/page-header';
 
 /** Java类型与JDBC类型的映射关系，用于字典类型创建时自动匹配 */
 const typeMapping: Record<string, string[]> = {
@@ -506,7 +507,11 @@ export default function DictPage() {
   ];
 
   return (
-    <div>
+    <div className="space-y-4">
+      <PageHeader
+        title="数据字典"
+        description="枚举字典与字典数据的统一维护"
+      />
       <Tabs
         items={[
           {
