@@ -95,11 +95,11 @@ function ratioTone(rate: number, good: number, warn: number): Tone {
 
 /* ------------------------------ 通用子组件 ------------------------------ */
 
-/** 统计卡图标芯片：中性浅灰底 + 次级前景图标 */
+/** 统计卡图标芯片：薄荷浅底圆形 + 品牌色图标 */
 function StatIcon({ icon }: { icon: React.ReactNode }) {
   return (
-    <div className="border-primary/10 bg-primary/5 flex size-10 shrink-0 items-center justify-center rounded-xl border">
-      <span className="text-primary inline-flex [&_svg]:size-5">{icon}</span>
+    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-soft)]">
+      <span className="text-[var(--color-brand)] inline-flex [&_svg]:size-5">{icon}</span>
     </div>
   );
 }
@@ -218,7 +218,7 @@ function OverviewItem({
   footnote?: string;
 }) {
   return (
-    <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
+    <div className="rounded-xl bg-[var(--color-bg-tint)] p-4">
       <div className="text-muted-foreground mb-1 text-[13px]">{label}</div>
       <div className="text-foreground text-xl font-semibold tabular-nums">{value}</div>
       <div className="mt-1.5">
@@ -255,7 +255,7 @@ function DetailBlock({
   hint?: string;
 }) {
   return (
-    <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
+    <div className="rounded-xl bg-[var(--color-bg-tint)] p-4">
       <div className="text-muted-foreground mb-1 text-[13px]">{label}</div>
       <div className="text-foreground text-lg font-semibold tabular-nums">{value}</div>
       {hint && <div className="text-muted-foreground/80 text-xs">{hint}</div>}
@@ -522,7 +522,7 @@ export default function DashboardPage() {
               value={formatNumber(apiSummary?.callCount)}
               hint="全部接口合计"
             />
-            <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
+            <div className="rounded-xl bg-[var(--color-bg-tint)] p-4">
               <div className="flex items-baseline justify-between">
                 <span className="text-muted-foreground text-[13px]">调用成功率</span>
                 <span className={cn('text-lg font-semibold tabular-nums', rateTone.text)}>
@@ -607,7 +607,7 @@ export default function DashboardPage() {
               )}
             </div>
 
-            <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
+            <div className="rounded-xl bg-[var(--color-bg-tint)] p-4">
               <div className="flex items-baseline justify-between">
                 <span className="text-muted-foreground text-[13px]">连接池水位</span>
                 <span className={cn('text-lg font-semibold tabular-nums', poolTone.text)}>
@@ -676,7 +676,7 @@ export default function DashboardPage() {
               />
             </div>
 
-            <div className="rounded-lg bg-[var(--color-bg-base)] p-4">
+            <div className="rounded-xl bg-[var(--color-bg-tint)] p-4">
               <div className="flex items-baseline justify-between">
                 <span className="text-muted-foreground text-[13px]">缓存命中率</span>
                 <span className={cn('text-lg font-semibold tabular-nums', hitTone.text)}>

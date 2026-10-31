@@ -413,12 +413,13 @@ export function InputSearch({
         disabled={rest.disabled}
         onClick={() => trigger(current)}
         className={cn(
-          'border-input bg-secondary hover:bg-accent ml-[-1px] inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-r-md border px-3 text-sm disabled:opacity-50',
+          'border-input bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground ml-[-1px] inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-r-[10px] border px-3 text-sm transition-colors disabled:opacity-50',
           SIZE_H[rest.size ?? 'middle'],
         )}
       >
         {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-        {enterButton && enterButton !== true ? enterButton : null}
+        {/* enterButton 未传时不能留空按钮：渲染放大镜，否则筛选条上出现一块空白灰块 */}
+        {enterButton && enterButton !== true ? enterButton : <Search className="size-4" />}
       </button>
     </span>
   );

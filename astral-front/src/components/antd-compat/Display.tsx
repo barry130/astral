@@ -62,7 +62,7 @@ export function Tag({
   return (
     <span
       className={cn(
-        'inline-flex max-w-full items-center gap-1 rounded border px-1.5 py-0.5 text-xs leading-5',
+        'inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-xs leading-5',
         !bordered && 'border-transparent',
         preset ?? (color ? 'border-transparent' : 'border-border bg-muted text-muted-foreground'),
         className,
