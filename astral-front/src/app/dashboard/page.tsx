@@ -13,8 +13,6 @@ import {
   MemoryStick,
   Radio,
   ShieldAlert,
-  TrendingDown,
-  TrendingUp,
   Zap,
 } from 'lucide-react';
 
@@ -24,6 +22,16 @@ import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { usePerm } from '@/lib/perm';
 import { PageHeader } from '@/components/page-header';
+import {
+  STAT_TONE_BAR,
+  STAT_TONE_TEXT,
+  StatCard,
+  StatTile,
+  ratioTone,
+  usageTone,
+} from '@/components/stat-card';
+import { TrendBadge } from '@/components/trend-badge';
+import { InfoRow } from '@/components/info-list';
 
 /** 轮询间隔：统计口径按天聚合，秒级刷新没有意义；系统指标 30 秒足以感知异常 */
 const REFRESH_INTERVAL_MS = 30_000;
@@ -63,212 +71,11 @@ function formatMs(ms?: number | null): string {
   return ms === null || ms === undefined ? '—' : `${ms} ms`;
 }
 
-/* ------------------------------ 状态配色 ------------------------------ */
-
-interface Tone {
-  /** 数值文字色 */
-  text: string;
-  /** 进度条填充色 */
-  bar: string;
-}
-
-const TONE_NORMAL: Tone = { text: 'text-foreground', bar: 'bg-primary' };
-const TONE_SUCCESS: Tone = { text: 'text-emerald-600', bar: 'bg-emerald-500' };
-const TONE_WARN: Tone = { text: 'text-amber-600', bar: 'bg-amber-500' };
-const TONE_DANGER: Tone = { text: 'text-destructive', bar: 'bg-destructive' };
-
-/**
- * 资源使用率配色
- * <p>正常区间沿用主题前景色，仅在越线时着色 —— 极简风，颜色只用来传递告警。</p>
- */
-function usageTone(usage: number, warn: number, danger: number): Tone {
-  if (usage > danger) return TONE_DANGER;
-  if (usage > warn) return TONE_WARN;
-  return TONE_NORMAL;
-}
-
-/** 比率型指标配色（成功率、命中率等）：越高越好，阈值方向与使用率相反 */
-function ratioTone(rate: number, good: number, warn: number): Tone {
-  if (rate >= good) return TONE_SUCCESS;
-  if (rate >= warn) return TONE_WARN;
-  return TONE_DANGER;
-}
-
 /* ------------------------------ 通用子组件 ------------------------------ */
-
-/** 统计卡图标芯片：薄荷浅底圆形 + 品牌色图标 */
-function StatIcon({ icon }: { icon: React.ReactNode }) {
-  return (
-    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-soft)]">
-      <span className="text-[var(--color-brand)] inline-flex [&_svg]:size-5">{icon}</span>
-    </div>
-  );
-}
 
 /** 响应式栅格单元（承载入场动画类） */
 function GridCell({ className, children }: { className?: string; children: React.ReactNode }) {
   return <div className={cn('w-full', className)}>{children}</div>;
-}
-
-/** 迷你走势线：纯内联 SVG，不引三方图表库（KPI 卡右下角用） */
-function Sparkline({ values, className }: { values: number[]; className?: string }) {
-  const width = 92;
-  const height = 30;
-  // 采样点不足时画一条贴底的淡线占位，避免卡片右下角出现突兀的空白
-  if (!values || values.length < 2) {
-    return (
-      <svg
-        viewBox="0 0 92 30"
-        className={cn('h-[30px] w-[92px] shrink-0 opacity-30', className)}
-        aria-hidden
-        focusable="false"
-      >
-        <line
-          x1="0"
-          y1="27"
-          x2="92"
-          y2="27"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeDasharray="3 4"
-        />
-      </svg>
-    );
-  }
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const span = max - min || 1;
-  const points = values
-    .map((v, i) => {
-      const x = (i / (values.length - 1)) * width;
-      const y = height - 3 - ((v - min) / span) * (height - 6);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(' ');
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      className={cn('h-[30px] w-[92px] shrink-0', className)}
-      aria-hidden
-      focusable="false"
-    >
-      <polyline
-        points={points}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** 顶部核心指标卡：左标签 + 大数字，右上圆形图标芯片，底部进度条/说明 + 迷你走势 */
-function StatCard({
-  label,
-  value,
-  icon,
-  tone,
-  progress,
-  sub,
-  spark,
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon: React.ReactNode;
-  tone?: Tone;
-  progress?: number;
-  sub?: React.ReactNode;
-  spark?: number[];
-}) {
-  return (
-    <Card className="stat-card h-full">
-      <CardContent className="flex h-full flex-col px-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[12.5px] font-medium text-[color:var(--color-text-tertiary)]">
-              {label}
-            </div>
-            <div
-              className={cn(
-                'mt-2 text-[30px] leading-none font-semibold tracking-[-0.02em] tabular-nums',
-                tone?.text ?? 'text-[color:var(--color-text)]',
-              )}
-            >
-              {value}
-            </div>
-          </div>
-          <StatIcon icon={icon} />
-        </div>
-        <div className="mt-auto flex items-end justify-between gap-3 pt-4">
-          <div className="min-w-0 flex-1">
-            {progress !== undefined && (
-              <Progress
-                value={Math.min(100, Math.max(0, progress))}
-                className="h-1.5"
-                indicatorClassName={cn('transition-[width] duration-300 ease-out', tone?.bar)}
-              />
-            )}
-            {sub && (
-              <div className="mt-2 truncate text-[11.5px] text-[color:var(--color-text-tertiary)]">
-                {sub}
-              </div>
-            )}
-          </div>
-          <Sparkline values={spark ?? []} className="text-[var(--color-brand)] opacity-70" />
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/**
- * 环比标签（今日 vs 昨日）
- * @param invert 指标越大越差时传 true（如错误次数），涨跌配色随之反转
- */
-function TrendBadge({
-  current,
-  previous,
-  invert = false,
-}: {
-  current?: number | null;
-  previous?: number | null;
-  invert?: boolean;
-}) {
-  const cur = current ?? 0;
-  const prev = previous ?? 0;
-
-  if (prev <= 0) {
-    return (
-      <span className="text-muted-foreground/70 text-xs">
-        {cur > 0 ? '昨日无数据' : '暂无数据'}
-      </span>
-    );
-  }
-
-  const delta = ((cur - prev) / prev) * 100;
-  if (Math.abs(delta) < 0.05) {
-    return <span className="text-muted-foreground/70 text-xs">与昨日持平</span>;
-  }
-
-  const rising = delta > 0;
-  const positive = invert ? !rising : rising;
-  const Icon = rising ? TrendingUp : TrendingDown;
-
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 text-xs tabular-nums',
-        positive ? 'text-emerald-600' : 'text-destructive',
-      )}
-    >
-      <Icon className="size-3 shrink-0" />
-      较昨日 {rising ? '+' : ''}
-      {delta.toFixed(1)}%
-    </span>
-  );
 }
 
 /** 今日业务概览子项 */
@@ -299,37 +106,6 @@ function OverviewItem({
           <TrendBadge current={current} previous={previous} invert={invert} />
         )}
       </div>
-    </div>
-  );
-}
-
-/** 明细卡内的信息行 */
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-muted-foreground shrink-0 text-[13px]">{label}</span>
-      <span className="text-foreground min-w-0 truncate text-right text-sm font-medium">
-        {children}
-      </span>
-    </div>
-  );
-}
-
-/** 明细卡内的数值块 */
-function DetailBlock({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: React.ReactNode;
-  hint?: string;
-}) {
-  return (
-    <div className="rounded-xl bg-[var(--color-bg-tint)] p-4">
-      <div className="text-muted-foreground mb-1 text-[13px]">{label}</div>
-      <div className="text-foreground text-lg font-semibold tabular-nums">{value}</div>
-      {hint && <div className="text-muted-foreground/80 text-xs">{hint}</div>}
     </div>
   );
 }
@@ -476,7 +252,7 @@ export default function DashboardPage() {
 
   /** Redis 命中率：服务刚起、尚无读写记录时为 null，此时不画进度条 */
   const hitRate = redis?.hitRate ?? null;
-  const hitTone = hitRate === null ? TONE_NORMAL : ratioTone(hitRate, 90, 70);
+  const hitTone = hitRate === null ? 'normal' : ratioTone(hitRate, 90, 70);
 
   return (
     <div className="dashboard-overview">
@@ -609,7 +385,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DetailBlock
+            <StatTile
               label="今日调用总量"
               value={formatNumber(apiSummary?.callCount)}
               hint="全部接口合计"
@@ -617,14 +393,19 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-[var(--color-bg-tint)] p-4">
               <div className="flex items-baseline justify-between">
                 <span className="text-muted-foreground text-[13px]">调用成功率</span>
-                <span className={cn('text-lg font-semibold tabular-nums', rateTone.text)}>
+                <span
+                  className={cn('text-lg font-semibold tabular-nums', STAT_TONE_TEXT[rateTone])}
+                >
                   {successRate.toFixed(2)}%
                 </span>
               </div>
               <Progress
                 value={successRate}
                 className="mt-2 h-1.5"
-                indicatorClassName={cn('transition-[width] duration-300 ease-out', rateTone.bar)}
+                indicatorClassName={cn(
+                  'transition-[width] duration-300 ease-out',
+                  STAT_TONE_BAR[rateTone],
+                )}
               />
               <div className="text-muted-foreground mt-3 flex justify-between text-xs">
                 <span>成功 {formatNumber(apiSummary?.successCount)}</span>
@@ -643,18 +424,18 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <DetailBlock
+              <StatTile
                 label="堆内存使用"
                 value={formatBytes(jvm?.heapUsed ?? 0)}
                 hint={`上限 ${formatBytes(jvm?.heapMax ?? 0)}`}
               />
-              <DetailBlock label="GC 次数" value={formatNumber(jvm?.gcCount)} hint="累计回收次数" />
-              <DetailBlock
+              <StatTile label="GC 次数" value={formatNumber(jvm?.gcCount)} hint="累计回收次数" />
+              <StatTile
                 label="活跃线程数"
                 value={formatNumber(jvm?.threadCount)}
                 hint="JVM 线程总数"
               />
-              <DetailBlock label="JVM 运行时长" value={formatUptime(jvm?.uptime ?? 0)} />
+              <StatTile label="JVM 运行时长" value={formatUptime(jvm?.uptime ?? 0)} />
             </div>
           </CardContent>
         </Card>
@@ -702,7 +483,9 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-[var(--color-bg-tint)] p-4">
               <div className="flex items-baseline justify-between">
                 <span className="text-muted-foreground text-[13px]">连接池水位</span>
-                <span className={cn('text-lg font-semibold tabular-nums', poolTone.text)}>
+                <span
+                  className={cn('text-lg font-semibold tabular-nums', STAT_TONE_TEXT[poolTone])}
+                >
                   {formatNumber(database?.activeConnections)} /{' '}
                   {formatNumber(database?.maxConnections)}
                 </span>
@@ -710,7 +493,10 @@ export default function DashboardPage() {
               <Progress
                 value={poolUsage}
                 className="mt-2 h-1.5"
-                indicatorClassName={cn('transition-[width] duration-300 ease-out', poolTone.bar)}
+                indicatorClassName={cn(
+                  'transition-[width] duration-300 ease-out',
+                  STAT_TONE_BAR[poolTone],
+                )}
               />
               <div className="text-muted-foreground mt-3 flex justify-between text-xs">
                 <span>空闲 {formatNumber(database?.idleConnections)}</span>
@@ -722,8 +508,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <DetailBlock label="数据量" value={formatSize(database?.databaseSize)} />
-              <DetailBlock
+              <StatTile label="数据量" value={formatSize(database?.databaseSize)} />
+              <StatTile
                 label="探测耗时"
                 value={formatMs(database?.pingMs)}
                 hint="含取连接 + 一次查询"
@@ -756,12 +542,12 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <DetailBlock
+              <StatTile
                 label="内存占用"
                 value={formatSize(redis?.usedMemory)}
                 hint={`峰值 ${formatSize(redis?.usedMemoryPeak)}`}
               />
-              <DetailBlock
+              <StatTile
                 label="Key 数量"
                 value={formatNumber(redis?.totalKeys)}
                 hint={`客户端 ${formatNumber(redis?.connectedClients)}`}
@@ -771,7 +557,7 @@ export default function DashboardPage() {
             <div className="rounded-xl bg-[var(--color-bg-tint)] p-4">
               <div className="flex items-baseline justify-between">
                 <span className="text-muted-foreground text-[13px]">缓存命中率</span>
-                <span className={cn('text-lg font-semibold tabular-nums', hitTone.text)}>
+                <span className={cn('text-lg font-semibold tabular-nums', STAT_TONE_TEXT[hitTone])}>
                   {hitRate === null ? '—' : `${hitRate.toFixed(2)}%`}
                 </span>
               </div>
@@ -779,7 +565,10 @@ export default function DashboardPage() {
                 <Progress
                   value={hitRate}
                   className="mt-2 h-1.5"
-                  indicatorClassName={cn('transition-[width] duration-300 ease-out', hitTone.bar)}
+                  indicatorClassName={cn(
+                    'transition-[width] duration-300 ease-out',
+                    STAT_TONE_BAR[hitTone],
+                  )}
                 />
               )}
               <div className="text-muted-foreground mt-3 flex justify-between text-xs">

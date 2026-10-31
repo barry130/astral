@@ -5,7 +5,6 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
   Tabs,
   Tag,
   Button,
@@ -46,6 +45,7 @@ import { usePerm, QT_PERMISSIONS } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import SourceReleasesTab from './SourceReleasesTab';
 import { PageHeader } from '@/components/page-header';
+import { StatCard } from '@/components/stat-card';
 
 const { Paragraph } = Typography;
 
@@ -534,34 +534,28 @@ export default function QtAdminPage() {
 
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
-          <Card>
-            <Statistic
-              title="用户数"
-              value={overview?.userCount ?? '-'}
-              prefix={<UserOutlined />}
-              valueStyle={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}
-            />
-          </Card>
+          <StatCard
+            size="compact"
+            label="用户数"
+            value={overview?.userCount ?? '-'}
+            icon={<UserOutlined />}
+          />
         </Col>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
-          <Card>
-            <Statistic
-              title="签到记录"
-              value={overview?.dakaCount ?? '-'}
-              prefix={<CalendarOutlined />}
-              valueStyle={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}
-            />
-          </Card>
+          <StatCard
+            size="compact"
+            label="签到记录"
+            value={overview?.dakaCount ?? '-'}
+            icon={<CalendarOutlined />}
+          />
         </Col>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
-          <Card>
-            <Statistic
-              title="版本更新"
-              value={overview?.updateCount ?? '-'}
-              prefix={<CloudDownloadOutlined />}
-              valueStyle={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}
-            />
-          </Card>
+          <StatCard
+            size="compact"
+            label="版本更新"
+            value={overview?.updateCount ?? '-'}
+            icon={<CloudDownloadOutlined />}
+          />
         </Col>
       </Row>
 
@@ -573,11 +567,7 @@ export default function QtAdminPage() {
             qtTab === 'updates' || qtTab === 'github-accels' ? (
               <Space>
                 {qtTab === 'updates' && canEdit && (
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => openUpdateModal()}
-                  >
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => openUpdateModal()}>
                     新增版本
                   </Button>
                 )}
@@ -600,11 +590,7 @@ export default function QtAdminPage() {
                     >
                       手动探活
                     </Button>
-                    <Button
-                      icon={<ClearOutlined />}
-                      disabled={!canEdit}
-                      onClick={evictAccelCache}
-                    >
+                    <Button icon={<ClearOutlined />} disabled={!canEdit} onClick={evictAccelCache}>
                       刷新缓存
                     </Button>
                   </>

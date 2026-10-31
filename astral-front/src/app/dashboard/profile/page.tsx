@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/page-header';
+import { InfoRow } from '@/components/info-list';
 import {
   Table,
   TableBody,
@@ -64,7 +65,7 @@ function ProfileContent() {
       const res = await profileApi.me();
       setInfo(res.data);
     } catch (e) {
-      toast.error(getErrorMessage(e, '加载个人资料失败'))
+      toast.error(getErrorMessage(e, '加载个人资料失败'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +77,7 @@ function ProfileContent() {
       const res = await profileApi.sessions(1, 50);
       setSessions(res.data?.records || []);
     } catch (e) {
-      toast.error(getErrorMessage(e, '加载会话失败'))
+      toast.error(getErrorMessage(e, '加载会话失败'));
     } finally {
       setSessionsLoading(false);
     }
@@ -115,7 +116,7 @@ function ProfileContent() {
       await logout();
       router.push('/login');
     } catch (e) {
-      toast.error(getErrorMessage(e, '修改失败'))
+      toast.error(getErrorMessage(e, '修改失败'));
     } finally {
       setSavingPassword(false);
     }
@@ -132,7 +133,7 @@ function ProfileContent() {
         setTotpQrDataUrl(await QRCode.toDataURL(res.data.otpauthUri, { width: 220 }));
       }
     } catch (e) {
-      toast.error(getErrorMessage(e, '生成密钥失败'))
+      toast.error(getErrorMessage(e, '生成密钥失败'));
     } finally {
       setTotpBusy(false);
     }
@@ -152,7 +153,7 @@ function ProfileContent() {
       setTotpQrDataUrl('');
       await loadMe();
     } catch (e) {
-      toast.error(getErrorMessage(e, '验证失败'))
+      toast.error(getErrorMessage(e, '验证失败'));
     } finally {
       setTotpBusy(false);
     }
@@ -171,7 +172,7 @@ function ProfileContent() {
       setDisablePassword('');
       await loadMe();
     } catch (e) {
-      toast.error(getErrorMessage(e, '关闭失败'))
+      toast.error(getErrorMessage(e, '关闭失败'));
     } finally {
       setTotpBusy(false);
     }
@@ -183,7 +184,7 @@ function ProfileContent() {
       toast.success('会话已下线');
       await loadSessions();
     } catch (e) {
-      toast.error(getErrorMessage(e, '下线失败'))
+      toast.error(getErrorMessage(e, '下线失败'));
     }
   };
 
@@ -228,23 +229,29 @@ function ProfileContent() {
               <CardDescription>账号归属信息由管理员维护，此处仅展示</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <Row label="用户名" value={info?.username} />
-              <Row label="昵称" value={info?.nickname || '-'} />
-              <Row label="邮箱" value={info?.email || '-'} />
-              <Row label="用户类型" value={info?.userType} />
-              <Row
-                label="最后登录"
-                value={info?.loginTime ? `${info.loginTime}（IP ${info.loginIp || '-'}）` : '-'}
-              />
-              <Row label="密码上次修改" value={info?.pwdUpdateTime || '-'} />
-              <Row
-                label="动态验证码"
-                value={
-                  <Badge variant={info?.totpEnabled ? 'default' : 'secondary'}>
-                    {info?.totpEnabled ? '已启用' : '未启用'}
-                  </Badge>
-                }
-              />
+              <InfoRow variant="inline" label="用户名">
+                {info?.username}
+              </InfoRow>
+              <InfoRow variant="inline" label="昵称">
+                {info?.nickname || '-'}
+              </InfoRow>
+              <InfoRow variant="inline" label="邮箱">
+                {info?.email || '-'}
+              </InfoRow>
+              <InfoRow variant="inline" label="用户类型">
+                {info?.userType}
+              </InfoRow>
+              <InfoRow variant="inline" label="最后登录">
+                {info?.loginTime ? `${info.loginTime}（IP ${info.loginIp || '-'}）` : '-'}
+              </InfoRow>
+              <InfoRow variant="inline" label="密码上次修改">
+                {info?.pwdUpdateTime || '-'}
+              </InfoRow>
+              <InfoRow variant="inline" label="动态验证码">
+                <Badge variant={info?.totpEnabled ? 'default' : 'secondary'}>
+                  {info?.totpEnabled ? '已启用' : '未启用'}
+                </Badge>
+              </InfoRow>
             </CardContent>
           </Card>
         </TabsContent>
@@ -442,15 +449,6 @@ function ProfileContent() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="text-muted-foreground w-28 shrink-0">{label}</span>
-      <span>{value}</span>
     </div>
   );
 }

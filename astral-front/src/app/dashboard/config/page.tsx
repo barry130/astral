@@ -27,6 +27,7 @@ import { sequenceConfigApi, SequenceConfig } from '@/api/sequenceConfig';
 import { sequenceApi, SequenceType } from '@/api/sequence';
 import { ResizableTable } from '@/components/ResizableTable';
 import { PageHeader } from '@/components/page-header';
+import { FilterBar } from '@/components/filter-bar';
 
 /**
  * 序列配置管理页面组件
@@ -183,15 +184,7 @@ export default function ConfigPage() {
       <PageHeader title="配置管理" description="管理序列生成器的配置信息" />
 
       <Card className="fade-in-up">
-        <div
-          style={{
-            marginBottom: 20,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-          className="filter-bar"
-        >
+        <FilterBar split>
           <div>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd} size="large">
               新建配置
@@ -200,7 +193,7 @@ export default function ConfigPage() {
           <Button icon={<ReloadOutlined />} onClick={loadData} size="large">
             刷新
           </Button>
-        </div>
+        </FilterBar>
         <ResizableTable
           dataSource={data}
           columns={columns}

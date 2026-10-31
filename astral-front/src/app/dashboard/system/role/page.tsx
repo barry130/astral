@@ -31,6 +31,7 @@ import { PermissionSideTag } from '@/lib/permission-side';
 import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, DictOption } from '@/api/dict';
 import { PageHeader } from '@/components/page-header';
+import { FilterBar } from '@/components/filter-bar';
 
 const { Option } = Select;
 
@@ -338,22 +339,16 @@ export default function RolePage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="角色权限"
-        description="角色及其权限点、数据范围的分配"
-      />
+      <PageHeader title="角色权限" description="角色及其权限点、数据范围的分配" />
       <Card>
-        <div
-          className="filter-bar"
-          style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}
-        >
+        <FilterBar split>
           <Input.Search placeholder="搜索角色" allowClear style={{ width: 300 }} />
           {canEdit && (
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
               新建角色
             </Button>
           )}
-        </div>
+        </FilterBar>
         <ResizableTable
           dataSource={data}
           columns={columns}

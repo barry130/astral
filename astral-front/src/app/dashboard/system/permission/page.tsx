@@ -23,6 +23,7 @@ import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, DictOption } from '@/api/dict';
 import { PermissionSideTag, SIDE_META, sideOfCode } from '@/lib/permission-side';
 import { PageHeader } from '@/components/page-header';
+import { FilterBar } from '@/components/filter-bar';
 
 const { Option } = Select;
 
@@ -190,7 +191,9 @@ export default function PermissionPage() {
       dataIndex: 'permissionCode',
       key: 'side',
       width: 90,
-      render: (_: unknown, record: PermissionRow) => <PermissionSideTag code={record.permissionCode} />,
+      render: (_: unknown, record: PermissionRow) => (
+        <PermissionSideTag code={record.permissionCode} />
+      ),
     },
     { title: '权限编码', dataIndex: 'permissionCode', width: 260 },
     { title: '权限名称', dataIndex: 'permissionName' },
@@ -247,15 +250,7 @@ export default function PermissionPage() {
           </>
         }
       />
-      <div
-        className="filter-bar"
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          gap: 12,
-          flexWrap: 'wrap',
-        }}
-      >
+      <FilterBar>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Input
             placeholder="搜索权限编码/名称"
@@ -304,7 +299,7 @@ export default function PermissionPage() {
             ))}
           </Select>
         </div>
-      </div>
+      </FilterBar>
       <ResizableTable
         columns={columns}
         dataSource={dataSource}

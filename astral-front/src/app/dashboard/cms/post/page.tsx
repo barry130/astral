@@ -39,12 +39,12 @@ import {
   flattenCategoryOptions,
   formatDateTime,
   ListCard,
-  Pager,
   PageHeader,
   StatusBadge,
   TableStateRow,
 } from '../shared';
 import { confirmDialog } from '../../confirm';
+import { TablePagination } from '@/components/data-table/TablePagination';
 
 const PAGE_SIZES = [10, 20, 50, 100];
 const CONTENT_STATUS = 'cms_content_status';
@@ -242,16 +242,26 @@ export default function CmsPostListPage() {
             </Button>
           </>
         }
-        footer={<Pager
-              page={page}
-              pageSize={pageSize}
-              total={total}
-              onPageChange={setPage}
-              onPageSizeChange={(s) => {
-                setPageSize(s);
-                setPage(1);
-              }}
-            />}
+        footer={
+          <TablePagination
+            pagination={{
+              current: page,
+              pageSize,
+              total,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              onChange: (p, ps) => {
+                if (ps !== pageSize) {
+                  setPageSize(ps);
+                  setPage(1);
+                } else {
+                  setPage(p);
+                }
+              },
+            }}
+            total={total}
+          />
+        }
       >
         <CmsTable>
           <TableHeader>

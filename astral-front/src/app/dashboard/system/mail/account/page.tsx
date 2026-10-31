@@ -25,6 +25,7 @@ import { mailApi, MailAccount } from '@/api/mail';
 import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { usePerm, MAIL_PERMISSIONS } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { FilterBar } from '@/components/filter-bar';
 
 export default function MailAccountPage() {
   const [loading, setLoading] = useState(false);
@@ -219,10 +220,7 @@ export default function MailAccountPage() {
   return (
     <div className="space-y-4">
       <Card>
-        <div
-          className="filter-bar"
-          style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}
-        >
+        <FilterBar split>
           <span style={{ fontWeight: 600, fontSize: 16 }}>邮箱账户</span>
           <div className="page-toolbar">
             {canEdit && (
@@ -231,7 +229,7 @@ export default function MailAccountPage() {
               </Button>
             )}
           </div>
-        </div>
+        </FilterBar>
         <ResizableTable
           dataSource={data}
           columns={columns}

@@ -41,6 +41,7 @@ const SyntaxHighlighter = dynamic(() => import('react-syntax-highlighter').then(
 import vscDarkPlus from 'react-syntax-highlighter/dist/esm/styles/prism/vsc-dark-plus';
 import { ResizableTable } from '@/components/ResizableTable';
 import { PageHeader } from '@/components/page-header';
+import { FilterBar } from '@/components/filter-bar';
 
 const { TabPane } = Tabs;
 
@@ -626,20 +627,9 @@ export default function TableSchemaPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="表结构管理"
-        description="自定义表结构与字段定义维护"
-      />
+      <PageHeader title="表结构管理" description="自定义表结构与字段定义维护" />
       <Card>
-        <div
-          style={{
-            marginBottom: 16,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-          className="filter-bar"
-        >
+        <FilterBar split>
           <Space>
             <Select
               style={{ width: 150 }}
@@ -670,7 +660,7 @@ export default function TableSchemaPage() {
             </Button>
             <Tag color="blue">共 {filteredData.length} 张表</Tag>
           </Space>
-        </div>
+        </FilterBar>
         <ResizableTable
           dataSource={filteredData}
           columns={columns}
@@ -878,15 +868,7 @@ export default function TableSchemaPage() {
           </Button>,
         ]}
       >
-        <div
-          style={{
-            marginBottom: 16,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-          className="filter-bar"
-        >
+        <FilterBar split>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={addField}>
               添加字段
@@ -903,7 +885,7 @@ export default function TableSchemaPage() {
             />
             <Tag color="blue">共 {editingSchema?.fields.length || 0} 个字段</Tag>
           </Space>
-        </div>
+        </FilterBar>
         <ResizableTable
           dataSource={editingSchema?.fields}
           rowKey="columnName"

@@ -1,13 +1,11 @@
 'use client';
 
 import dayjs from 'dayjs';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { cmsDictLabel, CmsCategory, CmsDictCode, CmsTreeNode } from '@/api/cms';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableCell, TableRow } from '@/components/ui/table';
@@ -59,73 +57,6 @@ export function StatusBadge({ code, value }: { code: CmsDictCode; value?: string
   );
 }
 
-/** 分页条：左侧总数/页码/每页条数，右侧上/下一页（与全站标准分页能力对齐） */
-const PAGER_PAGE_SIZES = [10, 20, 50, 100];
-
-export function Pager({
-  page,
-  pageSize,
-  total,
-  onPageChange,
-  onPageSizeChange,
-}: {
-  page: number;
-  pageSize: number;
-  total: number;
-  onPageChange: (page: number) => void;
-  /** 缺省时隐藏每页条数选择器 */
-  onPageSizeChange?: (pageSize: number) => void;
-}) {
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  if (total === 0) return null;
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-      <span className="text-muted-foreground flex items-center gap-2 tabular-nums">
-        共 {total} 条 · 第 {page} / {pages} 页
-        {onPageSizeChange && (
-          <select
-            value={String(pageSize)}
-            onChange={(e) => {
-              onPageChange(1);
-              onPageSizeChange(Number(e.target.value));
-            }}
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 cursor-pointer rounded-md border bg-transparent px-2 outline-none focus-visible:ring-[3px]"
-            aria-label="每页条数"
-          >
-            {[...new Set([pageSize, ...PAGER_PAGE_SIZES])].sort((a, b) => a - b).map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        )}
-        {onPageSizeChange && '条/页'}
-      </span>
-      <div className="flex items-center gap-1.5">
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1"
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-        >
-          <ChevronLeft className="size-3.5" />
-          上一页
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1"
-          disabled={page >= pages}
-          onClick={() => onPageChange(page + 1)}
-        >
-          下一页
-          <ChevronRight className="size-3.5" />
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 /**
  * 列表容器：筛选区 / 表格 / 分页三层，用发丝线分隔而不是分成三张卡片。

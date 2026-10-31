@@ -51,6 +51,7 @@ import { getErrorMessage } from '@/lib/error-message';
 import { usePerm, QT_PERMISSIONS } from '@/lib/perm';
 import { storageApi } from '@/api/storage';
 import { ResizableTable } from '@/components/ResizableTable';
+import { FilterBar } from '@/components/filter-bar';
 
 const { Paragraph } = Typography;
 
@@ -635,7 +636,7 @@ export default function SourceReleasesTab() {
 
   return (
     <div>
-      <div className="filter-bar" style={{ marginBottom: 12 }}>
+      <FilterBar className="mb-3">
         <Space>
           {canEdit && (
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
@@ -655,7 +656,7 @@ export default function SourceReleasesTab() {
             onChange={(v) => setChannelFilter(v)}
           />
         </Space>
-      </div>
+      </FilterBar>
       <ResizableTable
         rowKey="id"
         columns={columns}

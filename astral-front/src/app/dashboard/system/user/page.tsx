@@ -33,6 +33,7 @@ import { downloadResponse } from '@/lib/http-download';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import { PageHeader } from '@/components/page-header';
+import { FilterBar } from '@/components/filter-bar';
 
 /** 用户实体接口 */
 interface User {
@@ -576,15 +577,9 @@ export default function UserPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="用户管理"
-        description="后台账号、启用状态与角色归属维护"
-      />
+      <PageHeader title="用户管理" description="后台账号、启用状态与角色归属维护" />
       <Card>
-        <div
-          className="filter-bar"
-          style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', gap: 12 }}
-        >
+        <FilterBar split>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {/* 必须写回 search 状态，否则翻页时 loadData(p, ps, search) 传回空串、丢失搜索条件 */}
             <Input.Search
@@ -619,7 +614,7 @@ export default function UserPage() {
               </Button>
             )}
           </Space>
-        </div>
+        </FilterBar>
         <ResizableTable
           dataSource={data}
           columns={columns}

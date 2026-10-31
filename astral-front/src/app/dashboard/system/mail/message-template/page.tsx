@@ -28,6 +28,7 @@ import {
 import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { usePerm, MAIL_PERMISSIONS } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { FilterBar } from '@/components/filter-bar';
 
 /**
  * 投递渠道一律给全量（邮箱/站内信/短信），不再按事件声明收窄 ——
@@ -354,10 +355,7 @@ export default function MessageTemplatePage() {
   return (
     <div className="space-y-4">
       <Card>
-        <div
-          className="filter-bar"
-          style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}
-        >
+        <FilterBar split>
           <span style={{ fontWeight: 600, fontSize: 16 }}>消息模板</span>
           <div className="page-toolbar">
             {canEdit && (
@@ -366,7 +364,7 @@ export default function MessageTemplatePage() {
               </Button>
             )}
           </div>
-        </div>
+        </FilterBar>
         <ResizableTable
           dataSource={data}
           columns={columns}

@@ -610,6 +610,9 @@ html,
   gap: 8px;
   align-items: center;
 }
+.filter-bar--split {
+  justify-content: space-between;
+}
 .filter-bar > * {
   flex: 0 0 auto;
 }

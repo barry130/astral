@@ -6,7 +6,6 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
   Select,
   Spin,
   Tabs,
@@ -38,6 +37,7 @@ import { ResizableTable } from '@/components/ResizableTable';
 import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
 import { StatFilterBar, useVersionOptions, UT_ALL, type Option } from './StatFilterBar';
 import { PageHeader } from '@/components/page-header';
+import { StatCard, ratioTone } from '@/components/stat-card';
 
 const { Text } = Typography;
 
@@ -94,23 +94,20 @@ export default function StatisticsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="数据统计"
-        description="设备、接口与错误维度的访问趋势与明细统计"
-      />
+      <PageHeader title="数据统计" description="设备、接口与错误维度的访问趋势与明细统计" />
       <Card>
-      <Tabs
-        defaultActiveKey="device"
-        items={[
-          { key: 'device', label: '设备统计', children: <DeviceTab utOptions={utOptions} /> },
-          { key: 'api', label: '接口统计', children: <ApiTab utOptions={utOptions} /> },
-          {
-            key: 'error',
-            label: '错误统计',
-            children: <ErrorTab utOptions={utOptions} sourceOptions={sourceOptions} />,
-          },
-        ]}
-      />
+        <Tabs
+          defaultActiveKey="device"
+          items={[
+            { key: 'device', label: '设备统计', children: <DeviceTab utOptions={utOptions} /> },
+            { key: 'api', label: '接口统计', children: <ApiTab utOptions={utOptions} /> },
+            {
+              key: 'error',
+              label: '错误统计',
+              children: <ErrorTab utOptions={utOptions} sourceOptions={sourceOptions} />,
+            },
+          ]}
+        />
       </Card>
     </div>
   );
@@ -242,23 +239,22 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
       <Row gutter={[12, 12]}>
         {rows.map((r) => (
           <Col key={r.key} xs={12} sm={12} md={8} xl={6}>
-            <Card size="small">
-              <Statistic
-                title={r.label}
-                value={
-                  r.fmtFn ? r.fmtFn(today?.[r.field] as number) : fmt(today?.[r.field] as number)
-                }
-              />
-              <div className="mt-1 truncate">
-                <Text type="secondary" style={{ fontSize: 12 }}>
+            <StatCard
+              size="compact"
+              label={r.label}
+              value={
+                r.fmtFn ? r.fmtFn(today?.[r.field] as number) : fmt(today?.[r.field] as number)
+              }
+              sub={
+                <>
                   昨日{' '}
                   {r.fmtFn
                     ? r.fmtFn(yesterday?.[r.field] as number)
-                    : fmt(yesterday?.[r.field] as number)}
-                </Text>{' '}
-                {diffText(today?.[r.field] as number, yesterday?.[r.field] as number)}
-              </div>
-            </Card>
+                    : fmt(yesterday?.[r.field] as number)}{' '}
+                  {diffText(today?.[r.field] as number, yesterday?.[r.field] as number)}
+                </>
+              }
+            />
           </Col>
         ))}
       </Row>
@@ -431,23 +427,18 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
 
       <Row gutter={12} style={{ marginBottom: 16 }}>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
-          <Card size="small">
-            <Statistic title="总调用次数" value={fmt(totalCalls)} />
-          </Card>
+          <StatCard size="compact" label="总调用次数" value={fmt(totalCalls)} />
         </Col>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
-          <Card size="small">
-            <Statistic
-              title="成功次数"
-              value={fmt(totalSuccess)}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
+          <StatCard size="compact" label="成功次数" value={fmt(totalSuccess)} tone="success" />
         </Col>
         <Col xs={{ span: 24 }} sm={{ span: 12 }} md={{ span: 8 }}>
-          <Card size="small">
-            <Statistic title="成功率" value={`${successRate}%`} />
-          </Card>
+          <StatCard
+            size="compact"
+            label="成功率"
+            value={`${successRate}%`}
+            tone={ratioTone(Number(successRate) || 0, 99, 95)}
+          />
         </Col>
       </Row>
 

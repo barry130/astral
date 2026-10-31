@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
+import { RatioBar, StatCard } from '@/components/stat-card';
 import {
   Select,
   SelectContent,
@@ -210,19 +211,25 @@ export default function MessageStatisticsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="消息统计"
-        description="消息投递量、成功率与场景分布的综合统计"
-      />
+      <PageHeader title="消息统计" description="消息投递量、成功率与场景分布的综合统计" />
       {/* ---------------- 概览卡 ---------------- */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-        <StatCard title="投递总数" value={fmt(overview.total)} />
-        <StatCard title="成功" value={fmt(overview.success)} tone="success" />
-        <StatCard title="失败" value={fmt(overview.fail)} tone="danger" />
-        <StatCard title="成功率" value={`${(overview.successRate ?? 0).toFixed(1)}%`} />
-        <StatCard title="今日投递" value={fmt(overview.todayTotal)} />
-        <StatCard title="今日成功" value={fmt(overview.todaySuccess)} tone="success" />
-        <StatCard title="今日失败" value={fmt(overview.todayFail)} tone="danger" />
+        <StatCard size="compact" label="投递总数" value={fmt(overview.total)} />
+        <StatCard size="compact" label="成功" value={fmt(overview.success)} tone="success" />
+        <StatCard size="compact" label="失败" value={fmt(overview.fail)} tone="danger" />
+        <StatCard
+          size="compact"
+          label="成功率"
+          value={`${(overview.successRate ?? 0).toFixed(1)}%`}
+        />
+        <StatCard size="compact" label="今日投递" value={fmt(overview.todayTotal)} />
+        <StatCard
+          size="compact"
+          label="今日成功"
+          value={fmt(overview.todaySuccess)}
+          tone="success"
+        />
+        <StatCard size="compact" label="今日失败" value={fmt(overview.todayFail)} tone="danger" />
       </div>
 
       {/* ---------------- 筛选 ---------------- */}
@@ -367,8 +374,7 @@ export default function MessageStatisticsPage() {
                     </span>
                   </div>
                   <RatioBar
-                    total={c.total}
-                    max={overview.total}
+                    percent={overview.total ? (c.total / overview.total) * 100 : 0}
                     color={CHANNEL_COLOR[c.channel || ''] || '#94a3b8'}
                   />
                 </div>
@@ -394,7 +400,10 @@ export default function MessageStatisticsPage() {
                     </span>
                     <span className="shrink-0 tabular-nums">{fmt(s.total)}</span>
                   </div>
-                  <RatioBar total={s.total} max={sceneStats[0]?.total} color="#0ea5e9" />
+                  <RatioBar
+                    percent={sceneStats[0]?.total ? (s.total / sceneStats[0].total) * 100 : 0}
+                    color="#0ea5e9"
+                  />
                 </div>
               ))
             )}
@@ -419,7 +428,10 @@ export default function MessageStatisticsPage() {
                       <span className="text-muted-foreground ml-2 text-xs">失败 {fmt(p.fail)}</span>
                     </span>
                   </div>
-                  <RatioBar total={p.total} max={pluginStats[0]?.total} color="#f59e0b" />
+                  <RatioBar
+                    percent={pluginStats[0]?.total ? (p.total / pluginStats[0].total) * 100 : 0}
+                    color="#f59e0b"
+                  />
                 </div>
               ))
             )}
@@ -559,38 +571,6 @@ export default function MessageStatisticsPage() {
           />
         </CardContent>
       </Card>
-    </div>
-  );
-}
-
-/** 概览卡：数值 + 标题，tone 只控制数字颜色 */
-function StatCard({
-  title,
-  value,
-  tone,
-}: {
-  title: string;
-  value: string;
-  tone?: 'success' | 'danger';
-}) {
-  const color =
-    tone === 'success' ? 'text-emerald-600' : tone === 'danger' ? 'text-red-600' : undefined;
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="text-muted-foreground text-xs">{title}</div>
-        <div className={`mt-1 text-2xl font-semibold tabular-nums ${color || ''}`}>{value}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
-/** 比例条：宽度 = total / max */
-function RatioBar({ total, max, color }: { total: number; max?: number; color: string }) {
-  const pct = max && max > 0 ? Math.min(100, Math.round((total / max) * 100)) : 0;
-  return (
-    <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
     </div>
   );
 }

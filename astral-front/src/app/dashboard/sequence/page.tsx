@@ -36,6 +36,7 @@ import { sequenceConfigApi, SequenceConfig } from '@/api/sequenceConfig';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import { PageHeader } from '@/components/page-header';
+import { FilterBar } from '@/components/filter-bar';
 
 /**
  * 序列管理页面组件
@@ -611,10 +612,7 @@ export default function SequencePage() {
             </Row>
           ) : (
             <Card>
-              <div
-                className="filter-bar"
-                style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}
-              >
+              <FilterBar split>
                 <Input.Search
                   placeholder="搜索业务键"
                   allowClear
@@ -629,7 +627,7 @@ export default function SequencePage() {
                     </Button>
                   )}
                 </div>
-              </div>
+              </FilterBar>
               <ResizableTable
                 dataSource={configs}
                 loading={configLoading}

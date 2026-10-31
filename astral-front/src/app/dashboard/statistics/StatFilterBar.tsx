@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button, DatePicker, Select, Space } from '@/components/antd-compat';
+import { Button, DatePicker, Select } from '@/components/antd-compat';
 import { ReloadOutlined } from '@/components/antd-compat/icons';
 import type { Dayjs } from 'dayjs';
 import { statApi } from '@/api/statistics';
+import { FilterBar } from '@/components/filter-bar';
 
 /** 下拉选项 */
 export type Option = { value: string; label: string };
@@ -103,7 +104,7 @@ export function StatFilterBar({
   const allPlatform = isAllPlatform(ut);
 
   return (
-    <Space className="filter-bar" style={{ marginBottom: 16 }} wrap>
+    <FilterBar>
       <DatePicker
         value={date}
         onChange={(d) => d && onDateChange(d)}
@@ -133,6 +134,6 @@ export function StatFilterBar({
       <Button icon={<ReloadOutlined />} onClick={onRefresh}>
         刷新
       </Button>
-    </Space>
+    </FilterBar>
   );
 }

@@ -7,7 +7,6 @@ import {
   Card,
   Row,
   Col,
-  Statistic,
   Tag,
   Button,
   Space,
@@ -53,6 +52,8 @@ import {
 import { ResizableTable } from '@/components/ResizableTable';
 import { usePerm } from '@/lib/perm';
 import { PageHeader } from '@/components/page-header';
+import { StatCard } from '@/components/stat-card';
+import { FilterBar } from '@/components/filter-bar';
 
 const { Text, Paragraph } = Typography;
 
@@ -409,62 +410,32 @@ function FeedbackPanel() {
       {/* 统计卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 12 }}>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}>
-          <Card size="small">
-            <Statistic title="全部" value={stat?.total ?? '-'} />
-          </Card>
+          <StatCard size="compact" label="全部" value={stat?.total ?? '-'} />
         </Col>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}>
-          <Card size="small">
-            <Statistic
-              title="待处理"
-              value={stat?.pending ?? '-'}
-              valueStyle={{ color: '#fa8c16' }}
-            />
-          </Card>
+          <StatCard size="compact" label="待处理" value={stat?.pending ?? '-'} tone="warn" />
         </Col>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}>
-          <Card size="small">
-            <Statistic
-              title="已接收"
-              value={stat?.received ?? '-'}
-              valueStyle={{ color: '#14201c' }}
-            />
-          </Card>
+          <StatCard size="compact" label="已接收" value={stat?.received ?? '-'} />
         </Col>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}>
-          <Card size="small">
-            <Statistic
-              title="今日新增"
-              value={stat?.todayNew ?? '-'}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
+          <StatCard size="compact" label="今日新增" value={stat?.todayNew ?? '-'} tone="success" />
         </Col>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}>
-          <Card size="small">
-            <Statistic
-              title="未回复"
-              value={stat?.unreplied ?? '-'}
-              valueStyle={{ color: '#eb2f96' }}
-            />
-          </Card>
+          <StatCard size="compact" label="未回复" value={stat?.unreplied ?? '-'} tone="danger" />
         </Col>
         <Col xs={{ span: 12 }} sm={{ span: 8 }} lg={{ span: 4 }}>
-          <Card size="small">
-            <Statistic title="已解决" value={stat?.resolved ?? '-'} />
-          </Card>
+          <StatCard size="compact" label="已解决" value={stat?.resolved ?? '-'} tone="success" />
         </Col>
       </Row>
 
       <Card>
-        <div
-          className="filter-bar"
-          style={{
-            marginBottom: 16,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
+        <FilterBar
+          actions={
+            <Button icon={<ReloadOutlined />} onClick={refresh}>
+              刷新
+            </Button>
+          }
         >
           <Space wrap>
             <Input.Search
@@ -493,12 +464,7 @@ function FeedbackPanel() {
               options={feedbackTypeOptions()}
             />
           </Space>
-          <div className="page-toolbar">
-            <Button icon={<ReloadOutlined />} onClick={refresh}>
-              刷新
-            </Button>
-          </div>
-        </div>
+        </FilterBar>
 
         {/* 近7天柱状图（嵌在卡片内，用浅底分区而不是再套一层卡片边框） */}
         <div

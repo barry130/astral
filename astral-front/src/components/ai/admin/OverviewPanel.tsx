@@ -12,11 +12,9 @@ import React from 'react';
 import {
   Alert,
   Button,
-  Card,
   Descriptions,
   Space,
   Spin,
-  Statistic,
   Tag,
   Tooltip,
 } from '@/components/antd-compat';
@@ -30,6 +28,7 @@ import {
 import { aiOverviewApi, type AiOverview } from '@/api/ai';
 
 import { BoolTag, formatNumber, formatTime, Panel, statusColor, useAsync } from './shared';
+import { StatCard } from '@/components/stat-card';
 
 export default function OverviewPanel() {
   const { data, loading, error, reload } = useAsync<AiOverview | undefined>(
@@ -90,20 +89,22 @@ export default function OverviewPanel() {
         }}
       >
         <StatCard
-          title="提供方"
+          size="compact"
+          label="提供方"
           value={data.providerCount}
-          suffix={`/ ${data.enabledProviderCount ?? 0} 启用`}
+          sub={`/ ${data.enabledProviderCount ?? 0} 启用`}
         />
-        <StatCard title="模型" value={data.modelCount} />
-        <StatCard title="路由" value={data.routeCount} />
+        <StatCard size="compact" label="模型" value={data.modelCount} />
+        <StatCard size="compact" label="路由" value={data.routeCount} />
         <StatCard
-          title="智能体"
+          size="compact"
+          label="智能体"
           value={data.agentCount}
-          suffix={`/ ${data.publishedAgentCount ?? 0} 已发布`}
+          sub={`/ ${data.publishedAgentCount ?? 0} 已发布`}
         />
-        <StatCard title="提示词模板" value={data.promptCount} />
-        <StatCard title="知识源" value={data.knowledgeSourceCount} />
-        <StatCard title="工具" value={data.toolCount} />
+        <StatCard size="compact" label="提示词模板" value={data.promptCount} />
+        <StatCard size="compact" label="知识源" value={data.knowledgeSourceCount} />
+        <StatCard size="compact" label="工具" value={data.toolCount} />
       </div>
 
       <div
@@ -113,15 +114,24 @@ export default function OverviewPanel() {
           gap: 12,
         }}
       >
-        <StatCard title="今日请求" value={data.todayRequestCount} />
-        <StatCard title="进行中" value={data.runningRequestCount} />
+        <StatCard size="compact" label="今日请求" value={data.todayRequestCount} />
+        <StatCard size="compact" label="进行中" value={data.runningRequestCount} />
         <StatCard
-          title="今日失败"
+          size="compact"
+          label="今日失败"
           value={data.failedRequestCount}
-          danger={(data.failedRequestCount ?? 0) > 0}
+          tone={(data.failedRequestCount ?? 0) > 0 ? 'danger' : 'normal'}
         />
-        <StatCard title="今日输入 Token" value={data.todayInputTokens} plain />
-        <StatCard title="今日输出 Token" value={data.todayOutputTokens} plain />
+        <StatCard
+          size="compact"
+          label="今日输入 Token"
+          value={formatNumber(data.todayInputTokens)}
+        />
+        <StatCard
+          size="compact"
+          label="今日输出 Token"
+          value={formatNumber(data.todayOutputTokens)}
+        />
       </div>
 
       <Panel
@@ -269,37 +279,6 @@ export default function OverviewPanel() {
 }
 
 /* ==================== 局部组件 ==================== */
-
-function StatCard({
-  title,
-  value,
-  suffix,
-  plain,
-  danger,
-}: {
-  title: string;
-  value?: number;
-  suffix?: string;
-  plain?: boolean;
-  danger?: boolean;
-}) {
-  return (
-    <Card size="small" bodyStyle={{ padding: '12px 14px' }}>
-      <Statistic
-        title={<span style={{ fontSize: 12.5, opacity: 0.65 }}>{title}</span>}
-        value={plain ? formatNumber(value) : (value ?? 0)}
-        valueStyle={{
-          fontSize: 20,
-          fontWeight: 600,
-          color: danger ? 'var(--destructive, #dc2626)' : undefined,
-        }}
-        suffix={
-          suffix ? <span style={{ fontSize: 11.5, opacity: 0.55 }}>{suffix}</span> : undefined
-        }
-      />
-    </Card>
-  );
-}
 
 /** 把「缺什么」整理成人话，按修复顺序排列 */
 function buildBlockingIssues(data: AiOverview): string[] {
