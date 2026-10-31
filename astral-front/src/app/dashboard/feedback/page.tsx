@@ -500,13 +500,22 @@ function FeedbackPanel() {
           </div>
         </div>
 
-        {/* 近7天柱状图 */}
-        <Card size="small" style={{ marginBottom: 16 }}>
-          <Text strong>近7天新增反馈</Text>
+        {/* 近7天柱状图（嵌在卡片内，用浅底分区而不是再套一层卡片边框） */}
+        <div
+          style={{
+            marginBottom: 16,
+            borderRadius: 14,
+            background: 'var(--color-bg-tint)',
+            padding: '12px 14px 8px',
+          }}
+        >
+          <Text strong style={{ fontSize: 13.5 }}>
+            近7天新增反馈
+          </Text>
           <div className="chart-box" style={{ height: 320 }}>
             <ReactECharts option={chartOption} notMerge autoResize style={{ height: '100%' }} />
           </div>
-        </Card>
+        </div>
 
         <ResizableTable
           rowKey="id"

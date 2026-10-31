@@ -275,8 +275,8 @@ export default function AlertPage() {
         {/* ---------------- 渠道 ---------------- */}
         <TabsContent value="channels">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <div className="space-y-1.5">
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+              <div className="min-w-0 flex-1 space-y-1.5">
                 <CardTitle>通知渠道</CardTitle>
                 <CardDescription>
                   告警触达方式；EMAIL 复用系统邮箱发信账户（文案可在邮箱管理「邮件模板」的
@@ -285,7 +285,7 @@ export default function AlertPage() {
                 </CardDescription>
               </div>
               {canEditChannel && (
-                <Button onClick={() => openChannelDialog()} className="gap-1.5">
+                <Button onClick={() => openChannelDialog()} className="shrink-0 gap-1.5">
                   <Plus className="size-4" />
                   新建渠道
                 </Button>
@@ -379,15 +379,15 @@ export default function AlertPage() {
         {/* ---------------- 规则 ---------------- */}
         <TabsContent value="rules">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <div className="space-y-1.5">
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+              <div className="min-w-0 flex-1 space-y-1.5">
                 <CardTitle>告警规则</CardTitle>
                 <CardDescription>
                   每分钟评估一次：窗口内指标 ≥ 阈值即触发，冷却时间内不重复发送
                 </CardDescription>
               </div>
               {canEditRule && (
-                <Button onClick={() => openRuleDialog()} className="gap-1.5">
+                <Button onClick={() => openRuleDialog()} className="shrink-0 gap-1.5">
                   <Plus className="size-4" />
                   新建规则
                 </Button>

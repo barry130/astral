@@ -74,6 +74,7 @@ export default function QtAdminPage() {
   const [updateTotal, setUpdateTotal] = useState(0);
   const [updatePage, setUpdatePage] = useState(1);
   const [updatesLoading, setUpdatesLoading] = useState(false);
+  const [qtTab, setQtTab] = useState('updates');
   const [updateModal, setUpdateModal] = useState(false);
   const [updateIsEdit, setUpdateIsEdit] = useState(false);
   const [updateForm] = Form.useForm();
@@ -538,6 +539,7 @@ export default function QtAdminPage() {
               title="用户数"
               value={overview?.userCount ?? '-'}
               prefix={<UserOutlined />}
+              valueStyle={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}
             />
           </Card>
         </Col>
@@ -547,6 +549,7 @@ export default function QtAdminPage() {
               title="签到记录"
               value={overview?.dakaCount ?? '-'}
               prefix={<CalendarOutlined />}
+              valueStyle={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}
             />
           </Card>
         </Col>
@@ -556,6 +559,7 @@ export default function QtAdminPage() {
               title="版本更新"
               value={overview?.updateCount ?? '-'}
               prefix={<CloudDownloadOutlined />}
+              valueStyle={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em' }}
             />
           </Card>
         </Col>
@@ -563,23 +567,57 @@ export default function QtAdminPage() {
 
       <Card>
         <Tabs
+          activeKey={qtTab}
+          onChange={setQtTab}
+          tabBarExtraContent={
+            qtTab === 'updates' || qtTab === 'github-accels' ? (
+              <Space>
+                {qtTab === 'updates' && canEdit && (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => openUpdateModal()}
+                  >
+                    新增版本
+                  </Button>
+                )}
+                {qtTab === 'github-accels' && (
+                  <>
+                    {canEdit && (
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => openAccelModal()}
+                      >
+                        新增节点
+                      </Button>
+                    )}
+                    <Button
+                      icon={<ExperimentOutlined />}
+                      loading={probing}
+                      disabled={!canEdit}
+                      onClick={runProbe}
+                    >
+                      手动探活
+                    </Button>
+                    <Button
+                      icon={<ClearOutlined />}
+                      disabled={!canEdit}
+                      onClick={evictAccelCache}
+                    >
+                      刷新缓存
+                    </Button>
+                  </>
+                )}
+              </Space>
+            ) : null
+          }
           items={[
             {
               key: 'updates',
               label: '版本更新',
               children: (
                 <div>
-                  <div className="filter-bar" style={{ marginBottom: 12 }}>
-                    {canEdit && (
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => openUpdateModal()}
-                      >
-                        新增版本
-                      </Button>
-                    )}
-                  </div>
                   <ResizableTable
                     rowKey="id"
                     columns={updateColumns}
@@ -609,34 +647,6 @@ export default function QtAdminPage() {
               label: 'GitHub 加速节点',
               children: (
                 <div>
-                  <div className="filter-bar" style={{ marginBottom: 12 }}>
-                    <Space>
-                      {canEdit && (
-                        <Button
-                          type="primary"
-                          icon={<PlusOutlined />}
-                          onClick={() => openAccelModal()}
-                        >
-                          新增节点
-                        </Button>
-                      )}
-                      <Button
-                        icon={<ExperimentOutlined />}
-                        loading={probing}
-                        disabled={!canEdit}
-                        onClick={runProbe}
-                      >
-                        手动探活
-                      </Button>
-                      <Button
-                        icon={<ClearOutlined />}
-                        disabled={!canEdit}
-                        onClick={evictAccelCache}
-                      >
-                        刷新缓存
-                      </Button>
-                    </Space>
-                  </div>
                   <ResizableTable
                     rowKey="id"
                     columns={accelColumns}

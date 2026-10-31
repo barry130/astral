@@ -233,13 +233,25 @@ export default function PermissionPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="权限管理" description="接口权限点与权限分组的维护" />
+      <PageHeader
+        title="权限管理"
+        description="接口权限点与权限分组的维护"
+        actions={
+          <>
+            <Button icon={<ReloadOutlined />} onClick={fetchPermissions}>
+              刷新
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              新建权限
+            </Button>
+          </>
+        }
+      />
       <div
         className="filter-bar"
         style={{
           marginBottom: 16,
           display: 'flex',
-          justifyContent: 'flex-end',
           gap: 12,
           flexWrap: 'wrap',
         }}
@@ -291,12 +303,6 @@ export default function PermissionPage() {
               </Option>
             ))}
           </Select>
-          <Button icon={<ReloadOutlined />} onClick={fetchPermissions}>
-            刷新
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            新建权限
-          </Button>
         </div>
       </div>
       <ResizableTable

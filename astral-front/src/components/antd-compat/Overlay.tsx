@@ -436,7 +436,9 @@ function TabsBase({
                 disabled={tab.disabled}
                 onClick={() => select(tab.key)}
                 className={cn(
-                  'shrink-0 cursor-pointer whitespace-nowrap transition-colors',
+                  // inline-flex + items-center：Tailwind preflight 把 svg 设为 display:block，
+                  // 页签标签里若写成 <span><Icon /> 文案</span>，图标会独占一行把文案挤下去
+                  'inline-flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap transition-colors',
                   size === 'small' ? 'text-[12.5px]' : 'text-[13px]',
                   tab.disabled && 'cursor-not-allowed opacity-40',
                   card

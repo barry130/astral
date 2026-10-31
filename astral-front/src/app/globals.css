@@ -272,6 +272,13 @@ html,
   overflow-x: auto;
   scrollbar-width: none;
 }
+/* 页签标签里 <span><Icon /> 文案</span>：Tailwind preflight 把 svg 变 display:block，
+   不修正的话图标会独占一行、把文案挤到下一行 */
+[role='tab'] > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .tabs-scroll::-webkit-scrollbar {
   display: none;
 }

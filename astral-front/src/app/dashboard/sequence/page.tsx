@@ -415,16 +415,15 @@ export default function SequencePage() {
   );
 
   return (
-    <div style={{ background: 'var(--color-bg-base)', minHeight: '100%' }}>
+    <div className="space-y-4">
       <PageHeader title="序列管理" description="序列号规则配置与号段生成" />
       <div
         style={{
-          background: 'var(--color-bg-white)',
-          padding: '16px 24px 0',
-          borderBottom: '1px solid var(--color-border)',
           position: 'sticky',
-          top: 64,
+          top: 62,
           zIndex: 100,
+          background: 'color-mix(in srgb, var(--color-bg-base) 86%, transparent)',
+          backdropFilter: 'saturate(160%) blur(14px)',
         }}
       >
         <Tabs
@@ -451,7 +450,7 @@ export default function SequencePage() {
         />
       </div>
 
-      <div style={{ padding: '24px' }}>
+      <div>
         <Spin spinning={loading}>
           {activeTab === 'generate' ? (
             <Row gutter={[16, 16]}>
