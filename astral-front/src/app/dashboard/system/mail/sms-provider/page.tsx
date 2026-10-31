@@ -20,6 +20,7 @@ import { smsApi, SmsProvider } from '@/api/sms';
 import { fetchDictOptions, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
+import { FilterBar } from '@/components/filter-bar';
 
 export default function SmsProviderPage() {
   const [loading, setLoading] = useState(false);
@@ -187,15 +188,14 @@ export default function SmsProviderPage() {
   return (
     <div className="space-y-4">
       <Card>
-        <div
-          style={{
-            marginBottom: 16,
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 8,
-          }}
+        <FilterBar
+          actions={
+            canEdit ? (
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                新增供应商
+              </Button>
+            ) : null
+          }
         >
           <span style={{ fontWeight: 600, fontSize: 16 }}>
             短信供应商
@@ -203,14 +203,7 @@ export default function SmsProviderPage() {
               按权重轮选发送，失败自动换下一个；密钥保存后不再回传
             </span>
           </span>
-          <div className="page-toolbar">
-            {canEdit && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                新增供应商
-              </Button>
-            )}
-          </div>
-        </div>
+        </FilterBar>
         <ResizableTable
           dataSource={data}
           columns={columns}

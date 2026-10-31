@@ -11,7 +11,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,6 +40,7 @@ import {
 
 import { confirmDialog } from '../confirm';
 import { PageHeader } from '@/components/page-header';
+import { SectionCard } from '@/components/section-card';
 
 /**
  * 告警管理：通知渠道（EMAIL/WEBHOOK）/ 告警规则 / 触发记录
@@ -252,10 +252,7 @@ export default function AlertPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="告警管理"
-        description="告警渠道、告警规则与触发记录的集中管理"
-      />
+      <PageHeader title="告警管理" description="告警渠道、告警规则与触发记录的集中管理" />
       <Tabs defaultValue="channels">
         <TabsList>
           <TabsTrigger value="channels" className="gap-1.5">
@@ -274,180 +271,76 @@ export default function AlertPage() {
 
         {/* ---------------- 渠道 ---------------- */}
         <TabsContent value="channels">
-          <Card>
-            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <CardTitle>通知渠道</CardTitle>
-                <CardDescription>
-                  告警触达方式；EMAIL 复用系统邮箱发信账户（文案可在邮箱管理「邮件模板」的
-                  systemAlert 场景模板中自定义），SMS 走系统短信供应商（需在短信模板绑定 systemAlert
-                  事件），WEBHOOK 通用 JSON POST
-                </CardDescription>
-              </div>
-              {canEditChannel && (
+          <SectionCard
+            title="通知渠道"
+            description="告警触达方式；EMAIL 复用系统邮箱发信账户（文案可在邮箱管理「邮件模板」的 systemAlert 场景模板中自定义），SMS 走系统短信供应商（需在短信模板绑定 systemAlert 事件），WEBHOOK 通用 JSON POST"
+            actions={
+              canEditChannel ? (
                 <Button onClick={() => openChannelDialog()} className="shrink-0 gap-1.5">
                   <Plus className="size-4" />
                   新建渠道
                 </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
+              ) : null
+            }
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>名称</TableHead>
+                  <TableHead>类型</TableHead>
+                  <TableHead>配置摘要</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>备注</TableHead>
+                  <TableHead className="w-52">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
                   <TableRow>
-                    <TableHead>名称</TableHead>
-                    <TableHead>类型</TableHead>
-                    <TableHead>配置摘要</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>备注</TableHead>
-                    <TableHead className="w-52">操作</TableHead>
+                    <TableCell colSpan={6} className="text-muted-foreground text-center">
+                      加载中…
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-muted-foreground text-center">
-                        加载中…
-                      </TableCell>
-                    </TableRow>
-                  ) : channels.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-muted-foreground text-center">
-                        尚未创建渠道
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    channels.map((c) => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{c.type}</Badge>
-                        </TableCell>
-                        <TableCell className="max-w-[280px] truncate font-mono text-xs">
-                          {configSummary(c)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={c.enabled === 1 ? 'default' : 'secondary'}>
-                            {c.enabled === 1 ? '启用' : '停用'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{c.remark || '-'}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1.5">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1"
-                              onClick={() => testChannel(c)}
-                            >
-                              <Send className="size-3.5" />
-                              测试
-                            </Button>
-                            {canEditChannel && (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="gap-1"
-                                  onClick={() => openChannelDialog(c)}
-                                >
-                                  <Pencil className="size-3.5" />
-                                  编辑
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-destructive gap-1"
-                                  onClick={() => deleteChannel(c)}
-                                >
-                                  <Trash2 className="size-3.5" />
-                                  删除
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ---------------- 规则 ---------------- */}
-        <TabsContent value="rules">
-          <Card>
-            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <CardTitle>告警规则</CardTitle>
-                <CardDescription>
-                  每分钟评估一次：窗口内指标 ≥ 阈值即触发，冷却时间内不重复发送
-                </CardDescription>
-              </div>
-              {canEditRule && (
-                <Button onClick={() => openRuleDialog()} className="shrink-0 gap-1.5">
-                  <Plus className="size-4" />
-                  新建规则
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
+                ) : channels.length === 0 ? (
                   <TableRow>
-                    <TableHead>名称</TableHead>
-                    <TableHead>指标</TableHead>
-                    <TableHead>阈值 / 窗口</TableHead>
-                    <TableHead>渠道</TableHead>
-                    <TableHead>冷却</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>上次触发</TableHead>
-                    <TableHead className="w-32">操作</TableHead>
+                    <TableCell colSpan={6} className="text-muted-foreground text-center">
+                      尚未创建渠道
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-muted-foreground text-center">
-                        加载中…
+                ) : (
+                  channels.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">{c.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{c.type}</Badge>
                       </TableCell>
-                    </TableRow>
-                  ) : rules.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-muted-foreground text-center">
-                        尚未创建规则
+                      <TableCell className="max-w-[280px] truncate font-mono text-xs">
+                        {configSummary(c)}
                       </TableCell>
-                    </TableRow>
-                  ) : (
-                    rules.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="font-medium">{r.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{metricLabel(r.metric)}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          ≥{r.threshold} / {r.windowMinutes} 分钟
-                        </TableCell>
-                        <TableCell>{r.channelName || r.channelId}</TableCell>
-                        <TableCell>{r.cooldownMinutes} 分钟</TableCell>
-                        <TableCell>
-                          <Badge variant={r.enabled === 1 ? 'default' : 'secondary'}>
-                            {r.enabled === 1 ? '启用' : '停用'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {r.lastFiredAt || '从未'}
-                        </TableCell>
-                        <TableCell>
-                          {canEditRule && (
-                            <div className="flex gap-1.5">
+                      <TableCell>
+                        <Badge variant={c.enabled === 1 ? 'default' : 'secondary'}>
+                          {c.enabled === 1 ? '启用' : '停用'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{c.remark || '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => testChannel(c)}
+                          >
+                            <Send className="size-3.5" />
+                            测试
+                          </Button>
+                          {canEditChannel && (
+                            <>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="gap-1"
-                                onClick={() => openRuleDialog(r)}
+                                onClick={() => openChannelDialog(c)}
                               >
                                 <Pencil className="size-3.5" />
                                 编辑
@@ -456,82 +349,171 @@ export default function AlertPage() {
                                 variant="outline"
                                 size="sm"
                                 className="text-destructive gap-1"
-                                onClick={() => deleteRule(r)}
+                                onClick={() => deleteChannel(c)}
                               >
                                 <Trash2 className="size-3.5" />
                                 删除
                               </Button>
-                            </div>
+                            </>
                           )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </SectionCard>
+        </TabsContent>
+
+        {/* ---------------- 规则 ---------------- */}
+        <TabsContent value="rules">
+          <SectionCard
+            title="告警规则"
+            description="每分钟评估一次：窗口内指标 ≥ 阈值即触发，冷却时间内不重复发送"
+            actions={
+              canEditRule ? (
+                <Button onClick={() => openRuleDialog()} className="shrink-0 gap-1.5">
+                  <Plus className="size-4" />
+                  新建规则
+                </Button>
+              ) : null
+            }
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>名称</TableHead>
+                  <TableHead>指标</TableHead>
+                  <TableHead>阈值 / 窗口</TableHead>
+                  <TableHead>渠道</TableHead>
+                  <TableHead>冷却</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>上次触发</TableHead>
+                  <TableHead className="w-32">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-muted-foreground text-center">
+                      加载中…
+                    </TableCell>
+                  </TableRow>
+                ) : rules.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-muted-foreground text-center">
+                      尚未创建规则
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  rules.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{metricLabel(r.metric)}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        ≥{r.threshold} / {r.windowMinutes} 分钟
+                      </TableCell>
+                      <TableCell>{r.channelName || r.channelId}</TableCell>
+                      <TableCell>{r.cooldownMinutes} 分钟</TableCell>
+                      <TableCell>
+                        <Badge variant={r.enabled === 1 ? 'default' : 'secondary'}>
+                          {r.enabled === 1 ? '启用' : '停用'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {r.lastFiredAt || '从未'}
+                      </TableCell>
+                      <TableCell>
+                        {canEditRule && (
+                          <div className="flex gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                              onClick={() => openRuleDialog(r)}
+                            >
+                              <Pencil className="size-3.5" />
+                              编辑
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-destructive gap-1"
+                              onClick={() => deleteRule(r)}
+                            >
+                              <Trash2 className="size-3.5" />
+                              删除
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </SectionCard>
         </TabsContent>
 
         {/* ---------------- 触发记录 ---------------- */}
         <TabsContent value="records">
-          <Card>
-            <CardHeader>
-              <CardTitle>触发记录</CardTitle>
-              <CardDescription>发送失败也会留档（含原因），共 {recordsTotal} 条</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
+          <SectionCard
+            title="触发记录"
+            description={`发送失败也会留档（含原因），共 ${recordsTotal} 条`}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>时间</TableHead>
+                  <TableHead>规则</TableHead>
+                  <TableHead>渠道</TableHead>
+                  <TableHead>指标值</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>失败原因</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {records.length === 0 ? (
                   <TableRow>
-                    <TableHead>时间</TableHead>
-                    <TableHead>规则</TableHead>
-                    <TableHead>渠道</TableHead>
-                    <TableHead>指标值</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>失败原因</TableHead>
+                    <TableCell colSpan={6} className="text-muted-foreground text-center">
+                      暂无触发记录
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {records.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-muted-foreground text-center">
-                        暂无触发记录
+                ) : (
+                  records.map((rec) => (
+                    <TableRow key={rec.id}>
+                      <TableCell>{rec.firedAt}</TableCell>
+                      <TableCell>{rec.ruleName}</TableCell>
+                      <TableCell>{rec.channelName || '-'}</TableCell>
+                      <TableCell>{rec.metricValue}</TableCell>
+                      <TableCell>
+                        <Badge variant={rec.status === 'SUCCESS' ? 'default' : 'destructive'}>
+                          {rec.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground max-w-[260px] truncate">
+                        {rec.errorMsg || '-'}
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    records.map((rec) => (
-                      <TableRow key={rec.id}>
-                        <TableCell>{rec.firedAt}</TableCell>
-                        <TableCell>{rec.ruleName}</TableCell>
-                        <TableCell>{rec.channelName || '-'}</TableCell>
-                        <TableCell>{rec.metricValue}</TableCell>
-                        <TableCell>
-                          <Badge variant={rec.status === 'SUCCESS' ? 'default' : 'destructive'}>
-                            {rec.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground max-w-[260px] truncate">
-                          {rec.errorMsg || '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              <TablePagination
-                pagination={{
-                  current: recordsPage,
-                  pageSize: recordsPageSize,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                  showTotal: (t) => `共 ${t} 条`,
-                  onChange: (p, ps) => loadRecords(p, ps),
-                }}
-                total={recordsTotal}
-              />
-            </CardContent>
-          </Card>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination
+              pagination={{
+                current: recordsPage,
+                pageSize: recordsPageSize,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (t) => `共 ${t} 条`,
+                onChange: (p, ps) => loadRecords(p, ps),
+              }}
+              total={recordsTotal}
+            />
+          </SectionCard>
         </TabsContent>
       </Tabs>
 

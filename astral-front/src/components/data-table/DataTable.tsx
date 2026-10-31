@@ -5,6 +5,7 @@ import { ChevronRight, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-r
 
 import { cn } from '@/lib/utils';
 import { EmptyState } from '@/components/EmptyState';
+import { TableSkeleton } from '@/components/TableSkeleton';
 import {
   Table,
   TableBody,
@@ -249,7 +250,6 @@ export function DataTable<T extends object>({
     };
     walk(sortedRows, 0, '');
     return out;
-     
   }, [sortedRows, hasTreeData, rowKey, innerTreeExpanded]);
 
   const toggleTree = (key: string) => {
@@ -277,7 +277,7 @@ export function DataTable<T extends object>({
         className={cn(
           'relative overflow-hidden',
           bordered &&
-            'border-[color:var(--color-border-light)] bg-card rounded-2xl border shadow-[0_1px_2px_rgba(16,32,26,0.03)] dark:shadow-none',
+            'bg-card rounded-2xl border border-[color:var(--color-border-light)] shadow-[0_1px_2px_rgba(16,32,26,0.03)] dark:shadow-none',
         )}
       >
         <div
@@ -312,7 +312,7 @@ export function DataTable<T extends object>({
             </colgroup>
 
             {/* 表头吸顶：底色必须实心，否则滚动时行内容会从表头下方透出 */}
-            <TableHeader className="bg-[var(--color-bg-tint)] sticky top-0 z-[1]">
+            <TableHeader className="sticky top-0 z-[1] bg-[var(--color-bg-tint)]">
               {/* hover:bg-transparent 用 important 后缀：表头行不该响应数据行的悬停底色，
                   两者同属 hover 变体的 background-color，不加 ! 会由 Tailwind 的输出顺序决定谁生效 */}
               <TableRow className="hover:bg-transparent!">
@@ -367,11 +367,19 @@ export function DataTable<T extends object>({
             </TableHeader>
 
             <TableBody>
-              {sortedRows.length === 0 && !isLoading ? (
+              {sortedRows.length === 0 ? (
                 <TableRow className="hover:bg-transparent!">
                   <TableCell colSpan={columns.length + (hasExpand ? 1 : 0)} className="p-0">
-                    {emptyText ?? (
-                      <EmptyState description="暂无数据" padding={20} ariaLabel="暂无数据" />
+                    {isLoading ? (
+                      <TableSkeleton
+                        rows={Math.min((pagination && pagination.pageSize) || 6, 8)}
+                        columns={Math.min(columns.length, 6)}
+                        withHeader={false}
+                      />
+                    ) : (
+                      (emptyText ?? (
+                        <EmptyState description="暂无数据" padding={20} ariaLabel="暂无数据" />
+                      ))
                     )}
                   </TableCell>
                 </TableRow>

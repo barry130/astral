@@ -5,9 +5,9 @@ import dayjs from 'dayjs';
 import { cmsDictLabel, CmsCategory, CmsDictCode, CmsTreeNode } from '@/api/cms';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { TableSkeleton } from '@/components/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableCell, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
@@ -56,7 +56,6 @@ export function StatusBadge({ code, value }: { code: CmsDictCode; value?: string
     </Badge>
   );
 }
-
 
 /**
  * 列表容器：筛选区 / 表格 / 分页三层，用发丝线分隔而不是分成三张卡片。
@@ -122,18 +121,11 @@ export function CmsTable({ className, ...props }: React.ComponentProps<typeof Ta
   return <Table className={cn('[&_th]:bg-muted/40 [&_td]:py-3', className)} {...props} />;
 }
 
-/** 首屏骨架：形状按列表的「主标题 + 次列 + 状态」排布，比转圈更能表达正在加载 */
+/** 首屏骨架：统一复用全局表格骨架屏 */
 function TableSkeletonRows({ rows = 6 }: { rows?: number }) {
   return (
-    <div role="status" aria-busy="true" aria-label="数据加载中" className="space-y-4 py-4">
-      {Array.from({ length: rows }).map((_, index) => (
-        <div key={index} className="flex items-center gap-4">
-          <Skeleton className="h-4 w-[28%] max-w-64" />
-          <Skeleton className="h-4 w-[14%]" />
-          <Skeleton className="h-4 w-[10%]" />
-          <Skeleton className="h-4 flex-1" />
-        </div>
-      ))}
+    <div className="py-4">
+      <TableSkeleton rows={rows} columns={4} withHeader={false} />
     </div>
   );
 }

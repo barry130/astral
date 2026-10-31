@@ -220,15 +220,16 @@ export default function MailAccountPage() {
   return (
     <div className="space-y-4">
       <Card>
-        <FilterBar split>
-          <span style={{ fontWeight: 600, fontSize: 16 }}>邮箱账户</span>
-          <div className="page-toolbar">
-            {canEdit && (
+        <FilterBar
+          actions={
+            canEdit ? (
               <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
                 新建账户
               </Button>
-            )}
-          </div>
+            ) : null
+          }
+        >
+          <span style={{ fontWeight: 600, fontSize: 16 }}>邮箱账户</span>
         </FilterBar>
         <ResizableTable
           dataSource={data}

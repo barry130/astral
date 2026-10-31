@@ -65,7 +65,7 @@ shadcn 语义变量（`--background` / `--foreground` / `--primary` / `--muted` 
 | `PageHeader` | `page-header.tsx` | 页面标题栏。`title` 必填，`description`/`actions`/`eyebrow`/`children` 可选。`actions` 放右上按钮组 |
 | `FilterBar` | `filter-bar.tsx` | 列表页筛选条。`children` = 筛选项；`actions` = 右侧按钮；`split` 用于「左右两组内容」 |
 | `PageToolbar` | `filter-bar.tsx` | 右对齐动作行（单独一行放按钮时用） |
-| `SectionCard` | `section-card.tsx` | 带标题/描述/右上操作的区块卡片 |
+| `SectionCard` | `section-card.tsx` | **带标题的区块卡片唯一实现**（标题 + 描述 + 右上 `actions` + `contentClassName`）。页面里不要再手写 `<Card><CardHeader><CardTitle>…`；只有「标题行内还要塞统计数字/切换等自定义内容」时才退回 `Card`。标题带图标时写成 `title={<span className="flex items-center gap-2"><Icon className="size-4" />标题</span>}`（直接写 Fragment 会让 svg 独占一行） |
 | `DataTable` | `data-table/DataTable.tsx` | 标准数据表（列定义 + 分页 + 移动端自动切卡片列表） |
 | `TablePagination` | `data-table/TablePagination.tsx` | 标准分页器（每页条数 + 跳页），不经过 `DataTable` 时直接引入 |
 | `ResizableTable` | `ResizableTable.tsx` | 列宽可调 + 列设置的表格（后台列表页主力） |
@@ -83,7 +83,7 @@ shadcn 语义变量（`--background` / `--foreground` / `--primary` / `--muted` 
 | `InfoList` / `InfoRow` | `info-list.tsx` | 描述列表。`InfoRow` 两种形态：`between`（详情卡，值右对齐）/ `inline`（个人资料，标签定宽） |
 | `EmptyState` | `EmptyState.tsx` | 空状态（薄荷圆底图标 + 标题 + 说明 + 可选操作） |
 | `ErrorState` | `ErrorState.tsx` | 加载失败态 |
-| `TableSkeleton` | `TableSkeleton.tsx` | 表格骨架屏 |
+| `TableSkeleton` | `TableSkeleton.tsx` | 表格骨架屏。`DataTable` / `ResizableTable` 首次加载（无数据）时已自动渲染，页面无需手动调用 |
 | `markdown-editor` | `markdown-editor.tsx` | Markdown 编辑器（CMS 使用） |
 
 ### 3.3 全局与壳层

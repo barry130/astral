@@ -355,15 +355,16 @@ export default function MessageTemplatePage() {
   return (
     <div className="space-y-4">
       <Card>
-        <FilterBar split>
-          <span style={{ fontWeight: 600, fontSize: 16 }}>消息模板</span>
-          <div className="page-toolbar">
-            {canEdit && (
+        <FilterBar
+          actions={
+            canEdit ? (
               <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
                 新建模板
               </Button>
-            )}
-          </div>
+            ) : null
+          }
+        >
+          <span style={{ fontWeight: 600, fontSize: 16 }}>消息模板</span>
         </FilterBar>
         <ResizableTable
           dataSource={data}

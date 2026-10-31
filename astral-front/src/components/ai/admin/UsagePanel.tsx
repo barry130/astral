@@ -14,14 +14,11 @@ import dynamic from 'next/dynamic';
 import {
   Button,
   Card,
-  Col,
   Empty,
   InputNumber,
-  Row,
   Select,
   Space,
   Spin,
-  Statistic,
   Tag,
   message,
 } from '@/components/antd-compat';
@@ -31,6 +28,7 @@ import { ResizableTable } from '@/components/ResizableTable';
 import { aiAgentApi, aiUsageApi, type AiAgent, type AiUsage, type AiUsageSummary } from '@/api/ai';
 
 import { Hint, formatCost, formatNumber, formatTime } from './shared';
+import { StatCard } from '@/components/stat-card';
 
 // echarts 体积大且本页非首屏，动态加载（本文件已有 'use client'）
 const ReactECharts = dynamic(() => import('echarts-for-react'), {
@@ -280,33 +278,25 @@ export default function UsagePanel() {
         </Button>
       </div>
 
-      <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic title="请求数" value={summary?.requestCount ?? 0} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic title="输入 token" value={summary?.inputTokens ?? 0} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic title="输出 token" value={summary?.outputTokens ?? 0} />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card size="small">
-            <Statistic
-              title="估算成本"
-              value={summary?.estimatedCost ?? 0}
-              precision={4}
-              suffix={summary?.currency ?? 'CNY'}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div className="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard size="compact" label="请求数" value={formatNumber(summary?.requestCount ?? 0)} />
+        <StatCard
+          size="compact"
+          label="输入 token"
+          value={formatNumber(summary?.inputTokens ?? 0)}
+        />
+        <StatCard
+          size="compact"
+          label="输出 token"
+          value={formatNumber(summary?.outputTokens ?? 0)}
+        />
+        <StatCard
+          size="compact"
+          label="估算成本"
+          value={formatCost(summary?.estimatedCost ?? 0)}
+          sub={summary?.currency ?? 'CNY'}
+        />
+      </div>
 
       <Card size="small" title="用量趋势" style={{ marginBottom: 12 }}>
         {summaryLoading ? (

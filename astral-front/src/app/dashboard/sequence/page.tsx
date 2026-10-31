@@ -612,7 +612,15 @@ export default function SequencePage() {
             </Row>
           ) : (
             <Card>
-              <FilterBar split>
+              <FilterBar
+                actions={
+                  canEditConfig ? (
+                    <Button type="primary" icon={<PlusOutlined />} onClick={handleConfigAdd}>
+                      新建配置
+                    </Button>
+                  ) : null
+                }
+              >
                 <Input.Search
                   placeholder="搜索业务键"
                   allowClear
@@ -620,13 +628,6 @@ export default function SequencePage() {
                   style={{ width: 300 }}
                   onSearch={handleConfigSearch}
                 />
-                <div className="page-toolbar">
-                  {canEditConfig && (
-                    <Button type="primary" icon={<PlusOutlined />} onClick={handleConfigAdd}>
-                      新建配置
-                    </Button>
-                  )}
-                </div>
               </FilterBar>
               <ResizableTable
                 dataSource={configs}

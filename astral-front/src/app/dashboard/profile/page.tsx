@@ -12,11 +12,12 @@ import { getErrorMessage } from '@/lib/error-message';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/page-header';
-import { InfoRow } from '@/components/info-list';
+import { InfoList, InfoRow } from '@/components/info-list';
+import { SectionCard } from '@/components/section-card';
 import {
   Table,
   TableBody,
@@ -220,15 +221,17 @@ function ProfileContent() {
 
         {/* ---------------- 基本资料 ---------------- */}
         <TabsContent value="info">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <SectionCard
+            title={
+              <span className="flex items-center gap-2">
                 <UserIcon className="size-4" />
                 基本资料
-              </CardTitle>
-              <CardDescription>账号归属信息由管理员维护，此处仅展示</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+              </span>
+            }
+            description={'账号归属信息由管理员维护，此处仅展示'}
+            contentClassName="text-sm"
+          >
+            <InfoList gap="sm">
               <InfoRow variant="inline" label="用户名">
                 {info?.username}
               </InfoRow>
@@ -252,201 +255,196 @@ function ProfileContent() {
                   {info?.totpEnabled ? '已启用' : '未启用'}
                 </Badge>
               </InfoRow>
-            </CardContent>
-          </Card>
+            </InfoList>
+          </SectionCard>
         </TabsContent>
 
         {/* ---------------- 修改密码 ---------------- */}
         <TabsContent value="password">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <SectionCard
+            title={
+              <span className="flex items-center gap-2">
                 <KeyRound className="size-4" />
                 修改密码
-              </CardTitle>
-              <CardDescription>
-                至少 8 位，须同时包含字母和数字；修改成功后所有会话失效，需重新登录
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="max-w-sm space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="old-password">当前密码</Label>
-                <Input
-                  id="old-password"
-                  type="password"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  autoComplete="current-password"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="new-password">新密码</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="confirm-password">确认新密码</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-              <Button onClick={handleChangePassword} disabled={savingPassword}>
-                {savingPassword ? '提交中…' : '修改密码'}
-              </Button>
-            </CardContent>
-          </Card>
+              </span>
+            }
+            description={'至少 8 位，须同时包含字母和数字；修改成功后所有会话失效，需重新登录'}
+            contentClassName="max-w-sm space-y-4"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="old-password">当前密码</Label>
+              <Input
+                id="old-password"
+                type="password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-password">新密码</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm-password">确认新密码</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <Button onClick={handleChangePassword} disabled={savingPassword}>
+              {savingPassword ? '提交中…' : '修改密码'}
+            </Button>
+          </SectionCard>
         </TabsContent>
 
         {/* ---------------- TOTP ---------------- */}
         <TabsContent value="totp">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <SectionCard
+            title={
+              <span className="flex items-center gap-2">
                 <ShieldCheck className="size-4" />
                 动态验证码（TOTP）
-              </CardTitle>
-              <CardDescription>
-                启用后登录除密码外还需输入验证器 App 的 6 位动态码，可显著降低密码泄露的风险
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="max-w-md space-y-4 text-sm">
-              {info?.totpEnabled ? (
-                <div className="space-y-3">
-                  <Badge>已启用</Badge>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="disable-password">输入登录密码以关闭</Label>
-                    <Input
-                      id="disable-password"
-                      type="password"
-                      value={disablePassword}
-                      onChange={(e) => setDisablePassword(e.target.value)}
-                      autoComplete="current-password"
-                    />
-                  </div>
-                  <Button variant="destructive" onClick={handleTotpDisable} disabled={totpBusy}>
-                    关闭动态验证码
+              </span>
+            }
+            description={
+              '启用后登录除密码外还需输入验证器 App 的 6 位动态码，可显著降低密码泄露的风险'
+            }
+            contentClassName="max-w-md space-y-4 text-sm"
+          >
+            {info?.totpEnabled ? (
+              <div className="space-y-3">
+                <Badge>已启用</Badge>
+                <div className="space-y-1.5">
+                  <Label htmlFor="disable-password">输入登录密码以关闭</Label>
+                  <Input
+                    id="disable-password"
+                    type="password"
+                    value={disablePassword}
+                    onChange={(e) => setDisablePassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <Button variant="destructive" onClick={handleTotpDisable} disabled={totpBusy}>
+                  关闭动态验证码
+                </Button>
+              </div>
+            ) : totpInfo ? (
+              <div className="space-y-3">
+                <p>1. 用验证器 App（Google Authenticator / 1Password 等）扫码，或手动输入密钥：</p>
+                {totpQrDataUrl && (
+                  <img
+                    src={totpQrDataUrl}
+                    alt="TOTP 绑定二维码"
+                    className="rounded-md border"
+                    width={220}
+                    height={220}
+                  />
+                )}
+                <p className="bg-muted rounded px-2 py-1 font-mono text-xs break-all">
+                  {totpInfo.secret}
+                </p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="totp-code">2. 输入 App 上的 6 位动态码确认绑定</Label>
+                  <Input
+                    id="totp-code"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value)}
+                    placeholder="如 123456"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleTotpEnable} disabled={totpBusy}>
+                    确认启用
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setTotpInfo(null);
+                      setTotpQrDataUrl('');
+                      setTotpCode('');
+                    }}
+                  >
+                    取消
                   </Button>
                 </div>
-              ) : totpInfo ? (
-                <div className="space-y-3">
-                  <p>
-                    1. 用验证器 App（Google Authenticator / 1Password 等）扫码，或手动输入密钥：
-                  </p>
-                  {totpQrDataUrl && (
-                    <img
-                      src={totpQrDataUrl}
-                      alt="TOTP 绑定二维码"
-                      className="rounded-md border"
-                      width={220}
-                      height={220}
-                    />
-                  )}
-                  <p className="bg-muted rounded px-2 py-1 font-mono text-xs break-all">
-                    {totpInfo.secret}
-                  </p>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="totp-code">2. 输入 App 上的 6 位动态码确认绑定</Label>
-                    <Input
-                      id="totp-code"
-                      inputMode="numeric"
-                      maxLength={6}
-                      value={totpCode}
-                      onChange={(e) => setTotpCode(e.target.value)}
-                      placeholder="如 123456"
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={handleTotpEnable} disabled={totpBusy}>
-                      确认启用
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setTotpInfo(null);
-                        setTotpQrDataUrl('');
-                        setTotpCode('');
-                      }}
-                    >
-                      取消
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <Badge variant="secondary">未启用</Badge>
-                  <Button onClick={handleTotpSetup} disabled={totpBusy}>
-                    {totpBusy ? '生成中…' : '生成密钥并绑定'}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Badge variant="secondary">未启用</Badge>
+                <Button onClick={handleTotpSetup} disabled={totpBusy}>
+                  {totpBusy ? '生成中…' : '生成密钥并绑定'}
+                </Button>
+              </div>
+            )}
+          </SectionCard>
         </TabsContent>
 
         {/* ---------------- 我的会话 ---------------- */}
         <TabsContent value="sessions">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <SectionCard
+            title={
+              <span className="flex items-center gap-2">
                 <MonitorSmartphone className="size-4" />
                 我的在线会话
-              </CardTitle>
-              <CardDescription>当前账号的所有登录会话，可下线非本人的设备</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
+              </span>
+            }
+            description={'当前账号的所有登录会话，可下线非本人的设备'}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>登录 IP</TableHead>
+                  <TableHead>登录时间</TableHead>
+                  <TableHead>过期时间</TableHead>
+                  <TableHead className="w-24">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sessionsLoading ? (
                   <TableRow>
-                    <TableHead>登录 IP</TableHead>
-                    <TableHead>登录时间</TableHead>
-                    <TableHead>过期时间</TableHead>
-                    <TableHead className="w-24">操作</TableHead>
+                    <TableCell colSpan={4} className="text-muted-foreground text-center">
+                      加载中…
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sessionsLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-muted-foreground text-center">
-                        加载中…
+                ) : sessions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-muted-foreground text-center">
+                      无会话
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sessions.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell>{s.loginIp || '-'}</TableCell>
+                      <TableCell>{s.createTime || '-'}</TableCell>
+                      <TableCell>{s.expireTime || '-'}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => s.token && handleRevokeSession(s.token)}
+                        >
+                          下线
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  ) : sessions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-muted-foreground text-center">
-                        无会话
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    sessions.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell>{s.loginIp || '-'}</TableCell>
-                        <TableCell>{s.createTime || '-'}</TableCell>
-                        <TableCell>{s.expireTime || '-'}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => s.token && handleRevokeSession(s.token)}
-                          >
-                            下线
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </SectionCard>
         </TabsContent>
       </Tabs>
     </div>
