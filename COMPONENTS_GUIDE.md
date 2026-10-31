@@ -8,7 +8,7 @@
 
 | 模块 | 说明 |
 |------|------|
-| astral-server | Web/API 层（控制器、入口） |
+| astral-server | Web/API 层（控制器、入口、通知/告警等宿主能力） |
 | astral-common | 公共工具（统一返回、异常、常量） |
 | astral-dao | 数据访问（MyBatis-Plus 实体 + Mapper） |
 | astral-schema | 表结构元数据（实体同步、代码生成引擎） |
@@ -18,7 +18,7 @@
 | astral-system | 系统管理（用户/角色/权限/菜单/字典/配置/Token/表结构/邮件） |
 | astral-sequence | 序列生成（5 种算法，系统必需插件） |
 | astral-plugin-api | 插件 SPI（稳定接口） |
-| astral-plugin | 插件注册中心及内置 qt、feedback 业务插件 |
+| astral-plugin | 插件注册中心及内置 qt、feedback、storage、cms、ai 业务插件 |
 
 ---
 

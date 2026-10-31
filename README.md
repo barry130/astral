@@ -1,6 +1,33 @@
 # Astral 后台管理系统
 
-企业级后台管理系统，提供用户管理、角色权限、菜单管理、数据字典、系统配置、Token 管理、日志审计、邮件/短信服务、站内通知、告警管理、插件体系、对象存储、序列生成、表结构管理、全端统计等核心功能，并内置「轻听音乐」（qt）、「反馈」（feedback）与「对象存储」（storage）业务插件。
+企业级后台管理系统，提供用户管理、角色权限、菜单管理、数据字典、系统配置、Token 管理、日志审计、邮件/短信服务、站内通知、告警管理、插件体系、对象存储、序列生成、表结构管理、全端统计等核心功能，并内置「轻听音乐」（qt）、「反馈」（feedback）、「对象存储」（storage）、「内容管理」（cms）与「AI 助手」（ai）业务插件。
+
+## 📸 界面预览
+
+> 截图取自本地开发环境（1440×900，浅色为主题默认），完整清单见 [docs/images](docs/images)。
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/dashboard.jpg" alt="仪表盘：系统监控与今日业务概览" /><br /><sub><b>仪表盘</b>：CPU/内存/磁盘/并发 KPI 卡 + 今日业务概览 + 接口健康度、JVM、运行环境</sub></td>
+    <td width="50%"><img src="docs/images/statistics.jpg" alt="数据统计：设备/接口/错误三类报表" /><br /><sub><b>数据统计</b>：设备、接口、错误三类报表，趋势指标与明细下钻</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/feedback.jpg" alt="反馈管理" /><br /><sub><b>反馈管理</b>：用户反馈列表、状态流转与管理员回复</sub></td>
+    <td width="50%"><img src="docs/images/users.jpg" alt="用户管理" /><br /><sub><b>用户管理</b>：账号、状态、角色归属与数据范围</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/message-center.jpg" alt="消息中心：模板、通知规则与统计" /><br /><sub><b>消息中心</b>：邮箱/短信/站内信模板、通知规则（事件×渠道×收件人）与消息统计</sub></td>
+    <td width="50%"><img src="docs/images/cms.jpg" alt="内容管理：博客与 Wiki" /><br /><sub><b>内容管理</b>：Markdown 文章、分类标签、Wiki 层级页面与审核制评论</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/plugin-ai.jpg" alt="AI 答疑助手" /><br /><sub><b>AI 助手</b>：项目答疑（只读文档 + 引用出处）、管理助手与音乐助手</sub></td>
+    <td width="50%"><img src="docs/images/logs.jpg" alt="日志管理" /><br /><sub><b>日志管理</b>：操作日志与登录日志（AOP 异步落库）</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/login.jpg" alt="登录页" /><br /><sub><b>登录页</b>：RSA 加密传输密码 + 失败锁定</sub></td>
+    <td width="50%"><img src="docs/images/dashboard-dark.jpg" alt="深色主题" /><br /><sub><b>深色主题</b>：全站令牌化配色，一键切换</sub></td>
+  </tr>
+</table>
 
 ## 📖 项目简介
 
@@ -22,6 +49,8 @@ Astral 是一套基于 Spring Boot 4.1（Java 25）+ Next.js 16 的全栈后台�
 - 🔌 **插件体系**：SPI 扩展 + 插件注册中心 + 前端导航注入，可在管理页启停
 - 🎵 **轻听音乐插件（qt）**：App 用户体系、版本更新、打卡、收藏（`/api/v1/app/**`；公告由 feedback 插件统一提供）
 - 💬 **反馈插件（feedback）**：用户反馈、管理员回复、站内消息通知
+- 🤖 **AI 助手插件（ai）**：音乐助手（App/PC）、管理助手与项目答疑助手；供应商/模型/路由/智能体/提示词/工具/知识源/额度均在后台配置，支持 SSE 流式对话、会话管理与用量统计
+- 📰 **内容管理插件（cms）**：博客 / Wiki —— Markdown 文章、分类、标签、层级页面（Wiki 目录）、审核制匿名评论、分享链接与站点设置，附 App 端公开读取接口（供独立部署的博客前台 `astral-blog` 消费）
 - 🗄️ **对象存储插件（storage）**：存储配置/文件/授权文件夹管理，浏览器/客户端预签名直传（Telegram Bot API、Cloudflare Worker、S3 兼容对象存储等渠道），签名 URL 下载
 - 📊 **全端统计**：App 匿名批量上报采集、六类统计报表（访问量/设备/接口指标/错误日志等）
 - 🚨 **告警管理**：告警渠道（邮件/Webhook）、规则、触发记录，后台引擎周期评估阈值
@@ -50,6 +79,8 @@ Astral 是一套基于 Spring Boot 4.1（Java 25）+ Next.js 16 的全栈后台�
 | **构建工具** | Maven 3.9+（后端，无 wrapper）/ npm（前端，`package-lock.json`） |
 
 > 前端已从 Ant Design 全量迁移到 shadcn/ui + Tailwind v4（Next 16 起 `next lint` 已移除，改用 ESLint 9 flat config + Prettier，见下文「代码质量」）。
+>
+> 界面采用统一的薄荷绿 B 端 SaaS 设计语言：设计令牌集中在 `astral-front/src/app/globals.css`，页面骨架、表格、指标卡、空状态等全部走共享组件。**改动界面前先读 [docs/UI_GUIDE.md](docs/UI_GUIDE.md)**（组件清单 + 7 条复用规则 + 页面模板），不要在页面里另写一份 `StatCard` / `FilterBar` / `InfoRow`。
 
 ## 🚀 快速开始
 
@@ -127,15 +158,17 @@ astral/
 ├── astral-auth/               # 认证模块（Sa-Token 拦截器、RSA 登录加密、登录限流）
 ├── astral-log/                # 日志模块（AOP 操作日志、登录日志）
 ├── astral-monitor/            # 监控模块（Micrometer 指标）
-├── astral-system/             # 系统管理（用户/角色/权限/菜单/字典/配置/Token/表结构/邮件）
+├── astral-system/             # 系统管理（用户/角色/权限/菜单/字典/配置/Token/表结构/邮件短信/消息中心）
 ├── astral-sequence/           # 序列生成核心（5 种生成器，系统必需插件）
 ├── astral-plugin-api/         # 插件 SPI（AstralPlugin、导航扩展、注册中心接口）
-├── astral-plugin/             # 插件核心及内置插件（qt、feedback、storage）
+├── astral-plugin/             # 插件核心及内置插件（qt、feedback、storage、cms、ai）
 ├── astral-server/             # Web 服务（Controller、配置、入口）
 ├── astral-front/              # 前端（Next.js 16 + React 19 + Tailwind v4 + shadcn/ui）
+├── astral-blog/               # 公开博客/Wiki 前台（独立 Next.js 应用，消费 CMS 公开 API，默认 3001）
 ├── cloudflare/                # Cloudflare Worker（storage 直传回执等）
+├── telegram-server/           # Telegram 文件网关（服务器版直传，可替代 CF Worker）
 ├── deploy/                    # Docker Compose 部署（本地构建 / Registry 拉取 / 一键更新）
-├── docs/                      # 补充文档（备份、代码评审、编码规范）
+├── docs/                      # 补充文档（UI 规范、浏览器截图、备份、代码评审、编码规范）
 └── scripts/                   # 打包、schema 生成等辅助脚本
 ```
 
@@ -330,12 +363,18 @@ docker compose up -d --build
 
 | 文档 | 说明 |
 |------|------|
+| [UI 组件与设计规范](docs/UI_GUIDE.md) | 设计令牌、组件清单、复用规则、页面模板（**改界面前必读**） |
 | [组件指南](COMPONENTS_GUIDE.md) | 日志、认证（含 Sa-Token）、监控 |
 | [集成指南](INTEGRATION_GUIDE.md) | 与宿主系统/前端集成的步骤清单 |
 | [插件开发指南](PLUGIN_GUIDE.md) | 插件 SPI、建表、导航扩展 |
 | [部署指南](DEPLOY_GUIDE.md) | Docker Compose 与环境变量 |
 | [接口文档](API.md) | 全量 Controller 接口清单 |
 | [存储需求说明书](STORAGE_REQUIREMENTS.md) | 对象存储插件的需求与设计（多渠道直传、签名 URL） |
+| [CMS 插件说明](docs/CMS_PLUGIN.md) | 博客 / Wiki 的数据模型、公开接口与前台对接 |
+| [编码规范](docs/CODING_GUIDE.md) | 命名、分层、异常与日志约定 |
+| [备份指南](docs/BACKUP_GUIDE.md) | 数据库与对象存储的备份/恢复流程 |
+| [通知拆分方案](docs/NOTICE_FEEDBACK_SPLIT_PLAN.md) | 通知 HTTP 面从插件迁回宿主的落地记录 |
+| [代码质量评审](docs/CODE_QUALITY_REVIEW_2026-10-29.md) | 静态检查、Lint 与整改清单 |
 
 ## 🤝 贡献指南
 
