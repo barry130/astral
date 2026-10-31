@@ -89,7 +89,7 @@ export default function LoginPage() {
     <div className="login-container">
       <div className="login-box fade-in-up">
         <div className="mb-8 text-center">
-          <div className="bg-primary mb-5 inline-flex size-14 items-center justify-center rounded-[14px] shadow-[0_8px_20px_rgba(24,24,27,0.16)]">
+          <div className="bg-primary mb-5 inline-flex size-14 items-center justify-center rounded-[18px] shadow-[0_12px_28px_-8px_rgba(11,143,98,0.55)]">
             <ShieldCheck className="text-primary-foreground size-6" />
           </div>
           <h1 className="login-title">Astral</h1>
@@ -102,7 +102,7 @@ export default function LoginPage() {
               <div className="relative">
                 <User className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
                 <Input
-                  className="h-11 rounded-[10px] pl-10"
+                  className="h-11 rounded-xl pl-10"
                   placeholder="用户名"
                   autoComplete="username"
                   value={username}
@@ -120,7 +120,7 @@ export default function LoginPage() {
                 <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
                 <Input
                   type="password"
-                  className="h-11 rounded-[10px] pl-10"
+                  className="h-11 rounded-xl pl-10"
                   placeholder="密码"
                   autoComplete="current-password"
                   value={password}
@@ -138,7 +138,7 @@ export default function LoginPage() {
                 <div className="relative">
                   <KeyRound className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
                   <Input
-                    className="h-11 rounded-[10px] pl-10"
+                    className="h-11 rounded-xl pl-10"
                     placeholder="动态验证码（6 位）"
                     inputMode="numeric"
                     maxLength={6}
@@ -156,7 +156,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading || publicKeyLoading}
-              className="mt-4 h-11 w-full rounded-[10px] text-[15px] font-semibold"
+              className="mt-5 h-11 w-full rounded-xl text-[14.5px] font-semibold"
             >
               {(loading || publicKeyLoading) && <Loader2 className="animate-spin" />}登 录
             </Button>
