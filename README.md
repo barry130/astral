@@ -364,7 +364,7 @@ docker compose up -d --build
 | 文档 | 说明 |
 |------|------|
 | [UI 组件与设计规范](docs/UI_GUIDE.md) | 设计令牌、组件清单、复用规则、页面模板（**改界面前必读**） |
-| [组件指南](COMPONENTS_GUIDE.md) | 日志、认证（含 Sa-Token）、监控 |
+| [组件指南](COMPONENTS_GUIDE.md) | 日志、认证（含 Sa-Token）、监控、序列、表结构、邮件短信与消息中心 |
 | [集成指南](INTEGRATION_GUIDE.md) | 与宿主系统/前端集成的步骤清单 |
 | [插件开发指南](PLUGIN_GUIDE.md) | 插件 SPI、建表、导航扩展 |
 | [部署指南](DEPLOY_GUIDE.md) | Docker Compose 与环境变量 |
