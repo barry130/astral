@@ -55,7 +55,7 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          'z-50 w-72 rounded-md border border-border bg-popover p-4 text-popover-foreground shadow-md outline-hidden',
+          'z-50 w-72 rounded-2xl border border-[color:var(--color-border-light)] bg-popover p-4 text-popover-foreground shadow-[0_18px_44px_-16px_rgba(16,32,26,0.28)] outline-hidden',
           // pointer-events-auto 仍然需要，但解决的是**另一个**问题（"点不动"）：
           // Radix Dialog 打开时通过 DismissableLayer 给 body 设 inline `pointer-events: none`，
           // 且只给「注册了的图层」恢复 auto（DialogOverlay / DialogContent / SelectContent /

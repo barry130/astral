@@ -73,7 +73,7 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
        DataTable 已把「最后一行」的底线去掉，这里不会出现双线 */
     <div
       className={cn(
-        'border-border/60 flex flex-wrap items-center justify-end gap-3 border-t py-3 text-sm',
+        'flex flex-wrap items-center justify-end gap-3 border-t border-[color:var(--color-border-light)] py-3.5 text-[13px] text-[color:var(--color-text-tertiary)]',
         className,
       )}
     >
@@ -93,7 +93,7 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
           <select
             value={String(pageSize)}
             onChange={(e) => changePageSize(Number(e.target.value))}
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 cursor-pointer rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-[3px]"
+            className="h-9 cursor-pointer rounded-[10px] border border-[color:var(--color-border)] bg-card px-2 text-[13px] text-[color:var(--color-text)] outline-none transition-colors hover:border-[color:color-mix(in_srgb,var(--color-brand)_30%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]"
             aria-label="每页条数"
           >
             {pageSizes.map((s) => (
@@ -108,9 +108,9 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
 
       <div className="flex items-center gap-1">
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
-          className="size-8"
+          className="size-8 rounded-full"
           disabled={current <= 1}
           onClick={() => goto(1)}
           aria-label="首页"
@@ -118,9 +118,9 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
           <ChevronsLeft className="size-4" />
         </Button>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
-          className="size-8"
+          className="size-8 rounded-full"
           disabled={current <= 1}
           onClick={() => goto(current - 1)}
           aria-label="上一页"
@@ -136,9 +136,9 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
           ) : (
             <Button
               key={p}
-              variant={p === current ? 'default' : 'outline'}
+              variant={p === current ? 'default' : 'ghost'}
               size="icon"
-              className="size-8 tabular-nums"
+              className="size-8 rounded-full text-[13px] font-medium tabular-nums"
               onClick={() => goto(p)}
               aria-current={p === current ? 'page' : undefined}
               // 页码按钮只有数字，读屏会念成「3 按钮」；补一个完整名称
@@ -150,9 +150,9 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
         )}
 
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
-          className="size-8"
+          className="size-8 rounded-full"
           disabled={current >= pageCount}
           onClick={() => goto(current + 1)}
           aria-label="下一页"
@@ -160,9 +160,9 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
           <ChevronRight className="size-4" />
         </Button>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
-          className="size-8"
+          className="size-8 rounded-full"
           disabled={current >= pageCount}
           onClick={() => goto(pageCount)}
           aria-label="末页"
@@ -174,7 +174,7 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
           <label className="text-muted-foreground ml-1 flex items-center gap-1.5">
             跳至
             <Input
-              className="h-8 w-14 text-center"
+              className="h-9 w-14 rounded-[10px] text-center text-[13px]"
               value={jumpValue}
               onChange={(e) => setJumpValue(e.target.value.replace(/[^\d]/g, ''))}
               onKeyDown={(e) => {

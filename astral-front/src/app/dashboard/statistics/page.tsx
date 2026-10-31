@@ -197,7 +197,7 @@ function DeviceTab({ utOptions }: { utOptions: Option[] }) {
         type: 'line',
         smooth: true,
         data: trend?.today ?? [],
-        itemStyle: { color: '#18181b' },
+        itemStyle: { color: '#0b8f62' },
         areaStyle: { opacity: 0.08 },
       },
       {
@@ -372,7 +372,7 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
       {
         data: topData.slice(0, 10).map((i) => i.callCount || 0),
         type: 'bar',
-        itemStyle: { color: '#3f3f46', borderRadius: [4, 4, 0, 0] },
+        itemStyle: { color: '#0b8f62', borderRadius: [6, 6, 0, 0] },
       },
     ],
   };
@@ -385,7 +385,7 @@ function ApiTab({ utOptions }: { utOptions: Option[] }) {
         type: 'pie',
         radius: ['40%', '70%'],
         data: [
-          { value: totalSuccess, name: '成功', itemStyle: { color: '#52c41a' } },
+          { value: totalSuccess, name: '成功', itemStyle: { color: '#10a06a' } },
           { value: totalFailure, name: '失败', itemStyle: { color: '#ff4d4f' } },
         ],
       },

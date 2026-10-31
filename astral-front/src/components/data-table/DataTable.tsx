@@ -277,7 +277,7 @@ export function DataTable<T extends object>({
         className={cn(
           'relative overflow-hidden',
           bordered &&
-            'border-border bg-card rounded-xl border shadow-[0_1px_3px_rgba(24,24,27,0.05)] dark:shadow-none',
+            'border-[color:var(--color-border-light)] bg-card rounded-2xl border shadow-[0_1px_2px_rgba(16,32,26,0.03)] dark:shadow-none',
         )}
       >
         <div
@@ -312,7 +312,7 @@ export function DataTable<T extends object>({
             </colgroup>
 
             {/* 表头吸顶：底色必须实心，否则滚动时行内容会从表头下方透出 */}
-            <TableHeader className="bg-muted sticky top-0 z-[1]">
+            <TableHeader className="bg-[var(--color-bg-tint)] sticky top-0 z-[1]">
               {/* hover:bg-transparent 用 important 后缀：表头行不该响应数据行的悬停底色，
                   两者同属 hover 变体的 background-color，不加 ! 会由 Tailwind 的输出顺序决定谁生效 */}
               <TableRow className="hover:bg-transparent!">

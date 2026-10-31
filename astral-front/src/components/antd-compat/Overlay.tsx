@@ -167,15 +167,17 @@ export function Modal({
       >
         <div
           className={cn(
-            'border-border flex items-center justify-between gap-4 border-b py-3.5',
-            isCompact ? 'px-4' : 'px-5',
+            'flex items-center justify-between gap-4 border-b border-[color:var(--color-border-light)] py-4',
+            isCompact ? 'px-4' : 'px-6',
           )}
           style={styles?.header}
         >
-          <DialogTitle className="text-foreground text-[15px] font-semibold">{title}</DialogTitle>
+          <DialogTitle className="text-[color:var(--color-text)] text-[16px] font-semibold">
+            {title}
+          </DialogTitle>
           <DialogPrimitive.Close
             aria-label="关闭"
-            className="text-muted-foreground cursor-pointer rounded-sm opacity-70 transition-opacity hover:opacity-100"
+            className="text-[color:var(--color-text-tertiary)] inline-flex size-8 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-[var(--color-bg-tint)] hover:text-[color:var(--color-text)]"
           >
             <X className="size-4" />
           </DialogPrimitive.Close>
@@ -185,13 +187,20 @@ export function Modal({
             加 min-w-0 后弹窗宽度由自身 maxWidth 决定，超宽内容只在内部溢出/滚动。
             overflow-y-auto 让超高表单在弹窗内部滚动（配合上面的 max-h + 1fr 行）。 */}
         <div
-          className={cn('min-w-0 overflow-y-auto py-4', isCompact ? 'px-4' : 'px-5')}
+          className={cn('min-w-0 overflow-y-auto py-5', isCompact ? 'px-4' : 'px-6')}
           style={{ ...bodyStyle, ...styles?.body }}
         >
           {children}
         </div>
         {resolvedFooter ? (
-          <div className={cn('pb-4', isCompact ? 'px-4' : 'px-5')}>{resolvedFooter}</div>
+          <div
+            className={cn(
+              'flex flex-wrap items-center justify-end gap-2 border-t border-[color:var(--color-border-light)] bg-[var(--color-bg-tint)] py-3.5',
+              isCompact ? 'px-4' : 'px-6',
+            )}
+          >
+            {resolvedFooter}
+          </div>
         ) : null}
       </DialogContent>
     </Dialog>
@@ -259,7 +268,7 @@ export function Drawer({
         <DialogPrimitive.Content
           data-slot="dialog-content"
           className={cn(
-            'border-border bg-card fixed z-50 flex flex-col shadow-lg outline-none',
+            'border-[color:var(--color-border-light)] bg-card fixed z-50 flex flex-col shadow-[0_28px_70px_-30px_rgba(16,32,26,0.35)] outline-none',
             PLACEMENT_CLS[placement] ?? PLACEMENT_CLS.right,
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             className,
@@ -275,8 +284,8 @@ export function Drawer({
             if (!maskClosable) e.preventDefault();
           }}
         >
-          <div className="border-border flex shrink-0 items-center justify-between gap-4 border-b px-4 py-3">
-            <DialogPrimitive.Title className="text-foreground text-[15px] font-semibold">
+          <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[color:var(--color-border-light)] px-5 py-4">
+            <DialogPrimitive.Title className="text-[color:var(--color-text)] text-[16px] font-semibold">
               {title}
             </DialogPrimitive.Title>
             <div className="flex items-center gap-2">
@@ -295,7 +304,9 @@ export function Drawer({
             {children}
           </div>
           {footer ? (
-            <div className="border-border shrink-0 border-t px-4 py-3">{footer}</div>
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-[color:var(--color-border-light)] bg-[var(--color-bg-tint)] px-5 py-3.5">
+              {footer}
+            </div>
           ) : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -403,42 +414,55 @@ function TabsBase({
 
   return (
     <div className={cn('w-full', className)} style={style}>
-      <div role="tablist" className="tabs-scroll border-border flex items-center gap-1 border-b">
-        {list.map((tab) => {
-          const on = tab.key === active?.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              role="tab"
-              aria-selected={on}
-              disabled={tab.disabled}
-              onClick={() => select(tab.key)}
-              className={cn(
-                'relative shrink-0 cursor-pointer text-sm whitespace-nowrap transition-colors',
-                size === 'small' ? 'px-2.5 py-1.5' : 'px-3.5 py-2',
-                tab.disabled && 'cursor-not-allowed opacity-40',
-                card
-                  ? cn(
-                      'border-border rounded-t-md border border-b-0',
-                      on
-                        ? 'bg-card text-foreground font-medium'
-                        : 'bg-muted/40 text-muted-foreground hover:text-foreground',
-                    )
-                  : on
-                    ? 'text-foreground font-medium'
-                    : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {tab.label}
-              {!card && on ? (
-                <span className="bg-primary absolute inset-x-2 -bottom-px h-0.5 rounded-full" />
-              ) : null}
-            </button>
-          );
-        })}
+      <div className="flex w-full flex-wrap items-center gap-3">
+        <div
+          role="tablist"
+          className={cn(
+            'tabs-scroll flex w-fit items-center gap-1',
+            // 卡片型页签保留贴边外观；普通页签改成 B 端常见的分段胶囊
+            card
+              ? 'border-border border-b'
+              : 'rounded-full bg-[var(--color-bg-tint)] p-1',
+          )}
+        >
+          {list.map((tab) => {
+            const on = tab.key === active?.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                disabled={tab.disabled}
+                onClick={() => select(tab.key)}
+                className={cn(
+                  'shrink-0 cursor-pointer whitespace-nowrap transition-colors',
+                  size === 'small' ? 'text-[12.5px]' : 'text-[13px]',
+                  tab.disabled && 'cursor-not-allowed opacity-40',
+                  card
+                    ? cn(
+                        'border-border rounded-t-xl border border-b-0',
+                        size === 'small' ? 'px-3 py-1.5' : 'px-4 py-2',
+                        on
+                          ? 'bg-card text-[color:var(--color-text)] font-medium'
+                          : 'bg-[var(--color-bg-tint)] text-[color:var(--color-text-tertiary)] hover:text-[color:var(--color-text)]',
+                      )
+                    : cn(
+                        'rounded-full',
+                        size === 'small' ? 'px-3 py-1' : 'px-3.5 py-1.5',
+                        on
+                          ? 'bg-card font-medium text-[color:var(--color-text)] shadow-[0_1px_2px_rgba(16,32,26,0.08)]'
+                          : 'text-[color:var(--color-text-tertiary)] hover:text-[color:var(--color-text)]',
+                      ),
+                )}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
         {tabBarExtraContent ? (
-          <div className="ml-auto flex items-center gap-2 pb-1">{tabBarExtraContent}</div>
+          <div className="ml-auto flex items-center gap-2">{tabBarExtraContent}</div>
         ) : null}
       </div>
 

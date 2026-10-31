@@ -109,7 +109,62 @@ function GridCell({ className, children }: { className?: string; children: React
   return <div className={cn('w-full', className)}>{children}</div>;
 }
 
-/** 顶部核心指标卡 */
+/** 迷你走势线：纯内联 SVG，不引三方图表库（KPI 卡右下角用） */
+function Sparkline({ values, className }: { values: number[]; className?: string }) {
+  const width = 92;
+  const height = 30;
+  // 采样点不足时画一条贴底的淡线占位，避免卡片右下角出现突兀的空白
+  if (!values || values.length < 2) {
+    return (
+      <svg
+        viewBox="0 0 92 30"
+        className={cn('h-[30px] w-[92px] shrink-0 opacity-30', className)}
+        aria-hidden
+        focusable="false"
+      >
+        <line
+          x1="0"
+          y1="27"
+          x2="92"
+          y2="27"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeDasharray="3 4"
+        />
+      </svg>
+    );
+  }
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const span = max - min || 1;
+  const points = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * width;
+      const y = height - 3 - ((v - min) / span) * (height - 6);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className={cn('h-[30px] w-[92px] shrink-0', className)}
+      aria-hidden
+      focusable="false"
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** 顶部核心指标卡：左标签 + 大数字，右上圆形图标芯片，底部进度条/说明 + 迷你走势 */
 function StatCard({
   label,
   value,
@@ -117,6 +172,7 @@ function StatCard({
   tone,
   progress,
   sub,
+  spark,
 }: {
   label: string;
   value: React.ReactNode;
@@ -124,30 +180,44 @@ function StatCard({
   tone?: Tone;
   progress?: number;
   sub?: React.ReactNode;
+  spark?: number[];
 }) {
   return (
-    <Card className="stat-card h-full py-5">
-      <CardContent className="flex items-start justify-between px-5">
-        <div className="min-w-0">
-          <div className="text-muted-foreground text-sm">{label}</div>
-          <div
-            className={cn(
-              'mt-1 text-[28px] leading-tight font-semibold tabular-nums',
-              tone?.text ?? 'text-foreground',
-            )}
-          >
-            {value}
+    <Card className="stat-card h-full">
+      <CardContent className="flex h-full flex-col px-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[12.5px] font-medium text-[color:var(--color-text-tertiary)]">
+              {label}
+            </div>
+            <div
+              className={cn(
+                'mt-2 text-[30px] leading-none font-semibold tracking-[-0.02em] tabular-nums',
+                tone?.text ?? 'text-[color:var(--color-text)]',
+              )}
+            >
+              {value}
+            </div>
           </div>
-          {progress !== undefined && (
-            <Progress
-              value={Math.min(100, Math.max(0, progress))}
-              className="mt-3 h-1.5"
-              indicatorClassName={cn('transition-[width] duration-300 ease-out', tone?.bar)}
-            />
-          )}
-          {sub && <div className="text-muted-foreground/80 mt-1.5 text-xs">{sub}</div>}
+          <StatIcon icon={icon} />
         </div>
-        <StatIcon icon={icon} />
+        <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+          <div className="min-w-0 flex-1">
+            {progress !== undefined && (
+              <Progress
+                value={Math.min(100, Math.max(0, progress))}
+                className="h-1.5"
+                indicatorClassName={cn('transition-[width] duration-300 ease-out', tone?.bar)}
+              />
+            )}
+            {sub && (
+              <div className="mt-2 truncate text-[11.5px] text-[color:var(--color-text-tertiary)]">
+                {sub}
+              </div>
+            )}
+          </div>
+          <Sparkline values={spark ?? []} className="text-[var(--color-brand)] opacity-70" />
+        </div>
       </CardContent>
     </Card>
   );
@@ -337,6 +407,26 @@ export default function DashboardPage() {
     };
   }, [canViewMonitor]);
 
+  /** KPI 迷你走势：保留最近 24 个采样点（30 秒一次 ≈ 12 分钟） */
+  const [series, setSeries] = useState<{
+    cpu: number[];
+    mem: number[];
+    disk: number[];
+    req: number[];
+  }>({ cpu: [], mem: [], disk: [], req: [] });
+  useEffect(() => {
+    if (!data) return;
+    const push = (arr: number[], v: number) => [...arr, v].slice(-24);
+    const sys = data.system;
+    const biz = data.business;
+    setSeries((prev) => ({
+      cpu: push(prev.cpu, sys?.cpuUsage ?? 0),
+      mem: push(prev.mem, sys?.memoryUsage ?? 0),
+      disk: push(prev.disk, sys?.diskUsage ?? 0),
+      req: push(prev.req, biz?.activeRequests ?? 0),
+    }));
+  }, [data]);
+
   if (!canViewMonitor) {
     return (
       <div className="my-24 flex flex-col items-center gap-3 text-center">
@@ -420,6 +510,7 @@ export default function DashboardPage() {
             icon={<Cpu />}
             tone={usageTone(cpuUsage, 60, 80)}
             progress={cpuUsage}
+            spark={series.cpu}
           />
         </GridCell>
 
@@ -430,6 +521,7 @@ export default function DashboardPage() {
             icon={<MemoryStick />}
             tone={usageTone(memoryUsage, 70, 85)}
             progress={memoryUsage}
+            spark={series.mem}
             sub={`${formatBytes(system?.usedMemory ?? 0)} / ${formatBytes(system?.totalMemory ?? 0)}`}
           />
         </GridCell>
@@ -441,6 +533,7 @@ export default function DashboardPage() {
             icon={<HardDrive />}
             tone={usageTone(diskUsage, 75, 90)}
             progress={diskUsage}
+            spark={series.disk}
           />
         </GridCell>
 
@@ -449,6 +542,7 @@ export default function DashboardPage() {
             label="并发请求"
             value={String(activeRequests)}
             icon={<Radio />}
+            spark={series.req}
             sub="此刻处理中的请求数"
           />
         </GridCell>

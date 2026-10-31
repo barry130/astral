@@ -54,17 +54,22 @@ export function Card({
       {(title || extra) && (
         <CardHeader
           className={cn(
-            'border-border flex flex-row items-center justify-between gap-3 border-b px-4',
-            size === 'small' ? 'py-2.5' : 'py-3',
+            'flex flex-row items-center justify-between gap-3 border-b border-[color:var(--color-border-light)] px-5',
+            size === 'small' ? 'py-3' : 'py-4',
           )}
         >
-          <CardTitle className={cn('text-[15px] font-semibold', size === 'small' && 'text-sm')}>
+          <CardTitle
+            className={cn(
+              'text-[color:var(--color-text)] text-[15px] font-semibold tracking-[-0.01em]',
+              size === 'small' && 'text-[14px]',
+            )}
+          >
             {title}
           </CardTitle>
           {extra ? <div className="flex shrink-0 items-center gap-2">{extra}</div> : null}
         </CardHeader>
       )}
-      <CardContent className={cn('px-4', size === 'small' ? 'py-3' : 'py-4')} style={bodyStyle}>
+      <CardContent className={cn('px-5', size === 'small' ? 'py-3.5' : 'py-5')} style={bodyStyle}>
         {children}
       </CardContent>
     </ShadcnCard>

@@ -34,14 +34,14 @@ import { cn } from '@/lib/utils';
 /* ================================================================ 通用样式 */
 
 const SIZE_H: Record<string, string> = {
-  small: 'h-7 text-xs',
-  middle: 'h-9 text-sm',
-  default: 'h-9 text-sm',
-  large: 'h-10 text-base',
+  small: 'h-8 text-[13px]',
+  middle: 'h-10 text-[13.5px]',
+  default: 'h-10 text-[13.5px]',
+  large: 'h-11 text-[14px]',
 };
 
 const FIELD_BASE =
-  'w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-foreground shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50';
+  'w-full min-w-0 rounded-xl border border-[color:var(--color-border)] bg-card px-3.5 py-1 text-[color:var(--color-text)] shadow-[0_1px_2px_rgba(16,32,26,0.03)] outline-none transition-[color,box-shadow,border-color] placeholder:text-[color:var(--color-text-tertiary)] hover:border-[color:color-mix(in_srgb,var(--color-brand)_28%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)] disabled:cursor-not-allowed disabled:bg-[var(--color-bg-tint)] disabled:opacity-60';
 
 /* ================================================================ Input */
 
@@ -396,6 +396,8 @@ export function InputSearch({
       <span className="min-w-0 flex-1">
         <InputBase
           {...rest}
+          // 与右侧搜索按钮拼成一体：左边圆角保留，右边直角（否则两个圆角之间露缝）
+          className={cn('rounded-r-none', rest.className)}
           style={innerStyle}
           allowClear={allowClear}
           prefix={rest.prefix ?? <Search className="size-3.5" />}
@@ -728,7 +730,7 @@ function SelectBase({
           aria-disabled={disabled}
           tabIndex={disabled ? -1 : 0}
           className={cn(
-            'border-input focus-visible:border-ring focus-visible:ring-ring/40 flex w-full cursor-pointer items-center gap-1 rounded-md border bg-transparent px-2.5 py-1 shadow-xs outline-none focus-visible:ring-[3px]',
+            'flex w-full cursor-pointer items-center gap-1 rounded-xl border border-[color:var(--color-border)] bg-card px-3 py-1 shadow-[0_1px_2px_rgba(16,32,26,0.03)] outline-none transition-[color,box-shadow,border-color] hover:border-[color:color-mix(in_srgb,var(--color-brand)_28%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]',
             SIZE_H[size] ?? SIZE_H.middle,
             disabled && 'cursor-not-allowed opacity-50',
             status === 'error' && 'border-destructive',
@@ -1615,7 +1617,7 @@ export function TreeSelect({
           aria-expanded={open}
           tabIndex={disabled ? -1 : 0}
           className={cn(
-            'border-input focus-visible:border-ring focus-visible:ring-ring/40 flex w-full cursor-pointer items-center gap-1 rounded-md border bg-transparent px-2.5 py-1 shadow-xs outline-none focus-visible:ring-[3px]',
+            'flex w-full cursor-pointer items-center gap-1 rounded-xl border border-[color:var(--color-border)] bg-card px-3 py-1 shadow-[0_1px_2px_rgba(16,32,26,0.03)] outline-none transition-[color,box-shadow,border-color] hover:border-[color:color-mix(in_srgb,var(--color-brand)_28%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]',
             // 多选：不能沿用固定高度——已选项一多会换行，固定 h-9 会溢出；
             // 改用「最小高度」+ 标签区自身上限/内部滚动（见下方 max-h-20）。
             // 单选保持原固定高度，不影响其它调用方。

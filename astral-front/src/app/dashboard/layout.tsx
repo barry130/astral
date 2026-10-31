@@ -537,6 +537,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [openTabs, setOpenTabs] = useState<TabItem[]>([]);
   const [activeTab, setActiveTab] = useState(pathname);
   const [initialized, setInitialized] = useState(false);
+  /** 顶栏全局搜索：输入即匹配菜单，回车进入第一个结果 */
+  const [quickQuery, setQuickQuery] = useState('');
   // 记录上一次的 pathname，用于区分「路由真正跳转」与「openTabs 变化」，
   // 避免关闭页签后 setOpenTabs 触发 useEffect 把刚关闭的页签重新加回。
   const prevPathnameRef = useRef(pathname);
@@ -647,6 +649,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     return { allTabItems, menuItems };
   }, [backendMenuTree, filteredMenuConfig, visiblePluginNavItems, userPermissions]);
+
+  /** 顶栏搜索匹配结果（按菜单名 / 路由匹配，最多取 8 条） */
+  const quickResults = useMemo(() => {
+    const q = quickQuery.trim().toLowerCase();
+    if (!q) return [] as TabItem[];
+    return allTabItems
+      .filter((t) => t.label?.toLowerCase().includes(q) || t.key.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [quickQuery, allTabItems]);
 
   /**
    * 菜单搜索：菜单超过 10 项后逐项翻找成本高，输入关键词时把分组树扁平成
@@ -1049,6 +1060,53 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Breadcrumb>
           )}
 
+          {/* 顶栏全局搜索：输入即匹配菜单，回车进入第一个结果（参考 B 端 SaaS 的胶囊搜索） */}
+          {!isMobile && (
+            <div className="relative ml-3 w-[248px] shrink-0">
+              <Search className="text-[color:var(--color-text-tertiary)] pointer-events-none absolute top-1/2 left-3 z-10 size-3.5 -translate-y-1/2" />
+              <Input
+                value={quickQuery}
+                onChange={(e) => setQuickQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && quickResults[0]) {
+                    router.push(quickResults[0].key);
+                    setQuickQuery('');
+                  }
+                  if (e.key === 'Escape') setQuickQuery('');
+                }}
+                placeholder="搜索页面 / 功能"
+                aria-label="搜索页面"
+                className="h-9 rounded-full border-transparent bg-[var(--color-bg-tint)] pl-9 text-[13px] shadow-none hover:bg-[var(--color-brand-soft)] focus-visible:border-transparent focus-visible:bg-card focus-visible:ring-2"
+              />
+              {quickQuery.trim() && (
+                <div className="absolute top-11 left-0 z-30 w-full overflow-hidden rounded-2xl border border-[color:var(--color-border-light)] bg-popover p-1.5 shadow-[0_18px_44px_-16px_rgba(16,32,26,0.28)]">
+                  {quickResults.length === 0 ? (
+                    <div className="text-[color:var(--color-text-tertiary)] px-3 py-2 text-xs">
+                      没有匹配的页面
+                    </div>
+                  ) : (
+                    quickResults.map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          router.push(item.key);
+                          setQuickQuery('');
+                        }}
+                        className="hover:bg-[var(--color-bg-tint)] flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-colors"
+                      >
+                        <span className="text-[color:var(--color-text-tertiary)] flex size-4 items-center [&_svg]:size-4">
+                          {item.icon}
+                        </span>
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 右侧操作区（统一靠右）：收缩菜单栏 / 主题切换 / 通知 / 用户 */}
           <div className={cn('flex items-center gap-1', showBreadcrumb ? '' : 'ml-auto')}>
             <Button
@@ -1111,7 +1169,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* 页签条 */}
         {openTabs.length > 0 && (
-          <div className="tabs-wrapper border-border sticky top-14 z-10 flex items-center overflow-hidden border-b px-5 py-2">
+          <div className="tabs-wrapper sticky top-[62px] z-10 flex items-center overflow-hidden border-b border-[color:var(--color-border-light)] bg-[var(--color-bg-base)]/70 px-5 py-2 backdrop-blur-sm">
             <div className="flex min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden">
               <div className="flex gap-1 whitespace-nowrap">
                 {openTabs.map((tab) => {
@@ -1128,10 +1186,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         if (e.key === 'Enter' || e.key === ' ') handleTabChange(tab.key);
                       }}
                       className={cn(
-                        'dashboard-tab group inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors',
+                        'dashboard-tab group inline-flex cursor-pointer items-center gap-2 rounded-full border border-transparent px-3.5 py-1.5 text-[12.5px] transition-colors',
                         active
-                          ? 'border-border bg-card font-semibold text-[var(--color-brand-text)] shadow-sm'
-                          : 'text-muted-foreground hover:bg-accent hover:text-foreground border-transparent',
+                          ? 'bg-card font-semibold text-[var(--color-brand-text)] shadow-[0_1px_2px_rgba(16,32,26,0.1)] ring-1 ring-[color:var(--color-border-light)]'
+                          : 'text-[color:var(--color-text-tertiary)] hover:bg-card/80 hover:text-[color:var(--color-text)]',
                       )}
                     >
                       <span className="flex size-4 items-center [&_svg]:size-4">{tab.icon}</span>

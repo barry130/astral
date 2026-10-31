@@ -253,7 +253,7 @@ function FeedbackPanel() {
           name: '新增反馈',
           type: 'bar',
           data: days.map((d) => d.count),
-          itemStyle: { color: '#18181b', borderRadius: [4, 4, 0, 0] },
+          itemStyle: { color: '#0b8f62', borderRadius: [6, 6, 0, 0] },
           barMaxWidth: 36,
         },
       ],
@@ -422,7 +422,7 @@ function FeedbackPanel() {
             <Statistic
               title="已接收"
               value={stat?.received ?? '-'}
-              valueStyle={{ color: '#18181b' }}
+              valueStyle={{ color: '#14201c' }}
             />
           </Card>
         </Col>

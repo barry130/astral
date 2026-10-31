@@ -120,10 +120,16 @@ export function Statistic({
       : (value ?? '-');
 
   return (
-    <div className={cn('flex flex-col gap-1', className)} style={style}>
-      {title ? <span className="text-muted-foreground text-xs">{title}</span> : null}
+    <div className={cn('flex min-w-0 flex-col gap-1', className)} style={style}>
+      {title ? (
+        <span className="text-[12px] font-medium text-[color:var(--color-text-tertiary)]">
+          {title}
+        </span>
+      ) : null}
       <span
-        className="flex items-baseline gap-1 text-xl font-semibold tabular-nums"
+        // 值可能很长（如「平均停留 3321161m52s」）：单行裁切 + 悬停看全量，避免撑破卡片
+        title={typeof display === 'string' || typeof display === 'number' ? String(display) : undefined}
+        className="flex min-w-0 items-baseline gap-1 truncate text-[22px] leading-tight font-semibold tracking-[-0.01em] tabular-nums"
         style={valueStyle}
       >
         {prefix ? <span className="text-sm font-normal">{prefix}</span> : null}

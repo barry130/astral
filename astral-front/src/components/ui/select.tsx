@@ -29,11 +29,12 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none cursor-pointer",
-        'data-[size=default]:h-9 data-[size=sm]:h-8',
-        'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-        'disabled:cursor-not-allowed disabled:opacity-50',
-        'data-[placeholder]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
+        "flex w-full items-center justify-between gap-2 rounded-xl border border-[color:var(--color-border)] bg-card px-3.5 py-2 text-[13.5px] whitespace-nowrap shadow-[0_1px_2px_rgba(16,32,26,0.03)] transition-[color,box-shadow,border-color] outline-none cursor-pointer",
+        'hover:border-[color:color-mix(in_srgb,var(--color-brand)_28%,var(--color-border))]',
+        'data-[size=default]:h-10 data-[size=sm]:h-9',
+        'focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]',
+        'disabled:cursor-not-allowed disabled:bg-[var(--color-bg-tint)] disabled:opacity-60',
+        'data-[placeholder]:text-[color:var(--color-text-tertiary)] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*="size-"])]:size-4',
         'aria-invalid:border-destructive aria-invalid:ring-destructive/20',
         className,
       )}
@@ -58,7 +59,7 @@ function SelectContent({
       <SelectPrimitive.Content
         data-slot="select-content"
         className={cn(
-          'relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border border-border bg-popover text-popover-foreground shadow-md',
+          'relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-2xl border border-[color:var(--color-border-light)] bg-popover p-1 text-popover-foreground shadow-[0_18px_44px_-16px_rgba(16,32,26,0.28)]',
           'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           position === 'popper' &&
             'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',

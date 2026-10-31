@@ -438,7 +438,7 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
           <div className="rt-toolbar">
             <Popover>
               <PopoverTrigger asChild>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="ghost" className="rounded-full text-[12.5px]">
                   <SlidersHorizontal className="size-3.5" />
                   列设置
                 </Button>
