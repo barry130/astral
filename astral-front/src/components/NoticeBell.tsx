@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RichText } from '@/components/rich-text';
 
 /**
  * 顶栏消息提示铃铛
@@ -233,7 +234,10 @@ export default function NoticeBell({
             </Badge>
             <span>{fmtTime(detail?.createTime)}</span>
           </div>
-          <div className="leading-relaxed whitespace-pre-wrap">{detail?.content}</div>
+          {/* 正文是富文本（HTML 片段，客户端同一套白名单渲染），不能当纯文本输出 */}
+          <div className="max-h-[52vh] overflow-y-auto pr-1">
+            <RichText text={detail?.content} className="text-sm leading-relaxed break-words" />
+          </div>
           {detailLink && (
             <div className="text-sm">
               {detailLink.kind === 'internal' && (

@@ -87,6 +87,8 @@ shadcn 语义变量（`--background` / `--foreground` / `--primary` / `--muted` 
 | `ErrorState` | `ErrorState.tsx` | 加载失败态 |
 | `TableSkeleton` | `TableSkeleton.tsx` | 表格骨架屏。`DataTable` / `ResizableTable` 首次加载（无数据）时已自动渲染，页面无需手动调用 |
 | `markdown-editor` | `markdown-editor.tsx` | Markdown 编辑器（CMS 使用） |
+| `RichText` | `rich-text.tsx` | **富文本（HTML 片段）渲染唯一实现**：公告/通知正文、任何后台下发 HTML 的地方都用它，不要把 `content` 直接当文本输出或塞 `dangerouslySetInnerHTML`。节点树 + 标签/属性白名单渲染，同时兼容纯文本。附 `sanitizeRichText()`（写库前消毒）、`htmlToText()`（列表摘要）、`looksLikeHtml()` |
+| `RichTextEditor` | `rich-text-editor.tsx` | 富文本编辑器（所见即所得 + 源码切换 + 预览），产出 HTML 片段，直接给 `Form.Item` 用（`value`/`onChange`）。公告正文等 HTML 字段一律用它，不要再写 `Input.TextArea` |
 
 ### 3.3 全局与壳层
 

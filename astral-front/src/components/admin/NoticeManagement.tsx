@@ -38,6 +38,8 @@ import {
   loadNoticeDicts,
   NOTICE_CHANNEL_ALL,
 } from '@/api/notice';
+import { RichTextEditor } from '@/components/rich-text-editor';
+import { sanitizeRichText } from '@/components/rich-text';
 import { ResizableTable } from '@/components/ResizableTable';
 import { usePerm } from '@/lib/perm';
 
@@ -323,7 +325,8 @@ export default function NoticeManagement() {
             : values.channel,
       noticeType: values.noticeType,
       title: values.title,
-      content: values.content,
+      // 正文是富文本（HTML 片段）：落库前统一走白名单，把 script / 事件属性 / 外链样式剔掉
+      content: sanitizeRichText(values.content ?? ''),
       url: values.url,
       userId: values.userId,
       display,
@@ -706,8 +709,12 @@ export default function NoticeManagement() {
             </Form.Item>
           )}
 
-          <Form.Item name="content" label="内容">
-            <Input.TextArea rows={8} placeholder="通知内容（支持富文本）" />
+          <Form.Item
+            name="content"
+            label="内容"
+            extra="支持富文本：工具栏可加粗 / 标题 / 列表 / 链接，也能切「源码」直接粘 HTML。客户端按标签白名单渲染，border、圆角等排版样式在 App 端可能被简化"
+          >
+            <RichTextEditor minHeight={180} />
           </Form.Item>
 
           <Row gutter={16}>
