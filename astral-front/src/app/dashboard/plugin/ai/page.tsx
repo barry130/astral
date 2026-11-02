@@ -1,8 +1,8 @@
 /**
  * AI 助手配置台。
  *
- * 九个页签按「先配通道、再配智能体、最后看运行」的顺序排列：
- * 提供方 → 模型 → 路由 → 智能体版本 → 提示词 → 知识库 → 工具 → 额度 → 运行观测。
+ * 页签按「先配通道、再配智能体、最后看运行」的顺序排列：
+ * 提供方 → 模型 → 路由 → 智能体版本 → 提示词 → 知识库 → 工具 → MCP 服务器 → 额度 → 运行观测。
  *
  * 页签本身按权限裁剪：没有 `admin:ai:xxx:view` 就不显示对应页签，
  * 而不是显示后再报 403——那会让管理员以为功能坏了。
@@ -19,6 +19,7 @@ import { usePerm } from '@/lib/perm';
 import AgentPanel from '@/components/ai/admin/AgentPanel';
 import AuditPanel from '@/components/ai/admin/AuditPanel';
 import KnowledgePanel from '@/components/ai/admin/KnowledgePanel';
+import McpServerPanel from '@/components/ai/admin/McpServerPanel';
 import OverviewPanel from '@/components/ai/admin/OverviewPanel';
 import PromptPanel from '@/components/ai/admin/PromptPanel';
 import ProviderPanel from '@/components/ai/admin/ProviderPanel';
@@ -79,6 +80,12 @@ export default function AiConfigPage() {
         label: '工具',
         children: <ToolPanel />,
         visible: hasPerm('admin:ai:tool:view'),
+      },
+      {
+        key: 'mcp',
+        label: 'MCP 服务器',
+        children: <McpServerPanel />,
+        visible: hasPerm('admin:ai:mcp:view'),
       },
       {
         key: 'quota',
@@ -153,6 +160,7 @@ function PageHeading() {
         <Hint>
           改完智能体配置记得「校验 → 发布」：只有 PUBLISHED 版本会生效，草稿改动不会影响线上。
           如需回滚，在版本列表里对目标历史版本点「回滚」，系统会以该版本为蓝本生成新版本再发布，审计链不会断。
+          工具里的 HTTP / SQL 声明式工具可以直接在后台新建并试跑，MCP 远端工具在「MCP 服务器」页签刷新发现。
         </Hint>
       </div>
     </div>

@@ -307,8 +307,64 @@ export interface AiTool {
   status?: string;
   /** 代码里是否真的存在该 handlerKey；缺失时该工具不可用 */
   handlerAvailable?: boolean;
+  /** 执行方式：CODE 代码实现 / HTTP 外部接口 / SQL 只读查询 / MCP 远端工具 */
+  executorType?: string;
+  /** 声明式执行配置 JSON（HTTP / SQL / MCP 各自的形状） */
+  executorConfig?: string | null;
   createTime?: string;
   updateTime?: string;
+}
+
+/** 声明式工具保存请求（HTTP / SQL） */
+export interface DeclarativeToolSaveReq {
+  toolCode: string;
+  name: string;
+  description?: string;
+  clientTypes?: string[];
+  permissionCodes?: string[];
+  /** 参数 JSON Schema；占位符必须在这里声明 */
+  argumentsSchema?: string;
+  /** 执行配置 JSON（HTTP：method/url/headers/query/body/timeoutMs/summaryPath/payloadPath；SQL：sql/columns/maxRows/timeoutSeconds） */
+  executorConfig: string;
+  riskLevel?: string;
+  approvalPolicy?: string;
+}
+
+/** 声明式工具试跑结果 */
+export interface ToolTestRunResult {
+  status?: string;
+  summary?: string;
+  payload?: unknown;
+  elapsedMs?: number;
+}
+
+/* ==================== MCP 服务器 ==================== */
+
+/** 远端 MCP 服务器（Streamable HTTP） */
+export interface AiMcpServer {
+  id?: number;
+  serverCode?: string;
+  name?: string;
+  url?: string;
+  /** 附加请求头 JSON，值可写 ${secret:key} 引用环境变量 */
+  headers?: string | null;
+  readOnly?: boolean;
+  status?: string;
+  toolCount?: number;
+  toolCountEnabled?: number;
+  lastRefreshTime?: string;
+  lastError?: string | null;
+  createTime?: string;
+}
+
+/** MCP 服务器保存请求 */
+export interface McpServerSaveReq {
+  serverCode?: string;
+  name: string;
+  url: string;
+  headers?: string;
+  readOnly?: boolean;
+  status?: string;
 }
 
 /* ==================== 额度 / 用量 ==================== */
@@ -757,11 +813,42 @@ export const aiToolApi = {
   sync: () => request.post<{ changed?: number }>('/api/v1/admin/ai/tools/sync'),
   update: (id: number, data: Partial<AiTool>) =>
     request.put<AiTool>(`/api/v1/admin/ai/tools/${id}`, data),
+  /** 新建声明式工具：executorType 只接受 HTTP / SQL */
+  createDeclarative: (executorType: string, data: DeclarativeToolSaveReq) =>
+    request.post<AiTool>(
+      `/api/v1/admin/ai/tools/${executorType === 'SQL' ? 'sql' : 'http'}`,
+      data,
+    ),
+  /** 修改声明式工具 */
+  updateDeclarative: (executorType: string, id: number, data: DeclarativeToolSaveReq) =>
+    request.put<AiTool>(
+      `/api/v1/admin/ai/tools/${id}/${executorType === 'SQL' ? 'sql' : 'http'}`,
+      data,
+    ),
+  /** 用一份参数 JSON 试跑工具，不写审计表 */
+  testRun: (id: number, argumentsJson?: string) =>
+    request.post<ToolTestRunResult>(`/api/v1/admin/ai/tools/${id}/test-run`, {
+      arguments: argumentsJson ?? '',
+    }),
   approve: (toolCallId: number, approved: boolean, comment?: string) =>
     request.post<unknown>(`/api/v1/admin/ai/tool-calls/${toolCallId}/approve`, {
       approved,
       comment,
     }),
+};
+
+/* ==================== 管理端：MCP 服务器 ==================== */
+
+export const aiMcpApi = {
+  list: () => request.get<AiMcpServer[]>('/api/v1/admin/ai/mcp-servers'),
+  create: (data: McpServerSaveReq) =>
+    request.post<AiMcpServer>('/api/v1/admin/ai/mcp-servers', data),
+  update: (id: number, data: McpServerSaveReq) =>
+    request.put<AiMcpServer>(`/api/v1/admin/ai/mcp-servers/${id}`, data),
+  remove: (id: number) => request.delete<void>(`/api/v1/admin/ai/mcp-servers/${id}`),
+  /** 刷新远端工具清单：新增的写入 ai_tool，远端已下线的置为停用 */
+  refresh: (id: number) =>
+    request.post<AiMcpServer>(`/api/v1/admin/ai/mcp-servers/${id}/refresh`),
 };
 
 /* ==================== 管理端：额度 / 用量 / 请求 / 审计 / 总览 ==================== */

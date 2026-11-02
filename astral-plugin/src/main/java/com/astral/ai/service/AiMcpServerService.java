@@ -177,7 +177,7 @@ public class AiMcpServerService {
         List<AiToolEntity> touched = new ArrayList<>();
         int enabled = 0;
         for (McpClient.McpToolInfo info : tools) {
-            String config = configOf(server, info.name());
+            String config = configOf(server, info.name(), info.readOnlyHint());
             AiToolEntity entity = findByRemoteName(existing, info.name());
             boolean fresh = entity == null;
             if (fresh) {
@@ -226,10 +226,13 @@ public class AiMcpServerService {
         return enabled;
     }
 
-    private String configOf(AiMcpServerEntity server, String remoteToolName) {
+    private String configOf(AiMcpServerEntity server, String remoteToolName, Boolean readOnlyHint) {
         var node = AiJson.mapper().createObjectNode();
         node.put("serverId", server.getId());
         node.put("toolName", remoteToolName);
+        if (readOnlyHint != null) {
+            node.put("readOnlyHint", readOnlyHint);
+        }
         return AiJson.write(node);
     }
 

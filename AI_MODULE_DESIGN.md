@@ -312,6 +312,7 @@ update_time
 | 流式协议和事件格式 | 否 | 统一平台协议 |
 | 业务数据权限校验 | 否 | Service 和安全层 |
 | 高风险工具最高风险级别 | 否 | 代码强制下限 |
+| 声明式工具的执行配置（HTTP 地址、SQL 语句） | 是 | 执行器护栏：禁私网、SQL 只读、写方法强制确认 |
 
 管理员可以缩小能力，但不能通过配置绕过代码安全边界。例如，管理端可以把一个工具设置为“必须确认”，但不能把删除用户工具改成无需确认；可以限制最大 Token，但不能突破服务端硬上限。
 
@@ -871,6 +872,97 @@ send_email
 
 如果工具没有足够数据，助手必须明确说明未知，不能编造系统状态。
 
+### 7.4 声明式工具（HTTP / SQL / MCP）
+
+工具不再只有「写代码」一条路。后台可以直接配置**声明式工具**：执行逻辑固定收敛在三个执行器里，管理员只填配置，因此仍然无法借此执行任意代码。
+
+| 执行方式 | 谁能创建 | 执行面 | 典型场景 |
+|---|---|---|---|
+| `CODE` | 只能由代码登记 | 代码里的 `AiToolHandler` | 内置管理工具、音乐工具 |
+| `HTTP` | 后台手工新建 | `HttpToolExecutor` | 调 ERP / 订单 / 工单等外部接口 |
+| `SQL` | 后台手工新建 | `SqlToolExecutor` | 查本系统只读数据（报表、明细） |
+| `MCP` | 只能在「MCP 服务器」页签刷新发现 | `McpToolExecutor` + `McpClient` | 接第三方 MCP 服务器 |
+
+#### 7.4.1 HTTP 工具
+
+`executor_config` 形状：
+
+```json
+{
+  "method": "GET",
+  "url": "https://api.example.com/v1/orders/${orderId}",
+  "headers": { "Authorization": "Bearer ${secret:ERP_TOKEN}" },
+  "query": { "page": "${page}" },
+  "body": { "userId": "${userId}" },
+  "timeoutMs": 8000,
+  "maxResponseBytes": 262144,
+  "summaryPath": "data.summary",
+  "payloadPath": "data.items"
+}
+```
+
+约束（全部在执行器里强制，后台绕不过）：
+
+- `method` 仅 `GET / POST / PUT / PATCH / DELETE`；`GET` 不能带正文。
+- `url` 必须是 http(s) 绝对地址，**主机名与端口必须是字面量**，模板占位符只允许出现在路径、查询参数、请求头和正文里，防止把请求指向另一台主机。
+- 占位符形如 `${name}`，名字必须已在 `arguments_schema.properties` 里声明，否则保存即被拒；`${secret:key}` 从服务端配置/环境变量取，数据库里只存引用。
+- 地址解析阶段就拦私网、环回、链路本地与云元数据地址（`127.0.0.0/8`、`10.0.0.0/8`、`172.16.0.0/12`、`192.168.0.0/16`、`169.254.0.0/16`、`::1` 等），并关闭重定向；需要收紧时用 `astral.ai.http-tool.allowed-hosts` 白名单（白名单只能进一步收紧，不能放开私网）。
+- `timeoutMs` 区间 500–30000（默认 5000），`maxResponseBytes` 区间 4KB–1MB（默认 256KB），超出截断而不报错。
+
+#### 7.4.2 SQL 工具
+
+`executor_config` 形状：
+
+```json
+{
+  "sql": "select id, name, status from astral.sys_user where status = #{status} limit 50",
+  "columns": ["id", "name", "status"],
+  "maxRows": 50,
+  "timeoutSeconds": 5
+}
+```
+
+只读护栏：
+
+- 先剥离字符串字面量与注释，再去掉尾分号，**只允许单条** `SELECT` / `WITH … SELECT`；再含分号、或以其他关键字开头一律拒绝。
+- 关键字黑名单覆盖 `INSERT / UPDATE / DELETE / MERGE / INTO / RETURNING / CREATE / ALTER / DROP / TRUNCATE / GRANT / CALL / EXECUTE / DO / COPY / LOCK / VACUUM / SET / LISTEN / NOTIFY / PREPARE / ANALYZE` 等，因此 `WITH x AS (INSERT …)` 与 `SELECT … INTO` 同样被拒。
+- 参数只能写成 `#{name}`（PreparedStatement 绑定），禁止字符串拼接；名字必须在 `arguments_schema` 里声明。
+- 执行时连接 `setReadOnly(true)` + 手动事务，结束后回落滚，构成第二道保险。
+- `columns` 必须显式声明（列名白名单），只有这些列会回传给模型；`maxRows` 1–200（默认 50），`timeoutSeconds` 1–15（默认 5）。
+
+#### 7.4.3 MCP 工具
+
+「MCP 服务器」页签维护 `ai_mcp_server`，点「刷新工具」时服务端以 Streamable HTTP（协议版本 `2025-03-26`）连接远端：`initialize` → `notifications/initialized` → `tools/list`（自动翻页，最多 20 页 / 500 个工具）。发现的工具写入 `ai_tool`，编码形如 `{serverCode}__{toolName}`；远端已下线的工具置 `DISABLED`。
+
+- 传输层用 JDK `HttpClient` 手写，不引入额外依赖：响应既支持 `application/json`，也支持 `text/event-stream`（按 SSE 空行分帧、多行 `data:` 合并、只接受 `id` 精确匹配的帧），带 `Mcp-Session-Id` 的会话在结束时 `DELETE` 关闭。
+- 服务器 `url` 与 HTTP 工具同一套 SSRF 护栏；`headers_json` 里的 `${secret:key}` 同样只存引用。
+- 工具调用每次都是独立会话（connect → `tools/call` → close），失败信息透传为工具结果，不会拖垮整轮对话。
+
+#### 7.4.4 风险与确认策略的强制规则
+
+| 情况 | 风险等级 | 确认策略 |
+|---|---|---|
+| HTTP `GET` | 后台可选（`READ` / `DRAFT` / `HIGH`） | 后台可选 |
+| HTTP 非 `GET` | 强制 `HIGH` | 强制 `ADMIN_CONFIRM` |
+| SQL 查询 | 默认 `READ`（执行器本身只读） | 默认 `NONE` |
+| MCP 服务器 `read_only=true` 且远端未否定 `readOnlyHint` | `READ` | `NONE` |
+| 其余 MCP 工具 | 强制 `HIGH` | 强制 `ADMIN_CONFIRM` |
+
+强制值写在 `AiToolService.applyDeclarative` 与 `McpToolExecutor` 里：保存执行配置时按上表落库，之后在工具页签编辑风险/确认策略时，`AiToolService.update` 会按同一套下限校验并**直接拒绝**更低的取值（错误码 `AI008`），而不是静默改写——「管理员可以缩小能力，但不能放宽代码下限」这条原则对声明式工具同样成立。
+
+#### 7.4.5 后台操作流程
+
+```text
+工具页签
+  → 新建声明式工具（HTTP / SQL）
+  → 填参数结构（arguments_schema）与执行配置
+  → 保存（服务端做结构、占位符、SSRF、只读校验）
+  → 用「试跑」填一份参数 JSON 真实执行一次（不写 ai_tool_call，只留操作日志）
+  → 到智能体版本里绑定该工具、校验、发布
+```
+
+MCP 工具的流程是：MCP 服务器页签新建 → 刷新工具 → 工具页签确认风险与启用状态 → 绑定到智能体版本 → 发布。
+
 ## 8. 会话、请求和完整 AI 流
 
 ### 8.1 核心状态模型
@@ -1265,7 +1357,9 @@ id
 tool_code                  全局唯一的代码注册名
 name
 description
-handler_key                代码注册的安全处理器标识
+handler_key                执行器标识（代码工具为代码注册名，声明式工具为 declarative:http / declarative:sql / declarative:mcp）
+executor_type              CODE / HTTP / SQL / MCP
+executor_config            声明式执行配置 JSON（CODE 为空，见 §7.4）
 client_types               允许的客户端类型
 permission_codes           执行工具所需的声明式权限
 risk_level                 READ / DRAFT / HIGH
@@ -1278,7 +1372,7 @@ create_time
 update_time
 ```
 
-`handler_key` 只对应代码中登记的工具实现，后台不能创建任意 Java 类、Shell 命令、SQL 或脚本入口。工具注册表提供全局安全下限，智能体版本只能选择已登记工具并进一步收窄其参数、范围和确认策略。
+`handler_key` 指向的执行面有两类：`CODE` 由代码里的 `AiToolHandler` 实现；`HTTP` / `SQL` / `MCP` 由声明式执行器统一实现（见 §7.4），后台只填执行配置，仍然不能创建任意 Java 类、Shell 命令或非只读 SQL。工具注册表提供全局安全下限，智能体版本只能选择已登记工具并进一步收窄其参数、范围和确认策略。
 
 ### 11.6 `ai_agent_tool`
 
@@ -1498,7 +1592,26 @@ create_time
 
 反馈只用于分析和评测，不自动修改 Prompt、权限、额度或工具配置。敏感反馈内容按会话保留策略处理。
 
-### 11.16 Schema 与迁移
+### 11.16 `ai_mcp_server`
+
+```text
+id
+server_code                全局唯一，声明式 MCP 工具的编码前缀
+name
+url                        MCP 端点（Streamable HTTP，仅公网 http(s)）
+headers_json               附加请求头，值可写 ${secret:key} 引用环境变量
+read_only                  服务器是否只读：true 时发现的工具默认 READ + NONE
+status                     ENABLED / DISABLED
+tool_count                 最近一次刷新发现的工具数
+last_refresh_time
+last_error                 最近一次刷新失败原因（截断 500 字）
+created_by / updated_by
+create_time / update_time
+```
+
+刷新远端 `tools/list` 时按 `executor_config.toolName` 匹配既有 `ai_tool` 行：新工具建行，远端已消失的置 `DISABLED`（不物理删除，保证审计链完整）。MCP 工具不在后台手工创建，只能由刷新发现。
+
+### 11.17 Schema 与迁移
 
 新增表必须同步对应的表结构 JSON，并可在 `/api/v1/admin/system/table-schema` 查询。建议至少创建以下插件 Schema 文件：
 
@@ -1517,6 +1630,7 @@ astral-plugin/src/main/resources/schema/ai_knowledge_chunk.json
 astral-plugin/src/main/resources/schema/ai_knowledge_index_job.json
 astral-plugin/src/main/resources/schema/ai_agent_knowledge.json
 astral-plugin/src/main/resources/schema/ai_tool.json
+astral-plugin/src/main/resources/schema/ai_mcp_server.json
 astral-plugin/src/main/resources/schema/ai_agent_tool.json
 astral-plugin/src/main/resources/schema/ai_conversation.json
 astral-plugin/src/main/resources/schema/ai_message.json
@@ -1548,6 +1662,8 @@ ai_provider_type
 ai_model_kind
 ai_tool_risk_level
 ai_tool_approval_policy
+ai_tool_executor_type
+ai_mcp_server_status
 ai_knowledge_source_type
 ai_knowledge_status
 ai_request_status
@@ -1887,7 +2003,19 @@ GET    /api/v1/admin/ai/knowledge/index-jobs/{jobId}
 GET    /api/v1/admin/ai/agents/{id}/knowledge
 PUT    /api/v1/admin/ai/agent-versions/{versionId}/knowledge
 GET    /api/v1/admin/ai/tools
+POST   /api/v1/admin/ai/tools/sync
 PUT    /api/v1/admin/ai/tools/{id}
+POST   /api/v1/admin/ai/tools/http
+PUT    /api/v1/admin/ai/tools/{id}/http
+POST   /api/v1/admin/ai/tools/sql
+PUT    /api/v1/admin/ai/tools/{id}/sql
+POST   /api/v1/admin/ai/tools/{id}/test-run
+
+GET    /api/v1/admin/ai/mcp-servers
+POST   /api/v1/admin/ai/mcp-servers
+PUT    /api/v1/admin/ai/mcp-servers/{id}
+DELETE /api/v1/admin/ai/mcp-servers/{id}
+POST   /api/v1/admin/ai/mcp-servers/{id}/refresh
 GET    /api/v1/admin/ai/quotas
 PUT    /api/v1/admin/ai/quotas
 GET    /api/v1/admin/ai/usage

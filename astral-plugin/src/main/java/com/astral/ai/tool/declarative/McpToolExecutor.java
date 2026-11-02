@@ -10,6 +10,7 @@ import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
@@ -72,6 +73,16 @@ public class McpToolExecutor implements AiToolHandler {
     }
 
     /** 取 executor_config 里的 serverId（缺失或非法返回 null） */
+    /** 保存时记下的远端 readOnlyHint（远端未给出时为 null） */
+    public static Boolean readOnlyHintOf(AiToolEntity tool) {
+        ObjectNode config = AiJson.readObject(tool.getExecutorConfig());
+        if (config == null) {
+            return null;
+        }
+        JsonNode node = config.get("readOnlyHint");
+        return node == null || node.isNull() ? null : node.asBoolean();
+    }
+
     public static Long serverIdOf(AiToolEntity tool) {
         ObjectNode config = AiJson.readObject(tool.getExecutorConfig());
         var node = config.get("serverId");

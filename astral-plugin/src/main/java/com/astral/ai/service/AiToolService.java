@@ -190,19 +190,22 @@ public class AiToolService {
     public AiToolEntity update(Long id, String name, String description, String riskLevel,
                                String approvalPolicy, String status, Long operatorId) {
         AiToolEntity entity = require(id);
-        AiToolHandler handler = handlers.get(entity.getHandlerKey());
         if (name != null && !name.isBlank()) {
             entity.setName(name.trim());
         }
         if (description != null) {
             entity.setDescription(description);
         }
-        String codeRisk = handler == null ? null : handler.definition().riskLevel();
+        String[] floor = riskFloor(entity);
+        String floorRisk = floor[0];
         if (riskLevel != null && !riskLevel.isBlank()) {
             String target = riskLevel.toUpperCase(Locale.ROOT);
-            if (codeRisk != null && AiConstants.RiskLevel.order(target) < AiConstants.RiskLevel.order(codeRisk)) {
+            if (!AiConstants.RiskLevel.all().contains(target)) {
+                throw new AiException("AI008", "风险等级非法: " + target);
+            }
+            if (AiConstants.RiskLevel.order(target) < AiConstants.RiskLevel.order(floorRisk)) {
                 throw new AiException("AI008",
-                        "不能把风险等级降低到代码要求之下（最低 " + codeRisk + "）");
+                        "不能把风险等级降低到执行器要求之下（最低 " + floorRisk + "）");
             }
             entity.setRiskLevel(target);
         }
@@ -211,8 +214,8 @@ public class AiToolService {
             if (!AiConstants.ApprovalPolicy.all().contains(target)) {
                 throw new AiException("AI008", "确认策略非法: " + target);
             }
-            // 代码要求强确认的，后台不能放开
-            if (codeRisk != null && AiConstants.RiskLevel.HIGH.equals(codeRisk)
+            // 执行器要求强确认的，后台不能放开
+            if (AiConstants.RiskLevel.HIGH.equals(floorRisk)
                     && AiConstants.ApprovalPolicy.NONE.equals(target)) {
                 throw new AiException("AI008", "高风险工具必须保留人工确认");
             }
@@ -411,6 +414,38 @@ public class AiToolService {
         entity.setApprovalPolicy(readOnly ? approvalOrDefault(req.approvalPolicy())
                 : AiConstants.ApprovalPolicy.ADMIN_CONFIRM);
         entity.setSideEffects(readOnly ? "只读调用外部 HTTP 接口" : "调用外部 HTTP 接口（可能产生写操作）");
+    }
+
+    /**
+     * 后台编辑工具时允许的最低风险与最低确认策略。
+     *
+     * <p>代码工具来自 handler 定义；声明式工具来自执行配置本身：非 GET 的 HTTP 工具与可写的 MCP 工具
+     * 强制 HIGH + ADMIN_CONFIRM，SQL 执行器只读所以下限是 READ + NONE。后台只能抬高，不能降低。</p>
+     */
+    private String[] riskFloor(AiToolEntity entity) {
+        String type = executorTypeOf(entity);
+        if (AiConstants.ExecutorType.HTTP.equals(type)) {
+            return "GET".equals(methodOf(entity.getExecutorConfig()))
+                    ? new String[]{AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE}
+                    : new String[]{AiConstants.RiskLevel.HIGH, AiConstants.ApprovalPolicy.ADMIN_CONFIRM};
+        }
+        if (AiConstants.ExecutorType.MCP.equals(type)) {
+            Long serverId = McpToolExecutor.serverIdOf(entity);
+            AiMcpServerEntity server = serverId == null ? null : mcpServerMapper.selectById(serverId);
+            boolean readOnly = server != null && McpToolExecutor.readOnlyOf(
+                    Boolean.TRUE.equals(server.getReadOnly()), McpToolExecutor.readOnlyHintOf(entity));
+            return readOnly
+                    ? new String[]{AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE}
+                    : new String[]{AiConstants.RiskLevel.HIGH, AiConstants.ApprovalPolicy.ADMIN_CONFIRM};
+        }
+        if (AiConstants.ExecutorType.SQL.equals(type)) {
+            return new String[]{AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE};
+        }
+        AiToolHandler handler = resolveHandler(entity);
+        if (handler == null) {
+            return new String[]{AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE};
+        }
+        return new String[]{handler.definition().riskLevel(), handler.definition().approvalPolicy()};
     }
 
     private static String methodOf(String executorConfig) {

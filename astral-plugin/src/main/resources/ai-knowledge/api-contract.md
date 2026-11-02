@@ -83,7 +83,8 @@ HTTP 200 表示服务端已处理，业务结论看 body 的 `code`：200 成功
 - 绑定：`GET/PUT /agent-versions/{id}/tools`、`GET/PUT /agent-versions/{id}/knowledge`
 - 提示词：`GET/POST /prompts`、`GET/PUT /prompts/{id}`、`GET/POST /prompts/{id}/versions`、`PUT /prompt-versions/{id}`、`POST /prompt-versions/{id}/publish`
 - 知识库：`GET/POST /knowledge/sources`、`GET/PUT /knowledge/sources/{id}`、`GET/POST /knowledge/sources/{id}/documents`、`DELETE /knowledge/documents/{id}`、`POST /knowledge/sources/{id}/sync`、`GET /knowledge/index-jobs/{jobId}`
-- 工具：`GET /tools`、`POST /tools/sync`、`PUT /tools/{id}`、`POST /tool-calls/{id}/approve`
+- 工具：`GET /tools`、`POST /tools/sync`、`PUT /tools/{id}`、`POST /tool-calls/{id}/approve`；声明式工具 `POST /tools/http`、`PUT /tools/{id}/http`、`POST /tools/sql`、`PUT /tools/{id}/sql`、`POST /tools/{id}/test-run`
+- MCP 服务器：`GET/POST /mcp-servers`、`PUT/DELETE /mcp-servers/{id}`、`POST /mcp-servers/{id}/refresh`（刷新时发现远端工具写入 `ai_tool`）
 - 额度：`GET/POST /quotas`、`PUT/DELETE /quotas/{id}`
 - 用量与审计：`GET /usage`、`GET /usage/summary`、`GET /requests`、`GET /requests/{id}`、`GET /audit`、`GET /overview`
 

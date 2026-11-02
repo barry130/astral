@@ -522,3 +522,18 @@
 
 管理端 `/api/v1/admin/ai`（供应商/智能体/提示词/工具/知识库/用量/请求日志，70+ 端点）、App 端 `/api/v1/app/ai`（SSE 对话/会话/用量，12 端点）。
 设计文档见 [AI_MODULE_DESIGN.md](AI_MODULE_DESIGN.md)。
+
+工具的三种形态都在这一个接口面里：`CODE` 只读（由代码登记），`HTTP` / `SQL` 由后台新建，`MCP` 由服务器刷新发现。
+
+| 方法与路径 | 说明 |
+|---|---|
+| `GET /tools` | 工具清单，返回 `executorType`（`CODE`/`HTTP`/`SQL`/`MCP`）与 `executorConfig` |
+| `PUT /tools/{id}` | 改代码工具的显示名/描述/风险/确认策略/状态 |
+| `POST /tools/sync` | 从代码同步工具注册表，返回 `{changed}` |
+| `POST /tools/http`、`PUT /tools/{id}/http` | 新建/修改 HTTP 声明式工具（`DeclarativeToolSaveReq`） |
+| `POST /tools/sql`、`PUT /tools/{id}/sql` | 新建/修改 SQL 声明式工具（同一请求体形状） |
+| `POST /tools/{id}/test-run` | 用 `{arguments}` 真实试跑一次，返回 `{status,summary,payload,elapsedMs}`；不写 `ai_tool_call` |
+| `GET/POST /mcp-servers`、`PUT/DELETE /mcp-servers/{id}` | MCP 服务器维护 |
+| `POST /mcp-servers/{id}/refresh` | 连接远端拉取 `tools/list`，同步进 `ai_tool`，返回刷新后的服务器 |
+
+声明式工具的保存校验在服务端强制：HTTP 主机名必须字面量且禁私网/环回/云元数据地址、`GET` 不能带正文、非 `GET` 一律 `HIGH` + `ADMIN_CONFIRM`；SQL 只允许单条 `SELECT`/`WITH … SELECT`、参数只能 `#{name}` 绑定、必须声明 `columns`、连接只读。试跑需要 `admin:ai:tool:edit`，会写操作日志。
