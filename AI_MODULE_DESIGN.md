@@ -1611,6 +1611,8 @@ create_time / update_time
 
 刷新远端 `tools/list` 时按 `executor_config.toolName` 匹配既有 `ai_tool` 行：新工具建行，远端已消失的置 `DISABLED`（不物理删除，保证审计链完整）。MCP 工具不在后台手工创建，只能由刷新发现。
 
+刷新失败时（连不上、鉴权被拒、报文非法）`last_error` / `last_refresh_time` 由 `AiMcpServerFailureRecorder` 以独立事务（`REQUIRES_NEW`）写回：刷新本身是事务方法，若在同一事务里写错误原因再抛异常，写回会被自身回滚，页面上就看不到任何失败痕迹。
+
 ### 11.17 Schema 与迁移
 
 新增表必须同步对应的表结构 JSON，并可在 `/api/v1/admin/system/table-schema` 查询。建议至少创建以下插件 Schema 文件：
