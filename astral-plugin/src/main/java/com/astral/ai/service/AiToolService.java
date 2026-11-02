@@ -14,10 +14,12 @@ import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolProvider;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
 import com.astral.ai.tool.declarative.HttpToolExecutor;
+import com.astral.ai.tool.declarative.SqlToolExecutor;
 import com.astral.ai.common.AiException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,6 +52,8 @@ public class AiToolService {
     private final AiAgentToolMapper agentToolMapper;
     private final List<AiToolProvider> providers;
     private final AiProperties properties;
+    /** 声明式 SQL 工具的数据源（当前环境无 JDBC 时工具视为不可用） */
+    private final JdbcTemplate jdbcTemplate;
 
     /** handlerKey → 处理器 */
     private final Map<String, AiToolHandler> handlers = new LinkedHashMap<>();
@@ -249,67 +253,75 @@ public class AiToolService {
         if (AiConstants.ExecutorType.HTTP.equals(executorTypeOf(entity))) {
             return HttpToolExecutor.create(entity, properties);
         }
+        if (AiConstants.ExecutorType.SQL.equals(executorTypeOf(entity))) {
+            return SqlToolExecutor.create(entity, jdbcTemplate, properties);
+        }
         return handlers.get(entity.getHandlerKey());
     }
 
-    // ==================== 声明式 HTTP 工具 ====================
+    // ==================== 声明式工具（HTTP / SQL） ====================
 
     /**
-     * 新建声明式 HTTP 工具。
+     * 新建声明式工具。
      *
-     * <p>写方法（POST/PUT/PATCH/DELETE）强制 HIGH + ADMIN_CONFIRM，服务端写死、后台不可放开；
-     * GET 工具的风险与确认策略可由后台选择。toolCode 与代码工具同表唯一，不能撞名。</p>
+     * <p>执行面收窄在 {@link HttpToolExecutor} / {@link SqlToolExecutor} 里，服务端负责三件事：
+     * 校验执行配置、按执行器类型写 handlerKey、把「写操作必须人工确认」这条下限钉死——HTTP 的
+     * 写方法强制 HIGH + ADMIN_CONFIRM，SQL 只允许只读查询。toolCode 与代码工具同表唯一。</p>
      *
-     * @param req        保存请求
-     * @param operatorId 操作人
+     * @param req          保存请求
+     * @param executorType 执行器类型（HTTP / SQL）
+     * @param operatorId   操作人
      * @return 落库后的工具
      */
     @Transactional(rollbackFor = Exception.class)
-    public AiToolEntity createHttpTool(AiAdminDtos.HttpToolSaveReq req, Long operatorId) {
+    public AiToolEntity createDeclarative(AiAdminDtos.DeclarativeToolSaveReq req, String executorType,
+                                          Long operatorId) {
+        String type = normalizeExecutorType(executorType);
         String toolCode = req.toolCode() == null ? "" : req.toolCode().trim();
-        HttpToolExecutor.validate(req.executorConfig(), req.argumentsSchema(), allowedHosts());
+        validateDeclarative(type, req);
         if (findByCode(toolCode) != null) {
             throw new AiException("AI008", "工具编码已存在: " + toolCode);
         }
         AiToolEntity entity = new AiToolEntity();
         entity.setToolCode(toolCode);
-        entity.setHandlerKey(HttpToolExecutor.HANDLER_KEY);
-        entity.setExecutorType(AiConstants.ExecutorType.HTTP);
-        applyDeclarative(entity, req);
+        entity.setHandlerKey(handlerKeyOf(type));
+        entity.setExecutorType(type);
+        applyDeclarative(entity, req, type);
         entity.setStatus(AiConstants.ToolStatus.ENABLED);
         entity.setCreatedBy(operatorId);
         entity.setUpdatedBy(operatorId);
         toolMapper.insert(entity);
-        log.info("[AI] 新建声明式 HTTP 工具 {}（{}）", toolCode, entity.getRiskLevel());
+        log.info("[AI] 新建声明式 {} 工具 {}（{}）", type, toolCode, entity.getRiskLevel());
         return entity;
     }
 
     /**
-     * 修改声明式 HTTP 工具（含执行配置）。校验规则与新建完全一致。
+     * 修改声明式工具（含执行配置），校验规则与新建一致。
      *
-     * @param id         工具
-     * @param req        保存请求
-     * @param operatorId 操作人
+     * @param id          工具
+     * @param req         保存请求
+     * @param operatorId  操作人
      * @return 落库后的工具
      */
     @Transactional(rollbackFor = Exception.class)
-    public AiToolEntity updateHttpTool(Long id, AiAdminDtos.HttpToolSaveReq req, Long operatorId) {
+    public AiToolEntity updateDeclarative(Long id, AiAdminDtos.DeclarativeToolSaveReq req, Long operatorId) {
         AiToolEntity entity = require(id);
-        if (!AiConstants.ExecutorType.HTTP.equals(executorTypeOf(entity))) {
-            throw new AiException("AI008", "该工具不是声明式 HTTP 工具，不能按 API 配置修改: " + id);
+        String type = normalizeExecutorType(executorTypeOf(entity));
+        if (AiConstants.ExecutorType.CODE.equals(type)) {
+            throw new AiException("AI008", "代码注册的工具不能按声明式配置修改: " + id);
         }
         String toolCode = req.toolCode() == null || req.toolCode().isBlank()
                 ? entity.getToolCode() : req.toolCode().trim();
-        HttpToolExecutor.validate(req.executorConfig(), req.argumentsSchema(), allowedHosts());
+        validateDeclarative(type, req);
         AiToolEntity sameCode = findByCode(toolCode);
         if (sameCode != null && !sameCode.getId().equals(entity.getId())) {
             throw new AiException("AI008", "工具编码已存在: " + toolCode);
         }
         entity.setToolCode(toolCode);
-        applyDeclarative(entity, req);
+        applyDeclarative(entity, req, type);
         entity.setUpdatedBy(operatorId);
         toolMapper.updateById(entity);
-        log.info("[AI] 修改声明式 HTTP 工具 {}（{}）", toolCode, entity.getRiskLevel());
+        log.info("[AI] 修改声明式 {} 工具 {}（{}）", type, toolCode, entity.getRiskLevel());
         return entity;
     }
 
@@ -340,16 +352,50 @@ public class AiToolService {
         return handler.execute(context);
     }
 
-    /** 声明式工具字段落库（写方法强制 HIGH + ADMIN_CONFIRM，不可通过入参放开） */
-    private void applyDeclarative(AiToolEntity entity, AiAdminDtos.HttpToolSaveReq req) {
-        String method = methodOf(req.executorConfig());
-        boolean readOnly = "GET".equals(method);
+    /** 执行器类型归一化并校验 */
+    private static String normalizeExecutorType(String executorType) {
+        String type = executorType == null ? AiConstants.ExecutorType.CODE
+                : executorType.trim().toUpperCase(Locale.ROOT);
+        if (!AiConstants.ExecutorType.all().contains(type)) {
+            throw new AiException("AI008", "执行器类型非法: " + executorType);
+        }
+        return type;
+    }
+
+    /** 声明式工具的 handlerKey（固定值，与代码处理器命名空间隔离） */
+    private static String handlerKeyOf(String type) {
+        return AiConstants.ExecutorType.HTTP.equals(type)
+                ? HttpToolExecutor.HANDLER_KEY : SqlToolExecutor.HANDLER_KEY;
+    }
+
+    /** 按执行器类型做保存期校验（执行配置 + 参数占位符 + 安全护栏） */
+    private void validateDeclarative(String type, AiAdminDtos.DeclarativeToolSaveReq req) {
+        if (AiConstants.ExecutorType.HTTP.equals(type)) {
+            HttpToolExecutor.validate(req.executorConfig(), req.argumentsSchema(), allowedHosts());
+        } else if (AiConstants.ExecutorType.SQL.equals(type)) {
+            SqlToolExecutor.validate(req.executorConfig(), req.argumentsSchema());
+        } else {
+            throw new AiException("AI008", "该执行器类型不支持手工创建: " + type);
+        }
+    }
+
+    /** 声明式工具字段落库（风险下限按执行器类型写死，不可由入参放开） */
+    private void applyDeclarative(AiToolEntity entity, AiAdminDtos.DeclarativeToolSaveReq req, String type) {
         entity.setName(req.name() == null ? "" : req.name().trim());
         entity.setDescription(req.description());
         entity.setClientTypes(AiJson.joinCsv(req.clientTypes()));
         entity.setPermissionCodes(AiJson.joinCsv(req.permissionCodes()));
         entity.setArgumentsSchema(req.argumentsSchema());
         entity.setExecutorConfig(req.executorConfig());
+        if (AiConstants.ExecutorType.SQL.equals(type)) {
+            // SQL 工具只读：风险与确认策略由后台选，但下限仍是「只读查询」
+            entity.setRiskLevel(riskOrDefault(req.riskLevel()));
+            entity.setApprovalPolicy(approvalOrDefault(req.approvalPolicy()));
+            entity.setSideEffects("只读 SQL 查询（连接只读 + 只允许单条 SELECT）");
+            return;
+        }
+        String method = methodOf(req.executorConfig());
+        boolean readOnly = "GET".equals(method);
         entity.setRiskLevel(readOnly ? riskOrDefault(req.riskLevel()) : AiConstants.RiskLevel.HIGH);
         entity.setApprovalPolicy(readOnly ? approvalOrDefault(req.approvalPolicy())
                 : AiConstants.ApprovalPolicy.ADMIN_CONFIRM);
@@ -382,9 +428,15 @@ public class AiToolService {
         return properties.getHttpTool().getAllowedHosts();
     }
 
+
     // ==================== 绑定 ====================
 
-    /** 某智能体版本绑定的工具 */
+    /**
+     * 某智能体版本绑定的工具。
+     *
+     * @param agentVersionId 版本
+     * @return 绑定列表（按排序号）
+     */
     public List<AiAgentToolEntity> listBindings(Long agentVersionId) {
         return agentToolMapper.selectList(new LambdaQueryWrapper<AiAgentToolEntity>()
                 .eq(AiAgentToolEntity::getAgentVersionId, agentVersionId)

@@ -109,7 +109,7 @@ public class AiAdminToolController {
                 req.riskLevel(), req.approvalPolicy(), req.status(), operatorId(request))));
     }
 
-    // ==================== 声明式 HTTP 工具 ====================
+    // ==================== 声明式工具（HTTP / SQL） ====================
 
     /**
      * 新建声明式 HTTP 工具。
@@ -121,9 +121,10 @@ public class AiAdminToolController {
     @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
             description = "新建声明式 HTTP 工具")
     @OperateLog("新建 AI 声明式 HTTP 工具")
-    public Result<AiAdminDtos.ToolVo> createHttpTool(@Valid @RequestBody AiAdminDtos.HttpToolSaveReq req,
+    public Result<AiAdminDtos.ToolVo> createHttpTool(@Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
                                                      HttpServletRequest request) {
-        return Result.success("创建成功", toVo(toolService.createHttpTool(req, operatorId(request))));
+        return Result.success("创建成功", toVo(toolService.createDeclarative(req,
+                AiConstants.ExecutorType.HTTP, operatorId(request))));
     }
 
     /** 修改声明式 HTTP 工具（含执行配置），校验规则与新建一致 */
@@ -132,9 +133,36 @@ public class AiAdminToolController {
             description = "修改声明式 HTTP 工具")
     @OperateLog("修改 AI 声明式 HTTP 工具")
     public Result<AiAdminDtos.ToolVo> updateHttpTool(@PathVariable Long id,
-                                                     @Valid @RequestBody AiAdminDtos.HttpToolSaveReq req,
+                                                     @Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
                                                      HttpServletRequest request) {
-        return Result.success("保存成功", toVo(toolService.updateHttpTool(id, req, operatorId(request))));
+        return Result.success("保存成功", toVo(toolService.updateDeclarative(id, req, operatorId(request))));
+    }
+
+    /**
+     * 新建声明式 SQL 工具。
+     *
+     * <p>只允许单条 SELECT / WITH … SELECT：写关键字（INSERT/UPDATE/DELETE/INTO/DDL…）、
+     * 多语句、以及把入参拼进 SQL 的做法在保存与执行时都会被拒绝，参数一律 PreparedStatement 绑定。</p>
+     */
+    @PostMapping("/tools/sql")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
+            description = "新建声明式 SQL 工具")
+    @OperateLog("新建 AI 声明式 SQL 工具")
+    public Result<AiAdminDtos.ToolVo> createSqlTool(@Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
+                                                    HttpServletRequest request) {
+        return Result.success("创建成功", toVo(toolService.createDeclarative(req,
+                AiConstants.ExecutorType.SQL, operatorId(request))));
+    }
+
+    /** 修改声明式 SQL 工具（含查询配置），校验规则与新建一致 */
+    @PutMapping("/tools/{id}/sql")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
+            description = "修改声明式 SQL 工具")
+    @OperateLog("修改 AI 声明式 SQL 工具")
+    public Result<AiAdminDtos.ToolVo> updateSqlTool(@PathVariable Long id,
+                                                    @Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
+                                                    HttpServletRequest request) {
+        return Result.success("保存成功", toVo(toolService.updateDeclarative(id, req, operatorId(request))));
     }
 
     /**

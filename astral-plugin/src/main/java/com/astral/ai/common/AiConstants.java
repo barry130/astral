@@ -188,12 +188,14 @@ public final class AiConstants {
         public static final String CODE = "CODE";
         /** 声明式 HTTP 调用（executor_config 模板，执行面收敛在 tool.declarative 包） */
         public static final String HTTP = "HTTP";
+        /** 声明式 SQL 查询 */
+        public static final String SQL = "SQL";
 
         private ExecutorType() {
         }
 
         public static List<String> all() {
-            return List.of(CODE, HTTP);
+            return List.of(CODE, HTTP, SQL);
         }
     }
 

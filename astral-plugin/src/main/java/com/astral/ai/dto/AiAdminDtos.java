@@ -582,10 +582,10 @@ public final class AiAdminDtos {
     }
 
     /**
-     * 声明式 HTTP 工具保存请求。
+     * 声明式工具（HTTP / SQL）保存请求。
      *
-     * <p>写方法（POST/PUT/PATCH/DELETE）的 {@code riskLevel}/{@code approvalPolicy} 会被服务端
-     * 强制为 HIGH + ADMIN_CONFIRM，传什么都无效；GET 工具才按这里的值落库。</p>
+     * <p>HTTP 写方法（POST/PUT/PATCH/DELETE）的 {@code riskLevel}/{@code approvalPolicy} 会被
+     * 服务端强制为 HIGH + ADMIN_CONFIRM，传什么都无效；GET 与 SQL 工具才按这里的值落库。</p>
      *
      * @param toolCode        工具编码（模型看到的函数名，snake_case）
      * @param name            中文名
@@ -597,7 +597,7 @@ public final class AiAdminDtos {
      * @param riskLevel       风险等级（仅 GET 生效）
      * @param approvalPolicy  确认策略（仅 GET 生效）
      */
-    public record HttpToolSaveReq(
+    public record DeclarativeToolSaveReq(
             @NotBlank @Size(max = 64) @Pattern(regexp = "[a-z][a-z0-9_]{2,63}",
                     message = "工具编码只能是小写字母开头的 snake_case") String toolCode,
             @NotBlank @Size(max = 128) String name,
