@@ -5,8 +5,10 @@ import com.astral.ai.common.AiJson;
 import com.astral.ai.config.AiProperties;
 import com.astral.ai.dto.AiAdminDtos;
 import com.astral.ai.entity.AiAgentToolEntity;
+import com.astral.ai.entity.AiMcpServerEntity;
 import com.astral.ai.entity.AiToolEntity;
 import com.astral.ai.mapper.AiAgentToolMapper;
+import com.astral.ai.mapper.AiMcpServerMapper;
 import com.astral.ai.mapper.AiToolMapper;
 import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolDef;
@@ -14,6 +16,7 @@ import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolProvider;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
 import com.astral.ai.tool.declarative.HttpToolExecutor;
+import com.astral.ai.tool.declarative.McpToolExecutor;
 import com.astral.ai.tool.declarative.SqlToolExecutor;
 import com.astral.ai.common.AiException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -54,6 +57,9 @@ public class AiToolService {
     private final AiProperties properties;
     /** 声明式 SQL 工具的数据源（当前环境无 JDBC 时工具视为不可用） */
     private final JdbcTemplate jdbcTemplate;
+
+    /** MCP 服务器（声明式 MCP 工具按 serverId 取远端地址） */
+    private final AiMcpServerMapper mcpServerMapper;
 
     /** handlerKey → 处理器 */
     private final Map<String, AiToolHandler> handlers = new LinkedHashMap<>();
@@ -255,6 +261,11 @@ public class AiToolService {
         }
         if (AiConstants.ExecutorType.SQL.equals(executorTypeOf(entity))) {
             return SqlToolExecutor.create(entity, jdbcTemplate, properties);
+        }
+        if (AiConstants.ExecutorType.MCP.equals(executorTypeOf(entity))) {
+            Long serverId = McpToolExecutor.serverIdOf(entity);
+            AiMcpServerEntity server = serverId == null ? null : mcpServerMapper.selectById(serverId);
+            return McpToolExecutor.create(entity, server, properties);
         }
         return handlers.get(entity.getHandlerKey());
     }

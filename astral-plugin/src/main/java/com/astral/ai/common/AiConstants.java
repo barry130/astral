@@ -190,12 +190,14 @@ public final class AiConstants {
         public static final String HTTP = "HTTP";
         /** 声明式 SQL 查询 */
         public static final String SQL = "SQL";
+        /** 远端 MCP 工具（由服务器刷新发现，不在后台手工创建） */
+        public static final String MCP = "MCP";
 
         private ExecutorType() {
         }
 
         public static List<String> all() {
-            return List.of(CODE, HTTP, SQL);
+            return List.of(CODE, HTTP, SQL, MCP);
         }
     }
 

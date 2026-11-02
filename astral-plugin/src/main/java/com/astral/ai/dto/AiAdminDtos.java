@@ -638,6 +638,57 @@ public final class AiAdminDtos {
     }
 
     /**
+     * MCP 服务器保存请求。
+     *
+     * @param serverCode 服务器编码（小写 snake_case，作为工具编码前缀；修改时不生效）
+     * @param name       展示名称
+     * @param url        MCP 端点地址（http(s) 字面量，不支持占位符）
+     * @param headers    附加请求头 JSON，值可写 ${secret:key}
+     * @param readOnly   是否只读服务器（true 时发现的工具默认 READ + NONE）
+     * @param status     状态（仅修改时有意义：ENABLED / DISABLED）
+     */
+    public record McpServerSaveReq(
+            @Size(max = 64) String serverCode,
+            @NotBlank @Size(max = 128) String name,
+            @NotBlank @Size(max = 512) String url,
+            @Size(max = 8192) String headers,
+            Boolean readOnly,
+            @Size(max = 16) String status
+    ) {
+    }
+
+    /**
+     * MCP 服务器视图。
+     *
+     * @param id              主键
+     * @param serverCode      编码
+     * @param name            名称
+     * @param url             端点
+     * @param headers         附加请求头（回显时把 ${secret:key} 原样保留，不还原明文）
+     * @param readOnly        是否只读
+     * @param status          状态
+     * @param toolCount       最近一次发现的工具数
+     * @param lastRefreshTime 最近刷新时间
+     * @param lastError       最近失败原因
+     * @param toolCountEnabled 当前启用中的工具数
+     */
+    public record McpServerVo(
+            Long id,
+            String serverCode,
+            String name,
+            String url,
+            String headers,
+            Boolean readOnly,
+            String status,
+            Integer toolCount,
+            Integer toolCountEnabled,
+            LocalDateTime lastRefreshTime,
+            String lastError,
+            LocalDateTime createTime
+    ) {
+    }
+
+    /**
      * 智能体工具绑定请求。
      *
      * @param toolId                  工具

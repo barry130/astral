@@ -82,5 +82,8 @@ public class AiProperties {
 
         /** ${secret:key} 的取值处（不推荐：密钥优先放环境变量） */
         private Map<String, String> secrets = new LinkedHashMap<>();
+
+        /** MCP 工具单次调用的连接/读超时（秒），区间 3-60 */
+        private int mcpTimeoutSeconds = 20;
     }
 }
