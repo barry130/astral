@@ -5,7 +5,7 @@
 -- 2) ai_mcp_server_status：MCP 服务器启用状态。
 -- 3) ai_mcp_server 的 ID 同样走 sequence_segment 号段（biz_key = 'ai_mcp_server_id'）。
 
-INSERT INTO sequence_segment (biz_key, step, max_value, min_value, init_value)
+INSERT INTO sequence_segment (biz_key, min_value, max_value, current_max_value, step)
 VALUES ('ai_mcp_server_id', 1, 1000, 1000, 1000)
 ON CONFLICT (biz_key) DO NOTHING;
 

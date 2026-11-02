@@ -43,6 +43,8 @@ public class AiMcpServerService {
     private static final Pattern SERVER_CODE = Pattern.compile("[a-z][a-z0-9_]{2,63}");
 
     private final AiMcpServerMapper serverMapper;
+    /** 失败原因用独立事务落盘，避免被 refresh 自身的事务回滚掉 */
+    private final AiMcpServerFailureRecorder failureRecorder;
     private final AiToolMapper toolMapper;
     private final AiProperties properties;
 
@@ -158,10 +160,7 @@ public class AiMcpServerService {
             server.setToolCount(discovered);
             server.setLastError(null);
         } catch (AiException e) {
-            server.setLastError(AiJson.truncate(e.getMessage(), 500));
-            server.setLastRefreshTime(LocalDateTime.now());
-            server.setUpdatedBy(operatorId);
-            serverMapper.updateById(server);
+            failureRecorder.record(server.getId(), e.getMessage(), operatorId);
             throw e;
         }
         server.setLastRefreshTime(LocalDateTime.now());
