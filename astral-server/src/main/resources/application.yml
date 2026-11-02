@@ -137,6 +137,12 @@ astral:
       # API Key 落库加密口令（AES-GCM KEK）：只经环境变量注入，禁止写进仓库；
       # 留空时插件退化为「只允许 secret_ref 引用」模式，后台保存 API Key 会直接报错。
       secret-key: ${ASTRAL_AI_SECRET_KEY:}
+      # 声明式 HTTP 工具（executor_type='HTTP'，后台「AI 工具」页创建）的执行护栏。
+      # 私网/环回/链路本地/云元数据地址始终禁止（代码写死）；allowed-hosts 是进一步收紧：
+      # 非空时只有列表内的 host 可以调用，留空 = 允许任意公网主机。
+      # ${secret:key} 引用的明文放同名环境变量即可（也可写这里，但不推荐）。
+      http-tool:
+        allowed-hosts: ${ASTRAL_AI_HTTP_TOOL_ALLOWED_HOSTS:}
     cms:
       enabled: ${CMS_PLUGIN_ENABLED:true}
       # 匿名评论限流：同一 IP 每 rate-limit-window-seconds 内最多 rate-limit-count 条

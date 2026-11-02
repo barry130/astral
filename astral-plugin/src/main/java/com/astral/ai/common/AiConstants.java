@@ -182,6 +182,21 @@ public final class AiConstants {
         }
     }
 
+    /** 工具执行器类型（ai_tool.executor_type） */
+    public static final class ExecutorType {
+        /** 代码注册处理器（handlerKey 指向容器内 AiToolHandler） */
+        public static final String CODE = "CODE";
+        /** 声明式 HTTP 调用（executor_config 模板，执行面收敛在 tool.declarative 包） */
+        public static final String HTTP = "HTTP";
+
+        private ExecutorType() {
+        }
+
+        public static List<String> all() {
+            return List.of(CODE, HTTP);
+        }
+    }
+
     /** 工具调用状态 */
     public static final class ToolCallStatus {
         public static final String PLANNED = "PLANNED";

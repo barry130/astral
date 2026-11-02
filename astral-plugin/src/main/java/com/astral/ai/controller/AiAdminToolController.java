@@ -38,11 +38,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI 后台：工具登记与高风险工具审批。
+ * AI 后台：工具登记、声明式工具维护与高风险工具审批。
  *
- * <p>工具本体由代码注册（{@code handlerKey} 指向已登记处理器），后台只能调整名称、说明、
- * 风险下限之上的等级、确认策略与启用状态。**后台无法凭空创建一个处理器**——这是设计文档
- * §14 的硬约束，避免配置面变成任意代码执行入口。</p>
+ * <p><b>代码工具</b>：本体由代码注册（{@code handlerKey} 指向已登记处理器），后台只能调整名称、
+ * 说明、风险下限之上的等级、确认策略与启用状态——后台无法凭空创建代码处理器，这是设计文档
+ * §14 的硬约束。</p>
+ *
+ * <p><b>声明式工具</b>：允许后台创建 {@code executor_type='HTTP'} 的工具，执行面被收窄在
+ * {@link com.astral.ai.tool.declarative.HttpToolExecutor}（host 字面量 + 模板只出现在
+ * path/query/header/body + SSRF 护栏），写方法强制 HIGH + ADMIN_CONFIRM，因此不会变成
+ * 任意代码执行入口。</p>
  */
 @RestController
 @RequestMapping("/api/v1/admin/ai")
@@ -102,6 +107,52 @@ public class AiAdminToolController {
                                                  HttpServletRequest request) {
         return Result.success("保存成功", toVo(toolService.update(id, req.name(), req.description(),
                 req.riskLevel(), req.approvalPolicy(), req.status(), operatorId(request))));
+    }
+
+    // ==================== 声明式 HTTP 工具 ====================
+
+    /**
+     * 新建声明式 HTTP 工具。
+     *
+     * <p>执行配置只允许「按模板调用一个 HTTP 接口」；写方法的风险与确认策略由服务端强制
+     * HIGH + ADMIN_CONFIRM，传参无法放开。</p>
+     */
+    @PostMapping("/tools/http")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
+            description = "新建声明式 HTTP 工具")
+    @OperateLog("新建 AI 声明式 HTTP 工具")
+    public Result<AiAdminDtos.ToolVo> createHttpTool(@Valid @RequestBody AiAdminDtos.HttpToolSaveReq req,
+                                                     HttpServletRequest request) {
+        return Result.success("创建成功", toVo(toolService.createHttpTool(req, operatorId(request))));
+    }
+
+    /** 修改声明式 HTTP 工具（含执行配置），校验规则与新建一致 */
+    @PutMapping("/tools/{id}/http")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
+            description = "修改声明式 HTTP 工具")
+    @OperateLog("修改 AI 声明式 HTTP 工具")
+    public Result<AiAdminDtos.ToolVo> updateHttpTool(@PathVariable Long id,
+                                                     @Valid @RequestBody AiAdminDtos.HttpToolSaveReq req,
+                                                     HttpServletRequest request) {
+        return Result.success("保存成功", toVo(toolService.updateHttpTool(id, req, operatorId(request))));
+    }
+
+    /**
+     * 用样例参数试跑工具。
+     *
+     * <p>由管理员手动触发，等同「人工确认」，HIGH 工具直接执行；不写 {@code ai_tool_call}
+     * 审计表（不属于任何会话），留痕走 {@link OperateLog}。</p>
+     */
+    @PostMapping("/tools/{id}/test-run")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
+            description = "试跑工具")
+    @OperateLog("测试运行 AI 工具")
+    public Result<AiAdminDtos.ToolTestRunVo> testRun(@PathVariable Long id,
+                                                     @Valid @RequestBody AiAdminDtos.ToolTestRunReq req) {
+        long started = System.currentTimeMillis();
+        AiToolResult result = toolService.testRun(id, req.arguments());
+        return Result.success(new AiAdminDtos.ToolTestRunVo(result.status(), result.summary(),
+                result.payload(), System.currentTimeMillis() - started));
     }
 
     // ==================== 审批 ====================
@@ -196,7 +247,8 @@ public class AiAdminToolController {
 
     private AiAdminDtos.ToolVo toVo(AiToolEntity entity) {
         return new AiAdminDtos.ToolVo(entity.getId(), entity.getToolCode(), entity.getName(),
-                entity.getDescription(), entity.getHandlerKey(), AiJson.splitCsv(entity.getClientTypes()),
+                entity.getDescription(), entity.getHandlerKey(), AiToolService.executorTypeOf(entity),
+                entity.getExecutorConfig(), AiJson.splitCsv(entity.getClientTypes()),
                 AiJson.splitCsv(entity.getPermissionCodes()), entity.getRiskLevel(), entity.getApprovalPolicy(),
                 entity.getArgumentsSchema(), entity.getResultSchema(), entity.getSideEffects(), entity.getStatus(),
                 toolService.handlerAvailable(entity), entity.getCreateTime(), entity.getUpdateTime());

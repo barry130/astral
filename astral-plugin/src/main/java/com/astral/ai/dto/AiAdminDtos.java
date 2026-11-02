@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -564,6 +565,8 @@ public final class AiAdminDtos {
             String name,
             String description,
             String handlerKey,
+            String executorType,
+            String executorConfig,
             List<String> clientTypes,
             List<String> permissionCodes,
             String riskLevel,
@@ -575,6 +578,62 @@ public final class AiAdminDtos {
             Boolean handlerAvailable,
             LocalDateTime createTime,
             LocalDateTime updateTime
+    ) {
+    }
+
+    /**
+     * 声明式 HTTP 工具保存请求。
+     *
+     * <p>写方法（POST/PUT/PATCH/DELETE）的 {@code riskLevel}/{@code approvalPolicy} 会被服务端
+     * 强制为 HIGH + ADMIN_CONFIRM，传什么都无效；GET 工具才按这里的值落库。</p>
+     *
+     * @param toolCode        工具编码（模型看到的函数名，snake_case）
+     * @param name            中文名
+     * @param description     给模型看的说明（写清能做什么、参数含义）
+     * @param clientTypes     可用客户端（空=全部）
+     * @param permissionCodes 调用所需权限（空=不校验）
+     * @param argumentsSchema 参数 JSON Schema 文本
+     * @param executorConfig  执行配置 JSON 文本（method/url/headers/query/body/超时/取值路径）
+     * @param riskLevel       风险等级（仅 GET 生效）
+     * @param approvalPolicy  确认策略（仅 GET 生效）
+     */
+    public record HttpToolSaveReq(
+            @NotBlank @Size(max = 64) @Pattern(regexp = "[a-z][a-z0-9_]{2,63}",
+                    message = "工具编码只能是小写字母开头的 snake_case") String toolCode,
+            @NotBlank @Size(max = 128) String name,
+            @Size(max = 512) String description,
+            List<String> clientTypes,
+            List<String> permissionCodes,
+            String argumentsSchema,
+            @NotBlank String executorConfig,
+            @Size(max = 16) String riskLevel,
+            @Size(max = 24) String approvalPolicy
+    ) {
+    }
+
+    /**
+     * 工具测试运行请求。
+     *
+     * @param arguments 参数 JSON 文本（对 argumentsSchema 的一次样例填充）
+     */
+    public record ToolTestRunReq(
+            @Size(max = 8192) String arguments
+    ) {
+    }
+
+    /**
+     * 工具测试运行结果。
+     *
+     * @param status  工具状态（SUCCEEDED / FAILED / ...）
+     * @param summary 摘要（与对话里模型看到的一致）
+     * @param payload 结构化结果
+     * @param elapsedMs 执行耗时（毫秒）
+     */
+    public record ToolTestRunVo(
+            String status,
+            String summary,
+            ObjectNode payload,
+            long elapsedMs
     ) {
     }
 

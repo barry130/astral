@@ -29,8 +29,14 @@ public class AiToolEntity {
     /** 描述 */
     private String description;
 
-    /** 处理器键（仅限代码登记） */
+    /** 处理器键（代码登记；声明式工具固定为 declarative:http 等） */
     private String handlerKey;
+
+    /** 执行器类型：CODE=代码注册（默认） / HTTP=声明式 HTTP 调用 */
+    private String executorType;
+
+    /** 声明式执行配置 JSON（executor_type 非 CODE 时使用） */
+    private String executorConfig;
 
     /** 可用客户端 */
     private String clientTypes;

@@ -2,21 +2,26 @@ package com.astral.ai.service;
 
 import com.astral.ai.common.AiConstants;
 import com.astral.ai.common.AiJson;
+import com.astral.ai.config.AiProperties;
+import com.astral.ai.dto.AiAdminDtos;
 import com.astral.ai.entity.AiAgentToolEntity;
 import com.astral.ai.entity.AiToolEntity;
 import com.astral.ai.mapper.AiAgentToolMapper;
 import com.astral.ai.mapper.AiToolMapper;
-import com.astral.ai.tool.AiToolTypes;
+import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolProvider;
-import com.astral.common.exception.BusinessException;
+import com.astral.ai.tool.AiToolTypes.AiToolResult;
+import com.astral.ai.tool.declarative.HttpToolExecutor;
+import com.astral.ai.common.AiException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -28,9 +33,13 @@ import java.util.Set;
 /**
  * 工具登记、绑定与执行入口。
  *
- * <p>启动时把代码里注册的 {@link AiToolHandler} 同步进 {@code ai_tool}：<b>代码是工具的唯一来源</b>，
- * 后台只能调整风险等级、确认策略与启停（设计文档 §11.5）。同步是单向的——
- * 代码新增的工具会自动出现，代码删除的工具会被标记为 DISABLED 而不是物理删除，避免历史审计断链。</p>
+ * <p><b>代码工具</b>（{@code executor_type='CODE'}）的唯一来源是代码：启动时把注册的
+ * {@link AiToolHandler} 同步进 {@code ai_tool}，后台只能调整风险等级、确认策略与启停
+ * （设计文档 §11.5），代码删除的工具被标记为 DISABLED 而不是物理删除，避免审计断链。</p>
+ *
+ * <p><b>声明式工具</b>（{@code executor_type='HTTP'}）由后台创建，执行面收敛在
+ * {@link HttpToolExecutor}：只能表达「按模板调用一个 HTTP 接口」，无法表达任意代码。
+ * 写方法（POST/PUT/PATCH/DELETE）强制 HIGH + ADMIN_CONFIRM，服务端写死、不可配置放开。</p>
  */
 @Slf4j
 @Service
@@ -40,6 +49,7 @@ public class AiToolService {
     private final AiToolMapper toolMapper;
     private final AiAgentToolMapper agentToolMapper;
     private final List<AiToolProvider> providers;
+    private final AiProperties properties;
 
     /** handlerKey → 处理器 */
     private final Map<String, AiToolHandler> handlers = new LinkedHashMap<>();
@@ -119,9 +129,11 @@ public class AiToolService {
             }
             changed++;
         }
-        // 代码里已不存在的工具标记为禁用
+        // 代码里已不存在的「代码工具」标记为禁用；声明式工具由后台维护，不能在这里误杀
         for (AiToolEntity entity : toolMapper.selectList(null)) {
-            if (!byCode.containsKey(entity.getToolCode()) && !AiConstants.ToolStatus.DISABLED.equals(entity.getStatus())) {
+            boolean fromCode = AiConstants.ExecutorType.CODE.equals(executorTypeOf(entity));
+            if (fromCode && !byCode.containsKey(entity.getToolCode())
+                    && !AiConstants.ToolStatus.DISABLED.equals(entity.getStatus())) {
                 entity.setStatus(AiConstants.ToolStatus.DISABLED);
                 toolMapper.updateById(entity);
                 log.warn("[AI] 工具处理器已下线，置为 DISABLED: {}", entity.getToolCode());
@@ -148,7 +160,7 @@ public class AiToolService {
     public AiToolEntity require(Long id) {
         AiToolEntity entity = id == null ? null : toolMapper.selectById(id);
         if (entity == null) {
-            throw new BusinessException("AI008", "工具不存在: " + id);
+            throw new AiException("AI008", "工具不存在: " + id);
         }
         return entity;
     }
@@ -179,7 +191,7 @@ public class AiToolService {
         if (riskLevel != null && !riskLevel.isBlank()) {
             String target = riskLevel.toUpperCase(Locale.ROOT);
             if (codeRisk != null && AiConstants.RiskLevel.order(target) < AiConstants.RiskLevel.order(codeRisk)) {
-                throw new BusinessException("AI008",
+                throw new AiException("AI008",
                         "不能把风险等级降低到代码要求之下（最低 " + codeRisk + "）");
             }
             entity.setRiskLevel(target);
@@ -187,19 +199,19 @@ public class AiToolService {
         if (approvalPolicy != null && !approvalPolicy.isBlank()) {
             String target = approvalPolicy.toUpperCase(Locale.ROOT);
             if (!AiConstants.ApprovalPolicy.all().contains(target)) {
-                throw new BusinessException("AI008", "确认策略非法: " + target);
+                throw new AiException("AI008", "确认策略非法: " + target);
             }
             // 代码要求强确认的，后台不能放开
             if (codeRisk != null && AiConstants.RiskLevel.HIGH.equals(codeRisk)
                     && AiConstants.ApprovalPolicy.NONE.equals(target)) {
-                throw new BusinessException("AI008", "高风险工具必须保留人工确认");
+                throw new AiException("AI008", "高风险工具必须保留人工确认");
             }
             entity.setApprovalPolicy(target);
         }
         if (status != null && !status.isBlank()) {
             String target = status.toUpperCase(Locale.ROOT);
             if (!Set.of("ENABLED", "DISABLED").contains(target)) {
-                throw new BusinessException("AI008", "工具状态非法: " + target);
+                throw new AiException("AI008", "工具状态非法: " + target);
             }
             entity.setStatus(target);
         }
@@ -208,14 +220,166 @@ public class AiToolService {
         return entity;
     }
 
-    /** 该工具是否有可执行处理器 */
+    /** 该工具是否有可执行处理器（代码注册或声明式执行器） */
     public boolean handlerAvailable(AiToolEntity entity) {
-        return entity != null && handlers.containsKey(entity.getHandlerKey());
+        return resolveHandler(entity) != null;
     }
 
     /** 取处理器 */
     public AiToolHandler handler(String handlerKey) {
         return handlers.get(handlerKey);
+    }
+
+    /** 工具的执行器类型（空值按 CODE 处理，兼容迁移前的存量行） */
+    public static String executorTypeOf(AiToolEntity entity) {
+        return entity == null || entity.getExecutorType() == null
+                ? AiConstants.ExecutorType.CODE : entity.getExecutorType();
+    }
+
+    /**
+     * 取工具的可执行处理器：代码工具走注册表，声明式工具现构造执行器。
+     *
+     * <p>声明式执行配置非法时返回 {@code null}（与「处理器缺失」同样跳过并告警），
+     * 避免一条坏配置拖垮整轮对话。</p>
+     */
+    public AiToolHandler resolveHandler(AiToolEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        if (AiConstants.ExecutorType.HTTP.equals(executorTypeOf(entity))) {
+            return HttpToolExecutor.create(entity, properties);
+        }
+        return handlers.get(entity.getHandlerKey());
+    }
+
+    // ==================== 声明式 HTTP 工具 ====================
+
+    /**
+     * 新建声明式 HTTP 工具。
+     *
+     * <p>写方法（POST/PUT/PATCH/DELETE）强制 HIGH + ADMIN_CONFIRM，服务端写死、后台不可放开；
+     * GET 工具的风险与确认策略可由后台选择。toolCode 与代码工具同表唯一，不能撞名。</p>
+     *
+     * @param req        保存请求
+     * @param operatorId 操作人
+     * @return 落库后的工具
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public AiToolEntity createHttpTool(AiAdminDtos.HttpToolSaveReq req, Long operatorId) {
+        String toolCode = req.toolCode() == null ? "" : req.toolCode().trim();
+        HttpToolExecutor.validate(req.executorConfig(), req.argumentsSchema(), allowedHosts());
+        if (findByCode(toolCode) != null) {
+            throw new AiException("AI008", "工具编码已存在: " + toolCode);
+        }
+        AiToolEntity entity = new AiToolEntity();
+        entity.setToolCode(toolCode);
+        entity.setHandlerKey(HttpToolExecutor.HANDLER_KEY);
+        entity.setExecutorType(AiConstants.ExecutorType.HTTP);
+        applyDeclarative(entity, req);
+        entity.setStatus(AiConstants.ToolStatus.ENABLED);
+        entity.setCreatedBy(operatorId);
+        entity.setUpdatedBy(operatorId);
+        toolMapper.insert(entity);
+        log.info("[AI] 新建声明式 HTTP 工具 {}（{}）", toolCode, entity.getRiskLevel());
+        return entity;
+    }
+
+    /**
+     * 修改声明式 HTTP 工具（含执行配置）。校验规则与新建完全一致。
+     *
+     * @param id         工具
+     * @param req        保存请求
+     * @param operatorId 操作人
+     * @return 落库后的工具
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public AiToolEntity updateHttpTool(Long id, AiAdminDtos.HttpToolSaveReq req, Long operatorId) {
+        AiToolEntity entity = require(id);
+        if (!AiConstants.ExecutorType.HTTP.equals(executorTypeOf(entity))) {
+            throw new AiException("AI008", "该工具不是声明式 HTTP 工具，不能按 API 配置修改: " + id);
+        }
+        String toolCode = req.toolCode() == null || req.toolCode().isBlank()
+                ? entity.getToolCode() : req.toolCode().trim();
+        HttpToolExecutor.validate(req.executorConfig(), req.argumentsSchema(), allowedHosts());
+        AiToolEntity sameCode = findByCode(toolCode);
+        if (sameCode != null && !sameCode.getId().equals(entity.getId())) {
+            throw new AiException("AI008", "工具编码已存在: " + toolCode);
+        }
+        entity.setToolCode(toolCode);
+        applyDeclarative(entity, req);
+        entity.setUpdatedBy(operatorId);
+        toolMapper.updateById(entity);
+        log.info("[AI] 修改声明式 HTTP 工具 {}（{}）", toolCode, entity.getRiskLevel());
+        return entity;
+    }
+
+    /**
+     * 测试运行：用样例参数直接执行一次工具。
+     *
+     * <p>不写 {@code ai_tool_call} 审计表——它不属于任何会话，留痕交给后台操作日志；
+     * 由管理员手动触发，等同于「人工确认」，因此 HIGH 工具也直接执行。</p>
+     *
+     * @param id            工具
+     * @param argumentsJson 参数 JSON 文本
+     * @return 执行结果
+     */
+    public AiToolResult testRun(Long id, String argumentsJson) {
+        AiToolEntity entity = require(id);
+        AiToolHandler handler = resolveHandler(entity);
+        if (handler == null) {
+            throw new AiException("AI008", "工具没有可执行处理器: " + entity.getToolCode());
+        }
+        ObjectNode arguments = argumentsJson == null || argumentsJson.isBlank()
+                ? AiJson.mapper().createObjectNode() : AiJson.readObject(argumentsJson);
+        if (arguments == null) {
+            arguments = AiJson.mapper().createObjectNode();
+        }
+        AiToolContext context = new AiToolContext(null, null, null, null, "test-run",
+                AiConstants.AgentType.CUSTOM, AiConstants.ClientType.ASTRAL_FRONT, arguments,
+                AiJson.mapper().createObjectNode(), true, null);
+        return handler.execute(context);
+    }
+
+    /** 声明式工具字段落库（写方法强制 HIGH + ADMIN_CONFIRM，不可通过入参放开） */
+    private void applyDeclarative(AiToolEntity entity, AiAdminDtos.HttpToolSaveReq req) {
+        String method = methodOf(req.executorConfig());
+        boolean readOnly = "GET".equals(method);
+        entity.setName(req.name() == null ? "" : req.name().trim());
+        entity.setDescription(req.description());
+        entity.setClientTypes(AiJson.joinCsv(req.clientTypes()));
+        entity.setPermissionCodes(AiJson.joinCsv(req.permissionCodes()));
+        entity.setArgumentsSchema(req.argumentsSchema());
+        entity.setExecutorConfig(req.executorConfig());
+        entity.setRiskLevel(readOnly ? riskOrDefault(req.riskLevel()) : AiConstants.RiskLevel.HIGH);
+        entity.setApprovalPolicy(readOnly ? approvalOrDefault(req.approvalPolicy())
+                : AiConstants.ApprovalPolicy.ADMIN_CONFIRM);
+        entity.setSideEffects(readOnly ? "只读调用外部 HTTP 接口" : "调用外部 HTTP 接口（可能产生写操作）");
+    }
+
+    private static String methodOf(String executorConfig) {
+        return AiJson.text(AiJson.readObject(executorConfig), "method", "GET").toUpperCase(Locale.ROOT);
+    }
+
+    private static String riskOrDefault(String riskLevel) {
+        String target = riskLevel == null || riskLevel.isBlank()
+                ? AiConstants.RiskLevel.READ : riskLevel.toUpperCase(Locale.ROOT);
+        if (!AiConstants.RiskLevel.all().contains(target)) {
+            throw new AiException("AI008", "风险等级非法: " + target);
+        }
+        return target;
+    }
+
+    private static String approvalOrDefault(String approvalPolicy) {
+        String target = approvalPolicy == null || approvalPolicy.isBlank()
+                ? AiConstants.ApprovalPolicy.NONE : approvalPolicy.toUpperCase(Locale.ROOT);
+        if (!AiConstants.ApprovalPolicy.all().contains(target)) {
+            throw new AiException("AI008", "确认策略非法: " + target);
+        }
+        return target;
+    }
+
+    private List<String> allowedHosts() {
+        return properties.getHttpTool().getAllowedHosts();
     }
 
     // ==================== 绑定 ====================
@@ -254,7 +418,7 @@ public class AiToolService {
         AiToolEntity tool = require(toolId);
         if (riskOverride != null && !riskOverride.isBlank()) {
             if (AiConstants.RiskLevel.order(riskOverride) < AiConstants.RiskLevel.order(tool.getRiskLevel())) {
-                throw new BusinessException("AI008", "风险覆盖只能提高不能降低");
+                throw new AiException("AI008", "风险覆盖只能提高不能降低");
             }
         }
         AiAgentToolEntity existing = agentToolMapper.selectOne(new LambdaQueryWrapper<AiAgentToolEntity>()
@@ -303,7 +467,7 @@ public class AiToolService {
             if (tool == null || !"ENABLED".equals(tool.getStatus())) {
                 continue;
             }
-            AiToolHandler handler = handlers.get(tool.getHandlerKey());
+            AiToolHandler handler = resolveHandler(tool);
             if (handler == null) {
                 continue;
             }

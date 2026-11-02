@@ -8,9 +8,16 @@ import java.util.Map;
 /**
  * AI 工具的类型定义集合。
  *
- * <p>工具是「代码登记 + 后台配置」的混合体：{@code handler_key} 只能指向本包内真实注册的
- * 处理器（设计文档 §11.5），后台只能调整风险等级、确认策略与启停，<b>不能新增任意
- * Java / Shell / SQL 工具</b>。这条边界是整套工具机制的安全前提。</p>
+ * <p>工具分两种执行形态（{@code ai_tool.executor_type}）：</p>
+ * <ul>
+ *   <li><b>CODE</b>：{@code handler_key} 只能指向本包内真实注册的处理器（设计文档 §11.5），
+ *       后台只能调整风险等级、确认策略与启停，<b>不能新增任意 Java / Shell 工具</b>；</li>
+ *   <li><b>HTTP</b>：后台可创建的声明式工具，执行面收敛在
+ *       {@link com.astral.ai.tool.declarative.HttpToolExecutor}——只能表达「按模板调用一个
+ *       HTTP 接口」，host 必须字面量、非 GET 强制高风险确认、SSRF 护栏写死。</li>
+ * </ul>
+ *
+ * <p>无论哪种形态，模型看到的都是同一套 {@link AiToolDef} + {@link AiToolResult} 契约。</p>
  */
 public final class AiToolTypes {
 

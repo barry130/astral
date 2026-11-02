@@ -4,6 +4,11 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * AI 插件配置（前缀 {@code astral.plugins.ai}）。
  *
@@ -58,4 +63,24 @@ public class AiProperties {
 
     /** 不参与取号的表（与 sequence 模块一致的排除语义，插件侧仅保留说明用途） */
     private boolean logPayload = false;
+
+    /** 声明式 HTTP 工具（executor_type='HTTP'）的执行护栏 */
+    private HttpTool httpTool = new HttpTool();
+
+    /**
+     * 声明式 HTTP 工具护栏。
+     *
+     * <p>私网/环回/链路本地/云元数据地址始终禁止（代码写死）；白名单是「进一步收紧」：
+     * 非空时只有列表内的 host 可以调用。密钥只支持引用：工具配置里写 {@code ${secret:key}}，
+     * 明文放本节 secrets 或同名环境变量，绝不落库。</p>
+     */
+    @Data
+    public static class HttpTool {
+
+        /** 允许调用的主机白名单（host 或 host:port）；留空 = 允许任意公网主机 */
+        private List<String> allowedHosts = new ArrayList<>();
+
+        /** ${secret:key} 的取值处（不推荐：密钥优先放环境变量） */
+        private Map<String, String> secrets = new LinkedHashMap<>();
+    }
 }
