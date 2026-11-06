@@ -471,6 +471,8 @@ export default function FileManager({
     uploadLock.current = true;
     setUploading(true);
     const pending = [...entries];
+    let failedCount = 0;
+    let failureToastId: string | number | undefined;
     const patch = (id: string, change: Partial<QueueEntry>) =>
       setQueue((rows) => rows.map((row) => (row.id === id ? { ...row, ...change } : row)));
     const worker = async () => {
@@ -480,7 +482,19 @@ export default function FileManager({
           await uploadStorageFile(entry.folderId, entry.file, admin, entry.providerType);
           patch(entry.id, { state: 'ok' });
         } catch (error) {
-          patch(entry.id, { state: 'fail', error: errorText(error) });
+          const reason = errorText(error);
+          patch(entry.id, { state: 'fail', error: reason });
+          failedCount += 1;
+          // 首次失败立即提醒；同批次后续失败更新同一条提示，队列保留每个文件的完整原因。
+          failureToastId = toast.error(
+            failedCount === 1 ? '文件上传失败' : `${failedCount} 个文件上传失败`,
+            {
+              id: failureToastId,
+              description: `${entry.file.name}：${reason}`,
+              duration: 8000,
+              closeButton: true,
+            },
+          );
         }
       }
     };
