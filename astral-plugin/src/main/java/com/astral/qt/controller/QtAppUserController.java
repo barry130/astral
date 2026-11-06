@@ -235,12 +235,16 @@ public class QtAppUserController {
                 dto.getIdempotencyKey()));
     }
 
-    @Operation(summary = "两段式代传正文：原始字节 PUT（Content-Type 与声明一致）；state=COMMITTED 才算完成，state=CREATED 表示已切换备用渠道需重发")
+    @Operation(
+            summary =
+                    "两段式代传正文：原始字节 PUT/POST（Content-Type 与声明一致）；state=COMMITTED 才算完成，state=CREATED 表示已切换备用渠道需重发。生产网关/WAF 常只放行 POST，客户端统一用 POST")
     @RequiresPermission(
             value = {"user:profile:edit", "user:like:edit"},
             name = "媒体上传",
             description = "App 端头像/歌单封面两段式代传正文（CUSTOM_HTTP 渠道，持任一媒体编辑权限即可）")
-    @PutMapping("/proxy-upload/{uploadId}/content")
+    @RequestMapping(
+            value = "/proxy-upload/{uploadId}/content",
+            method = {RequestMethod.PUT, RequestMethod.POST})
     public Result<QtProxyContentVo> proxyUploadContent(
             @RequestHeader(value = "satoken", required = false) String satoken,
             @PathVariable String uploadId,

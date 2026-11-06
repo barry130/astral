@@ -9,8 +9,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * {@code ticket} 为原有直传凭证，客户端按既有三段式直传，不经过 Astral 服务器。</p>
  * <p>{@code mode=PROXY}：目录首选渠道是 CUSTOM_HTTP（如 ImgBB），浏览器直传被安全策略
  * 禁止（STORAGE039——直传凭证会把上游凭据泄露给客户端），客户端改为两段式代传：
- * 原始字节 {@code PUT contentPath}（Content-Type 与声明一致），响应 {@code state=COMMITTED}
- * 后凭 {@code uploadId} 调 apply 接口落到业务字段。{@code intentTtlSeconds} 为意图剩余存活秒数。</p>
+ * 原始字节 {@code POST contentPath}（PUT 兼容保留；Content-Type 与声明一致），响应
+ * {@code state=COMMITTED} 后凭 {@code uploadId} 调 apply 接口落到业务字段。
+ * {@code intentTtlSeconds} 为意图剩余存活秒数。</p>
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record QtUploadPlanVo(
