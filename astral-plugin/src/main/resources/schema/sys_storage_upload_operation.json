@@ -99,8 +99,8 @@
       "fieldName": "expectedSha256",
       "fieldType": "String",
       "jdbcType": "CHAR",
-      "comment": "期望SHA-256",
-      "isRequired": true,
+      "comment": "期望SHA-256(可选,客户端声明,服务端不强制)",
+      "isRequired": false,
       "length": 64
     },
     {
