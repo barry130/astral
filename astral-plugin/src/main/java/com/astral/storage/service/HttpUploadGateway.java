@@ -247,7 +247,9 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
             throw new BusinessException("STORAGE039");
         }
         if (!approvedTargetPolicy.enabled()) {
-            throw new BusinessException("STORAGE048");
+            // 部署侧总开关未开：approved-targets 出站白名单是 SSRF 防护面，必须部署配置显式批准
+            throw new BusinessException(
+                    "STORAGE048", "自定义 HTTP 图床渠道未启用（部署侧未配置 custom-http 批准目标清单）");
         }
         HttpSecretEnvelope envelope;
         try {
