@@ -1,0 +1,4 @@
+# git blame 忽略的批量格式化提交（git blame --ignore-revs 本文件）
+# 用法：git config blame.ignoreRevsFile .git-blame-ignore-revs
+# 全库 palantir-java-format 格式基线，与业务改动分离
+94fb807621729a4a66403f6eb0aee3a0fb0d5121
