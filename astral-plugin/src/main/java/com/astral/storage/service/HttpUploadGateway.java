@@ -253,12 +253,16 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
         HttpSecretEnvelope envelope;
         try {
             envelope = HttpSecretEnvelope.parse(config.getProviderOptions());
+        } catch (BusinessException ex) {
+            // STORAGE034 的 reason 是归一化的安全文案（信封损坏/缺画像/schemaVersion 不符），
+            // 直接透传，让客户端看到可排查的原因而不是无参 040
+            throw ex;
         } catch (RuntimeException ex) {
             log.warn("自定义 HTTP 渠道信封解析失败: configId={}, reason={}", configId, ex.getMessage());
-            throw new BusinessException("STORAGE040");
+            throw new BusinessException("STORAGE040", "渠道凭据信封解析失败，请在管理端重新保存该渠道");
         }
         if (envelope.profile() == null) {
-            throw new BusinessException("STORAGE040");
+            throw new BusinessException("STORAGE040", "渠道画像缺失，请在管理端重新保存该渠道");
         }
         HttpProfileValidator.Validated validated;
         try {
