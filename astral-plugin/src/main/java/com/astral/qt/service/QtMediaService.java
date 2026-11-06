@@ -6,25 +6,33 @@ import com.astral.common.util.ClientIp;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.qt.common.QtException;
+import com.astral.qt.dto.vo.QtProxyContentVo;
 import com.astral.qt.dto.vo.QtUploadCompleteVo;
+import com.astral.qt.dto.vo.QtUploadPlanVo;
 import com.astral.qt.dto.vo.QtUploadTicketVo;
 import com.astral.qt.entity.QtLikePlaylist;
 import com.astral.qt.mapper.QtLikePlaylistMapper;
 import com.astral.qt.mapper.QtLikeSyncMapper;
+import com.astral.storage.dto.UploadOperationDtos;
 import com.astral.storage.entity.StorageConfigEntity;
 import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.entity.StorageFolderConfigEntity;
 import com.astral.storage.entity.StorageFolderEntity;
+import com.astral.storage.mapper.StorageFileMapper;
 import com.astral.storage.mapper.StorageFolderConfigMapper;
 import com.astral.storage.mapper.StorageFolderMapper;
 import com.astral.storage.security.UploadTicketService;
+import com.astral.storage.service.HttpUploadGateway;
 import com.astral.storage.service.StorageConfigService;
 import com.astral.storage.service.StorageFileService;
 import com.astral.storage.service.StorageTicketTargetService;
+import com.astral.storage.service.UploadOperationService;
 import com.astral.storage.service.UploadPolicyService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +91,12 @@ public class QtMediaService {
     private StorageFileService storageFileService;
 
     @Resource
+    private UploadOperationService uploadOperationService;
+
+    @Resource
+    private StorageFileMapper storageFileMapper;
+
+    @Resource
     private UploadPolicyService uploadPolicyService;
 
     @Resource
@@ -107,6 +121,158 @@ public class QtMediaService {
     public QtUploadTicketVo avatarTicket(Long uid, String fileName, String contentType, long sizeBytes) {
         StorageFolderEntity folder = ensureMediaTree(FOLDER_AVATAR);
         return issueTicket(folder, uid, fileName, contentType, sizeBytes);
+    }
+
+    /**
+     * 头像上传计划（直传/两段式代传统一入口，CUSTOM_HTTP 渠道支持）：目录首选渠道为
+     * 直传家族时返回直传凭证（三段式行为不变）；首选渠道为 CUSTOM_HTTP 时返回两段式
+     * 代传参数（idempotencyKey 由客户端生成、重试复用同一键）。
+     */
+    public QtUploadPlanVo avatarUploadPlan(
+            Long uid, String fileName, String contentType, long sizeBytes, String idempotencyKey) {
+        StorageFolderEntity folder = ensureMediaTree(FOLDER_AVATAR);
+        return mediaUploadPlan(folder, uid, fileName, contentType, sizeBytes, idempotencyKey);
+    }
+
+    /**
+     * 歌单封面上传计划：先做业务归属校验（只能改自己收藏行的封面），其余同 {@link #avatarUploadPlan}。
+     */
+    public QtUploadPlanVo coverUploadPlan(
+            Long uid,
+            String pid,
+            String platform,
+            String fileName,
+            String contentType,
+            long sizeBytes,
+            String idempotencyKey) {
+        requireOwnPlaylist(uid, pid, platform);
+        StorageFolderEntity folder = ensureMediaTree(FOLDER_COVER);
+        return mediaUploadPlan(folder, uid, fileName, contentType, sizeBytes, idempotencyKey);
+    }
+
+    /**
+     * 上传计划分流：CUSTOM_HTTP 渠道不允许客户端直传（STORAGE039——直传凭证会把上游凭据
+     * 泄露给客户端），改走两段式代传（正文经 Astral 服务器 HttpUploadGateway 发往上游）。
+     * <p>qt 目录为 ADMIN-owned 约定目录（登录即可传，无按用户 ACL 行），目录 UPLOAD 门由
+     * folderAclExempt=true 豁免；每日配额由两段式链路的 quota reserve 独立执行（不豁免）。</p>
+     */
+    private QtUploadPlanVo mediaUploadPlan(
+            StorageFolderEntity folder,
+            Long uid,
+            String fileName,
+            String contentType,
+            long sizeBytes,
+            String idempotencyKey) {
+        StorageConfigEntity config = storageTicketTargetService.resolveUploadConfig(folder, uid.toString());
+        if (!HttpUploadGateway.PROVIDER_CUSTOM_HTTP.equals(config.getProviderType())) {
+            return QtUploadPlanVo.direct(issueTicket(folder, uid, fileName, contentType, sizeBytes));
+        }
+        UploadOperationDtos.UploadCreateResp operation = uploadOperationService.create(
+                new UploadOperationDtos.UploadCreateReq(folder.getId(), fileName, contentType, sizeBytes, null),
+                uid.toString(),
+                idempotencyKey,
+                true);
+        return QtUploadPlanVo.proxy(
+                operation.uploadId(),
+                proxyContentPath(operation.uploadId()),
+                operation.maxBytes(),
+                operation.intentTtlSeconds());
+    }
+
+    /** qt 域两段式代传正文端点（App 端统一入口，正文转发复用插件两段式状态机） */
+    private String proxyContentPath(String uploadId) {
+        return "/api/v1/app/user/proxy-upload/" + uploadId + "/content";
+    }
+
+    /**
+     * 两段式代传正文（qt 域入口）：读原始字节 → 复用插件两段式状态机（准入/配额/内容校验/上游发送）。
+     * <p>归属不豁免（只能续传本人创建的操作）；qt 目录 ACL 豁免与 plan 一致。
+     * 渠道 FAILOVER 时响应 {@code state=CREATED}，客户端重发同一正文即可（失败渠道不会被重试）。</p>
+     */
+    public QtProxyContentVo proxyUploadContent(
+            Long uid, String uploadId, Long contentLength, String contentType, HttpServletRequest request)
+            throws IOException {
+        UploadOperationService.PreparedContent prepared = uploadOperationService.prepareContent(
+                uploadId, contentLength, contentType, uid.toString(), true, false);
+        try (prepared) {
+            byte[] body = readBounded(request, prepared.maxBytes());
+            return QtProxyContentVo.of(uploadOperationService.sendContent(prepared, body));
+        }
+    }
+
+    /** 读正文并做硬上限保护：与 all 层两段式上传同口径（多读 1 字节判断超限） */
+    private byte[] readBounded(HttpServletRequest request, long maxBytes) throws IOException {
+        try (InputStream in = request.getInputStream()) {
+            byte[] body = in.readNBytes((int) Math.min(maxBytes + 1, Integer.MAX_VALUE));
+            if (body.length > maxBytes) {
+                throw new BusinessException("STORAGE045", "正文超出允许上限");
+            }
+            return body;
+        }
+    }
+
+    /**
+     * 头像两段式代传收尾：操作 COMMITTED 校验 → 永久 URL → 直写 sys_user.avatar → 异步删旧文件。
+     * 幂等：重复 apply 写入同一 URL，无副作用差异。
+     */
+    public QtUploadCompleteVo avatarProxyApply(Long uid, String uploadId) {
+        StorageFolderEntity folder = ensureMediaTree(FOLDER_AVATAR);
+        StorageFileEntity file = committedFile(uid, uploadId, folder);
+        String url = permanentUrlOf(file, uid);
+        User user = userMapper.selectById(uid);
+        if (user == null) {
+            throw new QtException(401, "登录状态已失效");
+        }
+        String oldAvatar = user.getAvatar();
+        user.setAvatar(url);
+        user.setUpdateTime(LocalDateTime.now());
+        userMapper.updateById(user);
+        recycleOldFile(oldAvatar, uid);
+        log.info("[QtPlugin] 头像更新（代传）: uid={}, url={}", uid, url);
+        return new QtUploadCompleteVo(url);
+    }
+
+    /**
+     * 歌单封面两段式代传收尾：业务归属校验 → COMMITTED 校验 → 永久 URL →
+     * 推进同步 seq 直写 pic_url → 删旧文件（事务边界与 coverComplete 一致）。
+     */
+    public QtUploadCompleteVo coverProxyApply(Long uid, String pid, String platform, String uploadId) {
+        QtLikePlaylist owned = requireOwnPlaylist(uid, pid, platform);
+        StorageFolderEntity folder = ensureMediaTree(FOLDER_COVER);
+        StorageFileEntity file = committedFile(uid, uploadId, folder);
+        String url = permanentUrlOf(file, uid);
+        String oldCover = owned.getPicUrl();
+        transactionTemplate.executeWithoutResult(status -> {
+            likeSyncMapper.lockUser(uid);
+            long seq = likeSyncMapper.selectUserMaxSeq(uid) + 1;
+            LocalDateTime now = LocalDateTime.now();
+            owned.setPicUrl(url);
+            owned.setUpdatedSeq(seq);
+            owned.setUpdatedAt(now);
+            owned.setUpdateTime(now);
+            playlistMapper.updateById(owned);
+        });
+        recycleOldFile(oldCover, uid);
+        log.info("[QtPlugin] 歌单封面更新（代传）: uid={}, pid={}, platform={}, url={}", uid, pid, platform, url);
+        return new QtUploadCompleteVo(url);
+    }
+
+    /**
+     * 两段式操作收尾校验：归属（本人操作）+ 目录一致（防跨目录张冠李戴）+
+     * {@code COMMITTED} 才允许落到业务字段（fileId 仅在 COMMITTED 后非空）。
+     */
+    private StorageFileEntity committedFile(Long uid, String uploadId, StorageFolderEntity folder) {
+        UploadOperationDtos.UploadOperationView view = uploadOperationService.get(uploadId, uid.toString(), false);
+        if (!"COMMITTED".equals(view.state())) {
+            throw new QtException("文件未完成上传或未通过校验，当前状态: " + view.state());
+        }
+        StorageFileEntity file = storageFileMapper.selectById(Long.valueOf(view.fileId()));
+        if (file == null
+                || !folder.getId().equals(file.getFolderId())
+                || !uid.toString().equals(file.getUploaderId())) {
+            throw new QtException(403, "上传归属校验失败");
+        }
+        return file;
     }
 
     /**

@@ -10,6 +10,7 @@ import com.astral.log.annotation.LoginLog;
 import com.astral.qt.common.QtException;
 import com.astral.qt.dto.QtAvatarTicketReqDto;
 import com.astral.qt.dto.QtChangePwByEmailDto;
+import com.astral.qt.dto.QtCoverPlanReqDto;
 import com.astral.qt.dto.QtCoverTicketReqDto;
 import com.astral.qt.dto.QtDeactivateDto;
 import com.astral.qt.dto.QtLikeBatchDto;
@@ -20,12 +21,15 @@ import com.astral.qt.dto.QtRegisterDto;
 import com.astral.qt.dto.QtSendEmailDto;
 import com.astral.qt.dto.QtUpdateUserDto;
 import com.astral.qt.dto.QtUploadCompleteReqDto;
+import com.astral.qt.dto.QtUploadPlanReqDto;
 import com.astral.qt.dto.QtUserDakaDto;
 import com.astral.qt.dto.vo.QtDakaDaysAndCodeVo;
 import com.astral.qt.dto.vo.QtLikeChangesVo;
 import com.astral.qt.dto.vo.QtLikePageVo;
 import com.astral.qt.dto.vo.QtLikeSeqVo;
+import com.astral.qt.dto.vo.QtProxyContentVo;
 import com.astral.qt.dto.vo.QtUploadCompleteVo;
+import com.astral.qt.dto.vo.QtUploadPlanVo;
 import com.astral.qt.dto.vo.QtUploadTicketVo;
 import com.astral.qt.dto.vo.QtUserInfoVo;
 import com.astral.qt.service.QtDakaService;
@@ -196,6 +200,76 @@ public class QtAppUserController {
             jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(
                 mediaService.coverComplete(currentUserId(satoken), pid, platform, dto.getUploadId(), request));
+    }
+
+    // ==================== 媒体上传计划（直传 / 两段式代传，CUSTOM_HTTP 渠道支持） ====================
+
+    @Operation(summary = "头像上传计划：直传家族渠道返回直传凭证，CUSTOM_HTTP 渠道返回两段式代传参数")
+    @RequiresPermission(value = "user:profile:edit", name = "用户资料编辑", description = "App 端修改本人资料、头像上传与直传回执")
+    @PostMapping("/avatar/upload-plan")
+    public Result<QtUploadPlanVo> avatarUploadPlan(
+            @RequestHeader(value = "satoken", required = false) String satoken,
+            @Valid @RequestBody QtUploadPlanReqDto dto) {
+        return Result.success(mediaService.avatarUploadPlan(
+                currentUserId(satoken),
+                dto.getFileName(),
+                dto.getContentType(),
+                dto.getSizeBytes(),
+                dto.getIdempotencyKey()));
+    }
+
+    @Operation(summary = "歌单封面上传计划：直传家族渠道返回直传凭证，CUSTOM_HTTP 渠道返回两段式代传参数")
+    @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")
+    @PostMapping("/like/playlist/{pid}/cover/upload-plan")
+    public Result<QtUploadPlanVo> coverUploadPlan(
+            @RequestHeader(value = "satoken", required = false) String satoken,
+            @PathVariable String pid,
+            @Valid @RequestBody QtCoverPlanReqDto dto) {
+        return Result.success(mediaService.coverUploadPlan(
+                currentUserId(satoken),
+                pid,
+                dto.getPlatform(),
+                dto.getFileName(),
+                dto.getContentType(),
+                dto.getSizeBytes(),
+                dto.getIdempotencyKey()));
+    }
+
+    @Operation(summary = "两段式代传正文：原始字节 PUT（Content-Type 与声明一致）；state=COMMITTED 才算完成，state=CREATED 表示已切换备用渠道需重发")
+    @RequiresPermission(
+            value = {"user:profile:edit", "user:like:edit"},
+            name = "媒体上传",
+            description = "App 端头像/歌单封面两段式代传正文（CUSTOM_HTTP 渠道，持任一媒体编辑权限即可）")
+    @PutMapping("/proxy-upload/{uploadId}/content")
+    public Result<QtProxyContentVo> proxyUploadContent(
+            @RequestHeader(value = "satoken", required = false) String satoken,
+            @PathVariable String uploadId,
+            @RequestHeader(value = "Content-Length", required = false) Long contentLength,
+            @RequestHeader(value = "Content-Type", required = false) String contentType,
+            jakarta.servlet.http.HttpServletRequest request)
+            throws java.io.IOException {
+        return Result.success(
+                mediaService.proxyUploadContent(currentUserId(satoken), uploadId, contentLength, contentType, request));
+    }
+
+    @Operation(summary = "头像两段式代传收尾：COMMITTED 校验后直写 sys_user.avatar")
+    @RequiresPermission(value = "user:profile:edit", name = "用户资料编辑", description = "App 端修改本人资料、头像上传与直传回执")
+    @PostMapping("/avatar/apply")
+    public Result<QtUploadCompleteVo> avatarProxyApply(
+            @RequestHeader(value = "satoken", required = false) String satoken,
+            @Valid @RequestBody QtUploadCompleteReqDto dto) {
+        return Result.success(mediaService.avatarProxyApply(currentUserId(satoken), dto.getUploadId()));
+    }
+
+    @Operation(summary = "歌单封面两段式代传收尾：COMMITTED 校验后推进同步 seq 直写 pic_url")
+    @RequiresPermission(value = "user:like:edit", name = "收藏编辑", description = "App 端收藏/取消收藏（歌曲、歌单、批量）与歌单封面上传维护")
+    @PostMapping("/like/playlist/{pid}/cover/apply")
+    public Result<QtUploadCompleteVo> coverProxyApply(
+            @RequestHeader(value = "satoken", required = false) String satoken,
+            @PathVariable String pid,
+            @RequestParam("platform") String platform,
+            @Valid @RequestBody QtUploadCompleteReqDto dto) {
+        return Result.success(mediaService.coverProxyApply(currentUserId(satoken), pid, platform, dto.getUploadId()));
     }
 
     @Operation(summary = "取消自定义歌单封面（恢复默认展示，不消耗每日次数）")

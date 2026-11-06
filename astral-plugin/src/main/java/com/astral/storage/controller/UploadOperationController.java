@@ -51,6 +51,7 @@ public class UploadOperationController {
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @RequestBody UploadOperationDtos.UploadCreateReq req,
             HttpServletRequest request) {
+        // 管理员豁免语义拆分后保持等价：目录 ACL 与归属校验同时豁免
         return Result.success(operationService.create(req, userId(request), idempotencyKey, adminExempt()));
     }
 
@@ -70,8 +71,8 @@ public class UploadOperationController {
             HttpServletRequest request)
             throws IOException {
         long contentLength = declaredLength == null ? request.getContentLengthLong() : declaredLength;
-        UploadOperationService.PreparedContent prepared =
-                operationService.prepareContent(uploadId, contentLength, contentType, userId(request), adminExempt());
+        UploadOperationService.PreparedContent prepared = operationService.prepareContent(
+                uploadId, contentLength, contentType, userId(request), adminExempt(), adminExempt());
         try (prepared) {
             byte[] body = readBounded(request, prepared.maxBytes());
             return Result.success(operationService.sendContent(prepared, body));

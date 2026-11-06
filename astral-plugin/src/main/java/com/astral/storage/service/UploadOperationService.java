@@ -112,12 +112,12 @@ public class UploadOperationService {
     // ==================== 创建意图 ====================
 
     public UploadOperationDtos.UploadCreateResp create(
-            UploadOperationDtos.UploadCreateReq req, String userId, String idempotencyKey, boolean adminExempt) {
+            UploadOperationDtos.UploadCreateReq req, String userId, String idempotencyKey, boolean folderAclExempt) {
         requireLogin(userId);
         String keyHash = hashIdempotencyKey(idempotencyKey);
         validateCreateRequest(req);
         StorageFolderEntity folder = folderService.getById(req.folderId());
-        if (!adminExempt) {
+        if (!folderAclExempt) {
             folderService.requirePermission(userId, folder.getId(), "UPLOAD");
         }
         requirePublicFolder(folder);
@@ -193,21 +193,26 @@ public class UploadOperationService {
 
     // ==================== 查询 ====================
 
-    public UploadOperationDtos.UploadOperationView get(String uploadId, String userId, boolean adminExempt) {
-        StorageUploadOperationEntity operation = requireOwned(uploadId, userId, adminExempt);
+    public UploadOperationDtos.UploadOperationView get(String uploadId, String userId, boolean skipOwnerCheck) {
+        StorageUploadOperationEntity operation = requireOwned(uploadId, userId, skipOwnerCheck);
         return toView(operation);
     }
 
     // ==================== PUT 预检 ====================
 
     public PreparedContent prepareContent(
-            String uploadId, Long contentLength, String contentType, String userId, boolean adminExempt) {
+            String uploadId,
+            Long contentLength,
+            String contentType,
+            String userId,
+            boolean folderAclExempt,
+            boolean skipOwnerCheck) {
         requireLogin(userId);
-        StorageUploadOperationEntity snapshot = requireOwned(uploadId, userId, adminExempt);
+        StorageUploadOperationEntity snapshot = requireOwned(uploadId, userId, skipOwnerCheck);
         UploadAdmissionControl.Permit permit = admissionControl.acquire(snapshot.getUploadId(), snapshot.getActorId());
         try {
-            PreparedContent prepared = transactionTemplate.execute(
-                    status -> claimForReceiving(uploadId, contentLength, contentType, userId, adminExempt, permit));
+            PreparedContent prepared = transactionTemplate.execute(status -> claimForReceiving(
+                    uploadId, contentLength, contentType, userId, folderAclExempt, skipOwnerCheck, permit));
             if (prepared == null) {
                 throw new BusinessException("STORAGE055");
             }
@@ -223,9 +228,10 @@ public class UploadOperationService {
             Long contentLength,
             String contentType,
             String userId,
-            boolean adminExempt,
+            boolean folderAclExempt,
+            boolean skipOwnerCheck,
             UploadAdmissionControl.Permit permit) {
-        StorageUploadOperationEntity operation = requireOwned(uploadId, userId, adminExempt);
+        StorageUploadOperationEntity operation = requireOwned(uploadId, userId, skipOwnerCheck);
         LocalDateTime now = LocalDateTime.now();
         if (StorageUploadOperationEntity.STATE_EXPIRED.equals(operation.getState())
                 || operation.getIntentExpiresAt() == null
@@ -252,7 +258,7 @@ public class UploadOperationService {
             throw new BusinessException("STORAGE045", "Content-Type 与声明 MIME 不一致");
         }
         StorageFolderEntity folder = folderService.getById(operation.getFolderId());
-        if (!adminExempt) {
+        if (!folderAclExempt) {
             folderService.requirePermission(userId, folder.getId(), "UPLOAD");
         }
         // 意图创建后目录可见性可能被改回 PRIVATE：接收前再检一次，避免非公开正文被代传到上游（§11.3）。
@@ -565,14 +571,14 @@ public class UploadOperationService {
 
     // ==================== 校验与工具 ====================
 
-    private StorageUploadOperationEntity requireOwned(String uploadId, String userId, boolean adminExempt) {
+    private StorageUploadOperationEntity requireOwned(String uploadId, String userId, boolean skipOwnerCheck) {
         StorageUploadOperationEntity operation =
                 operationMapper.selectOne(new LambdaQueryWrapper<StorageUploadOperationEntity>()
                         .eq(StorageUploadOperationEntity::getUploadId, uploadId));
         if (operation == null) {
             throw new BusinessException("STORAGE054");
         }
-        if (!adminExempt && !operation.getActorId().equals(userId)) {
+        if (!skipOwnerCheck && !operation.getActorId().equals(userId)) {
             throw new BusinessException("STORAGE054");
         }
         return operation;
