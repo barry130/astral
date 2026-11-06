@@ -92,6 +92,17 @@ public class UploadOperationService {
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
+    /** 大小上限/下限的可读文案（中文客户端直接 toast 给用户）：整除 MB/KB 用大单位，否则退回字节数 */
+    private static String sizeLimitText(long bytes) {
+        if (bytes % (1024L * 1024L) == 0) {
+            return (bytes / (1024L * 1024L)) + " MB";
+        }
+        if (bytes % 1024L == 0) {
+            return (bytes / 1024L) + " KB";
+        }
+        return bytes + " 字节";
+    }
+
     /** PUT 预检结果（正文读取前返回，读取完成后交给 {@link #sendContent}） */
     public record PreparedContent(
             StorageUploadOperationEntity operation,
@@ -127,10 +138,10 @@ public class UploadOperationService {
         String mime = normalizeMime(req.contentType());
         long size = req.sizeBytes();
         if (size <= 0 || size > maxBytes) {
-            throw new BusinessException("STORAGE045", "声明大小超出目录允许范围");
+            throw new BusinessException("STORAGE045", "文件大小超过上限（最大 " + sizeLimitText(maxBytes) + "），请压缩后重试");
         }
         if (policy.minSizeBytes() > 0 && size < policy.minSizeBytes()) {
-            throw new BusinessException("STORAGE045", "声明大小低于目录下限");
+            throw new BusinessException("STORAGE045", "文件小于下限（最小 " + sizeLimitText(policy.minSizeBytes()) + "）");
         }
         checkPolicyContent(policy, mime, fileName);
         String sha256 = normalizeSha256(req.sha256());
