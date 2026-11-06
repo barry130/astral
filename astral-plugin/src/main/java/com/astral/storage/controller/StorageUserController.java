@@ -1,30 +1,29 @@
 package com.astral.storage.controller;
 
-import org.springframework.beans.factory.annotation.Value;
-import com.astral.common.util.ClientIp;
 import com.astral.auth.security.PermissionChecker;
 import com.astral.common.result.Result;
+import com.astral.common.util.ClientIp;
 import com.astral.storage.dto.StorageDtos;
-import com.astral.storage.entity.StorageFileEntity;
-import com.astral.storage.service.StorageFileService;
-import com.astral.storage.security.UploadTicketService;
 import com.astral.storage.entity.StorageConfigEntity;
+import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.entity.StorageFolderEntity;
-import com.astral.storage.service.StorageConfigService;
+import com.astral.storage.security.UploadTicketService;
+import com.astral.storage.service.StorageFileService;
 import com.astral.storage.service.StorageFolderService;
+import com.astral.storage.service.StorageTicketTargetService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * storage 插件用户/业务 API（/api/v1/all/storage/**）
@@ -40,8 +39,8 @@ public class StorageUserController {
     @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
     private String trustedProxies;
 
-    private final StorageConfigService configService;
     private final StorageFolderService folderService;
+    private final StorageTicketTargetService ticketTargetService;
     private final StorageFileService fileService;
     private final UploadTicketService ticketService;
     private final PermissionChecker permissionChecker;
@@ -84,8 +83,8 @@ public class StorageUserController {
      * Astral 不接收文件正文。
      */
     @PostMapping("/upload-ticket")
-    public Result<StorageDtos.TicketView> uploadTicket(@RequestBody StorageDtos.UploadTicketReq req,
-                                                       jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageDtos.TicketView> uploadTicket(
+            @RequestBody StorageDtos.UploadTicketReq req, jakarta.servlet.http.HttpServletRequest request) {
         String userId = userId(request);
         if (req.folderId() == null) {
             throw new com.astral.common.exception.BusinessException("COMMON002", "缺少 folderId");
@@ -96,19 +95,21 @@ public class StorageUserController {
         if (!adminExempt) {
             folderService.requirePermission(userId, folder.getId(), "UPLOAD");
         }
-        // 配置取文件夹绑定的存储配置；被禁用时明确拒绝
-        StorageConfigEntity config = configService.getById(folder.getStorageConfigId());
-        if (!StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
-            throw new com.astral.common.exception.BusinessException("STORAGE002");
-        }
+        // 授权绑定子集 → 文件夹绑定，按优先级解析首个候选；禁用/CUSTOM_HTTP 明确拒绝
+        StorageConfigEntity config = ticketTargetService.requireDirectUploadConfig(folder, userId);
         UploadTicketService.IssuedTicket issued = ticketService.issue(
                 config, folder, userId, req.fileName(), req.contentType(), req.sizeBytes(), adminExempt);
-        StorageDtos.TicketFormView form = issued.formFields() == null ? null
+        StorageDtos.TicketFormView form = issued.formFields() == null
+                ? null
                 : new StorageDtos.TicketFormView(
                         issued.formFields().policy(), issued.formFields().authorization());
         return Result.success(new StorageDtos.TicketView(
-                issued.uploadUrl(), issued.method(), issued.formField(),
-                issued.uploadId(), issued.expiresAtEpochSeconds(), form));
+                issued.uploadUrl(),
+                issued.method(),
+                issued.formField(),
+                issued.uploadId(),
+                issued.expiresAtEpochSeconds(),
+                form));
     }
 
     /**
@@ -117,8 +118,8 @@ public class StorageUserController {
      * 登记成功后按文件夹策略 verifyContent 执行内容验证（失败删对象置 FAILED 并报错）。
      */
     @PostMapping("/files/register")
-    public Result<StorageFileEntity> registerUpload(@RequestBody StorageDtos.RegisterUploadReq req,
-                                                    jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageFileEntity> registerUpload(
+            @RequestBody StorageDtos.RegisterUploadReq req, jakarta.servlet.http.HttpServletRequest request) {
         StorageFileEntity file = fileService.registerFromBrowser(req.uploadId(), userId(request), clientIp(request));
         fileService.verifyContentAfterRegistration(file.getPublicId());
         file.setProviderLocatorJson(null);
@@ -127,8 +128,8 @@ public class StorageUserController {
 
     /** 按上传凭证 ID 查登记结果（客户端直传 complete 阶段使用；上传者本人或持文件夹 READ 权限） */
     @GetMapping("/uploads/{uploadId}")
-    public Result<StorageFileEntity> uploadResult(@PathVariable String uploadId,
-                                                  jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageFileEntity> uploadResult(
+            @PathVariable String uploadId, jakarta.servlet.http.HttpServletRequest request) {
         StorageFileEntity file = fileService.getByUploadId(uploadId, userId(request));
         file.setProviderLocatorJson(null);
         return Result.success(file);
@@ -136,8 +137,8 @@ public class StorageUserController {
 
     /** 永久公开链接（仅 PUBLIC 文件；TELEGRAM 走 Worker /p/，R2/S3 走桶公开域名） */
     @PostMapping("/files/{publicId}/permanent-url")
-    public Result<StorageDtos.PermanentUrlView> permanentUrl(@PathVariable String publicId,
-                                                             jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageDtos.PermanentUrlView> permanentUrl(
+            @PathVariable String publicId, jakarta.servlet.http.HttpServletRequest request) {
         // 管理员豁免（对齐 myFolders/uploadTicket 先例）：持全权管理员跳过文件夹 READ 门，
         // 否则 qt-media/avatar 等用户文件夹对 admin 无授权行，会报 STORAGE013
         boolean adminExempt = permissionChecker.hasPermission(PermissionChecker.SUPER_PERMISSION);
@@ -146,16 +147,16 @@ public class StorageUserController {
 
     /** 签发短时下载 URL（私有/公开统一走签名） */
     @PostMapping("/files/{publicId}/download-url")
-    public Result<StorageDtos.DownloadUrlView> downloadUrl(@PathVariable String publicId,
-                                                           jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageDtos.DownloadUrlView> downloadUrl(
+            @PathVariable String publicId, jakarta.servlet.http.HttpServletRequest request) {
         // 管理员豁免：同 permanentUrl，跳过文件夹 READ 门
         boolean adminExempt = permissionChecker.hasPermission(PermissionChecker.SUPER_PERMISSION);
         return Result.success(fileService.issueDownloadUrl(publicId, userId(request), adminExempt));
     }
 
     @GetMapping("/files/{publicId}")
-    public Result<StorageFileEntity> file(@PathVariable String publicId,
-                                          jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageFileEntity> file(
+            @PathVariable String publicId, jakarta.servlet.http.HttpServletRequest request) {
         StorageFileEntity file = fileService.getByPublicId(publicId);
         String userId = userId(request);
         boolean uploader = userId != null && userId.equals(file.getUploaderId());
@@ -167,20 +168,22 @@ public class StorageUserController {
     }
 
     @GetMapping("/folders/{folderId}/files")
-    public Result<Page<StorageFileEntity>> folderFiles(@PathVariable Long folderId,
-                                                       @RequestParam(defaultValue = "1") long current,
-                                                       @RequestParam(defaultValue = "20") long size,
-                                                       jakarta.servlet.http.HttpServletRequest request) {
-        Page<StorageFileEntity> page = fileManagerService.page(userId(request), isAdmin(), current, size,
-                new StorageDtos.FileQuery(folderId, null, null, null, null));
+    public Result<Page<StorageFileEntity>> folderFiles(
+            @PathVariable Long folderId,
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "20") long size,
+            jakarta.servlet.http.HttpServletRequest request) {
+        Page<StorageFileEntity> page = fileManagerService.page(
+                userId(request), isAdmin(), current, size, new StorageDtos.FileQuery(folderId, null, null, null, null));
         page.getRecords().forEach(f -> f.setProviderLocatorJson(null));
         return Result.success(page);
     }
 
     @PutMapping("/files/{publicId}/visibility")
-    public Result<StorageFileEntity> changeVisibility(@PathVariable String publicId,
-                                                      @RequestParam String value,
-                                                      jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageFileEntity> changeVisibility(
+            @PathVariable String publicId,
+            @RequestParam String value,
+            jakarta.servlet.http.HttpServletRequest request) {
         StorageFileEntity file = fileService.changeVisibility(publicId, userId(request), value, isAdmin());
         file.setProviderLocatorJson(null);
         return Result.success(file);
@@ -193,36 +196,40 @@ public class StorageUserController {
     }
 
     @GetMapping("/files")
-    public Result<Page<StorageFileEntity>> files(@RequestParam(defaultValue = "1") long current,
-                                                @RequestParam(defaultValue = "24") long size,
-                                                StorageDtos.FileQuery query,
-                                                jakarta.servlet.http.HttpServletRequest request) {
+    public Result<Page<StorageFileEntity>> files(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "24") long size,
+            StorageDtos.FileQuery query,
+            jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(fileManagerService.page(userId(request), isAdmin(), current, size, query));
     }
 
     @PutMapping("/files/{publicId}")
-    public Result<StorageFileEntity> updateFile(@PathVariable String publicId,
-                                               @RequestBody StorageDtos.FileUpdateReq req,
-                                               jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageFileEntity> updateFile(
+            @PathVariable String publicId,
+            @RequestBody StorageDtos.FileUpdateReq req,
+            jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(fileManagerService.update(publicId, req, userId(request), isAdmin()));
     }
 
     /** 各项独立事务，单个失败不回滚已完成的文件；返回逐项结果供前端保留失败选择。 */
     @PostMapping("/files/batch")
-    public Result<StorageDtos.BatchResult> batch(@RequestBody StorageDtos.FileBatchReq req,
-                                                jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageDtos.BatchResult> batch(
+            @RequestBody StorageDtos.FileBatchReq req, jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(batchService.execute(req, userId(request), isAdmin()));
     }
 
     @PostMapping("/folders")
-    public Result<StorageFolderEntity> createFolder(@RequestBody StorageDtos.UserFolderReq req,
-                                                    jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageFolderEntity> createFolder(
+            @RequestBody StorageDtos.UserFolderReq req, jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(fileManagerService.createFolder(req, userId(request), isAdmin()));
     }
 
     @PutMapping("/folders/{id}")
-    public Result<StorageFolderEntity> renameFolder(@PathVariable Long id, @RequestBody StorageDtos.UserFolderReq req,
-                                                    jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageFolderEntity> renameFolder(
+            @PathVariable Long id,
+            @RequestBody StorageDtos.UserFolderReq req,
+            jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(fileManagerService.renameFolder(id, req, userId(request), isAdmin()));
     }
 

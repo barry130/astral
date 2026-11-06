@@ -132,6 +132,33 @@ astral:
       upload-ticket-key: ${STORAGE_UPLOAD_TICKET_KEY:}
       origin-shared-secret: ${STORAGE_ORIGIN_SHARED_SECRET:}
       download-signing-key: ${STORAGE_DOWNLOAD_SIGNING_KEY_V1:}
+      # 第三方 HTTP 直连渠道（provider_type=CUSTOM_HTTP）：密钥仍只落服务端
+      custom-http:
+        # 首次部署必须 false：先配好渠道/组/目录/权限并本地验证，再开
+        enabled: ${STORAGE_CUSTOM_HTTP_ENABLED:false}
+        # 全局同时进行的上游请求数，设计上限 2，默认 1（按 1Mbps 出口估算）
+        max-concurrent-uploads: ${STORAGE_CUSTOM_HTTP_CONCURRENCY:1}
+        # 单渠道命名凭据数量上限
+        max-secrets-per-channel: 8
+        # 批准目标清单：部署侧维护，管理端不能扩大；为空时任何出站请求都不允许。
+        # 示例（取消注释并缩进对齐后生效）：
+        # approved-targets:
+        #   - origin: https://api.example.com
+        #     path: /v1/upload
+        #     url-origins:
+        #       - https://cdn.example.com
+        approved-targets: []
+      # 两步上传操作：服务端接收正文后再代传到上游（客户端不再直连第三方）
+      upload-operation:
+        # 首次 PUT 准入时固化的总截止时间，接收重试与换候选共用剩余预算
+        deadline-seconds: 90
+        # 正文硬上限 5 MiB，只能收紧
+        max-content-bytes: 5242880
+        max-concurrent-uploads: ${STORAGE_UPLOAD_CONCURRENCY:1}
+        max-concurrent-per-user: 1
+        lease-seconds: 30
+        recovery-interval-seconds: 60
+        recovery-enabled: ${STORAGE_UPLOAD_RECOVERY_ENABLED:true}
     ai:
       enabled: ${AI_PLUGIN_ENABLED:true}
       # API Key 落库加密口令（AES-GCM KEK）：只经环境变量注入，禁止写进仓库；

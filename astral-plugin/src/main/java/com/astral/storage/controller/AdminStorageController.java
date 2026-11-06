@@ -7,32 +7,30 @@ import com.astral.storage.entity.StorageAuditEntity;
 import com.astral.storage.entity.StorageConfigEntity;
 import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.entity.StorageFolderEntity;
-import com.astral.storage.entity.StorageFolderPermissionEntity;
 import com.astral.storage.entity.StorageTaskEntity;
+import com.astral.storage.mapper.StorageFileMapper;
+import com.astral.storage.mapper.StorageFolderMapper;
 import com.astral.storage.service.FileManagerService;
 import com.astral.storage.service.StorageAuditService;
 import com.astral.storage.service.StorageBatchService;
 import com.astral.storage.service.StorageConfigService;
 import com.astral.storage.service.StorageFileService;
 import com.astral.storage.service.StorageFolderService;
+import com.astral.storage.service.StorageTicketTargetService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.astral.storage.mapper.StorageFileMapper;
-import com.astral.storage.mapper.StorageFolderMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * storage 插件管理端 API（/api/v1/admin/plugin/storage/**）
@@ -46,6 +44,7 @@ public class AdminStorageController {
 
     private final StorageConfigService configService;
     private final StorageFolderService folderService;
+    private final StorageTicketTargetService ticketTargetService;
     private final StorageFileService fileService;
     private final StorageAuditService auditService;
     private final StorageFileMapper fileMapper;
@@ -63,10 +62,17 @@ public class AdminStorageController {
 
     @GetMapping("/overview")
     public Result<Map<String, Object>> overview(jakarta.servlet.http.HttpServletRequest request) {
+        var configs = configService.listAll();
         Map<String, Object> data = new HashMap<>();
         data.put("fileCount", fileMapper.selectCount(null));
         data.put("folderCount", folderMapper.selectCount(null));
-        data.put("configCount", configService.listAll().size());
+        data.put("configCount", configs.size());
+        data.put(
+                "enabledConfigCount",
+                configs.stream().filter(c -> "ENABLED".equals(c.getStatus())).count());
+        data.put(
+                "downConfigCount",
+                configs.stream().filter(c -> "DOWN".equals(c.getHealthStatus())).count());
         data.put("operator", userId(request));
         return Result.success(data);
     }
@@ -80,16 +86,17 @@ public class AdminStorageController {
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PostMapping("/configs")
-    public Result<StorageConfigEntity> createConfig(@RequestBody StorageDtos.ConfigCreateReq req,
-                                                    jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageConfigEntity> createConfig(
+            @RequestBody StorageDtos.ConfigCreateReq req, jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(configService.create(req, userId(request)));
     }
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PutMapping("/configs/{id}")
-    public Result<StorageConfigEntity> updateConfig(@PathVariable Long id,
-                                                    @RequestBody StorageDtos.ConfigUpdateReq req,
-                                                    jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageConfigEntity> updateConfig(
+            @PathVariable Long id,
+            @RequestBody StorageDtos.ConfigUpdateReq req,
+            jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(configService.update(id, req, userId(request)));
     }
 
@@ -102,8 +109,8 @@ public class AdminStorageController {
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PostMapping("/configs/{id}/test")
-    public Result<StorageDtos.ConfigTestResp> testConfig(@PathVariable Long id,
-                                                         jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageDtos.ConfigTestResp> testConfig(
+            @PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(configService.test(id, userId(request)));
     }
 
@@ -117,23 +124,24 @@ public class AdminStorageController {
     // ==================== 文件夹与授权 ====================
 
     @GetMapping("/folders")
-    public Result<List<StorageFolderEntity>> folders() {
-        return Result.success(folderService.listAll());
+    public Result<List<StorageDtos.FolderView>> folders() {
+        return Result.success(folderService.listAllViews());
     }
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PostMapping("/folders")
-    public Result<StorageFolderEntity> createFolder(@RequestBody StorageDtos.FolderCreateReq req,
-                                                    jakarta.servlet.http.HttpServletRequest request) {
-        return Result.success(folderService.create(req, userId(request)));
+    public Result<StorageDtos.FolderView> createFolder(
+            @RequestBody StorageDtos.FolderCreateReq req, jakarta.servlet.http.HttpServletRequest request) {
+        return Result.success(folderService.toView(folderService.create(req, userId(request))));
     }
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PutMapping("/folders/{id}")
-    public Result<StorageFolderEntity> updateFolder(@PathVariable Long id,
-                                                    @RequestBody StorageDtos.FolderUpdateReq req,
-                                                    jakarta.servlet.http.HttpServletRequest request) {
-        return Result.success(folderService.update(id, req, userId(request)));
+    public Result<StorageDtos.FolderView> updateFolder(
+            @PathVariable Long id,
+            @RequestBody StorageDtos.FolderUpdateReq req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return Result.success(folderService.toView(folderService.update(id, req, userId(request))));
     }
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
@@ -144,15 +152,16 @@ public class AdminStorageController {
     }
 
     @GetMapping("/folders/{id}/permissions")
-    public Result<List<StorageFolderPermissionEntity>> folderPermissions(@PathVariable Long id) {
+    public Result<List<StorageDtos.PermView>> folderPermissions(@PathVariable Long id) {
         return Result.success(folderService.listPermissions(id));
     }
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PutMapping("/folders/{id}/permissions")
-    public Result<Void> saveFolderPermissions(@PathVariable Long id,
-                                              @RequestBody StorageDtos.FolderPermSaveReq req,
-                                              jakarta.servlet.http.HttpServletRequest request) {
+    public Result<Void> saveFolderPermissions(
+            @PathVariable Long id,
+            @RequestBody StorageDtos.FolderPermSaveReq req,
+            jakarta.servlet.http.HttpServletRequest request) {
         folderService.savePermissions(id, req.rows(), userId(request));
         return Result.success();
     }
@@ -160,18 +169,20 @@ public class AdminStorageController {
     // ==================== 文件管理 ====================
 
     @GetMapping("/files")
-    public Result<Page<StorageFileEntity>> files(@RequestParam(defaultValue = "1") long current,
-                                                 @RequestParam(defaultValue = "20") long size,
-                                                 @RequestParam(required = false) Long folderId,
-                                                 @RequestParam(required = false) String keyword) {
+    public Result<Page<StorageFileEntity>> files(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "20") long size,
+            @RequestParam(required = false) Long folderId,
+            @RequestParam(required = false) String keyword) {
         return Result.success(fileService.pageForAdmin(current, size, folderId, keyword));
     }
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PutMapping("/files/{publicId}/visibility")
-    public Result<StorageFileEntity> changeVisibility(@PathVariable String publicId,
-                                                      @RequestParam String value,
-                                                      jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageFileEntity> changeVisibility(
+            @PathVariable String publicId,
+            @RequestParam String value,
+            jakarta.servlet.http.HttpServletRequest request) {
         StorageFileEntity file = fileService.changeVisibility(publicId, userId(request), value, true);
         file.setProviderLocatorJson(null);
         return Result.success(file);
@@ -187,63 +198,74 @@ public class AdminStorageController {
     // ==================== 任务与审计 ====================
 
     @GetMapping("/tasks")
-    public Result<Page<StorageTaskEntity>> tasks(@RequestParam(defaultValue = "1") long current,
-                                                 @RequestParam(defaultValue = "20") long size) {
+    public Result<Page<StorageTaskEntity>> tasks(
+            @RequestParam(defaultValue = "1") long current, @RequestParam(defaultValue = "20") long size) {
         // 复用文件分页逻辑之外的任务查询：直接通过审计服务所在包的 Mapper 由服务层暴露
         return Result.success(fileService.pageTasks(current, size));
     }
 
     @GetMapping("/audit")
-    public Result<Page<StorageAuditEntity>> audit(@RequestParam(defaultValue = "1") long current,
-                                                  @RequestParam(defaultValue = "20") long size) {
+    public Result<Page<StorageAuditEntity>> audit(
+            @RequestParam(defaultValue = "1") long current, @RequestParam(defaultValue = "20") long size) {
         return Result.success(auditService.page(current, size));
     }
 
     @GetMapping("/manager/files")
-    public Result<Page<StorageFileEntity>> managerFiles(@RequestParam(defaultValue = "1") long current,
-                                                       @RequestParam(defaultValue = "24") long size,
-                                                       StorageDtos.FileQuery query,
-                                                       jakarta.servlet.http.HttpServletRequest request) {
+    public Result<Page<StorageFileEntity>> managerFiles(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "24") long size,
+            StorageDtos.FileQuery query,
+            jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(fileManagerService.page(userId(request), true, current, size, query));
     }
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PutMapping("/files/{publicId}")
-    public Result<StorageFileEntity> updateFile(@PathVariable String publicId, @RequestBody StorageDtos.FileUpdateReq req,
-                                               jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageFileEntity> updateFile(
+            @PathVariable String publicId,
+            @RequestBody StorageDtos.FileUpdateReq req,
+            jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(fileManagerService.update(publicId, req, userId(request), true));
     }
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PostMapping("/files/batch")
-    public Result<StorageDtos.BatchResult> batch(@RequestBody StorageDtos.FileBatchReq req,
-                                                jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageDtos.BatchResult> batch(
+            @RequestBody StorageDtos.FileBatchReq req, jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(batchService.execute(req, userId(request), true));
     }
 
     @PostMapping("/files/{publicId}/download-url")
-    public Result<StorageDtos.DownloadUrlView> downloadUrl(@PathVariable String publicId,
-                                                          jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageDtos.DownloadUrlView> downloadUrl(
+            @PathVariable String publicId, jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(fileService.issueDownloadUrl(publicId, userId(request), true));
     }
 
     @PostMapping("/files/{publicId}/permanent-url")
-    public Result<StorageDtos.PermanentUrlView> permanentUrl(@PathVariable String publicId,
-                                                          jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageDtos.PermanentUrlView> permanentUrl(
+            @PathVariable String publicId, jakarta.servlet.http.HttpServletRequest request) {
         return Result.success(fileService.issuePermanentUrl(publicId, userId(request), true));
     }
 
     @RequiresPermission(value = "admin:storage:edit", name = "存储编辑", description = "存储配置/文件夹策略/文件操作")
     @PostMapping("/upload-ticket")
-    public Result<StorageDtos.TicketView> uploadTicket(@RequestBody StorageDtos.UploadTicketReq req,
-                                                      jakarta.servlet.http.HttpServletRequest request) {
+    public Result<StorageDtos.TicketView> uploadTicket(
+            @RequestBody StorageDtos.UploadTicketReq req, jakarta.servlet.http.HttpServletRequest request) {
         if (req.folderId() == null) throw new com.astral.common.exception.BusinessException("COMMON002", "缺少 folderId");
         StorageFolderEntity folder = folderService.getById(req.folderId());
-        StorageConfigEntity config = configService.getById(folder.getStorageConfigId());
-        if (!StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) throw new com.astral.common.exception.BusinessException("STORAGE002");
-        var issued = ticketService.issue(config, folder, userId(request), req.fileName(), req.contentType(), req.sizeBytes(), true);
-        var form = issued.formFields() == null ? null : new StorageDtos.TicketFormView(issued.formFields().policy(), issued.formFields().authorization());
-        return Result.success(new StorageDtos.TicketView(issued.uploadUrl(), issued.method(), issued.formField(),
-                issued.uploadId(), issued.expiresAtEpochSeconds(), form));
+        StorageConfigEntity config = ticketTargetService.requireDirectUploadConfig(folder, userId(request));
+        var issued = ticketService.issue(
+                config, folder, userId(request), req.fileName(), req.contentType(), req.sizeBytes(), true);
+        var form = issued.formFields() == null
+                ? null
+                : new StorageDtos.TicketFormView(
+                        issued.formFields().policy(), issued.formFields().authorization());
+        return Result.success(new StorageDtos.TicketView(
+                issued.uploadUrl(),
+                issued.method(),
+                issued.formField(),
+                issued.uploadId(),
+                issued.expiresAtEpochSeconds(),
+                form));
     }
 }

@@ -44,8 +44,15 @@
       "fieldName": "storageConfigId",
       "fieldType": "Long",
       "jdbcType": "BIGINT",
-      "comment": "存储配置ID",
+      "comment": "实际产生该文件的存储配置ID",
       "isRequired": true
+    },
+    {
+      "columnName": "upload_operation_id",
+      "fieldName": "uploadOperationId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "两步上传操作ID(sys_storage_upload_operation.id,旧直传路径为空,唯一)"
     },
     {
       "columnName": "provider_type",
@@ -204,6 +211,13 @@
       "indexName": "uk_storage_file_public_id",
       "columns": [
         "public_id"
+      ],
+      "isUnique": true
+    },
+    {
+      "indexName": "uq_storage_file_operation",
+      "columns": [
+        "upload_operation_id"
       ],
       "isUnique": true
     }

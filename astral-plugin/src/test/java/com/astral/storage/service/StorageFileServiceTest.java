@@ -1,5 +1,9 @@
 package com.astral.storage.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.astral.common.exception.BusinessException;
 import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.entity.StorageTaskEntity;
@@ -8,15 +12,12 @@ import com.astral.storage.mapper.StorageTaskMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 class StorageFileServiceTest {
     private StorageFileMapper mapper;
     private StorageTaskMapper tasks;
     private StorageFolderService folders;
     private WorkerCachePurgeService purger;
+    private StorageRemoteDeleteService remoteDelete;
     private StorageFileService service;
     private StorageFileEntity file;
 
@@ -26,9 +27,25 @@ class StorageFileServiceTest {
         tasks = mock(StorageTaskMapper.class);
         folders = mock(StorageFolderService.class);
         purger = mock(WorkerCachePurgeService.class);
+        remoteDelete = mock(StorageRemoteDeleteService.class);
         var configCache = mock(StorageConfigCache.class);
-        service = spy(new StorageFileService(mapper, tasks, configCache, folders, mock(StorageAuditService.class),
-                null, null, null, null, null, null, null, null, null, purger));
+        service = spy(new StorageFileService(
+                mapper,
+                tasks,
+                configCache,
+                folders,
+                mock(StorageAuditService.class),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                remoteDelete,
+                null,
+                null,
+                purger));
         file = new StorageFileEntity();
         file.setId(1L);
         file.setPublicId("public-id");
@@ -47,7 +64,8 @@ class StorageFileServiceTest {
         order.verify(mapper).lockUploadKey("storage-file:public-id");
         order.verify(service).getByPublicId("public-id");
         verifyNoInteractions(folders);
-        assertEquals("DELETING", file.getStatus());
+        // 新语义：库行立即硬删，不再落 DELETING 中间态
+        verify(mapper).deleteById(1L);
         verify(tasks).insert(any(StorageTaskEntity.class));
     }
 
@@ -56,7 +74,7 @@ class StorageFileServiceTest {
         doThrow(new BusinessException("STORAGE013")).when(folders).requirePermission("user", 10L, "DELETE");
         assertThrows(BusinessException.class, () -> service.requestDelete("public-id", "user"));
         verifyNoInteractions(tasks);
-        verify(mapper, never()).updateById(any(StorageFileEntity.class));
+        verify(mapper, never()).deleteById(any(Long.class));
     }
 
     @Test
@@ -71,8 +89,8 @@ class StorageFileServiceTest {
     }
 
     @Test
-    void deletingFileCannotHaveVisibilityChanged() {
-        file.setStatus("DELETING");
+    void nonAvailableFileCannotHaveVisibilityChanged() {
+        file.setStatus("FAILED");
         assertThrows(BusinessException.class, () -> service.changeVisibility("public-id", "admin", "PUBLIC", true));
         verify(mapper, never()).updateById(any(StorageFileEntity.class));
         assertEquals("PRIVATE", file.getVisibility());
@@ -86,10 +104,35 @@ class StorageFileServiceTest {
     }
 
     @Test
-    void telegramDeleteEnqueuesTaskAndPurgesEdgeCache() {
+    void telegramDeleteEnqueuesTaskPurgesEdgeCacheAndRemovesRow() {
         service.requestDelete("public-id", "admin", true);
         verify(tasks).insert(any(StorageTaskEntity.class));
         verify(purger).purgeFileAsync(isNull(), eq("public-id"), eq(1L), isNull());
+        verify(mapper).deleteById(1L);
+        // TELEGRAM 走任务表，不走异步线程池
+        verifyNoInteractions(remoteDelete);
+    }
+
+    @Test
+    void serverManagedDeleteRemovesRowAndDispatchesAsyncRemoteCleanup() {
+        file.setProviderType("R2");
+        service.requestDelete("public-id", "admin", true);
+        verify(mapper).deleteById(1L);
+        // 远端清理异步调度（无事务上下文直接派发），失败只在异步侧留痕
+        verify(remoteDelete).deleteQuietly(eq("public-id"), eq("R2"), isNull(), isNull(), eq("admin"));
+        verifyNoInteractions(tasks);
+        verifyNoInteractions(purger);
+    }
+
+    @Test
+    void customHttpDeleteOnlyRemovesRow() {
+        file.setProviderType("CUSTOM_HTTP");
+        service.requestDelete("public-id", "admin", true);
+        verify(mapper).deleteById(1L);
+        // 图床无远端删除接口：无任务、无异步远端清理
+        verifyNoInteractions(tasks);
+        verifyNoInteractions(remoteDelete);
+        verifyNoInteractions(purger);
     }
 }
 
@@ -103,12 +146,14 @@ class StorageFileServiceSvgTest {
 
     @Test
     void plainSvgIsDetected() {
-        assertTrue(StorageFileService.looksLikeSvg(utf8("<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>")));
+        assertTrue(StorageFileService.looksLikeSvg(
+                utf8("<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>")));
     }
 
     @Test
     void svgWithDeclarationCommentAndDoctypeIsDetected() {
-        String svg = "<?xml version=\"1.0\"?>\n<!-- figure -->\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"x\">\n<SVG onload=\"alert(1)\" xmlns=\"http://www.w3.org/2000/svg\"/>";
+        String svg =
+                "<?xml version=\"1.0\"?>\n<!-- figure -->\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"x\">\n<SVG onload=\"alert(1)\" xmlns=\"http://www.w3.org/2000/svg\"/>";
         assertTrue(StorageFileService.looksLikeSvg(utf8(svg)));
     }
 

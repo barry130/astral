@@ -1,0 +1,83 @@
+{
+  "tableName": "sys_storage_folder_config",
+  "tableComment": "文件夹存储配置绑定表(多选+优先级,空=禁止上传)",
+  "moduleName": "storage",
+  "className": "StorageFolderConfigEntity",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "folder_id",
+      "fieldName": "folderId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "文件夹ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "storage_config_id",
+      "fieldName": "storageConfigId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "存储配置ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "priority",
+      "fieldName": "priority",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "优先级(0-10000,小值优先,FAILOVER故障转移顺序)",
+      "isRequired": true,
+      "defaultValue": "100"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_storage_folder_config",
+      "columns": [
+        "folder_id",
+        "storage_config_id"
+      ],
+      "unique": true
+    },
+    {
+      "indexName": "idx_storage_folder_config_order",
+      "columns": [
+        "folder_id",
+        "priority",
+        "id"
+      ]
+    },
+    {
+      "indexName": "idx_storage_folder_config_config",
+      "columns": [
+        "storage_config_id"
+      ]
+    }
+  ]
+}

@@ -1,9 +1,8 @@
 package com.astral.qt.service;
 
-import org.springframework.beans.factory.annotation.Value;
-import com.astral.common.util.ClientIp;
 import com.astral.auth.security.PermissionChecker;
 import com.astral.common.exception.BusinessException;
+import com.astral.common.util.ClientIp;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.qt.common.QtException;
@@ -14,25 +13,28 @@ import com.astral.qt.mapper.QtLikePlaylistMapper;
 import com.astral.qt.mapper.QtLikeSyncMapper;
 import com.astral.storage.entity.StorageConfigEntity;
 import com.astral.storage.entity.StorageFileEntity;
+import com.astral.storage.entity.StorageFolderConfigEntity;
 import com.astral.storage.entity.StorageFolderEntity;
+import com.astral.storage.mapper.StorageFolderConfigMapper;
 import com.astral.storage.mapper.StorageFolderMapper;
+import com.astral.storage.security.UploadTicketService;
 import com.astral.storage.service.StorageConfigService;
 import com.astral.storage.service.StorageFileService;
+import com.astral.storage.service.StorageTicketTargetService;
 import com.astral.storage.service.UploadPolicyService;
-import com.astral.storage.security.UploadTicketService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Qt 媒体上传服务（UPDATE_DESIGN.md §5/§6）：头像与歌单封面的直传编排层。
@@ -53,6 +55,7 @@ public class QtMediaService {
 
     /** 约定文件夹（默认仓库下的展示路径） */
     public static final String FOLDER_ROOT = "qt-media";
+
     public static final String FOLDER_AVATAR = "avatar";
     public static final String FOLDER_COVER = "playlist-cover";
 
@@ -66,6 +69,12 @@ public class QtMediaService {
 
     @Resource
     private StorageFolderMapper storageFolderMapper;
+
+    @Resource
+    private StorageFolderConfigMapper storageFolderConfigMapper;
+
+    @Resource
+    private StorageTicketTargetService storageTicketTargetService;
 
     @Resource
     private UploadTicketService uploadTicketService;
@@ -124,8 +133,8 @@ public class QtMediaService {
     // ==================== 歌单封面（仅修改时上传；每日配额按文件夹聚合=全部歌单合计） ====================
 
     /** 歌单封面上传取凭证：先做业务归属校验（只能改自己收藏行的封面） */
-    public QtUploadTicketVo coverTicket(Long uid, String pid, String platform,
-                                        String fileName, String contentType, long sizeBytes) {
+    public QtUploadTicketVo coverTicket(
+            Long uid, String pid, String platform, String fileName, String contentType, long sizeBytes) {
         requireOwnPlaylist(uid, pid, platform);
         StorageFolderEntity folder = ensureMediaTree(FOLDER_COVER);
         return issueTicket(folder, uid, fileName, contentType, sizeBytes);
@@ -137,8 +146,8 @@ public class QtMediaService {
      * （每日配额按非 FAILED 计数依赖该行存在），整体回滚会把行吞掉；
      * 业务事务只包 seq 推进 + pic_url 直写（advisory lock 需要事务内执行）。</p>
      */
-    public QtUploadCompleteVo coverComplete(Long uid, String pid, String platform,
-                                            String uploadId, HttpServletRequest request) {
+    public QtUploadCompleteVo coverComplete(
+            Long uid, String pid, String platform, String uploadId, HttpServletRequest request) {
         StorageFolderEntity folder = ensureMediaTree(FOLDER_COVER);
         StorageFileEntity file = registerAndGet(uploadId, uid.toString(), request, folder);
         String url = permanentUrlOf(file, uid);
@@ -177,12 +186,10 @@ public class QtMediaService {
     // ==================== 内部编排 ====================
 
     /** 签发直传凭证（管理员豁免判定在此处，策略校验在插件 UploadTicketService） */
-    private QtUploadTicketVo issueTicket(StorageFolderEntity folder, Long uid,
-                                         String fileName, String contentType, long sizeBytes) {
-        StorageConfigEntity config = storageConfigService.getById(folder.getStorageConfigId());
-        if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
-            throw new QtException("存储配置不可用，请稍后再试");
-        }
+    private QtUploadTicketVo issueTicket(
+            StorageFolderEntity folder, Long uid, String fileName, String contentType, long sizeBytes) {
+        // 统一解析链：授权绑定子集 → 文件夹绑定；无绑定/渠道停用/CUSTOM_HTTP 由该服务明确拒绝
+        StorageConfigEntity config = storageTicketTargetService.requireDirectUploadConfig(folder, uid.toString());
         boolean adminExempt = permissionChecker.hasPermission(PermissionChecker.SUPER_PERMISSION);
         UploadTicketService.IssuedTicket ticket = uploadTicketService.issue(
                 config, folder, uid.toString(), fileName, contentType, sizeBytes, adminExempt);
@@ -194,8 +201,8 @@ public class QtMediaService {
      * 对象存储家族先尝试登记（幂等，HEAD 确认）；TELEGRAM 由 Worker 回调登记，未回执时报上传未完成；
      * 内容验证（verifyContent）幂等重跑；最后核对 uploader 与文件夹，防跨用户/跨文件夹张冠李戴。
      */
-    private StorageFileEntity registerAndGet(String uploadId, String uploaderId,
-                                             HttpServletRequest request, StorageFolderEntity expectedFolder) {
+    private StorageFileEntity registerAndGet(
+            String uploadId, String uploaderId, HttpServletRequest request, StorageFolderEntity expectedFolder) {
         try {
             storageFileService.registerFromBrowser(uploadId, uploaderId, clientIp(request));
         } catch (BusinessException e) {
@@ -207,8 +214,7 @@ public class QtMediaService {
         storageFileService.verifyContentAfterRegistration(
                 storageFileService.getByUploadId(uploadId, uploaderId).getPublicId());
         StorageFileEntity file = storageFileService.getByUploadId(uploadId, uploaderId);
-        if (!expectedFolder.getId().equals(file.getFolderId())
-                || !uploaderId.equals(file.getUploaderId())) {
+        if (!expectedFolder.getId().equals(file.getFolderId()) || !uploaderId.equals(file.getUploaderId())) {
             throw new QtException(403, "上传归属校验失败");
         }
         if (!StorageFileEntity.STATUS_AVAILABLE.equals(file.getStatus())) {
@@ -219,7 +225,9 @@ public class QtMediaService {
 
     /** 永久 URL 签发 + 长度守卫（业务字段 VARCHAR(256) 容量约束，业务层唯一校验） */
     private String permanentUrlOf(StorageFileEntity file, Long uid) {
-        String url = storageFileService.issuePermanentUrl(file.getPublicId(), uid.toString()).url();
+        String url = storageFileService
+                .issuePermanentUrl(file.getPublicId(), uid.toString())
+                .url();
         if (url == null || url.length() > MAX_URL_LENGTH) {
             throw new QtException("图片地址超长，请缩短存储配置的公开访问域名");
         }
@@ -246,11 +254,11 @@ public class QtMediaService {
      */
     private synchronized StorageFolderEntity ensureMediaTree(String leafName) {
         StorageConfigEntity config = storageConfigService.requireDefaultEnabled();
-        StorageFolderEntity root = findFolder(config.getId(), FOLDER_ROOT, null);
+        StorageFolderEntity root = findFolder(FOLDER_ROOT, null);
         if (root == null) {
             root = createFolder(config, FOLDER_ROOT, null, null);
         }
-        StorageFolderEntity leaf = findFolder(config.getId(), leafName, root.getId());
+        StorageFolderEntity leaf = findFolder(leafName, root.getId());
         if (leaf == null) {
             leaf = createFolder(config, leafName, root, leafPolicy());
         }
@@ -260,12 +268,11 @@ public class QtMediaService {
         return leaf;
     }
 
-    private StorageFolderEntity findFolder(Long configId, String folderName, Long parentId) {
+    private StorageFolderEntity findFolder(String folderName, Long parentId) {
         // parent_id 为 NULL 的判断必须走 isNull：eq(column, null) 生成 "parent_id = NULL" 永远不匹配，
         // 会让根文件夹每次调用都被重复创建（幂等性破坏）
-        LambdaQueryWrapper<StorageFolderEntity> qw = new LambdaQueryWrapper<StorageFolderEntity>()
-                .eq(StorageFolderEntity::getStorageConfigId, configId)
-                .eq(StorageFolderEntity::getFolderName, folderName);
+        LambdaQueryWrapper<StorageFolderEntity> qw =
+                new LambdaQueryWrapper<StorageFolderEntity>().eq(StorageFolderEntity::getFolderName, folderName);
         if (parentId == null) {
             qw.isNull(StorageFolderEntity::getParentId);
         } else {
@@ -274,13 +281,14 @@ public class QtMediaService {
         return storageFolderMapper.selectOne(qw.last("LIMIT 1"));
     }
 
-    private StorageFolderEntity createFolder(StorageConfigEntity config, String folderName,
-                                             StorageFolderEntity parent, String policyJson) {
+    private StorageFolderEntity createFolder(
+            StorageConfigEntity config, String folderName, StorageFolderEntity parent, String policyJson) {
         StorageFolderEntity folder = new StorageFolderEntity();
         folder.setParentId(parent == null ? null : parent.getId());
         folder.setFolderName(folderName);
         folder.setFolderPath(parent == null ? "/" + folderName : parent.getFolderPath() + "/" + folderName);
-        folder.setStorageConfigId(config.getId());
+        folder.setStorageStrategy(StorageFolderEntity.STRATEGY_FAILOVER);
+        folder.setTargetVersion(1L);
         folder.setOwnerType(StorageFolderEntity.OWNER_ADMIN);
         folder.setOwnerId("qt");
         folder.setVisibility(StorageFolderEntity.VISIBILITY_PUBLIC);
@@ -290,11 +298,11 @@ public class QtMediaService {
         folder.setUpdateBy("qt");
         try {
             storageFolderMapper.insert(folder);
+            bindFolderConfig(folder.getId(), config.getId());
             log.info("[QtPlugin] 媒体文件夹已创建: {}", folder.getFolderPath());
         } catch (Exception e) {
             // 并发创建竞态：回查已有行
-            StorageFolderEntity existing = findFolder(config.getId(), folderName,
-                    parent == null ? null : parent.getId());
+            StorageFolderEntity existing = findFolder(folderName, parent == null ? null : parent.getId());
             if (existing != null) {
                 return existing;
             }
@@ -303,19 +311,35 @@ public class QtMediaService {
         return folder;
     }
 
+    /** 媒体文件夹绑定默认配置（无绑定 = 禁止上传，凭据签发将直接失败） */
+    private void bindFolderConfig(Long folderId, Long configId) {
+        StorageFolderConfigEntity binding = new StorageFolderConfigEntity();
+        binding.setFolderId(folderId);
+        binding.setStorageConfigId(configId);
+        binding.setPriority(100);
+        storageFolderConfigMapper.insert(binding);
+    }
+
     /**
      * qt 媒体文件夹策略（UPDATE_DESIGN.md §3.1/§5.4）：要求登录、单文件 ≤2MB、
      * png/jpeg/webp、每日每用户 2 次、强制 PUBLIC、登记后完整内容验证。
      */
     private String leafPolicy() {
         Map<String, Object> policy = Map.of(
-                "requireLogin", true,
-                "maxSizeBytes", 2L * 1024 * 1024,
-                "allowedMimes", List.of("image/png", "image/jpeg", "image/webp"),
-                "allowedExtensions", List.of("png", "jpg", "jpeg", "webp"),
-                "dailyUploadLimit", 2,
-                "forceVisibility", "PUBLIC",
-                "verifyContent", UploadPolicyService.VERIFY_FULL);
+                "requireLogin",
+                true,
+                "maxSizeBytes",
+                2L * 1024 * 1024,
+                "allowedMimes",
+                List.of("image/png", "image/jpeg", "image/webp"),
+                "allowedExtensions",
+                List.of("png", "jpg", "jpeg", "webp"),
+                "dailyUploadLimit",
+                2,
+                "forceVisibility",
+                "PUBLIC",
+                "verifyContent",
+                UploadPolicyService.VERIFY_FULL);
         return uploadPolicyService.normalize(policy);
     }
 

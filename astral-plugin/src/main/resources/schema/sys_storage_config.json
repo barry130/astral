@@ -28,7 +28,7 @@
       "fieldName": "providerType",
       "fieldType": "String",
       "jdbcType": "VARCHAR",
-      "comment": "存储类型(TELEGRAM/R2/S3_COMPATIBLE/QINIU/COS/OSS/UPYUN)",
+      "comment": "存储类型(TELEGRAM/R2/S3_COMPATIBLE/QINIU/COS/OSS/UPYUN/CUSTOM_HTTP)",
       "isRequired": true,
       "defaultValue": "TELEGRAM",
       "length": 32
@@ -81,6 +81,15 @@
       "comment": "是否默认配置(0否 1是)",
       "isRequired": true,
       "defaultValue": "0"
+    },
+    {
+      "columnName": "config_version",
+      "fieldName": "configVersion",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "配置版本(CUSTOM_HTTP画像/凭据/限额每次修改递增,供上传意图CAS)",
+      "isRequired": true,
+      "defaultValue": "1"
     },
     {
       "columnName": "health_status",

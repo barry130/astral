@@ -99,6 +99,8 @@ shadcn 语义变量（`--background` / `--foreground` / `--primary` / `--muted` 
 | `NoticeManagement` | `admin/NoticeManagement.tsx` | 通知管理面板 |
 | AI 相关 | `ai/*` | `ChatPanel`、`useAiChat`、`sse`、`AnswerBlocks`、`RichText` |
 | 存储相关 | `storage/FileManager.tsx` | 文件管理器 |
+| 存储相关 | `storage/HttpChannelEditorFields.tsx` | CUSTOM_HTTP 渠道配置表单分区（目标存储弹窗内嵌） |
+| 存储相关 | `storage/ServerSideUpload.tsx` | 两步上传（意图 → 直传/接收 → 提交）流程面板 |
 
 ### 3.4 色调约定
 

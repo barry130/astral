@@ -17,19 +17,46 @@ export interface StorageConfig {
   remark?: string;
 }
 
+/** 绑定写入项（文件夹/授权共用）：priority 越小越优先，缺省 100 */
+export interface StorageBindingReq {
+  storageConfigId: number;
+  priority?: number;
+}
+
+/** 绑定视图（管理端返回；停用配置也原样展示） */
+export interface StorageBindingView {
+  configId: number;
+  configName?: string;
+  providerType?: string;
+  priority: number;
+  configStatus?: string;
+}
+
+/** 调度策略（字典 storage_target_strategy：FAILOVER 按优先级 / ROUND_ROBIN 轮询） */
+export type StorageTargetStrategy = 'FAILOVER' | 'ROUND_ROBIN';
+
 /** 存储文件夹 */
 export interface StorageFolder {
   id?: number;
   parentId?: number;
   folderName?: string;
   folderPath?: string;
-  storageConfigId?: number;
   ownerType?: string;
   ownerId?: string;
   visibility?: string;
   status?: string;
   /** 文件夹级上传策略 JSON（null = 未配置，走默认行为） */
   uploadPolicy?: string | null;
+  /** 调度策略：FAILOVER 按优先级故障转移 / ROUND_ROBIN 同层轮询 */
+  storageStrategy?: string;
+  /** 目标版本（绑定/策略/授权/状态/可见性变更后由后端递增） */
+  targetVersion?: number;
+  /** 绑定的存储配置（priority 升序；空列表 = 禁止上传，无默认回落） */
+  configs?: StorageBindingView[];
+  /** 只读解析结果：解析失败（无绑定/渠道停用）时为 null */
+  resolvedConfigId?: number;
+  resolvedProviderType?: string;
+  resolvedTargetName?: string;
 }
 
 /** 文件夹上传策略（对应后端 UploadPolicyService.PolicySpec） */
@@ -45,11 +72,22 @@ export interface FolderUploadPolicy {
   maxPixels?: number;
 }
 
-/** 文件夹授权行 */
+/** 文件夹授权行（configs 限定该主体上传使用的配置，须为文件夹绑定子集，空 = 跟随文件夹绑定） */
 export interface FolderPermRow {
   subjectType: string;
   subjectId: string;
   permissions: string;
+  configs?: StorageBindingReq[];
+}
+
+/** 授权视图（GET folders/{id}/permissions 返回） */
+export interface FolderPermView {
+  id: number;
+  subjectType: string;
+  subjectId: string;
+  permissions: string;
+  expiresTime?: string | null;
+  configs: StorageBindingView[];
 }
 
 /** 存储文件 */
@@ -134,9 +172,16 @@ export interface MyStorageFolder {
   folderPath: string;
   visibility: string;
   status: string;
-  storageConfigId: number;
   myPermissions: string;
   parentId?: number | null;
+  /** 绑定的存储配置 id 列表（priority 升序；空 = 未绑定，禁止上传） */
+  bindingConfigIds?: number[];
+  /** 目标版本（绑定/策略/授权/状态/可见性变更后由后端递增） */
+  targetVersion?: number | null;
+  /** 只读解析结果（无绑定/渠道停用时为 null，此时上传会被拒绝） */
+  resolvedConfigId?: number | null;
+  resolvedProviderType?: string | null;
+  resolvedTargetName?: string | null;
 }
 
 export interface FileManagerQuery {
@@ -161,9 +206,226 @@ export interface FileBatchResult {
   failed: { publicId: string; message: string }[];
 }
 
+/** 两步上传操作状态（字典 storage_upload_state）；只有 COMMITTED 代表上传完成 */
+export type UploadOperationState =
+  | 'CREATED'
+  | 'RECEIVING'
+  | 'SENDING'
+  | 'REMOTE_SUCCEEDED'
+  | 'COMMITTED'
+  | 'FAILED'
+  | 'EXPIRED'
+  | 'UNKNOWN_OUTCOME';
+
+/** 创建上传意图结果（POST /api/v1/all/storage/upload-operations） */
+export interface UploadOperation {
+  uploadId: string;
+  publicId: string;
+  state: string;
+  canSendContent: boolean;
+  contentPath: string;
+  maxBytes: number;
+  intentTtlSeconds: number;
+}
+
+/** 正文 PUT 结果（UploadContentResp）；contentAccepted=false 表示重复提交、服务端未读正文，应转 GET 查询 */
+export interface UploadContentResult {
+  contentAccepted: boolean;
+  operation: UploadOperationStatus;
+  httpStatus?: number | null;
+  safeCode?: string | null;
+}
+
+/** 上传操作查询结果（UploadOperationView）；HTTP 200 只代表请求被受理，不代表上传成功 */
+export interface UploadOperationStatus {
+  uploadId: string;
+  publicId: string;
+  state: string;
+  canSendContent: boolean;
+  contentPath: string;
+  maxBytes: number;
+  folderId?: number;
+  originalName?: string;
+  contentType?: string;
+  expectedSize?: number;
+  /** 仅在 COMMITTED 后非空 */
+  fileId?: string;
+  /** 固定安全码，不含上游正文与凭据 */
+  safeFailureCode?: string;
+  intentExpiresAt?: number;
+  sendDeadline?: number;
+  quotaCharge?: string;
+  quotaDay?: string;
+}
+
+// ==================== CUSTOM_HTTP 渠道（设计 v1.1 §4） ====================
+
+/** 认证方式：NONE 无认证；HEADER/QUERY/FORM 需 name+valueTemplate；BASIC 需双密钥 */
+export type HttpAuthMode = 'NONE' | 'HEADER' | 'QUERY' | 'FORM' | 'BASIC';
+
+/** 认证画像；valueTemplate 用 ${secret:name} 引用命名凭据 */
+export interface HttpAuthSpec {
+  mode: string;
+  name?: string;
+  valueTemplate?: string;
+  usernameSecret?: string;
+  passwordSecret?: string;
+}
+
+/** multipart 正文定义；mode 固定 MULTIPART */
+export interface HttpBodySpec {
+  mode: string;
+  fileField: string;
+  fileNameTemplate?: string;
+  fields?: Record<string, string>;
+}
+
+/** 响应成功条件（1–8 条，全部满足才算成功） */
+export interface HttpConditionSpec {
+  pointer: string;
+  op: string;
+  type?: string;
+  value?: string;
+}
+
+/** 响应解析与成功判定；urlPointer 必填 */
+export interface HttpResponseSpec {
+  success: HttpConditionSpec[];
+  urlPointer: string;
+  thumbPointer?: string;
+  idPointer?: string;
+  sizePointer?: string;
+  sizeUnit?: string;
+  widthPointer?: string;
+  heightPointer?: string;
+  numericStringPointers?: string[];
+  allowedUrlOrigins: string[];
+}
+
+/** 渠道级限额：只能收紧应用硬上限（单图 1 MiB） */
+export interface HttpLimitsSpec {
+  maxBytes: number;
+  allowedMimes: string[];
+}
+
+export interface HttpTimeoutsSpec {
+  attemptMs: number;
+}
+
+/** 上传画像：只描述协议，不含任何凭据明文 */
+export interface HttpUploadProfile {
+  schemaVersion: number;
+  presetId?: string;
+  presetVersion?: number;
+  endpoint: string;
+  method: string;
+  query?: Record<string, string>;
+  headers?: Record<string, string>;
+  auth: HttpAuthSpec;
+  body: HttpBodySpec;
+  response: HttpResponseSpec;
+  limits: HttpLimitsSpec;
+  timeouts: HttpTimeoutsSpec;
+}
+
+/** 密钥变更判别联合：KEEP 不动 / SET 带明文 / CLEAR 清除；非 SET 不得携带 value */
+export interface HttpSecretChange {
+  op: 'KEEP' | 'SET' | 'CLEAR';
+  value?: string;
+}
+
+/** 读出侧只告知是否已配置，永不返回明文 */
+export interface HttpSecretView {
+  name: string;
+  configured: boolean;
+  updatedAt?: string;
+}
+
+export interface HttpChannelSummary {
+  id: number;
+  name: string;
+  providerType: string;
+  status: string;
+  configVersion: number;
+  isDefault?: number;
+  healthStatus?: string;
+  lastTestTime?: string;
+  lastTestMessage?: string;
+  remark?: string;
+  createBy?: string;
+  createTime?: string;
+  updateBy?: string;
+  updateTime?: string;
+}
+
+export interface HttpChannelView extends HttpChannelSummary {
+  profile: HttpUploadProfile;
+  configuredSecrets: HttpSecretView[];
+  missingSecrets: string[];
+  configError?: string;
+}
+
+export interface HttpChannelCreateRequest {
+  name: string;
+  profile: HttpUploadProfile;
+  secretChanges?: Record<string, HttpSecretChange>;
+  status?: string;
+  remark?: string;
+}
+
+/** 更新必须带 expectedVersion（冲突 STORAGE038） */
+export interface HttpChannelUpdateRequest extends HttpChannelCreateRequest {
+  expectedVersion: number;
+}
+
+/** 离线校验入参：不读写数据库、不联网 */
+export interface HttpChannelValidateRequest {
+  profile: HttpUploadProfile;
+  secretChanges?: Record<string, HttpSecretChange>;
+  status?: string;
+}
+
+export interface HttpChannelValidation {
+  valid: boolean;
+  profile: HttpUploadProfile;
+  configuredSecrets: HttpSecretView[];
+  missingSecrets: string[];
+}
+
+export interface HttpChannelTestResult {
+  success: boolean;
+  safeCode?: string;
+  safeMessage?: string;
+  httpStatus?: number;
+  remoteSizeBytes?: number;
+  channelId?: number;
+  configVersion?: number;
+  requestId?: string;
+  testedAt?: string;
+}
+
+/** 部署侧批准目标（只读，管理接口不能扩大） */
+export interface HttpApprovedTarget {
+  origin: string;
+  path?: string;
+  urlOrigins: string[];
+}
+
+/** 存储概览计数（GET /admin/plugin/storage/overview；configCount 全部配置，enabledConfigCount 启用，downConfigCount 健康探测异常） */
+export interface StorageOverview {
+  fileCount: number;
+  folderCount: number;
+  configCount: number;
+  enabledConfigCount: number;
+  downConfigCount: number;
+  operator?: string | null;
+}
+
 export const storageApi = {
+  // 概览
+  getOverview: () => request.get<StorageOverview>('/api/v1/admin/plugin/storage/overview'),
   // 配置
-  listConfigs: () => request.get('/api/v1/admin/plugin/storage/configs'),
+  listConfigs: () => request.get<StorageConfig[]>('/api/v1/admin/plugin/storage/configs'),
   createConfig: (data: {
     name: string;
     providerType?: string;
@@ -190,27 +452,30 @@ export const storageApi = {
     request.post(`/api/v1/admin/plugin/storage/configs/${id}/default`),
 
   // 文件夹与授权
-  listFolders: () => request.get('/api/v1/admin/plugin/storage/folders'),
+  listFolders: () => request.get<StorageFolder[]>('/api/v1/admin/plugin/storage/folders'),
+  // 绑定：configs 为全量替换（null = 不改动，空列表 = 清空绑定即禁止上传）；strategy 缺省 FAILOVER
   createFolder: (data: {
     parentId?: number;
     folderName: string;
-    configId?: number;
     visibility?: string;
     policy?: FolderUploadPolicy;
-  }) => request.post('/api/v1/admin/plugin/storage/folders', data),
+    storageStrategy?: string;
+    configs?: StorageBindingReq[];
+  }) => request.post<StorageFolder>('/api/v1/admin/plugin/storage/folders', data),
   updateFolder: (
     id: number,
     data: {
       folderName?: string;
       visibility?: string;
       status?: string;
-      configId?: number;
       policy?: FolderUploadPolicy;
+      storageStrategy?: string;
+      configs?: StorageBindingReq[];
     },
-  ) => request.put(`/api/v1/admin/plugin/storage/folders/${id}`, data),
+  ) => request.put<StorageFolder>(`/api/v1/admin/plugin/storage/folders/${id}`, data),
   deleteFolder: (id: number) => request.delete(`/api/v1/admin/plugin/storage/folders/${id}`),
   getFolderPermissions: (id: number) =>
-    request.get(`/api/v1/admin/plugin/storage/folders/${id}/permissions`),
+    request.get<FolderPermView[]>(`/api/v1/admin/plugin/storage/folders/${id}/permissions`),
   saveFolderPermissions: (id: number, rows: FolderPermRow[]) =>
     request.put(`/api/v1/admin/plugin/storage/folders/${id}/permissions`, { rows }),
 
@@ -283,4 +548,61 @@ export const storageApi = {
   renameMyFolder: (id: number, folderName: string) =>
     request.put<StorageFolder>(`/api/v1/all/storage/folders/${id}`, { folderName }),
   deleteMyFolder: (id: number) => request.delete(`/api/v1/all/storage/folders/${id}`),
+
+  // 两步上传（设计 v1.1 §7）：POST/PUT 返回 200 只代表请求被受理，只有 state=COMMITTED 才算完成
+  // 字段名对齐后端 UploadOperationDtos.UploadCreateReq（contentType，不是 mimeType）
+  createUploadOperation: (
+    folderId: number,
+    fileName: string,
+    contentType: string,
+    sizeBytes: number,
+    sha256: string,
+    idempotencyKey: string,
+  ) =>
+    request.post<UploadOperation>(
+      '/api/v1/all/storage/upload-operations',
+      { folderId, fileName, contentType, sizeBytes, sha256 },
+      { headers: { 'Idempotency-Key': idempotencyKey } },
+    ),
+  putUploadContent: (
+    uploadId: string,
+    content: Blob | ArrayBuffer,
+    contentType: string,
+    onProgress?: (percent: number) => void,
+  ) =>
+    request.put<UploadContentResult>(
+      `/api/v1/all/storage/upload-operations/${uploadId}/content`,
+      content,
+      {
+        // 正文 PUT 单独放宽超时（服务端 90s 截止 + 登记），其余元数据请求保持全局 30s
+        timeout: 120_000,
+        headers: { 'Content-Type': contentType },
+        onUploadProgress: (event) => {
+          if (!onProgress || !event.total) return;
+          onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        },
+      },
+    ),
+  getUploadOperation: (uploadId: string, silent = false) =>
+    request.get<UploadOperationStatus>(`/api/v1/all/storage/upload-operations/${uploadId}`, {
+      silent,
+    }),
+
+  // CUSTOM_HTTP 渠道（/api/v1/admin/plugin/storage/http-configs）：凭据只走 KEEP/SET/CLEAR
+  listHttpChannels: () =>
+    request.get<HttpChannelSummary[]>('/api/v1/admin/plugin/storage/http-configs'),
+  listApprovedTargets: () =>
+    request.get<HttpApprovedTarget[]>('/api/v1/admin/plugin/storage/http-configs/approved-targets'),
+  getHttpChannel: (id: number) =>
+    request.get<HttpChannelView>(`/api/v1/admin/plugin/storage/http-configs/${id}`),
+  createHttpChannel: (data: HttpChannelCreateRequest) =>
+    request.post<HttpChannelView>('/api/v1/admin/plugin/storage/http-configs', data),
+  updateHttpChannel: (id: number, data: HttpChannelUpdateRequest) =>
+    request.put<HttpChannelView>(`/api/v1/admin/plugin/storage/http-configs/${id}`, data),
+  deleteHttpChannel: (id: number) =>
+    request.delete<null>(`/api/v1/admin/plugin/storage/http-configs/${id}`),
+  validateHttpChannel: (data: HttpChannelValidateRequest) =>
+    request.post<HttpChannelValidation>('/api/v1/admin/plugin/storage/http-configs/validate', data),
+  testHttpChannel: (id: number) =>
+    request.post<HttpChannelTestResult>(`/api/v1/admin/plugin/storage/http-configs/${id}/test`),
 };

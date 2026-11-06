@@ -10,12 +10,6 @@ import com.astral.storage.service.ProviderSupport;
 import com.astral.storage.service.S3ObjectService;
 import com.astral.storage.service.UploadPolicyService;
 import com.astral.storage.service.UpyunApiService;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Service;
-
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -23,6 +17,11 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 上传凭证（Upload Ticket）签发与回调校验
@@ -53,14 +52,15 @@ public class UploadTicketService {
     private final UpyunApiService upyunApiService;
     private final UploadPolicyService policyService;
 
-    public UploadTicketService(StorageProperties properties,
-                               StringRedisTemplate stringRedisTemplate,
-                               ObjectMapper objectMapper,
-                               S3ObjectService s3ObjectService,
-                               CosApiService cosApiService,
-                               OssApiService ossApiService,
-                               UpyunApiService upyunApiService,
-                               UploadPolicyService policyService) {
+    public UploadTicketService(
+            StorageProperties properties,
+            StringRedisTemplate stringRedisTemplate,
+            ObjectMapper objectMapper,
+            S3ObjectService s3ObjectService,
+            CosApiService cosApiService,
+            OssApiService ossApiService,
+            UpyunApiService upyunApiService,
+            UploadPolicyService policyService) {
         this.properties = properties;
         this.stringRedisTemplate = stringRedisTemplate;
         this.objectMapper = objectMapper;
@@ -72,18 +72,28 @@ public class UploadTicketService {
     }
 
     /** 上传凭证签发结果（formFields 仅 UPYUN 表单直传非空） */
-    public record IssuedTicket(String uploadId, String ticket, String uploadUrl, String formField,
-                               String method, long expiresAtEpochSeconds, FormFields formFields) {
+    public record IssuedTicket(
+            String uploadId,
+            String ticket,
+            String uploadUrl,
+            String formField,
+            String method,
+            long expiresAtEpochSeconds,
+            FormFields formFields) {
 
-        public IssuedTicket(String uploadId, String ticket, String uploadUrl, String formField,
-                            String method, long expiresAtEpochSeconds) {
+        public IssuedTicket(
+                String uploadId,
+                String ticket,
+                String uploadUrl,
+                String formField,
+                String method,
+                long expiresAtEpochSeconds) {
             this(uploadId, ticket, uploadUrl, formField, method, expiresAtEpochSeconds, null);
         }
     }
 
     /** 表单直传（UPYUN）附加字段：policy 与 authorization 必须随签发一次性下发，不可重建 */
-    public record FormFields(String policy, String authorization) {
-    }
+    public record FormFields(String policy, String authorization) {}
 
     /**
      * 签发上传凭证。调用方需已完成身份认证与文件夹 UPLOAD 权限校验（或持有管理员豁免）。
@@ -94,14 +104,24 @@ public class UploadTicketService {
      * dailyUploadLimit 在此强制执行；adminExempt=true（持全权管理员）跳过文件夹策略与配额，
      * 仅保留插件全局上限。</p>
      */
-    public IssuedTicket issue(StorageConfigEntity config, StorageFolderEntity folder,
-                              String uploaderId, String fileName, String contentType, long sizeBytes) {
+    public IssuedTicket issue(
+            StorageConfigEntity config,
+            StorageFolderEntity folder,
+            String uploaderId,
+            String fileName,
+            String contentType,
+            long sizeBytes) {
         return issue(config, folder, uploaderId, fileName, contentType, sizeBytes, false);
     }
 
-    public IssuedTicket issue(StorageConfigEntity config, StorageFolderEntity folder,
-                              String uploaderId, String fileName, String contentType, long sizeBytes,
-                              boolean adminExempt) {
+    public IssuedTicket issue(
+            StorageConfigEntity config,
+            StorageFolderEntity folder,
+            String uploaderId,
+            String fileName,
+            String contentType,
+            long sizeBytes,
+            boolean adminExempt) {
         UploadPolicyService.PolicySpec policy = policyService.resolve(folder);
         String ticketKey = requireKey();
         if (policy.requireLogin() && (uploaderId == null || uploaderId.isBlank())) {
@@ -126,8 +146,15 @@ public class UploadTicketService {
             policyService.checkDailyQuota(folder, policy, uploaderId);
         }
 
-        String providerType = config.getProviderType() == null || config.getProviderType().isBlank()
-                ? StorageConfigEntity.PROVIDER_TELEGRAM : config.getProviderType();
+        String providerType =
+                config.getProviderType() == null || config.getProviderType().isBlank()
+                        ? StorageConfigEntity.PROVIDER_TELEGRAM
+                        : config.getProviderType();
+        if (StorageConfigEntity.PROVIDER_CUSTOM_HTTP.equals(providerType)) {
+            // 设计 §7.1：CUSTOM_HTTP 只走 /api/v1/all/storage/upload-operations 两步代传协议，
+            // 旧直传入口必须显式拒绝——ticket 一旦外泄等于把上游凭据交给浏览器。
+            throw new BusinessException("STORAGE019");
+        }
         String uploadId = "up_" + UUID.randomUUID().toString().replace("-", "");
         long now = Instant.now().getEpochSecond();
         long exp = now + properties.getUploadTicketTtlSeconds();
@@ -152,8 +179,8 @@ public class UploadTicketService {
             // 又拍云：对象键与 publicId 在签发时确定，浏览器以 policy/authorization 表单直传
             publicId = UUID.randomUUID().toString().replace("-", "");
             objectKey = "astral/" + publicId + "/v1/" + keySegment(fileName);
-            UpyunApiService.FormUploadGrant grant = upyunApiService.issueFormUploadGrant(
-                    config, objectKey, properties.getUploadTicketTtlSeconds());
+            UpyunApiService.FormUploadGrant grant =
+                    upyunApiService.issueFormUploadGrant(config, objectKey, properties.getUploadTicketTtlSeconds());
             uploadUrl = grant.url();
             method = "POST";
             formField = "file";
@@ -164,11 +191,17 @@ public class UploadTicketService {
             objectKey = "astral/" + publicId + "/v1/" + keySegment(fileName);
             String putUrl;
             if (ProviderSupport.isS3Family(providerType)) {
-                putUrl = s3ObjectService.presignPut(config, objectKey, properties.getUploadTicketTtlSeconds()).url();
+                putUrl = s3ObjectService
+                        .presignPut(config, objectKey, properties.getUploadTicketTtlSeconds())
+                        .url();
             } else if (StorageConfigEntity.PROVIDER_COS.equals(providerType)) {
-                putUrl = cosApiService.presignPut(config, objectKey, properties.getUploadTicketTtlSeconds()).url();
+                putUrl = cosApiService
+                        .presignPut(config, objectKey, properties.getUploadTicketTtlSeconds())
+                        .url();
             } else if (StorageConfigEntity.PROVIDER_OSS.equals(providerType)) {
-                putUrl = ossApiService.presignPut(config, objectKey, properties.getUploadTicketTtlSeconds()).url();
+                putUrl = ossApiService
+                        .presignPut(config, objectKey, properties.getUploadTicketTtlSeconds())
+                        .url();
             } else {
                 throw new BusinessException("COMMON002", "不支持的存储类型: " + providerType);
             }
@@ -177,8 +210,21 @@ public class UploadTicketService {
             formField = null;
         }
 
-        String payload = buildPayload(config, folder, uploadId, uploaderId, fileName, contentType, exp, nonce,
-                providerType, publicId, objectKey, policy, maxSize, adminExempt);
+        String payload = buildPayload(
+                config,
+                folder,
+                uploadId,
+                uploaderId,
+                fileName,
+                contentType,
+                exp,
+                nonce,
+                providerType,
+                publicId,
+                objectKey,
+                policy,
+                maxSize,
+                adminExempt);
         String payloadB64 = StorageHmac.b64UrlEncode(payload.getBytes(StandardCharsets.UTF_8));
         String signature = StorageHmac.sign(ticketKey.getBytes(StandardCharsets.UTF_8), payloadB64);
         ticket = payloadB64 + "." + signature;
@@ -187,8 +233,12 @@ public class UploadTicketService {
         }
 
         // 回执校验依赖 Redis 中的凭证上下文；TTL 为有效期的 2 倍，覆盖时钟偏差
-        stringRedisTemplate.opsForValue().set(TICKET_KEY_PREFIX + uploadId, payload,
-                Duration.ofSeconds(properties.getUploadTicketTtlSeconds() * 2L));
+        stringRedisTemplate
+                .opsForValue()
+                .set(
+                        TICKET_KEY_PREFIX + uploadId,
+                        payload,
+                        Duration.ofSeconds(properties.getUploadTicketTtlSeconds() * 2L));
 
         return new IssuedTicket(uploadId, ticket, uploadUrl, formField, method, exp, formFields);
     }
@@ -287,7 +337,9 @@ public class UploadTicketService {
         if (isSvgMime(contentType)) {
             return false;
         }
-        List<String> allowlist = policy != null && policy.allowedMimes() != null && !policy.allowedMimes().isEmpty()
+        List<String> allowlist = policy != null
+                        && policy.allowedMimes() != null
+                        && !policy.allowedMimes().isEmpty()
                 ? policy.allowedMimes()
                 : properties.getAllowedMimeTypes();
         if (allowlist == null || allowlist.isEmpty()) {
@@ -304,17 +356,40 @@ public class UploadTicketService {
         return allowlist.stream().anyMatch(mime::equals);
     }
 
-    private String buildPayload(StorageConfigEntity config, StorageFolderEntity folder, String uploadId,
-                                String uploaderId, String fileName, String contentType,
-                                long exp, String nonce, String providerType, String publicId, String objectKey,
-                                UploadPolicyService.PolicySpec policy, long maxSize, boolean adminExempt) {
+    private String buildPayload(
+            StorageConfigEntity config,
+            StorageFolderEntity folder,
+            String uploadId,
+            String uploaderId,
+            String fileName,
+            String contentType,
+            long exp,
+            String nonce,
+            String providerType,
+            String publicId,
+            String objectKey,
+            UploadPolicyService.PolicySpec policy,
+            long maxSize,
+            boolean adminExempt) {
         try {
             return objectMapper.writeValueAsString(new TicketPayload(
-                    1, uploadId, config.getId(), folder.getId(), config.getChatId(),
-                    maxSize, contentType.toLowerCase(), uploaderId,
-                    Instant.now().getEpochSecond(), exp, nonce,
-                    providerType, fileName, publicId, objectKey,
-                    policy.verifyContent(), adminExempt));
+                    1,
+                    uploadId,
+                    config.getId(),
+                    folder.getId(),
+                    config.getChatId(),
+                    maxSize,
+                    contentType.toLowerCase(),
+                    uploaderId,
+                    Instant.now().getEpochSecond(),
+                    exp,
+                    nonce,
+                    providerType,
+                    fileName,
+                    publicId,
+                    objectKey,
+                    policy.verifyContent(),
+                    adminExempt));
         } catch (Exception e) {
             throw new IllegalStateException("上传凭证序列化失败", e);
         }
@@ -325,17 +400,28 @@ public class UploadTicketService {
      * 末尾两项为文件夹策略扩展：verifyContent 供登记后内容验证读取，adminExempt 供复查豁免）。
      * Worker 只识别自己关心的字段，新增字段对 Worker 透明。
      */
-    record TicketPayload(int v, String uploadId, Long configId, Long folderId, String chatId,
-                         long maxSize, String mime, String uploaderId,
-                         long iat, long exp, String nonce,
-                         String providerType, String fileName, String publicId, String objectKey,
-                         String verifyContent, boolean adminExempt) {
-    }
+    record TicketPayload(
+            int v,
+            String uploadId,
+            Long configId,
+            Long folderId,
+            String chatId,
+            long maxSize,
+            String mime,
+            String uploaderId,
+            long iat,
+            long exp,
+            String nonce,
+            String providerType,
+            String fileName,
+            String publicId,
+            String objectKey,
+            String verifyContent,
+            boolean adminExempt) {}
 
     /** 对象键安全段：仅保留文件名字符，防止路径穿越与编码歧义 */
     private String keySegment(String fileName) {
-        String cleaned = (fileName == null ? "file" : fileName)
-                .replaceAll("[^A-Za-z0-9._-]", "_");
+        String cleaned = (fileName == null ? "file" : fileName).replaceAll("[^A-Za-z0-9._-]", "_");
         cleaned = cleaned.replaceAll("^\\.+", "_");
         if (cleaned.isBlank() || cleaned.length() > 120) {
             cleaned = cleaned.isBlank() ? "file" : cleaned.substring(cleaned.length() - 120);

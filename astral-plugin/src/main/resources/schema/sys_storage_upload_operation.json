@@ -1,0 +1,367 @@
+{
+  "tableName": "sys_storage_upload_operation",
+  "tableComment": "两步上传操作表(状态机/配额预留/幂等墓碑)",
+  "moduleName": "storage",
+  "className": "StorageUploadOperationEntity",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "upload_id",
+      "fieldName": "uploadId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "对外稳定上传标识(客户端PUT用)",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "public_id",
+      "fieldName": "publicId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "对外稳定文件标识(文件表复用)",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "actor_type",
+      "fieldName": "actorType",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "主体类型(USER/PLUGIN)",
+      "isRequired": true,
+      "length": 16
+    },
+    {
+      "columnName": "actor_id",
+      "fieldName": "actorId",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "主体标识",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "idempotency_key_hash",
+      "fieldName": "idempotencyKeyHash",
+      "fieldType": "String",
+      "jdbcType": "CHAR",
+      "comment": "幂等键SHA-256(不落明文)",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "intent_fingerprint",
+      "fieldName": "intentFingerprint",
+      "fieldType": "String",
+      "jdbcType": "CHAR",
+      "comment": "请求指纹SHA-256",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "original_name",
+      "fieldName": "originalName",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "原始文件名",
+      "isRequired": true,
+      "length": 255
+    },
+    {
+      "columnName": "expected_mime",
+      "fieldName": "expectedMime",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "期望MIME",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "expected_size",
+      "fieldName": "expectedSize",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "期望大小(字节)",
+      "isRequired": true
+    },
+    {
+      "columnName": "expected_sha256",
+      "fieldName": "expectedSha256",
+      "fieldType": "String",
+      "jdbcType": "CHAR",
+      "comment": "期望SHA-256",
+      "isRequired": true,
+      "length": 64
+    },
+    {
+      "columnName": "folder_id",
+      "fieldName": "folderId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "目标目录ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "folder_version",
+      "fieldName": "folderVersion",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "目录目标版本快照",
+      "isRequired": true
+    },
+    {
+      "columnName": "route_snapshot_json",
+      "fieldName": "routeSnapshotJson",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "路由快照(非秘密摘要,≤16KiB)"
+    },
+    {
+      "columnName": "chosen_config_id",
+      "fieldName": "chosenConfigId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "实际选择的渠道ID"
+    },
+    {
+      "columnName": "chosen_config_version",
+      "fieldName": "chosenConfigVersion",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "选择时的渠道版本"
+    },
+    {
+      "columnName": "chosen_preset_version",
+      "fieldName": "chosenPresetVersion",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "预设版本"
+    },
+    {
+      "columnName": "state",
+      "fieldName": "state",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "状态机状态(CREATED/RECEIVING/SENDING/REMOTE_SUCCEEDED/COMMITTED/FAILED/EXPIRED/UNKNOWN_OUTCOME)",
+      "isRequired": true,
+      "defaultValue": "CREATED",
+      "length": 32
+    },
+    {
+      "columnName": "version",
+      "fieldName": "version",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "状态CAS版本",
+      "isRequired": true,
+      "defaultValue": "1"
+    },
+    {
+      "columnName": "lease_token",
+      "fieldName": "leaseToken",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "推进租约令牌",
+      "length": 64
+    },
+    {
+      "columnName": "lease_until",
+      "fieldName": "leaseUntil",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "租约到期时间"
+    },
+    {
+      "columnName": "send_deadline",
+      "fieldName": "sendDeadline",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "固定发送截止时间(首次PUT准入确定)"
+    },
+    {
+      "columnName": "intent_expires_at",
+      "fieldName": "intentExpiresAt",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "意图过期时间",
+      "isRequired": true
+    },
+    {
+      "columnName": "quota_day",
+      "fieldName": "quotaDay",
+      "fieldType": "LocalDate",
+      "jdbcType": "DATE",
+      "comment": "配额计费日(准入时固定)"
+    },
+    {
+      "columnName": "quota_charge",
+      "fieldName": "quotaCharge",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "配额状态(NONE/HELD/CONSUMED/REFUNDED)",
+      "isRequired": true,
+      "defaultValue": "NONE",
+      "length": 16
+    },
+    {
+      "columnName": "quota_exempt",
+      "fieldName": "quotaExempt",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "是否不计费(0否 1是)",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "actual_size",
+      "fieldName": "actualSize",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "实际收到的正文大小"
+    },
+    {
+      "columnName": "actual_sha256",
+      "fieldName": "actualSha256",
+      "fieldType": "String",
+      "jdbcType": "CHAR",
+      "comment": "实际正文SHA-256",
+      "length": 64
+    },
+    {
+      "columnName": "attempts_json",
+      "fieldName": "attemptsJson",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "有界尝试记录(≤8KiB,最多2项)"
+    },
+    {
+      "columnName": "safe_result_json",
+      "fieldName": "safeResultJson",
+      "fieldType": "String",
+      "jdbcType": "TEXT",
+      "comment": "有界安全回执(≤8KiB)"
+    },
+    {
+      "columnName": "failure_code",
+      "fieldName": "failureCode",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "失败错误码",
+      "length": 64
+    },
+    {
+      "columnName": "file_id",
+      "fieldName": "fileId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "登记后的文件ID"
+    },
+    {
+      "columnName": "purpose",
+      "fieldName": "purpose",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "用途(UPLOAD/PROBE)",
+      "isRequired": true,
+      "defaultValue": "UPLOAD",
+      "length": 16
+    },
+    {
+      "columnName": "audit_pending",
+      "fieldName": "auditPending",
+      "fieldType": "Integer",
+      "jdbcType": "SMALLINT",
+      "comment": "审计待补写(0否 1是)",
+      "isRequired": true,
+      "defaultValue": "0"
+    },
+    {
+      "columnName": "audit_event_key",
+      "fieldName": "auditEventKey",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "审计事件键(uploadId+事件类型)",
+      "length": 128
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    },
+    {
+      "columnName": "completed_at",
+      "fieldName": "completedAt",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "完成时间"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_storage_upload_operation_upload",
+      "columns": [
+        "upload_id"
+      ],
+      "isUnique": true
+    },
+    {
+      "indexName": "uk_storage_upload_operation_public",
+      "columns": [
+        "public_id"
+      ],
+      "isUnique": true
+    },
+    {
+      "indexName": "uk_storage_upload_operation_idempotent",
+      "columns": [
+        "actor_type",
+        "actor_id",
+        "idempotency_key_hash"
+      ],
+      "isUnique": true
+    },
+    {
+      "indexName": "idx_storage_upload_operation_recover",
+      "columns": [
+        "state",
+        "lease_until"
+      ]
+    },
+    {
+      "indexName": "idx_storage_upload_operation_quota",
+      "columns": [
+        "folder_id",
+        "actor_id",
+        "quota_day",
+        "quota_charge"
+      ]
+    },
+    {
+      "indexName": "idx_storage_upload_operation_file",
+      "columns": [
+        "file_id"
+      ]
+    }
+  ]
+}

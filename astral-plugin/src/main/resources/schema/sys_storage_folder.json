@@ -41,12 +41,23 @@
       "length": 512
     },
     {
-      "columnName": "storage_config_id",
-      "fieldName": "storageConfigId",
+      "columnName": "storage_strategy",
+      "fieldName": "storageStrategy",
+      "fieldType": "String",
+      "jdbcType": "VARCHAR",
+      "comment": "绑定调度策略(FAILOVER按优先级故障转移/ROUND_ROBIN轮询)",
+      "isRequired": true,
+      "defaultValue": "FAILOVER",
+      "length": 20
+    },
+    {
+      "columnName": "target_version",
+      "fieldName": "targetVersion",
       "fieldType": "Long",
       "jdbcType": "BIGINT",
-      "comment": "绑定存储配置ID",
-      "isRequired": true
+      "comment": "上传目标/授权策略版本(绑定、授权、状态、可见性变更递增)",
+      "isRequired": true,
+      "defaultValue": "1"
     },
     {
       "columnName": "owner_type",
@@ -131,12 +142,6 @@
       "indexName": "idx_storage_folder_parent",
       "columns": [
         "parent_id"
-      ]
-    },
-    {
-      "indexName": "idx_storage_folder_config",
-      "columns": [
-        "storage_config_id"
       ]
     }
   ]

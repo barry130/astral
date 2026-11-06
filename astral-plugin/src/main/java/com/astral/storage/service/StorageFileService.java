@@ -13,25 +13,27 @@ import com.astral.storage.security.StorageUrlSigner;
 import com.astral.storage.security.UploadTicketService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.ObjectNode;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 存储文件服务
  * <p>
  * TELEGRAM：Worker 直连架构——上传回调登记 Telegram 定位元数据，下载 URL 由 Astral 签名、
- * Worker 校验并回源 Telegram；删除通过任务表由 Worker 拉取执行 deleteMessage 后确认。
+ * Worker 校验并回源 Telegram；删除立即硬删库行，远端消息经任务表由 Worker 拉取执行 deleteMessage 后确认。
  * 对象存储系（R2/S3/七牛/COS/OSS/UPYUN）：浏览器直传后回执登记（服务端 HEAD 确认），
- * 下载走各 Provider 预签名 URL，删除由本服务同步调 Provider API。
+ * 下载走各 Provider 预签名 URL，删除立即硬删库行，远端对象由 StorageRemoteDeleteService 异步清理、
+ * 失败仅后端留痕（审计+日志），不向用户回传。
  * Astral 全程不接触文件正文。
  * </p>
  */
@@ -64,6 +66,7 @@ public class StorageFileService {
     private final StorageTaskMapper taskMapper;
     /** 服务端内部配置读取走共享缓存（StorageConfigCache），配置写入由 StorageConfigService 统一失效 */
     private final StorageConfigCache configCache;
+
     private final StorageFolderService folderService;
     private final StorageAuditService auditService;
     private final UploadTicketService ticketService;
@@ -73,6 +76,9 @@ public class StorageFileService {
     private final CosApiService cosApiService;
     private final OssApiService ossApiService;
     private final UpyunApiService upyunApiService;
+    /** 远端对象删除（删除类远端操作唯一实现）：用户删除异步尽力而为，失败仅后端留痕 */
+    private final StorageRemoteDeleteService remoteDeleteService;
+
     private final StorageProperties properties;
     private final ObjectMapper objectMapper;
     private final WorkerCachePurgeService workerCachePurgeService;
@@ -91,7 +97,8 @@ public class StorageFileService {
 
     /** 任务分页（管理端：远端删除补偿等） */
     public Page<StorageTaskEntity> pageTasks(long current, long size) {
-        return taskMapper.selectPage(new Page<>(current, size),
+        return taskMapper.selectPage(
+                new Page<>(current, size),
                 new LambdaQueryWrapper<StorageTaskEntity>().orderByDesc(StorageTaskEntity::getCreateTime));
     }
 
@@ -109,7 +116,8 @@ public class StorageFileService {
 
     public Page<StorageFileEntity> pageFolderFiles(Long folderId, String userId, long current, long size) {
         folderService.requirePermission(userId, folderId, "READ");
-        return fileMapper.selectPage(new Page<>(current, size),
+        return fileMapper.selectPage(
+                new Page<>(current, size),
                 new LambdaQueryWrapper<StorageFileEntity>()
                         .eq(StorageFileEntity::getFolderId, folderId)
                         .ne(StorageFileEntity::getStatus, StorageFileEntity.STATUS_DELETED)
@@ -166,10 +174,11 @@ public class StorageFileService {
             return existing;
         }
 
-        JsonNode ticket = ticketService.validateCallback(
-                req.uploadId(), req.sizeBytes(), req.contentType());
-        if (req.telegramFileId() == null || req.telegramFileId().isBlank()
-                || req.messageId() == null || req.messageId().isBlank()) {
+        JsonNode ticket = ticketService.validateCallback(req.uploadId(), req.sizeBytes(), req.contentType());
+        if (req.telegramFileId() == null
+                || req.telegramFileId().isBlank()
+                || req.messageId() == null
+                || req.messageId().isBlank()) {
             throw new BusinessException("STORAGE011", "缺少 Telegram 定位信息");
         }
 
@@ -179,7 +188,8 @@ public class StorageFileService {
         boolean adminExempt = ticket.path("adminExempt").asBoolean(false);
         if (!adminExempt) {
             // 登记时配额复查（签发与登记之间的窗口；FAILED 行不计入，见 UploadPolicyService）
-            policyService.checkDailyQuota(folder, policy, ticket.path("uploaderId").asText(null));
+            policyService.checkDailyQuota(
+                    folder, policy, ticket.path("uploaderId").asText(null));
         }
         String publicId = UUID.randomUUID().toString().replace("-", "");
         StorageFileEntity file = new StorageFileEntity();
@@ -198,10 +208,15 @@ public class StorageFileService {
         file.setUploaderType("WORKER");
         file.setUploaderId(ticket.path("uploaderId").asText(null));
         fileMapper.insert(file);
-        auditService.record("FILE_UPLOAD", "WORKER", req.uploadId(), "FILE", file.getPublicId(),
-                file.getOriginalName() + " " + req.sizeBytes() + "B", "OK");
-        log.info("[Storage] 上传登记完成: publicId={}, folderId={}, size={}",
-                file.getPublicId(), folderId, req.sizeBytes());
+        auditService.record(
+                "FILE_UPLOAD",
+                "WORKER",
+                req.uploadId(),
+                "FILE",
+                file.getPublicId(),
+                file.getOriginalName() + " " + req.sizeBytes() + "B",
+                "OK");
+        log.info("[Storage] 上传登记完成: publicId={}, folderId={}, size={}", file.getPublicId(), folderId, req.sizeBytes());
         return file;
     }
 
@@ -280,10 +295,20 @@ public class StorageFileService {
         file.setUploaderId(ticketUploader);
         file.setUploaderIp(clientIp);
         fileMapper.insert(file);
-        auditService.record("FILE_UPLOAD", "BROWSER", uploadId, "FILE", file.getPublicId(),
-                file.getOriginalName() + " " + sizeBytes + "B provider=" + providerType, "OK");
-        log.info("[Storage] 直传登记完成: publicId={}, provider={}, folderId={}, size={}",
-                file.getPublicId(), providerType, folderId, sizeBytes);
+        auditService.record(
+                "FILE_UPLOAD",
+                "BROWSER",
+                uploadId,
+                "FILE",
+                file.getPublicId(),
+                file.getOriginalName() + " " + sizeBytes + "B provider=" + providerType,
+                "OK");
+        log.info(
+                "[Storage] 直传登记完成: publicId={}, provider={}, folderId={}, size={}",
+                file.getPublicId(),
+                providerType,
+                folderId,
+                sizeBytes);
         return file;
     }
 
@@ -311,7 +336,8 @@ public class StorageFileService {
             // 旧实现传 -1 会 readNBytes(Integer.MAX_VALUE) 把整个对象读进堆。
             // 一律按文件头读取，与 full / magic 无关：magic 识别与 SVG 检测都只依赖前若干字节。
             byte[] head = fetchContentBytes(file, full ? MAX_VERIFY_BYTES : MAGIC_HEAD_BYTES);
-            String declared = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
+            String declared =
+                    file.getContentType() == null ? "" : file.getContentType().toLowerCase();
             // SVG 是 XML 文档，可内联脚本：即便登记类型写成 image/svg+xml 也不放行
             // （Worker 侧同样把 svg 排除在内联白名单外，两处都挡，避免只靠一层）。
             if (declared.startsWith("image/svg") || looksLikeSvg(head)) {
@@ -328,8 +354,7 @@ public class StorageFileService {
             if (!actual.equals(declared)) {
                 throw new BusinessException("STORAGE033", "实际内容 " + actual + " 与登记类型 " + declared + " 不符");
             }
-            if (full && policy.maxPixels() != null
-                    && ("image/png".equals(actual) || "image/jpeg".equals(actual))) {
+            if (full && policy.maxPixels() != null && ("image/png".equals(actual) || "image/jpeg".equals(actual))) {
                 // WebP 无 JDK 内置解码器，magic 已核对，像素校验跳过（PNG/JPEG 才做）
                 // 只读图像元信息、不整幅解码：否则「小文件 + 巨型画布」的构造图（解压炸弹）
                 // 会先把像素数据解出来占满堆，像素上限形同虚设。
@@ -355,10 +380,10 @@ public class StorageFileService {
             if (ProviderSupport.isServerManagedFamily(providerType)) {
                 StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
                 if (config != null) {
-                    deleteObjectByProvider(providerType, config, locatorKey(file));
+                    remoteDeleteService.deleteObject(providerType, config, locatorKey(file));
                 }
-            } else {
-                // TELEGRAM：远端删除走既有任务机制
+            } else if (StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)) {
+                // TELEGRAM：远端删除走既有任务机制（CUSTOM_HTTP 无远端删除接口，不投任务表）
                 StorageTaskEntity task = new StorageTaskEntity();
                 task.setTaskType(StorageTaskEntity.TYPE_DELETE_REMOTE);
                 task.setFileId(file.getId());
@@ -386,13 +411,21 @@ public class StorageFileService {
         if (StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)) {
             url = urlSigner.issue(config, file).url();
         } else if (ProviderSupport.isS3Family(providerType)) {
-            url = s3ObjectService.presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds()).url();
+            url = s3ObjectService
+                    .presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds())
+                    .url();
         } else if (StorageConfigEntity.PROVIDER_COS.equals(providerType)) {
-            url = cosApiService.presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds()).url();
+            url = cosApiService
+                    .presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds())
+                    .url();
         } else if (StorageConfigEntity.PROVIDER_OSS.equals(providerType)) {
-            url = ossApiService.presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds()).url();
+            url = ossApiService
+                    .presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds())
+                    .url();
         } else if (StorageConfigEntity.PROVIDER_UPYUN.equals(providerType)) {
-            url = upyunApiService.downloadUrl(config, locatorKey(file), properties.getDownloadUrlTtlSeconds()).url();
+            url = upyunApiService
+                    .downloadUrl(config, locatorKey(file), properties.getDownloadUrlTtlSeconds())
+                    .url();
         } else {
             throw new BusinessException("STORAGE019", providerType);
         }
@@ -402,7 +435,8 @@ public class StorageFileService {
         if (limit > 0) {
             builder.header("Range", "bytes=0-" + (limit - 1));
         }
-        var response = VERIFY_HTTP_CLIENT.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());
+        var response =
+                VERIFY_HTTP_CLIENT.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());
         try (var in = response.body()) {
             // limit <= 0 时也必须有上限，不能让校验把任意大小的对象读进堆
             return in.readNBytes(limit > 0 ? limit : MAX_VERIFY_BYTES);
@@ -417,8 +451,8 @@ public class StorageFileService {
      *         类型是否合法仍由 magic 结果决定，与旧实现「解码失败则不校验」的行为一致）
      */
     private static long readPixelCount(byte[] content) {
-        try (javax.imageio.stream.ImageInputStream in = javax.imageio.ImageIO
-                .createImageInputStream(new java.io.ByteArrayInputStream(content))) {
+        try (javax.imageio.stream.ImageInputStream in =
+                javax.imageio.ImageIO.createImageInputStream(new java.io.ByteArrayInputStream(content))) {
             if (in == null) {
                 return -1;
             }
@@ -449,7 +483,9 @@ public class StorageFileService {
             return false;
         }
         String text = new String(head, java.nio.charset.StandardCharsets.UTF_8)
-                .replace("\uFEFF", "").trim().toLowerCase(java.util.Locale.ROOT);
+                .replace("\uFEFF", "")
+                .trim()
+                .toLowerCase(java.util.Locale.ROOT);
         // 依次剥掉 XML 声明 / 注释 / DOCTYPE，直到看到真正的根元素
         while (true) {
             if (text.startsWith("<?xml")) {
@@ -491,8 +527,14 @@ public class StorageFileService {
         if (head[0] == 'G' && head[1] == 'I' && head[2] == 'F') {
             return "image/gif";
         }
-        if (head[0] == 'R' && head[1] == 'I' && head[2] == 'F' && head[3] == 'F'
-                && head[8] == 'W' && head[9] == 'E' && head[10] == 'B' && head[11] == 'P') {
+        if (head[0] == 'R'
+                && head[1] == 'I'
+                && head[2] == 'F'
+                && head[3] == 'F'
+                && head[8] == 'W'
+                && head[9] == 'E'
+                && head[10] == 'B'
+                && head[11] == 'P') {
             return "image/webp";
         }
         return null;
@@ -528,29 +570,32 @@ public class StorageFileService {
         if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
             throw new BusinessException("STORAGE002");
         }
-        String providerType = config.getProviderType() == null
-                ? StorageConfigEntity.PROVIDER_TELEGRAM : config.getProviderType();
+        String providerType =
+                config.getProviderType() == null ? StorageConfigEntity.PROVIDER_TELEGRAM : config.getProviderType();
         StorageDtos.DownloadUrlView view;
         if (ProviderSupport.isS3Family(providerType)) {
-            S3ObjectService.PresignedUrl presigned = s3ObjectService.presignGet(
-                    config, locatorKey(file), properties.getDownloadUrlTtlSeconds());
+            S3ObjectService.PresignedUrl presigned =
+                    s3ObjectService.presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds());
             view = new StorageDtos.DownloadUrlView(presigned.url(), presigned.expiresAtEpochSeconds());
         } else if (StorageConfigEntity.PROVIDER_COS.equals(providerType)) {
-            CosApiService.PresignedUrl presigned = cosApiService.presignGet(
-                    config, locatorKey(file), properties.getDownloadUrlTtlSeconds());
+            CosApiService.PresignedUrl presigned =
+                    cosApiService.presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds());
             view = new StorageDtos.DownloadUrlView(presigned.url(), presigned.expiresAtEpochSeconds());
         } else if (StorageConfigEntity.PROVIDER_OSS.equals(providerType)) {
-            OssApiService.PresignedUrl presigned = ossApiService.presignGet(
-                    config, locatorKey(file), properties.getDownloadUrlTtlSeconds());
+            OssApiService.PresignedUrl presigned =
+                    ossApiService.presignGet(config, locatorKey(file), properties.getDownloadUrlTtlSeconds());
             view = new StorageDtos.DownloadUrlView(presigned.url(), presigned.expiresAtEpochSeconds());
         } else if (StorageConfigEntity.PROVIDER_UPYUN.equals(providerType)) {
             view = upyunDownloadUrl(config, locatorKey(file));
+        } else if (StorageConfigEntity.PROVIDER_CUSTOM_HTTP.equals(providerType)) {
+            // 图床直链由上游托管、长期有效；expiresAt 仅按 TTL 占位满足临时链接语义
+            view = new StorageDtos.DownloadUrlView(
+                    customHttpUrl(file), System.currentTimeMillis() / 1000 + properties.getDownloadUrlTtlSeconds());
         } else {
             StorageUrlSigner.SignedUrl signed = urlSigner.issue(config, file);
             view = new StorageDtos.DownloadUrlView(signed.url(), signed.expiresAtEpochSeconds());
         }
-        auditService.record("URL_ISSUE", "USER", userId, "FILE", publicId,
-                "visibility=" + file.getVisibility(), "OK");
+        auditService.record("URL_ISSUE", "USER", userId, "FILE", publicId, "visibility=" + file.getVisibility(), "OK");
         return view;
     }
 
@@ -591,8 +636,8 @@ public class StorageFileService {
             throw new BusinessException("STORAGE002");
         }
         String url;
-        String providerType = config.getProviderType() == null
-                ? StorageConfigEntity.PROVIDER_TELEGRAM : config.getProviderType();
+        String providerType =
+                config.getProviderType() == null ? StorageConfigEntity.PROVIDER_TELEGRAM : config.getProviderType();
         if (StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)) {
             if (config.getWorkerBaseUrl() == null || config.getWorkerBaseUrl().isBlank()) {
                 throw new BusinessException("STORAGE019", "该配置未填写 Worker 地址");
@@ -601,6 +646,9 @@ public class StorageFileService {
             url = stripTrailingSlash(base) + "/p/" + file.getPublicId() + "/" + file.getContentVersion();
         } else if (ProviderSupport.isPermanentUrlFamily(providerType)) {
             url = publicObjectUrl(providerType, config, locatorKey(file));
+        } else if (StorageConfigEntity.PROVIDER_CUSTOM_HTTP.equals(providerType)) {
+            // 图床托管直链即永久链接（仅 PUBLIC 可见性可达这里，见上方可见性门禁）
+            url = customHttpUrl(file);
         } else {
             throw new BusinessException("STORAGE019", providerType);
         }
@@ -642,8 +690,11 @@ public class StorageFileService {
     }
 
     /**
-     * 删除：对象存储系（R2/S3/七牛/COS/OSS/UPYUN）由本服务直接删除对象（同步，失败即回滚并报错）；
-     * TELEGRAM 走任务表由 Worker 拉取执行 deleteMessage 后确认。
+     * 删除：立即删除数据库行并生效，远端清理异步尽力而为——失败仅后端留痕（任务表/审计/日志），不向用户回传。
+     * <p>TELEGRAM：远端消息仍走任务表由 Worker 拉取执行 deleteMessage（任务 payload 自带 locator，
+     * 与文件行解耦，Worker ack 时文件行已不存在，任务独立归档）；
+     * 对象存储系：事务提交后由远端删除线程池调 Provider DELETE API，失败记审计与日志；
+     * CUSTOM_HTTP：上游图床无远端删除接口，仅删库行。</p>
      */
     @Transactional(rollbackFor = Exception.class)
     public void requestDelete(String publicId, String userId, boolean adminExempt) {
@@ -652,43 +703,68 @@ public class StorageFileService {
         if (StorageFileEntity.STATUS_DELETED.equals(file.getStatus())) {
             throw new BusinessException("STORAGE021");
         }
-        if (StorageFileEntity.STATUS_DELETING.equals(file.getStatus())) {
-            return;
-        }
         boolean uploader = userId != null && userId.equals(file.getUploaderId());
         if (!uploader && !adminExempt) {
             folderService.requirePermission(userId, file.getFolderId(), "DELETE");
         }
         String providerType = providerTypeOf(file);
-        if (ProviderSupport.isServerManagedFamily(providerType)) {
-            StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
-            if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
-                throw new BusinessException("STORAGE002");
-            }
-            deleteObjectByProvider(providerType, config, locatorKey(file));
-            file.setStatus(StorageFileEntity.STATUS_DELETED);
-            file.setDeletedTime(LocalDateTime.now());
-            file.setUpdateTime(LocalDateTime.now());
-            fileMapper.updateById(file);
-            auditService.record("FILE_DELETE", "USER", userId, "FILE", publicId,
-                    "provider=" + providerType, "OK");
+        if (StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)) {
+            // 远端消息删除仍由 Worker 异步执行；任务 payload 自带 locator，文件行删除后仍可完成清理
+            StorageTaskEntity task = new StorageTaskEntity();
+            task.setTaskType(StorageTaskEntity.TYPE_DELETE_REMOTE);
+            task.setFileId(file.getId());
+            task.setPayloadJson(file.getProviderLocatorJson() == null ? "{}" : file.getProviderLocatorJson());
+            task.setRetryCount(0);
+            task.setStatus(StorageTaskEntity.STATUS_PENDING);
+            taskMapper.insert(task);
+            // 边缘缓存立即可失效：不等 Worker ack，删除后旧 URL 出图窗口 = URL TTL
+            purgeWorkerCacheQuietly(file);
+            fileMapper.deleteById(file.getId());
+            auditService.record(
+                    "FILE_DELETE",
+                    "USER",
+                    userId,
+                    "FILE",
+                    publicId,
+                    "provider=" + providerType + ",task=" + task.getId(),
+                    "OK");
             return;
         }
-        file.setStatus(StorageFileEntity.STATUS_DELETING);
-        file.setUpdateTime(LocalDateTime.now());
-        fileMapper.updateById(file);
+        // 对象存储系：先快照远端定位（行删除后 locator 不可再读），提交后异步清理远端对象
+        if (ProviderSupport.isServerManagedFamily(providerType)) {
+            StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
+            String key = safeLocatorKey(file);
+            fileMapper.deleteById(file.getId());
+            auditService.record("FILE_DELETE", "USER", userId, "FILE", publicId, "provider=" + providerType, "OK");
+            afterCommit(() -> remoteDeleteService.deleteQuietly(publicId, providerType, config, key, userId));
+            return;
+        }
+        // CUSTOM_HTTP 等无远端删除能力的渠道：仅删库行
+        fileMapper.deleteById(file.getId());
+        auditService.record("FILE_DELETE", "USER", userId, "FILE", publicId, "provider=" + providerType, "OK");
+    }
 
-        StorageTaskEntity task = new StorageTaskEntity();
-        task.setTaskType(StorageTaskEntity.TYPE_DELETE_REMOTE);
-        task.setFileId(file.getId());
-        task.setPayloadJson(file.getProviderLocatorJson() == null ? "{}" : file.getProviderLocatorJson());
-        task.setRetryCount(0);
-        task.setStatus(StorageTaskEntity.STATUS_PENDING);
-        taskMapper.insert(task);
-        // 远端消息删除尚由 Worker 异步执行，但边缘缓存立即可失效：等 Worker ack 再清，
-        // 删除期间旧 URL 会继续从缓存出图（最快也要 5 分钟 cron 周期）。
-        purgeWorkerCacheQuietly(file);
-        auditService.record("FILE_DELETE", "USER", userId, "FILE", publicId, "task=" + task.getId(), "OK");
+    /** 事务提交后调度远端清理（回滚时不清理，避免远端已删而库行还在）；无事务上下文（单测/工具）时直接调度 */
+    private void afterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
+    }
+
+    /** locator 损坏不阻塞删除：返回 null，远端清理在异步侧记失败留痕 */
+    private String safeLocatorKey(StorageFileEntity file) {
+        try {
+            return locatorKey(file);
+        } catch (BusinessException e) {
+            return null;
+        }
     }
 
     // ==================== Worker 删除任务协同 ====================
@@ -715,23 +791,26 @@ public class StorageFileService {
                 .last("LIMIT 100"));
         for (StorageTaskEntity task : stale) {
             log.warn("[Storage] 删除任务租约过期回收: taskId={}, runningSince={}", task.getId(), task.getUpdateTime());
-            ackDeleteTask(task.getId(), false, "lease expired: worker did not ack within "
-                    + DELETE_TASK_LEASE_MINUTES + " minutes");
+            ackDeleteTask(
+                    task.getId(),
+                    false,
+                    "lease expired: worker did not ack within " + DELETE_TASK_LEASE_MINUTES + " minutes");
         }
 
         // 2. 拉取可执行的 PENDING 任务
         List<StorageTaskEntity> tasks = taskMapper.selectList(new LambdaQueryWrapper<StorageTaskEntity>()
                 .eq(StorageTaskEntity::getTaskType, StorageTaskEntity.TYPE_DELETE_REMOTE)
                 .eq(StorageTaskEntity::getStatus, StorageTaskEntity.STATUS_PENDING)
-                .and(w -> w.isNull(StorageTaskEntity::getNextRetryTime)
-                        .or().le(StorageTaskEntity::getNextRetryTime, now))
+                .and(w ->
+                        w.isNull(StorageTaskEntity::getNextRetryTime).or().le(StorageTaskEntity::getNextRetryTime, now))
                 .last("LIMIT " + Math.max(1, Math.min(limit, 50))));
 
         // 3. 条件认领（CAS）：只有仍为 PENDING 的行才能被置 RUNNING，
         //    并发拉取（多个 cron 实例重叠）时同一任务不会被两边同时领走。
         List<StorageDtos.WorkerTaskView> claimed = new java.util.ArrayList<>();
         for (StorageTaskEntity task : tasks) {
-            int rows = taskMapper.update(null,
+            int rows = taskMapper.update(
+                    null,
                     new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<StorageTaskEntity>()
                             .eq(StorageTaskEntity::getId, task.getId())
                             .eq(StorageTaskEntity::getStatus, StorageTaskEntity.STATUS_PENDING)
@@ -769,13 +848,20 @@ public class StorageFileService {
                     purgeWorkerCacheQuietly(file);
                 }
             }
-            auditService.record("FILE_DELETE_ACK", "WORKER", String.valueOf(taskId), "FILE",
-                    task.getFileId() == null ? null : String.valueOf(task.getFileId()), null, "OK");
+            auditService.record(
+                    "FILE_DELETE_ACK",
+                    "WORKER",
+                    String.valueOf(taskId),
+                    "FILE",
+                    task.getFileId() == null ? null : String.valueOf(task.getFileId()),
+                    null,
+                    "OK");
             return;
         }
         int retry = (task.getRetryCount() == null ? 0 : task.getRetryCount()) + 1;
         task.setRetryCount(retry);
-        task.setErrorMessage(errorMessage == null ? "unknown" : errorMessage.substring(0, Math.min(errorMessage.length(), 500)));
+        task.setErrorMessage(
+                errorMessage == null ? "unknown" : errorMessage.substring(0, Math.min(errorMessage.length(), 500)));
         if (retry >= MAX_DELETE_RETRY) {
             task.setStatus(StorageTaskEntity.STATUS_DEAD);
             taskMapper.updateById(task);
@@ -788,8 +874,14 @@ public class StorageFileService {
                     fileMapper.updateById(file);
                 }
             }
-            auditService.record("FILE_DELETE_DEAD", "WORKER", String.valueOf(taskId), "FILE", null,
-                    task.getErrorMessage(), "ERROR");
+            auditService.record(
+                    "FILE_DELETE_DEAD",
+                    "WORKER",
+                    String.valueOf(taskId),
+                    "FILE",
+                    null,
+                    task.getErrorMessage(),
+                    "ERROR");
             return;
         }
         // 指数退避：2^n 分钟
@@ -823,8 +915,8 @@ public class StorageFileService {
         }
         try {
             StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
-            workerCachePurgeService.purgeFileAsync(config, file.getPublicId(), targetVersion,
-                    locatorField(file, "fileId"));
+            workerCachePurgeService.purgeFileAsync(
+                    config, file.getPublicId(), targetVersion, locatorField(file, "fileId"));
         } catch (Exception e) {
             log.warn("[Storage] Worker 缓存失效触发异常: publicId={}, {}", file.getPublicId(), e.getMessage());
         }
@@ -859,23 +951,10 @@ public class StorageFileService {
         return -1;
     }
 
-    /** 按 Provider DELETE 对象 */
-    private void deleteObjectByProvider(String providerType, StorageConfigEntity config, String key) {
-        if (ProviderSupport.isS3Family(providerType)) {
-            s3ObjectService.deleteObject(config, key);
-        } else if (StorageConfigEntity.PROVIDER_COS.equals(providerType)) {
-            cosApiService.deleteObject(config, key);
-        } else if (StorageConfigEntity.PROVIDER_OSS.equals(providerType)) {
-            ossApiService.deleteObject(config, key);
-        } else if (StorageConfigEntity.PROVIDER_UPYUN.equals(providerType)) {
-            upyunApiService.deleteObject(config, key);
-        }
-    }
-
     /** 又拍云下载 URL（CDN token 防盗链；tokenKey 未配置时为裸公开 URL） */
     private StorageDtos.DownloadUrlView upyunDownloadUrl(StorageConfigEntity config, String key) {
-        UpyunApiService.DownloadUrl url = upyunApiService.downloadUrl(
-                config, key, properties.getDownloadUrlTtlSeconds());
+        UpyunApiService.DownloadUrl url =
+                upyunApiService.downloadUrl(config, key, properties.getDownloadUrlTtlSeconds());
         return new StorageDtos.DownloadUrlView(url.url(), url.expiresAtEpochSeconds());
     }
 
@@ -917,9 +996,25 @@ public class StorageFileService {
         }
     }
 
+    /** CUSTOM_HTTP locator：上游图床托管的直链 URL（上传时经响应映射存入），缺失视为记录损坏 */
+    private String customHttpUrl(StorageFileEntity file) {
+        try {
+            JsonNode locator = objectMapper.readTree(file.getProviderLocatorJson());
+            String url = locator.path("url").asText(null);
+            if (url == null || url.isBlank()) {
+                throw new BusinessException("STORAGE016");
+            }
+            return url;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException("STORAGE016");
+        }
+    }
+
     /** 对象存储系 locator：记录桶/端点（TELEGRAM 之外的家族通用） */
-    private String buildObjectLocator(String providerType, StorageConfigEntity config,
-                                      String objectKey, String publicId) {
+    private String buildObjectLocator(
+            String providerType, StorageConfigEntity config, String objectKey, String publicId) {
         ObjectNode node = objectMapper.createObjectNode();
         try {
             if (ProviderSupport.isS3Family(providerType)) {
@@ -954,7 +1049,8 @@ public class StorageFileService {
     private StorageDtos.WorkerTaskView toTaskView(StorageTaskEntity task) {
         try {
             JsonNode locator = objectMapper.readTree(task.getPayloadJson());
-            return new StorageDtos.WorkerTaskView(task.getId(),
+            return new StorageDtos.WorkerTaskView(
+                    task.getId(),
                     locator.path("chatId").asText(null),
                     locator.path("messageId").asText(null),
                     locator.path("publicId").asText(null));

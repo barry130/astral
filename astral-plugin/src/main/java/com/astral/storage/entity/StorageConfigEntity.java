@@ -5,9 +5,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-
 import java.time.LocalDateTime;
+import lombok.Data;
 
 /**
  * 存储配置（sys_storage_config）
@@ -25,11 +24,16 @@ public class StorageConfigEntity {
     public static final String PROVIDER_OSS = "OSS";
     public static final String PROVIDER_QINIU = "QINIU";
     public static final String PROVIDER_UPYUN = "UPYUN";
+    public static final String PROVIDER_CUSTOM_HTTP = "CUSTOM_HTTP";
     public static final String STATUS_ENABLED = "ENABLED";
     public static final String STATUS_DISABLED = "DISABLED";
     public static final String HEALTH_UP = "UP";
     public static final String HEALTH_DOWN = "DOWN";
     public static final String HEALTH_UNKNOWN = "UNKNOWN";
+    /** 凭据被上游拒绝（401/403）：本渠道暂停选择，人工修正后才恢复 */
+    public static final String HEALTH_AUTH_INVALID = "AUTH_INVALID";
+    /** 失败退避窗口内：可被半开探测，不参与普通选择 */
+    public static final String HEALTH_COOLDOWN = "COOLDOWN";
 
     @TableId(value = "id", type = IdType.INPUT)
     private Long id;
@@ -57,6 +61,13 @@ public class StorageConfigEntity {
 
     /** 默认配置标记（0/1，全表最多一个 1） */
     private Integer isDefault;
+
+    /**
+     * 配置版本：CUSTOM_HTTP 渠道的画像/凭据/限额每次修改递增。
+     * <p>上传意图按创建时快照的版本执行；版本不一致的未发送意图直接拒绝，
+     * 避免用旧参数（例如已删除的请求头）向上游发请求。</p>
+     */
+    private Long configVersion;
 
     /** UP | DOWN | UNKNOWN */
     private String healthStatus;

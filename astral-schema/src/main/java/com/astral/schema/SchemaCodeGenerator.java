@@ -61,8 +61,8 @@ public class SchemaCodeGenerator {
         // 实体 String 字段若对应库表 VARCHAR(N)，生成 @Size(max=N)：入参超长时由 Bean Validation
         // 拦截为 400（COMMON002），避免打到 DB 触发 value too long 的未捕获 500（详见 CODING_GUIDE §3.6）。
         // max 严格等于 schema 里声明的 length（即 DDL 宽度），绝不改小，否则会误杀合法长值。
-        boolean hasSize = schema.getFields().stream()
-                .anyMatch(f -> isVarchar(f) && f.getLength() != null && f.getLength() > 0);
+        boolean hasSize =
+                schema.getFields().stream().anyMatch(f -> isVarchar(f) && f.getLength() != null && f.getLength() > 0);
         if (hasSize) {
             sb.append("import jakarta.validation.constraints.Size;\n");
         }
@@ -70,16 +70,18 @@ public class SchemaCodeGenerator {
         // 拦截为 400，避免打到 DB 触发 not-null 约束的未捕获 500（详见 CODING_GUIDE §3.6）。
         // 有默认值/自动填充的列不标 @NotNull，否则会误杀「靠默认值/填充补全」的合法请求。
         boolean hasNotNull = schema.getFields().stream()
-                .anyMatch(f -> Boolean.TRUE.equals(f.getIsRequired()) && !Boolean.TRUE.equals(f.getIsPrimaryKey())
-                        && f.getDefaultValue() == null && f.getIsAutoFill() == null);
+                .anyMatch(f -> Boolean.TRUE.equals(f.getIsRequired())
+                        && !Boolean.TRUE.equals(f.getIsPrimaryKey())
+                        && f.getDefaultValue() == null
+                        && f.getIsAutoFill() == null);
         if (hasNotNull) {
             sb.append("import jakarta.validation.constraints.NotNull;\n");
         }
         sb.append("import lombok.Data;\n\n");
-        
+
         boolean hasLocalDate = schema.getFields().stream().anyMatch(f -> "LocalDate".equals(f.getFieldType()));
         boolean hasLocalDateTime = schema.getFields().stream().anyMatch(f -> "LocalDateTime".equals(f.getFieldType()));
-        
+
         if (hasLocalDate) {
             sb.append("import java.time.LocalDate;\n");
         }
@@ -96,7 +98,9 @@ public class SchemaCodeGenerator {
 
         for (FieldSchema field : schema.getFields()) {
             if (Boolean.TRUE.equals(field.getIsPrimaryKey())) {
-                sb.append("    @TableId(type = IdType.").append(field.getMybatisPlusIdType() != null ? field.getMybatisPlusIdType() : "INPUT").append(")\n");
+                sb.append("    @TableId(type = IdType.")
+                        .append(field.getMybatisPlusIdType() != null ? field.getMybatisPlusIdType() : "INPUT")
+                        .append(")\n");
             }
             if (Boolean.TRUE.equals(field.getIsLogicDelete())) {
                 sb.append("    @TableLogic\n");
@@ -108,7 +112,9 @@ public class SchemaCodeGenerator {
                 sb.append("    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)\n");
             }
             if (field.getJsonFormat() != null && !field.getJsonFormat().isBlank()) {
-                sb.append("    @JsonFormat(pattern = \"").append(field.getJsonFormat()).append("\")\n");
+                sb.append("    @JsonFormat(pattern = \"")
+                        .append(field.getJsonFormat())
+                        .append("\")\n");
             }
             boolean hasColumnName = !field.getColumnName().equals(field.getFieldName());
             // 自动填充策略：优先使用 schema 中声明的，否则按字段名约定
@@ -125,7 +131,11 @@ public class SchemaCodeGenerator {
             if (hasColumnName || hasAutoFill) {
                 sb.append("    @TableField(");
                 if (hasColumnName && hasAutoFill) {
-                    sb.append("value = \"").append(field.getColumnName()).append("\", fill = FieldFill.").append(autoFill).append(")");
+                    sb.append("value = \"")
+                            .append(field.getColumnName())
+                            .append("\", fill = FieldFill.")
+                            .append(autoFill)
+                            .append(")");
                 } else if (hasColumnName) {
                     sb.append("\"").append(field.getColumnName()).append("\")");
                 } else {
@@ -136,17 +146,27 @@ public class SchemaCodeGenerator {
             if (isVarchar(field) && field.getLength() != null && field.getLength() > 0) {
                 sb.append("    @Size(max = ").append(field.getLength()).append(")\n");
             }
-            if (Boolean.TRUE.equals(field.getIsRequired()) && !Boolean.TRUE.equals(field.getIsPrimaryKey())
-                    && field.getDefaultValue() == null && field.getIsAutoFill() == null) {
+            if (Boolean.TRUE.equals(field.getIsRequired())
+                    && !Boolean.TRUE.equals(field.getIsPrimaryKey())
+                    && field.getDefaultValue() == null
+                    && field.getIsAutoFill() == null) {
                 sb.append("    @NotNull\n");
             }
-            sb.append("    private ").append(field.getFieldType()).append(" ").append(field.getFieldName()).append(";\n\n");
+            sb.append("    private ")
+                    .append(field.getFieldType())
+                    .append(" ")
+                    .append(field.getFieldName())
+                    .append(";\n\n");
         }
 
         if (schema.getNonDbFields() != null) {
             for (FieldSchema field : schema.getNonDbFields()) {
                 sb.append("    @TableField(exist = false)\n");
-                sb.append("    private ").append(field.getFieldType()).append(" ").append(field.getFieldName()).append(";\n\n");
+                sb.append("    private ")
+                        .append(field.getFieldType())
+                        .append(" ")
+                        .append(field.getFieldName())
+                        .append(";\n\n");
             }
         }
 
@@ -175,7 +195,11 @@ public class SchemaCodeGenerator {
         sb.append("import com.baomidou.mybatisplus.core.mapper.BaseMapper;\n");
         sb.append("import org.apache.ibatis.annotations.Mapper;\n\n");
         sb.append("@Mapper\n");
-        sb.append("public interface ").append(className).append("Mapper extends BaseMapper<").append(className).append("> {\n");
+        sb.append("public interface ")
+                .append(className)
+                .append("Mapper extends BaseMapper<")
+                .append(className)
+                .append("> {\n");
         sb.append("}\n");
         return sb.toString();
     }
@@ -199,7 +223,11 @@ public class SchemaCodeGenerator {
         sb.append("package ").append(servicePackage).append(";\n\n");
         sb.append("import ").append(entityPackage).append(".").append(className).append(";\n");
         sb.append("import com.baomidou.mybatisplus.spring.service.IService;\n\n");
-        sb.append("public interface ").append(className).append("Service extends IService<").append(className).append("> {\n");
+        sb.append("public interface ")
+                .append(className)
+                .append("Service extends IService<")
+                .append(className)
+                .append("> {\n");
         sb.append("}\n");
         return sb.toString();
     }
@@ -224,11 +252,23 @@ public class SchemaCodeGenerator {
         sb.append("package ").append(servicePackage).append(".impl;\n\n");
         sb.append("import ").append(entityPackage).append(".").append(className).append(";\n");
         sb.append("import ").append(mapperPackage).append(".").append(className).append("Mapper;\n");
-        sb.append("import ").append(servicePackage).append(".").append(className).append("Service;\n");
+        sb.append("import ")
+                .append(servicePackage)
+                .append(".")
+                .append(className)
+                .append("Service;\n");
         sb.append("import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;\n");
         sb.append("import org.springframework.stereotype.Service;\n\n");
         sb.append("@Service\n");
-        sb.append("public class ").append(className).append("ServiceImpl extends ServiceImpl<").append(className).append("Mapper, ").append(className).append("> implements ").append(className).append("Service {\n");
+        sb.append("public class ")
+                .append(className)
+                .append("ServiceImpl extends ServiceImpl<")
+                .append(className)
+                .append("Mapper, ")
+                .append(className)
+                .append("> implements ")
+                .append(className)
+                .append("Service {\n");
         sb.append("}\n");
         return sb.toString();
     }
@@ -257,11 +297,16 @@ public class SchemaCodeGenerator {
         String entityPackage = schema.getPackageName();
         String className = schema.getClassName();
         String tableName = schema.getTableName();
-        String basePath = "/api/v1/" + schema.getModuleName() + "/" + tableName.replace("sys_", "").replace("sequence_", "");
+        String basePath = "/api/v1/" + schema.getModuleName() + "/"
+                + tableName.replace("sys_", "").replace("sequence_", "");
 
         sb.append("package ").append(controllerPackage).append(";\n\n");
         sb.append("import ").append(entityPackage).append(".").append(className).append(";\n");
-        sb.append("import ").append(servicePackage).append(".").append(className).append("Service;\n");
+        sb.append("import ")
+                .append(servicePackage)
+                .append(".")
+                .append(className)
+                .append("Service;\n");
         sb.append("import com.astral.common.result.Result;\n");
         sb.append("import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;\n");
         sb.append("import com.baomidou.mybatisplus.extension.plugins.pagination.Page;\n");
@@ -275,32 +320,47 @@ public class SchemaCodeGenerator {
         sb.append("@RequestMapping(\"").append(basePath).append("\")\n");
         sb.append("@RequiredArgsConstructor\n");
         sb.append("public class ").append(className).append("Controller {\n\n");
-        sb.append("    private final ").append(className).append("Service ").append(lowercaseFirst(className)).append("Service;\n\n");
+        sb.append("    private final ")
+                .append(className)
+                .append("Service ")
+                .append(lowercaseFirst(className))
+                .append("Service;\n\n");
 
         sb.append("    @Operation(summary = \"分页查询\")\n");
         sb.append("    @GetMapping(\"/page\")\n");
-        sb.append("    public Result<Page<").append(className).append(">> page(@RequestParam(defaultValue = \"1\") Integer pageNum,\n");
-        sb.append("                                               @RequestParam(defaultValue = \"10\") Integer pageSize) {\n");
+        sb.append("    public Result<Page<")
+                .append(className)
+                .append(">> page(@RequestParam(defaultValue = \"1\") Integer pageNum,\n");
+        sb.append(
+                "                                               @RequestParam(defaultValue = \"10\") Integer pageSize) {\n");
         sb.append("        Page<").append(className).append("> page = new Page<>(pageNum, pageSize);\n");
-        sb.append("        return Result.success(").append(lowercaseFirst(className)).append("Service.page(page));\n");
+        sb.append("        return Result.success(")
+                .append(lowercaseFirst(className))
+                .append("Service.page(page));\n");
         sb.append("    }\n\n");
 
         sb.append("    @Operation(summary = \"根据ID查询\")\n");
         sb.append("    @GetMapping(\"/{id}\")\n");
         sb.append("    public Result<").append(className).append("> getById(@PathVariable Long id) {\n");
-        sb.append("        return Result.success(").append(lowercaseFirst(className)).append("Service.getById(id));\n");
+        sb.append("        return Result.success(")
+                .append(lowercaseFirst(className))
+                .append("Service.getById(id));\n");
         sb.append("    }\n\n");
 
         sb.append("    @Operation(summary = \"创建\")\n");
         sb.append("    @PostMapping\n");
-        sb.append("    public Result<Void> create(@Valid @RequestBody ").append(className).append(" entity) {\n");
+        sb.append("    public Result<Void> create(@Valid @RequestBody ")
+                .append(className)
+                .append(" entity) {\n");
         sb.append("        ").append(lowercaseFirst(className)).append("Service.save(entity);\n");
         sb.append("        return Result.success();\n");
         sb.append("    }\n\n");
 
         sb.append("    @Operation(summary = \"更新\")\n");
         sb.append("    @PutMapping(\"/{id}\")\n");
-        sb.append("    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody ").append(className).append(" entity) {\n");
+        sb.append("    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody ")
+                .append(className)
+                .append(" entity) {\n");
         sb.append("        entity.setId(id);\n");
         sb.append("        ").append(lowercaseFirst(className)).append("Service.updateById(entity);\n");
         sb.append("        return Result.success();\n");
@@ -369,13 +429,11 @@ public class SchemaCodeGenerator {
         String quotedTable = SqlIdentifiers.quote(tableName);
         sb.append("CREATE TABLE IF NOT EXISTS ").append(quotedTable).append(" (\n");
 
-        List<String> columnDefs = schema.getFields().stream()
-                .map(f -> buildColumnDef(f, db))
-                .collect(Collectors.toList());
+        List<String> columnDefs =
+                schema.getFields().stream().map(f -> buildColumnDef(f, db)).collect(Collectors.toList());
 
         // Schema未声明主键字段时，才补充默认自增主键列（避免与JSON中已声明的id列重复）
-        boolean hasPrimaryKey = schema.getFields().stream()
-                .anyMatch(f -> Boolean.TRUE.equals(f.getIsPrimaryKey()));
+        boolean hasPrimaryKey = schema.getFields().stream().anyMatch(f -> Boolean.TRUE.equals(f.getIsPrimaryKey()));
         if (!hasPrimaryKey) {
             columnDefs.add(0, buildDefaultIdColumnDef(db));
         }
@@ -384,7 +442,9 @@ public class SchemaCodeGenerator {
         if (db == SqlDialect.MYSQL) {
             sb.append("\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
             if (hasText(schema.getTableComment())) {
-                sb.append(" COMMENT='").append(escapeSqlLiteral(schema.getTableComment())).append("'");
+                sb.append(" COMMENT='")
+                        .append(escapeSqlLiteral(schema.getTableComment()))
+                        .append("'");
             }
             sb.append(";\n");
         } else {
@@ -398,8 +458,12 @@ public class SchemaCodeGenerator {
                         .append("INDEX ")
                         .append(db == SqlDialect.POSTGRESQL ? "IF NOT EXISTS " : "")
                         .append(SqlIdentifiers.quote(index.getIndexName()))
-                        .append(" ON ").append(quotedTable)
-                        .append("(").append(String.join(", ", index.getColumns())).append(");\n");
+                        .append(" ON ")
+                        .append(quotedTable)
+                        .append("(")
+                        .append(String.join(", ", index.getColumns()))
+                        .append(")")
+                        .append(";\n");
             }
         }
 
@@ -439,7 +503,9 @@ public class SchemaCodeGenerator {
             col.append(" DEFAULT ").append(formatDefaultValue(field.getDefaultValue(), dialect));
         }
         if (dialect == SqlDialect.MYSQL && hasText(field.getComment())) {
-            col.append(" COMMENT '").append(escapeSqlLiteral(field.getComment())).append("'");
+            col.append(" COMMENT '")
+                    .append(escapeSqlLiteral(field.getComment()))
+                    .append("'");
         }
         return col.toString();
     }
@@ -480,8 +546,11 @@ public class SchemaCodeGenerator {
         if ("TRUE".equals(upper) || "FALSE".equals(upper)) {
             return dialect == SqlDialect.MYSQL ? ("TRUE".equals(upper) ? "1" : "0") : upper;
         }
-        if ("NULL".equals(upper) || "CURRENT_TIMESTAMP".equals(upper) || "CURRENT_DATE".equals(upper)
-                || "CURRENT_TIME".equals(upper) || "NOW()".equals(upper)) {
+        if ("NULL".equals(upper)
+                || "CURRENT_TIMESTAMP".equals(upper)
+                || "CURRENT_DATE".equals(upper)
+                || "CURRENT_TIME".equals(upper)
+                || "NOW()".equals(upper)) {
             return upper;
         }
         if (v.length() >= 2 && v.startsWith("'") && v.endsWith("'")) {
@@ -510,15 +579,19 @@ public class SchemaCodeGenerator {
         SqlIdentifiers.requireValid(schema.getTableName(), "表名");
         String tableName = SqlIdentifiers.quote(schema.getTableName());
 
-        if (!hasText(schema.getTableComment()) && !withDefaultIdColumn
+        if (!hasText(schema.getTableComment())
+                && !withDefaultIdColumn
                 && schema.getFields().stream().noneMatch(f -> hasText(f.getComment()))) {
             return "";
         }
 
         sb.append("\n-- 表与字段注释\n");
         if (hasText(schema.getTableComment())) {
-            sb.append("COMMENT ON TABLE ").append(tableName).append(" IS '")
-                    .append(escapeSqlLiteral(schema.getTableComment())).append("';\n");
+            sb.append("COMMENT ON TABLE ")
+                    .append(tableName)
+                    .append(" IS '")
+                    .append(escapeSqlLiteral(schema.getTableComment()))
+                    .append("';\n");
         }
         if (withDefaultIdColumn) {
             sb.append("COMMENT ON COLUMN ").append(tableName).append(".id IS '主键ID';\n");
@@ -528,9 +601,13 @@ public class SchemaCodeGenerator {
                 continue;
             }
             if (hasText(field.getComment())) {
-                sb.append("COMMENT ON COLUMN ").append(tableName).append(".")
-                        .append(SqlIdentifiers.quote(field.getColumnName())).append(" IS '")
-                        .append(escapeSqlLiteral(field.getComment())).append("';\n");
+                sb.append("COMMENT ON COLUMN ")
+                        .append(tableName)
+                        .append(".")
+                        .append(SqlIdentifiers.quote(field.getColumnName()))
+                        .append(" IS '")
+                        .append(escapeSqlLiteral(field.getComment()))
+                        .append("';\n");
             }
         }
 
@@ -548,8 +625,10 @@ public class SchemaCodeGenerator {
         SqlIdentifiers.requireValid(tableName, "表名");
         SqlIdentifiers.requireValid(field.getColumnName(), "列名");
         StringBuilder sb = new StringBuilder();
-        sb.append("COMMENT ON COLUMN ").append(SqlIdentifiers.quote(tableName))
-                .append(".").append(SqlIdentifiers.quote(field.getColumnName()));
+        sb.append("COMMENT ON COLUMN ")
+                .append(SqlIdentifiers.quote(tableName))
+                .append(".")
+                .append(SqlIdentifiers.quote(field.getColumnName()));
         if (hasText(field.getComment())) {
             sb.append(" IS '").append(escapeSqlLiteral(field.getComment())).append("'");
         } else {
@@ -690,23 +769,28 @@ public class SchemaCodeGenerator {
         SqlIdentifiers.requireValid(newSchema.getTableName(), "表名");
         String tableName = SqlIdentifiers.quote(newSchema.getTableName());
 
-        List<String> oldColumnNames = oldSchema.getFields().stream()
-                .map(FieldSchema::getColumnName)
-                .collect(Collectors.toList());
-        List<String> newColumnNames = newSchema.getFields().stream()
-                .map(FieldSchema::getColumnName)
-                .collect(Collectors.toList());
+        List<String> oldColumnNames =
+                oldSchema.getFields().stream().map(FieldSchema::getColumnName).collect(Collectors.toList());
+        List<String> newColumnNames =
+                newSchema.getFields().stream().map(FieldSchema::getColumnName).collect(Collectors.toList());
 
         // 1. 表注释变更
         if (!Objects.equals(blankToNull(oldSchema.getTableComment()), blankToNull(newSchema.getTableComment()))) {
             if (db == SqlDialect.MYSQL) {
-                sb.append("ALTER TABLE ").append(tableName).append(" COMMENT = '")
-                        .append(hasText(newSchema.getTableComment()) ? escapeSqlLiteral(newSchema.getTableComment()) : "")
+                sb.append("ALTER TABLE ")
+                        .append(tableName)
+                        .append(" COMMENT = '")
+                        .append(
+                                hasText(newSchema.getTableComment())
+                                        ? escapeSqlLiteral(newSchema.getTableComment())
+                                        : "")
                         .append("';\n");
             } else {
                 sb.append("COMMENT ON TABLE ").append(tableName);
                 if (hasText(newSchema.getTableComment())) {
-                    sb.append(" IS '").append(escapeSqlLiteral(newSchema.getTableComment())).append("'");
+                    sb.append(" IS '")
+                            .append(escapeSqlLiteral(newSchema.getTableComment()))
+                            .append("'");
                 } else {
                     sb.append(" IS NULL");
                 }
@@ -717,8 +801,10 @@ public class SchemaCodeGenerator {
         // 2. 新增字段
         for (FieldSchema newField : newSchema.getFields()) {
             if (!oldColumnNames.contains(newField.getColumnName())) {
-                sb.append("ALTER TABLE ").append(tableName)
-                        .append(" ADD COLUMN ").append(buildColumnDef(newField, db).trim())
+                sb.append("ALTER TABLE ")
+                        .append(tableName)
+                        .append(" ADD COLUMN ")
+                        .append(buildColumnDef(newField, db).trim())
                         .append(";\n");
                 if (db == SqlDialect.POSTGRESQL && hasText(newField.getComment())) {
                     sb.append(generateColumnCommentSql(tableName, newField));
@@ -729,8 +815,10 @@ public class SchemaCodeGenerator {
         // 3. 删除字段
         for (FieldSchema oldField : oldSchema.getFields()) {
             if (!newColumnNames.contains(oldField.getColumnName())) {
-                sb.append("ALTER TABLE ").append(tableName)
-                        .append(" DROP COLUMN ").append(SqlIdentifiers.quote(oldField.getColumnName()))
+                sb.append("ALTER TABLE ")
+                        .append(tableName)
+                        .append(" DROP COLUMN ")
+                        .append(SqlIdentifiers.quote(oldField.getColumnName()))
                         .append(";\n");
             }
         }
@@ -747,34 +835,42 @@ public class SchemaCodeGenerator {
             boolean typeChanged = !typeEqual(oldField, newField);
             boolean requiredChanged = !Objects.equals(
                     Boolean.TRUE.equals(oldField.getIsRequired()), Boolean.TRUE.equals(newField.getIsRequired()));
-            boolean defaultChanged = !Objects.equals(
-                    blankToNull(oldField.getDefaultValue()), blankToNull(newField.getDefaultValue()));
-            boolean commentChanged = !Objects.equals(
-                    blankToNull(oldField.getComment()), blankToNull(newField.getComment()));
+            boolean defaultChanged =
+                    !Objects.equals(blankToNull(oldField.getDefaultValue()), blankToNull(newField.getDefaultValue()));
+            boolean commentChanged =
+                    !Objects.equals(blankToNull(oldField.getComment()), blankToNull(newField.getComment()));
 
             if (db == SqlDialect.MYSQL) {
                 // MySQL：注释内联在列定义中，任何变化都用 MODIFY COLUMN 重定义
-                sb.append("ALTER TABLE ").append(tableName)
-                        .append(" MODIFY COLUMN ").append(buildColumnDef(newField, db).trim())
+                sb.append("ALTER TABLE ")
+                        .append(tableName)
+                        .append(" MODIFY COLUMN ")
+                        .append(buildColumnDef(newField, db).trim())
                         .append(";\n");
                 continue;
             }
             if (typeChanged) {
-                sb.append("ALTER TABLE ").append(tableName)
-                        .append(" ALTER COLUMN ").append(SqlIdentifiers.quote(newField.getColumnName()))
+                sb.append("ALTER TABLE ")
+                        .append(tableName)
+                        .append(" ALTER COLUMN ")
+                        .append(SqlIdentifiers.quote(newField.getColumnName()))
                         .append(" TYPE ")
                         .append(getSqlType(newField, db, Boolean.TRUE.equals(newField.getIsAutoIncrement())))
                         .append(";\n");
             }
             if (requiredChanged) {
-                sb.append("ALTER TABLE ").append(tableName)
-                        .append(" ALTER COLUMN ").append(SqlIdentifiers.quote(newField.getColumnName()))
+                sb.append("ALTER TABLE ")
+                        .append(tableName)
+                        .append(" ALTER COLUMN ")
+                        .append(SqlIdentifiers.quote(newField.getColumnName()))
                         .append(Boolean.TRUE.equals(newField.getIsRequired()) ? " SET NOT NULL" : " DROP NOT NULL")
                         .append(";\n");
             }
             if (defaultChanged) {
-                sb.append("ALTER TABLE ").append(tableName)
-                        .append(" ALTER COLUMN ").append(SqlIdentifiers.quote(newField.getColumnName()));
+                sb.append("ALTER TABLE ")
+                        .append(tableName)
+                        .append(" ALTER COLUMN ")
+                        .append(SqlIdentifiers.quote(newField.getColumnName()));
                 if (hasText(newField.getDefaultValue())) {
                     sb.append(" SET DEFAULT ").append(formatDefaultValue(newField.getDefaultValue(), db));
                 } else {
@@ -809,7 +905,8 @@ public class SchemaCodeGenerator {
      */
     private static boolean fieldsEqual(FieldSchema oldField, FieldSchema newField) {
         return typeEqual(oldField, newField)
-                && Objects.equals(Boolean.TRUE.equals(oldField.getIsRequired()), Boolean.TRUE.equals(newField.getIsRequired()))
+                && Objects.equals(
+                        Boolean.TRUE.equals(oldField.getIsRequired()), Boolean.TRUE.equals(newField.getIsRequired()))
                 && Objects.equals(blankToNull(oldField.getDefaultValue()), blankToNull(newField.getDefaultValue()))
                 && Objects.equals(blankToNull(oldField.getComment()), blankToNull(newField.getComment()));
     }

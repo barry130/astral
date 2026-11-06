@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Button,
@@ -29,8 +29,14 @@ import {
 import { fetchDictOptions, DictOption } from '@/api/dict';
 import { usePerm } from '@/lib/perm';
 import FileManager from '@/components/storage/FileManager';
+import ServerSideUpload from '@/components/storage/ServerSideUpload';
+import HttpChannelEditorFields, {
+  type HttpChannelFieldsHandle,
+} from '@/components/storage/HttpChannelEditorFields';
 import { uploadWithStorageTicket } from '@/lib/storage-upload';
 import { PageHeader } from '@/components/page-header';
+import { StatCard } from '@/components/stat-card';
+import { FilterBar } from '@/components/filter-bar';
 import {
   storageApi,
   type StorageConfig,
@@ -39,9 +45,12 @@ import {
   type StoragePageResult,
   type StorageTask,
   type StorageAudit,
+  type StorageOverview,
   type S3ProviderOptions,
   type FolderUploadPolicy,
-  type FolderPermRow,
+  type StorageBindingView,
+  type HttpApprovedTarget,
+  type HttpChannelView,
 } from '@/api/storage';
 
 /** S3 SigV4 家族（含七牛 S3 网关）：预签名 PUT 直传 + secretAccessKey 密钥 */
@@ -69,8 +78,20 @@ const STATUS_COLOR: Record<string, string> = {
   RUNNING: 'processing',
 };
 
-/** 授权弹窗行：后端返回的授权记录（含 id）+ Table 所需 key；「添加授权」新增行无 id/key */
-type PermRow = FolderPermRow & { id?: number; key?: number };
+/** 授权弹窗行：后端 FolderPermView（含 id/configs 视图）+ 绑定子集选择态；「添加授权」新增行无 id/key */
+type PermRow = {
+  id?: number;
+  key?: number;
+  subjectType: string;
+  subjectId: string;
+  permissions: string;
+  configs?: StorageBindingView[];
+  permConfigs?: number[];
+  permPriority?: number;
+};
+
+/** 文件夹弹窗内一行存储绑定（configId × 优先级）；新行未选配置时 id 为空 */
+type FolderBindingRow = { storageConfigId?: number; priority?: number };
 
 /** 文件夹弹窗表单值：文件夹字段 + 策略开关与各策略字段（policy* 由 buildFolderPolicy 序列化为 FolderUploadPolicy） */
 type FolderFormValues = {
@@ -78,7 +99,6 @@ type FolderFormValues = {
   folderName?: string;
   visibility?: string;
   status?: string;
-  configId?: number;
   policyEnabled?: boolean;
   policyRequireLogin?: boolean;
   policyMinSizeBytes?: number;
@@ -95,6 +115,9 @@ export default function StoragePage() {
   const hasPerm = usePerm();
   /** 是否具备存储维护权限（须与后端 AdminStorageController 上的 @RequiresPermission("admin:storage:edit") 一致；无权限时只读） */
   const canEdit = hasPerm('admin:storage:edit');
+  /** HTTP 渠道权限（与后端 AdminStorageHttpConfigController 的 admin:storage:channel:{edit,test} 一致；渠道入口即存储配置弹窗） */
+  const canEditChannel = hasPerm('admin:storage:channel:edit');
+  const canTestChannel = hasPerm('admin:storage:channel:test');
 
   // ==================== 数据字典（枚举值走字典，见 AGENTS.md §3） ====================
   const [dict, setDict] = useState<Record<string, DictOption[]>>({});
@@ -103,12 +126,29 @@ export default function StoragePage() {
 
   // ==================== 存储配置 ====================
   const [configs, setConfigs] = useState<StorageConfig[]>([]);
+  /** 概览计数（统计条）：随配置/文件夹列表一并刷新 */
+  const [overview, setOverview] = useState<StorageOverview | null>(null);
+  /** useCallback 固定引用：供 loadConfigs/loadFolders 复用且保持 exhaustive-deps 可证明稳定 */
+  const loadOverview = useCallback(() => {
+    storageApi
+      .getOverview()
+      .then((res) => {
+        if (res.code === 200) setOverview(res.data);
+      })
+      .catch(() => {});
+  }, []);
   const [configModal, setConfigModal] = useState<{ open: boolean; editing?: StorageConfig }>({
     open: false,
   });
+  /** CUSTOM_HTTP 渠道：弹窗内就地渲染 HttpChannelEditorFields（无独立页签/弹窗） */
+  const [httpChannelDetail, setHttpChannelDetail] = useState<HttpChannelView | null>(null);
+  const [httpApprovedTargets, setHttpApprovedTargets] = useState<HttpApprovedTarget[]>([]);
+  const [httpBusy, setHttpBusy] = useState(false);
+  const httpEditorRef = useRef<HttpChannelFieldsHandle>(null);
   const [configForm] = Form.useForm();
 
   const loadConfigs = () => {
+    loadOverview();
     storageApi
       .listConfigs()
       .then((res) => {
@@ -120,6 +160,29 @@ export default function StoragePage() {
   const submitConfig = async () => {
     try {
       const values = await configForm.validateFields();
+      // CUSTOM_HTTP：编辑态走 configModal.editing.providerType（编辑时类型下拉不渲染），新建态走表单值
+      const isHttp =
+        configModal.editing?.providerType === 'CUSTOM_HTTP' ||
+        (!configModal.editing && values.providerType === 'CUSTOM_HTTP');
+      if (isHttp) {
+        const name = (values.name || '').trim();
+        if (configModal.editing?.id && !httpChannelDetail) {
+          message.warning('渠道详情加载中，请稍候再试');
+          return;
+        }
+        const error = await httpEditorRef.current?.submit({
+          name,
+          mode: configModal.editing?.id ? 'edit' : 'create',
+          channelId: configModal.editing?.id,
+          expectedVersion: httpChannelDetail?.configVersion,
+        });
+        // 编辑器内部已把错误内联展示在表单上方，这里不再弹 toast，避免同一错误出现两次
+        if (error) return;
+        message.success('已保存');
+        setConfigModal({ open: false });
+        loadConfigs();
+        return;
+      }
       if (configModal.editing?.id) {
         await storageApi.updateConfig(configModal.editing.id, values);
       } else {
@@ -142,6 +205,42 @@ export default function StoragePage() {
   const isCOSConfig = configProvider === 'COS';
   const isOSSConfig = configProvider === 'OSS';
   const isObjectConfig = OBJECT_PROVIDERS.includes(configProvider);
+  const isHttpChannelConfig = configProvider === 'CUSTOM_HTTP';
+
+  /** CUSTOM_HTTP：弹窗打开时拉取渠道详情（编辑）与部署批准目标；就地渲染专用字段的数据源 */
+  useEffect(() => {
+    if (!configModal.open) {
+      setHttpChannelDetail(null);
+      return;
+    }
+    let cancelled = false;
+    const editingHttp =
+      configModal.editing?.id != null && configModal.editing.providerType === 'CUSTOM_HTTP';
+    if (editingHttp) {
+      setHttpChannelDetail(null);
+      storageApi
+        .getHttpChannel(configModal.editing!.id!)
+        .then((res) => {
+          if (res.code !== 200) throw new Error(res.msg);
+          if (!cancelled) setHttpChannelDetail(res.data);
+        })
+        .catch((e: unknown) => {
+          if (!cancelled) message.error((e as Error).message);
+        });
+    }
+    if (isHttpChannelConfig || editingHttp) {
+      storageApi
+        .listApprovedTargets()
+        .then((res) => {
+          if (res.code === 200 && !cancelled) setHttpApprovedTargets(res.data || []);
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configModal.open, configModal.editing?.id, isHttpChannelConfig]);
 
   const testConfig = async (config: StorageConfig) => {
     try {
@@ -158,9 +257,13 @@ export default function StoragePage() {
 
   // ==================== 文件夹 ====================
   const [folders, setFolders] = useState<StorageFolder[]>([]);
-  const [folderModal, setFolderModal] = useState<{ open: boolean; editing?: StorageFolder }>({
-    open: false,
-  });
+  /** 文件夹弹窗：绑定列表与调度策略不放 Form，走组件状态（Form 只管名称/可见性/策略字段） */
+  const [folderModal, setFolderModal] = useState<{
+    open: boolean;
+    editing?: StorageFolder;
+    bindings: FolderBindingRow[];
+    strategy: string;
+  }>({ open: false, bindings: [], strategy: 'FAILOVER' });
   const [folderForm] = Form.useForm();
   const [permModal, setPermModal] = useState<{
     open: boolean;
@@ -169,6 +272,7 @@ export default function StoragePage() {
   }>({ open: false, rows: [] });
 
   const loadFolders = () => {
+    loadOverview();
     storageApi
       .listFolders()
       .then((res) => {
@@ -198,8 +302,20 @@ export default function StoragePage() {
 
   const submitFolder = async () => {
     try {
+      if (folderModal.bindings.some((b) => !b.storageConfigId)) {
+        message.error('存在未选择存储配置的绑定行，请补全或删除');
+        return;
+      }
       const values = await folderForm.validateFields();
-      const payload = { ...values, policy: buildFolderPolicy(values) };
+      const payload = {
+        ...values,
+        policy: buildFolderPolicy(values),
+        storageStrategy: folderModal.strategy || 'FAILOVER',
+        configs: folderModal.bindings.map((b) => ({
+          storageConfigId: b.storageConfigId!,
+          priority: b.priority ?? 100,
+        })),
+      };
       delete payload.policyEnabled;
       [
         'policyRequireLogin',
@@ -218,7 +334,7 @@ export default function StoragePage() {
         await storageApi.createFolder(payload);
       }
       message.success('已保存');
-      setFolderModal({ open: false });
+      setFolderModal({ open: false, bindings: [], strategy: 'FAILOVER' });
       loadFolders();
     } catch (e: unknown) {
       // 同 submitConfig：校验失败不会带上 message，兜底中文提示
@@ -226,9 +342,18 @@ export default function StoragePage() {
     }
   };
 
-  // 打开文件夹弹窗；编辑时把 upload_policy JSON 回显到策略表单字段
+  // 打开文件夹弹窗；编辑时把 upload_policy JSON 回显到策略表单字段，绑定/策略回显到组件状态
   const openFolderModal = (record?: StorageFolder) => {
-    setFolderModal({ open: true, editing: record });
+    const bindings: FolderBindingRow[] = (record?.configs || []).map((c) => ({
+      storageConfigId: c.configId,
+      priority: c.priority,
+    }));
+    setFolderModal({
+      open: true,
+      editing: record,
+      bindings,
+      strategy: record?.storageStrategy || 'FAILOVER',
+    });
     if (!record) {
       folderForm.resetFields();
       return;
@@ -261,7 +386,12 @@ export default function StoragePage() {
         setPermModal({
           open: true,
           folder,
-          rows: (res.data || []).map((r: FolderPermRow & { id: number }) => ({ ...r, key: r.id })),
+          rows: (res.data || []).map((r) => ({
+            ...r,
+            key: r.id,
+            permConfigs: (r.configs || []).map((c) => c.configId),
+            permPriority: r.configs?.[0]?.priority ?? 100,
+          })),
         });
       }
     } catch (e: unknown) {
@@ -274,6 +404,14 @@ export default function StoragePage() {
       subjectType: r.subjectType,
       subjectId: r.subjectId,
       permissions: r.permissions,
+      // 授权绑定：空 = 跟随文件夹绑定；选定项必须是文件夹绑定的子集（后端 STORAGE058 校验）
+      configs:
+        r.permConfigs && r.permConfigs.length
+          ? r.permConfigs.map((id) => ({
+              storageConfigId: id,
+              priority: r.permPriority ?? 100,
+            }))
+          : undefined,
     }));
     try {
       await storageApi.saveFolderPermissions(permModal.folder!.id!, rows);
@@ -302,10 +440,10 @@ export default function StoragePage() {
   const resetTest = () =>
     setTestSteps((steps) => steps.map((s) => ({ ...s, state: 'wait', detail: undefined })));
 
-  /** 测试文件夹绑定的存储配置（未绑定则取默认配置）；随选择联动 */
+  /** 测试文件夹解析出的存储配置（后端 resolved* 字段；无绑定则取平台默认） */
   const activeTestConfig = useMemo(() => {
     const folder = folders.find((f) => f.id === testFolderId);
-    if (folder?.storageConfigId) return configs.find((c) => c.id === folder.storageConfigId);
+    if (folder?.resolvedConfigId) return configs.find((c) => c.id === folder.resolvedConfigId);
     return configs.find((c) => c.isDefault === 1) || undefined;
   }, [testFolderId, folders, configs]);
   const testProvider = activeTestConfig?.providerType || 'TELEGRAM';
@@ -512,9 +650,12 @@ export default function StoragePage() {
       'storage_permission',
       'storage_verify_content',
       'storage_subject_type',
+      'storage_target_strategy',
     ])
       .then(setDict)
       .catch(() => {});
+    // 挂载一次性拉取；loadConfigs/loadFolders 每渲染重建，列入依赖会变成每渲染重拉（仓库既有 disable 惯例）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** Provider 展示配色（纯前端观感，保留映射；文案标签走 storage_provider_type 字典） */
@@ -585,78 +726,164 @@ export default function StoragePage() {
       title: '操作',
       key: 'action',
       width: 280,
-      render: (_: unknown, record: StorageConfig) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<ExperimentOutlined />}
-            disabled={!canEdit}
-            onClick={() => testConfig(record)}
-          >
-            测试
-          </Button>
-          <Button
-            size="small"
-            icon={<StarOutlined />}
-            disabled={!canEdit}
-            onClick={async () => {
-              await storageApi.setDefaultConfig(record.id!);
-              message.success('已设为默认');
-              loadConfigs();
-            }}
-          >
-            设默认
-          </Button>
-          <Button
-            size="small"
-            disabled={!canEdit}
-            onClick={() => {
-              const editing = { ...record } as StorageConfig;
-              const opts = parseOptions(record.providerOptions);
-              // Secret 打码回显：留空即保持不变（四类密钥字段统一处理）
-              delete opts.secretAccessKey;
-              delete opts.secretKey;
-              delete opts.accessKeySecret;
-              delete opts.password;
-              delete opts.tokenKey;
-              setConfigModal({ open: true, editing });
-              configForm.setFieldsValue({
-                name: editing.name,
-                chatId: editing.chatId,
-                workerBaseUrl: editing.workerBaseUrl,
-                providerOptions: OBJECT_PROVIDERS.includes(record.providerType || 'TELEGRAM')
-                  ? opts
-                  : undefined,
-                maxFileSize: editing.maxFileSize,
-                remark: editing.remark,
-                status: editing.status,
-              });
-            }}
-          >
-            编辑
-          </Button>
-          <Popconfirm
-            title="确定删除该配置？"
-            disabled={!canEdit}
-            onConfirm={async () => {
-              try {
-                await storageApi.deleteConfig(record.id!);
-                message.success('已删除');
+      render: (_: unknown, record: StorageConfig) => {
+        // CUSTOM_HTTP 走 http-configs 接口：测试/编辑/删除全部换成专用实现（旧五入口后端拒绝 STORAGE039）
+        if (record.providerType === 'CUSTOM_HTTP') {
+          return (
+            <Space>
+              <Popconfirm
+                title="向该渠道发起一次真实测试上传？"
+                description="会先校验部署开关与批准目标；未启用/未配置时只返回错误码，不出站。"
+                disabled={!canTestChannel}
+                onConfirm={async () => {
+                  try {
+                    const res = await storageApi.testHttpChannel(record.id!);
+                    if (res.code === 200) {
+                      const ok = res.data.success && res.data.safeCode === 'OK';
+                      if (ok) {
+                        message.success(`测试通过（${res.data.safeCode || 'OK'}）`);
+                      } else {
+                        message.error(
+                          `测试未通过${res.data.safeCode ? `（${res.data.safeCode}）` : ''}${
+                            res.data.safeMessage ? `：${res.data.safeMessage}` : ''
+                          }`,
+                        );
+                      }
+                      loadConfigs();
+                    }
+                  } catch (e: unknown) {
+                    message.warning((e as Error).message);
+                  }
+                }}
+              >
+                <Button size="small" icon={<ExperimentOutlined />} disabled={!canTestChannel}>
+                  测试
+                </Button>
+              </Popconfirm>
+              <Button
+                size="small"
+                disabled={!canEditChannel}
+                onClick={() => {
+                  setConfigModal({ open: true, editing: record });
+                  configForm.setFieldsValue({
+                    name: record.name,
+                    providerType: record.providerType,
+                    status: record.status,
+                  });
+                }}
+              >
+                编辑
+              </Button>
+              <Popconfirm
+                title="确定删除该 HTTP 渠道？"
+                description="仍被文件夹绑定或授权绑定时后端会拒绝删除。"
+                disabled={!canEditChannel}
+                onConfirm={async () => {
+                  try {
+                    await storageApi.deleteHttpChannel(record.id!);
+                    message.success('已删除');
+                    loadConfigs();
+                  } catch (e: unknown) {
+                    message.error((e as Error).message);
+                  }
+                }}
+              >
+                <Button size="small" danger disabled={!canEditChannel} icon={<DeleteOutlined />} />
+              </Popconfirm>
+            </Space>
+          );
+        }
+        return (
+          <Space>
+            <Button
+              size="small"
+              icon={<ExperimentOutlined />}
+              disabled={!canEdit}
+              onClick={() => testConfig(record)}
+            >
+              测试
+            </Button>
+            <Button
+              size="small"
+              icon={<StarOutlined />}
+              disabled={!canEdit}
+              onClick={async () => {
+                await storageApi.setDefaultConfig(record.id!);
+                message.success('已设为默认');
                 loadConfigs();
-              } catch (e: unknown) {
-                message.error((e as Error).message);
-              }
-            }}
-          >
-            <Button size="small" danger disabled={!canEdit} icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
+              }}
+            >
+              设默认
+            </Button>
+            <Button
+              size="small"
+              disabled={!canEdit}
+              onClick={() => {
+                const editing = { ...record } as StorageConfig;
+                const opts = parseOptions(record.providerOptions);
+                // Secret 打码回显：留空即保持不变（四类密钥字段统一处理）
+                delete opts.secretAccessKey;
+                delete opts.secretKey;
+                delete opts.accessKeySecret;
+                delete opts.password;
+                delete opts.tokenKey;
+                setConfigModal({ open: true, editing });
+                configForm.setFieldsValue({
+                  name: editing.name,
+                  chatId: editing.chatId,
+                  workerBaseUrl: editing.workerBaseUrl,
+                  providerOptions: OBJECT_PROVIDERS.includes(record.providerType || 'TELEGRAM')
+                    ? opts
+                    : undefined,
+                  maxFileSize: editing.maxFileSize,
+                  remark: editing.remark,
+                  status: editing.status,
+                });
+              }}
+            >
+              编辑
+            </Button>
+            <Popconfirm
+              title="确定删除该配置？"
+              disabled={!canEdit}
+              onConfirm={async () => {
+                try {
+                  await storageApi.deleteConfig(record.id!);
+                  message.success('已删除');
+                  loadConfigs();
+                } catch (e: unknown) {
+                  message.error((e as Error).message);
+                }
+              }}
+            >
+              <Button size="small" danger disabled={!canEdit} icon={<DeleteOutlined />} />
+            </Popconfirm>
+          </Space>
+        );
+      },
     },
   ];
 
   const folderColumns = [
     { title: '路径', dataIndex: 'folderPath', ellipsis: true },
+    {
+      title: '存储绑定',
+      key: 'bindings',
+      ellipsis: true,
+      render: (_: unknown, r: StorageFolder) =>
+        r.configs?.length ? (
+          <Space size={4} wrap>
+            {r.configs.map((c) => (
+              <Tag key={c.configId} color={c.configStatus === 'ENABLED' ? 'blue' : 'default'}>
+                {c.configName || `#${c.configId}`}·{c.priority}
+              </Tag>
+            ))}
+            {r.storageStrategy === 'ROUND_ROBIN' && <Tag color="purple">轮询</Tag>}
+          </Space>
+        ) : (
+          <Tag color="red">未绑定（禁止上传）</Tag>
+        ),
+    },
     {
       title: '可见性',
       dataIndex: 'visibility',
@@ -713,64 +940,114 @@ export default function StoragePage() {
     <div className="space-y-4">
       <PageHeader
         title="文件存储"
-        description="支持 Telegram（Worker 中转）、Cloudflare R2、S3 兼容存储（AWS/MinIO/七牛）、腾讯云 COS、阿里云 OSS、又拍云；文件由浏览器直传目标存储，Astral 只管理权限与元数据"
+        description="先建存储配置（含自定义 HTTP 图床），再在文件夹上绑定配置并授权；文件由浏览器直传目标存储，Astral 只管理权限与元数据"
       />
 
-      <Alert
-        style={{ marginBottom: 16 }}
-        type="info"
-        showIcon
-        message="Bot Token / Access Key 只进入对应存储端，不经过本系统；公开文件可生成永久直链，私有文件只发短时签名地址。"
-      />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard
+          size="compact"
+          label="存储配置"
+          value={String(overview?.configCount ?? '-')}
+          sub={`启用 ${overview?.enabledConfigCount ?? '-'} 个`}
+        />
+        <StatCard
+          size="compact"
+          label="异常渠道"
+          value={String(overview?.downConfigCount ?? '-')}
+          tone={overview ? (overview.downConfigCount > 0 ? 'danger' : 'success') : 'normal'}
+          sub={
+            overview && overview.downConfigCount > 0 ? '测试消息见存储配置页签' : '健康探测全部正常'
+          }
+        />
+        <StatCard
+          size="compact"
+          label="文件夹"
+          value={String(overview?.folderCount ?? '-')}
+          sub="含上传策略与授权"
+        />
+        <StatCard
+          size="compact"
+          label="文件"
+          value={String(overview?.fileCount ?? '-')}
+          sub="已登记对象"
+        />
+      </div>
 
       <Card>
         <Tabs
           items={[
             {
-              key: 'files',
-              label: '文件管理',
-              children: <FileManager admin canEdit={canEdit} />,
+              key: 'configs',
+              label: '存储配置',
+              children: (
+                <div className="space-y-3">
+                  <FilterBar
+                    actions={
+                      <>
+                        <Button icon={<ReloadOutlined />} onClick={loadConfigs}>
+                          刷新
+                        </Button>
+                        {canEdit && (
+                          <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => {
+                              setConfigModal({ open: true });
+                              configForm.resetFields();
+                            }}
+                          >
+                            新建配置
+                          </Button>
+                        )}
+                      </>
+                    }
+                  >
+                    <span className="text-sm text-[color:var(--color-text-tertiary)]">
+                      凭据只进入对应存储端；公开文件可生成永久直链，私有文件只发短时签名地址。
+                    </span>
+                  </FilterBar>
+                  <PagedTable files={configs} columns={configColumns} rowKey="id" />
+                </div>
+              ),
             },
             {
               key: 'folders',
               label: '文件夹与授权',
               children: (
-                <div>
-                  <div style={{ marginBottom: 12 }}>
-                    {canEdit && (
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => openFolderModal()}
-                      >
-                        新建文件夹
-                      </Button>
-                    )}
-                  </div>
+                <div className="space-y-3">
+                  <FilterBar
+                    actions={
+                      <>
+                        <Button icon={<ReloadOutlined />} onClick={loadFolders}>
+                          刷新
+                        </Button>
+                        {canEdit && (
+                          <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => openFolderModal()}
+                          >
+                            新建文件夹
+                          </Button>
+                        )}
+                      </>
+                    }
+                  >
+                    <span className="text-sm text-[color:var(--color-text-tertiary)]">
+                      文件夹可绑定多个存储配置按优先级调度；未绑定任何配置时禁止上传。
+                    </span>
+                  </FilterBar>
                   <PagedTable files={folders} columns={folderColumns} rowKey="id" />
                 </div>
               ),
             },
             {
-              key: 'configs',
-              label: '存储配置',
+              key: 'files',
+              label: '文件管理',
               children: (
-                <div>
-                  <div style={{ marginBottom: 12 }}>
-                    {canEdit && (
-                      <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => {
-                          setConfigModal({ open: true });
-                          configForm.resetFields();
-                        }}
-                      >
-                        新建配置
-                      </Button>
-                    )}
-                  </div>
-                  <PagedTable files={configs} columns={configColumns} rowKey="id" />
+                <div className="space-y-4">
+                  {canEdit && <ServerSideUpload canUpload={canEdit} />}
+                  <FileManager admin canEdit={canEdit} />
                 </div>
               ),
             },
@@ -788,10 +1065,10 @@ export default function StoragePage() {
                       options={folders
                         .filter((f) => f.status === 'ENABLED')
                         .map((f) => {
-                          const cfg = f.storageConfigId
-                            ? configs.find((c) => c.id === f.storageConfigId)
-                            : configs.find((c) => c.isDefault === 1);
-                          const p = cfg?.providerType || 'TELEGRAM';
+                          const cfg = f.resolvedConfigId
+                            ? configs.find((c) => c.id === f.resolvedConfigId)
+                            : undefined;
+                          const p = cfg?.providerType || f.resolvedProviderType || 'TELEGRAM';
                           const label = `${f.folderPath || f.folderName}（${p === 'TELEGRAM' ? 'Telegram' : p === 'S3_COMPATIBLE' ? 'S3' : p === 'QINIU' ? '七牛' : p === 'COS' ? '腾讯COS' : p === 'OSS' ? '阿里OSS' : p === 'UPYUN' ? '又拍云' : p}）`;
                           return { label, value: f.id! };
                         })}
@@ -890,14 +1167,14 @@ export default function StoragePage() {
               key: 'tasks',
               label: '任务',
               children: (
-                <div>
-                  <Button
-                    icon={<ReloadOutlined />}
-                    style={{ marginBottom: 12 }}
-                    onClick={loadTasks}
-                  >
-                    刷新
-                  </Button>
+                <div className="space-y-3">
+                  <FilterBar
+                    actions={
+                      <Button icon={<ReloadOutlined />} onClick={loadTasks}>
+                        刷新
+                      </Button>
+                    }
+                  />
                   <PagedTable
                     files={tasks}
                     rowKey="id"
@@ -927,14 +1204,14 @@ export default function StoragePage() {
               key: 'audit',
               label: '审计',
               children: (
-                <div>
-                  <Button
-                    icon={<ReloadOutlined />}
-                    style={{ marginBottom: 12 }}
-                    onClick={loadAudits}
-                  >
-                    刷新
-                  </Button>
+                <div className="space-y-3">
+                  <FilterBar
+                    actions={
+                      <Button icon={<ReloadOutlined />} onClick={loadAudits}>
+                        刷新
+                      </Button>
+                    }
+                  />
                   <PagedTable
                     files={audits}
                     rowKey="id"
@@ -986,8 +1263,36 @@ export default function StoragePage() {
         onCancel={() => setConfigModal({ open: false })}
         okButtonProps={{ disabled: !canEdit }}
         destroyOnClose
+        width={760}
+        footer={
+          isHttpChannelConfig || configModal.editing?.providerType === 'CUSTOM_HTTP'
+            ? [
+                <Button
+                  key="validate"
+                  type="link"
+                  disabled={httpBusy || !canEditChannel}
+                  onClick={() => void httpEditorRef.current?.validateOffline()}
+                >
+                  离线校验
+                </Button>,
+                <Button key="cancel" onClick={() => setConfigModal({ open: false })}>
+                  取消
+                </Button>,
+                <Button
+                  key="ok"
+                  type="primary"
+                  loading={httpBusy}
+                  disabled={!canEditChannel}
+                  onClick={() => void submitConfig()}
+                >
+                  确定
+                </Button>,
+              ]
+            : undefined
+        }
       >
         <Form form={configForm} layout="vertical">
+          <p className="text-sm font-medium">基本信息</p>
           <Form.Item
             name="name"
             label="配置名称"
@@ -1004,12 +1309,17 @@ export default function StoragePage() {
               name="providerType"
               label="存储类型"
               initialValue="TELEGRAM"
-              extra="TELEGRAM 经 Cloudflare Worker 中转；R2/S3/七牛走 S3 预签名 PUT；COS/OSS 走各自预签名 PUT；又拍云走表单直传"
+              extra="第三方 HTTP 接口：填好名称后点「确定」进入专用渠道编辑器；其余：TELEGRAM 经 Cloudflare Worker 中转，R2/S3/七牛走 S3 预签名 PUT，COS/OSS 走各自预签名 PUT，又拍云走表单直传"
             >
               <Select options={dict['storage_provider_type'] || []} />
             </Form.Item>
           )}
-          {!isObjectConfig ? (
+          {!isObjectConfig && !isHttpChannelConfig ? (
+            <p className="mt-1 text-sm font-medium">目标存储（Telegram）</p>
+          ) : isHttpChannelConfig ? null : (
+            <p className="mt-1 text-sm font-medium">目标存储</p>
+          )}
+          {!isObjectConfig && !isHttpChannelConfig ? (
             <>
               <Form.Item
                 name="chatId"
@@ -1028,7 +1338,7 @@ export default function StoragePage() {
                 <Input placeholder="https://img.example.com" />
               </Form.Item>
             </>
-          ) : isS3Config ? (
+          ) : isHttpChannelConfig ? null : isS3Config ? (
             <>
               <Form.Item
                 name={['providerOptions', 'endpoint']}
@@ -1217,16 +1527,31 @@ export default function StoragePage() {
               </Form.Item>
             </>
           )}
-          <Form.Item name="maxFileSize" label="单文件上限（字节，留空使用全局 20MiB）">
-            <InputNumber
-              style={{ width: '100%' }}
-              min={1}
-              max={isObjectConfig ? 5368709120 : 20971520}
-            />
-          </Form.Item>
-          <Form.Item name="remark" label="备注">
-            <Input maxLength={256} />
-          </Form.Item>
+          {isHttpChannelConfig ? (
+            <div style={{ marginTop: 8 }}>
+              <HttpChannelEditorFields
+                ref={httpEditorRef}
+                mode={configModal.editing?.id ? 'edit' : 'create'}
+                channel={httpChannelDetail}
+                approvedTargets={httpApprovedTargets}
+                onBusyChange={setHttpBusy}
+              />
+            </div>
+          ) : (
+            <>
+              <p className="mt-1 text-sm font-medium">其他设置</p>
+              <Form.Item name="maxFileSize" label="单文件上限（字节，留空使用全局 20MiB）">
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={1}
+                  max={isObjectConfig ? 5368709120 : 20971520}
+                />
+              </Form.Item>
+              <Form.Item name="remark" label="备注">
+                <Input maxLength={256} />
+              </Form.Item>
+            </>
+          )}
         </Form>
       </Modal>
 
@@ -1235,11 +1560,13 @@ export default function StoragePage() {
         title={folderModal.editing ? '编辑文件夹' : '新建文件夹'}
         open={folderModal.open}
         onOk={submitFolder}
-        onCancel={() => setFolderModal({ open: false })}
+        onCancel={() => setFolderModal({ open: false, bindings: [], strategy: 'FAILOVER' })}
         okButtonProps={{ disabled: !canEdit }}
         destroyOnClose
+        width={760}
       >
         <Form form={folderForm} layout="vertical">
+          <p className="text-sm font-medium">基本信息</p>
           <Form.Item name="parentId" label="父文件夹（可选）">
             <Select
               allowClear
@@ -1256,16 +1583,85 @@ export default function StoragePage() {
           <Form.Item name="visibility" label="默认可见性" initialValue="PRIVATE">
             <Select options={dict['storage_visibility'] || []} />
           </Form.Item>
-          {!folderModal.editing && (
-            <Form.Item name="configId" label="存储配置（可选，默认使用默认配置）">
-              <Select
-                allowClear
-                options={configs
-                  .filter((c) => c.status === 'ENABLED')
-                  .map((c) => ({ label: c.name, value: c.id! }))}
-              />
-            </Form.Item>
-          )}
+          <p className="mt-1 text-sm font-medium">存储绑定与调度</p>
+          <Form.Item label="存储绑定（可多选；空 = 禁止上传，不再回落默认配置）">
+            <Space direction="vertical" style={{ width: '100%' }} size={8}>
+              {folderModal.bindings.length === 0 && (
+                <span style={{ color: '#f56c6c' }}>未绑定任何存储配置：该文件夹将禁止上传</span>
+              )}
+              {folderModal.bindings.map((b, idx) => (
+                <Space key={idx} wrap>
+                  <Select
+                    style={{ width: 260 }}
+                    placeholder="选择存储配置"
+                    value={b.storageConfigId}
+                    options={configs
+                      .filter((c) => c.status === 'ENABLED')
+                      .map((c) => ({ label: c.name, value: c.id! }))}
+                    onChange={(v) =>
+                      setFolderModal((m) => ({
+                        ...m,
+                        bindings: m.bindings.map((row, i) =>
+                          i === idx ? { ...row, storageConfigId: v } : row,
+                        ),
+                      }))
+                    }
+                  />
+                  <InputNumber
+                    style={{ width: 140 }}
+                    min={0}
+                    max={10000}
+                    placeholder="优先级"
+                    value={b.priority ?? 100}
+                    onChange={(v) =>
+                      setFolderModal((m) => ({
+                        ...m,
+                        bindings: m.bindings.map((row, i) =>
+                          i === idx ? { ...row, priority: v ?? 100 } : row,
+                        ),
+                      }))
+                    }
+                  />
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() =>
+                      setFolderModal((m) => ({
+                        ...m,
+                        bindings: m.bindings.filter((_, i) => i !== idx),
+                      }))
+                    }
+                  />
+                </Space>
+              ))}
+              <Button
+                type="dashed"
+                size="small"
+                icon={<PlusOutlined />}
+                disabled={folderModal.bindings.length >= 16}
+                onClick={() =>
+                  setFolderModal((m) => ({
+                    ...m,
+                    bindings: [...m.bindings, { storageConfigId: undefined, priority: 100 }],
+                  }))
+                }
+              >
+                添加绑定
+              </Button>
+              <span style={{ color: '#909399' }}>
+                优先级 0–10000，数值小者优先；FAILOVER 按优先级故障转移，ROUND_ROBIN 同层轮询。
+              </span>
+            </Space>
+          </Form.Item>
+          <Form.Item label="调度策略">
+            <Select
+              style={{ width: 260 }}
+              value={folderModal.strategy}
+              options={dict['storage_target_strategy'] || []}
+              onChange={(v) => setFolderModal((m) => ({ ...m, strategy: v }))}
+            />
+          </Form.Item>
           <Form.Item
             name="policyEnabled"
             label="上传策略"
@@ -1363,56 +1759,109 @@ export default function StoragePage() {
         okButtonProps={{ disabled: !canEdit }}
       >
         <p style={{ color: '#909399' }}>
-          授权为全量替换；权限集合：READ / UPLOAD / UPDATE / DELETE / MANAGE。 Qt 等插件调用方使用
-          PLUGIN 主体（预留）。
+          授权为全量替换；权限集合：READ / UPLOAD / UPDATE / DELETE /
+          MANAGE。可选「限定配置」必须是该文件夹绑定的子集，留空 = 跟随文件夹绑定。 Qt
+          等插件调用方使用 PLUGIN 主体（预留）。
         </p>
         {permModal.rows.map((row, idx) => (
-          <Space key={idx} style={{ display: 'flex', marginBottom: 8 }}>
-            <Select
-              style={{ width: 110 }}
-              value={row.subjectType}
-              options={dict['storage_subject_type'] || []}
-              onChange={(v) =>
-                setPermModal((m) => ({
-                  ...m,
-                  rows: m.rows.map((r, i) => (i === idx ? { ...r, subjectType: v } : r)),
-                }))
-              }
-            />
-            <Input
-              style={{ width: 160 }}
-              placeholder="主体 ID（用户ID）"
-              value={row.subjectId}
-              onChange={(e) =>
-                setPermModal((m) => ({
-                  ...m,
-                  rows: m.rows.map((r, i) => (i === idx ? { ...r, subjectId: e.target.value } : r)),
-                }))
-              }
-            />
-            <Select
-              style={{ width: 220 }}
-              mode="multiple"
-              placeholder="权限"
-              options={dict['storage_permission'] || []}
-              value={(row.permissions || '').split(',').filter(Boolean)}
-              onChange={(v) =>
-                setPermModal((m) => ({
-                  ...m,
-                  rows: m.rows.map((r, i) => (i === idx ? { ...r, permissions: v.join(',') } : r)),
-                }))
-              }
-            />
-            <Button
-              danger
-              disabled={!canEdit}
-              onClick={() =>
-                setPermModal((m) => ({ ...m, rows: m.rows.filter((_, i) => i !== idx) }))
-              }
-            >
-              移除
-            </Button>
-          </Space>
+          <div
+            key={row.key ?? `row-${idx}`}
+            style={{
+              border: '1px solid #f0f0f0',
+              borderRadius: 6,
+              padding: 8,
+              marginBottom: 8,
+            }}
+          >
+            <Space style={{ display: 'flex' }}>
+              <Select
+                style={{ width: 110 }}
+                value={row.subjectType}
+                options={dict['storage_subject_type'] || []}
+                onChange={(v) =>
+                  setPermModal((m) => ({
+                    ...m,
+                    rows: m.rows.map((r, i) => (i === idx ? { ...r, subjectType: v } : r)),
+                  }))
+                }
+              />
+              <Input
+                style={{ width: 160 }}
+                placeholder="主体 ID（用户ID）"
+                value={row.subjectId}
+                onChange={(e) =>
+                  setPermModal((m) => ({
+                    ...m,
+                    rows: m.rows.map((r, i) =>
+                      i === idx ? { ...r, subjectId: e.target.value } : r,
+                    ),
+                  }))
+                }
+              />
+              <Select
+                style={{ width: 220 }}
+                mode="multiple"
+                placeholder="权限"
+                options={dict['storage_permission'] || []}
+                value={(row.permissions || '').split(',').filter(Boolean)}
+                onChange={(v) =>
+                  setPermModal((m) => ({
+                    ...m,
+                    rows: m.rows.map((r, i) =>
+                      i === idx ? { ...r, permissions: v.join(',') } : r,
+                    ),
+                  }))
+                }
+              />
+              <Button
+                danger
+                disabled={!canEdit}
+                onClick={() =>
+                  setPermModal((m) => ({ ...m, rows: m.rows.filter((_, i) => i !== idx) }))
+                }
+              >
+                移除
+              </Button>
+            </Space>
+            <Space style={{ display: 'flex', marginTop: 4 }}>
+              <Select
+                style={{ width: 320 }}
+                mode="multiple"
+                placeholder="限定配置（可选，必须是文件夹绑定的子集）"
+                options={(permModal.folder?.configs || []).map((c) => ({
+                  label: `${c.configName || `#${c.configId}`}（优先级 ${c.priority}）`,
+                  value: c.configId,
+                }))}
+                value={row.permConfigs || []}
+                disabled={!permModal.folder?.configs?.length}
+                onChange={(v) =>
+                  setPermModal((m) => ({
+                    ...m,
+                    rows: m.rows.map((r, i) => (i === idx ? { ...r, permConfigs: v } : r)),
+                  }))
+                }
+              />
+              <InputNumber
+                style={{ width: 140 }}
+                min={0}
+                max={10000}
+                placeholder="优先级"
+                value={row.permPriority ?? 100}
+                disabled={!(row.permConfigs || []).length}
+                onChange={(v) =>
+                  setPermModal((m) => ({
+                    ...m,
+                    rows: m.rows.map((r, i) => (i === idx ? { ...r, permPriority: v ?? 100 } : r)),
+                  }))
+                }
+              />
+            </Space>
+            {!permModal.folder?.configs?.length && (
+              <p style={{ color: '#f56c6c', marginBottom: 0 }}>
+                该文件夹未绑定存储配置，无法限定授权配置
+              </p>
+            )}
+          </div>
         ))}
         <Button
           type="dashed"
@@ -1422,7 +1871,16 @@ export default function StoragePage() {
           onClick={() =>
             setPermModal((m) => ({
               ...m,
-              rows: [...m.rows, { subjectType: 'USER', subjectId: '', permissions: 'READ,UPLOAD' }],
+              rows: [
+                ...m.rows,
+                {
+                  subjectType: 'USER',
+                  subjectId: '',
+                  permissions: 'READ,UPLOAD',
+                  permConfigs: [],
+                  permPriority: 100,
+                },
+              ],
             }))
           }
         >

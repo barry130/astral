@@ -1,0 +1,83 @@
+{
+  "tableName": "sys_storage_permission_config",
+  "tableComment": "授权存储配置绑定表(须为文件夹绑定的子集,空=跟随文件夹)",
+  "moduleName": "storage",
+  "className": "StoragePermissionConfigEntity",
+  "fields": [
+    {
+      "columnName": "id",
+      "fieldName": "id",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "主键ID",
+      "isPrimaryKey": true,
+      "isAutoIncrement": false,
+      "mybatisPlusIdType": "INPUT"
+    },
+    {
+      "columnName": "permission_id",
+      "fieldName": "permissionId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "授权记录ID(sys_storage_folder_permission.id)",
+      "isRequired": true
+    },
+    {
+      "columnName": "storage_config_id",
+      "fieldName": "storageConfigId",
+      "fieldType": "Long",
+      "jdbcType": "BIGINT",
+      "comment": "存储配置ID",
+      "isRequired": true
+    },
+    {
+      "columnName": "priority",
+      "fieldName": "priority",
+      "fieldType": "Integer",
+      "jdbcType": "INTEGER",
+      "comment": "优先级(0-10000,小值优先)",
+      "isRequired": true,
+      "defaultValue": "100"
+    },
+    {
+      "columnName": "create_time",
+      "fieldName": "createTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "创建时间",
+      "isAutoFill": "INSERT"
+    },
+    {
+      "columnName": "update_time",
+      "fieldName": "updateTime",
+      "fieldType": "LocalDateTime",
+      "jdbcType": "TIMESTAMP",
+      "comment": "更新时间",
+      "isAutoFill": "INSERT_UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexName": "uk_storage_permission_config",
+      "columns": [
+        "permission_id",
+        "storage_config_id"
+      ],
+      "unique": true
+    },
+    {
+      "indexName": "idx_storage_permission_config_order",
+      "columns": [
+        "permission_id",
+        "priority",
+        "id"
+      ]
+    },
+    {
+      "indexName": "idx_storage_permission_config_config",
+      "columns": [
+        "storage_config_id"
+      ]
+    }
+  ]
+}

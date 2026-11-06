@@ -8,11 +8,6 @@ import com.astral.storage.mapper.StorageFileMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import jakarta.annotation.Resource;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -21,6 +16,10 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 存储配置服务（多 Provider：TELEGRAM Worker 直连 / R2 / S3 兼容 / 腾讯 COS / 阿里 OSS / 七牛 S3 网关 / 又拍云）
@@ -38,6 +37,12 @@ public class StorageConfigService {
 
     @Resource
     private StorageFileMapper fileMapper;
+
+    @Resource
+    private com.astral.storage.mapper.StorageFolderConfigMapper folderConfigMapper;
+
+    @Resource
+    private com.astral.storage.mapper.StoragePermissionConfigMapper permissionConfigMapper;
 
     @Resource
     private StorageAuditService auditService;
@@ -68,20 +73,33 @@ public class StorageConfigService {
         List<StorageConfigEntity> list = configMapper.selectList(new LambdaQueryWrapper<StorageConfigEntity>()
                 .orderByDesc(StorageConfigEntity::getIsDefault)
                 .orderByAsc(StorageConfigEntity::getId));
-        list.forEach(this::redactSecret);
+        list.replaceAll(this::safeForOutput);
         return list;
     }
 
     public Page<StorageConfigEntity> page(long current, long size) {
-        Page<StorageConfigEntity> result = configMapper.selectPage(new Page<>(current, size),
+        Page<StorageConfigEntity> result = configMapper.selectPage(
+                new Page<>(current, size),
                 new LambdaQueryWrapper<StorageConfigEntity>()
                         .orderByDesc(StorageConfigEntity::getIsDefault)
                         .orderByAsc(StorageConfigEntity::getId));
-        result.getRecords().forEach(this::redactSecret);
+        result.getRecords().replaceAll(this::safeForOutput);
         return result;
     }
 
+    /**
+     * 读取配置（对外安全视图）。
+     *
+     * <p>CUSTOM_HTTP 只返回安全摘要副本：{@code providerOptions} 里是凭据信封，
+     * 旧任务/文件链路仍可能直接复用返回实体，不能让它带出明文（设计 §4.1）。
+     * 服务端内部需要完整原始行的调用方请用 {@link #requireConfig(Long)}。</p>
+     */
     public StorageConfigEntity getById(Long id) {
+        return safeForOutput(requireConfig(id));
+    }
+
+    /** 读取配置原始行：仅供服务端内部使用，绝不可直接作为接口响应 */
+    private StorageConfigEntity requireConfig(Long id) {
         StorageConfigEntity config = configMapper.selectById(id);
         if (config == null) {
             throw new BusinessException("STORAGE002");
@@ -102,6 +120,8 @@ public class StorageConfigService {
         if (req.name() == null || req.name().isBlank() || req.name().length() > 128) {
             throw new BusinessException("COMMON002", "配置名称不能为空且不超过 128 字符");
         }
+        // CUSTOM_HTTP 走新渠道链（HttpStorageConfigService），旧 CRUD 一律 STORAGE039
+        requireLegacyProviderType(req.providerType());
         String providerType = normalizeProvider(req.providerType());
         Long exists = configMapper.selectCount(new LambdaQueryWrapper<StorageConfigEntity>()
                 .eq(StorageConfigEntity::getName, req.name().trim()));
@@ -126,13 +146,20 @@ public class StorageConfigService {
         config.setUpdateBy(operator);
         configMapper.insert(config);
         configCache.evictAll();
-        auditService.record("CONFIG_CREATE", "USER", operator, "CONFIG", String.valueOf(config.getId()),
-                "name=" + config.getName() + " provider=" + providerType, "OK");
+        auditService.record(
+                "CONFIG_CREATE",
+                "USER",
+                operator,
+                "CONFIG",
+                String.valueOf(config.getId()),
+                "name=" + config.getName() + " provider=" + providerType,
+                "OK");
         return redactSecret(config);
     }
 
     public StorageConfigEntity update(Long id, StorageDtos.ConfigUpdateReq req, String operator) {
-        StorageConfigEntity config = getById(id);
+        StorageConfigEntity config = requireConfig(id);
+        requireLegacyProvider(config);
         String providerType = normalizeProvider(config.getProviderType());
         String optionsJson = validateAndNormalizeOptions(providerType, req.providerOptions(), config);
         if (StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)) {
@@ -164,16 +191,30 @@ public class StorageConfigService {
     }
 
     public void delete(Long id, String operator) {
-        StorageConfigEntity config = getById(id);
+        StorageConfigEntity config = requireConfig(id);
+        // CUSTOM_HTTP 的引用检查（文件/文件夹绑定/授权绑定）在新渠道链路里，旧路由直接拒绝
+        requireLegacyProvider(config);
         Long fileCount = fileMapper.selectCount(new LambdaQueryWrapper<com.astral.storage.entity.StorageFileEntity>()
                 .eq(com.astral.storage.entity.StorageFileEntity::getStorageConfigId, id));
         if (fileCount != null && fileCount > 0) {
             throw new BusinessException("COMMON002", "该配置仍被 " + fileCount + " 个文件引用，无法删除");
         }
+        Long folderBindingCount = folderConfigMapper.selectCount(
+                new LambdaQueryWrapper<com.astral.storage.entity.StorageFolderConfigEntity>()
+                        .eq(com.astral.storage.entity.StorageFolderConfigEntity::getStorageConfigId, id));
+        if (folderBindingCount != null && folderBindingCount > 0) {
+            throw new BusinessException("COMMON002", "该配置仍被 " + folderBindingCount + " 个文件夹绑定引用，无法删除");
+        }
+        Long grantBindingCount = permissionConfigMapper.selectCount(
+                new LambdaQueryWrapper<com.astral.storage.entity.StoragePermissionConfigEntity>()
+                        .eq(com.astral.storage.entity.StoragePermissionConfigEntity::getStorageConfigId, id));
+        if (grantBindingCount != null && grantBindingCount > 0) {
+            throw new BusinessException("COMMON002", "该配置仍被 " + grantBindingCount + " 个授权绑定引用，无法删除");
+        }
         configMapper.deleteById(id);
         configCache.evictAll();
-        auditService.record("CONFIG_DELETE", "USER", operator, "CONFIG", String.valueOf(id),
-                "name=" + config.getName(), "OK");
+        auditService.record(
+                "CONFIG_DELETE", "USER", operator, "CONFIG", String.valueOf(id), "name=" + config.getName(), "OK");
     }
 
     /**
@@ -183,14 +224,18 @@ public class StorageConfigService {
      */
     private void purgeConfigWorkerCache(StorageConfigEntity config) {
         try {
-            List<com.astral.storage.entity.StorageFileEntity> files = fileMapper.selectList(
-                    new LambdaQueryWrapper<com.astral.storage.entity.StorageFileEntity>()
+            List<com.astral.storage.entity.StorageFileEntity> files =
+                    fileMapper.selectList(new LambdaQueryWrapper<com.astral.storage.entity.StorageFileEntity>()
                             .eq(com.astral.storage.entity.StorageFileEntity::getStorageConfigId, config.getId())
-                            .eq(com.astral.storage.entity.StorageFileEntity::getStatus,
+                            .eq(
+                                    com.astral.storage.entity.StorageFileEntity::getStatus,
                                     com.astral.storage.entity.StorageFileEntity.STATUS_AVAILABLE));
             for (com.astral.storage.entity.StorageFileEntity file : files) {
-                workerCachePurgeService.purgeFileAsync(config, file.getPublicId(),
-                        file.getContentVersion() == null ? 1L : file.getContentVersion(), null);
+                workerCachePurgeService.purgeFileAsync(
+                        config,
+                        file.getPublicId(),
+                        file.getContentVersion() == null ? 1L : file.getContentVersion(),
+                        null);
             }
             log.info("[Storage] 配置停用，已触发 Worker 缓存失效: configId={}, files={}", config.getId(), files.size());
         } catch (Exception e) {
@@ -200,13 +245,17 @@ public class StorageConfigService {
 
     /** 设为默认配置（全表唯一默认） */
     public void setDefault(Long id, String operator) {
-        getById(id);
-        configMapper.update(null, new LambdaUpdateWrapper<StorageConfigEntity>()
-                .eq(StorageConfigEntity::getIsDefault, 1)
-                .set(StorageConfigEntity::getIsDefault, 0));
-        configMapper.update(null, new LambdaUpdateWrapper<StorageConfigEntity>()
-                .eq(StorageConfigEntity::getId, id)
-                .set(StorageConfigEntity::getIsDefault, 1));
+        requireLegacyProvider(requireConfig(id));
+        configMapper.update(
+                null,
+                new LambdaUpdateWrapper<StorageConfigEntity>()
+                        .eq(StorageConfigEntity::getIsDefault, 1)
+                        .set(StorageConfigEntity::getIsDefault, 0));
+        configMapper.update(
+                null,
+                new LambdaUpdateWrapper<StorageConfigEntity>()
+                        .eq(StorageConfigEntity::getId, id)
+                        .set(StorageConfigEntity::getIsDefault, 1));
         configCache.evictAll();
         auditService.record("CONFIG_SET_DEFAULT", "USER", operator, "CONFIG", String.valueOf(id), null, "OK");
     }
@@ -217,7 +266,9 @@ public class StorageConfigService {
      * 只发出小体积请求，不涉及文件内容。
      */
     public StorageDtos.ConfigTestResp test(Long id, String operator) {
-        StorageConfigEntity config = getById(id);
+        StorageConfigEntity config = requireConfig(id);
+        // CUSTOM_HTTP 的真实测试走 POST /http-configs/{id}/test，旧路由直接拒绝
+        requireLegacyProvider(config);
         String providerType = normalizeProvider(config.getProviderType());
         String message;
         String botUsername = null;
@@ -227,7 +278,8 @@ public class StorageConfigService {
                 HttpClient client = HttpClient.newBuilder()
                         .connectTimeout(Duration.ofSeconds(5))
                         .build();
-                HttpRequest request = HttpRequest.newBuilder(URI.create(stripTrailingSlash(config.getWorkerBaseUrl()) + "/healthz"))
+                HttpRequest request = HttpRequest.newBuilder(
+                                URI.create(stripTrailingSlash(config.getWorkerBaseUrl()) + "/healthz"))
                         .timeout(Duration.ofSeconds(8))
                         .GET()
                         .build();
@@ -303,13 +355,15 @@ public class StorageConfigService {
      * S3 系（R2/S3/七牛）校验 S3 必填项，COS/OSS/UPYUN 校验各自必填项；
      * 密钥字段（secretAccessKey/secretKey/accessKeySecret/password）为空或打码值时沿用已存值。
      */
-    private String validateAndNormalizeOptions(String providerType, java.util.Map<String, String> options,
-                                               StorageConfigEntity existing) {
+    private String validateAndNormalizeOptions(
+            String providerType, java.util.Map<String, String> options, StorageConfigEntity existing) {
         if (StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)) {
             return null;
         }
         java.util.Map<String, String> merged = new java.util.HashMap<>();
-        if (existing != null && existing.getProviderOptions() != null && !existing.getProviderOptions().isBlank()) {
+        if (existing != null
+                && existing.getProviderOptions() != null
+                && !existing.getProviderOptions().isBlank()) {
             try {
                 JsonNode old = objectMapper.readTree(existing.getProviderOptions());
                 old.propertyNames().forEach(n -> merged.put(n, old.path(n).asText(null)));
@@ -392,7 +446,10 @@ public class StorageConfigService {
 
     private String oldOption(StorageConfigEntity existing, String field) {
         try {
-            return objectMapper.readTree(existing.getProviderOptions()).path(field).asText(null);
+            return objectMapper
+                    .readTree(existing.getProviderOptions())
+                    .path(field)
+                    .asText(null);
         } catch (Exception e) {
             return null;
         }
@@ -404,7 +461,8 @@ public class StorageConfigService {
             try {
                 JsonNode node = objectMapper.readTree(config.getProviderOptions());
                 boolean changed = false;
-                for (String field : new String[]{"secretAccessKey", "secretKey", "accessKeySecret", "password", "tokenKey"}) {
+                for (String field :
+                        new String[] {"secretAccessKey", "secretKey", "accessKeySecret", "password", "tokenKey"}) {
                     if (node.hasNonNull(field)) {
                         ((tools.jackson.databind.node.ObjectNode) node).put(field, "******");
                         changed = true;
@@ -418,6 +476,45 @@ public class StorageConfigService {
             }
         }
         return config;
+    }
+
+    /**
+     * 接口出参总入口：CUSTOM_HTTP 返回安全摘要副本（{@code provider_options} 是凭据信封，
+     * 连摘要都不外泄），其余 Provider 沿用字段打码。
+     */
+    private StorageConfigEntity safeForOutput(StorageConfigEntity config) {
+        String type = config.getProviderType();
+        if (type == null || !StorageConfigEntity.PROVIDER_CUSTOM_HTTP.equalsIgnoreCase(type.trim())) {
+            return redactSecret(config);
+        }
+        StorageConfigEntity safe = new StorageConfigEntity();
+        safe.setId(config.getId());
+        safe.setName(config.getName());
+        safe.setProviderType(config.getProviderType());
+        safe.setStatus(config.getStatus());
+        safe.setConfigVersion(config.getConfigVersion());
+        safe.setIsDefault(config.getIsDefault());
+        safe.setHealthStatus(config.getHealthStatus());
+        safe.setLastTestTime(config.getLastTestTime());
+        safe.setLastTestMessage(config.getLastTestMessage());
+        safe.setRemark(config.getRemark());
+        safe.setCreateBy(config.getCreateBy());
+        safe.setCreateTime(config.getCreateTime());
+        safe.setUpdateBy(config.getUpdateBy());
+        safe.setUpdateTime(config.getUpdateTime());
+        return safe;
+    }
+
+    /** 旧七家专属入口（create/update/test/default/delete）：CUSTOM_HTTP 一律 STORAGE039，改走新渠道服务 */
+    private static void requireLegacyProvider(StorageConfigEntity config) {
+        requireLegacyProviderType(config.getProviderType());
+    }
+
+    /** 同上，入参为请求体里的原始 providerType（create 时还没有实体） */
+    private static void requireLegacyProviderType(String providerType) {
+        if (providerType != null && StorageConfigEntity.PROVIDER_CUSTOM_HTTP.equalsIgnoreCase(providerType.trim())) {
+            throw new BusinessException("STORAGE039");
+        }
     }
 
     private void validateTelegram(String chatId, String workerBaseUrl) {

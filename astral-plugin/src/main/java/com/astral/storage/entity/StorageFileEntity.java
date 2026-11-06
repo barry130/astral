@@ -5,9 +5,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-
 import java.time.LocalDateTime;
+import lombok.Data;
 
 /**
  * 存储文件（sys_storage_file）
@@ -39,6 +38,9 @@ public class StorageFileEntity {
     private Long folderId;
 
     private Long storageConfigId;
+
+    /** 通过两步上传操作创建时的操作ID（sys_storage_upload_operation.id，旧直传路径为空）；唯一 */
+    private Long uploadOperationId;
 
     /** TELEGRAM */
     private String providerType;

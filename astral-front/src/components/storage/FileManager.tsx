@@ -65,6 +65,14 @@ export function hasFolderPermission(folder: MyStorageFolder | undefined, permiss
 function errorText(error: unknown) {
   return error instanceof Error ? error.message : '操作失败，请稍后重试';
 }
+/** 业务失败码：client.ts 把 errorCode 挂在 Error 实例上 */
+function errorCodeOf(error: unknown) {
+  if (error instanceof Error && 'errorCode' in error) {
+    const code = (error as Error & { errorCode?: unknown }).errorCode;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
+}
 function fileSize(bytes = 0) {
   if (bytes < 1024) return `${bytes} B`;
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), 4);
@@ -98,6 +106,8 @@ type QueueEntry = {
   file: File;
   folderId: number;
   folderName: string;
+  /** 当前文件夹解析出的渠道类型；CUSTOM_HTTP 走两段式上传，其余走浏览器直传凭证 */
+  providerType?: string;
   state: 'wait' | 'run' | 'ok' | 'fail';
   error?: string;
 };
@@ -180,7 +190,11 @@ export default function FileManager({
     (f) =>
       f.status === 'ENABLED' &&
       permission(f, 'UPLOAD') &&
-      moveFiles.every((file) => file.storageConfigId === f.storageConfigId),
+      // 移动目标必须绑定文件所在存储配置（与后端 move 校验一致）；文件无渠道信息时不在此过滤
+      moveFiles.every(
+        (file) =>
+          !file.storageConfigId || (f.bindingConfigIds || []).includes(file.storageConfigId),
+      ),
   );
 
   const loadFolders = useCallback(async () => {
@@ -195,10 +209,14 @@ export default function FileManager({
               parentId: f.parentId,
               folderName: f.folderName || '',
               folderPath: f.folderPath || '',
-              storageConfigId: f.storageConfigId!,
               visibility: f.visibility || '',
               status: f.status || '',
               myPermissions: 'ALL',
+              bindingConfigIds: (f.configs || []).map((c) => c.configId),
+              targetVersion: f.targetVersion,
+              resolvedConfigId: f.resolvedConfigId,
+              resolvedProviderType: f.resolvedProviderType,
+              resolvedTargetName: f.resolvedTargetName,
             }))
         : result.data || [];
       rows.sort((a, b) => a.folderPath.localeCompare(b.folderPath, 'zh-CN'));
@@ -344,12 +362,9 @@ export default function FileManager({
     setOperationError('');
     try {
       if (editor.type === 'new-folder') {
+        // 绑定模型：文件夹继承父文件夹的存储绑定（根目录走平台默认配置），不再单独选择目标
         const result = admin
-          ? await storageApi.createFolder({
-              parentId: folderId,
-              folderName: name.trim(),
-              configId: current?.storageConfigId,
-            })
+          ? await storageApi.createFolder({ parentId: folderId, folderName: name.trim() })
           : await storageApi.createMyFolder({ parentId: folderId, folderName: name.trim() });
         if (result.code !== 200) throw new Error(result.msg);
         toast.success('文件夹已创建');
@@ -380,7 +395,13 @@ export default function FileManager({
       setEditor(null);
       reload();
     } catch (error) {
-      setOperationError(errorText(error));
+      const code = errorCodeOf(error);
+      // 绑定/授权变更会让后端递增 targetVersion，旧快照写入会被 STORAGE047 拒绝：提示刷新目录
+      const hint =
+        code === 'STORAGE047'
+          ? '文件夹已被他人修改（目标版本冲突），请关闭弹窗后刷新目录再试'
+          : undefined;
+      setOperationError(hint ? `${hint}（${errorText(error)}）` : errorText(error));
     } finally {
       setBusy(false);
     }
@@ -456,7 +477,7 @@ export default function FileManager({
       for (let entry = pending.shift(); entry; entry = pending.shift()) {
         patch(entry.id, { state: 'run', error: undefined });
         try {
-          await uploadStorageFile(entry.folderId, entry.file, admin);
+          await uploadStorageFile(entry.folderId, entry.file, admin, entry.providerType);
           patch(entry.id, { state: 'ok' });
         } catch (error) {
           patch(entry.id, { state: 'fail', error: errorText(error) });
@@ -482,10 +503,34 @@ export default function FileManager({
       file,
       folderId,
       folderName: current!.folderPath,
+      providerType: current!.resolvedProviderType || undefined,
       state: 'wait',
     }));
     setQueue((previous) => [...previous.filter((e) => e.state !== 'ok'), ...entries]);
     void uploadEntries(entries);
+  };
+
+  /** 重试失败项：先重新拉目录解析类型（旧条目可能冻结了修复前的空值），再按最新 providerType 分流 */
+  const retryFailed = async () => {
+    const failed = queue.filter((q) => q.state === 'fail');
+    if (!failed.length) return;
+    try {
+      const result = admin ? await storageApi.listFolders() : await storageApi.listMyFolders();
+      if (result.code === 200) {
+        const rows = (result.data || []) as Pick<MyStorageFolder, 'id' | 'resolvedProviderType'>[];
+        const typeById = new Map<number, string | undefined>();
+        rows.forEach((f) => {
+          if (f.id != null) typeById.set(f.id, f.resolvedProviderType || undefined);
+        });
+        await uploadEntries(
+          failed.map((q) => ({ ...q, providerType: typeById.get(q.folderId) ?? q.providerType })),
+        );
+        return;
+      }
+    } catch {
+      // 目录拉取失败时按原条目直接重试，不阻塞用户
+    }
+    await uploadEntries(failed);
   };
 
   const fileActions = (file: StorageFile) => (
@@ -543,7 +588,7 @@ export default function FileManager({
         </DropdownMenuItem>
         <DropdownMenuItem
           className="text-destructive"
-          disabled={busy || !filePermission(file, 'DELETE') || file.status === 'DELETING'}
+          disabled={busy || !filePermission(file, 'DELETE')}
           onSelect={() => openEditor({ type: 'delete-files', ids: [file.publicId!] })}
         >
           <Trash2 />
@@ -1172,7 +1217,7 @@ export default function FileManager({
                   variant="outline"
                   size="sm"
                   disabled={uploading}
-                  onClick={() => void uploadEntries(queue.filter((q) => q.state === 'fail'))}
+                  onClick={() => void retryFailed()}
                 >
                   重试失败项
                 </Button>
@@ -1247,9 +1292,9 @@ export default function FileManager({
                 : editor?.type === 'delete-folder'
                   ? `删除「${editor.folder?.folderName}」。文件夹内必须没有文件和子文件夹。`
                   : editor?.type === 'move'
-                    ? '选择相同存储配置且有上传权限的目标文件夹。移动后现有文件链接保持有效。'
+                    ? '选择绑定了相同存储配置且有上传权限的目标文件夹。移动后现有文件链接保持有效。'
                     : editor?.type === 'new-folder'
-                      ? `创建位置：${current?.folderPath || '根目录'}。根目录文件夹使用默认存储。`
+                      ? `创建位置：${current?.folderPath || '根目录'}。新文件夹继承父文件夹的存储绑定（根目录使用平台默认配置）。`
                       : '更新显示名称，已有文件链接保持有效。'}
             </DialogDescription>
           </DialogHeader>
@@ -1302,6 +1347,12 @@ export default function FileManager({
                 </p>
               )}
             </div>
+          )}
+          {editor?.type === 'folder-name' && admin && editor.folder && (
+            <p className="text-muted-foreground text-xs">
+              目标版本 {editor.folder.targetVersion ?? '-'} · 当前解析：
+              {editor.folder.resolvedTargetName || '未解析（无绑定或渠道停用，请在存储管理页配置）'}
+            </p>
           )}
           {operationError && (
             <p role="alert" className="text-destructive text-sm">
