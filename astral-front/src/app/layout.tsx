@@ -22,8 +22,8 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
   // 深浅色各一条：否则手机状态栏在深色主题下仍是白底，与页面割裂
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#12151b' },
+    { media: '(prefers-color-scheme: light)', color: '#f4f7fb' },
+    { media: '(prefers-color-scheme: dark)', color: '#0c1622' },
   ],
 };
 

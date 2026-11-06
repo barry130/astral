@@ -11,7 +11,7 @@ import {
   User,
   PanelLeftClose,
   PanelLeftOpen,
-  Menu as MenuIcon,
+  Menu,
   X,
   RotateCw,
   MoreHorizontal,
@@ -47,6 +47,7 @@ import { menuApi, SysMenu } from '@/api/menu';
 import { initStatTracker, trackPage } from '@/lib/statTracker';
 import { hasPermissionIn } from '@/lib/perm';
 import NoticeBell from '@/components/NoticeBell';
+import { BrandLockup, BrandMark } from '@/components/brand';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,7 +90,7 @@ const iconMap: Record<string, ReactNode> = {
   MailOutlined: <Mail />,
   InboxOutlined: <Inbox />,
   BellOutlined: <BellRing />,
-  MenuOutlined: <MenuIcon />,
+  MenuOutlined: <Menu />,
   CustomerServiceOutlined: <Headphones />,
   SearchOutlined: <Search />,
   SunOutlined: <Sun />,
@@ -356,7 +357,7 @@ const MENU_GROUPS: Array<{ group: MenuGroup; key: string; icon: ReactNode; label
 
 /* ============================ 侧边栏菜单渲染 ============================ */
 
-/** 单个菜单叶子项（shadcn 风格：浅灰胶囊选中态 + 图标 + 文案） */
+/** 单个菜单叶子项：墨蓝导航内以左侧标线和文字对比表达当前位置。 */
 function NavLeaf({
   item,
   active,
@@ -375,16 +376,21 @@ function NavLeaf({
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'dashboard-nav-item flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors',
+        'dashboard-nav-item flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left text-[13px] transition-colors',
         'disabled:pointer-events-none disabled:opacity-50',
         collapsed && 'justify-center px-0',
         active
-          ? 'bg-[var(--menu-selected-bg)] font-semibold text-[var(--color-brand-text)]'
-          : 'text-muted-foreground hover:text-foreground hover:bg-[var(--menu-hover-bg)]',
+          ? 'bg-[var(--color-nav-active)] font-medium text-[color:var(--color-nav-text)]'
+          : 'text-[color:var(--color-nav-muted)] hover:bg-[var(--color-nav-surface)] hover:text-[color:var(--color-nav-text)]',
       )}
     >
       {item.icon && (
-        <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+        <span
+          className={cn(
+            'flex size-4 shrink-0 items-center justify-center [&_svg]:size-[17px]',
+            active && 'text-[color:var(--color-nav-accent)]',
+          )}
+        >
           {item.icon}
         </span>
       )}
@@ -439,11 +445,11 @@ function NavGroup({
       onClick={headerOnClick}
       aria-expanded={open}
       className={cn(
-        'dashboard-nav-item flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[13px] transition-colors',
+        'dashboard-nav-item flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left text-[13px] transition-colors',
         collapsed && 'justify-center px-0',
         groupActive
-          ? 'text-foreground font-medium'
-          : 'text-muted-foreground hover:text-foreground hover:bg-[var(--menu-hover-bg)]',
+          ? 'font-medium text-[color:var(--color-nav-text)]'
+          : 'text-[color:var(--color-nav-muted)] hover:bg-[var(--color-nav-surface)] hover:text-[color:var(--color-nav-text)]',
       )}
     >
       {item.icon && (
@@ -473,7 +479,7 @@ function NavGroup({
         header
       )}
       {open && !collapsed && (
-        <div className="mt-0.5 space-y-0.5 pl-4">
+        <div className="mt-1 ml-2 space-y-0.5 border-l border-[color:var(--color-nav-border)] pl-2">
           {(item.children || []).map((child) =>
             child.key.startsWith(GROUP_KEY_PREFIX) ? null : (
               <NavLeaf
@@ -512,6 +518,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isMobile, setIsMobile] = useState(false);
   /** 移动端侧边栏抽屉是否展开 */
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const mobileNavRef = useRef<HTMLElement>(null);
+
+  // 移动导航是模态抽屉：焦点留在抽屉内，Esc 关闭，关闭后返回触发按钮。
+  useEffect(() => {
+    if (!isMobile || !mobileNavOpen) return;
+    const drawer = mobileNavRef.current;
+    if (!drawer) return;
+    const previousFocus = document.activeElement;
+    const rootOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    const focusable = () =>
+      Array.from(
+        drawer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex="0"]',
+        ),
+      ).filter((element) => element.getClientRects().length > 0);
+    focusable()[0]?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMobileNavOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.documentElement.style.overflow = rootOverflow;
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
+    };
+  }, [isMobile, mobileNavOpen]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -731,7 +780,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setActiveTab(pathname);
     // 依赖：pathname（路由跳转触发追加）、initialized（首次初始化）、
     // openTabs（关闭后重跑但被 prevPathname 守卫拦下）、allTabItems（菜单就绪后补初始化）。
-     
   }, [pathname, initialized, openTabs, allTabItems]);
 
   /**
@@ -919,12 +967,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ==================== 侧边栏 ==================== */}
       <aside
+        ref={mobileNavRef}
+        id="dashboard-navigation"
+        role={isMobile && mobileNavOpen ? 'dialog' : undefined}
+        aria-label="工作区导航"
+        aria-modal={isMobile && mobileNavOpen ? true : undefined}
+        aria-hidden={isMobile && !mobileNavOpen ? true : undefined}
+        inert={isMobile && !mobileNavOpen}
         className={cn(
-          'dashboard-sider border-border flex flex-col border-r bg-[var(--color-bg-sidebar)]',
+          'dashboard-sider flex flex-col border-r bg-[var(--color-nav-bg)]',
           isMobile ? 'drawer-open' : '',
         )}
         style={{
-          width: siderCollapsed ? 80 : 220,
+          width: siderCollapsed ? 76 : 248,
           position: 'fixed',
           left: 0,
           top: 0,
@@ -934,26 +989,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           transition: isMobile ? 'transform 0.24s ease' : undefined,
         }}
       >
-        {/* Logo */}
+        {/* 品牌区 */}
         <div
           className={cn(
-            'sider-logo flex h-16 shrink-0 items-center gap-3 px-5',
+            'sider-logo flex h-[72px] shrink-0 items-center px-5',
             siderCollapsed && 'justify-center px-0',
+            isMobile && 'justify-between',
           )}
         >
-          <div
-            aria-hidden
-            className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-xl text-base font-bold shadow-sm"
-          >
-            A<span className="mb-2 text-xs opacity-60">✦</span>
-          </div>
-          {!siderCollapsed && (
-            <div className="min-w-0">
-              <h1 className="text-foreground text-lg font-bold tracking-tight">Astral</h1>
-              <p className="text-muted-foreground text-[10px] font-medium tracking-[0.16em]">
-                管理工作台
-              </p>
-            </div>
+          {siderCollapsed ? <BrandMark /> : <BrandLockup inverted subtitle="应用与运维管理" />}
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(false)}
+              className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-[color:var(--color-nav-muted)] hover:bg-[var(--color-nav-surface)] hover:text-[color:var(--color-nav-text)]"
+              aria-label="关闭导航菜单"
+            >
+              <X className="size-4" />
+            </button>
           )}
         </div>
 
@@ -961,9 +1014,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="sider-menu-wrap flex-1 overflow-x-hidden overflow-y-auto pb-4">
           {!siderCollapsed && (
             <div className="relative mx-3 mb-1.5">
-              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2" />
+              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-[color:var(--color-nav-muted)]" />
               <Input
-                className="sider-search bg-muted/70 focus-visible:border-ring h-9 border-transparent pl-8 text-xs shadow-none"
+                className="sider-search h-9 border-[color:var(--color-nav-border)] bg-[var(--color-nav-surface)] pl-8 text-xs text-[color:var(--color-nav-text)] shadow-none placeholder:text-[color:var(--color-nav-muted)] hover:border-[color:var(--color-nav-muted)] focus-visible:border-[color:var(--color-nav-accent)]"
                 placeholder="搜索菜单"
                 value={menuKeyword}
                 onChange={(e) => setMenuKeyword(e.target.value)}
@@ -971,8 +1024,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               />
             </div>
           )}
+          {!siderCollapsed && (
+            <p className="px-5 pt-4 pb-1 text-[11px] font-medium text-[color:var(--color-nav-muted)]">
+              工作区导航
+            </p>
+          )}
           {menuKeyword.trim() && displayedMenuItems.length === 0 && !siderCollapsed ? (
-            <div className="sider-search-empty text-muted-foreground flex flex-col items-center gap-1.5 px-4 py-6 text-xs">
+            <div className="sider-search-empty flex flex-col items-center gap-1.5 px-4 py-6 text-xs text-[color:var(--color-nav-muted)]">
               <Inbox className="size-5" strokeWidth={1.5} aria-hidden />
               <span>未找到匹配的菜单</span>
             </div>
@@ -1011,20 +1069,57 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </nav>
           )}
         </div>
+
+        {!isMobile && (
+          <div className="shrink-0 border-t border-[color:var(--color-nav-border)] p-3">
+            <button
+              type="button"
+              onClick={() => setCollapsed(!siderCollapsed)}
+              className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-lg px-3 text-xs text-[color:var(--color-nav-muted)] transition-colors hover:bg-[var(--color-nav-surface)] hover:text-[color:var(--color-nav-text)]"
+              aria-label={siderCollapsed ? '展开侧边栏' : '收起侧边栏'}
+              title={siderCollapsed ? '展开侧边栏' : '收起侧边栏'}
+            >
+              <span className={cn('flex shrink-0', siderCollapsed && 'w-full justify-center')}>
+                {siderCollapsed ? (
+                  <PanelLeftOpen className="size-4" />
+                ) : (
+                  <PanelLeftClose className="size-4" />
+                )}
+              </span>
+              {!siderCollapsed && <span>收起导航</span>}
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* ==================== 主区 ==================== */}
       <div
+        inert={isMobile && mobileNavOpen}
         style={{
-          marginLeft: isMobile ? 0 : siderCollapsed ? 80 : 220,
+          marginLeft: isMobile ? 0 : siderCollapsed ? 76 : 248,
           transition: 'margin-left 0.2s',
         }}
       >
         {/* 头部 */}
-        <header className="dashboard-header safe-top border-border flex h-14 items-center gap-1 border-b bg-[var(--color-bg-white)] px-4">
+        <header className="dashboard-header safe-top border-border flex items-center gap-3 border-b bg-[var(--color-bg-white)] px-4">
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[color:var(--color-border)]"
+              aria-label="打开导航菜单"
+              aria-expanded={mobileNavOpen}
+              aria-controls="dashboard-navigation"
+            >
+              <Menu className="size-5" />
+            </button>
+          )}
           {!showBreadcrumb && (
-            <div className="text-foreground min-w-0 flex-1 truncate text-sm font-semibold">
-              {breadcrumbLast?.label || '工作台'}
+            <div className="min-w-0 flex-1">
+              <p className="text-muted-foreground text-[11px]">Astral 控制台</p>
+              <div className="text-foreground truncate text-sm font-semibold">
+                {breadcrumbLast?.label || '工作台'}
+              </div>
             </div>
           )}
           {/* 面包屑：左侧（flex-1 占满剩余空间，把右侧操作区顶到最右） */}
@@ -1060,10 +1155,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Breadcrumb>
           )}
 
-          {/* 顶栏全局搜索：输入即匹配菜单，回车进入第一个结果（参考 B 端 SaaS 的胶囊搜索） */}
+          {/* 顶栏全局搜索：输入即匹配菜单，回车进入第一个结果。 */}
           {!isMobile && (
             <div className="relative ml-3 w-[248px] shrink-0">
-              <Search className="text-[color:var(--color-text-tertiary)] pointer-events-none absolute top-1/2 left-3 z-10 size-3.5 -translate-y-1/2" />
+              <Search className="pointer-events-none absolute top-1/2 left-3 z-10 size-3.5 -translate-y-1/2 text-[color:var(--color-text-tertiary)]" />
               <Input
                 value={quickQuery}
                 onChange={(e) => setQuickQuery(e.target.value)}
@@ -1076,12 +1171,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 }}
                 placeholder="搜索页面 / 功能"
                 aria-label="搜索页面"
-                className="h-9 rounded-full border-transparent bg-[var(--color-bg-tint)] pl-9 text-[13px] shadow-none hover:bg-[var(--color-brand-soft)] focus-visible:border-transparent focus-visible:bg-card focus-visible:ring-2"
+                className="focus-visible:bg-card h-9 border-[color:var(--color-border)] bg-[var(--color-bg-tint)] pl-9 text-[13px] shadow-none hover:border-[color:var(--color-border)] hover:bg-[var(--color-brand-soft)]"
               />
               {quickQuery.trim() && (
-                <div className="absolute top-11 left-0 z-30 w-full overflow-hidden rounded-2xl border border-[color:var(--color-border-light)] bg-popover p-1.5 shadow-[0_18px_44px_-16px_rgba(16,32,26,0.28)]">
+                <div className="bg-popover absolute top-11 left-0 z-30 w-full overflow-hidden rounded-xl border border-[color:var(--color-border)] p-1.5 shadow-[var(--shadow-lg)]">
                   {quickResults.length === 0 ? (
-                    <div className="text-[color:var(--color-text-tertiary)] px-3 py-2 text-xs">
+                    <div className="px-3 py-2 text-xs text-[color:var(--color-text-tertiary)]">
                       没有匹配的页面
                     </div>
                   ) : (
@@ -1093,9 +1188,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           router.push(item.key);
                           setQuickQuery('');
                         }}
-                        className="hover:bg-[var(--color-bg-tint)] flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-colors"
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-colors hover:bg-[var(--color-bg-tint)]"
                       >
-                        <span className="text-[color:var(--color-text-tertiary)] flex size-4 items-center [&_svg]:size-4">
+                        <span className="flex size-4 items-center text-[color:var(--color-text-tertiary)] [&_svg]:size-4">
                           {item.icon}
                         </span>
                         <span className="truncate">{item.label}</span>
@@ -1107,17 +1202,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
 
-          {/* 右侧操作区（统一靠右）：收缩菜单栏 / 主题切换 / 通知 / 用户 */}
-          <div className={cn('flex items-center gap-1', showBreadcrumb ? '' : 'ml-auto')}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => (isMobile ? setMobileNavOpen(true) : setCollapsed(!collapsed))}
-              title={isMobile ? '打开菜单' : siderCollapsed ? '展开侧边栏' : '收起侧边栏'}
-              aria-label={isMobile ? '打开菜单' : siderCollapsed ? '展开侧边栏' : '收起侧边栏'}
-            >
-              {isMobile ? <MenuIcon /> : siderCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-            </Button>
+          {/* 右侧操作区：主题 / 通知 / 当前账号；侧栏收缩入口位于导航底部。 */}
+          <div className={cn('flex items-center gap-1.5', showBreadcrumb ? '' : 'ml-auto')}>
             <Button
               variant="ghost"
               size="icon"
@@ -1143,13 +1229,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   >
                     <User className="size-4" />
                   </span>
-                  <span
-                    className={cn(
-                      'username-text text-foreground font-medium',
-                      isMobile && 'hidden',
+                  <span className={cn('flex flex-col gap-0.5 leading-tight', isMobile && 'hidden')}>
+                    <span className="username-text text-foreground text-xs font-medium">
+                      {user?.username || '管理员'}
+                    </span>
+                    {user && user.roles.length > 0 && (
+                      <span className="text-muted-foreground text-[10px]">
+                        {user.roles.join(' · ')}
+                      </span>
                     )}
-                  >
-                    {user?.username || '管理员'}
                   </span>
                 </button>
               </DropdownMenuTrigger>
@@ -1169,9 +1257,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* 页签条 */}
         {openTabs.length > 0 && (
-          <div className="tabs-wrapper sticky top-[62px] z-10 flex items-center overflow-hidden border-b border-[color:var(--color-border-light)] bg-[var(--color-bg-base)]/70 px-5 py-2 backdrop-blur-sm">
+          <div className="tabs-wrapper bg-card sticky top-16 z-10 flex items-center overflow-hidden border-b border-[color:var(--color-border)] px-3 backdrop-blur-sm sm:px-5">
             <div className="flex min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden">
-              <div className="flex gap-1 whitespace-nowrap">
+              <div className="flex whitespace-nowrap">
                 {openTabs.map((tab) => {
                   const active = tab.key === activeTab;
                   const closable = tab.key !== '/dashboard';
@@ -1186,10 +1274,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         if (e.key === 'Enter' || e.key === ' ') handleTabChange(tab.key);
                       }}
                       className={cn(
-                        'dashboard-tab group inline-flex cursor-pointer items-center gap-2 rounded-full border border-transparent px-3.5 py-1.5 text-[12.5px] transition-colors',
+                        'dashboard-tab group relative inline-flex cursor-pointer items-center gap-2 border-b-2 px-3.5 py-3 text-[12.5px] transition-colors',
                         active
-                          ? 'bg-card font-semibold text-[var(--color-brand-text)] shadow-[0_1px_2px_rgba(16,32,26,0.1)] ring-1 ring-[color:var(--color-border-light)]'
-                          : 'text-[color:var(--color-text-tertiary)] hover:bg-card/80 hover:text-[color:var(--color-text)]',
+                          ? 'border-[color:var(--color-brand)] font-medium text-[color:var(--color-brand-text)]'
+                          : 'border-transparent text-[color:var(--color-text-tertiary)] hover:bg-[var(--color-bg-tint)] hover:text-[color:var(--color-text)]',
                       )}
                     >
                       <span className="flex size-4 items-center [&_svg]:size-4">{tab.icon}</span>
@@ -1202,7 +1290,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             e.stopPropagation();
                             handleTabClose(tab.key);
                           }}
-                          className="hover:bg-accent ml-0.5 cursor-pointer rounded-sm p-0.5 opacity-0 transition-opacity group-hover:opacity-60 focus:opacity-100"
+                          className="hover:bg-accent ml-0.5 cursor-pointer rounded-sm p-0.5 opacity-50 transition-opacity group-hover:opacity-100 focus:opacity-100"
                         >
                           <X className="size-3.5" />
                         </button>

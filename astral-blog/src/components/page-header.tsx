@@ -1,21 +1,20 @@
 interface PageHeaderProps {
-  /** 小标签（分类 / 标签 / 知识库），用字距拉开的大写风格 */
   eyebrow?: string;
   title: string;
   description?: string;
 }
 
-/** 内页统一标题区：小标签 + 标题 + 一句说明，底部发丝线与内容分隔 */
+/** 内页刊头：标题与说明分栏，底部粗刊线明确正文起点。 */
 export function PageHeader({ eyebrow, title, description }: PageHeaderProps) {
   return (
-    <header className="mb-8 border-b border-line pb-6">
-      {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-      <h1 className="mt-2 text-[25px] font-semibold tracking-[-0.02em] text-ink sm:text-[clamp(28px,0.55vw+21px,34px)]">
-        {title}
-      </h1>
-      {description ? (
-        <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-ink-soft">{description}</p>
-      ) : null}
+    <header className="mb-9 grid gap-5 border-b border-ink pb-8 sm:grid-cols-[minmax(0,1fr)_minmax(220px,360px)] sm:items-end sm:pb-9">
+      <div>
+        {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+        <h1 className="mt-3 font-display text-[36px] font-semibold leading-[1.2] tracking-[-0.015em] text-ink sm:text-[clamp(40px,3.4vw,50px)]">
+          {title}
+        </h1>
+      </div>
+      {description ? <p className="max-w-xl text-[14px] leading-7 text-ink-soft sm:justify-self-end">{description}</p> : null}
     </header>
   );
 }

@@ -50,9 +50,9 @@ export function EmptyState({
           {icon}
         </div>
       ) : (
-        <div className="bg-[var(--color-brand-soft)] mb-3 flex size-12 items-center justify-center rounded-full">
+        <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-[var(--color-brand-soft)]">
           <InboxIcon
-            className="text-[color:var(--color-brand-text)]/70 size-6"
+            className="size-6 text-[color:var(--color-brand-text)]/70"
             strokeWidth={1.5}
             aria-hidden
           />

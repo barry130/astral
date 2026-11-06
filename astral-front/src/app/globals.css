@@ -6,55 +6,54 @@
 @custom-variant dark (&:is([data-theme="dark"] *), &[data-theme="dark"]);
 
 /* ============================================================
-   shadcn/ui 语义令牌 —— 冷灰表面与青绿强调色，与下方应用令牌保持一致。
+   shadcn/ui 语义令牌 —— 冷灰表面与青蓝强调色，与下方应用令牌保持一致。
    Tailwind 类（bg-background / text-foreground / border-border 等）
    经 @theme inline 解析到这些变量；明暗切换由 data-theme 驱动。
    ============================================================ */
 :root {
-  /* 明色基准：让浏览器把滚动条、原生 select 下拉、日期选择器画成浅色。
-     深色主题在 [data-theme="dark"] 里覆盖为 dark。 */
+  /* 云白工作区 + 深墨蓝导航 + 克制青蓝操作色。 */
   color-scheme: light;
-  --background: #ffffff;
-  --foreground: #14201c;
+  --background: #f4f7fb;
+  --foreground: #172637;
   --card: #ffffff;
-  --card-foreground: #14201c;
+  --card-foreground: #172637;
   --popover: #ffffff;
-  --popover-foreground: #14201c;
-  --primary: #0b8f62;
+  --popover-foreground: #172637;
+  --primary: #0f7288;
   --primary-foreground: #ffffff;
-  --secondary: #f1f6f3;
-  --secondary-foreground: #14201c;
-  --muted: #f1f6f3;
-  --muted-foreground: #6b7a75;
-  --accent: #ecf4f0;
-  --accent-foreground: #14201c;
-  --destructive: #dc2626;
+  --secondary: #eaf0f5;
+  --secondary-foreground: #172637;
+  --muted: #edf2f6;
+  --muted-foreground: #607285;
+  --accent: #e4f1f4;
+  --accent-foreground: #172637;
+  --destructive: #c93c3c;
   --destructive-foreground: #ffffff;
-  --border: #e5ede9;
-  --input: #e5ede9;
-  --ring: #0b8f62;
-  --radius: 0.875rem;
+  --border: #d9e2eb;
+  --input: #d9e2eb;
+  --ring: #0f7288;
+  --radius: 0.75rem;
 }
 [data-theme='dark'] {
-  --background: #0f1512;
-  --foreground: #e7efeb;
-  --card: #161d19;
-  --card-foreground: #e7efeb;
-  --popover: #1a221d;
-  --popover-foreground: #e7efeb;
-  --primary: #34d399;
-  --primary-foreground: #08201a;
-  --secondary: #161d19;
-  --secondary-foreground: #e7efeb;
-  --muted: #1a221d;
-  --muted-foreground: #98a8a1;
-  --accent: #223029;
-  --accent-foreground: #e7efeb;
-  --destructive: #e0564f;
+  --background: #0c1622;
+  --foreground: #e4edf5;
+  --card: #122131;
+  --card-foreground: #e4edf5;
+  --popover: #162838;
+  --popover-foreground: #e4edf5;
+  --primary: #4db1c6;
+  --primary-foreground: #071a22;
+  --secondary: #182a3a;
+  --secondary-foreground: #e4edf5;
+  --muted: #182a3a;
+  --muted-foreground: #9bafbf;
+  --accent: #1c3644;
+  --accent-foreground: #e4edf5;
+  --destructive: #df6b6b;
   --destructive-foreground: #ffffff;
-  --border: #24312b;
-  --input: #24312b;
-  --ring: #34d399;
+  --border: #293b4c;
+  --input: #293b4c;
+  --ring: #4db1c6;
 }
 
 @theme inline {
@@ -79,62 +78,54 @@
   --color-ring: var(--ring);
 }
 :root {
-  /* ---- 颜色角色（语义命名，勿再按字面理解）----
-     --color-surface-dark        深色表面：深色块 / Logo 标记
-     --color-brand               品牌主色：主按钮 / 选中态 / 聚焦环（唯一 CTA 色）
-     --color-brand-hover         品牌色按压态
-     --color-success/warning/error 状态色
-     风格：冷灰背景 · 清晰表面 · 青绿强调，颜色仅用于操作和状态
-     约束：--color-warning 对比度仅 ~3:1，只能用于图标 / 底色，
-           不得作为正文文字色（WCAG AA 正文需 ≥4.5:1） */
-  --color-surface-dark: #14201c;
-  --color-surface-dark-hover: #23312b;
-  --color-brand: #0b8f62;
-  --color-brand-hover: #0a7a53;
-  /* 品牌色作为「文字 / 链接」使用时的色值。
-     浅色下与 --color-brand 相同；深色下使用亮青绿，保持文字对比度。 */
-  --color-brand-text: #0b8f62;
-  /* 品牌色浅底：选中态 / 胶囊标签 / 图表填充，配 --color-brand-text 作文字 */
-  --color-brand-soft: #e7f7ef;
-  --color-brand-soft-hover: #d8f2e6;
-  --color-success: #10a06a;
-  --color-warning: #d97706;
-  --color-error: #dc2626;
-  --color-text: #14201c;
-  --color-text-secondary: #4d5f58;
-  /* 次级信息：#6b7a75 在白底上约 4.9:1，满足 WCAG AA */
-  --color-text-tertiary: #6b7a75;
-  --color-border: #e5ede9;
-  --color-border-light: #eff4f1;
-  --color-bg-base: #f2f7f4;
-  /* 卡内浅底块（KPI 小格 / 只读区）：比页面底色更浅，避免整页泛绿 */
-  --color-bg-tint: #f7fbf9;
+  /* 应用语义令牌：导航、文字、表面与状态分离，页面不得写死品牌色。 */
+  --color-surface-dark: #102233;
+  --color-surface-dark-hover: #1b3247;
+  --color-brand: #0f7288;
+  --color-brand-hover: #0b5f72;
+  --color-brand-text: #0b6478;
+  --color-brand-soft: #e4f2f5;
+  --color-brand-soft-hover: #d4e9ee;
+  --color-success: #0c8064;
+  --color-warning: #b86a0b;
+  --color-warning-text: #925209;
+  --color-error: #c93c3c;
+  --color-text: #172637;
+  --color-text-secondary: #465b6e;
+  --color-text-tertiary: #607285;
+  --color-border: #d9e2eb;
+  --color-border-light: #e7edf3;
+  --color-bg-base: #f4f7fb;
+  --color-bg-tint: #f7f9fc;
   --color-bg-white: #ffffff;
   --color-bg-card: #ffffff;
-  --color-bg-sidebar: #ffffff;
-  /* 阴影：极柔、偏绿黑，避免灰扑扑的「边框感」 */
-  --shadow-sm: 0 1px 2px rgba(16, 32, 26, 0.04);
-  --shadow-md: 0 6px 20px -6px rgba(16, 32, 26, 0.1);
-  --shadow-lg: 0 18px 44px -16px rgba(16, 32, 26, 0.16);
-  --shadow-clay: 0 1px 2px rgba(24, 24, 27, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --color-bg-sidebar: #0d1b2a;
+  --color-nav-bg: #0d1b2a;
+  --color-nav-surface: #14283a;
+  --color-nav-text: #e8f0f6;
+  --color-nav-muted: #8ea4b5;
+  --color-nav-border: #24384a;
+  --color-nav-active: #123c4b;
+  --color-nav-accent: #4db1c6;
+  --shadow-sm: 0 1px 2px rgba(13, 27, 42, 0.04);
+  --shadow-md: 0 10px 28px -22px rgba(13, 27, 42, 0.22);
+  --shadow-lg: 0 18px 44px -20px rgba(13, 27, 42, 0.28);
+  --shadow-clay: 0 1px 2px rgba(13, 27, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 22px;
-  --transition-fast: 0.15s ease; /* hover / focus 等即时反馈 */
-  --transition-normal: 0.25s ease; /* 仅用于抽屉 / 弹窗进出，勿用于 hover */
-  /* 图标尺寸令牌：禁止在组件里裸写 fontSize */
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
   --icon-sm: 14px;
   --icon-md: 16px;
   --icon-lg: 22px;
-  /* 侧边栏菜单态（白底侧边栏，深色模式在下方翻转） */
-  --menu-hover-bg: #f1f7f4;
-  --menu-selected-bg: #e6f7ef;
-  /* 玻璃拟态：仅限浮层（弹窗 / 抽屉 / 下拉 / 提示），主体页面一律实色 */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-bg-strong: rgba(255, 255, 255, 0.66);
-  --glass-border: rgba(255, 255, 255, 0.62);
-  --glass-blur: blur(24px) saturate(140%);
+  --menu-hover-bg: #14283a;
+  --menu-selected-bg: #123c4b;
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-bg-strong: rgba(255, 255, 255, 0.97);
+  --glass-border: rgba(217, 226, 235, 0.9);
+  --glass-blur: blur(18px) saturate(120%);
 }
 * {
   box-sizing: border-box;
@@ -152,10 +143,12 @@ body {
   color: var(--color-text);
   line-height: 1.6;
 }
-body,
-html,
-#__next {
+html {
   height: 100%;
+}
+/* 避免固定 body 高度配合 overflow-x:hidden 形成嵌套滚动；长页由文档滚动。 */
+body {
+  min-height: 100%;
 }
 
 /* Custom animations */
@@ -232,40 +225,134 @@ html,
   overflow: hidden;
 }
 .login-container {
-  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(460px, 0.92fr);
   min-height: 100dvh;
+  background: var(--color-nav-bg);
+}
+.login-brand-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  padding: clamp(32px, 5vw, 72px);
+  color: var(--color-nav-text);
+  border-right: 1px solid var(--color-nav-border);
+  background: var(--color-nav-bg);
+}
+.login-brand-copy {
+  max-width: 640px;
+  padding: 56px 0;
+  margin: auto 0;
+}
+.login-brand-title {
+  max-width: 9em;
+  margin-top: 24px;
+  font-size: clamp(40px, 4.5vw, 68px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.055em;
+}
+.login-brand-description {
+  max-width: 500px;
+  margin-top: 24px;
+  color: var(--color-nav-muted);
+  font-size: 15px;
+  line-height: 1.9;
+}
+.login-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 48px;
+  border-top: 1px solid var(--color-nav-border);
+  border-bottom: 1px solid var(--color-nav-border);
+}
+.login-flow-item {
+  min-width: 0;
+  padding: 22px 20px 24px 0;
+}
+.login-flow-item + .login-flow-item {
+  padding-left: 20px;
+  border-left: 1px solid var(--color-nav-border);
+}
+.login-flow-item strong {
+  display: block;
+  margin-top: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.login-flow-item span {
+  display: block;
+  margin-top: 7px;
+  color: var(--color-nav-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.login-brand-footer {
+  color: var(--color-nav-muted);
+  font-size: 12px;
+}
+.login-form-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    radial-gradient(
-      900px 460px at 50% -8%,
-      color-mix(in srgb, var(--color-brand) 9%, transparent),
-      transparent 70%
-    ),
-    linear-gradient(180deg, var(--color-bg-white) 0%, var(--color-bg-base) 60%);
-  position: relative;
-  overflow: hidden;
+  min-width: 0;
+  padding: 48px clamp(32px, 6vw, 88px);
+  background: var(--color-bg-base);
 }
 .login-box {
-  width: 420px;
-  /* 手机视口钳制：<452px 时按视口收缩，避免固定 420px + padding 把输入框裁出屏幕 */
-  max-width: calc(100vw - 32px);
-  padding: 44px 40px;
-  background: var(--color-bg-white);
-  border: 1px solid color-mix(in srgb, var(--color-border-light) 70%, transparent);
-  border-radius: 22px;
-  box-shadow:
-    0 1px 2px rgba(16, 32, 26, 0.04),
-    0 24px 60px -28px rgba(16, 32, 26, 0.28),
-    0 2px 10px -4px color-mix(in srgb, var(--color-brand) 14%, transparent);
-  position: relative;
-  z-index: 1;
+  width: min(100%, 400px);
+}
+.login-field-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+@media (max-width: 1023px) {
+  .login-container {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .login-brand-panel {
+    padding: 28px 32px 36px;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-nav-border);
+  }
+  .login-brand-copy {
+    max-width: 560px;
+    padding: 0;
+    margin: 40px 0 0;
+  }
+  .login-brand-title {
+    max-width: 16ch;
+    margin-top: 0;
+    font-size: clamp(30px, 6vw, 42px);
+  }
+  .login-brand-description {
+    margin-top: 14px;
+    font-size: 13px;
+  }
+  .login-flow,
+  .login-brand-footer {
+    display: none;
+  }
+  .login-form-panel {
+    padding: 44px 24px 56px;
+  }
 }
 @media (max-width: 480px) {
-  .login-box {
-    padding: 36px 20px;
-    border-radius: 12px;
+  .login-brand-panel {
+    padding: 22px 20px 28px;
+  }
+  .login-brand-copy {
+    margin-top: 32px;
+  }
+  .login-brand-description {
+    line-height: 1.75;
+  }
+  .login-form-panel {
+    padding: 36px 20px 48px;
   }
 }
 /* Tabs 标签条横向滚动（窄屏放不下全部 tab 时滑动而非溢出/挤压），滚动条隐藏 */
@@ -284,18 +371,17 @@ html,
   display: none;
 }
 .login-title {
-  font-size: 30px;
-  font-weight: 700;
   color: var(--color-text);
-  text-align: center;
-  margin-bottom: 8px;
-  letter-spacing: -1px;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.035em;
 }
 .login-subtitle {
-  font-size: 14px;
+  margin-top: 10px;
   color: var(--color-text-tertiary);
-  text-align: center;
-  margin-bottom: 36px;
+  font-size: 13.5px;
+  line-height: 1.7;
 }
 .imgbed-container {
   min-height: 100vh;
@@ -437,10 +523,10 @@ html,
   min-height: 100dvh;
 }
 .dashboard-sider {
-  box-shadow:
-    1px 0 0 rgba(16, 32, 26, 0.02),
-    10px 0 32px -26px rgba(16, 32, 26, 0.45);
-  border-right: 1px solid var(--color-border-light);
+  color: var(--color-nav-text);
+  background: var(--color-nav-bg);
+  border-right: 1px solid var(--color-nav-border);
+  box-shadow: none;
 }
 .dashboard-sider .sider-menu-wrap {
   flex: 1;
@@ -448,92 +534,87 @@ html,
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: rgba(24, 24, 27, 0.18) transparent;
+  scrollbar-color: var(--color-nav-border) transparent;
 }
 .dashboard-sider .sider-menu-wrap::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 .dashboard-sider .sider-menu-wrap::-webkit-scrollbar-thumb {
-  background: rgba(24, 24, 27, 0.18);
+  background: var(--color-nav-border);
   border-radius: 3px;
 }
 .dashboard-sider .sider-menu-wrap::-webkit-scrollbar-thumb:hover {
-  background: rgba(24, 24, 27, 0.3);
+  background: var(--color-nav-muted);
 }
 .sider-logo {
-  height: 64px;
+  height: 72px;
   display: flex;
   align-items: center;
 }
 .sider-logo h1 {
-  color: var(--color-text);
-  font-size: 19px;
-  font-weight: 700;
+  color: var(--color-nav-text);
+  font-size: 18px;
+  font-weight: 600;
   margin: 0;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.025em;
 }
 .sider-logo h1 span {
-  color: var(--color-text);
+  color: var(--color-nav-text);
 }
-/* 菜单项：胶囊化 + 选中态薄荷底/品牌色，左侧细指示条 */
+/* 导航选中态用左侧青蓝标线；圆角只服务于交互热区，不做胶囊模板。 */
 .dashboard-nav-item {
   position: relative;
-  border-radius: 12px;
-  padding-top: 9px;
-  padding-bottom: 9px;
+  border-radius: 8px;
+  padding-top: 10px;
+  padding-bottom: 10px;
   transition:
     background-color var(--transition-fast),
-    color var(--transition-fast),
-    box-shadow var(--transition-fast);
-}
-.dashboard-nav-item[aria-current='page'] {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-brand) 12%, transparent);
+    color var(--transition-fast);
 }
 .dashboard-nav-item[aria-current='page']::before {
   content: '';
   position: absolute;
   left: -12px;
   top: 50%;
-  height: 18px;
+  height: 20px;
   width: 3px;
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 2px 2px 0;
   transform: translateY(-50%);
-  background: var(--color-brand);
+  background: var(--color-primary);
 }
 .dashboard-header {
-  background: color-mix(in srgb, var(--color-bg-white) 84%, transparent) !important;
-  backdrop-filter: saturate(160%) blur(14px);
+  background: var(--color-bg-white) !important;
+  backdrop-filter: saturate(140%) blur(14px);
   padding: 0 24px !important;
-  height: 62px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border);
   box-shadow: none;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
 }
 .header-user {
   display: flex;
   align-items: center;
-  gap: 12px;
-  /* 命中区：视觉尺寸不变，热区扩到 40px 高，方便点选与键盘聚焦 */
-  padding: 4px 10px 4px 6px;
+  gap: 10px;
+  padding: 4px 8px 4px 5px;
   min-height: 40px;
-  border-radius: 999px;
+  border-radius: 8px;
   cursor: pointer;
   transition: background-color var(--transition-fast);
 }
 .header-user:hover {
-  background: var(--menu-hover-bg);
+  background: var(--color-bg-tint);
 }
 .dashboard-content {
   margin: 0 auto;
-  padding: 26px 28px 40px;
-  max-width: 1680px;
-  min-height: calc(100vh - 105px);
-  min-height: calc(100dvh - 105px);
+  padding: 28px 32px 48px;
+  max-width: 1600px;
+  min-height: calc(100vh - 108px);
+  min-height: calc(100dvh - 108px);
 }
 ::-webkit-scrollbar {
   width: 6px;
@@ -651,7 +732,7 @@ body {
   background: var(--color-bg-base) !important;
 }
 .sider-logo {
-  border-bottom: 1px solid var(--color-border-light) !important;
+  border-bottom: 1px solid var(--color-nav-border) !important;
 }
 .sider-search-empty {
   display: flex;
@@ -659,7 +740,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 24px 16px;
-  color: var(--color-text-tertiary);
+  color: var(--color-nav-muted);
   font-size: 12.5px;
   text-align: center;
 }
@@ -669,9 +750,9 @@ body {
   opacity: 0.6;
 }
 .dashboard-header {
-  background: #ffffff !important;
+  background: var(--color-bg-white) !important;
   box-shadow: none !important;
-  border-bottom: 1px solid var(--color-border-light) !important;
+  border-bottom: 1px solid var(--color-border) !important;
 }
 .page-title {
   letter-spacing: -0.3px;
@@ -701,7 +782,7 @@ body {
     margin-bottom: 16px;
   }
   .tabs-wrapper {
-    padding: 8px 16px !important;
+    padding: 0 16px !important;
   }
 }
 
@@ -722,7 +803,7 @@ body {
   }
   .tabs-wrapper {
     top: 56px !important;
-    padding: 6px 12px !important;
+    padding: 0 8px !important;
   }
   .dashboard-content {
     padding: 16px !important;
@@ -765,7 +846,7 @@ body {
   }
 }
 :root {
-  --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.22);
+  --focus-ring: 0 0 0 3px rgba(15, 114, 136, 0.22);
 }
 :focus:not(:focus-visible) {
   outline: none;
@@ -834,36 +915,44 @@ summary {
 }
 [data-theme='dark'] {
   color-scheme: dark;
-  --color-surface-dark: #e4e4e7;
-  --color-surface-dark-hover: #d4d4d8;
-  --color-brand: #0f8f66; /* 自定义按钮仍使用白字 */
-  --color-brand-hover: #12a377;
-  --color-brand-text: #4ade9e;
-  --color-brand-soft: rgba(52, 211, 153, 0.14);
-  --color-brand-soft-hover: rgba(52, 211, 153, 0.2);
-  --color-success: #2fb57c;
-  --color-warning: #e0a82c;
-  --color-error: #e0564f;
-  --color-text: #e7efeb;
-  --color-text-secondary: #9aa8a2;
-  --color-text-tertiary: #8a9791;
-  --color-border: #24312b;
-  --color-border-light: #1f2a25;
-  --color-bg-base: #0f1512;
-  --color-bg-tint: rgba(255, 255, 255, 0.035);
-  --color-bg-white: #161d19;
-  --color-bg-card: #161d19;
-  --color-bg-sidebar: #161d19;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.34);
-  --shadow-md: 0 6px 20px -6px rgba(0, 0, 0, 0.46);
-  --shadow-lg: 0 18px 44px -16px rgba(0, 0, 0, 0.6);
-  --shadow-clay: 0 1px 2px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --menu-hover-bg: rgba(255, 255, 255, 0.05);
-  --menu-selected-bg: rgba(52, 211, 153, 0.12);
-  --focus-ring: 0 0 0 3px rgba(94, 234, 212, 0.25);
-  --glass-bg: rgba(26, 30, 38, 0.78);
-  --glass-bg-strong: rgba(22, 26, 34, 0.82);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --color-surface-dark: #1d3447;
+  --color-surface-dark-hover: #29465c;
+  --color-brand: #4db1c6;
+  --color-brand-hover: #6bc2d3;
+  --color-brand-text: #79c7d7;
+  --color-brand-soft: rgba(77, 177, 198, 0.13);
+  --color-brand-soft-hover: rgba(77, 177, 198, 0.2);
+  --color-success: #58c3a4;
+  --color-warning: #e2ad55;
+  --color-warning-text: #e2ad55;
+  --color-error: #df6b6b;
+  --color-text: #e4edf5;
+  --color-text-secondary: #b0c0cd;
+  --color-text-tertiary: #9bafbf;
+  --color-border: #293b4c;
+  --color-border-light: #203142;
+  --color-bg-base: #0c1622;
+  --color-bg-tint: #162636;
+  --color-bg-white: #122131;
+  --color-bg-card: #122131;
+  --color-bg-sidebar: #091521;
+  --color-nav-bg: #091521;
+  --color-nav-surface: #122638;
+  --color-nav-text: #e8f0f6;
+  --color-nav-muted: #8ea4b5;
+  --color-nav-border: #21364a;
+  --color-nav-active: #123744;
+  --color-nav-accent: #62bed0;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 10px 28px -20px rgba(0, 0, 0, 0.48);
+  --shadow-lg: 0 18px 44px -18px rgba(0, 0, 0, 0.62);
+  --shadow-clay: 0 1px 2px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --menu-hover-bg: #122638;
+  --menu-selected-bg: #123744;
+  --focus-ring: 0 0 0 3px rgba(77, 177, 198, 0.28);
+  --glass-bg: rgba(18, 33, 49, 0.94);
+  --glass-bg-strong: rgba(18, 33, 49, 0.98);
+  --glass-border: rgba(155, 175, 191, 0.18);
 }
 [data-theme='dark'] body {
   background: var(--color-bg-base) !important;
@@ -876,7 +965,7 @@ summary {
   background: var(--color-bg-base);
 }
 [data-theme='dark'] .sider-logo {
-  border-bottom-color: var(--color-border) !important;
+  border-bottom-color: var(--color-nav-border) !important;
 }
 [data-theme='dark'] .header-user .username-text {
   color: var(--color-text) !important;

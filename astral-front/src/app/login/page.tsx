@@ -2,13 +2,32 @@
 
 import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, User, Lock, ShieldCheck, KeyRound } from 'lucide-react';
+import { Activity, ArrowLeft, KeyRound, Loader2, Lock, ShieldCheck, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuth } from '@/context/AuthContext';
 import { encryptPassword, clearPublicKeyCache } from '@/lib/crypto';
+import { BrandLockup } from '@/components/brand';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+const LOGIN_CAPABILITIES = [
+  {
+    icon: ShieldCheck,
+    title: '统一身份',
+    description: '管理账号与会话在同一入口安全接入。',
+  },
+  {
+    icon: KeyRound,
+    title: '权限边界',
+    description: '按角色与权限进入对应工作区域。',
+  },
+  {
+    icon: Activity,
+    title: '运行审计',
+    description: '服务状态与操作记录保持可追踪。',
+  },
+] as const;
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -45,7 +64,6 @@ export default function LoginPage() {
 
   const onFinish = async (e: FormEvent) => {
     e.preventDefault();
-    // 轻量校验（替代 antd Form rules）
     const errors: { username?: string; password?: string } = {};
     if (!username.trim()) errors.username = '请输入用户名';
     if (!password.trim()) errors.password = '请输入密码';
@@ -63,7 +81,6 @@ export default function LoginPage() {
       router.push(data?.mustChangePassword === 1 ? '/dashboard/profile?force=1' : '/dashboard');
     } catch (error: unknown) {
       // AUTH010 = 该账号启用了 TOTP 二次验证，展开动态码输入框
-      // （业务错误码挂在 Error.errorCode 上，见 @/api/client 的 businessFailure）
       const errorCode = (error as { errorCode?: string })?.errorCode;
       if (errorCode === 'AUTH010') {
         setNeedTotp(true);
@@ -79,7 +96,7 @@ export default function LoginPage() {
   // 校验登录状态期间不展示表单，避免闪现后跳转
   if (authLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="bg-background flex min-h-dvh items-center justify-center">
         <Loader2 className="text-muted-foreground size-8 animate-spin" />
       </div>
     );
@@ -87,91 +104,158 @@ export default function LoginPage() {
 
   return (
     <div className="login-container">
-      <div className="login-box fade-in-up">
-        <div className="mb-8 text-center">
-          <div className="bg-primary mb-5 inline-flex size-14 items-center justify-center rounded-[18px] shadow-[0_12px_28px_-8px_rgba(11,143,98,0.55)]">
-            <ShieldCheck className="text-primary-foreground size-6" />
+      <section aria-labelledby="login-brand-title" className="login-brand-panel">
+        <BrandLockup inverted subtitle="应用与运维管理平台" />
+
+        <div className="login-brand-copy">
+          <p className="text-sm font-medium text-[color:var(--color-nav-muted)]">
+            面向团队的管理入口
+          </p>
+          <h1 id="login-brand-title" className="login-brand-title">
+            <span className="block">每一次管理操作，</span>
+            <span className="block">都有清晰边界。</span>
+          </h1>
+          <p className="login-brand-description">
+            从身份验证到权限校验，再到服务监控与操作留痕， Astral
+            将日常运维需要的信息收拢在同一个工作区。
+          </p>
+
+          <div className="login-flow" aria-label="平台能力">
+            {LOGIN_CAPABILITIES.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="login-flow-item">
+                <Icon
+                  className="size-5 text-[color:var(--color-nav-accent)]"
+                  strokeWidth={1.7}
+                  aria-hidden="true"
+                />
+                <strong>{title}</strong>
+                <span>{description}</span>
+              </div>
+            ))}
           </div>
-          <h1 className="login-title">Astral</h1>
-          <p className="login-subtitle">Astral 后台管理系统</p>
         </div>
 
-        <form onSubmit={onFinish} autoComplete="off" noValidate>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <div className="relative">
-                <User className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-                <Input
-                  className="h-11 rounded-xl pl-10"
-                  placeholder="用户名"
-                  autoComplete="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  aria-invalid={!!fieldErrors.username}
-                />
-              </div>
-              {fieldErrors.username && (
-                <p className="text-destructive text-xs">{fieldErrors.username}</p>
-              )}
-            </div>
+        <p className="login-brand-footer">Astral · 连接应用、数据与团队协作</p>
+      </section>
 
-            <div className="space-y-1.5">
-              <div className="relative">
-                <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
-                <Input
-                  type="password"
-                  className="h-11 rounded-xl pl-10"
-                  placeholder="密码"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  aria-invalid={!!fieldErrors.password}
-                />
-              </div>
-              {fieldErrors.password && (
-                <p className="text-destructive text-xs">{fieldErrors.password}</p>
-              )}
-            </div>
+      <main className="login-form-panel">
+        <div className="login-box">
+          <div className="mb-8">
+            <p className="mb-2 text-sm font-medium text-[color:var(--color-brand-text)]">
+              管理控制台
+            </p>
+            <h2 className="login-title">欢迎回来</h2>
+            <p className="login-subtitle">使用管理员账号登录，继续处理今日工作。</p>
+          </div>
 
-            {needTotp && (
-              <div className="space-y-1.5">
+          <form onSubmit={onFinish} autoComplete="off" noValidate>
+            <div className="space-y-5">
+              <div>
+                <label htmlFor="login-username" className="login-field-label">
+                  用户名
+                </label>
                 <div className="relative">
-                  <KeyRound className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
+                  <User className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
                   <Input
-                    className="h-11 rounded-xl pl-10"
-                    placeholder="动态验证码（6 位）"
-                    inputMode="numeric"
-                    maxLength={6}
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value)}
-                    autoComplete="one-time-code"
+                    id="login-username"
+                    name="username"
+                    spellCheck={false}
+                    className="h-12 pl-10 text-sm"
+                    placeholder="请输入用户名"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    aria-invalid={!!fieldErrors.username}
+                    aria-describedby={fieldErrors.username ? 'login-username-error' : undefined}
                   />
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  来自验证器 App（Google Authenticator 等），30 秒刷新
-                </p>
+                {fieldErrors.username && (
+                  <p id="login-username-error" className="text-destructive mt-1.5 text-xs">
+                    {fieldErrors.username}
+                  </p>
+                )}
               </div>
-            )}
 
-            <Button
-              type="submit"
-              disabled={loading || publicKeyLoading}
-              className="mt-5 h-11 w-full rounded-xl text-[14.5px] font-semibold"
+              <div>
+                <label htmlFor="login-password" className="login-field-label">
+                  密码
+                </label>
+                <div className="relative">
+                  <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
+                  <Input
+                    id="login-password"
+                    name="password"
+                    spellCheck={false}
+                    type="password"
+                    className="h-12 pl-10 text-sm"
+                    placeholder="请输入密码"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    aria-invalid={!!fieldErrors.password}
+                    aria-describedby={fieldErrors.password ? 'login-password-error' : undefined}
+                  />
+                </div>
+                {fieldErrors.password && (
+                  <p id="login-password-error" className="text-destructive mt-1.5 text-xs">
+                    {fieldErrors.password}
+                  </p>
+                )}
+              </div>
+
+              {needTotp && (
+                <div>
+                  <label htmlFor="login-totp" className="login-field-label">
+                    动态验证码
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
+                    <Input
+                      id="login-totp"
+                      name="totpCode"
+                      spellCheck={false}
+                      className="h-12 pl-10 text-sm tracking-[0.2em]"
+                      placeholder="6 位动态验证码"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value)}
+                      autoComplete="one-time-code"
+                    />
+                  </div>
+                  <p className="text-muted-foreground mt-1.5 text-xs">
+                    来自验证器 App（Google Authenticator 等），30 秒刷新
+                  </p>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={loading || publicKeyLoading}
+                className="mt-2 h-12 w-full text-sm font-semibold"
+              >
+                {(loading || publicKeyLoading) && <Loader2 className="animate-spin" />}
+                {publicKeyLoading ? '正在准备安全登录' : loading ? '正在登录' : '登录控制台'}
+              </Button>
+            </div>
+          </form>
+
+          <div className="mt-6 flex items-center justify-between gap-4 border-t border-[color:var(--color-border-light)] pt-5">
+            <button
+              type="button"
+              onClick={() => router.push('/')}
+              className="text-muted-foreground hover:text-foreground inline-flex cursor-pointer items-center gap-1.5 text-xs"
             >
-              {(loading || publicKeyLoading) && <Loader2 className="animate-spin" />}登 录
-            </Button>
+              <ArrowLeft className="size-3.5" aria-hidden="true" />
+              返回首页
+            </button>
+            <span className="text-muted-foreground inline-flex items-center gap-1.5 text-[11px]">
+              <ShieldCheck className="size-3.5" aria-hidden="true" />
+              密码经 RSA 加密后传输
+            </span>
           </div>
-        </form>
-
-        <div className="mt-3 text-center">
-          <a
-            onClick={() => router.push('/')}
-            className="text-muted-foreground hover:text-foreground cursor-pointer text-xs"
-          >
-            ← 返回首页
-          </a>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

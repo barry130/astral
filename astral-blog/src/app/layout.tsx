@@ -17,8 +17,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  // 与 --color-canvas (#f9f7f3) 一致，手机状态栏与纸色底连成一片
-  themeColor: '#f9f7f3',
+  // 与 --color-canvas (#f6f1e7) 一致，手机状态栏与纸色底连成一片
+  themeColor: '#f6f1e7',
 };
 
 // 站点标题/描述来自后端公开设置接口（cmsGet 带 cache:'no-store'，路由按动态渲染处理）。

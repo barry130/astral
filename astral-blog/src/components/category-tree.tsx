@@ -37,7 +37,7 @@ function CategoryBranch({
             <Link
               href={categoryHref(node)}
               aria-current={active ? 'page' : undefined}
-              className={`group/row flex min-h-11 items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors duration-150 sm:min-h-0 sm:text-[12.5px] ${
+              className={`group/row flex min-h-11 items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] transition-colors duration-150 sm:min-h-9 sm:text-[12.5px] ${
                 active
                   ? 'bg-brand-wash font-medium text-brand'
                   : 'text-ink-body hover:bg-brand-wash/70 hover:text-brand'

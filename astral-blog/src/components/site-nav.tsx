@@ -118,7 +118,7 @@ export function SiteNav({ pages = [] }: SiteNavProps) {
           <button
             type="button"
             aria-label="打开导航菜单"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink-soft transition-colors active:bg-surface-muted sm:hidden"
+            className="flex h-11 w-11 shrink-0 items-center justify-center border border-line bg-transparent text-ink-soft transition-colors active:bg-surface-muted sm:hidden"
           >
             <Menu className="h-4 w-4" />
           </button>

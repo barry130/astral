@@ -415,7 +415,7 @@ function EditableArticleInner({ kind, id, children }: EditableArticleProps) {
           {/* 阅读态也能导出：只要求 canEdit，进了工作台就不用先点「编辑」 */}
           <a
             href={`/api/admin/export/${kind}/${id}`}
-            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12px] text-ink-faint transition-colors hover:text-brand"
+            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12px] text-ink-faint transition-colors hover:text-brand max-sm:h-11 max-sm:px-3"
             title="导出为 Markdown 文件"
           >
             <IconDownload className="size-3.5" />
@@ -429,7 +429,7 @@ function EditableArticleInner({ kind, id, children }: EditableArticleProps) {
               void startEditing();
             }}
             disabled={loading}
-            className="h-7 px-2 text-[12px] text-ink-faint hover:text-brand"
+            className="h-7 px-2 text-[12px] text-ink-faint hover:text-brand max-sm:h-11"
           >
             {loading ? '读取中…' : '编辑'}
           </Button>

@@ -13,7 +13,7 @@ interface CommentFormProps {
 type Feedback = { kind: 'ok' | 'error'; text: string } | null;
 
 const inputClass =
-  'w-full rounded-lg border border-line bg-canvas/50 px-3 text-[13px] text-ink-body outline-none transition-colors placeholder:text-ink-faint focus:border-brand/50 focus:bg-surface focus:ring-2 focus:ring-brand/10';
+  'w-full border border-line bg-surface/60 px-3 text-[13px] text-ink-body outline-none transition-colors placeholder:text-ink-faint focus:border-brand/60 focus:bg-surface focus:ring-2 focus:ring-brand/10';
 
 /**
  * 匿名评论提交表单（客户端组件）。
@@ -77,7 +77,7 @@ export function CommentForm({ targetType, targetId, needReview }: CommentFormPro
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-8 rounded-card border border-line bg-surface p-5 shadow-card sm:p-6"
+      className="mt-8 border-y border-line-strong bg-surface/45 px-5 py-6 sm:px-7"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line-soft pb-4">
         <p className="text-[13px] font-medium text-ink">写下评论</p>
@@ -94,7 +94,7 @@ export function CommentForm({ targetType, targetId, needReview }: CommentFormPro
           placeholder="昵称…"
           aria-label="昵称"
           autoComplete="nickname"
-          className={`${inputClass} h-10`}
+          className={`${inputClass} h-11 sm:h-10`}
         />
         <input
           type="email"
@@ -105,7 +105,7 @@ export function CommentForm({ targetType, targetId, needReview }: CommentFormPro
           aria-label="邮箱"
           autoComplete="email"
           spellCheck={false}
-          className={`${inputClass} h-10`}
+          className={`${inputClass} h-11 sm:h-10`}
         />
       </div>
       <textarea
@@ -132,7 +132,7 @@ export function CommentForm({ targetType, targetId, needReview }: CommentFormPro
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex h-9 items-center rounded-lg bg-brand px-4 text-[13px] font-medium text-white transition-colors hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-11 items-center bg-brand px-5 text-[13px] font-medium text-primary-foreground transition-colors hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-60 sm:h-10"
         >
           {submitting ? '提交中…' : '提交评论'}
         </button>

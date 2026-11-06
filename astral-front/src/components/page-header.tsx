@@ -42,11 +42,11 @@ export function PageHeader({
     >
       <div className="min-w-0 space-y-1.5">
         {eyebrow ? (
-          <div className="text-[11px] font-semibold tracking-[0.14em] text-[color:var(--color-text-tertiary)] uppercase">
+          <div className="text-xs font-medium text-[color:var(--color-text-tertiary)]">
             {eyebrow}
           </div>
         ) : null}
-        <h1 className="text-[23px] leading-tight font-semibold tracking-[-0.02em] text-[color:var(--color-text)]">
+        <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.035em] text-[color:var(--color-text)]">
           {title}
         </h1>
         {description ? (

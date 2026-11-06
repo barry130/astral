@@ -14,15 +14,15 @@ export type StatTone = 'normal' | 'success' | 'warn' | 'danger';
 
 export const STAT_TONE_TEXT: Record<StatTone, string> = {
   normal: 'text-[color:var(--color-text)]',
-  success: 'text-emerald-600',
-  warn: 'text-amber-600',
+  success: 'text-[color:var(--color-success)]',
+  warn: 'text-[color:var(--color-warning-text)]',
   danger: 'text-destructive',
 };
 
 export const STAT_TONE_BAR: Record<StatTone, string> = {
   normal: 'bg-primary',
-  success: 'bg-emerald-500',
-  warn: 'bg-amber-500',
+  success: 'bg-[var(--color-success)]',
+  warn: 'bg-[var(--color-warning)]',
   danger: 'bg-destructive',
 };
 
@@ -47,7 +47,7 @@ export interface StatCardProps {
   label: string;
   /** 主数值（自己格式化好的字符串，或带单位的 ReactNode） */
   value: ReactNode;
-  /** 右上角图标（圆形薄荷芯片） */
+  /** 右上角图标（青蓝方形芯片） */
   icon?: ReactNode;
   /** 右上角自定义内容，传了就不渲染 icon 芯片 */
   extra?: ReactNode;
@@ -103,8 +103,10 @@ export function StatCard({
           </div>
           {extra ??
             (icon ? (
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-brand-soft)]">
-                <span className="inline-flex text-[var(--color-brand)] [&_svg]:size-5">{icon}</span>
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-brand-soft)]">
+                <span className="inline-flex text-[var(--color-brand-text)] [&_svg]:size-5">
+                  {icon}
+                </span>
               </div>
             ) : null)}
         </div>

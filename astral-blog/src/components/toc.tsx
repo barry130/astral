@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { TocItem } from '@/lib/markdown';
 
 /**
- * 文章标题目录（左侧栏）。
+ * 文章标题目录（正文右侧附注栏）。
  *
  * 交互刻意做得轻：
  * - 不做「滚动到哪个标题就高亮」的滚动监听（长文里 ScrollY 计算易抖动），
@@ -56,7 +56,7 @@ export function Toc({ items }: TocProps) {
     if (!target) return;
     setActiveId(id);
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // 顶栏 sticky 高 64px，滚动后补偏移，避免标题被盖住
+    // 顶栏 sticky 高 68px，滚动后补偏移，避免标题被盖住
     window.history.replaceState(null, '', `#${id}`);
   };
 
@@ -72,7 +72,7 @@ export function Toc({ items }: TocProps) {
                 href={`#${entry.id}`}
                 onClick={(event) => handleJump(event, entry.id)}
                 style={{ paddingLeft: 12 + level * 12 }}
-                className={`-ml-px block border-l py-1.5 pr-2 text-[clamp(13.5px,0.28vw+9.5px,15.5px)] leading-[1.65] transition-colors sm:py-[5px] ${
+                className={`-ml-px block border-l py-3 pr-2 text-[clamp(13.5px,0.28vw+9.5px,15.5px)] leading-[1.65] transition-colors sm:py-[5px] ${
                   active
                     ? 'border-brand font-medium text-brand'
                     : 'border-transparent text-ink-soft hover:border-line-strong hover:text-ink'
