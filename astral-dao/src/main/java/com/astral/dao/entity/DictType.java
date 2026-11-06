@@ -1,10 +1,14 @@
 package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.time.LocalDateTime;
+
+import java.util.List;
 
 @Data
 @TableName("sys_dict_type")
@@ -44,4 +48,5 @@ public class DictType {
 
     @TableField(value = "update_time", fill = FieldFill.UPDATE)
     private LocalDateTime updateTime;
+
 }

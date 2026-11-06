@@ -1,9 +1,13 @@
 package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
 import lombok.Data;
+
+import java.time.LocalDateTime;
+
+import java.util.List;
 
 @Data
 @TableName("sys_login_log")
@@ -41,4 +45,5 @@ public class LoginLog {
 
     @TableField(value = "login_time", fill = FieldFill.INSERT)
     private LocalDateTime loginTime;
+
 }

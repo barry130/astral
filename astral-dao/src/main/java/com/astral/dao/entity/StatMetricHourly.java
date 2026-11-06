@@ -1,9 +1,13 @@
 package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
 import lombok.Data;
+
+import java.time.LocalDateTime;
+
+import java.util.List;
 
 @Data
 @TableName("stat_metric_hourly")
@@ -39,4 +43,5 @@ public class StatMetricHourly {
 
     @TableField(value = "update_time", fill = FieldFill.UPDATE)
     private LocalDateTime updateTime;
+
 }

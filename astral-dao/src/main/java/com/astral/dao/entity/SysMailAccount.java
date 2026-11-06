@@ -1,9 +1,13 @@
 package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
 import lombok.Data;
+
+import java.time.LocalDateTime;
+
+import java.util.List;
 
 @Data
 @TableName("sys_mail_account")
@@ -55,4 +59,5 @@ public class SysMailAccount {
 
     @TableField(value = "update_time", fill = FieldFill.UPDATE)
     private LocalDateTime updateTime;
+
 }

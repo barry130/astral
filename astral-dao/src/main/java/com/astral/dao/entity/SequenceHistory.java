@@ -1,10 +1,14 @@
 package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import jakarta.validation.constraints.NotNull;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.time.LocalDateTime;
+
+import java.util.List;
 
 @Data
 @TableName("sequence_history")
@@ -28,4 +32,5 @@ public class SequenceHistory {
 
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
+
 }
