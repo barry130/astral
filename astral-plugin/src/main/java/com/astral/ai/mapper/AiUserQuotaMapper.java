@@ -41,7 +41,8 @@ public interface AiUserQuotaMapper extends BaseMapper<AiUserQuotaEntity> {
      * @param outLimit    输出 Token 上限（null 表示不限）
      * @return 受影响行数（0 表示超限）
      */
-    @Update("""
+    @Update(
+            """
             UPDATE ai_user_quota
                SET request_count = request_count + #{requests},
                    input_tokens  = input_tokens + #{inTokens},
@@ -56,11 +57,12 @@ public interface AiUserQuotaMapper extends BaseMapper<AiUserQuotaEntity> {
                AND (#{outLimit,jdbcType=BIGINT} IS NULL
                     OR output_tokens + #{outTokens} <= #{outLimit,jdbcType=BIGINT})
             """)
-    int addWithinLimits(@Param("id") Long id,
-                        @Param("requests") int requests,
-                        @Param("inTokens") long inTokens,
-                        @Param("outTokens") long outTokens,
-                        @Param("reqLimit") Integer reqLimit,
-                        @Param("inLimit") Long inLimit,
-                        @Param("outLimit") Long outLimit);
+    int addWithinLimits(
+            @Param("id") Long id,
+            @Param("requests") int requests,
+            @Param("inTokens") long inTokens,
+            @Param("outTokens") long outTokens,
+            @Param("reqLimit") Integer reqLimit,
+            @Param("inLimit") Long inLimit,
+            @Param("outLimit") Long outLimit);
 }

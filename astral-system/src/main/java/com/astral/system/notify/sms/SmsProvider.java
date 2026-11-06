@@ -1,8 +1,7 @@
 package com.astral.system.notify.sms;
 
-import java.util.Map;
-
 import com.astral.dao.entity.SysSmsProvider;
+import java.util.Map;
 
 /**
  * 短信供应商 SPI
@@ -26,5 +25,6 @@ public interface SmsProvider {
      * @param params       模板变量（按名透传，JSON 序列化后作为模板参数）
      * @throws Exception 网络/签名/供应商业务错误（Code != OK 等）
      */
-    void send(SysSmsProvider provider, String phone, String signName, String templateCode, Map<String, String> params) throws Exception;
+    void send(SysSmsProvider provider, String phone, String signName, String templateCode, Map<String, String> params)
+            throws Exception;
 }

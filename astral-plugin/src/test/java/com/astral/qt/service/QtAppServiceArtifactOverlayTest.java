@@ -1,19 +1,18 @@
 package com.astral.qt.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.astral.qt.entity.QtAppUpdate;
 import com.astral.qt.entity.QtAppUpdateArtifact;
 import com.astral.qt.mapper.QtAppUpdateMapper;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.List;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 class QtAppServiceArtifactOverlayTest {
     private QtAppService service;

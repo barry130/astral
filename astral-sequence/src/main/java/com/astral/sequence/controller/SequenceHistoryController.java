@@ -1,19 +1,18 @@
 package com.astral.sequence.controller;
 
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.result.Result;
 import com.astral.dao.entity.SequenceHistory;
 import com.astral.sequence.service.SequenceHistoryService;
-import com.astral.common.result.Result;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 序列生成历史控制器
@@ -42,9 +41,10 @@ public class SequenceHistoryController {
      */
     @Operation(summary = "分页查询")
     @GetMapping("/page")
-    public Result<IPage<SequenceHistory>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                               @RequestParam(defaultValue = "10") Integer pageSize,
-                                               @RequestParam(required = false) String bizKey) {
+    public Result<IPage<SequenceHistory>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String bizKey) {
         return Result.success(sequenceHistoryService.getPage(pageNum, pageSize, bizKey));
     }
 
@@ -60,8 +60,8 @@ public class SequenceHistoryController {
      */
     @Operation(summary = "最近记录")
     @GetMapping("/recent")
-    public Result<List<SequenceHistory>> recent(@RequestParam(required = false) String bizKey,
-                                                @RequestParam(defaultValue = "100") Integer limit) {
+    public Result<List<SequenceHistory>> recent(
+            @RequestParam(required = false) String bizKey, @RequestParam(defaultValue = "100") Integer limit) {
         return Result.success(sequenceHistoryService.getRecent(bizKey, limit));
     }
 }

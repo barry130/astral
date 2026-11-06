@@ -2,49 +2,47 @@ package com.astral.qt.controller;
 
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.exception.BusinessException;
+import com.astral.common.result.Result;
+import com.astral.common.util.PatchValues;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.qt.QtPlugin;
-import com.astral.common.result.Result;
 import com.astral.qt.dto.QtSourceReleaseCreateDto;
+import com.astral.qt.dto.vo.QtGithubAccelProbeVo;
 import com.astral.qt.dto.vo.QtSourceReleaseVo;
 import com.astral.qt.entity.QtAppUpdate;
 import com.astral.qt.entity.QtAppUpdateArtifact;
 import com.astral.qt.entity.QtGithubAccel;
-import com.astral.qt.service.QtAppUpdateArtifactService;
-import com.astral.qt.dto.vo.QtGithubAccelProbeVo;
 import com.astral.qt.mapper.QtAppUpdateMapper;
+import com.astral.qt.mapper.QtUserDakaMapper;
 import com.astral.qt.service.QtAppService;
+import com.astral.qt.service.QtAppUpdateArtifactService;
+import com.astral.qt.service.QtDakaService;
 import com.astral.qt.service.QtGithubAccelService;
 import com.astral.qt.service.QtSourceService;
-
-import com.astral.qt.mapper.QtUserDakaMapper;
-import com.astral.qt.service.QtDakaService;
-import com.astral.common.util.PatchValues;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 轻听插件管理控制器（后台 Admin）
@@ -56,7 +54,10 @@ import java.util.Map;
 @Tag(name = "轻听API-后台管理")
 @RestController
 @RequestMapping("/api/v1/admin/qt")
-@RequiresPermission(value = QtPlugin.PERM_ADMIN, name = "轻听管理", domain = "qt",
+@RequiresPermission(
+        value = QtPlugin.PERM_ADMIN,
+        name = "轻听管理",
+        domain = "qt",
         description = "轻听插件后台管理（用户/版本更新/音源包/加速节点）")
 public class QtAdminController {
 
@@ -90,8 +91,7 @@ public class QtAdminController {
     @GetMapping("/overview")
     public Result<Map<String, Object>> overview() {
         Map<String, Object> map = new HashMap<>();
-        map.put("userCount", userMapper.selectCount(
-                new LambdaQueryWrapper<User>().eq(User::getUserType, "APP")));
+        map.put("userCount", userMapper.selectCount(new LambdaQueryWrapper<User>().eq(User::getUserType, "APP")));
         map.put("dakaCount", qtDakaMapper.selectCount(null));
         map.put("updateCount", qtUpdateMapper.selectCount(null));
         return Result.success(map);
@@ -99,9 +99,10 @@ public class QtAdminController {
 
     @Operation(summary = "用户分页（仅 App 用户）")
     @GetMapping("/users")
-    public Result<Page<User>> users(@RequestParam(defaultValue = "1") Integer pageNum,
-                                         @RequestParam(defaultValue = "10") Integer pageSize,
-                                         @RequestParam(required = false) String keyword) {
+    public Result<Page<User>> users(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String keyword) {
         Page<User> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUserType, "APP");
@@ -127,14 +128,13 @@ public class QtAdminController {
 
     @Operation(summary = "版本更新列表")
     @GetMapping("/updates")
-    public Result<Page<QtAppUpdate>> updates(@RequestParam(defaultValue = "1") Integer pageNum,
-                                                  @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<QtAppUpdate>> updates(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<QtAppUpdate> page = new Page<>(pageNum, pageSize);
-        Page<QtAppUpdate> result = qtUpdateMapper.selectPage(page,
-                new LambdaQueryWrapper<QtAppUpdate>().orderByDesc(QtAppUpdate::getVersionCode));
+        Page<QtAppUpdate> result = qtUpdateMapper.selectPage(
+                page, new LambdaQueryWrapper<QtAppUpdate>().orderByDesc(QtAppUpdate::getVersionCode));
         // 列表页要展示「该版本有几个产物」，所以每条都附上产物清单（只读，不挑选）
-        return Result.success((Page<QtAppUpdate>) result.setRecords(
-                appService.attachArtifacts(result.getRecords())));
+        return Result.success((Page<QtAppUpdate>) result.setRecords(appService.attachArtifacts(result.getRecords())));
     }
 
     @Operation(summary = "某版本的产物列表（一版本多包：Windows x64/x86/arm64…）")
@@ -185,14 +185,16 @@ public class QtAdminController {
         if (fallback == null) {
             return;
         }
-        qtUpdateMapper.update(null, new LambdaUpdateWrapper<QtAppUpdate>()
-                .eq(QtAppUpdate::getId, exist.getId())
-                .set(QtAppUpdate::getDownloadUrl, PatchValues.blankToNull(fallback.getDownloadUrl()))
-                .set(QtAppUpdate::getBrowserUrl, fallback.getBrowserUrl())
-                .set(QtAppUpdate::getIsGithub, fallback.getIsGithub() == null ? 0L : fallback.getIsGithub())
-                .set(QtAppUpdate::getMd5, fallback.getMd5())
-                .set(QtAppUpdate::getFileSize, fallback.getFileSize())
-                .set(QtAppUpdate::getUpdateTime, LocalDateTime.now()));
+        qtUpdateMapper.update(
+                null,
+                new LambdaUpdateWrapper<QtAppUpdate>()
+                        .eq(QtAppUpdate::getId, exist.getId())
+                        .set(QtAppUpdate::getDownloadUrl, PatchValues.blankToNull(fallback.getDownloadUrl()))
+                        .set(QtAppUpdate::getBrowserUrl, fallback.getBrowserUrl())
+                        .set(QtAppUpdate::getIsGithub, fallback.getIsGithub() == null ? 0L : fallback.getIsGithub())
+                        .set(QtAppUpdate::getMd5, fallback.getMd5())
+                        .set(QtAppUpdate::getFileSize, fallback.getFileSize())
+                        .set(QtAppUpdate::getUpdateTime, LocalDateTime.now()));
     }
 
     @Operation(summary = "新增版本更新")
@@ -207,9 +209,10 @@ public class QtAdminController {
         }
         update.setId(null);
         // 平台多选：前端送逗号分隔 CSV（与公告 channel 同款），这里校验并归一（去重/去空/保持顺序）
-        String platforms = update.getPlatforms() == null || update.getPlatforms().isBlank()
-                ? String.valueOf(QtAppUpdate.PLATFORM_ANDROID)
-                : update.getPlatforms();
+        String platforms =
+                update.getPlatforms() == null || update.getPlatforms().isBlank()
+                        ? String.valueOf(QtAppUpdate.PLATFORM_ANDROID)
+                        : update.getPlatforms();
         String platformErr = validatePlatformsCsv(platforms);
         if (platformErr != null) {
             throw BusinessException.of(platformErr);
@@ -272,25 +275,37 @@ public class QtAdminController {
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「清空版本说明/更新类型/文件大小/md5」保存后都还是旧值。白名单逐列显式 set。
         // fileSize 用原值写入（含 null）：整表单提交时 null 就是「清空」，文件大小列可空。
-        qtUpdateMapper.update(null, new LambdaUpdateWrapper<QtAppUpdate>()
-                .eq(QtAppUpdate::getId, id)
-                .set(QtAppUpdate::getVersionCode, PatchValues.orDefault(update.getVersionCode(), exist.getVersionCode()))
-                .set(QtAppUpdate::getPlatforms, normalizedPlatforms)
-                .set(QtAppUpdate::getVersionName, PatchValues.orCurrent(update.getVersionName(), exist.getVersionName()))
-                .set(QtAppUpdate::getVersionInfo, PatchValues.orCurrent(update.getVersionInfo(), exist.getVersionInfo()))
-                .set(QtAppUpdate::getUpdateType, PatchValues.orCurrent(update.getUpdateType(), exist.getUpdateType()))
-                .set(QtAppUpdate::getDownloadUrl, downloadUrl)
-                .set(QtAppUpdate::getBrowserUrl, browserUrl)
-                .set(QtAppUpdate::getChannel, PatchValues.orDefault(update.getChannel(), exist.getChannel()))
-                // download_mode 已废弃，后台不再维护：这里显式清成空串，避免旧客户端读到残留值。
-                // 该列是 NOT NULL DEFAULT 'app'，写不了 NULL，updateById(null) 又会被跳过（原实现因此没清掉）
-                .set(QtAppUpdate::getDownloadMode, "")
-                .set(QtAppUpdate::getIsGithub, isGithub)
-                .set(QtAppUpdate::getIsForce, PatchValues.orDefault(update.getIsForce(), exist.getIsForce()))
-                .set(QtAppUpdate::getIsPublished, PatchValues.orDefault(update.getIsPublished(), exist.getIsPublished()))
-                .set(QtAppUpdate::getFileSize, update.getFileSize())
-                .set(QtAppUpdate::getMd5, PatchValues.orCurrent(update.getMd5(), exist.getMd5()))
-                .set(QtAppUpdate::getUpdateTime, LocalDateTime.now()));
+        qtUpdateMapper.update(
+                null,
+                new LambdaUpdateWrapper<QtAppUpdate>()
+                        .eq(QtAppUpdate::getId, id)
+                        .set(
+                                QtAppUpdate::getVersionCode,
+                                PatchValues.orDefault(update.getVersionCode(), exist.getVersionCode()))
+                        .set(QtAppUpdate::getPlatforms, normalizedPlatforms)
+                        .set(
+                                QtAppUpdate::getVersionName,
+                                PatchValues.orCurrent(update.getVersionName(), exist.getVersionName()))
+                        .set(
+                                QtAppUpdate::getVersionInfo,
+                                PatchValues.orCurrent(update.getVersionInfo(), exist.getVersionInfo()))
+                        .set(
+                                QtAppUpdate::getUpdateType,
+                                PatchValues.orCurrent(update.getUpdateType(), exist.getUpdateType()))
+                        .set(QtAppUpdate::getDownloadUrl, downloadUrl)
+                        .set(QtAppUpdate::getBrowserUrl, browserUrl)
+                        .set(QtAppUpdate::getChannel, PatchValues.orDefault(update.getChannel(), exist.getChannel()))
+                        // download_mode 已废弃，后台不再维护：这里显式清成空串，避免旧客户端读到残留值。
+                        // 该列是 NOT NULL DEFAULT 'app'，写不了 NULL，updateById(null) 又会被跳过（原实现因此没清掉）
+                        .set(QtAppUpdate::getDownloadMode, "")
+                        .set(QtAppUpdate::getIsGithub, isGithub)
+                        .set(QtAppUpdate::getIsForce, PatchValues.orDefault(update.getIsForce(), exist.getIsForce()))
+                        .set(
+                                QtAppUpdate::getIsPublished,
+                                PatchValues.orDefault(update.getIsPublished(), exist.getIsPublished()))
+                        .set(QtAppUpdate::getFileSize, update.getFileSize())
+                        .set(QtAppUpdate::getMd5, PatchValues.orCurrent(update.getMd5(), exist.getMd5()))
+                        .set(QtAppUpdate::getUpdateTime, LocalDateTime.now()));
         if (update.getArtifacts() != null) {
             List<QtAppUpdateArtifact> saved = artifactService.replaceAll(id, artifacts);
             syncLegacyFields(exist, saved.isEmpty() ? null : saved.get(0));
@@ -303,11 +318,11 @@ public class QtAdminController {
 
     @Operation(summary = "GitHub加速节点分页列表（直接查库，不走缓存）")
     @GetMapping("/github-accels")
-    public Result<Page<QtGithubAccel>> githubAccels(@RequestParam(defaultValue = "1") Integer pageNum,
-                                                        @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<QtGithubAccel>> githubAccels(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<QtGithubAccel> page = new Page<>(pageNum, pageSize);
-        return Result.success(githubAccelService.page(page,
-                new LambdaQueryWrapper<QtGithubAccel>().orderByAsc(QtGithubAccel::getSort)));
+        return Result.success(githubAccelService.page(
+                page, new LambdaQueryWrapper<QtGithubAccel>().orderByAsc(QtGithubAccel::getSort)));
     }
 
     @Operation(summary = "新增GitHub加速节点（自动刷新缓存）")
@@ -387,8 +402,8 @@ public class QtAdminController {
             @RequestParam(required = false) String channel,
             @RequestParam(required = false) Boolean published,
             @RequestParam(defaultValue = "0") Integer full) {
-        return Result.success(sourceService.pageReleases(
-                pageNum, pageSize, platform, channel, published, full != null && full == 1));
+        return Result.success(
+                sourceService.pageReleases(pageNum, pageSize, platform, channel, published, full != null && full == 1));
     }
 
     @Operation(summary = "音源包装机分布统计（版本×平台×结果）")
@@ -405,8 +420,7 @@ public class QtAdminController {
 
     @Operation(summary = "编辑音源包（platforms/channel/notes/appVersionCodes/artifacts 按 path 合并）")
     @PutMapping("/source-releases/{id}")
-    public Result<Void> updateSourceRelease(@PathVariable Long id,
-                                                @RequestBody QtSourceReleaseCreateDto dto) {
+    public Result<Void> updateSourceRelease(@PathVariable Long id, @RequestBody QtSourceReleaseCreateDto dto) {
         sourceService.updateRelease(id, dto);
         return Result.success();
     }
@@ -427,8 +441,7 @@ public class QtAdminController {
 
     @Operation(summary = "标记坏包（可带 rollbackTo 指定回退版本）")
     @PostMapping("/source-releases/{id}/bad")
-    public Result<Void> markSourceReleaseBad(@PathVariable Long id,
-                                                 @RequestParam(required = false) Long rollbackTo) {
+    public Result<Void> markSourceReleaseBad(@PathVariable Long id, @RequestParam(required = false) Long rollbackTo) {
         sourceService.markBad(id, rollbackTo);
         return Result.success();
     }
@@ -495,8 +508,7 @@ public class QtAdminController {
                 .filter(platform -> items.stream().noneMatch(a -> a != null && platform.equals(a.getPlatform())))
                 .map(this::platformLabel)
                 .toList();
-        return missing.isEmpty() ? null : "缺少所选平台的产物：" + String.join("、", missing)
-                + "（请为每个所选平台添加对应产物）";
+        return missing.isEmpty() ? null : "缺少所选平台的产物：" + String.join("、", missing) + "（请为每个所选平台添加对应产物）";
     }
 
     /** 平台码 → 中文名（仅用于拼错误提示，避免用户看到 1101 这种裸码值）；未知码值原样返回 */

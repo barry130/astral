@@ -6,5 +6,4 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 /**
  * CMS 站点设置 Mapper
  */
-public interface CmsSettingMapper extends BaseMapper<CmsSetting> {
-}
+public interface CmsSettingMapper extends BaseMapper<CmsSetting> {}

@@ -5,10 +5,9 @@ import com.astral.storage.mapper.StorageConfigMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.springframework.stereotype.Component;
-
 import jakarta.annotation.Resource;
 import java.time.Duration;
+import org.springframework.stereotype.Component;
 
 /**
  * 存储配置进程内只读缓存（Caffeine，TTL 60s）
@@ -52,10 +51,12 @@ public class StorageConfigCache {
 
     /** 默认启用的配置（is_default=1 + status=ENABLED）；无则返回 null，由调用方决定报错 */
     public StorageConfigEntity getDefaultEnabled() {
-        return defaultCache.get(KEY_DEFAULT, k -> configMapper.selectOne(new LambdaQueryWrapper<StorageConfigEntity>()
-                .eq(StorageConfigEntity::getIsDefault, 1)
-                .eq(StorageConfigEntity::getStatus, StorageConfigEntity.STATUS_ENABLED)
-                .last("LIMIT 1")));
+        return defaultCache.get(
+                KEY_DEFAULT,
+                k -> configMapper.selectOne(new LambdaQueryWrapper<StorageConfigEntity>()
+                        .eq(StorageConfigEntity::getIsDefault, 1)
+                        .eq(StorageConfigEntity::getStatus, StorageConfigEntity.STATUS_ENABLED)
+                        .last("LIMIT 1")));
     }
 
     /** 任何 sys_storage_config 写入后调用：失效全部配置缓存 */

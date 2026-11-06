@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 提示词模板 Mapper
  */
 @Mapper
-public interface AiPromptTemplateMapper extends BaseMapper<AiPromptTemplateEntity> {
-}
+public interface AiPromptTemplateMapper extends BaseMapper<AiPromptTemplateEntity> {}

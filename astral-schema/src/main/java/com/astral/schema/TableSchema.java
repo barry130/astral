@@ -1,9 +1,8 @@
 package com.astral.schema;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * 表Schema定义

@@ -1,15 +1,14 @@
 package com.astral.server;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.astral.common.util.ClientHeaders;
 import com.astral.monitor.service.StatIngestService;
-import org.junit.jupiter.api.Test;
-
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 /**
  * 匿名上报的「维度归一 + 时间戳裁剪」守卫（回归保护）。
@@ -51,12 +50,9 @@ class StatIngestPrivacyTest {
         LocalDateTime skewed = (LocalDateTime) toLocalDateTime.invoke(service, now - 365L * 24 * 3600 * 1000);
         LocalDateTime future = (LocalDateTime) toLocalDateTime.invoke(service, now + 365L * 24 * 3600 * 1000);
 
-        assertTrue(Math.abs(Duration.between(fresh, nowBucket).toMinutes()) <= 5,
-                "当前时间戳应原样使用: " + fresh);
-        assertTrue(Math.abs(Duration.between(skewed, nowBucket).toDays()) < 1,
-                "远古时间戳应被裁剪到当前时间，实际: " + skewed);
-        assertTrue(Math.abs(Duration.between(future, nowBucket).toDays()) < 1,
-                "未来时间戳应被裁剪到当前时间，实际: " + future);
+        assertTrue(Math.abs(Duration.between(fresh, nowBucket).toMinutes()) <= 5, "当前时间戳应原样使用: " + fresh);
+        assertTrue(Math.abs(Duration.between(skewed, nowBucket).toDays()) < 1, "远古时间戳应被裁剪到当前时间，实际: " + skewed);
+        assertTrue(Math.abs(Duration.between(future, nowBucket).toDays()) < 1, "未来时间戳应被裁剪到当前时间，实际: " + future);
     }
 
     @Test

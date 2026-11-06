@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
-
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -36,7 +35,8 @@ class QtPackHeaderProbeTest {
 
     @Test
     void parseWithLeadingBytesBeforeMark() {
-        String text = "  \n/*__QT_PACK__{\"kind\":\"play\",\"id\":\"play-official\",\"versionCode\":2026102501}*/\nbody";
+        String text =
+                "  \n/*__QT_PACK__{\"kind\":\"play\",\"id\":\"play-official\",\"versionCode\":2026102501}*/\nbody";
         QtPackHeaderProbe.PackHeader header = QtPackHeaderProbe.parsePackHeader(text, mapper);
         assertNotNull(header);
         assertEquals("play", header.kind());

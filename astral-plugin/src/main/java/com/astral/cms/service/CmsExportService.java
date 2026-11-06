@@ -10,9 +10,6 @@ import com.astral.cms.mapper.CmsPostTagMapper;
 import com.astral.cms.mapper.CmsTagMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +23,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 内容导出服务
@@ -44,12 +43,16 @@ public class CmsExportService {
 
     @Resource
     private CmsPostMapper postMapper;
+
     @Resource
     private CmsPageMapper pageMapper;
+
     @Resource
     private CmsTagMapper tagMapper;
+
     @Resource
     private CmsPostTagMapper postTagMapper;
+
     @Resource
     private CmsPostService postService;
 
@@ -82,7 +85,8 @@ public class CmsExportService {
                 .orderByDesc(CmsPost::getId));
         List<CmsPage> pages = pageMapper.selectList(new LambdaQueryWrapper<CmsPage>()
                 .isNull(CmsPage::getDeleteTime)
-                .orderByAsc(CmsPage::getSort).orderByAsc(CmsPage::getId));
+                .orderByAsc(CmsPage::getSort)
+                .orderByAsc(CmsPage::getId));
         Map<Long, List<String>> tagNamesByPost = loadTagNames(posts);
         Map<Long, List<String>> categoryNamesByPost = postService.loadCategoryNames(posts);
 
@@ -90,18 +94,29 @@ public class CmsExportService {
         try (ZipOutputStream zip = new ZipOutputStream(buffer, StandardCharsets.UTF_8)) {
             Set<String> used = new HashSet<>();
             StringBuilder manifest = new StringBuilder("# 内容导出\n\n")
-                    .append("导出时间：").append(LocalDateTime.now().format(DATE_FMT))
-                    .append("\n\n## 文章（").append(posts.size()).append(" 篇）\n\n");
+                    .append("导出时间：")
+                    .append(LocalDateTime.now().format(DATE_FMT))
+                    .append("\n\n## 文章（")
+                    .append(posts.size())
+                    .append(" 篇）\n\n");
             for (CmsPost post : posts) {
                 String name = uniqueName(used, "posts/", post.getSlug(), post.getTitle(), post.getId());
                 writeEntry(zip, name, renderPostMarkdown(post, tagNamesByPost, categoryNamesByPost));
-                manifest.append("- [").append(post.getTitle()).append("](").append(name).append(")\n");
+                manifest.append("- [")
+                        .append(post.getTitle())
+                        .append("](")
+                        .append(name)
+                        .append(")\n");
             }
             manifest.append("\n## 页面（").append(pages.size()).append(" 个）\n\n");
             for (CmsPage page : pages) {
                 String name = uniqueName(used, "pages/", page.getSlug(), page.getTitle(), page.getId());
                 writeEntry(zip, name, renderPageMarkdown(page));
-                manifest.append("- [").append(page.getTitle()).append("](").append(name).append(")\n");
+                manifest.append("- [")
+                        .append(page.getTitle())
+                        .append("](")
+                        .append(name)
+                        .append(")\n");
             }
             writeEntry(zip, "manifest.md", manifest.toString());
         } catch (IOException e) {
@@ -123,7 +138,8 @@ public class CmsExportService {
         Map<Long, List<String>> categoryNamesByPost = postService.loadCategoryNames(posts);
         StringBuilder sb = new StringBuilder("# 文章合集\n\n");
         for (CmsPost post : posts) {
-            sb.append(renderPostMarkdown(post, tagNamesByPost, categoryNamesByPost)).append("\n\n---\n\n");
+            sb.append(renderPostMarkdown(post, tagNamesByPost, categoryNamesByPost))
+                    .append("\n\n---\n\n");
         }
         return sb.toString();
     }
@@ -131,20 +147,23 @@ public class CmsExportService {
     // ==================== 私有辅助 ====================
 
     private String renderPostMarkdown(CmsPost post) {
-        return renderPostMarkdown(post, loadTagNames(List.of(post)),
-                postService.loadCategoryNames(List.of(post)));
+        return renderPostMarkdown(post, loadTagNames(List.of(post)), postService.loadCategoryNames(List.of(post)));
     }
 
-    private String renderPostMarkdown(CmsPost post, Map<Long, List<String>> tagNames,
-                                      Map<Long, List<String>> categoryNames) {
+    private String renderPostMarkdown(
+            CmsPost post, Map<Long, List<String>> tagNames, Map<Long, List<String>> categoryNames) {
         StringBuilder sb = new StringBuilder();
         sb.append("---\n");
         sb.append("title: ").append(yamlString(post.getTitle())).append('\n');
         if (notBlank(post.getSlug())) {
             sb.append("slug: ").append(yamlString(post.getSlug())).append('\n');
         }
-        sb.append("date: ").append(post.getPublishedAt() == null ? ""
-                : post.getPublishedAt().format(DATE_FMT)).append('\n');
+        sb.append("date: ")
+                .append(
+                        post.getPublishedAt() == null
+                                ? ""
+                                : post.getPublishedAt().format(DATE_FMT))
+                .append('\n');
         sb.append("status: ").append(post.getStatus()).append('\n');
         List<String> cats = categoryNames.getOrDefault(post.getId(), List.of());
         if (!cats.isEmpty()) {
@@ -175,8 +194,12 @@ public class CmsExportService {
         if (notBlank(page.getSlug())) {
             sb.append("slug: ").append(yamlString(page.getSlug())).append('\n');
         }
-        sb.append("date: ").append(page.getPublishedAt() == null ? ""
-                : page.getPublishedAt().format(DATE_FMT)).append('\n');
+        sb.append("date: ")
+                .append(
+                        page.getPublishedAt() == null
+                                ? ""
+                                : page.getPublishedAt().format(DATE_FMT))
+                .append('\n');
         sb.append("status: ").append(page.getStatus()).append('\n');
         if (page.getSort() != null) {
             sb.append("sort: ").append(page.getSort()).append('\n');
@@ -195,13 +218,15 @@ public class CmsExportService {
             return result;
         }
         List<Long> postIds = posts.stream().map(CmsPost::getId).toList();
-        List<CmsPostTag> links = postTagMapper.selectList(new LambdaQueryWrapper<CmsPostTag>()
-                .in(CmsPostTag::getPostId, postIds));
+        List<CmsPostTag> links =
+                postTagMapper.selectList(new LambdaQueryWrapper<CmsPostTag>().in(CmsPostTag::getPostId, postIds));
         if (links.isEmpty()) {
             return result;
         }
         Map<Long, String> nameById = new HashMap<>();
-        tagMapper.selectBatchIds(links.stream().map(CmsPostTag::getTagId).distinct().toList())
+        tagMapper
+                .selectBatchIds(
+                        links.stream().map(CmsPostTag::getTagId).distinct().toList())
                 .forEach(t -> nameById.put(t.getId(), t.getName()));
         for (CmsPostTag link : links) {
             String name = nameById.get(link.getTagId());

@@ -2,11 +2,10 @@ package com.astral.dao.mapper;
 
 import com.astral.dao.entity.StatMetricHourly;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.time.LocalDateTime;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
-
-import java.time.LocalDateTime;
 
 /**
  * 统计小时指标桶 Mapper 接口
@@ -26,16 +25,17 @@ public interface StatMetricHourlyMapper extends BaseMapper<StatMetricHourly> {
      * 同族的 {@code StatPageHourlyMapper} / {@code StatDeviceMapper} 用的都是 {@code @Update}，
      * 这里统一为 {@code @Update}，语义与执行路径才一致。</p>
      */
-    @Update("UPDATE stat_metric_hourly SET pv = pv + #{pv}, visits = visits + #{visits}, " +
-            "launches = launches + #{launches}, total_duration_ms = total_duration_ms + #{totalDurationMs}, " +
-            "error_count = error_count + #{errorCount} " +
-            "WHERE bucket_hour = #{bucketHour} AND ut = #{ut} AND app_version = #{appVersion}")
-    int incrementMetric(@Param("bucketHour") LocalDateTime bucketHour,
-                        @Param("ut") String ut,
-                        @Param("appVersion") String appVersion,
-                        @Param("pv") long pv,
-                        @Param("visits") long visits,
-                        @Param("launches") long launches,
-                        @Param("totalDurationMs") long totalDurationMs,
-                        @Param("errorCount") long errorCount);
+    @Update("UPDATE stat_metric_hourly SET pv = pv + #{pv}, visits = visits + #{visits}, "
+            + "launches = launches + #{launches}, total_duration_ms = total_duration_ms + #{totalDurationMs}, "
+            + "error_count = error_count + #{errorCount} "
+            + "WHERE bucket_hour = #{bucketHour} AND ut = #{ut} AND app_version = #{appVersion}")
+    int incrementMetric(
+            @Param("bucketHour") LocalDateTime bucketHour,
+            @Param("ut") String ut,
+            @Param("appVersion") String appVersion,
+            @Param("pv") long pv,
+            @Param("visits") long visits,
+            @Param("launches") long launches,
+            @Param("totalDurationMs") long totalDurationMs,
+            @Param("errorCount") long errorCount);
 }

@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * 反馈回复表 Mapper
  */
 @Mapper
-public interface FeedbackReplyMapper extends BaseMapper<FeedbackReply> {
-}
+public interface FeedbackReplyMapper extends BaseMapper<FeedbackReply> {}

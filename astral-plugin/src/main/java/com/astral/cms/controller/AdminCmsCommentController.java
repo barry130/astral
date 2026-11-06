@@ -35,11 +35,12 @@ public class AdminCmsCommentController {
 
     @Operation(summary = "评论分页（status/targetType/keyword 筛选，含目标标题与 IP）")
     @GetMapping("/page")
-    public Result<Page<CmsComment>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                         @RequestParam(defaultValue = "10") Integer pageSize,
-                                         @RequestParam(required = false) String status,
-                                         @RequestParam(required = false) String targetType,
-                                         @RequestParam(required = false) String keyword) {
+    public Result<Page<CmsComment>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String targetType,
+            @RequestParam(required = false) String keyword) {
         return Result.success(commentService.adminPage(pageNum, pageSize, status, targetType, keyword));
     }
 

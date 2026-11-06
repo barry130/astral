@@ -7,5 +7,4 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SysSmsProviderServiceImpl extends ServiceImpl<SysSmsProviderMapper, SysSmsProvider>
-        implements SysSmsProviderService {
-}
+        implements SysSmsProviderService {}

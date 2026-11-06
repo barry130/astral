@@ -1,5 +1,6 @@
 package com.astral.cms.controller;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.astral.cms.common.CmsException;
 import com.astral.cms.dto.ContentStatusDto;
 import com.astral.cms.dto.PostSaveDto;
@@ -8,7 +9,6 @@ import com.astral.cms.service.CmsPostService;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import cn.dev33.satoken.stp.StpUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -40,12 +40,13 @@ public class AdminCmsPostController {
 
     @Operation(summary = "文章分页（status/categoryId/tagId/keyword 筛选）")
     @GetMapping("/page")
-    public Result<Page<CmsPost>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                      @RequestParam(defaultValue = "10") Integer pageSize,
-                                      @RequestParam(required = false) String status,
-                                      @RequestParam(required = false) Long categoryId,
-                                      @RequestParam(required = false) Long tagId,
-                                      @RequestParam(required = false) String keyword) {
+    public Result<Page<CmsPost>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long tagId,
+            @RequestParam(required = false) String keyword) {
         return Result.success(postService.adminPage(pageNum, pageSize, status, categoryId, tagId, keyword));
     }
 

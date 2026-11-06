@@ -1,11 +1,10 @@
 package com.astral.qt.mapper;
 
 import com.astral.qt.dto.vo.QtLikeChangeVo;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-
-import java.util.List;
 
 /**
  * 收藏多端同步专用 Mapper（LIKE_SYNC_DESIGN.md §1.3/§2.3）
@@ -22,7 +21,8 @@ public interface QtLikeSyncMapper {
     String lockUser(@Param("key") long key);
 
     /** 用户跨两表的最大变更序号（无记录返回 0） */
-    @Select("""
+    @Select(
+            """
             SELECT GREATEST(
                 COALESCE((SELECT MAX(updated_seq) FROM qt_like_song WHERE uid = #{uid}), 0),
                 COALESCE((SELECT MAX(updated_seq) FROM qt_like_playlist WHERE uid = #{uid}), 0)
@@ -35,7 +35,8 @@ public interface QtLikeSyncMapper {
      * pg_advisory_xact_lock 是易变函数，CTE 引用一次、物化执行，主查询在其上取两表最大 seq。
      * 事务提交/回滚自动释放锁，与 {@link #lockUser} 同一把用户级锁。
      */
-    @Select("""
+    @Select(
+            """
             WITH locked AS (SELECT pg_advisory_xact_lock(#{uid}))
             SELECT GREATEST(
                 COALESCE((SELECT MAX(updated_seq) FROM qt_like_song WHERE uid = #{uid}), 0),
@@ -50,7 +51,8 @@ public interface QtLikeSyncMapper {
      * song 行同时返回 pid（歌曲所属歌单，收藏时上送）与 pic_url（封面快照，可空），
      * playlist 行 pid 即歌单ID、pic_url 为歌单封面。</p>
      */
-    @Select("""
+    @Select(
+            """
             <script>
             SELECT 'song' AS type, sid AS id, sid, pid, platform, name, singer, album, hash,
                    pic_url, (deleted_at IS NOT NULL) AS deleted, updated_seq
@@ -66,6 +68,6 @@ public interface QtLikeSyncMapper {
             LIMIT #{limit} OFFSET #{offset}
             </script>
             """)
-    List<QtLikeChangeVo> selectChanges(@Param("uid") Long uid, @Param("since") long since,
-                                       @Param("limit") int limit, @Param("offset") int offset);
+    List<QtLikeChangeVo> selectChanges(
+            @Param("uid") Long uid, @Param("since") long since, @Param("limit") int limit, @Param("offset") int offset);
 }

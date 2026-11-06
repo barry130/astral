@@ -21,6 +21,10 @@ import com.astral.ai.service.AiRequestService;
 import com.astral.common.result.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,11 +34,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * App 端 AI 接口，{@code qt-uniappx} 与 {@code qt-pc} 共用。
@@ -59,14 +58,13 @@ public class AiAppController {
     // ==================== 智能体 ====================
 
     @GetMapping("/agents")
-    public Result<List<AiAppDtos.AgentCard>> agents(HttpServletRequest request,
-                                                    @RequestParam(required = false) String clientType) {
+    public Result<List<AiAppDtos.AgentCard>> agents(
+            HttpServletRequest request, @RequestParam(required = false) String clientType) {
         Long userId = AiCaller.requireUserId(request);
         String client = resolveClient(clientType, request);
         List<AiAppDtos.AgentCard> cards = new ArrayList<>();
         for (AiAgentEntity agent : agentService.list()) {
-            if (agent.getPublishedVersionId() == null
-                    || AiConstants.AgentStatus.DISABLED.equals(agent.getStatus())) {
+            if (agent.getPublishedVersionId() == null || AiConstants.AgentStatus.DISABLED.equals(agent.getStatus())) {
                 continue;
             }
             if (!accessService.supportsClient(agent, client)) {
@@ -75,17 +73,23 @@ public class AiAppController {
             if (!accessService.permitted(agent, client, userId)) {
                 continue;
             }
-            cards.add(new AiAppDtos.AgentCard(agent.getAgentCode(), agent.getName(), agent.getAgentType(),
-                    agent.getDescription(), agent.getIcon(), agent.getEntryConfig(),
+            cards.add(new AiAppDtos.AgentCard(
+                    agent.getAgentCode(),
+                    agent.getName(),
+                    agent.getAgentType(),
+                    agent.getDescription(),
+                    agent.getIcon(),
+                    agent.getEntryConfig(),
                     capabilitiesOf(agent, client)));
         }
         return Result.success(cards);
     }
 
     @GetMapping("/capabilities")
-    public Result<AiAppDtos.Capabilities> capabilities(@RequestParam String agentCode,
-                                                       HttpServletRequest request,
-                                                       @RequestParam(required = false) String clientType) {
+    public Result<AiAppDtos.Capabilities> capabilities(
+            @RequestParam String agentCode,
+            HttpServletRequest request,
+            @RequestParam(required = false) String clientType) {
         Long userId = AiCaller.requireUserId(request);
         String client = resolveClient(clientType, request);
         AiAgentEntity agent = accessService.requireForClient(agentCode, client, userId);
@@ -95,9 +99,10 @@ public class AiAppController {
     // ==================== 会话 ====================
 
     @GetMapping("/conversations")
-    public Result<List<AiAppDtos.ConversationVo>> conversations(@RequestParam String agentCode,
-                                                                HttpServletRequest request,
-                                                                @RequestParam(required = false) String clientType) {
+    public Result<List<AiAppDtos.ConversationVo>> conversations(
+            @RequestParam String agentCode,
+            HttpServletRequest request,
+            @RequestParam(required = false) String clientType) {
         Long userId = AiCaller.requireUserId(request);
         String client = resolveClient(clientType, request);
         AiAgentEntity agent = accessService.requireForClient(agentCode, client, userId);
@@ -116,8 +121,7 @@ public class AiAppController {
         Long userId = AiCaller.requireUserId(request);
         String client = resolveClient(clientType, request);
         AiAgentEntity agent = accessService.requireForClient(req.agentCode(), client, userId);
-        return Result.success("创建成功",
-                toVo(conversationService.create(userId, agent, client, req.title()), agent));
+        return Result.success("创建成功", toVo(conversationService.create(userId, agent, client, req.title()), agent));
     }
 
     @GetMapping("/conversations/{id}")
@@ -137,13 +141,15 @@ public class AiAppController {
     // ==================== 消息 ====================
 
     @GetMapping("/conversations/{id}/messages")
-    public Result<AiAppDtos.MessagePage> messages(@PathVariable Long id,
-                                                  HttpServletRequest request,
-                                                  @RequestParam(required = false) Long beforeId,
-                                                  @RequestParam(required = false) Integer limit) {
+    public Result<AiAppDtos.MessagePage> messages(
+            @PathVariable Long id,
+            HttpServletRequest request,
+            @RequestParam(required = false) Long beforeId,
+            @RequestParam(required = false) Integer limit) {
         Long userId = AiCaller.requireUserId(request);
         conversationService.requireOwned(id, userId);
-        int size = limit == null ? AiConversationService.DEFAULT_PAGE_SIZE
+        int size = limit == null
+                ? AiConversationService.DEFAULT_PAGE_SIZE
                 : Math.max(1, Math.min(AiConversationService.MAX_PAGE_SIZE, limit));
         // 多取一条用于判断 hasMore
         List<AiMessageEntity> rows = conversationService.messages(id, beforeId, size + 1);
@@ -158,10 +164,11 @@ public class AiAppController {
     }
 
     @PostMapping("/conversations/{id}/messages")
-    public Result<AiAppDtos.SendMessageResp> send(@PathVariable Long id,
-                                                  @Valid @RequestBody AiAppDtos.SendMessageReq req,
-                                                  HttpServletRequest request,
-                                                  @RequestParam(required = false) String clientType) {
+    public Result<AiAppDtos.SendMessageResp> send(
+            @PathVariable Long id,
+            @Valid @RequestBody AiAppDtos.SendMessageReq req,
+            HttpServletRequest request,
+            @RequestParam(required = false) String clientType) {
         Long userId = AiCaller.requireUserId(request);
         String client = resolveClient(clientType, request);
         AiConversationEntity conversation = conversationService.requireOwned(id, userId);
@@ -173,25 +180,30 @@ public class AiAppController {
             throw new AiException("AI004", agent.getName());
         }
         AiAgentVersionEntity version = accessService.resolveVersion(agent, conversation.getAgentVersionId());
-        AiChatOrchestrator.Start started = orchestrator.start(agent, version, conversation, userId, client,
-                req.content(), req.context(), req.idempotencyKey());
-        return Result.success(new AiAppDtos.SendMessageResp(started.requestId(), started.userMessageId(),
-                started.assistantMessageId(), started.status(), started.stream()));
+        AiChatOrchestrator.Start started = orchestrator.start(
+                agent, version, conversation, userId, client, req.content(), req.context(), req.idempotencyKey());
+        return Result.success(new AiAppDtos.SendMessageResp(
+                started.requestId(),
+                started.userMessageId(),
+                started.assistantMessageId(),
+                started.status(),
+                started.stream()));
     }
 
     // ==================== 事件与取消 ====================
 
     @GetMapping("/requests/{id}/events")
-    public Result<AiAppDtos.EventBatch> events(@PathVariable Long id,
-                                               HttpServletRequest request,
-                                               @RequestParam(required = false) Long after,
-                                               @RequestParam(required = false) Integer limit) {
+    public Result<AiAppDtos.EventBatch> events(
+            @PathVariable Long id,
+            HttpServletRequest request,
+            @RequestParam(required = false) Long after,
+            @RequestParam(required = false) Integer limit) {
         Long userId = AiCaller.requireUserId(request);
         AiRequestEntity entity = requestService.requireOwned(id, userId);
         List<AiAppDtos.EventVo> events = new ArrayList<>();
         for (var row : eventService.read(id, after, limit)) {
-            events.add(new AiAppDtos.EventVo(id, row.getSequenceNo(), row.getEventType(),
-                    toMap(row.getDataJson()), row.getCreateTime()));
+            events.add(new AiAppDtos.EventVo(
+                    id, row.getSequenceNo(), row.getEventType(), toMap(row.getDataJson()), row.getCreateTime()));
         }
         long next = after == null ? 0L : after;
         if (!events.isEmpty()) {
@@ -199,15 +211,13 @@ public class AiAppController {
         }
         // 终态 + 游标追平才算流结束：一次拉取有条数上限，请求 SUCCEEDED 时
         // 事件可能还剩几百条没读，提前报 terminal 会让客户端丢掉 message.completed
-        boolean terminal = AiConstants.RequestStatus.isTerminal(entity.getStatus())
-                && eventService.drained(id, next);
+        boolean terminal = AiConstants.RequestStatus.isTerminal(entity.getStatus()) && eventService.drained(id, next);
         return Result.success(new AiAppDtos.EventBatch(id, entity.getStatus(), events, next, terminal));
     }
 
     @PostMapping("/requests/{id}/cancel")
-    public Result<Map<String, Object>> cancel(@PathVariable Long id,
-                                              @RequestBody(required = false) AiAppDtos.CancelReq req,
-                                              HttpServletRequest request) {
+    public Result<Map<String, Object>> cancel(
+            @PathVariable Long id, @RequestBody(required = false) AiAppDtos.CancelReq req, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
         String reason = req == null ? null : req.reason();
         AiRequestEntity entity = requestService.cancel(id, userId, reason, false);
@@ -220,15 +230,16 @@ public class AiAppController {
     // ==================== 反馈与动作 ====================
 
     @PostMapping("/messages/{id}/feedback")
-    public Result<Map<String, Object>> feedback(@PathVariable Long id,
-                                                @Valid @RequestBody AiAppDtos.FeedbackReq req,
-                                                HttpServletRequest request) {
+    public Result<Map<String, Object>> feedback(
+            @PathVariable Long id, @Valid @RequestBody AiAppDtos.FeedbackReq req, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
         AiMessageEntity message = feedbackService.requireMessage(id, userId);
         feedbackService.submit(userId, message, req.feedbackType(), req.reasonCode(), req.comment());
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("messageId", id);
-        data.put("feedbackType", req.feedbackType() == null ? null : req.feedbackType().toUpperCase());
+        data.put(
+                "feedbackType",
+                req.feedbackType() == null ? null : req.feedbackType().toUpperCase());
         return Result.success("已记录", data);
     }
 
@@ -239,8 +250,8 @@ public class AiAppController {
      * 不接受模型原始文本，也不会据此执行任何副作用操作（播放发生在客户端）。</p>
      */
     @PostMapping("/actions/execute")
-    public Result<Map<String, Object>> executeAction(@Valid @RequestBody AiAppDtos.ActionExecuteReq req,
-                                                     HttpServletRequest request) {
+    public Result<Map<String, Object>> executeAction(
+            @Valid @RequestBody AiAppDtos.ActionExecuteReq req, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
         String type = req.actionType() == null ? "" : req.actionType().trim().toUpperCase();
         if (!AiConstants.ActionType.all().contains(type)) {
@@ -285,11 +296,16 @@ public class AiAppController {
     }
 
     private AiAppDtos.ConversationVo toVo(AiConversationEntity entity, AiAgentEntity agent) {
-        return new AiAppDtos.ConversationVo(entity.getId(),
+        return new AiAppDtos.ConversationVo(
+                entity.getId(),
                 agent == null ? null : agent.getAgentCode(),
                 agent == null ? null : agent.getName(),
-                entity.getTitle(), entity.getStatus(), entity.getMessageCount(), entity.getPinned(),
-                entity.getLastMessageTime(), entity.getCreateTime());
+                entity.getTitle(),
+                entity.getStatus(),
+                entity.getMessageCount(),
+                entity.getPinned(),
+                entity.getLastMessageTime(),
+                entity.getCreateTime());
     }
 
     private AiAppDtos.MessageVo toVo(AiMessageEntity entity) {
@@ -297,7 +313,8 @@ public class AiAppController {
         var blocksNode = AiJson.readArray(entity.getBlocksJson());
         if (blocksNode != null) {
             for (var node : blocksNode) {
-                blocks.add(new AiAppDtos.Block(AiJson.text(node, "type", "text"),
+                blocks.add(new AiAppDtos.Block(
+                        AiJson.text(node, "type", "text"),
                         AiJson.text(node, "title", null),
                         toMap(AiJson.write(node.get("data")))));
             }
@@ -316,9 +333,18 @@ public class AiAppController {
                         AiJson.text(node, "matchedText", null)));
             }
         }
-        return new AiAppDtos.MessageVo(entity.getId(), entity.getConversationId(), entity.getRequestId(),
-                entity.getRole(), entity.getContent(), entity.getContentType(), entity.getStatus(),
-                blocks, citations, entity.getModelName(), entity.getCreateTime());
+        return new AiAppDtos.MessageVo(
+                entity.getId(),
+                entity.getConversationId(),
+                entity.getRequestId(),
+                entity.getRole(),
+                entity.getContent(),
+                entity.getContentType(),
+                entity.getStatus(),
+                blocks,
+                citations,
+                entity.getModelName(),
+                entity.getCreateTime());
     }
 
     private Map<String, Object> toMap(String json) {

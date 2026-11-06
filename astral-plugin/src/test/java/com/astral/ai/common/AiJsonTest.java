@@ -1,12 +1,11 @@
 package com.astral.ai.common;
 
-import org.junit.jupiter.api.Test;
-import tools.jackson.databind.node.ObjectNode;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * {@link AiJson} 的边界行为。

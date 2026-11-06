@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 知识文档 Mapper
  */
 @Mapper
-public interface AiKnowledgeDocumentMapper extends BaseMapper<AiKnowledgeDocumentEntity> {
-}
+public interface AiKnowledgeDocumentMapper extends BaseMapper<AiKnowledgeDocumentEntity> {}

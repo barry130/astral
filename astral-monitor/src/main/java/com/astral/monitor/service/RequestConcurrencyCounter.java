@@ -2,10 +2,9 @@ package com.astral.monitor.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 并发请求计数器
@@ -38,8 +37,8 @@ public class RequestConcurrencyCounter implements HandlerInterceptor {
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
-                                Object handler, Exception ex) {
+    public void afterCompletion(
+            HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         activeRequests.decrementAndGet();
     }
 

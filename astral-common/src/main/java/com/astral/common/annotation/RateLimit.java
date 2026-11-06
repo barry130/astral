@@ -7,7 +7,10 @@ import java.lang.annotation.*;
 @Documented
 public @interface RateLimit {
     String key() default "ip";
+
     int limit() default 60;
+
     int duration() default 60;
+
     String message() default "请求过于频繁，请稍后再试";
 }

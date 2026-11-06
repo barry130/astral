@@ -1,9 +1,8 @@
 package com.astral.system.notify;
 
-import java.util.Map;
-
 import com.astral.dao.entity.SysNotice;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.util.Map;
 
 /**
  * 站内信（INAPP 渠道）发送与收件箱。

@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * MCP 服务器 Mapper
  */
 @Mapper
-public interface AiMcpServerMapper extends BaseMapper<AiMcpServerEntity> {
-}
+public interface AiMcpServerMapper extends BaseMapper<AiMcpServerEntity> {}

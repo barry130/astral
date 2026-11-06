@@ -6,5 +6,4 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 /**
  * CMS 标签 Mapper
  */
-public interface CmsTagMapper extends BaseMapper<CmsTag> {
-}
+public interface CmsTagMapper extends BaseMapper<CmsTag> {}

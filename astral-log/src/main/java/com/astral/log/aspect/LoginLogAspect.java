@@ -1,10 +1,11 @@
 package com.astral.log.aspect;
 
-import org.springframework.beans.factory.annotation.Value;
+import cn.hutool.core.util.StrUtil;
 import com.astral.common.util.ClientIp;
 import com.astral.log.service.LogService;
-import cn.hutool.core.util.StrUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -12,12 +13,10 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import java.lang.reflect.Method;
-import java.time.LocalDateTime;
 
 /**
  * 登录日志AOP切面
@@ -46,6 +45,7 @@ public class LoginLogAspect {
      * 而登录日志保存失败会掩盖真正的登录失败原因，所以写库前统一按列宽截断。</p>
      */
     private static final int USERNAME_MAX_LENGTH = 64;
+
     private static final int LOGIN_TYPE_MAX_LENGTH = 32;
     private static final int IP_MAX_LENGTH = 64;
     private static final int MSG_MAX_LENGTH = 256;
@@ -54,8 +54,7 @@ public class LoginLogAspect {
      * 定义切点：拦截所有标注了 @LoginLog 注解的方法
      */
     @Pointcut("@annotation(com.astral.log.annotation.LoginLog)")
-    public void loginLogPointcut() {
-    }
+    public void loginLogPointcut() {}
 
     /**
      * 环绕通知：在登录方法执行前后捕获日志信息

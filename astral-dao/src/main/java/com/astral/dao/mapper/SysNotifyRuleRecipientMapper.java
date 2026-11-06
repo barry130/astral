@@ -4,5 +4,5 @@ import com.astral.dao.entity.SysNotifyRuleRecipient;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface SysNotifyRuleRecipientMapper extends com.baomidou.mybatisplus.core.mapper.BaseMapper<SysNotifyRuleRecipient> {
-}
+public interface SysNotifyRuleRecipientMapper
+        extends com.baomidou.mybatisplus.core.mapper.BaseMapper<SysNotifyRuleRecipient> {}

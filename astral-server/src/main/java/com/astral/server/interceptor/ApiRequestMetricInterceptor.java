@@ -2,14 +2,13 @@ package com.astral.server.interceptor;
 
 import com.astral.common.util.ClientHeaders;
 import com.astral.monitor.service.ApiMetricCollector;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * 接口指标采集拦截器
@@ -57,18 +56,18 @@ public class ApiRequestMetricInterceptor implements HandlerInterceptor {
     }
 
     @Override
-    public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
-                                Object handler, Exception ex) {
+    public void afterCompletion(
+            HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         Object startObj = request.getAttribute(ATTR_START_NS);
         if (startObj instanceof Long startNs) {
             String uri = ClientHeaders.normalize(request.getRequestURI(), MAX_URI_LENGTH);
-            String ut = ClientHeaders.resolveUt(
-                    request.getHeader(clientUtHeader), request.getHeader(legacyPlatformHeader));
+            String ut =
+                    ClientHeaders.resolveUt(request.getHeader(clientUtHeader), request.getHeader(legacyPlatformHeader));
             String appVersion = ClientHeaders.normalizeVersion(request.getHeader(clientVersionHeader));
             // 传纳秒差值（不是提前除好的毫秒）：collector 内部自己换算，
             // 避免「整数除法丢精度 → 绝大多数请求耗时恒为 0」这类口径错误。
-            apiMetricCollector.record(uri, request.getMethod(), response.getStatus(),
-                    System.nanoTime() - startNs, ut, appVersion);
+            apiMetricCollector.record(
+                    uri, request.getMethod(), response.getStatus(), System.nanoTime() - startNs, ut, appVersion);
         }
     }
 }

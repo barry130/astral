@@ -1,14 +1,10 @@
 package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
-import java.util.List;
+import lombok.Data;
 
 @Data
 @TableName("stat_device")
@@ -52,5 +48,4 @@ public class StatDevice {
 
     @TableField(value = "update_time", fill = FieldFill.UPDATE)
     private LocalDateTime updateTime;
-
 }

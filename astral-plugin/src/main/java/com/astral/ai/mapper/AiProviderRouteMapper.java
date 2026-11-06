@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 提供方路由 Mapper
  */
 @Mapper
-public interface AiProviderRouteMapper extends BaseMapper<AiProviderRouteEntity> {
-}
+public interface AiProviderRouteMapper extends BaseMapper<AiProviderRouteEntity> {}

@@ -2,13 +2,12 @@ package com.astral.dao.mapper;
 
 import com.astral.dao.entity.SequenceStatistics;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.time.LocalDateTime;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
-
-import java.time.LocalDateTime;
 
 /**
  * 序列统计表 Mapper 接口
@@ -81,7 +80,8 @@ public interface SequenceStatisticsMapper extends BaseMapper<SequenceStatistics>
     @Update("UPDATE sequence_statistics SET current_value = #{currentValue}, "
             + "last_generate_time = #{updateTime}, update_time = #{updateTime} "
             + "WHERE biz_key = #{bizKey} AND deleted = 0")
-    int updateCurrentValueByBizKey(@Param("bizKey") String bizKey,
-                                   @Param("currentValue") long currentValue,
-                                   @Param("updateTime") LocalDateTime updateTime);
+    int updateCurrentValueByBizKey(
+            @Param("bizKey") String bizKey,
+            @Param("currentValue") long currentValue,
+            @Param("updateTime") LocalDateTime updateTime);
 }

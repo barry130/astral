@@ -1,18 +1,17 @@
 package com.astral.qt.entity;
 
+import com.astral.qt.dto.vo.QtAppUpdateArtifactVo;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.astral.qt.dto.vo.QtAppUpdateArtifactVo;
-import lombok.Data;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import lombok.Data;
 
 /**
  * APP 版本更新信息
@@ -44,9 +43,8 @@ public class QtAppUpdate {
     public static final Long PLATFORM_HARMONY = 1106L;
 
     /** 全部受支持的平台 */
-    private static final List<Long> SUPPORTED_PLATFORMS =
-            Arrays.asList(PLATFORM_ANDROID, PLATFORM_IOS, PLATFORM_WINDOWS, PLATFORM_LINUX, PLATFORM_MACOS,
-                    PLATFORM_HARMONY);
+    private static final List<Long> SUPPORTED_PLATFORMS = Arrays.asList(
+            PLATFORM_ANDROID, PLATFORM_IOS, PLATFORM_WINDOWS, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_HARMONY);
 
     /** 平台列表存储长度上限（platforms VARCHAR(64)，六个平台全选也只用 29 字符） */
     public static final int PLATFORMS_MAX_LENGTH = 64;

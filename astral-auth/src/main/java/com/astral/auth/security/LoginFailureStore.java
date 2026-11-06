@@ -1,12 +1,11 @@
 package com.astral.auth.security;
 
+import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-
-import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 登录失败计数存储（Redis 为主，内存兜底）
@@ -40,6 +39,7 @@ public class LoginFailureStore {
     private static class FailureRecord {
         /** 失败次数（锁定期间不再累加，见 recordInMemory）；变更需同步线程可见 */
         volatile int count;
+
         volatile long lastFailureTime;
         volatile long lockUntil;
     }
@@ -59,8 +59,7 @@ public class LoginFailureStore {
                     redisTemplate.expire(key, Duration.ofSeconds(FAILURE_WINDOW_SEC));
                 }
                 if (count != null && count >= MAX_FAILURES) {
-                    redisTemplate.opsForValue().set(LOCK_KEY + username, "1",
-                            Duration.ofMillis(LOCK_DURATION_MS));
+                    redisTemplate.opsForValue().set(LOCK_KEY + username, "1", Duration.ofMillis(LOCK_DURATION_MS));
                 }
                 return;
             }

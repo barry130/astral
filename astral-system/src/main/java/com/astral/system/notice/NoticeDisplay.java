@@ -19,8 +19,7 @@ public final class NoticeDisplay {
     /** 展示位掩码：消息中心 */
     public static final long DISPLAY_MESSAGE_CENTER = 4L;
 
-    private NoticeDisplay() {
-    }
+    private NoticeDisplay() {}
 
     /** display 是否命中指定位（display 为空视为不命中） */
     public static boolean hasDisplay(Long display, long bit) {

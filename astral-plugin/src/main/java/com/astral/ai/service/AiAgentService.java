@@ -6,23 +6,22 @@ import com.astral.ai.entity.AiAgentEntity;
 import com.astral.ai.entity.AiAgentKnowledgeEntity;
 import com.astral.ai.entity.AiAgentToolEntity;
 import com.astral.ai.entity.AiAgentVersionEntity;
-import com.astral.ai.mapper.AiAgentMapper;
 import com.astral.ai.mapper.AiAgentKnowledgeMapper;
+import com.astral.ai.mapper.AiAgentMapper;
 import com.astral.ai.mapper.AiAgentToolMapper;
 import com.astral.ai.mapper.AiAgentVersionMapper;
 import com.astral.common.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 智能体与智能体版本服务。
@@ -116,8 +115,12 @@ public class AiAgentService {
 
     /** 批量取版本号（列表展示用，避免 N+1） */
     public Map<Long, AiAgentVersionEntity> versionsByIds(List<Long> versionIds) {
-        List<Long> ids = versionIds == null ? List.of()
-                : versionIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        List<Long> ids = versionIds == null
+                ? List.of()
+                : versionIds.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .distinct()
+                        .toList();
         if (ids.isEmpty()) {
             return Map.of();
         }
@@ -129,11 +132,23 @@ public class AiAgentService {
 
     /** 新增智能体（初始为草稿） */
     @Transactional(rollbackFor = Exception.class)
-    public AiAgentEntity create(String agentCode, String name, String agentType, String description, String icon,
-                                List<String> clientTypes, String entryConfig, String permissionCode,
-                                String clientPermissionCodes, Long quotaPolicyId, Boolean allowUserContext,
-                                Boolean allowFileContext, Boolean conversationEnabled, Boolean feedbackEnabled,
-                                Integer sort, Long operatorId) {
+    public AiAgentEntity create(
+            String agentCode,
+            String name,
+            String agentType,
+            String description,
+            String icon,
+            List<String> clientTypes,
+            String entryConfig,
+            String permissionCode,
+            String clientPermissionCodes,
+            Long quotaPolicyId,
+            Boolean allowUserContext,
+            Boolean allowFileContext,
+            Boolean conversationEnabled,
+            Boolean feedbackEnabled,
+            Integer sort,
+            Long operatorId) {
         if (findByCode(agentCode) != null) {
             throw new BusinessException("AI007", "智能体编码已存在: " + agentCode);
         }
@@ -165,11 +180,23 @@ public class AiAgentService {
 
     /** 更新智能体身份信息（不改已发布版本内容） */
     @Transactional(rollbackFor = Exception.class)
-    public AiAgentEntity update(Long id, String name, String agentType, String description, String icon,
-                                List<String> clientTypes, String entryConfig, String permissionCode,
-                                String clientPermissionCodes, Long quotaPolicyId, Boolean allowUserContext,
-                                Boolean allowFileContext, Boolean conversationEnabled, Boolean feedbackEnabled,
-                                Integer sort, Long operatorId) {
+    public AiAgentEntity update(
+            Long id,
+            String name,
+            String agentType,
+            String description,
+            String icon,
+            List<String> clientTypes,
+            String entryConfig,
+            String permissionCode,
+            String clientPermissionCodes,
+            Long quotaPolicyId,
+            Boolean allowUserContext,
+            Boolean allowFileContext,
+            Boolean conversationEnabled,
+            Boolean feedbackEnabled,
+            Integer sort,
+            Long operatorId) {
         AiAgentEntity entity = require(id);
         if (name != null && !name.isBlank()) {
             entity.setName(name.trim());
@@ -263,20 +290,26 @@ public class AiAgentService {
 
     /** 新建草稿版本（版本号自增） */
     @Transactional(rollbackFor = Exception.class)
-    public AiAgentVersionEntity createDraftVersion(Long agentId, String versionName, Long providerRouteId,
-                                                   Long systemPromptVersionId, String contextPolicyJson,
-                                                   String responseSchemaJson, String toolPolicyJson,
-                                                   String knowledgePolicyJson, String modelParametersJson,
-                                                   String safetyPolicyJson, String quotaOverrideJson,
-                                                   Long operatorId) {
+    public AiAgentVersionEntity createDraftVersion(
+            Long agentId,
+            String versionName,
+            Long providerRouteId,
+            Long systemPromptVersionId,
+            String contextPolicyJson,
+            String responseSchemaJson,
+            String toolPolicyJson,
+            String knowledgePolicyJson,
+            String modelParametersJson,
+            String safetyPolicyJson,
+            String quotaOverrideJson,
+            Long operatorId) {
         AiAgentEntity agent = require(agentId);
         List<AiAgentVersionEntity> versions = listVersions(agentId);
         int nextNo = versions.isEmpty() ? 1 : versions.get(0).getVersionNo() + 1;
         AiAgentVersionEntity version = new AiAgentVersionEntity();
         version.setAgentId(agentId);
         version.setVersionNo(nextNo);
-        version.setVersionName(versionName == null || versionName.isBlank()
-                ? "v" + nextNo : versionName.trim());
+        version.setVersionName(versionName == null || versionName.isBlank() ? "v" + nextNo : versionName.trim());
         version.setStatus(AiConstants.VersionStatus.DRAFT);
         version.setProviderRouteId(providerRouteId);
         version.setSystemPromptVersionId(systemPromptVersionId);
@@ -301,12 +334,19 @@ public class AiAgentService {
 
     /** 更新草稿版本（已发布版本禁止修改） */
     @Transactional(rollbackFor = Exception.class)
-    public AiAgentVersionEntity updateDraftVersion(Long versionId, String versionName, Long providerRouteId,
-                                                   Long systemPromptVersionId, String contextPolicyJson,
-                                                   String responseSchemaJson, String toolPolicyJson,
-                                                   String knowledgePolicyJson, String modelParametersJson,
-                                                   String safetyPolicyJson, String quotaOverrideJson,
-                                                   Long operatorId) {
+    public AiAgentVersionEntity updateDraftVersion(
+            Long versionId,
+            String versionName,
+            Long providerRouteId,
+            Long systemPromptVersionId,
+            String contextPolicyJson,
+            String responseSchemaJson,
+            String toolPolicyJson,
+            String knowledgePolicyJson,
+            String modelParametersJson,
+            String safetyPolicyJson,
+            String quotaOverrideJson,
+            Long operatorId) {
         AiAgentVersionEntity version = requireVersion(versionId);
         requireDraft(version);
         if (versionName != null && !versionName.isBlank()) {
@@ -360,10 +400,9 @@ public class AiAgentService {
         }
         AiAgentEntity agent = require(version.getAgentId());
 
-        List<AiAgentVersionEntity> published = versionMapper.selectList(
-                new LambdaQueryWrapper<AiAgentVersionEntity>()
-                        .eq(AiAgentVersionEntity::getAgentId, agent.getId())
-                        .eq(AiAgentVersionEntity::getStatus, AiConstants.VersionStatus.PUBLISHED));
+        List<AiAgentVersionEntity> published = versionMapper.selectList(new LambdaQueryWrapper<AiAgentVersionEntity>()
+                .eq(AiAgentVersionEntity::getAgentId, agent.getId())
+                .eq(AiAgentVersionEntity::getStatus, AiConstants.VersionStatus.PUBLISHED));
         for (AiAgentVersionEntity old : published) {
             if (!old.getId().equals(version.getId())) {
                 old.setStatus(AiConstants.VersionStatus.ARCHIVED);
@@ -383,8 +422,7 @@ public class AiAgentService {
         agent.setStatus(AiConstants.AgentStatus.PUBLISHED);
         agent.setUpdatedBy(operatorId);
         agentMapper.updateById(agent);
-        log.info("[AI] 智能体发布 code={} version={} operator={}",
-                agent.getAgentCode(), version.getVersionNo(), operatorId);
+        log.info("[AI] 智能体发布 code={} version={} operator={}", agent.getAgentCode(), version.getVersionNo(), operatorId);
         return version;
     }
 
@@ -443,10 +481,9 @@ public class AiAgentService {
      * 与 AiOverviewService 反向依赖本服务，构造器注入会成环。</p>
      */
     private void copyRuntimeBindingsFrom(Long sourceVersionId, Long targetVersionId) {
-        List<AiAgentToolEntity> toolBindings = agentToolMapper.selectList(
-                new LambdaQueryWrapper<AiAgentToolEntity>()
-                        .eq(AiAgentToolEntity::getAgentVersionId, sourceVersionId)
-                        .orderByAsc(AiAgentToolEntity::getSort));
+        List<AiAgentToolEntity> toolBindings = agentToolMapper.selectList(new LambdaQueryWrapper<AiAgentToolEntity>()
+                .eq(AiAgentToolEntity::getAgentVersionId, sourceVersionId)
+                .orderByAsc(AiAgentToolEntity::getSort));
         int toolCount = 0;
         for (AiAgentToolEntity src : toolBindings) {
             AiAgentToolEntity copy = new AiAgentToolEntity();
@@ -461,8 +498,8 @@ public class AiAgentService {
             agentToolMapper.insert(copy);
             toolCount++;
         }
-        List<AiAgentKnowledgeEntity> knowledgeBindings = agentKnowledgeMapper.selectList(
-                new LambdaQueryWrapper<AiAgentKnowledgeEntity>()
+        List<AiAgentKnowledgeEntity> knowledgeBindings =
+                agentKnowledgeMapper.selectList(new LambdaQueryWrapper<AiAgentKnowledgeEntity>()
                         .eq(AiAgentKnowledgeEntity::getAgentVersionId, sourceVersionId)
                         .orderByAsc(AiAgentKnowledgeEntity::getPriority));
         int knowledgeCount = 0;
@@ -480,8 +517,12 @@ public class AiAgentService {
             knowledgeCount++;
         }
         if (toolCount > 0 || knowledgeCount > 0) {
-            log.info("[AI] 复制运行时绑定 version {} -> {}（工具 {} 个，知识源 {} 个）",
-                    sourceVersionId, targetVersionId, toolCount, knowledgeCount);
+            log.info(
+                    "[AI] 复制运行时绑定 version {} -> {}（工具 {} 个，知识源 {} 个）",
+                    sourceVersionId,
+                    targetVersionId,
+                    toolCount,
+                    knowledgeCount);
         }
     }
 

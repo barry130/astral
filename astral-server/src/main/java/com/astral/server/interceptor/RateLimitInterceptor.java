@@ -8,6 +8,8 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Duration;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,9 +17,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import tools.jackson.databind.ObjectMapper;
-
-import java.time.Duration;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 限流拦截器
@@ -56,7 +55,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private String trustedProxies;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
         if (!(handler instanceof HandlerMethod handlerMethod)) {
             return true;
         }
@@ -82,8 +82,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             response.setContentType("application/json;charset=UTF-8");
             response.setHeader("X-RateLimit-Limit", String.valueOf(rateLimit.limit()));
             response.setHeader("X-RateLimit-Remaining", "0");
-            response.getWriter().write(objectMapper.writeValueAsString(
-                    Result.error(ApiConstants.TOO_MANY_REQUESTS_CODE, "COMMON007", rateLimit.message())));
+            response.getWriter()
+                    .write(objectMapper.writeValueAsString(
+                            Result.error(ApiConstants.TOO_MANY_REQUESTS_CODE, "COMMON007", rateLimit.message())));
             return false;
         }
 

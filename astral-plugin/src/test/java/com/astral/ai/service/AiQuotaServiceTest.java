@@ -1,5 +1,12 @@
 package com.astral.ai.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.astral.ai.common.AiConstants;
 import com.astral.ai.common.AiException;
 import com.astral.ai.config.AiProperties;
@@ -11,19 +18,11 @@ import com.astral.ai.mapper.AiQuotaPolicyMapper;
 import com.astral.ai.mapper.AiUserQuotaMapper;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import java.math.BigDecimal;
+import java.util.List;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.math.BigDecimal;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * 额度解析与预占。
@@ -41,8 +40,8 @@ class AiQuotaServiceTest {
 
     @BeforeEach
     void setUp() {
-        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "test"),
-                AiQuotaPolicyEntity.class);
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), "test"), AiQuotaPolicyEntity.class);
 
         policyMapper = mock(AiQuotaPolicyMapper.class);
         quotaMapper = mock(AiUserQuotaMapper.class);
@@ -114,7 +113,8 @@ class AiQuotaServiceTest {
 
         when(policyMapper.selectList(any())).thenReturn(List.of(global, user));
 
-        assertEquals(10, service.resolveLimits(1L, agent(2L, null), version(null)).dailyRequests());
+        assertEquals(
+                10, service.resolveLimits(1L, agent(2L, null), version(null)).dailyRequests());
     }
 
     @Test
@@ -143,8 +143,11 @@ class AiQuotaServiceTest {
         user.setMonthlyCostLimit(new BigDecimal("26.50"));
         when(policyMapper.selectList(any())).thenReturn(List.of(global, user));
 
-        assertEquals(0, new BigDecimal("26.50")
-                .compareTo(service.resolveLimits(1L, agent(2L, null), version(null)).monthlyCostLimit()));
+        assertEquals(
+                0,
+                new BigDecimal("26.50")
+                        .compareTo(service.resolveLimits(1L, agent(2L, null), version(null))
+                                .monthlyCostLimit()));
     }
 
     @Test
@@ -177,8 +180,8 @@ class AiQuotaServiceTest {
         global.setDailyRequests(100);
         when(policyMapper.selectList(any())).thenReturn(List.of(global));
 
-        AiQuotaService.Limits limits = service.resolveLimits(1L, agent(2L, null),
-                version("{\"dailyRequests\":5,\"maxInputChars\":1000}"));
+        AiQuotaService.Limits limits =
+                service.resolveLimits(1L, agent(2L, null), version("{\"dailyRequests\":5,\"maxInputChars\":1000}"));
 
         assertEquals(5, limits.dailyRequests());
         assertEquals(1000, limits.maxInputChars());
@@ -191,14 +194,16 @@ class AiQuotaServiceTest {
         global.setDailyRequests(10);
         when(policyMapper.selectList(any())).thenReturn(List.of(global));
 
-        assertEquals(10, service.resolveLimits(1L, agent(2L, null),
-                version("{\"dailyRequests\":9999}")).dailyRequests());
+        assertEquals(
+                10,
+                service.resolveLimits(1L, agent(2L, null), version("{\"dailyRequests\":9999}"))
+                        .dailyRequests());
     }
 
     @Test
     void versionOverrideCannotBreakTheHardCaps() {
-        AiQuotaService.Limits limits = service.resolveLimits(1L, agent(2L, null),
-                version("{\"maxInputChars\":100000000,\"maxOutputTokens\":100000000}"));
+        AiQuotaService.Limits limits = service.resolveLimits(
+                1L, agent(2L, null), version("{\"maxInputChars\":100000000,\"maxOutputTokens\":100000000}"));
 
         assertEquals(properties.getHardMaxInputChars(), limits.maxInputChars());
         assertEquals(properties.getHardMaxOutputTokens(), limits.maxOutputTokens());
@@ -225,8 +230,8 @@ class AiQuotaServiceTest {
     void inputLongerThanTheLimitIsRejectedBeforeTouchingTheDatabase() {
         AiQuotaService.Limits limits = limits(100, 3);
 
-        AiException error = assertThrows(AiException.class,
-                () -> service.reserve(1L, agent(2L, null), version(null), 101, limits));
+        AiException error =
+                assertThrows(AiException.class, () -> service.reserve(1L, agent(2L, null), version(null), 101, limits));
 
         assertEquals("AI005", error.getErrorCode());
     }
@@ -239,8 +244,8 @@ class AiQuotaServiceTest {
         AiQuotaService.Reservation first = service.reserve(1L, agent(2L, null), version(null), 10, limits);
         assertNotNull(first);
 
-        AiException error = assertThrows(AiException.class,
-                () -> service.reserve(1L, agent(2L, null), version(null), 10, limits));
+        AiException error =
+                assertThrows(AiException.class, () -> service.reserve(1L, agent(2L, null), version(null), 10, limits));
         assertEquals("AI005", error.getErrorCode());
 
         // 第二个请求被拒后必须把自己占的槽退掉，否则这个用户再也发不出请求
@@ -269,8 +274,8 @@ class AiQuotaServiceTest {
 
         AiQuotaService.Limits limits = limits(100, 1);
 
-        AiException error = assertThrows(AiException.class,
-                () -> service.reserve(1L, agent(2L, null), version(null), 10, limits));
+        AiException error =
+                assertThrows(AiException.class, () -> service.reserve(1L, agent(2L, null), version(null), 10, limits));
         assertEquals("AI005", error.getErrorCode());
 
         // 槽位必须归还，否则额度恢复后该用户仍然发不出请求
@@ -299,9 +304,19 @@ class AiQuotaServiceTest {
     }
 
     private AiQuotaService.Limits limits(int maxInputChars, int maxConcurrent) {
-        return new AiQuotaService.Limits(null, null, null, null, null, null,
-                maxInputChars, properties.getHardMaxContextTokens(), properties.getHardMaxOutputTokens(),
-                maxConcurrent, null, List.of());
+        return new AiQuotaService.Limits(
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                maxInputChars,
+                properties.getHardMaxContextTokens(),
+                properties.getHardMaxOutputTokens(),
+                maxConcurrent,
+                null,
+                List.of());
     }
 
     private static AiQuotaPolicyEntity policy(String code, String scope) {

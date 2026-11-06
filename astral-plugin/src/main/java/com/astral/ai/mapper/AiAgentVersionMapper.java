@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 智能体版本 Mapper
  */
 @Mapper
-public interface AiAgentVersionMapper extends BaseMapper<AiAgentVersionEntity> {
-}
+public interface AiAgentVersionMapper extends BaseMapper<AiAgentVersionEntity> {}

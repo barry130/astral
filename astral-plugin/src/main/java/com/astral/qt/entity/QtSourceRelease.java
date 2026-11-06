@@ -5,11 +5,10 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import lombok.Data;
 
 /**
  * 音源包发布记录（SOURCE_UPDATE_DESIGN）
@@ -40,9 +39,8 @@ public class QtSourceRelease {
     public static final Long PLATFORM_HARMONY = 1106L;
 
     /** 全部受支持的平台（与 qt_app_update.platforms 同源） */
-    private static final List<Long> SUPPORTED_PLATFORMS =
-            Arrays.asList(PLATFORM_ANDROID, PLATFORM_IOS, PLATFORM_WINDOWS, PLATFORM_LINUX, PLATFORM_MACOS,
-                    PLATFORM_HARMONY);
+    private static final List<Long> SUPPORTED_PLATFORMS = Arrays.asList(
+            PLATFORM_ANDROID, PLATFORM_IOS, PLATFORM_WINDOWS, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_HARMONY);
 
     /** 渠道：正式版 */
     public static final String CHANNEL_STABLE = "stable";

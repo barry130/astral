@@ -1,15 +1,14 @@
 package com.astral.ai.mapper;
 
-import org.apache.ibatis.annotations.Update;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Method;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.apache.ibatis.annotations.Update;
+import org.junit.jupiter.api.Test;
 
 /**
  * 回归测试：{@link AiUserQuotaMapper#addWithinLimits} 的三个上限参数必须显式声明 jdbcType。
@@ -32,15 +31,21 @@ class AiUserQuotaMapperSqlTest {
 
     /** 上限参数 -> 其列在 PostgreSQL 中的类型 */
     private static final String[][] NULLABLE_LIMITS = {
-            {"reqLimit", "INTEGER"},
-            {"inLimit", "BIGINT"},
-            {"outLimit", "BIGINT"},
+        {"reqLimit", "INTEGER"},
+        {"inLimit", "BIGINT"},
+        {"outLimit", "BIGINT"},
     };
 
     private static String addWithinLimitsSql() throws Exception {
-        Method method = AiUserQuotaMapper.class.getMethod("addWithinLimits",
-                Long.class, int.class, long.class, long.class,
-                Integer.class, Long.class, Long.class);
+        Method method = AiUserQuotaMapper.class.getMethod(
+                "addWithinLimits",
+                Long.class,
+                int.class,
+                long.class,
+                long.class,
+                Integer.class,
+                Long.class,
+                Long.class);
         Update update = method.getAnnotation(Update.class);
         assertTrue(update != null, "addWithinLimits 应当由 @Update 驱动");
         return String.join("\n", update.value());
@@ -58,13 +63,12 @@ class AiUserQuotaMapperSqlTest {
             while (matcher.find()) {
                 occurrences++;
                 String placeholder = matcher.group();
-                assertTrue(placeholder.contains("jdbcType=" + jdbcType),
-                        "占位符 " + placeholder + " 必须声明 jdbcType=" + jdbcType
-                                + "，否则 PostgreSQL 无法推断 null 参数类型");
+                assertTrue(
+                        placeholder.contains("jdbcType=" + jdbcType),
+                        "占位符 " + placeholder + " 必须声明 jdbcType=" + jdbcType + "，否则 PostgreSQL 无法推断 null 参数类型");
             }
             // 每个上限在 SQL 中出现两次：一次 IS NULL 判断、一次阈值比较
-            assertEquals(2, occurrences,
-                    param + " 应恰好出现 2 次；若 SQL 结构变了，请同步复核 jdbcType");
+            assertEquals(2, occurrences, param + " 应恰好出现 2 次；若 SQL 结构变了，请同步复核 jdbcType");
         }
     }
 
@@ -73,8 +77,7 @@ class AiUserQuotaMapperSqlTest {
         String sql = addWithinLimitsSql();
         for (String[] entry : NULLABLE_LIMITS) {
             String param = entry[0];
-            assertFalse(sql.contains("#{" + param + "}"),
-                    "存在裸占位符 #{" + param + "}；必须写成 #{" + param + ",jdbcType=...}");
+            assertFalse(sql.contains("#{" + param + "}"), "存在裸占位符 #{" + param + "}；必须写成 #{" + param + ",jdbcType=...}");
         }
     }
 
@@ -83,7 +86,8 @@ class AiUserQuotaMapperSqlTest {
         String sql = addWithinLimitsSql();
         for (String[] entry : NULLABLE_LIMITS) {
             String param = entry[0];
-            assertTrue(sql.contains("#{" + param + ",jdbcType=" + entry[1] + "} IS NULL"),
+            assertTrue(
+                    sql.contains("#{" + param + ",jdbcType=" + entry[1] + "} IS NULL"),
                     "上限为 null 时应视为不限，需要 " + param + " IS NULL 短路");
         }
     }

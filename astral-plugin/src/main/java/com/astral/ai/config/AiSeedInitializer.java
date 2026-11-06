@@ -24,18 +24,17 @@ import com.astral.ai.service.AiProviderService;
 import com.astral.ai.service.AiQuotaService;
 import com.astral.ai.service.AiRouteService;
 import com.astral.ai.service.AiToolService;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * AI 插件启动初始化：登记工具处理器 + 补齐种子配置。
@@ -91,8 +90,7 @@ public class AiSeedInitializer implements ApplicationRunner {
             log.info("[AiSeed] 工具处理器登记完成：{} 个", tools);
             // 运行期清理，与种子开关无关：上个进程留下的「生成中」请求必须收尾，
             // 否则界面上永远转圈、客户端永远等不到终态
-            int stale = requestService.failStaleRequests("AI012",
-                    "服务重启导致本次生成中断，请重新发送");
+            int stale = requestService.failStaleRequests("AI012", "服务重启导致本次生成中断，请重新发送");
             if (stale > 0) {
                 log.warn("[AiSeed] 已收尾上个进程遗留的未完成请求 {} 个", stale);
             }
@@ -112,38 +110,70 @@ public class AiSeedInitializer implements ApplicationRunner {
         AiProviderRouteEntity route = ensureRoute(provider, model);
         AiQuotaPolicyEntity quota = ensureQuota();
 
-        Long musicPrompt = ensurePrompt("music_assistant_prompt", "音乐助手提示词", "MUSIC",
-                "ai-seed/prompts/music_assistant.md");
-        Long adminPrompt = ensurePrompt("admin_assistant_prompt", "管理助手提示词", "ADMIN",
-                "ai-seed/prompts/admin_assistant.md");
-        Long qaPrompt = ensurePrompt("admin_qa_prompt", "答疑助手提示词", "QA",
-                "ai-seed/prompts/admin_qa.md");
+        Long musicPrompt =
+                ensurePrompt("music_assistant_prompt", "音乐助手提示词", "MUSIC", "ai-seed/prompts/music_assistant.md");
+        Long adminPrompt =
+                ensurePrompt("admin_assistant_prompt", "管理助手提示词", "ADMIN", "ai-seed/prompts/admin_assistant.md");
+        Long qaPrompt = ensurePrompt("admin_qa_prompt", "答疑助手提示词", "QA", "ai-seed/prompts/admin_qa.md");
 
         Long knowledgeSourceId = ensureKnowledgeSource();
 
-        ensureAgent(AiPlugin.SeedAgents.MUSIC, "音乐助手", AiConstants.AgentType.MUSIC,
+        ensureAgent(
+                AiPlugin.SeedAgents.MUSIC,
+                "音乐助手",
+                AiConstants.AgentType.MUSIC,
                 "用自然语言找歌、排序推荐并给出可执行动作。轻听 App 与轻听 PC 功能一致。",
                 "CustomerServiceOutlined",
                 List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
-                AiPlugin.PERM_MUSIC_USE, null, quota.getId(), route.getId(), musicPrompt,
-                musicTools(), null, MUSIC_SCHEMA, 10);
+                AiPlugin.PERM_MUSIC_USE,
+                null,
+                quota.getId(),
+                route.getId(),
+                musicPrompt,
+                musicTools(),
+                null,
+                MUSIC_SCHEMA,
+                10);
 
-        ensureAgent(AiPlugin.SeedAgents.ADMIN, "管理助手", AiConstants.AgentType.ADMIN,
+        ensureAgent(
+                AiPlugin.SeedAgents.ADMIN,
+                "管理助手",
+                AiConstants.AgentType.ADMIN,
                 "查询系统、用户、插件、存储与日志，起草通知邮件，高风险操作出确认卡片。",
                 "ToolOutlined",
                 List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                AiPlugin.Perms.ASSISTANT_USE, null, quota.getId(), route.getId(), adminPrompt,
-                adminTools(), null, ADMIN_SCHEMA, 20);
+                AiPlugin.Perms.ASSISTANT_USE,
+                null,
+                quota.getId(),
+                route.getId(),
+                adminPrompt,
+                adminTools(),
+                null,
+                ADMIN_SCHEMA,
+                20);
 
-        ensureAgent(AiPlugin.SeedAgents.QA, "答疑助手", AiConstants.AgentType.QA,
+        ensureAgent(
+                AiPlugin.SeedAgents.QA,
+                "答疑助手",
+                AiConstants.AgentType.QA,
                 "基于已发布项目文档回答接口、插件、部署与错误码问题，答案带可核验引用。",
                 "ReadOutlined",
                 List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                AiPlugin.Perms.QA_USE, null, quota.getId(), route.getId(), qaPrompt,
-                qaTools(), knowledgeSourceId, QA_SCHEMA, 30);
+                AiPlugin.Perms.QA_USE,
+                null,
+                quota.getId(),
+                route.getId(),
+                qaPrompt,
+                qaTools(),
+                knowledgeSourceId,
+                QA_SCHEMA,
+                30);
 
-        log.info("[AiSeed] AI 种子配置就绪（提供方 {}，路由 {}，知识源 {}）",
-                provider.getProviderCode(), route.getRouteCode(), knowledgeSourceId);
+        log.info(
+                "[AiSeed] AI 种子配置就绪（提供方 {}，路由 {}，知识源 {}）",
+                provider.getProviderCode(),
+                route.getRouteCode(),
+                knowledgeSourceId);
     }
 
     // ==================== 提供方 / 模型 / 路由 ====================
@@ -154,9 +184,20 @@ public class AiSeedInitializer implements ApplicationRunner {
                 return row;
             }
         }
-        AiProviderEntity entity = providerService.create(PROVIDER_CODE, "本地模拟提供方",
-                MockAiProvider.TYPE, "mock://local", null, null, true,
-                15000, 120000, 1, 100, "开箱即用的离线提供方，不产生费用；正式使用请替换为真实模型", null);
+        AiProviderEntity entity = providerService.create(
+                PROVIDER_CODE,
+                "本地模拟提供方",
+                MockAiProvider.TYPE,
+                "mock://local",
+                null,
+                null,
+                true,
+                15000,
+                120000,
+                1,
+                100,
+                "开箱即用的离线提供方，不产生费用；正式使用请替换为真实模型",
+                null);
         log.info("[AiSeed] 已创建种子提供方 {}", PROVIDER_CODE);
         return entity;
     }
@@ -239,14 +280,18 @@ public class AiSeedInitializer implements ApplicationRunner {
             if (published != null) {
                 return published.getId();
             }
-            return promptService.publish(
-                    promptService.createVersion(template.getId(), read(resourcePath), null, null,
-                            "补齐已发布版本", null).getId(), null).getId();
+            return promptService
+                    .publish(
+                            promptService
+                                    .createVersion(template.getId(), read(resourcePath), null, null, "补齐已发布版本", null)
+                                    .getId(),
+                            null)
+                    .getId();
         }
-        AiPromptTemplateEntity created = promptService.createTemplate(promptCode, name, scene,
-                "种子提示词，可在后台修改并发布新版本", null);
-        AiPromptVersionEntity version = promptService.createVersion(created.getId(), read(resourcePath),
-                null, null, "种子创建", null);
+        AiPromptTemplateEntity created =
+                promptService.createTemplate(promptCode, name, scene, "种子提示词，可在后台修改并发布新版本", null);
+        AiPromptVersionEntity version =
+                promptService.createVersion(created.getId(), read(resourcePath), null, null, "种子创建", null);
         promptService.publish(version.getId(), null);
         log.info("[AiSeed] 已创建种子提示词 {}", promptCode);
         return version.getId();
@@ -260,12 +305,24 @@ public class AiSeedInitializer implements ApplicationRunner {
                 return row.getId();
             }
         }
-        AiKnowledgeSourceEntity source = knowledgeService.createSource(KNOWLEDGE_CODE, "项目文档",
+        AiKnowledgeSourceEntity source = knowledgeService.createSource(
+                KNOWLEDGE_CODE,
+                "项目文档",
                 AiConstants.KnowledgeSourceType.PROJECT_DOCUMENT,
                 "接口契约、插件开发与部署说明、数据字典与错误码解释",
-                "docs/**", true, "MANUAL", null);
-        knowledgeService.saveDocument(source.getId(), "api-contract", "AI 模块接口契约",
-                "docs/ai/api-contract.md", "接口", "1.0", read("ai-knowledge/api-contract.md"), null);
+                "docs/**",
+                true,
+                "MANUAL",
+                null);
+        knowledgeService.saveDocument(
+                source.getId(),
+                "api-contract",
+                "AI 模块接口契约",
+                "docs/ai/api-contract.md",
+                "接口",
+                "1.0",
+                read("ai-knowledge/api-contract.md"),
+                null);
         knowledgeService.syncSource(source.getId(), null);
         log.info("[AiSeed] 已创建种子知识源 {}", KNOWLEDGE_CODE);
         return source.getId();
@@ -273,35 +330,71 @@ public class AiSeedInitializer implements ApplicationRunner {
 
     // ==================== 智能体 ====================
 
-    private void ensureAgent(String agentCode, String name, String agentType, String description, String icon,
-                             List<String> clientTypes, String permissionCode, String clientPermissionCodes,
-                             Long quotaPolicyId, Long routeId, Long promptVersionId, List<String> toolCodes,
-                             Long knowledgeSourceId, String responseSchema, int sort) {
+    private void ensureAgent(
+            String agentCode,
+            String name,
+            String agentType,
+            String description,
+            String icon,
+            List<String> clientTypes,
+            String permissionCode,
+            String clientPermissionCodes,
+            Long quotaPolicyId,
+            Long routeId,
+            Long promptVersionId,
+            List<String> toolCodes,
+            Long knowledgeSourceId,
+            String responseSchema,
+            int sort) {
         if (agentService.findByCode(agentCode) != null) {
             return;
         }
-        AiAgentEntity agent = agentService.create(agentCode, name, agentType, description, icon, clientTypes,
-                entryConfig(agentType), permissionCode, clientPermissionCodes, quotaPolicyId,
-                true, false, true, true, sort, null);
+        AiAgentEntity agent = agentService.create(
+                agentCode,
+                name,
+                agentType,
+                description,
+                icon,
+                clientTypes,
+                entryConfig(agentType),
+                permissionCode,
+                clientPermissionCodes,
+                quotaPolicyId,
+                true,
+                false,
+                true,
+                true,
+                sort,
+                null);
 
-        AiAgentVersionEntity draft = agentService.createDraftVersion(agent.getId(), "v1", routeId,
-                promptVersionId, contextPolicy(agentType), responseSchema, toolPolicy(agentType),
-                knowledgePolicy(agentType), modelParameters(), safetyPolicy(), null, null);
+        AiAgentVersionEntity draft = agentService.createDraftVersion(
+                agent.getId(),
+                "v1",
+                routeId,
+                promptVersionId,
+                contextPolicy(agentType),
+                responseSchema,
+                toolPolicy(agentType),
+                knowledgePolicy(agentType),
+                modelParameters(),
+                safetyPolicy(),
+                null,
+                null);
 
         List<Long> toolIds = resolveToolIds(toolCodes);
         if (!toolIds.isEmpty()) {
             toolService.replaceBindings(draft.getId(), toolIds, null);
         }
         if (knowledgeSourceId != null) {
-            knowledgeService.replaceBindings(draft.getId(), List.of(knowledgeBinding(draft.getId(), knowledgeSourceId)));
+            knowledgeService.replaceBindings(
+                    draft.getId(), List.of(knowledgeBinding(draft.getId(), knowledgeSourceId)));
         }
 
         // 种子配置由代码生成，校验问题照实写进日志，但仍发布，保证后台开箱可见并可立即修正
         AiAdminDtos.ValidationVo validation = validationService.validate(draft);
         for (AiAdminDtos.ValidationVo.ValidationIssue issue : validation.issues()) {
             if ("ERROR".equals(issue.level())) {
-                log.warn("[AiSeed] 智能体 {} 校验问题 [{}/{}]: {}", agentCode, issue.code(), issue.field(),
-                        issue.message());
+                log.warn("[AiSeed] 智能体 {} 校验问题 [{}/{}]: {}", agentCode, issue.code(), issue.field(), issue.message());
             }
         }
         agentService.publish(draft.getId(), null);
@@ -334,25 +427,54 @@ public class AiSeedInitializer implements ApplicationRunner {
     }
 
     private static List<String> musicTools() {
-        return List.of("search_music", "search_artist", "search_album", "search_playlist",
-                "get_song_detail", "get_current_song", "get_current_playlist",
-                "get_user_likes", "get_play_history");
+        return List.of(
+                "search_music",
+                "search_artist",
+                "search_album",
+                "search_playlist",
+                "get_song_detail",
+                "get_current_song",
+                "get_current_playlist",
+                "get_user_likes",
+                "get_play_history");
     }
 
     private static List<String> adminTools() {
-        return List.of("get_system_health", "get_plugin_status", "get_user_summary",
-                "get_permission_summary", "get_storage_summary", "search_operate_logs",
-                "search_login_logs", "search_feedback", "get_usage_statistics",
-                "check_config_completeness", "draft_notice", "draft_email",
-                "draft_feedback_reply", "draft_config_change", "draft_plugin_operation",
-                "disable_provider", "update_config", "change_user_status",
-                "change_role_permission", "delete_file", "publish_notice", "send_email");
+        return List.of(
+                "get_system_health",
+                "get_plugin_status",
+                "get_user_summary",
+                "get_permission_summary",
+                "get_storage_summary",
+                "search_operate_logs",
+                "search_login_logs",
+                "search_feedback",
+                "get_usage_statistics",
+                "check_config_completeness",
+                "draft_notice",
+                "draft_email",
+                "draft_feedback_reply",
+                "draft_config_change",
+                "draft_plugin_operation",
+                "disable_provider",
+                "update_config",
+                "change_user_status",
+                "change_role_permission",
+                "delete_file",
+                "publish_notice",
+                "send_email");
     }
 
     private static List<String> qaTools() {
-        return List.of("search_project_document", "get_api_contract", "get_plugin_guide",
-                "get_deployment_guide", "get_dictionary_definition", "get_error_code_explanation",
-                "get_current_plugin_status_readonly", "get_current_config_schema_readonly");
+        return List.of(
+                "search_project_document",
+                "get_api_contract",
+                "get_plugin_guide",
+                "get_deployment_guide",
+                "get_dictionary_definition",
+                "get_error_code_explanation",
+                "get_current_plugin_status_readonly",
+                "get_current_config_schema_readonly");
     }
 
     // ==================== 策略 JSON ====================
@@ -394,7 +516,8 @@ public class AiSeedInitializer implements ApplicationRunner {
     }
 
     /** 音乐助手输出结构：answer + 结构化卡片 + 白名单动作 */
-    private static final String MUSIC_SCHEMA = """
+    private static final String MUSIC_SCHEMA =
+            """
             {"type":"object","required":["answer"],"properties":{
               "answer":{"type":"string"},
               "blocks":{"type":"array","items":{"type":"object","properties":{
@@ -404,7 +527,8 @@ public class AiSeedInitializer implements ApplicationRunner {
             }}""";
 
     /** 管理助手输出结构：answer + 草稿/计划卡片 + 待确认动作 */
-    private static final String ADMIN_SCHEMA = """
+    private static final String ADMIN_SCHEMA =
+            """
             {"type":"object","required":["answer"],"properties":{
               "answer":{"type":"string"},
               "blocks":{"type":"array","items":{"type":"object","properties":{
@@ -413,7 +537,8 @@ public class AiSeedInitializer implements ApplicationRunner {
             }}""";
 
     /** 答疑助手输出结构：answer + 引用卡片 */
-    private static final String QA_SCHEMA = """
+    private static final String QA_SCHEMA =
+            """
             {"type":"object","required":["answer"],"properties":{
               "answer":{"type":"string"},
               "blocks":{"type":"array","items":{"type":"object","properties":{

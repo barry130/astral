@@ -1,8 +1,7 @@
 package com.astral.system.notice.dto;
 
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * 已读回执请求体（本期后端仅记日志，不落表）。

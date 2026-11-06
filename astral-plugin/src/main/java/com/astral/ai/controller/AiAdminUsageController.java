@@ -14,6 +14,10 @@ import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.common.util.PageQuery;
 import com.astral.log.annotation.OperateLog;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,11 +28,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * AI 后台：配置总览、额度策略、用量统计与配置审计。
@@ -54,9 +53,10 @@ public class AiAdminUsageController {
 
     @GetMapping("/audit")
     @RequiresPermission(value = "admin:ai:audit:view", name = "AI 审计查看", description = "查看 AI 配置审计")
-    public Result<List<AiAdminDtos.AuditVo>> audit(@RequestParam(required = false) Long pageNum,
-                                                   @RequestParam(required = false) Long pageSize) {
-        return Result.success(overviewService.audit(PageQuery.pageNum(pageNum == null ? 1 : pageNum),
+    public Result<List<AiAdminDtos.AuditVo>> audit(
+            @RequestParam(required = false) Long pageNum, @RequestParam(required = false) Long pageSize) {
+        return Result.success(overviewService.audit(
+                PageQuery.pageNum(pageNum == null ? 1 : pageNum),
                 PageQuery.pageSize(pageSize == null ? PageQuery.DEFAULT_PAGE_SIZE : pageSize)));
     }
 
@@ -87,8 +87,7 @@ public class AiAdminUsageController {
     @RequiresPermission(value = "admin:ai:quota:edit", name = "AI 额度编辑", description = "修改额度策略")
     @OperateLog("修改 AI 额度策略")
     public Result<AiAdminDtos.QuotaPolicyVo> updateQuota(
-            @PathVariable Long id,
-            @jakarta.validation.Valid @RequestBody AiAdminDtos.QuotaPolicySaveReq req) {
+            @PathVariable Long id, @jakarta.validation.Valid @RequestBody AiAdminDtos.QuotaPolicySaveReq req) {
         AiQuotaPolicyEntity entity = quotaService.requirePolicy(id);
         apply(entity, req);
         return Result.success("保存成功", toVo(quotaService.savePolicy(entity)));
@@ -106,12 +105,13 @@ public class AiAdminUsageController {
 
     @GetMapping("/usage")
     @RequiresPermission(value = "admin:ai:usage:view", name = "AI 用量查看", description = "查看 AI 用量明细")
-    public Result<List<AiAdminDtos.UsageVo>> usage(@RequestParam(required = false) Long userId,
-                                                   @RequestParam(required = false) Long agentId,
-                                                   @RequestParam(required = false) String from,
-                                                   @RequestParam(required = false) String to,
-                                                   @RequestParam(required = false) Long pageNum,
-                                                   @RequestParam(required = false) Long pageSize) {
+    public Result<List<AiAdminDtos.UsageVo>> usage(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Long agentId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) Long pageNum,
+            @RequestParam(required = false) Long pageSize) {
         LocalDateTime start = parseStart(from);
         LocalDateTime end = parseEnd(to);
         int num = (int) PageQuery.pageNum(pageNum == null ? 1 : pageNum);
@@ -125,18 +125,27 @@ public class AiAdminUsageController {
 
     @GetMapping("/usage/summary")
     @RequiresPermission(value = "admin:ai:usage:view", name = "AI 用量查看", description = "查看 AI 用量汇总")
-    public Result<AiAdminDtos.UsageSummaryVo> usageSummary(@RequestParam(required = false) Long userId,
-                                                           @RequestParam(required = false) Long agentId,
-                                                           @RequestParam(required = false) String from,
-                                                           @RequestParam(required = false) String to) {
+    public Result<AiAdminDtos.UsageSummaryVo> usageSummary(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) Long agentId,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to) {
         AiUsageService.Summary summary = usageService.summarize(parseStart(from), parseEnd(to), agentId, userId);
         List<AiAdminDtos.UsageTrendPoint> trend = new ArrayList<>();
         for (AiUsageService.TrendPoint point : summary.trend()) {
-            trend.add(new AiAdminDtos.UsageTrendPoint(point.date() == null ? null : point.date().toString(),
-                    point.requestCount(), point.inputTokens(), point.outputTokens()));
+            trend.add(new AiAdminDtos.UsageTrendPoint(
+                    point.date() == null ? null : point.date().toString(),
+                    point.requestCount(),
+                    point.inputTokens(),
+                    point.outputTokens()));
         }
-        return Result.success(new AiAdminDtos.UsageSummaryVo(summary.requestCount(), summary.inputTokens(),
-                summary.outputTokens(), summary.estimatedCost(), summary.currency(), trend));
+        return Result.success(new AiAdminDtos.UsageSummaryVo(
+                summary.requestCount(),
+                summary.inputTokens(),
+                summary.outputTokens(),
+                summary.estimatedCost(),
+                summary.currency(),
+                trend));
     }
 
     // ==================== 转换 ====================
@@ -164,13 +173,29 @@ public class AiAdminUsageController {
     }
 
     private AiAdminDtos.QuotaPolicyVo toVo(AiQuotaPolicyEntity entity) {
-        return new AiAdminDtos.QuotaPolicyVo(entity.getId(), entity.getPolicyCode(), entity.getName(),
-                entity.getScopeType(), entity.getAgentId(), entity.getRoleId(), entity.getUserId(),
-                entity.getDailyRequests(), entity.getMonthlyRequests(), entity.getDailyInputTokens(),
-                entity.getMonthlyInputTokens(), entity.getDailyOutputTokens(), entity.getMonthlyOutputTokens(),
-                entity.getMaxInputChars(), entity.getMaxContextTokens(), entity.getMaxOutputTokens(),
-                entity.getMaxConcurrent(), entity.getMonthlyCostLimit(), entity.getEnabled(), entity.getRemark(),
-                entity.getCreateTime(), entity.getUpdateTime());
+        return new AiAdminDtos.QuotaPolicyVo(
+                entity.getId(),
+                entity.getPolicyCode(),
+                entity.getName(),
+                entity.getScopeType(),
+                entity.getAgentId(),
+                entity.getRoleId(),
+                entity.getUserId(),
+                entity.getDailyRequests(),
+                entity.getMonthlyRequests(),
+                entity.getDailyInputTokens(),
+                entity.getMonthlyInputTokens(),
+                entity.getDailyOutputTokens(),
+                entity.getMonthlyOutputTokens(),
+                entity.getMaxInputChars(),
+                entity.getMaxContextTokens(),
+                entity.getMaxOutputTokens(),
+                entity.getMaxConcurrent(),
+                entity.getMonthlyCostLimit(),
+                entity.getEnabled(),
+                entity.getRemark(),
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 
     private AiAdminDtos.UsageVo toVo(AiUsageEntity entity) {
@@ -192,10 +217,21 @@ public class AiAdminUsageController {
                 modelCode = null;
             }
         }
-        return new AiAdminDtos.UsageVo(entity.getId(), entity.getRequestId(), entity.getUserId(),
-                entity.getAgentId(), agentName, entity.getProviderId(), entity.getModelId(), modelCode,
-                entity.getInputTokens(), entity.getOutputTokens(), entity.getEstimatedCost(),
-                entity.getCurrency(), entity.getStatus(), entity.getCreateTime());
+        return new AiAdminDtos.UsageVo(
+                entity.getId(),
+                entity.getRequestId(),
+                entity.getUserId(),
+                entity.getAgentId(),
+                agentName,
+                entity.getProviderId(),
+                entity.getModelId(),
+                modelCode,
+                entity.getInputTokens(),
+                entity.getOutputTokens(),
+                entity.getEstimatedCost(),
+                entity.getCurrency(),
+                entity.getStatus(),
+                entity.getCreateTime());
     }
 
     private static LocalDateTime parseStart(String value) {
@@ -205,7 +241,9 @@ public class AiAdminUsageController {
 
     private static LocalDateTime parseEnd(String value) {
         LocalDate date = parseDate(value);
-        return date == null ? LocalDate.now().plusDays(1).atStartOfDay() : date.plusDays(1).atStartOfDay();
+        return date == null
+                ? LocalDate.now().plusDays(1).atStartOfDay()
+                : date.plusDays(1).atStartOfDay();
     }
 
     private static LocalDate parseDate(String value) {

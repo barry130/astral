@@ -7,16 +7,15 @@ import com.astral.auth.security.LoginUserTypeResolver;
 import com.astral.auth.service.UserLoginMarker;
 import com.astral.common.result.Result;
 import com.astral.common.web.CsrfTokenSupport;
-import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import java.util.Set;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 全局统一认证拦截器（宿主管理端 + 轻听插件用户端合并）
@@ -92,12 +91,15 @@ public class AuthInterceptor implements HandlerInterceptor {
      * 不能放行整个 /api/v1/all/storage/**（用户接口仍需登录）。
      */
     private static final String STORAGE_WORKER_PREFIX = "/api/v1/all/storage/worker/";
+
     private static final String STORAGE_ORIGIN_PREFIX = "/api/v1/all/storage/origin/";
 
     /** 免认证路径白名单（合并原宿主 WebMvcConfig excludes 与 qt 插件 PUBLIC_PATHS） */
     private static final Set<String> PUBLIC_PATHS = Set.of(
             // 宿主认证（/api/v1/all/auth）
-            "/api/v1/all/auth/public-key", "/api/v1/all/auth/login", "/api/v1/all/auth/logout",
+            "/api/v1/all/auth/public-key",
+            "/api/v1/all/auth/login",
+            "/api/v1/all/auth/logout",
             // 轻听用户端免认证（/api/v1/app/user）
             // 注意：upload 已从白名单移除 —— 匿名上传 + 同源静态目录 = 存储型 XSS，
             // 头像上传属于「登录后才该做的事」，客户端请先登录再上传。
@@ -107,11 +109,11 @@ public class AuthInterceptor implements HandlerInterceptor {
             "/api/v1/app/user/changePass",
             "/api/v1/app/user/refresh",
             // 全端统计：匿名上报入口放行
-            "/api/v1/app/stat/report"
-    );
+            "/api/v1/app/stat/report");
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
         String uri = request.getRequestURI();
         String token = request.getHeader(TOKEN_HEADER);
 
@@ -154,9 +156,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             if (userId == null) {
                 response.setContentType("application/json;charset=UTF-8");
                 response.setStatus(200);
-                response.getWriter().write(objectMapper.writeValueAsString(
-                        Result.error(401, "登录状态已失效")
-                ));
+                response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, "登录状态已失效")));
                 return false;
             }
             request.setAttribute("userId", userId);
@@ -213,8 +213,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        log.warn("管理端身份门禁拒绝: userId={}, userType={}, 要求={}",
-                loginId, userType, adminRequiredUserType);
+        log.warn("管理端身份门禁拒绝: userId={}, userType={}, 要求={}", loginId, userType, adminRequiredUserType);
 
         response.setContentType("application/json;charset=UTF-8");
         response.setStatus(200);
@@ -252,14 +251,18 @@ public class AuthInterceptor implements HandlerInterceptor {
     private boolean passCsrfCheck(HttpServletRequest request, HttpServletResponse response) throws Exception {
         String cookieCsrf = CsrfTokenSupport.readCookie(request, CsrfTokenSupport.CSRF_COOKIE);
         String headerCsrf = request.getHeader(CsrfTokenSupport.CSRF_HEADER);
-        if (cookieCsrf != null && !cookieCsrf.isBlank()
+        if (cookieCsrf != null
+                && !cookieCsrf.isBlank()
                 && CsrfTokenSupport.constantTimeEquals(cookieCsrf, headerCsrf)) {
             return true;
         }
 
-        log.warn("CSRF 校验失败: uri={}, method={}, cookie存在={}, header存在={}",
-                request.getRequestURI(), request.getMethod(),
-                cookieCsrf != null, headerCsrf != null);
+        log.warn(
+                "CSRF 校验失败: uri={}, method={}, cookie存在={}, header存在={}",
+                request.getRequestURI(),
+                request.getMethod(),
+                cookieCsrf != null,
+                headerCsrf != null);
 
         response.setContentType("application/json;charset=UTF-8");
         response.setStatus(200);

@@ -28,13 +28,6 @@ import com.astral.ai.provider.AiProviderRegistry;
 import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
 import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.ObjectNode;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -45,6 +38,12 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 对话编排器：把「请求 → 模型 → 工具 → 落库 → 事件」这条链路串起来。
@@ -89,7 +88,8 @@ public class AiChatOrchestrator {
     private static final int MAX_KNOWLEDGE_HITS = 6;
 
     /** 缺省系统提示词（未配置 Prompt 时兜底，不含任何业务硬编码分支） */
-    private static final String FALLBACK_SYSTEM_PROMPT = """
+    private static final String FALLBACK_SYSTEM_PROMPT =
+            """
             你是 Astral 平台的智能助手。请使用简体中文回答，保持简洁、准确、可执行。
             当你不确定事实时，明确说明不确定，不要编造数据、引用或接口。
             """;
@@ -129,9 +129,15 @@ public class AiChatOrchestrator {
      *
      * @return 请求 ID / 用户消息 ID / 助手消息 ID（助手消息此时为空壳，内容靠事件推送）
      */
-    public Start start(AiAgentEntity agent, AiAgentVersionEntity version, AiConversationEntity conversation,
-                       Long userId, String clientType, String content, Map<String, Object> context,
-                       String idempotencyKey) {
+    public Start start(
+            AiAgentEntity agent,
+            AiAgentVersionEntity version,
+            AiConversationEntity conversation,
+            Long userId,
+            String clientType,
+            String content,
+            Map<String, Object> context,
+            String idempotencyKey) {
         String trimmed = content == null ? "" : content.trim();
         if (trimmed.isEmpty()) {
             throw new AiException("AI007", "消息内容不能为空");
@@ -144,8 +150,8 @@ public class AiChatOrchestrator {
         AiRequestEntity existing = requestService.findByIdempotency(userId, agent.getId(), idempotencyKey);
         if (existing != null) {
             AiMessageEntity assistant = latestAssistant(existing.getId());
-            return new Start(existing.getId(), null, assistant == null ? null : assistant.getId(),
-                    existing.getStatus(), false);
+            return new Start(
+                    existing.getId(), null, assistant == null ? null : assistant.getId(), existing.getStatus(), false);
         }
 
         // 用户消息
@@ -158,8 +164,15 @@ public class AiChatOrchestrator {
         conversationService.append(userMessage);
 
         String inputSnapshot = snapshotInput(trimmed, context);
-        AiRequestEntity request = requestService.create(conversation.getId(), agent, version, userId,
-                clientType, idempotencyKey, inputSnapshot, AiJson.write(sanitizeContext(context, version, agent)));
+        AiRequestEntity request = requestService.create(
+                conversation.getId(),
+                agent,
+                version,
+                userId,
+                clientType,
+                idempotencyKey,
+                inputSnapshot,
+                AiJson.write(sanitizeContext(context, version, agent)));
         userMessage.setRequestId(request.getId());
         conversationService.update(userMessage);
 
@@ -175,13 +188,22 @@ public class AiChatOrchestrator {
         conversationService.append(assistantMessage);
 
         conversationService.touch(conversation, version.getId(), trimmed);
-        eventService.append(request.getId(), AiConstants.EventType.REQUEST_CREATED,
-                Map.of("requestId", request.getId(), "agentCode", agent.getAgentCode(),
-                        "agentVersionId", version.getId(), "clientType", String.valueOf(clientType)));
+        eventService.append(
+                request.getId(),
+                AiConstants.EventType.REQUEST_CREATED,
+                Map.of(
+                        "requestId",
+                        request.getId(),
+                        "agentCode",
+                        agent.getAgentCode(),
+                        "agentVersionId",
+                        version.getId(),
+                        "clientType",
+                        String.valueOf(clientType)));
 
         executor.submit(() -> runSafely(request.getId(), assistantMessage.getId()));
-        return new Start(request.getId(), userMessage.getId(), assistantMessage.getId(),
-                AiConstants.RequestStatus.QUEUED, true);
+        return new Start(
+                request.getId(), userMessage.getId(), assistantMessage.getId(), AiConstants.RequestStatus.QUEUED, true);
     }
 
     /** 用户确认后继续执行挂起的工具 */
@@ -190,8 +212,7 @@ public class AiChatOrchestrator {
     }
 
     /** 发起结果 */
-    public record Start(Long requestId, Long userMessageId, Long assistantMessageId, String status, boolean stream) {
-    }
+    public record Start(Long requestId, Long userMessageId, Long assistantMessageId, String status, boolean stream) {}
 
     // ==================== 编排主流程 ====================
 
@@ -218,12 +239,13 @@ public class AiChatOrchestrator {
 
         // 解析路由 / 提供方 / 模型
         Resolved resolved = resolve(version);
-        requestService.markRunning(requestId, resolved.provider().getId(), resolved.model().getId());
+        requestService.markRunning(
+                requestId, resolved.provider().getId(), resolved.model().getId());
 
         // 额度预占（已预占过则跳过，resume 时复用）
         AiQuotaService.Limits limits = quotaService.resolveLimits(request.getUserId(), agent, version);
-        AiQuotaService.Reservation reservation = quotaService.reserve(request.getUserId(), agent, version,
-                inputChars(request), limits);
+        AiQuotaService.Reservation reservation =
+                quotaService.reserve(request.getUserId(), agent, version, inputChars(request), limits);
         AiUsageEntity usage = usageService.reserve(requestService.require(requestId), resolved.model());
 
         boolean succeeded = false;
@@ -232,8 +254,8 @@ public class AiChatOrchestrator {
         StringBuilder answer = new StringBuilder();
         List<AiAppDtos.Citation> citations = List.of();
         try {
-            List<AiToolService.EffectiveTool> tools = toolService.resolveEffective(version.getId(),
-                    request.getClientType());
+            List<AiToolService.EffectiveTool> tools =
+                    toolService.resolveEffective(version.getId(), request.getClientType());
 
             String systemPrompt = buildSystemPrompt(version, request, agent);
             Knowledge knowledge = retrieveKnowledge(version, request);
@@ -256,8 +278,8 @@ public class AiChatOrchestrator {
                 messages.addAll(history(conversation.getId()));
                 List<ToolSpec> specs = toolSpecs(availableTools(tools, exhaustedTools));
 
-                RoundResult result = callModel(request, assistant, resolved, messages, specs,
-                        answer.length() == 0 ? assistant : null);
+                RoundResult result = callModel(
+                        request, assistant, resolved, messages, specs, answer.length() == 0 ? assistant : null);
                 tokenIn += result.promptTokens();
                 tokenOut += result.completionTokens();
                 if (!answer.isEmpty() && !result.content().isEmpty()) {
@@ -270,8 +292,8 @@ public class AiChatOrchestrator {
                 }
                 // 工具轮：先落库助手消息（含 toolCalls），再执行工具
                 persistAssistantToolCalls(assistant, result.toolCalls(), resolved.model());
-                boolean needApproval = executeTools(request, agent, version, conversation, result.toolCalls(),
-                        tools, assistant);
+                boolean needApproval =
+                        executeTools(request, agent, version, conversation, result.toolCalls(), tools, assistant);
                 if (needApproval) {
                     requestService.markWaiting(requestId, true);
                     conversationService.update(status(assistant, AiConstants.MessageStatus.STREAMING));
@@ -289,7 +311,10 @@ public class AiChatOrchestrator {
             // 非空但毫无信息量，兜底因此从未触发。改为「解析不出结构化 blocks」。
             if (!cancelled(requestId) && !hasStructuredBlocks(answer.toString())) {
                 List<Message> messages = new ArrayList<>();
-                messages.add(Message.system(systemPrompt + """
+                messages.add(
+                        Message.system(
+                                systemPrompt
+                                        + """
 
 
                         工具调用次数已用尽。请**立刻**基于上面已经拿到的工具结果直接作答，
@@ -320,8 +345,13 @@ public class AiChatOrchestrator {
 
     // ==================== 模型调用 ====================
 
-    private RoundResult callModel(AiRequestEntity request, AiMessageEntity assistant, Resolved resolved,
-                                  List<Message> messages, List<ToolSpec> specs, AiMessageEntity streaming) {
+    private RoundResult callModel(
+            AiRequestEntity request,
+            AiMessageEntity assistant,
+            Resolved resolved,
+            List<Message> messages,
+            List<ToolSpec> specs,
+            AiMessageEntity streaming) {
         ChatRequest chatRequest = new ChatRequest(
                 resolved.provider().getBaseUrl(),
                 providerService.resolveApiKey(resolved.provider()),
@@ -333,9 +363,15 @@ public class AiChatOrchestrator {
                 routeMaxTokens(resolved.route(), resolved.model()),
                 responseFormat(resolved.version().getResponseSchemaJson()),
                 resolved.route() == null ? null : resolved.route().getExtraParametersJson(),
-                resolved.provider().getConnectTimeoutMs() == null ? 10000 : resolved.provider().getConnectTimeoutMs(),
-                resolved.provider().getReadTimeoutMs() == null ? 60000 : resolved.provider().getReadTimeoutMs(),
-                resolved.provider().getMaxRetries() == null ? 0 : resolved.provider().getMaxRetries(),
+                resolved.provider().getConnectTimeoutMs() == null
+                        ? 10000
+                        : resolved.provider().getConnectTimeoutMs(),
+                resolved.provider().getReadTimeoutMs() == null
+                        ? 60000
+                        : resolved.provider().getReadTimeoutMs(),
+                resolved.provider().getMaxRetries() == null
+                        ? 0
+                        : resolved.provider().getMaxRetries(),
                 "ai-" + request.getId());
 
         AiProvider provider = providerRegistry.require(resolved.provider().getProviderType());
@@ -354,11 +390,15 @@ public class AiChatOrchestrator {
                 }
                 if (started.compareAndSet(false, true)) {
                     requestService.markFirstToken(request.getId());
-                    eventService.append(request.getId(), AiConstants.EventType.MESSAGE_STARTED,
+                    eventService.append(
+                            request.getId(),
+                            AiConstants.EventType.MESSAGE_STARTED,
                             Map.of("messageId", assistant.getId()));
                 }
                 content.append(text);
-                eventService.append(request.getId(), AiConstants.EventType.MESSAGE_DELTA,
+                eventService.append(
+                        request.getId(),
+                        AiConstants.EventType.MESSAGE_DELTA,
                         Map.of("messageId", assistant.getId(), "delta", text));
             }
 
@@ -388,8 +428,7 @@ public class AiChatOrchestrator {
         });
 
         if (error[0] != null) {
-            throw error[0] instanceof AiException ai ? ai
-                    : new AiException("AI006", error[0].getMessage());
+            throw error[0] instanceof AiException ai ? ai : new AiException("AI006", error[0].getMessage());
         }
         if (streaming != null && !started.get() && !content.isEmpty()) {
             requestService.markFirstToken(request.getId());
@@ -399,15 +438,26 @@ public class AiChatOrchestrator {
 
     // ==================== 工具执行 ====================
 
-    private boolean executeTools(AiRequestEntity request, AiAgentEntity agent, AiAgentVersionEntity version,
-                                 AiConversationEntity conversation, List<ToolCall> calls,
-                                 List<AiToolService.EffectiveTool> tools, AiMessageEntity assistant) {
+    private boolean executeTools(
+            AiRequestEntity request,
+            AiAgentEntity agent,
+            AiAgentVersionEntity version,
+            AiConversationEntity conversation,
+            List<ToolCall> calls,
+            List<AiToolService.EffectiveTool> tools,
+            AiMessageEntity assistant) {
         for (ToolCall call : calls) {
             AiToolService.EffectiveTool effective = findTool(tools, call.name());
             if (effective == null) {
-                appendToolMessage(conversation.getId(), request.getId(), call,
-                        "工具 " + call.name() + " 未被当前智能体授权使用", AiToolResult.REJECTED);
-                eventService.append(request.getId(), AiConstants.EventType.TOOL_COMPLETED,
+                appendToolMessage(
+                        conversation.getId(),
+                        request.getId(),
+                        call,
+                        "工具 " + call.name() + " 未被当前智能体授权使用",
+                        AiToolResult.REJECTED);
+                eventService.append(
+                        request.getId(),
+                        AiConstants.EventType.TOOL_COMPLETED,
                         Map.of("toolCode", String.valueOf(call.name()), "status", AiToolResult.REJECTED));
                 continue;
             }
@@ -423,29 +473,69 @@ public class AiChatOrchestrator {
             boolean approvalRequired = requiresApproval(effective);
             if (approvalRequired) {
                 record.setStatus(AiConstants.ToolCallStatus.WAITING_APPROVAL);
-                record.setApprovalStatus(AiConstants.ApprovalPolicy.ADMIN_CONFIRM.equals(effective.approval())
-                        ? AiConstants.ApprovalPolicy.ADMIN_CONFIRM : AiConstants.ApprovalPolicy.USER_CONFIRM);
+                record.setApprovalStatus(
+                        AiConstants.ApprovalPolicy.ADMIN_CONFIRM.equals(effective.approval())
+                                ? AiConstants.ApprovalPolicy.ADMIN_CONFIRM
+                                : AiConstants.ApprovalPolicy.USER_CONFIRM);
                 toolCallMapper.insert(record);
-                eventService.append(request.getId(), AiConstants.EventType.TOOL_PLANNED,
-                        Map.of("toolCallId", record.getId(), "toolCode", effective.tool().getToolCode(),
-                                "name", String.valueOf(effective.tool().getName()), "risk", effective.risk()));
-                eventService.append(request.getId(), AiConstants.EventType.TOOL_APPROVAL_REQUIRED,
-                        Map.of("toolCallId", record.getId(), "toolCode", effective.tool().getToolCode(),
-                                "name", String.valueOf(effective.tool().getName()), "risk", effective.risk(),
-                                "arguments", arguments));
-                appendToolMessage(conversation.getId(), request.getId(), call,
-                        "该操作需要确认后执行：" + effective.tool().getName(), AiToolResult.REQUIRES_APPROVAL);
+                eventService.append(
+                        request.getId(),
+                        AiConstants.EventType.TOOL_PLANNED,
+                        Map.of(
+                                "toolCallId",
+                                record.getId(),
+                                "toolCode",
+                                effective.tool().getToolCode(),
+                                "name",
+                                String.valueOf(effective.tool().getName()),
+                                "risk",
+                                effective.risk()));
+                eventService.append(
+                        request.getId(),
+                        AiConstants.EventType.TOOL_APPROVAL_REQUIRED,
+                        Map.of(
+                                "toolCallId",
+                                record.getId(),
+                                "toolCode",
+                                effective.tool().getToolCode(),
+                                "name",
+                                String.valueOf(effective.tool().getName()),
+                                "risk",
+                                effective.risk(),
+                                "arguments",
+                                arguments));
+                appendToolMessage(
+                        conversation.getId(),
+                        request.getId(),
+                        call,
+                        "该操作需要确认后执行：" + effective.tool().getName(),
+                        AiToolResult.REQUIRES_APPROVAL);
                 return true;
             }
 
             record.setStatus(AiConstants.ToolCallStatus.RUNNING);
             record.setApprovalStatus(AiConstants.ApprovalPolicy.NONE);
             toolCallMapper.insert(record);
-            eventService.append(request.getId(), AiConstants.EventType.TOOL_PLANNED,
-                    Map.of("toolCallId", record.getId(), "toolCode", effective.tool().getToolCode(),
-                            "name", String.valueOf(effective.tool().getName()), "risk", effective.risk()));
-            eventService.append(request.getId(), AiConstants.EventType.TOOL_STARTED,
-                    Map.of("toolCallId", record.getId(), "toolCode", effective.tool().getToolCode()));
+            eventService.append(
+                    request.getId(),
+                    AiConstants.EventType.TOOL_PLANNED,
+                    Map.of(
+                            "toolCallId",
+                            record.getId(),
+                            "toolCode",
+                            effective.tool().getToolCode(),
+                            "name",
+                            String.valueOf(effective.tool().getName()),
+                            "risk",
+                            effective.risk()));
+            eventService.append(
+                    request.getId(),
+                    AiConstants.EventType.TOOL_STARTED,
+                    Map.of(
+                            "toolCallId",
+                            record.getId(),
+                            "toolCode",
+                            effective.tool().getToolCode()));
 
             AiToolResult result = invoke(request, agent, effective, arguments, false, null);
             record.setResultJson(result.payload() == null ? null : AiJson.write(result.payload()));
@@ -470,13 +560,25 @@ public class AiChatOrchestrator {
     }
 
     /** 执行单个工具（供编排与「确认后执行」两条路径共用） */
-    public AiToolResult invoke(AiRequestEntity request, AiAgentEntity agent,
-                               AiToolService.EffectiveTool effective, ObjectNode arguments,
-                               boolean approved, Long approvedBy) {
+    public AiToolResult invoke(
+            AiRequestEntity request,
+            AiAgentEntity agent,
+            AiToolService.EffectiveTool effective,
+            ObjectNode arguments,
+            boolean approved,
+            Long approvedBy) {
         AiToolContext context = new AiToolContext(
-                request.getId(), request.getConversationId(), request.getUserId(), agent.getId(),
-                agent.getAgentCode(), agent.getAgentType(), request.getClientType(),
-                arguments, AiJson.readObject(request.getContextSnapshot()), approved, approvedBy);
+                request.getId(),
+                request.getConversationId(),
+                request.getUserId(),
+                agent.getId(),
+                agent.getAgentCode(),
+                agent.getAgentType(),
+                request.getClientType(),
+                arguments,
+                AiJson.readObject(request.getContextSnapshot()),
+                approved,
+                approvedBy);
         try {
             return effective.handler().execute(context);
         } catch (AiException e) {
@@ -517,8 +619,7 @@ public class AiChatOrchestrator {
         return null;
     }
 
-    private void appendToolMessage(Long conversationId, Long requestId, ToolCall call, String summary,
-                                   String status) {
+    private void appendToolMessage(Long conversationId, Long requestId, ToolCall call, String summary, String status) {
         AiMessageEntity message = new AiMessageEntity();
         message.setConversationId(conversationId);
         message.setRequestId(requestId);
@@ -534,8 +635,7 @@ public class AiChatOrchestrator {
         conversationService.append(message);
     }
 
-    private void persistAssistantToolCalls(AiMessageEntity assistant, List<ToolCall> calls,
-                                           AiModelEntity model) {
+    private void persistAssistantToolCalls(AiMessageEntity assistant, List<ToolCall> calls, AiModelEntity model) {
         List<Map<String, Object>> items = new ArrayList<>();
         for (ToolCall call : calls) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -552,9 +652,14 @@ public class AiChatOrchestrator {
 
     // ==================== 收尾 ====================
 
-    private void finalize(AiRequestEntity request, AiMessageEntity assistant, String rawContent,
-                          List<AiAppDtos.Citation> citations, AiModelEntity model,
-                          int tokenIn, int tokenOut) {
+    private void finalize(
+            AiRequestEntity request,
+            AiMessageEntity assistant,
+            String rawContent,
+            List<AiAppDtos.Citation> citations,
+            AiModelEntity model,
+            int tokenIn,
+            int tokenOut) {
         Parsed parsed = parseAnswer(rawContent, request.getResponseSchemaSnapshot());
         // 实测（生产 conv 8010 / 本地复现）证明只靠提示词压不住：模型会推荐候选池之外、
         // 客户端根本放不了的歌（编造，或回声当前播放队列），「再来点」时还会重复上一轮
@@ -568,7 +673,8 @@ public class AiChatOrchestrator {
         // 收尾时 blocks 为空就会把上一轮的工具调用残留当成消息 blocks 存下去（DB 与事件不一致）
         if (!parsed.blocks().isEmpty()) {
             assistant.setBlocksJson(AiJson.write(parsed.blocks()));
-        } else if (assistant.getBlocksJson() != null && assistant.getBlocksJson().contains("toolCalls")) {
+        } else if (assistant.getBlocksJson() != null
+                && assistant.getBlocksJson().contains("toolCalls")) {
             assistant.setBlocksJson("[]");
         }
         assistant.setCitationsJson(citations.isEmpty() ? null : AiJson.write(citations));
@@ -579,19 +685,41 @@ public class AiChatOrchestrator {
         conversationService.update(assistant);
 
         if (!citations.isEmpty()) {
-            eventService.append(request.getId(), AiConstants.EventType.MESSAGE_CITATION,
+            eventService.append(
+                    request.getId(),
+                    AiConstants.EventType.MESSAGE_CITATION,
                     Map.of("messageId", assistant.getId(), "citations", citations));
         }
         if (!parsed.actions().isEmpty()) {
-            eventService.append(request.getId(), AiConstants.EventType.RECOMMENDATION_UPDATED,
+            eventService.append(
+                    request.getId(),
+                    AiConstants.EventType.RECOMMENDATION_UPDATED,
                     Map.of("messageId", assistant.getId(), "actions", parsed.actions()));
         }
-        eventService.append(request.getId(), AiConstants.EventType.MESSAGE_COMPLETED,
-                Map.of("messageId", assistant.getId(), "content", parsed.answer(),
-                        "blocks", parsed.blocks(), "actions", parsed.actions()));
-        eventService.append(request.getId(), AiConstants.EventType.MESSAGE_METADATA,
-                Map.of("messageId", assistant.getId(), "modelName", String.valueOf(model.getModelName()),
-                        "inputTokens", tokenIn, "outputTokens", tokenOut));
+        eventService.append(
+                request.getId(),
+                AiConstants.EventType.MESSAGE_COMPLETED,
+                Map.of(
+                        "messageId",
+                        assistant.getId(),
+                        "content",
+                        parsed.answer(),
+                        "blocks",
+                        parsed.blocks(),
+                        "actions",
+                        parsed.actions()));
+        eventService.append(
+                request.getId(),
+                AiConstants.EventType.MESSAGE_METADATA,
+                Map.of(
+                        "messageId",
+                        assistant.getId(),
+                        "modelName",
+                        String.valueOf(model.getModelName()),
+                        "inputTokens",
+                        tokenIn,
+                        "outputTokens",
+                        tokenOut));
         requestService.markSucceeded(request.getId(), tokenIn, tokenOut);
     }
 
@@ -607,11 +735,15 @@ public class AiChatOrchestrator {
             AiMessageEntity assistant = conversationService.message(assistantMessageId);
             if (assistant != null) {
                 assistant.setStatus(AiConstants.MessageStatus.FAILED);
-                assistant.setContent(assistant.getContent() == null || assistant.getContent().isEmpty()
-                        ? "请求失败：" + safe(message) : assistant.getContent());
+                assistant.setContent(
+                        assistant.getContent() == null || assistant.getContent().isEmpty()
+                                ? "请求失败：" + safe(message)
+                                : assistant.getContent());
                 conversationService.update(assistant);
             }
-            eventService.append(requestId, AiConstants.EventType.REQUEST_FAILED,
+            eventService.append(
+                    requestId,
+                    AiConstants.EventType.REQUEST_FAILED,
                     Map.of("errorCode", String.valueOf(errorCode), "message", safe(message)));
             requestService.markFailed(requestId, errorCode, message, 0, 0);
         } catch (Exception e) {
@@ -622,14 +754,16 @@ public class AiChatOrchestrator {
     // ==================== 组装 ====================
 
     private Resolved resolve(AiAgentVersionEntity version) {
-        AiProviderRouteEntity route = version.getProviderRouteId() == null ? null
-                : routeService.requireEnabled(version.getProviderRouteId());
+        AiProviderRouteEntity route =
+                version.getProviderRouteId() == null ? null : routeService.requireEnabled(version.getProviderRouteId());
         AiModelEntity model;
         AiProviderEntity provider;
         if (route == null) {
             // 未绑定路由：取任一启用模型，避免版本校验漏洞导致运行期空指针
             List<AiModelEntity> models = modelService.list(null);
-            model = models.stream().filter(m -> Boolean.TRUE.equals(m.getEnabled())).findFirst()
+            model = models.stream()
+                    .filter(m -> Boolean.TRUE.equals(m.getEnabled()))
+                    .findFirst()
                     .orElseThrow(() -> new AiException("AI006", "没有可用的模型，请先配置提供方与模型"));
             provider = providerService.requireEnabled(model.getProviderId());
         } else {
@@ -643,7 +777,9 @@ public class AiChatOrchestrator {
         StringBuilder builder = new StringBuilder();
         if (version.getSystemPromptVersionId() != null) {
             AiPromptVersionEntity prompt = promptService.findVersion(version.getSystemPromptVersionId());
-            if (prompt != null && prompt.getSystemPrompt() != null && !prompt.getSystemPrompt().isBlank()) {
+            if (prompt != null
+                    && prompt.getSystemPrompt() != null
+                    && !prompt.getSystemPrompt().isBlank()) {
                 builder.append(prompt.getSystemPrompt().trim());
             }
         }
@@ -674,14 +810,17 @@ public class AiChatOrchestrator {
             if (AiConstants.MessageRole.USER.equals(row.getRole())) {
                 messages.add(Message.user(row.getContent()));
             } else if (AiConstants.MessageRole.ASSISTANT.equals(row.getRole())
-                    && row.getBlocksJson() != null && row.getBlocksJson().contains("toolCalls")) {
+                    && row.getBlocksJson() != null
+                    && row.getBlocksJson().contains("toolCalls")) {
                 JsonNode node = AiJson.read(row.getBlocksJson());
                 List<ToolCall> calls = new ArrayList<>();
                 JsonNode array = node == null ? null : node.get("toolCalls");
                 if (array != null && array.isArray()) {
                     for (JsonNode item : array) {
-                        calls.add(new ToolCall(AiJson.text(item, "id", "call_" + calls.size()),
-                                AiJson.text(item, "name", ""), AiJson.text(item, "arguments", "{}")));
+                        calls.add(new ToolCall(
+                                AiJson.text(item, "id", "call_" + calls.size()),
+                                AiJson.text(item, "name", ""),
+                                AiJson.text(item, "arguments", "{}")));
                     }
                 }
                 if (!calls.isEmpty()) {
@@ -705,8 +844,7 @@ public class AiChatOrchestrator {
                 String content = row.getContent();
                 String recommended = recommendedSongsSummary(row.getBlocksJson());
                 if (!recommended.isEmpty()) {
-                    content = content + "\n（这条历史回答已推荐过以下歌曲，本次用户要更多时请优先推荐别的，不要重复："
-                            + recommended + "）";
+                    content = content + "\n（这条历史回答已推荐过以下歌曲，本次用户要更多时请优先推荐别的，不要重复：" + recommended + "）";
                 }
                 messages.add(Message.assistant(content));
             }
@@ -749,7 +887,8 @@ public class AiChatOrchestrator {
             Set<String> answered = new LinkedHashSet<>();
             boolean paired = true;
             for (Message result : results) {
-                if (result.toolCallId() == null || !declared.contains(result.toolCallId())
+                if (result.toolCallId() == null
+                        || !declared.contains(result.toolCallId())
                         || !answered.add(result.toolCallId())) {
                     paired = false;
                     break;
@@ -769,7 +908,9 @@ public class AiChatOrchestrator {
     private List<ToolSpec> toolSpecs(List<AiToolService.EffectiveTool> tools) {
         List<ToolSpec> specs = new ArrayList<>();
         for (AiToolService.EffectiveTool tool : tools) {
-            specs.add(new ToolSpec(tool.tool().getToolCode(), tool.tool().getDescription(),
+            specs.add(new ToolSpec(
+                    tool.tool().getToolCode(),
+                    tool.tool().getDescription(),
                     tool.tool().getArgumentsSchema()));
         }
         return specs;
@@ -777,8 +918,8 @@ public class AiChatOrchestrator {
 
     private Knowledge retrieveKnowledge(AiAgentVersionEntity version, AiRequestEntity request) {
         String query = AiJson.text(AiJson.readObject(request.getInputSnapshot()), "content", "");
-        List<AiKnowledgeService.AiCitationHit> hits = knowledgeService.search(version.getId(), query,
-                MAX_KNOWLEDGE_HITS);
+        List<AiKnowledgeService.AiCitationHit> hits =
+                knowledgeService.search(version.getId(), query, MAX_KNOWLEDGE_HITS);
         if (hits.isEmpty()) {
             return new Knowledge("", List.of());
         }
@@ -791,13 +932,23 @@ public class AiChatOrchestrator {
             if (!seen.add(key)) {
                 continue;
             }
-            builder.append("\n[").append(index++).append("] 《").append(hit.title()).append("》");
+            builder.append("\n[")
+                    .append(index++)
+                    .append("] 《")
+                    .append(hit.title())
+                    .append("》");
             if (hit.section() != null && !hit.section().isBlank()) {
                 builder.append(" · ").append(hit.section());
             }
             builder.append("\n").append(AiJson.truncate(hit.content(), 700));
-            citations.add(new AiAppDtos.Citation(hit.sourceId(), hit.sourceType(), hit.title(),
-                    hit.path(), hit.section(), hit.version(), hit.matchedText()));
+            citations.add(new AiAppDtos.Citation(
+                    hit.sourceId(),
+                    hit.sourceType(),
+                    hit.title(),
+                    hit.path(),
+                    hit.section(),
+                    hit.version(),
+                    hit.matchedText()));
             if (citations.size() >= AiConstants.Runtime.MAX_CITATIONS) {
                 break;
             }
@@ -820,7 +971,8 @@ public class AiChatOrchestrator {
             String answer = AiJson.text(node, "answer", "");
             if (answer == null || answer.isBlank()) {
                 // 模型只给了 JSON、没写 answer：用 JSON 之前的那段话兜底，再退到默认文案
-                String preamble = json.substring(0, Math.max(0, json.indexOf('{'))).trim();
+                String preamble =
+                        json.substring(0, Math.max(0, json.indexOf('{'))).trim();
                 answer = preamble.isEmpty() ? "为你挑了几首歌。" : preamble;
             }
             List<AiAppDtos.Block> blocks = parseBlocks(node.get("blocks"));
@@ -860,8 +1012,7 @@ public class AiChatOrchestrator {
                 return null;
             }
             JsonNode candidate = AiJson.read(trimmed.substring(start, end + 1));
-            if (candidate != null && candidate.isObject()
-                    && (candidate.has("answer") || candidate.has("blocks"))) {
+            if (candidate != null && candidate.isObject() && (candidate.has("answer") || candidate.has("blocks"))) {
                 return candidate;
             }
             from = start + 1;
@@ -908,8 +1059,8 @@ public class AiChatOrchestrator {
                     payload.put(entry.getKey(), AiJson.mapper().convertValue(entry.getValue(), Object.class));
                 }
             });
-            actions.add(new AiAppDtos.ActionVo("act_" + java.util.UUID.randomUUID().toString().replace("-", ""),
-                    type, payload));
+            actions.add(new AiAppDtos.ActionVo(
+                    "act_" + java.util.UUID.randomUUID().toString().replace("-", ""), type, payload));
         }
         return actions;
     }
@@ -930,8 +1081,8 @@ public class AiChatOrchestrator {
 
     // ==================== 小工具 ====================
 
-    private Map<String, Object> sanitizeContext(Map<String, Object> context, AiAgentVersionEntity version,
-                                                AiAgentEntity agent) {
+    private Map<String, Object> sanitizeContext(
+            Map<String, Object> context, AiAgentVersionEntity version, AiAgentEntity agent) {
         if (context == null || context.isEmpty()) {
             return Map.of();
         }
@@ -988,7 +1139,9 @@ public class AiChatOrchestrator {
     }
 
     private static Double routeTemperature(AiProviderRouteEntity route) {
-        return route == null || route.getTemperature() == null ? null : route.getTemperature().doubleValue();
+        return route == null || route.getTemperature() == null
+                ? null
+                : route.getTemperature().doubleValue();
     }
 
     private static Double routeTopP(AiProviderRouteEntity route) {
@@ -1002,20 +1155,19 @@ public class AiChatOrchestrator {
         return model.getMaxOutputTokens();
     }
 
-    private record Resolved(AiAgentVersionEntity version, AiProviderRouteEntity route,
-                            AiProviderEntity provider, AiModelEntity model) {
-    }
+    private record Resolved(
+            AiAgentVersionEntity version,
+            AiProviderRouteEntity route,
+            AiProviderEntity provider,
+            AiModelEntity model) {}
 
-    private record RoundResult(String content, List<ToolCall> toolCalls, int promptTokens,
-                               int completionTokens, String finishReason) {
-    }
+    private record RoundResult(
+            String content, List<ToolCall> toolCalls, int promptTokens, int completionTokens, String finishReason) {}
 
-    private record Knowledge(String block, List<AiAppDtos.Citation> citations) {
-    }
+    private record Knowledge(String block, List<AiAppDtos.Citation> citations) {}
 
-    private record Parsed(String answer, List<AiAppDtos.Block> blocks,
-                          List<AiAppDtos.ActionVo> actions, String finishReason) {
-    }
+    private record Parsed(
+            String answer, List<AiAppDtos.Block> blocks, List<AiAppDtos.ActionVo> actions, String finishReason) {}
 
     /** 供事件里序列化 blocks 时复用 */
     static List<Map<String, Object>> blockMaps(List<AiAppDtos.Block> blocks) {
@@ -1062,8 +1214,7 @@ public class AiChatOrchestrator {
      * 要输出 JSON，音乐助手只回一句散文。这里按协议重新包装。</p>
      */
     static String responseFormat(String responseSchemaJson) {
-        if (responseSchemaJson == null || responseSchemaJson.isBlank()
-                || "{}".equals(responseSchemaJson.trim())) {
+        if (responseSchemaJson == null || responseSchemaJson.isBlank() || "{}".equals(responseSchemaJson.trim())) {
             return null;
         }
         JsonNode schema = AiJson.read(responseSchemaJson);
@@ -1125,8 +1276,8 @@ public class AiChatOrchestrator {
      * <p>只过滤 READ 类工具：DRAFT / HIGH 类操作（发通知、改配置）允许在用户确认后
      * 重复执行，而搜索类工具重复调用只会拿到同一批候选，纯粹浪费轮次。</p>
      */
-    static List<AiToolService.EffectiveTool> availableTools(List<AiToolService.EffectiveTool> tools,
-                                                           java.util.Set<String> exhausted) {
+    static List<AiToolService.EffectiveTool> availableTools(
+            List<AiToolService.EffectiveTool> tools, java.util.Set<String> exhausted) {
         if (tools == null || tools.isEmpty() || exhausted == null || exhausted.isEmpty()) {
             return tools;
         }
@@ -1249,8 +1400,9 @@ public class AiChatOrchestrator {
                         droppedUnknown++;
                         continue;
                     }
-                    boolean repeated = (!songId.isBlank() && !sourceId.isBlank()
-                            && alreadyKeys.contains(songKey(sourceId, songId)))
+                    boolean repeated = (!songId.isBlank()
+                                    && !sourceId.isBlank()
+                                    && alreadyKeys.contains(songKey(sourceId, songId)))
                             || (!name.isBlank() && alreadyKeys.contains(nameKey(name, artist)));
                     if (repeated) {
                         droppedRepeat++;
@@ -1291,8 +1443,7 @@ public class AiChatOrchestrator {
                 keptActions.add(action);
                 continue;
             }
-            Map<String, Object> mapped = actionRemap.get(
-                    songKey(mapStr(action.payload(), "sourceId"), actionSongId));
+            Map<String, Object> mapped = actionRemap.get(songKey(mapStr(action.payload(), "sourceId"), actionSongId));
             if (mapped == null) {
                 // 动作指向的歌不在保留的卡片里（编造或已被滤掉），客户端拿去只会播放失败
                 droppedActions++;
@@ -1304,8 +1455,12 @@ public class AiChatOrchestrator {
             keptActions.add(new AiAppDtos.ActionVo(action.actionId(), action.type(), payload));
         }
         if (droppedUnknown + droppedRepeat + droppedActions > 0) {
-            log.info("[AI] 推荐硬校验 requestId={}：滤掉候选外 {} 首、已推荐过 {} 首、无效动作 {} 个",
-                    request.getId(), droppedUnknown, droppedRepeat, droppedActions);
+            log.info(
+                    "[AI] 推荐硬校验 requestId={}：滤掉候选外 {} 首、已推荐过 {} 首、无效动作 {} 个",
+                    request.getId(),
+                    droppedUnknown,
+                    droppedRepeat,
+                    droppedActions);
         }
         if (!keptAnySong) {
             // 模型一张可用卡片都没留下（整轮空 blocks 逃避，或全被滤掉），但候选池里还有
@@ -1315,17 +1470,21 @@ public class AiChatOrchestrator {
                 Map<String, Object> data = new LinkedHashMap<>();
                 data.put("items", fresh);
                 keptBlocks.add(new AiAppDtos.Block("song_list", "为你挑选", data));
-                log.info("[AI] 推荐硬校验 requestId={}：模型未给出可用卡片，服务端从候选池代挑 {} 首",
-                        request.getId(), fresh.size());
+                log.info("[AI] 推荐硬校验 requestId={}：模型未给出可用卡片，服务端从候选池代挑 {} 首", request.getId(), fresh.size());
                 String answer = parsed.answer();
-                return new Parsed(answer == null || answer.isBlank()
-                        ? "从候选池里替你挑了几首这轮还没推荐过的歌。" : answer,
-                        keptBlocks, keptActions, parsed.finishReason());
+                return new Parsed(
+                        answer == null || answer.isBlank() ? "从候选池里替你挑了几首这轮还没推荐过的歌。" : answer,
+                        keptBlocks,
+                        keptActions,
+                        parsed.finishReason());
             }
             String answer = parsed.answer();
             String note = "\n\n（这批候选里没有能再推荐的新歌了。可以换个方向，或告诉我具体想听什么，我再让客户端找一批。）";
-            return new Parsed((answer == null || answer.isBlank() ? "这批候选里没有能再推荐的新歌了。" : answer) + note,
-                    keptBlocks, keptActions, parsed.finishReason());
+            return new Parsed(
+                    (answer == null || answer.isBlank() ? "这批候选里没有能再推荐的新歌了。" : answer) + note,
+                    keptBlocks,
+                    keptActions,
+                    parsed.finishReason());
         }
         // 编造被滤掉太多会让卡片缩水（实测一轮 5 首滤完只剩 1-2 首，schema 预期 3-8 首）：
         // 从池里还没推荐过的歌补齐到最少 3 张，保证「再来点」永远有东西可看
@@ -1333,8 +1492,7 @@ public class AiChatOrchestrator {
         int firstSongListIndex = -1;
         for (int i = 0; i < keptBlocks.size(); i++) {
             AiAppDtos.Block block = keptBlocks.get(i);
-            if (!"song_list".equals(block.type())
-                    || !(block.data().get("items") instanceof List<?> list)) {
+            if (!"song_list".equals(block.type()) || !(block.data().get("items") instanceof List<?> list)) {
                 continue;
             }
             keptCount += list.size();
@@ -1343,7 +1501,8 @@ public class AiChatOrchestrator {
             }
         }
         if (keptCount > 0 && keptCount < MIN_RECOMMENDED_CARDS) {
-            List<Map<String, Object>> topUp = freshClientSongs(universe, alreadyKeys, MIN_RECOMMENDED_CARDS - keptCount);
+            List<Map<String, Object>> topUp =
+                    freshClientSongs(universe, alreadyKeys, MIN_RECOMMENDED_CARDS - keptCount);
             if (!topUp.isEmpty()) {
                 AiAppDtos.Block block = keptBlocks.get(firstSongListIndex);
                 List<Object> items = new ArrayList<>();
@@ -1355,8 +1514,7 @@ public class AiChatOrchestrator {
                 Map<String, Object> data = new LinkedHashMap<>(block.data());
                 data.put("items", items);
                 keptBlocks.set(firstSongListIndex, new AiAppDtos.Block(block.type(), block.title(), data));
-                log.info("[AI] 推荐硬校验 requestId={}：卡片缩水（滤后 {} 首），从候选池补齐 {} 首",
-                        request.getId(), keptCount, topUp.size());
+                log.info("[AI] 推荐硬校验 requestId={}：卡片缩水（滤后 {} 首），从候选池补齐 {} 首", request.getId(), keptCount, topUp.size());
             }
         }
         return new Parsed(parsed.answer(), keptBlocks, keptActions, parsed.finishReason());
@@ -1376,8 +1534,10 @@ public class AiChatOrchestrator {
         if (context == null || !context.isObject()) {
             return universe;
         }
-        for (String key : List.of(AiConstants.ContextKey.MUSIC_CANDIDATES,
-                AiConstants.ContextKey.CURRENT_QUEUE, AiConstants.ContextKey.CURRENT_SONG)) {
+        for (String key : List.of(
+                AiConstants.ContextKey.MUSIC_CANDIDATES,
+                AiConstants.ContextKey.CURRENT_QUEUE,
+                AiConstants.ContextKey.CURRENT_SONG)) {
             JsonNode node = context.get(key);
             if (node == null) {
                 continue;
@@ -1399,8 +1559,9 @@ public class AiChatOrchestrator {
             return;
         }
         Map<String, Object> song = new LinkedHashMap<>();
-        item.properties().forEach(entry ->
-                song.put(entry.getKey(), AiJson.mapper().convertValue(entry.getValue(), Object.class)));
+        item.properties()
+                .forEach(entry ->
+                        song.put(entry.getKey(), AiJson.mapper().convertValue(entry.getValue(), Object.class)));
         String sourceId = mapStr(song, "sourceId");
         String songId = mapStr(song, "songId");
         String name = mapStr(song, "name");
@@ -1520,8 +1681,7 @@ public class AiChatOrchestrator {
                     depth--;
                     if (depth == 0 && start >= 0) {
                         JsonNode node = AiJson.read(s.substring(start, i + 1));
-                        if (node != null && node.isObject()
-                                && (node.has("answer") || node.has("blocks"))) {
+                        if (node != null && node.isObject() && (node.has("answer") || node.has("blocks"))) {
                             result.add(node);
                         }
                         start = -1;
@@ -1562,7 +1722,8 @@ public class AiChatOrchestrator {
     private boolean musicSearchCalled(AiRequestEntity request) {
         for (AiMessageEntity row : conversationService.byRequest(request.getId())) {
             if (AiConstants.MessageRole.TOOL.equals(row.getRole())
-                    && row.getBlocksJson() != null && row.getBlocksJson().contains("search_")) {
+                    && row.getBlocksJson() != null
+                    && row.getBlocksJson().contains("search_")) {
                 return true;
             }
         }
@@ -1573,8 +1734,8 @@ public class AiChatOrchestrator {
      * 从客户端候选池里代挑还没推荐过的歌（按客户端上报顺序取前 limit 首）。
      * <p>同一首歌在 universe 里登记了两种键，这里逐首去重并跳过历史已推荐的。</p>
      */
-    static List<Map<String, Object>> freshClientSongs(Map<String, Map<String, Object>> universe,
-                                                       Set<String> alreadyKeys, int limit) {
+    static List<Map<String, Object>> freshClientSongs(
+            Map<String, Map<String, Object>> universe, Set<String> alreadyKeys, int limit) {
         List<Map<String, Object>> fresh = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         for (Map<String, Object> song : universe.values()) {
@@ -1584,10 +1745,9 @@ public class AiChatOrchestrator {
             String artist = mapStr(song, "artist");
             String idKey = songId.isBlank() || sourceId.isBlank() ? null : songKey(sourceId, songId);
             String nmKey = name.isBlank() ? null : nameKey(name, artist);
-            boolean seenBefore = (idKey != null && seen.contains(idKey))
-                    || (nmKey != null && seen.contains(nmKey));
-            boolean recommendedBefore = (idKey != null && alreadyKeys.contains(idKey))
-                    || (nmKey != null && alreadyKeys.contains(nmKey));
+            boolean seenBefore = (idKey != null && seen.contains(idKey)) || (nmKey != null && seen.contains(nmKey));
+            boolean recommendedBefore =
+                    (idKey != null && alreadyKeys.contains(idKey)) || (nmKey != null && alreadyKeys.contains(nmKey));
             if (seenBefore || recommendedBefore) {
                 continue;
             }

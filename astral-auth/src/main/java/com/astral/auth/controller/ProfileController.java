@@ -1,7 +1,7 @@
 package com.astral.auth.controller;
 
-import cn.hutool.crypto.digest.BCrypt;
 import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.crypto.digest.BCrypt;
 import com.astral.auth.dto.TokenInfo;
 import com.astral.auth.security.RsaKeyManager;
 import com.astral.auth.security.TotpUtil;
@@ -11,28 +11,27 @@ import com.astral.common.result.Result;
 import com.astral.common.util.PasswordPolicy;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 个人中心（管理端自助操作，登录即可，不挂权限码）
@@ -84,6 +83,7 @@ public class ProfileController {
     public static class ChangePasswordRequest {
         @NotBlank(message = "旧密码不能为空")
         private String oldPassword;
+
         @NotBlank(message = "新密码不能为空")
         private String newPassword;
     }
@@ -122,8 +122,8 @@ public class ProfileController {
 
     @Operation(summary = "我的在线会话")
     @GetMapping("/sessions")
-    public Result<Page<TokenInfo>> mySessions(@RequestParam(defaultValue = "1") Integer pageNum,
-                                              @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<TokenInfo>> mySessions(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         long userId = StpUtil.getLoginIdAsLong();
         return Result.success(tokenService.pageFromSaToken(pageNum, pageSize, userId));
     }
@@ -201,11 +201,13 @@ public class ProfileController {
             throw new BusinessException("AUTH002");
         }
         // MP 默认 NOT_NULL 策略下 updateById 跳过 null 字段，清空 secret 必须走 lambdaUpdate 显式 set
-        userMapper.update(null, Wrappers.<User>lambdaUpdate()
-                .eq(User::getId, userId)
-                .set(User::getTotpEnabled, 0)
-                .set(User::getTotpSecret, null)
-                .set(User::getUpdateTime, LocalDateTime.now()));
+        userMapper.update(
+                null,
+                Wrappers.<User>lambdaUpdate()
+                        .eq(User::getId, userId)
+                        .set(User::getTotpEnabled, 0)
+                        .set(User::getTotpSecret, null)
+                        .set(User::getUpdateTime, LocalDateTime.now()));
         log.info("[profile] 用户 {} 已关闭 TOTP 二次验证", user.getUsername());
         return Result.success();
     }

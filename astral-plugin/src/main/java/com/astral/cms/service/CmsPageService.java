@@ -8,9 +8,6 @@ import com.astral.cms.mapper.CmsPageMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -18,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * CMS 页面（Wiki 层级页面）服务
@@ -36,7 +35,8 @@ public class CmsPageService {
     public List<CmsPage> adminTree() {
         List<CmsPage> all = pageMapper.selectList(new LambdaQueryWrapper<CmsPage>()
                 .isNull(CmsPage::getDeleteTime)
-                .orderByAsc(CmsPage::getSort).orderByAsc(CmsPage::getId));
+                .orderByAsc(CmsPage::getSort)
+                .orderByAsc(CmsPage::getId));
         return buildTree(all);
     }
 
@@ -73,8 +73,7 @@ public class CmsPageService {
         checkSlugUnique(dto.getSlug(), id);
         checkParent(dto.getParentId(), id);
         LocalDateTime publishedAt = dto.getPublishedAt();
-        if (isPubliclyVisible(status)
-                && exist.getPublishedAt() == null && publishedAt == null) {
+        if (isPubliclyVisible(status) && exist.getPublishedAt() == null && publishedAt == null) {
             publishedAt = LocalDateTime.now();
         }
         LambdaUpdateWrapper<CmsPage> uw = new LambdaUpdateWrapper<CmsPage>()
@@ -92,9 +91,8 @@ public class CmsPageService {
     public void changeStatus(Long id, String status) {
         CmsPage exist = getByIdNotNull(id);
         String next = validateStatus(status);
-        LambdaUpdateWrapper<CmsPage> uw = new LambdaUpdateWrapper<CmsPage>()
-                .eq(CmsPage::getId, id)
-                .set(CmsPage::getStatus, next);
+        LambdaUpdateWrapper<CmsPage> uw =
+                new LambdaUpdateWrapper<CmsPage>().eq(CmsPage::getId, id).set(CmsPage::getStatus, next);
         if (isPubliclyVisible(next) && exist.getPublishedAt() == null) {
             uw.set(CmsPage::getPublishedAt, LocalDateTime.now());
         }
@@ -103,15 +101,16 @@ public class CmsPageService {
 
     public void delete(Long id) {
         getByIdNotNull(id);
-        Long childCount = pageMapper.selectCount(new LambdaQueryWrapper<CmsPage>()
-                .eq(CmsPage::getParentId, id)
-                .isNull(CmsPage::getDeleteTime));
+        Long childCount = pageMapper.selectCount(
+                new LambdaQueryWrapper<CmsPage>().eq(CmsPage::getParentId, id).isNull(CmsPage::getDeleteTime));
         if (childCount > 0) {
             throw new CmsException("该页面下存在子页面，请先删除子页面");
         }
-        pageMapper.update(null, new LambdaUpdateWrapper<CmsPage>()
-                .eq(CmsPage::getId, id)
-                .set(CmsPage::getDeleteTime, LocalDateTime.now()));
+        pageMapper.update(
+                null,
+                new LambdaUpdateWrapper<CmsPage>()
+                        .eq(CmsPage::getId, id)
+                        .set(CmsPage::getDeleteTime, LocalDateTime.now()));
     }
 
     // ==================== 前台公开 ====================
@@ -120,8 +119,7 @@ public class CmsPageService {
      * 前台页面树（仅已发布）
      */
     public List<CmsPage> publicTree() {
-        LambdaQueryWrapper<CmsPage> lw = new LambdaQueryWrapper<CmsPage>()
-                .isNull(CmsPage::getDeleteTime);
+        LambdaQueryWrapper<CmsPage> lw = new LambdaQueryWrapper<CmsPage>().isNull(CmsPage::getDeleteTime);
         appendVisibilityFilter(lw);
         lw.orderByAsc(CmsPage::getSort).orderByAsc(CmsPage::getId);
         List<CmsPage> all = pageMapper.selectList(lw);
@@ -142,13 +140,14 @@ public class CmsPageService {
                     .isNull(CmsPage::getDeleteTime)
                     .last("LIMIT 1"));
         }
-        if (page == null || page.getDeleteTime() != null
-                || !CmsVisibility.isVisible(page.getStatus())) {
+        if (page == null || page.getDeleteTime() != null || !CmsVisibility.isVisible(page.getStatus())) {
             throw new CmsException(404, "页面不存在或未发布");
         }
-        pageMapper.update(null, new LambdaUpdateWrapper<CmsPage>()
-                .eq(CmsPage::getId, page.getId())
-                .setSql("views = views + 1"));
+        pageMapper.update(
+                null,
+                new LambdaUpdateWrapper<CmsPage>()
+                        .eq(CmsPage::getId, page.getId())
+                        .setSql("views = views + 1"));
         page.setBreadcrumb(buildBreadcrumb(page));
         return page;
     }
@@ -221,8 +220,10 @@ public class CmsPageService {
     }
 
     private String validateStatus(String status) {
-        if (CmsPage.STATUS_DRAFT.equals(status) || CmsPage.STATUS_PUBLISHED.equals(status)
-                || CmsPage.STATUS_PRIVATE.equals(status) || CmsPage.STATUS_HIDDEN.equals(status)) {
+        if (CmsPage.STATUS_DRAFT.equals(status)
+                || CmsPage.STATUS_PUBLISHED.equals(status)
+                || CmsPage.STATUS_PRIVATE.equals(status)
+                || CmsPage.STATUS_HIDDEN.equals(status)) {
             return status;
         }
         throw new CmsException("不支持的内容状态：" + status);

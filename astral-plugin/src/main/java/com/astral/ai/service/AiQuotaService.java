@@ -14,12 +14,6 @@ import com.astral.dao.entity.UserRole;
 import com.astral.system.service.UserRoleService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.PreDestroy;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -29,6 +23,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 额度策略与用量预占服务。
@@ -66,8 +65,8 @@ public class AiQuotaService {
     });
 
     {
-        sweeper.scheduleWithFixedDelay(this::sweep, CONCURRENCY_SWEEP_SECONDS,
-                CONCURRENCY_SWEEP_SECONDS, TimeUnit.SECONDS);
+        sweeper.scheduleWithFixedDelay(
+                this::sweep, CONCURRENCY_SWEEP_SECONDS, CONCURRENCY_SWEEP_SECONDS, TimeUnit.SECONDS);
     }
 
     @PreDestroy
@@ -120,9 +119,7 @@ public class AiQuotaService {
             Integer maxOutputTokens,
             Integer maxConcurrent,
             BigDecimal monthlyCostLimit,
-            List<String> sources
-    ) {
-    }
+            List<String> sources) {}
 
     /**
      * 计算某用户在某智能体上的生效额度。
@@ -210,15 +207,18 @@ public class AiQuotaService {
             if (policy.getMaxConcurrent() != null && policy.getMaxConcurrent() > 0) {
                 maxConcurrent = min(maxConcurrent, policy.getMaxConcurrent());
             }
-            if (policy.getMonthlyCostLimit() != null && policy.getMonthlyCostLimit().compareTo(BigDecimal.ZERO) > 0) {
+            if (policy.getMonthlyCostLimit() != null
+                    && policy.getMonthlyCostLimit().compareTo(BigDecimal.ZERO) > 0) {
                 costLimit = costLimit == null || policy.getMonthlyCostLimit().compareTo(costLimit) < 0
-                        ? policy.getMonthlyCostLimit() : costLimit;
+                        ? policy.getMonthlyCostLimit()
+                        : costLimit;
             }
             sources.add(policy.getPolicyCode());
         }
 
         // 版本层的额度覆盖同样只能收紧
-        if (version != null && version.getQuotaOverrideJson() != null
+        if (version != null
+                && version.getQuotaOverrideJson() != null
                 && !version.getQuotaOverrideJson().isBlank()) {
             var node = AiJson.readObject(version.getQuotaOverrideJson());
             if (node != null) {
@@ -252,8 +252,19 @@ public class AiQuotaService {
         if (maxConcurrent == null || maxConcurrent <= 0) {
             maxConcurrent = 3;
         }
-        return new Limits(dailyRequests, monthlyRequests, dailyIn, monthlyIn, dailyOut, monthlyOut,
-                maxInputChars, maxContext, maxOutput, maxConcurrent, costLimit, sources);
+        return new Limits(
+                dailyRequests,
+                monthlyRequests,
+                dailyIn,
+                monthlyIn,
+                dailyOut,
+                monthlyOut,
+                maxInputChars,
+                maxContext,
+                maxOutput,
+                maxConcurrent,
+                costLimit,
+                sources);
     }
 
     /**
@@ -267,8 +278,8 @@ public class AiQuotaService {
      * @return 预占凭据
      */
     @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
-    public Reservation reserve(Long userId, AiAgentEntity agent, AiAgentVersionEntity version,
-                               int inputChars, Limits limits) {
+    public Reservation reserve(
+            Long userId, AiAgentEntity agent, AiAgentVersionEntity version, int inputChars, Limits limits) {
         if (inputChars > limits.maxInputChars()) {
             throw new AiException("AI005", "输入过长：" + inputChars + " 字符，上限 " + limits.maxInputChars());
         }
@@ -282,22 +293,34 @@ public class AiQuotaService {
         try {
             Long agentId = agent == null ? 0L : agent.getId();
             AiUserQuotaEntity day = ensureRow(userId, agentId, "DAY", LocalDate.now());
-            AiUserQuotaEntity month = ensureRow(userId, agentId, "MONTH", LocalDate.now().withDayOfMonth(1));
-            int dayRows = quotaMapper.addWithinLimits(day.getId(), 1, inputChars, 0,
-                    limits.dailyRequests(), limits.dailyInputTokens(), limits.dailyOutputTokens());
+            AiUserQuotaEntity month =
+                    ensureRow(userId, agentId, "MONTH", LocalDate.now().withDayOfMonth(1));
+            int dayRows = quotaMapper.addWithinLimits(
+                    day.getId(),
+                    1,
+                    inputChars,
+                    0,
+                    limits.dailyRequests(),
+                    limits.dailyInputTokens(),
+                    limits.dailyOutputTokens());
             if (dayRows == 0) {
                 releaseConcurrency(concurrencyKey);
                 throw new AiException("AI005", "今日额度已用尽");
             }
-            int monthRows = quotaMapper.addWithinLimits(month.getId(), 1, inputChars, 0,
-                    limits.monthlyRequests(), limits.monthlyInputTokens(), limits.monthlyOutputTokens());
+            int monthRows = quotaMapper.addWithinLimits(
+                    month.getId(),
+                    1,
+                    inputChars,
+                    0,
+                    limits.monthlyRequests(),
+                    limits.monthlyInputTokens(),
+                    limits.monthlyOutputTokens());
             if (monthRows == 0) {
                 quotaMapper.addWithinLimits(day.getId(), -1, -inputChars, 0, null, null, null);
                 releaseConcurrency(concurrencyKey);
                 throw new AiException("AI005", "本月额度已用尽");
             }
-            return new Reservation(userId, agentId, day.getId(), month.getId(), inputChars,
-                    concurrencyKey, limits);
+            return new Reservation(userId, agentId, day.getId(), month.getId(), inputChars, concurrencyKey, limits);
         } catch (AiException e) {
             throw e;
         } catch (RuntimeException e) {
@@ -385,9 +408,7 @@ public class AiQuotaService {
             return List.of();
         }
         try {
-            return userRoleService.list(new LambdaQueryWrapper<UserRole>()
-                            .eq(UserRole::getUserId, userId))
-                    .stream()
+            return userRoleService.list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId)).stream()
                     .map(UserRole::getRoleId)
                     .filter(java.util.Objects::nonNull)
                     .distinct()
@@ -409,16 +430,21 @@ public class AiQuotaService {
      * @param concurrencyKey 并发计数键
      * @param limits         生效额度
      */
-    public record Reservation(Long userId, Long agentId, Long dayRowId, Long monthRowId,
-                              int inputChars, String concurrencyKey, Limits limits) {
-    }
+    public record Reservation(
+            Long userId,
+            Long agentId,
+            Long dayRowId,
+            Long monthRowId,
+            int inputChars,
+            String concurrencyKey,
+            Limits limits) {}
 
     // ==================== 策略维护 ====================
 
     /** 全部额度策略 */
     public List<AiQuotaPolicyEntity> listPolicies() {
-        return policyMapper.selectList(new LambdaQueryWrapper<AiQuotaPolicyEntity>()
-                .orderByAsc(AiQuotaPolicyEntity::getId));
+        return policyMapper.selectList(
+                new LambdaQueryWrapper<AiQuotaPolicyEntity>().orderByAsc(AiQuotaPolicyEntity::getId));
     }
 
     /** 取策略 */

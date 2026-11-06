@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * 告警触发记录 Mapper
  */
 @Mapper
-public interface AlertRecordMapper extends BaseMapper<AlertRecord> {
-}
+public interface AlertRecordMapper extends BaseMapper<AlertRecord> {}

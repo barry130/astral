@@ -2,13 +2,6 @@ package com.astral.storage.service;
 
 import com.astral.common.exception.BusinessException;
 import com.astral.storage.entity.StorageConfigEntity;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -21,6 +14,12 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HexFormat;
 import java.util.TreeMap;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * S3 兼容对象存储操作（AWS Signature V4，适用于 R2 / S3 / 其他兼容实现）
@@ -39,9 +38,8 @@ public class S3ObjectService {
     private static final String EMPTY_SHA256 = hex(sha256(new byte[0]));
 
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private final HttpClient httpClient =
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     public S3ObjectService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -73,7 +71,12 @@ public class S3ObjectService {
             if (region.isBlank()) {
                 region = StorageConfigEntity.PROVIDER_R2.equals(config.getProviderType()) ? "auto" : "us-east-1";
             }
-            return new S3Options(endpoint, region, bucket, accessKeyId, secretAccessKey,
+            return new S3Options(
+                    endpoint,
+                    region,
+                    bucket,
+                    accessKeyId,
+                    secretAccessKey,
                     node.path("publicBaseUrl").asText(null));
         } catch (BusinessException e) {
             throw e;
@@ -83,14 +86,17 @@ public class S3ObjectService {
     }
 
     /** S3 连接信息（secretAccessKey 只在服务端内存中流转） */
-    public record S3Options(String endpoint, String region, String bucket,
-                            String accessKeyId, String secretAccessKey, String publicBaseUrl) {
-    }
+    public record S3Options(
+            String endpoint,
+            String region,
+            String bucket,
+            String accessKeyId,
+            String secretAccessKey,
+            String publicBaseUrl) {}
 
     // ==================== 预签名 URL ====================
 
-    public record PresignedUrl(String url, long expiresAtEpochSeconds) {
-    }
+    public record PresignedUrl(String url, long expiresAtEpochSeconds) {}
 
     /** 预签名 PUT：浏览器凭该 URL 直传对象正文 */
     public PresignedUrl presignPut(StorageConfigEntity config, String key, long ttlSeconds) {
@@ -120,13 +126,14 @@ public class S3ObjectService {
         String canonicalQuery = joinQuery(query);
 
         String canonicalUri = "/" + o.bucket() + "/" + encodeKeyPath(key);
-        String canonicalRequest = String.join("\n", method, canonicalUri, canonicalQuery,
-                "host:" + host.value(), "", "host", "UNSIGNED-PAYLOAD");
+        String canonicalRequest = String.join(
+                "\n", method, canonicalUri, canonicalQuery, "host:" + host.value(), "", "host", "UNSIGNED-PAYLOAD");
         String stringToSign = String.join("\n", "AWS4-HMAC-SHA256", amzDate, scope, hex(sha256(canonicalRequest)));
         byte[] signingKey = signingKey(o.secretAccessKey(), day, o.region());
         String signature = hex(hmac(signingKey, stringToSign));
 
-        String url = host.scheme() + "://" + host.value() + canonicalUri + "?" + canonicalQuery + "&X-Amz-Signature=" + signature;
+        String url = host.scheme() + "://" + host.value() + canonicalUri + "?" + canonicalQuery + "&X-Amz-Signature="
+                + signature;
         return new PresignedUrl(url, now.getEpochSecond() + Long.parseLong(query.get("X-Amz-Expires")));
     }
 
@@ -135,8 +142,8 @@ public class S3ObjectService {
     /** HEAD 对象：校验上传回执时确认对象真实存在并取 Content-Length；不存在返回 -1 */
     public long headObject(StorageConfigEntity config, String key) {
         try {
-            HttpResponse<Void> resp = httpClient.send(signed("HEAD", config, key).build(),
-                    HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp =
+                    httpClient.send(signed("HEAD", config, key).build(), HttpResponse.BodyHandlers.discarding());
             return resp.statusCode() == 200
                     ? Long.parseLong(resp.headers().firstValue("Content-Length").orElse("-1"))
                     : -1;
@@ -151,8 +158,8 @@ public class S3ObjectService {
     /** DELETE 对象：S3 语义下删除不存在的对象也返回 204，视为成功 */
     public void deleteObject(StorageConfigEntity config, String key) {
         try {
-            HttpResponse<Void> resp = httpClient.send(signed("DELETE", config, key).build(),
-                    HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp =
+                    httpClient.send(signed("DELETE", config, key).build(), HttpResponse.BodyHandlers.discarding());
             if (resp.statusCode() / 100 != 2) {
                 throw new BusinessException("STORAGE012", "S3 删除返回 HTTP " + resp.statusCode());
             }
@@ -171,19 +178,29 @@ public class S3ObjectService {
             String amzDate = AMZ_DATE.format(Instant.now().atOffset(ZoneOffset.UTC));
             Host host = hostOf(o.endpoint());
             String canonicalUri = "/" + o.bucket();
-            String canonicalRequest = String.join("\n", "HEAD", canonicalUri, "",
-                    "host:" + host.value(), "x-amz-content-sha256:" + EMPTY_SHA256, "x-amz-date:" + amzDate,
-                    "", "host;x-amz-content-sha256;x-amz-date", EMPTY_SHA256);
+            String canonicalRequest = String.join(
+                    "\n",
+                    "HEAD",
+                    canonicalUri,
+                    "",
+                    "host:" + host.value(),
+                    "x-amz-content-sha256:" + EMPTY_SHA256,
+                    "x-amz-date:" + amzDate,
+                    "",
+                    "host;x-amz-content-sha256;x-amz-date",
+                    EMPTY_SHA256);
             String day = amzDate.substring(0, 8);
             String scope = day + "/" + o.region() + "/s3/aws4_request";
             String stringToSign = String.join("\n", "AWS4-HMAC-SHA256", amzDate, scope, hex(sha256(canonicalRequest)));
             String signature = hex(hmac(signingKey(o.secretAccessKey(), day, o.region()), stringToSign));
-            HttpRequest request = HttpRequest.newBuilder(URI.create(host.scheme() + "://" + host.value() + canonicalUri))
+            HttpRequest request = HttpRequest.newBuilder(
+                            URI.create(host.scheme() + "://" + host.value() + canonicalUri))
                     .method("HEAD", HttpRequest.BodyPublishers.noBody())
                     .header("x-amz-content-sha256", EMPTY_SHA256)
                     .header("x-amz-date", amzDate)
-                    .header("Authorization", authorization(o, amzDate, scope,
-                            "host;x-amz-content-sha256;x-amz-date", signature))
+                    .header(
+                            "Authorization",
+                            authorization(o, amzDate, scope, "host;x-amz-content-sha256;x-amz-date", signature))
                     .timeout(Duration.ofSeconds(8))
                     .build();
             HttpResponse<Void> resp = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
@@ -202,9 +219,17 @@ public class S3ObjectService {
         String amzDate = AMZ_DATE.format(Instant.now().atOffset(ZoneOffset.UTC));
         Host host = hostOf(o.endpoint());
         String canonicalUri = "/" + o.bucket() + "/" + encodeKeyPath(key);
-        String canonicalRequest = String.join("\n", method, canonicalUri, "",
-                "host:" + host.value(), "x-amz-content-sha256:" + EMPTY_SHA256, "x-amz-date:" + amzDate,
-                "", "host;x-amz-content-sha256;x-amz-date", EMPTY_SHA256);
+        String canonicalRequest = String.join(
+                "\n",
+                method,
+                canonicalUri,
+                "",
+                "host:" + host.value(),
+                "x-amz-content-sha256:" + EMPTY_SHA256,
+                "x-amz-date:" + amzDate,
+                "",
+                "host;x-amz-content-sha256;x-amz-date",
+                EMPTY_SHA256);
         String day = amzDate.substring(0, 8);
         String scope = day + "/" + o.region() + "/s3/aws4_request";
         String stringToSign = String.join("\n", "AWS4-HMAC-SHA256", amzDate, scope, hex(sha256(canonicalRequest)));
@@ -213,20 +238,20 @@ public class S3ObjectService {
                 .method(method, HttpRequest.BodyPublishers.noBody())
                 .header("x-amz-content-sha256", EMPTY_SHA256)
                 .header("x-amz-date", amzDate)
-                .header("Authorization", authorization(o, amzDate, scope,
-                        "host;x-amz-content-sha256;x-amz-date", signature))
+                .header(
+                        "Authorization",
+                        authorization(o, amzDate, scope, "host;x-amz-content-sha256;x-amz-date", signature))
                 .timeout(Duration.ofSeconds(10));
     }
 
     private String authorization(S3Options o, String amzDate, String scope, String signedHeaders, String signature) {
-        return "AWS4-HMAC-SHA256 Credential=" + o.accessKeyId() + "/" + scope
-                + ", SignedHeaders=" + signedHeaders + ", Signature=" + signature;
+        return "AWS4-HMAC-SHA256 Credential=" + o.accessKeyId() + "/" + scope + ", SignedHeaders=" + signedHeaders
+                + ", Signature=" + signature;
     }
 
     // ==================== SigV4 原语 ====================
 
-    private record Host(String value, String scheme) {
-    }
+    private record Host(String value, String scheme) {}
 
     private Host hostOf(String endpoint) {
         URI uri = URI.create(endpoint);
@@ -264,8 +289,13 @@ public class S3ObjectService {
         byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
         for (byte b : bytes) {
             char c = (char) (b & 0xFF);
-            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
-                    || c == '-' || c == '.' || c == '_' || c == '~') {
+            if ((c >= 'A' && c <= 'Z')
+                    || (c >= 'a' && c <= 'z')
+                    || (c >= '0' && c <= '9')
+                    || c == '-'
+                    || c == '.'
+                    || c == '_'
+                    || c == '~') {
                 sb.append(c);
             } else {
                 sb.append('%').append(String.format("%02X", b));
@@ -284,8 +314,13 @@ public class S3ObjectService {
             StringBuilder seg = new StringBuilder();
             for (byte b : segment.getBytes(StandardCharsets.UTF_8)) {
                 char c = (char) (b & 0xFF);
-                if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
-                        || c == '-' || c == '.' || c == '_' || c == '~') {
+                if ((c >= 'A' && c <= 'Z')
+                        || (c >= 'a' && c <= 'z')
+                        || (c >= '0' && c <= '9')
+                        || c == '-'
+                        || c == '.'
+                        || c == '_'
+                        || c == '~') {
                     seg.append(c);
                 } else {
                     seg.append('%').append(String.format("%02X", b));

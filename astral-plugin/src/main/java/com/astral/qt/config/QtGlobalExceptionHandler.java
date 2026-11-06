@@ -1,8 +1,8 @@
 package com.astral.qt.config;
 
 import com.astral.common.exception.BusinessException;
-import com.astral.qt.common.QtException;
 import com.astral.common.result.Result;
+import com.astral.qt.common.QtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -44,7 +44,8 @@ public class QtGlobalExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public Result<Void> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
-                ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+                ? "参数校验失败"
+                : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
         return Result.error(320, msg);
     }
 
@@ -52,7 +53,8 @@ public class QtGlobalExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public Result<Void> handleBind(BindException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
-                ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+                ? "参数校验失败"
+                : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
         return Result.error(320, msg);
     }
 

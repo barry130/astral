@@ -11,5 +11,4 @@ import org.springframework.stereotype.Service;
  * <p>继承MyBatis-Plus的ServiceImpl，提供登录日志实体的标准CRUD操作</p>
  */
 @Service
-public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> implements LoginLogService {
-}
+public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> implements LoginLogService {}

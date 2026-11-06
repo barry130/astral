@@ -5,13 +5,12 @@ import com.astral.cms.entity.CmsSetting;
 import com.astral.cms.mapper.CmsSettingMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * CMS 站点设置服务（KV，含默认值兜底）
@@ -38,8 +37,7 @@ public class CmsSettingService {
      */
     public Map<String, String> getAll() {
         Map<String, String> result = new LinkedHashMap<>(DEFAULTS);
-        settingMapper.selectList(null)
-                .forEach(s -> result.put(s.getSettingKey(), s.getSettingValue()));
+        settingMapper.selectList(null).forEach(s -> result.put(s.getSettingKey(), s.getSettingValue()));
         return result;
     }
 
@@ -67,7 +65,8 @@ public class CmsSettingService {
 
     private void upsert(String key, String value) {
         CmsSetting exist = settingMapper.selectOne(new LambdaQueryWrapper<CmsSetting>()
-                .eq(CmsSetting::getSettingKey, key).last("LIMIT 1"));
+                .eq(CmsSetting::getSettingKey, key)
+                .last("LIMIT 1"));
         String val = value == null ? "" : value;
         if (exist == null) {
             CmsSetting setting = new CmsSetting();
@@ -110,8 +109,9 @@ public class CmsSettingService {
     public Map<String, String> getPublic() {
         Map<String, String> all = getAll();
         Map<String, String> result = new LinkedHashMap<>();
-        for (String key : new String[]{KEY_SITE_TITLE, KEY_SITE_DESCRIPTION, KEY_FOOTER_TEXT,
-                KEY_COMMENT_ENABLED, KEY_COMMENT_NEED_REVIEW}) {
+        for (String key : new String[] {
+            KEY_SITE_TITLE, KEY_SITE_DESCRIPTION, KEY_FOOTER_TEXT, KEY_COMMENT_ENABLED, KEY_COMMENT_NEED_REVIEW
+        }) {
             result.put(key, all.getOrDefault(key, ""));
         }
         return result;

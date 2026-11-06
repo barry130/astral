@@ -11,5 +11,4 @@ import org.springframework.stereotype.Service;
  * <p>继承MyBatis-Plus的ServiceImpl，提供权限实体的标准CRUD操作</p>
  */
 @Service
-public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permission> implements PermissionService {
-}
+public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permission> implements PermissionService {}

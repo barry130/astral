@@ -13,6 +13,8 @@ import com.astral.common.result.Result;
 import com.astral.log.annotation.OperateLog;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,9 +25,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * AI 后台：提供方、模型与路由配置。
@@ -71,23 +70,44 @@ public class AiAdminProviderController {
     @PostMapping("/providers")
     @RequiresPermission(value = "admin:ai:provider:edit", name = "AI 提供方编辑", description = "新增提供方")
     @OperateLog("新增 AI 提供方")
-    public Result<AiAdminDtos.ProviderVo> createProvider(@Valid @RequestBody AiAdminDtos.ProviderSaveReq req,
-                                                        HttpServletRequest request) {
-        AiProviderEntity entity = providerService.create(req.providerCode(), req.name(), req.providerType(),
-                req.baseUrl(), req.apiKey(), req.secretRef(), req.enabled(), req.connectTimeoutMs(),
-                req.readTimeoutMs(), req.maxRetries(), req.weight(), req.remark(), operatorId(request));
+    public Result<AiAdminDtos.ProviderVo> createProvider(
+            @Valid @RequestBody AiAdminDtos.ProviderSaveReq req, HttpServletRequest request) {
+        AiProviderEntity entity = providerService.create(
+                req.providerCode(),
+                req.name(),
+                req.providerType(),
+                req.baseUrl(),
+                req.apiKey(),
+                req.secretRef(),
+                req.enabled(),
+                req.connectTimeoutMs(),
+                req.readTimeoutMs(),
+                req.maxRetries(),
+                req.weight(),
+                req.remark(),
+                operatorId(request));
         return Result.success("创建成功", toVo(entity));
     }
 
     @PutMapping("/providers/{id}")
     @RequiresPermission(value = "admin:ai:provider:edit", name = "AI 提供方编辑", description = "修改提供方")
     @OperateLog("修改 AI 提供方")
-    public Result<AiAdminDtos.ProviderVo> updateProvider(@PathVariable Long id,
-                                                        @Valid @RequestBody AiAdminDtos.ProviderSaveReq req,
-                                                        HttpServletRequest request) {
-        AiProviderEntity entity = providerService.update(id, req.name(), req.providerType(), req.baseUrl(),
-                req.apiKey(), req.secretRef(), req.enabled(), req.connectTimeoutMs(), req.readTimeoutMs(),
-                req.maxRetries(), req.weight(), req.remark(), operatorId(request));
+    public Result<AiAdminDtos.ProviderVo> updateProvider(
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.ProviderSaveReq req, HttpServletRequest request) {
+        AiProviderEntity entity = providerService.update(
+                id,
+                req.name(),
+                req.providerType(),
+                req.baseUrl(),
+                req.apiKey(),
+                req.secretRef(),
+                req.enabled(),
+                req.connectTimeoutMs(),
+                req.readTimeoutMs(),
+                req.maxRetries(),
+                req.weight(),
+                req.remark(),
+                operatorId(request));
         return Result.success("保存成功", toVo(entity));
     }
 
@@ -101,13 +121,13 @@ public class AiAdminProviderController {
 
     @PostMapping("/providers/{id}/test")
     @RequiresPermission(value = "admin:ai:provider:edit", name = "AI 提供方编辑", description = "测试提供方连通性")
-    public Result<AiAdminDtos.ProviderTestVo> testProvider(@PathVariable Long id,
-                                                          @RequestParam(required = false) String modelCode) {
+    public Result<AiAdminDtos.ProviderTestVo> testProvider(
+            @PathVariable Long id, @RequestParam(required = false) String modelCode) {
         AiProviderEntity provider = providerService.require(id);
         com.astral.ai.provider.AiProviderDtos.HealthResult result = providerService.test(id, modelCode);
         AiProviderEntity refreshed = providerService.require(provider.getId());
-        return Result.success(new AiAdminDtos.ProviderTestVo(result.healthy(), result.message(),
-                result.latencyMs(), refreshed.getHealthStatus()));
+        return Result.success(new AiAdminDtos.ProviderTestVo(
+                result.healthy(), result.message(), result.latencyMs(), refreshed.getHealthStatus()));
     }
 
     // ==================== 模型 ====================
@@ -133,8 +153,8 @@ public class AiAdminProviderController {
     @PutMapping("/models/{id}")
     @RequiresPermission(value = "admin:ai:model:edit", name = "AI 模型编辑", description = "修改模型")
     @OperateLog("修改 AI 模型")
-    public Result<AiAdminDtos.ModelVo> updateModel(@PathVariable Long id,
-                                                  @Valid @RequestBody AiAdminDtos.ModelSaveReq req) {
+    public Result<AiAdminDtos.ModelVo> updateModel(
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.ModelSaveReq req) {
         AiModelEntity entity = modelService.update(id, fromReq(req));
         return Result.success("保存成功", toVo(entity));
     }
@@ -170,8 +190,8 @@ public class AiAdminProviderController {
     @PutMapping("/routes/{id}")
     @RequiresPermission(value = "admin:ai:route:edit", name = "AI 路由编辑", description = "修改路由")
     @OperateLog("修改 AI 路由")
-    public Result<AiAdminDtos.RouteVo> updateRoute(@PathVariable Long id,
-                                                  @Valid @RequestBody AiAdminDtos.RouteSaveReq req) {
+    public Result<AiAdminDtos.RouteVo> updateRoute(
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.RouteSaveReq req) {
         AiProviderRouteEntity entity = routeService.update(id, fromReq(req));
         return Result.success("保存成功", toVo(entity));
     }
@@ -188,12 +208,26 @@ public class AiAdminProviderController {
 
     private AiAdminDtos.ProviderVo toVo(AiProviderEntity entity) {
         long modelCount = modelService.list(entity.getId()).size();
-        return new AiAdminDtos.ProviderVo(entity.getId(), entity.getProviderCode(), entity.getName(),
-                entity.getProviderType(), entity.getBaseUrl(), entity.getEnabled(), entity.getSecretRef(),
-                providerService.credentialSource(entity), entity.getConnectTimeoutMs(), entity.getReadTimeoutMs(),
-                entity.getMaxRetries(), entity.getWeight(), entity.getHealthStatus(), entity.getLastHealthTime(),
-                entity.getLastHealthMessage(), entity.getRemark(), (int) modelCount,
-                entity.getCreateTime(), entity.getUpdateTime());
+        return new AiAdminDtos.ProviderVo(
+                entity.getId(),
+                entity.getProviderCode(),
+                entity.getName(),
+                entity.getProviderType(),
+                entity.getBaseUrl(),
+                entity.getEnabled(),
+                entity.getSecretRef(),
+                providerService.credentialSource(entity),
+                entity.getConnectTimeoutMs(),
+                entity.getReadTimeoutMs(),
+                entity.getMaxRetries(),
+                entity.getWeight(),
+                entity.getHealthStatus(),
+                entity.getLastHealthTime(),
+                entity.getLastHealthMessage(),
+                entity.getRemark(),
+                (int) modelCount,
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 
     private AiAdminDtos.ModelVo toVo(AiModelEntity entity) {
@@ -203,12 +237,26 @@ public class AiAdminProviderController {
         } catch (RuntimeException ignored) {
             providerName = null;
         }
-        return new AiAdminDtos.ModelVo(entity.getId(), entity.getProviderId(), providerName,
-                entity.getModelCode(), entity.getModelName(), entity.getModelKind(), entity.getSupportsStream(),
-                entity.getSupportsTools(), entity.getSupportsJson(), entity.getSupportsVision(),
-                entity.getMaxContextTokens(), entity.getMaxOutputTokens(), entity.getInputPrice(),
-                entity.getOutputPrice(), entity.getCurrency(), entity.getEnabled(), entity.getRemark(),
-                entity.getCreateTime(), entity.getUpdateTime());
+        return new AiAdminDtos.ModelVo(
+                entity.getId(),
+                entity.getProviderId(),
+                providerName,
+                entity.getModelCode(),
+                entity.getModelName(),
+                entity.getModelKind(),
+                entity.getSupportsStream(),
+                entity.getSupportsTools(),
+                entity.getSupportsJson(),
+                entity.getSupportsVision(),
+                entity.getMaxContextTokens(),
+                entity.getMaxOutputTokens(),
+                entity.getInputPrice(),
+                entity.getOutputPrice(),
+                entity.getCurrency(),
+                entity.getEnabled(),
+                entity.getRemark(),
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 
     private AiAdminDtos.RouteVo toVo(AiProviderRouteEntity entity) {
@@ -232,11 +280,24 @@ public class AiAdminProviderController {
                 fallbackCode = null;
             }
         }
-        return new AiAdminDtos.RouteVo(entity.getId(), entity.getRouteCode(), entity.getName(),
-                entity.getProviderId(), providerName, entity.getModelId(), modelCode,
-                entity.getFallbackModelId(), fallbackCode, entity.getTemperature(), entity.getTopP(),
-                entity.getMaxTokens(), entity.getExtraParametersJson(), entity.getEnabled(), entity.getRemark(),
-                entity.getCreateTime(), entity.getUpdateTime());
+        return new AiAdminDtos.RouteVo(
+                entity.getId(),
+                entity.getRouteCode(),
+                entity.getName(),
+                entity.getProviderId(),
+                providerName,
+                entity.getModelId(),
+                modelCode,
+                entity.getFallbackModelId(),
+                fallbackCode,
+                entity.getTemperature(),
+                entity.getTopP(),
+                entity.getMaxTokens(),
+                entity.getExtraParametersJson(),
+                entity.getEnabled(),
+                entity.getRemark(),
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 
     private AiModelEntity fromReq(AiAdminDtos.ModelSaveReq req) {

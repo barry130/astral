@@ -8,9 +8,8 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.PostConstruct;
-import org.springframework.stereotype.Service;
-
 import java.util.concurrent.TimeUnit;
+import org.springframework.stereotype.Service;
 
 @Service
 public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig> implements SysConfigService {

@@ -32,7 +32,8 @@ public class CmsSchemaInitializer {
             populator.setIgnoreFailedDrops(true);
             populator.addScript(new ClassPathResource("sql/cms-schema.sql"));
             populator.execute(jdbcTemplate.getDataSource());
-            log.info("[CmsPlugin] 内容管理表结构初始化完成（cms_post/cms_category/cms_tag/cms_post_tag/cms_page/cms_comment/cms_setting）");
+            log.info(
+                    "[CmsPlugin] 内容管理表结构初始化完成（cms_post/cms_category/cms_tag/cms_post_tag/cms_page/cms_comment/cms_setting）");
         } catch (Exception e) {
             log.error("[CmsPlugin] 内容管理表结构初始化失败", e);
             throw e;

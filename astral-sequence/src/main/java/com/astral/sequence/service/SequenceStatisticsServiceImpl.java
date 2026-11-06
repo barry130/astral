@@ -11,5 +11,5 @@ import org.springframework.stereotype.Service;
  * <p>继承MyBatis-Plus的ServiceImpl，提供序列统计实体的标准CRUD操作</p>
  */
 @Service
-public class SequenceStatisticsServiceImpl extends ServiceImpl<SequenceStatisticsMapper, SequenceStatistics> implements SequenceStatisticsService {
-}
+public class SequenceStatisticsServiceImpl extends ServiceImpl<SequenceStatisticsMapper, SequenceStatistics>
+        implements SequenceStatisticsService {}

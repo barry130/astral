@@ -1,12 +1,5 @@
 package com.astral.system.notify;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.SysSmsLog;
 import com.astral.dao.entity.SysSmsProvider;
@@ -18,6 +11,12 @@ import com.astral.system.notify.sms.SmsProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -40,17 +39,23 @@ public class SmsServiceImpl implements SmsService {
 
     /** 模板缓存（key=事件码）与供应商池缓存（单键），60s，写路径主动失效 */
     private final Cache<String, SysSmsTemplate> templateCache = Caffeine.newBuilder()
-            .maximumSize(128).expireAfterWrite(Duration.ofSeconds(60)).build();
+            .maximumSize(128)
+            .expireAfterWrite(Duration.ofSeconds(60))
+            .build();
+
     private static final String KEY_PROVIDERS = "enabled";
     private final Cache<String, List<SysSmsProvider>> providerCache = Caffeine.newBuilder()
-            .maximumSize(4).expireAfterWrite(Duration.ofSeconds(60)).build();
+            .maximumSize(4)
+            .expireAfterWrite(Duration.ofSeconds(60))
+            .build();
 
-    public SmsServiceImpl(List<SmsProvider> impls,
-                          SysSmsProviderMapper providerMapper,
-                          SysSmsTemplateMapper templateMapper,
-                          SysSmsLogMapper logMapper) {
-        this.providerImpls = impls.stream().collect(java.util.stream.Collectors
-                .toUnmodifiableMap(SmsProvider::type, p -> p));
+    public SmsServiceImpl(
+            List<SmsProvider> impls,
+            SysSmsProviderMapper providerMapper,
+            SysSmsTemplateMapper templateMapper,
+            SysSmsLogMapper logMapper) {
+        this.providerImpls =
+                impls.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(SmsProvider::type, p -> p));
         this.providerMapper = providerMapper;
         this.templateMapper = templateMapper;
         this.logMapper = logMapper;
@@ -58,13 +63,19 @@ public class SmsServiceImpl implements SmsService {
 
     @Override
     public void sendSystemAlert(String phone, String title, String content) {
-        SysSmsTemplate tpl = templateCache.get(NotifyEventRegistry.SYSTEM_ALERT, k -> templateMapper.selectOne(
-                new LambdaQueryWrapper<SysSmsTemplate>().eq(SysSmsTemplate::getEventCode, k)));
+        SysSmsTemplate tpl = templateCache.get(
+                NotifyEventRegistry.SYSTEM_ALERT,
+                k -> templateMapper.selectOne(
+                        new LambdaQueryWrapper<SysSmsTemplate>().eq(SysSmsTemplate::getEventCode, k)));
         if (tpl == null) {
             throw new IllegalStateException("短信模板未配置（事件 " + NotifyEventRegistry.SYSTEM_ALERT + "）");
         }
-        sendWithProvider(phone, tpl, Map.of("title", title == null ? "" : title,
-                "content", content == null ? "" : content), "system", NotifyEventRegistry.SYSTEM_ALERT);
+        sendWithProvider(
+                phone,
+                tpl,
+                Map.of("title", title == null ? "" : title, "content", content == null ? "" : content),
+                "system",
+                NotifyEventRegistry.SYSTEM_ALERT);
     }
 
     @Override
@@ -94,10 +105,12 @@ public class SmsServiceImpl implements SmsService {
     }
 
     /** 按权重在启用供应商池中选择并发送，失败自动换下一个，全失败抛 SMS003 */
-    private void sendWithProvider(String phone, SysSmsTemplate tpl, Map<String, String> variables,
-                                  String pluginId, String eventCode) {
-        List<SysSmsProvider> enabled = providerCache.get(KEY_PROVIDERS, k -> providerMapper.selectList(
-                new LambdaQueryWrapper<SysSmsProvider>().eq(SysSmsProvider::getEnabled, 1)));
+    private void sendWithProvider(
+            String phone, SysSmsTemplate tpl, Map<String, String> variables, String pluginId, String eventCode) {
+        List<SysSmsProvider> enabled = providerCache.get(
+                KEY_PROVIDERS,
+                k -> providerMapper.selectList(
+                        new LambdaQueryWrapper<SysSmsProvider>().eq(SysSmsProvider::getEnabled, 1)));
         if (enabled == null || enabled.isEmpty()) {
             throw new BusinessException("SMS001");
         }
@@ -122,24 +135,33 @@ public class SmsServiceImpl implements SmsService {
                 log.warn("[Sms] 供应商[{}]发送失败，尝试下一个: {}", provider.getProviderName(), e.getMessage());
             }
         }
-        saveLog(null, pluginId, eventCode, phone, variables, 0,
-                lastError != null ? lastError.getMessage() : "未知错误");
+        saveLog(null, pluginId, eventCode, phone, variables, 0, lastError != null ? lastError.getMessage() : "未知错误");
         throw new BusinessException("SMS003", lastError != null ? lastError.getMessage() : "");
     }
 
-    private void doSend(SysSmsProvider provider, String phone, SysSmsTemplate tpl, Map<String, String> variables) throws Exception {
-        SmsProvider impl = providerImpls.get(provider.getProviderType() == null ? "" : provider.getProviderType().toUpperCase());
+    private void doSend(SysSmsProvider provider, String phone, SysSmsTemplate tpl, Map<String, String> variables)
+            throws Exception {
+        SmsProvider impl = providerImpls.get(
+                provider.getProviderType() == null
+                        ? ""
+                        : provider.getProviderType().toUpperCase());
         if (impl == null) {
             throw new BusinessException("SMS006", provider.getProviderType());
         }
         // 签名：模板级覆盖优先，回退供应商级
-        String signName = tpl.getSignName() != null && !tpl.getSignName().isBlank()
-                ? tpl.getSignName() : provider.getSignName();
+        String signName =
+                tpl.getSignName() != null && !tpl.getSignName().isBlank() ? tpl.getSignName() : provider.getSignName();
         impl.send(provider, phone, signName, tpl.getProviderTemplateCode(), variables);
     }
 
-    private void saveLog(Long providerId, String pluginId, String scene, String phone,
-                         Map<String, String> variables, int status, String errorMsg) {
+    private void saveLog(
+            Long providerId,
+            String pluginId,
+            String scene,
+            String phone,
+            Map<String, String> variables,
+            int status,
+            String errorMsg) {
         try {
             SysSmsLog logRow = new SysSmsLog();
             logRow.setProviderId(providerId);

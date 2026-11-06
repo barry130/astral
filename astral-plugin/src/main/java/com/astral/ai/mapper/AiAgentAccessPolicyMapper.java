@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 智能体访问策略 Mapper
  */
 @Mapper
-public interface AiAgentAccessPolicyMapper extends BaseMapper<AiAgentAccessPolicyEntity> {
-}
+public interface AiAgentAccessPolicyMapper extends BaseMapper<AiAgentAccessPolicyEntity> {}

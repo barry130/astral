@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 工具 Mapper
  */
 @Mapper
-public interface AiToolMapper extends BaseMapper<AiToolEntity> {
-}
+public interface AiToolMapper extends BaseMapper<AiToolEntity> {}

@@ -58,8 +58,7 @@ public class PermissionDeclaration {
 
     /** 从插件 SPI 构建 */
     public static PermissionDeclaration fromPlugin(String pluginId, PermissionProvider.PermissionDef def) {
-        int type = def.getType() == PermissionProvider.TYPE_DATA
-                ? PermissionType.DATA : PermissionType.API;
+        int type = def.getType() == PermissionProvider.TYPE_DATA ? PermissionType.DATA : PermissionType.API;
         return new PermissionDeclaration(
                 def.getCode(),
                 blankToNull(def.getName()),

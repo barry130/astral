@@ -8,13 +8,6 @@ import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.ObjectNode;
-
-import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -30,6 +23,12 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.sql.DataSource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 声明式 SQL 工具执行器（只读查询）。
@@ -59,11 +58,38 @@ public class SqlToolExecutor implements AiToolHandler {
 
     /** 写操作 / DDL / 会话变更关键字（大小写不敏感，按词边界匹配） */
     static final Set<String> FORBIDDEN_WORDS = Set.of(
-            "INSERT", "UPDATE", "DELETE", "MERGE", "UPSERT", "INTO", "RETURNING",
-            "CREATE", "ALTER", "DROP", "TRUNCATE", "RENAME", "GRANT", "REVOKE",
-            "CALL", "EXEC", "EXECUTE", "DO", "COPY", "LOCK", "VACUUM", "REINDEX",
-            "REFRESH", "SET", "RESET", "COMMENT", "LISTEN", "NOTIFY", "DISCARD",
-            "PREPARE", "DEALLOCATE", "ANALYZE");
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "MERGE",
+            "UPSERT",
+            "INTO",
+            "RETURNING",
+            "CREATE",
+            "ALTER",
+            "DROP",
+            "TRUNCATE",
+            "RENAME",
+            "GRANT",
+            "REVOKE",
+            "CALL",
+            "EXEC",
+            "EXECUTE",
+            "DO",
+            "COPY",
+            "LOCK",
+            "VACUUM",
+            "REINDEX",
+            "REFRESH",
+            "SET",
+            "RESET",
+            "COMMENT",
+            "LISTEN",
+            "NOTIFY",
+            "DISCARD",
+            "PREPARE",
+            "DEALLOCATE",
+            "ANALYZE");
 
     static final Pattern COLUMN_NAME = Pattern.compile("[A-Za-z_][A-Za-z0-9_]{0,63}");
 
@@ -251,10 +277,18 @@ public class SqlToolExecutor implements AiToolHandler {
 
     @Override
     public AiToolDef definition() {
-        return new AiToolDef(tool.getToolCode(), tool.getName(), tool.getDescription(), HANDLER_KEY,
-                tool.getRiskLevel(), tool.getApprovalPolicy(), AiJson.splitCsv(tool.getClientTypes()),
-                AiJson.splitCsv(tool.getPermissionCodes()), tool.getArgumentsSchema(),
-                tool.getResultSchema(), tool.getSideEffects());
+        return new AiToolDef(
+                tool.getToolCode(),
+                tool.getName(),
+                tool.getDescription(),
+                HANDLER_KEY,
+                tool.getRiskLevel(),
+                tool.getApprovalPolicy(),
+                AiJson.splitCsv(tool.getClientTypes()),
+                AiJson.splitCsv(tool.getPermissionCodes()),
+                tool.getArgumentsSchema(),
+                tool.getResultSchema(),
+                tool.getSideEffects());
     }
 
     @Override
@@ -305,7 +339,8 @@ public class SqlToolExecutor implements AiToolHandler {
         payload.set("rows", rows);
         payload.put("rowCount", rows.size());
         String summary = rows.isEmpty()
-                ? "查询没有匹配的数据" : "查询到 " + rows.size() + " 行：" + AiJson.truncate(AiJson.write(rows), SUMMARY_LIMIT);
+                ? "查询没有匹配的数据"
+                : "查询到 " + rows.size() + " 行：" + AiJson.truncate(AiJson.write(rows), SUMMARY_LIMIT);
         return AiToolResult.ok(summary, payload);
     }
 

@@ -34,8 +34,7 @@ public final class PageQuery {
     /** {@code limit} / {@code topN} 类参数的默认上限 */
     public static final int MAX_LIMIT = 100;
 
-    private PageQuery() {
-    }
+    private PageQuery() {}
 
     /**
      * 页码钳制到 {@code [1, MAX_PAGE_NUM]}。

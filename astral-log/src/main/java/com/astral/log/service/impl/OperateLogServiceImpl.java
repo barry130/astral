@@ -11,5 +11,4 @@ import org.springframework.stereotype.Service;
  * <p>继承MyBatis-Plus的ServiceImpl，提供操作日志实体的标准CRUD操作</p>
  */
 @Service
-public class OperateLogServiceImpl extends ServiceImpl<OperateLogMapper, OperateLog> implements OperateLogService {
-}
+public class OperateLogServiceImpl extends ServiceImpl<OperateLogMapper, OperateLog> implements OperateLogService {}

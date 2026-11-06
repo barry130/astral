@@ -15,13 +15,18 @@ public class StorageBatchService {
     private final FileManagerService managerService;
 
     public StorageDtos.BatchResult execute(StorageDtos.FileBatchReq req, String userId, boolean admin) {
-        if (req.publicIds() == null || req.publicIds().isEmpty() || req.publicIds().size() > 100
+        if (req.publicIds() == null
+                || req.publicIds().isEmpty()
+                || req.publicIds().size() > 100
                 || req.publicIds().stream().anyMatch(id -> id == null || id.isBlank() || id.length() > 128)) {
             throw new BusinessException("COMMON002", "请选择 1–100 个文件");
         }
-        if (req.action() == null || !java.util.Set.of("delete", "move", "visibility").contains(req.action())
+        if (req.action() == null
+                || !java.util.Set.of("delete", "move", "visibility").contains(req.action())
                 || ("move".equals(req.action()) && req.folderId() == null)
-                || ("visibility".equals(req.action()) && !java.util.Set.of("PUBLIC", "PRIVATE").contains(req.visibility() == null ? "" : req.visibility()))) {
+                || ("visibility".equals(req.action())
+                        && !java.util.Set.of("PUBLIC", "PRIVATE")
+                                .contains(req.visibility() == null ? "" : req.visibility()))) {
             throw new BusinessException("COMMON002", "批量操作参数无效");
         }
         var succeeded = new java.util.ArrayList<String>();
@@ -30,7 +35,8 @@ public class StorageBatchService {
             try {
                 switch (req.action()) {
                     case "delete" -> fileService.requestDelete(id, userId, admin);
-                    case "move" -> managerService.update(id, new StorageDtos.FileUpdateReq(null, req.folderId()), userId, admin);
+                    case "move" -> managerService.update(
+                            id, new StorageDtos.FileUpdateReq(null, req.folderId()), userId, admin);
                     case "visibility" -> fileService.changeVisibility(id, userId, req.visibility(), admin);
                     default -> throw new IllegalStateException("Unsupported batch action");
                 }

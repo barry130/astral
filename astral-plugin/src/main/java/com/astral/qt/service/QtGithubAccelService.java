@@ -10,9 +10,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -21,6 +18,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * GitHub 加速前缀服务（UPDATE_DESIGN.md §2.3/§2.4）
@@ -73,8 +72,11 @@ public class QtGithubAccelService extends ServiceImpl<QtGithubAccelMapper, QtGit
     /** 增删改后调用 → 主动刷新缓存 */
     public void refreshCache() {
         cache.put(CACHE_KEY, loadEnabledFromDb());
-        log.debug("[QtPlugin] GitHub 加速缓存已刷新: {} 条", cache.getIfPresent(CACHE_KEY) == null ? 0
-                : cache.getIfPresent(CACHE_KEY).size());
+        log.debug(
+                "[QtPlugin] GitHub 加速缓存已刷新: {} 条",
+                cache.getIfPresent(CACHE_KEY) == null
+                        ? 0
+                        : cache.getIfPresent(CACHE_KEY).size());
     }
 
     /** 手动失效（运维接口触发）：清空 + 立即重新加载，避免空窗 */
@@ -84,11 +86,11 @@ public class QtGithubAccelService extends ServiceImpl<QtGithubAccelMapper, QtGit
     }
 
     private List<QtGithubAccelVo> loadEnabledFromDb() {
-        return accelMapper.selectList(
-                        new LambdaQueryWrapper<QtGithubAccel>()
-                                .eq(QtGithubAccel::getIsShow, 1)
-                                .orderByAsc(QtGithubAccel::getSort)
-                ).stream()
+        return accelMapper
+                .selectList(new LambdaQueryWrapper<QtGithubAccel>()
+                        .eq(QtGithubAccel::getIsShow, 1)
+                        .orderByAsc(QtGithubAccel::getSort))
+                .stream()
                 .map(a -> new QtGithubAccelVo(a.getId(), a.getName(), normalizePrefix(a.getPrefixUrl())))
                 .toList();
     }
@@ -118,9 +120,7 @@ public class QtGithubAccelService extends ServiceImpl<QtGithubAccelMapper, QtGit
             List<CompletableFuture<QtGithubAccelProbeVo>> futures = nodes.stream()
                     .map(node -> CompletableFuture.supplyAsync(() -> probeOne(client, node)))
                     .toList();
-            return futures.stream()
-                    .map(CompletableFuture::join)
-                    .toList();
+            return futures.stream().map(CompletableFuture::join).toList();
         }
     }
 
@@ -151,7 +151,7 @@ public class QtGithubAccelService extends ServiceImpl<QtGithubAccelMapper, QtGit
         } catch (Exception e) {
             message = e.getClass().getSimpleName();
         }
-        return new QtGithubAccelProbeVo(node.getId(), node.getName(), node.getPrefixUrl(),
-                alive, System.currentTimeMillis() - start, message);
+        return new QtGithubAccelProbeVo(
+                node.getId(), node.getName(), node.getPrefixUrl(), alive, System.currentTimeMillis() - start, message);
     }
 }

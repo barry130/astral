@@ -1,13 +1,12 @@
 package com.astral.ai.security;
 
 import com.astral.ai.common.AiException;
-import lombok.extern.slf4j.Slf4j;
-
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Locale;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * AI 提供方 URL 的 SSRF 防护。
@@ -19,14 +18,10 @@ import java.util.Set;
 public final class AiUrlGuard {
 
     /** 云元数据地址：任何情况下不允许 */
-    private static final Set<String> METADATA_HOSTS = Set.of(
-            "169.254.169.254",
-            "metadata.google.internal",
-            "100.100.100.200"
-    );
+    private static final Set<String> METADATA_HOSTS =
+            Set.of("169.254.169.254", "metadata.google.internal", "100.100.100.200");
 
-    private AiUrlGuard() {
-    }
+    private AiUrlGuard() {}
 
     /**
      * 校验并规范化 base URL。
@@ -101,7 +96,9 @@ public final class AiUrlGuard {
     }
 
     private static boolean isPrivateHost(String host) {
-        if ("localhost".equals(host) || host.endsWith(".localhost") || host.endsWith(".local")
+        if ("localhost".equals(host)
+                || host.endsWith(".localhost")
+                || host.endsWith(".local")
                 || host.endsWith(".internal")) {
             return true;
         }
@@ -117,8 +114,10 @@ public final class AiUrlGuard {
     }
 
     private static boolean isPrivateAddress(InetAddress address) {
-        if (address.isAnyLocalAddress() || address.isLoopbackAddress()
-                || address.isLinkLocalAddress() || address.isSiteLocalAddress()
+        if (address.isAnyLocalAddress()
+                || address.isLoopbackAddress()
+                || address.isLinkLocalAddress()
+                || address.isSiteLocalAddress()
                 || address.isMulticastAddress()) {
             return true;
         }
@@ -166,8 +165,7 @@ public final class AiUrlGuard {
             }
             if (mapped && (raw[10] & 0xFF) == 0xFF && (raw[11] & 0xFF) == 0xFF) {
                 try {
-                    return isPrivateAddress(InetAddress.getByAddress(
-                            new byte[]{raw[12], raw[13], raw[14], raw[15]}));
+                    return isPrivateAddress(InetAddress.getByAddress(new byte[] {raw[12], raw[13], raw[14], raw[15]}));
                 } catch (UnknownHostException e) {
                     return true;
                 }

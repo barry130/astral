@@ -1,8 +1,8 @@
 package com.astral.common.util;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * 操作日志脱敏。凭据一旦明文落进 {@code sys_operate_log}，

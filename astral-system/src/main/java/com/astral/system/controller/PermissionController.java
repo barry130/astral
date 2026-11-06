@@ -4,30 +4,19 @@ import com.astral.auth.security.PermissionCache;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.annotation.RequiresSuper;
 import com.astral.common.exception.BusinessException;
+import com.astral.common.result.Result;
+import com.astral.common.util.PatchValues;
 import com.astral.dao.entity.Permission;
 import com.astral.dao.entity.RolePermission;
 import com.astral.dao.mapper.RolePermissionMapper;
 import com.astral.system.service.PermissionService;
-import com.astral.common.result.Result;
-import com.astral.common.util.PatchValues;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import jakarta.validation.Valid;
-
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -35,8 +24,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.time.LocalDateTime;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "权限管理")
 @RestController
@@ -55,8 +53,8 @@ public class PermissionController {
     @Operation(summary = "分页查询")
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/page")
-    public Result<Page<Permission>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                         @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<Permission>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<Permission> page = new Page<>(pageNum, pageSize);
         return Result.success(permissionService.page(page));
     }
@@ -181,8 +179,7 @@ public class PermissionController {
         List<Permission> result = new ArrayList<>(byDomain.size());
         for (Map.Entry<String, List<Permission>> entry : byDomain.entrySet()) {
             List<Permission> children = entry.getValue();
-            children.sort(Comparator
-                    .comparingInt((Permission p) -> p.getType() != null ? p.getType() : 0)
+            children.sort(Comparator.comparingInt((Permission p) -> p.getType() != null ? p.getType() : 0)
                     .thenComparingInt(p -> p.getSort() != null ? p.getSort() : 0)
                     .thenComparing(p -> p.getPermissionCode() != null ? p.getPermissionCode() : ""));
             Permission group = new Permission();

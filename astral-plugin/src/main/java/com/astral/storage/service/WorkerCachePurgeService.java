@@ -3,10 +3,6 @@ package com.astral.storage.service;
 import com.astral.storage.config.StorageProperties;
 import com.astral.storage.entity.StorageConfigEntity;
 import com.astral.storage.security.StorageHmac;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -16,6 +12,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * Worker 边缘缓存主动失效（Cache API purge）。
@@ -39,9 +38,8 @@ public class WorkerCachePurgeService {
 
     private final StorageProperties properties;
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private final HttpClient httpClient =
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     /**
      * 逐配置通知 Worker 清除指定文件的全部边缘缓存（内容 + 永久 + 元数据 + getFile）。
@@ -66,11 +64,11 @@ public class WorkerCachePurgeService {
         }
         // 内容缓存键随 contentVersion 变化：当前与上一版本都清，覆盖可见性回退场景
         String[] paths = {
-                "/cache/" + publicId + "/" + contentVersion,
-                "/cache/" + publicId + "/" + Math.max(1, contentVersion - 1),
-                "/pcache/" + publicId + "/" + contentVersion,
-                "/pcache/" + publicId + "/" + Math.max(1, contentVersion - 1),
-                "/mcache/" + publicId + "/" + contentVersion,
+            "/cache/" + publicId + "/" + contentVersion,
+            "/cache/" + publicId + "/" + Math.max(1, contentVersion - 1),
+            "/pcache/" + publicId + "/" + contentVersion,
+            "/pcache/" + publicId + "/" + Math.max(1, contentVersion - 1),
+            "/mcache/" + publicId + "/" + contentVersion,
         };
         // getFile 结果缓存的键是 telegramFileId；拿不到定位信息就跳过（该缓存只影响回源速度，不影响撤销正确性）
         if (telegramFileId != null && !telegramFileId.isBlank()) {
@@ -79,12 +77,16 @@ public class WorkerCachePurgeService {
         for (String path : paths) {
             send(safeBase, path, secret);
         }
-        log.info("[Storage] Worker 缓存失效已请求: worker={}, publicId={}, contentVersion={}",
-                safeBase, publicId, contentVersion);
+        log.info(
+                "[Storage] Worker 缓存失效已请求: worker={}, publicId={}, contentVersion={}",
+                safeBase,
+                publicId,
+                contentVersion);
     }
 
     /** 异步触发，不阻塞调用方事务/请求线程 */
-    public void purgeFileAsync(StorageConfigEntity config, String publicId, long contentVersion, String telegramFileId) {
+    public void purgeFileAsync(
+            StorageConfigEntity config, String publicId, long contentVersion, String telegramFileId) {
         CompletableFuture.runAsync(() -> {
             try {
                 purgeFile(config, publicId, contentVersion, telegramFileId);

@@ -1,19 +1,17 @@
 package com.astral.ai.tool.declarative;
 
-import com.astral.ai.common.AiException;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
-
-import java.util.List;
-import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.astral.ai.common.AiException;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 
 /**
  * {@link McpClient} 的传输层单元测试。
@@ -28,7 +26,8 @@ class McpClientTest {
     @Test
     @DisplayName("SSE 响应按空行拆帧，只取 data 负载")
     void splitsSseFrames() {
-        String body = """
+        String body =
+                """
                 event: message
                 data: {"jsonrpc":"2.0","id":1,"result":{"ok":true}}
 
@@ -47,7 +46,8 @@ class McpClientTest {
     @Test
     @DisplayName("多行 data 合并成一帧（规范行为）")
     void joinsMultilineData() {
-        String body = """
+        String body =
+                """
                 data: {"jsonrpc":"2.0",
                 data: "id":7,"result":{}}
 
@@ -69,8 +69,8 @@ class McpClientTest {
     @Test
     @DisplayName("普通 JSON 响应按 id 校验")
     void parsesJsonEnvelope() {
-        JsonNode node = McpClient.parseEnvelope("application/json",
-                "{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"tools\":[]}}", 3);
+        JsonNode node = McpClient.parseEnvelope(
+                "application/json", "{\"jsonrpc\":\"2.0\",\"id\":3,\"result\":{\"tools\":[]}}", 3);
         assertEquals(3, node.get("id").asLong());
         assertTrue(node.get("result").has("tools"));
     }
@@ -78,37 +78,40 @@ class McpClientTest {
     @Test
     @DisplayName("id 不匹配的 JSON 响应直接拒绝，避免张冠李戴")
     void rejectsMismatchedJsonId() {
-        AiException error = assertThrows(AiException.class, () -> McpClient.parseEnvelope("application/json",
-                "{\"jsonrpc\":\"2.0\",\"id\":9,\"result\":{}}", 3));
+        AiException error = assertThrows(
+                AiException.class,
+                () -> McpClient.parseEnvelope("application/json", "{\"jsonrpc\":\"2.0\",\"id\":9,\"result\":{}}", 3));
         assertTrue(error.getMessage().contains("不匹配"));
     }
 
     @Test
     @DisplayName("非 JSON 响应报错时带上截断后的原文，便于排障")
     void rejectsNonJsonBody() {
-        AiException error = assertThrows(AiException.class, () -> McpClient.parseEnvelope("text/html",
-                "<html>404</html>", 1));
+        AiException error =
+                assertThrows(AiException.class, () -> McpClient.parseEnvelope("text/html", "<html>404</html>", 1));
         assertTrue(error.getMessage().contains("合法 JSON"));
     }
 
     @Test
     @DisplayName("SSE 响应里挑 id 匹配的帧")
     void picksMatchingSseFrame() {
-        String body = """
+        String body =
+                """
                 data: {"jsonrpc":"2.0","id":1,"result":{"stage":"init"}}
 
                 data: {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"search"}]}}
 
                 """;
         JsonNode node = McpClient.parseEnvelope("text/event-stream; charset=utf-8", body, 2);
-        assertEquals("search", node.get("result").get("tools").get(0).get("name").asString());
+        assertEquals(
+                "search", node.get("result").get("tools").get(0).get("name").asString());
     }
 
     @Test
     @DisplayName("SSE 响应里找不到匹配帧时报错")
     void rejectsSseWithoutMatch() {
-        AiException error = assertThrows(AiException.class,
-                () -> McpClient.parseEnvelope("text/event-stream", "data: {\"id\":1}\n\n", 5));
+        AiException error = assertThrows(
+                AiException.class, () -> McpClient.parseEnvelope("text/event-stream", "data: {\"id\":1}\n\n", 5));
         assertTrue(error.getMessage().contains("没有 id=5"));
     }
 
@@ -117,8 +120,12 @@ class McpClientTest {
     @Test
     @DisplayName("私网/环回/云元数据地址一律拒绝")
     void rejectsPrivateEndpoints() {
-        for (String url : List.of("http://127.0.0.1:8080/mcp", "http://169.254.169.254/mcp",
-                "http://10.0.0.5/mcp", "http://192.168.1.7:3000/mcp", "http://[::1]:9000/mcp")) {
+        for (String url : List.of(
+                "http://127.0.0.1:8080/mcp",
+                "http://169.254.169.254/mcp",
+                "http://10.0.0.5/mcp",
+                "http://192.168.1.7:3000/mcp",
+                "http://[::1]:9000/mcp")) {
             assertThrows(AiException.class, () -> McpClient.requireEndpoint(url, null), url);
         }
     }
@@ -137,9 +144,12 @@ class McpClientTest {
     void acceptsPublicAndHonoursAllowlist() {
         // 用公网 IP 字面量，避免单测依赖 DNS
         assertNotNull(McpClient.requireEndpoint("https://93.184.216.34/mcp", null));
-        assertEquals("93.184.216.34",
-                McpClient.requireEndpoint("https://93.184.216.34/mcp", List.of("93.184.216.34")).getHost());
-        assertThrows(AiException.class,
+        assertEquals(
+                "93.184.216.34",
+                McpClient.requireEndpoint("https://93.184.216.34/mcp", List.of("93.184.216.34"))
+                        .getHost());
+        assertThrows(
+                AiException.class,
                 () -> McpClient.requireEndpoint("https://93.184.216.35/mcp", List.of("93.184.216.34")));
     }
 
@@ -154,8 +164,9 @@ class McpClientTest {
         assertEquals("Bearer abc123", headers.get("Authorization"));
         assertEquals("astral", headers.get("X-Trace"));
 
-        assertThrows(AiException.class, () -> McpClient.renderHeaders(
-                "{\"Authorization\":\"Bearer ${secret:MISSING_TOKEN}\"}", Map.of()));
+        assertThrows(
+                AiException.class,
+                () -> McpClient.renderHeaders("{\"Authorization\":\"Bearer ${secret:MISSING_TOKEN}\"}", Map.of()));
     }
 
     @Test
@@ -178,7 +189,8 @@ class McpClientTest {
     @Test
     @DisplayName("工具定义解析：名称/标题/参数结构/只读标注")
     void parsesToolInfo() {
-        JsonNode item = com.astral.ai.common.AiJson.read("""
+        JsonNode item = com.astral.ai.common.AiJson.read(
+                """
                 {"name":"search","title":"搜索","description":"搜一搜",
                  "inputSchema":{"type":"object","properties":{"q":{"type":"string"}}},
                  "annotations":{"readOnlyHint":false}}
@@ -201,8 +213,7 @@ class McpClientTest {
     @Test
     @DisplayName("只读标注缺失时保持 null（由服务器 read_only 决定风险）")
     void leavesMissingHintNull() {
-        McpClient.McpToolInfo info = McpClient.toolInfo(
-                com.astral.ai.common.AiJson.read("{\"name\":\"ping\"}"));
+        McpClient.McpToolInfo info = McpClient.toolInfo(com.astral.ai.common.AiJson.read("{\"name\":\"ping\"}"));
         assertNotNull(info);
         assertNull(info.readOnlyHint());
         assertNull(info.title());

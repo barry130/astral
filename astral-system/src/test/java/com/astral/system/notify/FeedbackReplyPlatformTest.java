@@ -1,5 +1,9 @@
 package com.astral.system.notify;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.astral.dao.entity.SysMailTemplate;
 import com.astral.dao.entity.SysNotice;
 import com.astral.dao.entity.SysNotifyRule;
@@ -11,17 +15,12 @@ import com.astral.dao.mapper.SysNotifyRuleRecipientMapper;
 import com.astral.dao.mapper.SysSmsTemplateMapper;
 import com.astral.system.controller.NotifyRuleController;
 import com.astral.system.dto.NotifyRuleSaveDto;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
-
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 class FeedbackReplyPlatformTest {
 
@@ -31,11 +30,13 @@ class FeedbackReplyPlatformTest {
         SysNotifyRuleService rules = mock(SysNotifyRuleService.class);
         com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(
                 new org.apache.ibatis.builder.MapperBuilderAssistant(
-                        new com.baomidou.mybatisplus.core.MybatisConfiguration(), "notify-rule-test"), SysNotifyRule.class);
+                        new com.baomidou.mybatisplus.core.MybatisConfiguration(), "notify-rule-test"),
+                SysNotifyRule.class);
         com.astral.dao.mapper.SysNotifyRuleMapper ruleMapper = mock(com.astral.dao.mapper.SysNotifyRuleMapper.class);
         when(ruleMapper.selectCount(any())).thenReturn(0L);
-        when(rules.lambdaQuery()).thenAnswer(call ->
-                new com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper<>(ruleMapper));
+        when(rules.lambdaQuery())
+                .thenAnswer(call ->
+                        new com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper<>(ruleMapper));
         when(rules.save(any(SysNotifyRule.class))).thenAnswer(inv -> {
             SysNotifyRule saved = inv.getArgument(0);
             saved.setId(1L);
@@ -49,8 +50,13 @@ class FeedbackReplyPlatformTest {
         when(templates.selectById(1L)).thenReturn(template);
         SysNotifyRuleChannelMapper channelMapper = mock(SysNotifyRuleChannelMapper.class);
         SysNotifyRuleRecipientMapper recipientMapper = mock(SysNotifyRuleRecipientMapper.class);
-        NotifyRuleController controller = new NotifyRuleController(rules, channelMapper, recipientMapper,
-                templates, mock(SysSmsTemplateMapper.class), mock(NotifyPublisher.class));
+        NotifyRuleController controller = new NotifyRuleController(
+                rules,
+                channelMapper,
+                recipientMapper,
+                templates,
+                mock(SysSmsTemplateMapper.class),
+                mock(NotifyPublisher.class));
 
         NotifyRuleSaveDto dto = new NotifyRuleSaveDto();
         dto.setRuleName("reply");
@@ -87,21 +93,26 @@ class FeedbackReplyPlatformTest {
 
     @Test
     void unrelatedEventRetainsConfiguredPlatform() {
-        assertEquals("app-windows", deliver(NotifyEventRegistry.SYSTEM_ALERT, "app-windows").getChannel());
+        assertEquals(
+                "app-windows",
+                deliver(NotifyEventRegistry.SYSTEM_ALERT, "app-windows").getChannel());
     }
 
     @Test
     void roleChangeEventOnlyDeclaresInappAndCompletePayload() {
-        NotifyEventDef event = NotifyEventRegistry.find(NotifyEventRegistry.USER_ROLES_CHANGED).orElseThrow();
+        NotifyEventDef event =
+                NotifyEventRegistry.find(NotifyEventRegistry.USER_ROLES_CHANGED).orElseThrow();
         // 渠道可配：事件声明的是「支持」渠道，具体投递由规则决定
         assertEquals(java.util.List.of("EMAIL", "SMS", "INAPP"), event.channels());
-        assertEquals(java.util.Set.of("userId", "addedRoles", "removedRoles", "changeSummary"),
+        assertEquals(
+                java.util.Set.of("userId", "addedRoles", "removedRoles", "changeSummary"),
                 java.util.Set.copyOf(event.payloadFieldNames()));
     }
 
     @Test
     void passwordResetEventRequiresEmailChannel() {
-        NotifyEventDef event = NotifyEventRegistry.find(NotifyEventRegistry.QT_PASSWORD_RESET_CODE).orElseThrow();
+        NotifyEventDef event = NotifyEventRegistry.find(NotifyEventRegistry.QT_PASSWORD_RESET_CODE)
+                .orElseThrow();
         assertEquals(java.util.List.of(NotifyChannel.EMAIL), event.requiredChannels());
         assertTrue(event.payloadFieldNames().contains("email"));
         assertTrue(event.hasRequiredChannel());

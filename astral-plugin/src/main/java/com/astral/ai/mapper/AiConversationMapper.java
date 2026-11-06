@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 会话 Mapper
  */
 @Mapper
-public interface AiConversationMapper extends BaseMapper<AiConversationEntity> {
-}
+public interface AiConversationMapper extends BaseMapper<AiConversationEntity> {}

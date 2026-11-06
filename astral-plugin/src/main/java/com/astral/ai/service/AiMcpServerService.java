@@ -12,16 +12,15 @@ import com.astral.ai.mapper.AiToolMapper;
 import com.astral.ai.tool.declarative.McpClient;
 import com.astral.ai.tool.declarative.McpToolExecutor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * MCP 服务器管理：增删改查 + 工具发现。
@@ -45,6 +44,7 @@ public class AiMcpServerService {
     private final AiMcpServerMapper serverMapper;
     /** 失败原因用独立事务落盘，避免被 refresh 自身的事务回滚掉 */
     private final AiMcpServerFailureRecorder failureRecorder;
+
     private final AiToolMapper toolMapper;
     private final AiProperties properties;
 
@@ -52,8 +52,8 @@ public class AiMcpServerService {
 
     /** 服务器列表 */
     public List<AiMcpServerEntity> list() {
-        return serverMapper.selectList(new LambdaQueryWrapper<AiMcpServerEntity>()
-                .orderByDesc(AiMcpServerEntity::getCreateTime));
+        return serverMapper.selectList(
+                new LambdaQueryWrapper<AiMcpServerEntity>().orderByDesc(AiMcpServerEntity::getCreateTime));
     }
 
     /** 按主键取服务器，不存在报错 */
@@ -71,8 +71,8 @@ public class AiMcpServerService {
     @Transactional(rollbackFor = Exception.class)
     public AiMcpServerEntity create(AiAdminDtos.McpServerSaveReq req, Long operatorId) {
         String code = normalizeCode(req.serverCode());
-        Long exists = serverMapper.selectCount(new LambdaQueryWrapper<AiMcpServerEntity>()
-                .eq(AiMcpServerEntity::getServerCode, code));
+        Long exists = serverMapper.selectCount(
+                new LambdaQueryWrapper<AiMcpServerEntity>().eq(AiMcpServerEntity::getServerCode, code));
         if (exists != null && exists > 0) {
             throw new AiException("AI008", "MCP 服务器编码已存在: " + code);
         }
@@ -153,8 +153,12 @@ public class AiMcpServerService {
         }
         AiProperties.HttpTool config = properties.getHttpTool();
         int discovered;
-        try (McpClient client = McpClient.connect(server.getUrl(), server.getHeadersJson(),
-                config.getAllowedHosts(), config.getSecrets(), config.getMcpTimeoutSeconds())) {
+        try (McpClient client = McpClient.connect(
+                server.getUrl(),
+                server.getHeadersJson(),
+                config.getAllowedHosts(),
+                config.getSecrets(),
+                config.getMcpTimeoutSeconds())) {
             List<McpClient.McpToolInfo> tools = client.listTools();
             discovered = syncTools(server, tools, operatorId);
             server.setToolCount(discovered);
@@ -190,12 +194,12 @@ public class AiMcpServerService {
             entity.setName(info.title() == null || info.title().isBlank() ? info.name() : info.title());
             entity.setDescription(info.description());
             entity.setArgumentsSchema(info.inputSchema() == null ? null : AiJson.write(info.inputSchema()));
-            boolean readOnly = McpToolExecutor.readOnlyOf(Boolean.TRUE.equals(server.getReadOnly()),
-                    info.readOnlyHint());
-            entity.setRiskLevel(McpToolExecutor.riskLevelOf(Boolean.TRUE.equals(server.getReadOnly()),
-                    info.readOnlyHint()));
-            entity.setApprovalPolicy(McpToolExecutor.approvalOf(Boolean.TRUE.equals(server.getReadOnly()),
-                    info.readOnlyHint()));
+            boolean readOnly =
+                    McpToolExecutor.readOnlyOf(Boolean.TRUE.equals(server.getReadOnly()), info.readOnlyHint());
+            entity.setRiskLevel(
+                    McpToolExecutor.riskLevelOf(Boolean.TRUE.equals(server.getReadOnly()), info.readOnlyHint()));
+            entity.setApprovalPolicy(
+                    McpToolExecutor.approvalOf(Boolean.TRUE.equals(server.getReadOnly()), info.readOnlyHint()));
             entity.setSideEffects(readOnly ? "调用 MCP 只读工具" : "调用 MCP 工具（可能产生写操作）");
             if (fresh) {
                 entity.setClientTypes(AiJson.joinCsv(AiConstants.ClientType.all()));

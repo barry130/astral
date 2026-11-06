@@ -9,6 +9,8 @@ import com.astral.common.result.Result;
 import com.astral.log.annotation.OperateLog;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,9 +20,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * AI 后台：MCP 服务器管理。
@@ -62,29 +61,25 @@ public class AiAdminMcpController {
 
     /** 新建服务器（不自动刷新，保存后由管理员点「刷新工具」） */
     @PostMapping("/mcp-servers")
-    @RequiresPermission(value = "admin:ai:mcp:edit", name = "MCP 服务器编辑",
-            description = "新建 MCP 服务器")
+    @RequiresPermission(value = "admin:ai:mcp:edit", name = "MCP 服务器编辑", description = "新建 MCP 服务器")
     @OperateLog("新建 AI MCP 服务器")
-    public Result<AiAdminDtos.McpServerVo> createServer(@Valid @RequestBody AiAdminDtos.McpServerSaveReq req,
-                                                       HttpServletRequest request) {
+    public Result<AiAdminDtos.McpServerVo> createServer(
+            @Valid @RequestBody AiAdminDtos.McpServerSaveReq req, HttpServletRequest request) {
         return Result.success("创建成功", toVo(mcpServerService.create(req, operatorId(request))));
     }
 
     /** 修改服务器（编码不可改） */
     @PutMapping("/mcp-servers/{id}")
-    @RequiresPermission(value = "admin:ai:mcp:edit", name = "MCP 服务器编辑",
-            description = "修改 MCP 服务器")
+    @RequiresPermission(value = "admin:ai:mcp:edit", name = "MCP 服务器编辑", description = "修改 MCP 服务器")
     @OperateLog("修改 AI MCP 服务器")
-    public Result<AiAdminDtos.McpServerVo> updateServer(@PathVariable Long id,
-                                                       @Valid @RequestBody AiAdminDtos.McpServerSaveReq req,
-                                                       HttpServletRequest request) {
+    public Result<AiAdminDtos.McpServerVo> updateServer(
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.McpServerSaveReq req, HttpServletRequest request) {
         return Result.success("保存成功", toVo(mcpServerService.update(id, req, operatorId(request))));
     }
 
     /** 删除服务器（其下工具置停用，不物理删除） */
     @DeleteMapping("/mcp-servers/{id}")
-    @RequiresPermission(value = "admin:ai:mcp:edit", name = "MCP 服务器编辑",
-            description = "删除 MCP 服务器")
+    @RequiresPermission(value = "admin:ai:mcp:edit", name = "MCP 服务器编辑", description = "删除 MCP 服务器")
     @OperateLog("删除 AI MCP 服务器")
     public Result<Void> deleteServer(@PathVariable Long id, HttpServletRequest request) {
         mcpServerService.delete(id, operatorId(request));
@@ -97,13 +92,12 @@ public class AiAdminMcpController {
      * <p>远端不可达时返回失败并记录 last_error，不会影响已发现的工具（它们保持原状态）。</p>
      */
     @PostMapping("/mcp-servers/{id}/refresh")
-    @RequiresPermission(value = "admin:ai:mcp:edit", name = "MCP 服务器编辑",
-            description = "刷新 MCP 工具清单")
+    @RequiresPermission(value = "admin:ai:mcp:edit", name = "MCP 服务器编辑", description = "刷新 MCP 工具清单")
     @OperateLog("刷新 AI MCP 工具清单")
     public Result<AiAdminDtos.McpServerVo> refresh(@PathVariable Long id, HttpServletRequest request) {
         AiMcpServerEntity entity = mcpServerService.refresh(id, operatorId(request));
-        return Result.success("已同步 " + (entity.getToolCount() == null ? 0 : entity.getToolCount()) + " 个工具",
-                toVo(entity));
+        return Result.success(
+                "已同步 " + (entity.getToolCount() == null ? 0 : entity.getToolCount()) + " 个工具", toVo(entity));
     }
 
     private AiAdminDtos.McpServerVo toVo(AiMcpServerEntity entity) {
@@ -114,9 +108,18 @@ public class AiAdminMcpController {
                 enabled++;
             }
         }
-        return new AiAdminDtos.McpServerVo(entity.getId(), entity.getServerCode(), entity.getName(),
-                entity.getUrl(), entity.getHeadersJson(), entity.getReadOnly(), entity.getStatus(),
-                entity.getToolCount(), enabled, entity.getLastRefreshTime(), entity.getLastError(),
+        return new AiAdminDtos.McpServerVo(
+                entity.getId(),
+                entity.getServerCode(),
+                entity.getName(),
+                entity.getUrl(),
+                entity.getHeadersJson(),
+                entity.getReadOnly(),
+                entity.getStatus(),
+                entity.getToolCount(),
+                enabled,
+                entity.getLastRefreshTime(),
+                entity.getLastError(),
                 entity.getCreateTime());
     }
 }

@@ -1,8 +1,7 @@
 package com.astral.auth.dto;
 
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * 登录响应DTO

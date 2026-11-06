@@ -25,6 +25,14 @@ import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -39,15 +47,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 管理端 AI 使用接口：管理助手（{@code admin_assistant}）与独立答疑（{@code admin_qa}）。
@@ -98,8 +97,7 @@ public class AiAdminChatController {
         Long userId = AiCaller.requireUserId(request);
         List<AiAppDtos.AgentCard> cards = new ArrayList<>();
         for (AiAgentEntity agent : agentService.list()) {
-            if (agent.getPublishedVersionId() == null
-                    || AiConstants.AgentStatus.DISABLED.equals(agent.getStatus())) {
+            if (agent.getPublishedVersionId() == null || AiConstants.AgentStatus.DISABLED.equals(agent.getStatus())) {
                 continue;
             }
             if (!accessService.supportsClient(agent, AiConstants.ClientType.ASTRAL_FRONT)) {
@@ -108,8 +106,13 @@ public class AiAdminChatController {
             if (!accessService.permitted(agent, AiConstants.ClientType.ASTRAL_FRONT, userId)) {
                 continue;
             }
-            cards.add(new AiAppDtos.AgentCard(agent.getAgentCode(), agent.getName(), agent.getAgentType(),
-                    agent.getDescription(), agent.getIcon(), agent.getEntryConfig(),
+            cards.add(new AiAppDtos.AgentCard(
+                    agent.getAgentCode(),
+                    agent.getName(),
+                    agent.getAgentType(),
+                    agent.getDescription(),
+                    agent.getIcon(),
+                    agent.getEntryConfig(),
                     capabilitiesOf(agent)));
         }
         return Result.success(cards);
@@ -117,11 +120,9 @@ public class AiAdminChatController {
 
     @GetMapping("/capabilities")
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "查看智能体能力")
-    public Result<AiAppDtos.Capabilities> capabilities(@RequestParam String agentCode,
-                                                       HttpServletRequest request) {
+    public Result<AiAppDtos.Capabilities> capabilities(@RequestParam String agentCode, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
-        AiAgentEntity agent = accessService.requireForClient(agentCode,
-                AiConstants.ClientType.ASTRAL_FRONT, userId);
+        AiAgentEntity agent = accessService.requireForClient(agentCode, AiConstants.ClientType.ASTRAL_FRONT, userId);
         requireUsePermission(agent);
         return Result.success(capabilitiesOf(agent));
     }
@@ -130,15 +131,14 @@ public class AiAdminChatController {
 
     @GetMapping("/conversations")
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "查看会话列表")
-    public Result<List<AiAppDtos.ConversationVo>> conversations(@RequestParam String agentCode,
-                                                                HttpServletRequest request) {
+    public Result<List<AiAppDtos.ConversationVo>> conversations(
+            @RequestParam String agentCode, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
-        AiAgentEntity agent = accessService.requireForClient(agentCode,
-                AiConstants.ClientType.ASTRAL_FRONT, userId);
+        AiAgentEntity agent = accessService.requireForClient(agentCode, AiConstants.ClientType.ASTRAL_FRONT, userId);
         requireUsePermission(agent);
         List<AiAppDtos.ConversationVo> list = new ArrayList<>();
-        for (AiConversationEntity entity
-                : conversationService.list(userId, agent.getId(), AiConstants.ClientType.ASTRAL_FRONT)) {
+        for (AiConversationEntity entity :
+                conversationService.list(userId, agent.getId(), AiConstants.ClientType.ASTRAL_FRONT)) {
             list.add(toVo(entity, agent));
         }
         return Result.success(list);
@@ -147,14 +147,16 @@ public class AiAdminChatController {
     @PostMapping("/conversations")
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "新建会话")
     public Result<AiAppDtos.ConversationVo> createConversation(
-            @Valid @RequestBody AiAppDtos.ConversationCreateReq req,
-            HttpServletRequest request) {
+            @Valid @RequestBody AiAppDtos.ConversationCreateReq req, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
-        AiAgentEntity agent = accessService.requireForClient(req.agentCode(),
-                AiConstants.ClientType.ASTRAL_FRONT, userId);
+        AiAgentEntity agent =
+                accessService.requireForClient(req.agentCode(), AiConstants.ClientType.ASTRAL_FRONT, userId);
         requireUsePermission(agent);
-        return Result.success("创建成功", toVo(conversationService.create(userId, agent,
-                AiConstants.ClientType.ASTRAL_FRONT, req.title()), agent));
+        return Result.success(
+                "创建成功",
+                toVo(
+                        conversationService.create(userId, agent, AiConstants.ClientType.ASTRAL_FRONT, req.title()),
+                        agent));
     }
 
     @GetMapping("/conversations/{id}")
@@ -167,9 +169,10 @@ public class AiAdminChatController {
 
     @PutMapping("/conversations/{id}")
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "重命名会话")
-    public Result<AiAppDtos.ConversationVo> renameConversation(@PathVariable Long id,
-                                                               @Valid @RequestBody AiAppDtos.ConversationRenameReq req,
-                                                               HttpServletRequest request) {
+    public Result<AiAppDtos.ConversationVo> renameConversation(
+            @PathVariable Long id,
+            @Valid @RequestBody AiAppDtos.ConversationRenameReq req,
+            HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
         AiConversationEntity entity = conversationService.rename(id, userId, req.title());
         return Result.success("已重命名", toVo(entity, agentService.findById(entity.getAgentId())));
@@ -187,13 +190,15 @@ public class AiAdminChatController {
 
     @GetMapping("/conversations/{id}/messages")
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "查看会话消息")
-    public Result<AiAppDtos.MessagePage> messages(@PathVariable Long id,
-                                                  HttpServletRequest request,
-                                                  @RequestParam(required = false) Long beforeId,
-                                                  @RequestParam(required = false) Integer limit) {
+    public Result<AiAppDtos.MessagePage> messages(
+            @PathVariable Long id,
+            HttpServletRequest request,
+            @RequestParam(required = false) Long beforeId,
+            @RequestParam(required = false) Integer limit) {
         Long userId = AiCaller.requireUserId(request);
         conversationService.requireOwned(id, userId);
-        int size = limit == null ? AiConversationService.DEFAULT_PAGE_SIZE
+        int size = limit == null
+                ? AiConversationService.DEFAULT_PAGE_SIZE
                 : Math.max(1, Math.min(AiConversationService.MAX_PAGE_SIZE, limit));
         List<AiMessageEntity> rows = conversationService.messages(id, beforeId, size + 1);
         boolean hasMore = rows.size() > size;
@@ -208,9 +213,8 @@ public class AiAdminChatController {
 
     @PostMapping("/conversations/{id}/messages")
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "发送消息")
-    public Result<AiAppDtos.SendMessageResp> send(@PathVariable Long id,
-                                                  @Valid @RequestBody AiAppDtos.SendMessageReq req,
-                                                  HttpServletRequest request) {
+    public Result<AiAppDtos.SendMessageResp> send(
+            @PathVariable Long id, @Valid @RequestBody AiAppDtos.SendMessageReq req, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
         AiConversationEntity conversation = conversationService.requireOwned(id, userId);
         AiAgentEntity agent = agentService.require(conversation.getAgentId());
@@ -222,10 +226,21 @@ public class AiAdminChatController {
         }
         requireUsePermission(agent);
         AiAgentVersionEntity version = accessService.resolveVersion(agent, conversation.getAgentVersionId());
-        AiChatOrchestrator.Start started = orchestrator.start(agent, version, conversation, userId,
-                AiConstants.ClientType.ASTRAL_FRONT, req.content(), req.context(), req.idempotencyKey());
-        return Result.success(new AiAppDtos.SendMessageResp(started.requestId(), started.userMessageId(),
-                started.assistantMessageId(), started.status(), started.stream()));
+        AiChatOrchestrator.Start started = orchestrator.start(
+                agent,
+                version,
+                conversation,
+                userId,
+                AiConstants.ClientType.ASTRAL_FRONT,
+                req.content(),
+                req.context(),
+                req.idempotencyKey());
+        return Result.success(new AiAppDtos.SendMessageResp(
+                started.requestId(),
+                started.userMessageId(),
+                started.assistantMessageId(),
+                started.status(),
+                started.stream()));
     }
 
     // ==================== 事件 ====================
@@ -233,10 +248,11 @@ public class AiAdminChatController {
     /** 轮询式事件拉取，与 App 端同构（SSE 不可用时前端可退化为轮询） */
     @GetMapping("/requests/{id}/events")
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "拉取请求事件")
-    public Result<AiAppDtos.EventBatch> events(@PathVariable Long id,
-                                               HttpServletRequest request,
-                                               @RequestParam(required = false) Long after,
-                                               @RequestParam(required = false) Integer limit) {
+    public Result<AiAppDtos.EventBatch> events(
+            @PathVariable Long id,
+            HttpServletRequest request,
+            @RequestParam(required = false) Long after,
+            @RequestParam(required = false) Integer limit) {
         Long userId = AiCaller.requireUserId(request);
         AiRequestEntity entity = requestService.requireOwned(id, userId);
         return Result.success(batch(entity, after, limit));
@@ -250,11 +266,12 @@ public class AiAdminChatController {
      */
     @GetMapping(value = "/requests/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "订阅请求流")
-    public SseEmitter stream(@PathVariable Long id,
-                             HttpServletRequest request,
-                             @RequestParam(required = false) Long after,
-                             @org.springframework.web.bind.annotation.RequestHeader(
-                                     value = "Last-Event-ID", required = false) String lastEventId) {
+    public SseEmitter stream(
+            @PathVariable Long id,
+            HttpServletRequest request,
+            @RequestParam(required = false) Long after,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Last-Event-ID", required = false)
+                    String lastEventId) {
         Long userId = AiCaller.requireUserId(request);
         AiRequestEntity entity = requestService.requireOwned(id, userId);
         long start = after != null ? after : parseLong(lastEventId, 0L);
@@ -269,9 +286,8 @@ public class AiAdminChatController {
 
     @PostMapping("/requests/{id}/cancel")
     @RequiresPermission(value = "admin:ai:request:cancel", name = "AI 请求取消", description = "取消进行中的请求")
-    public Result<Map<String, Object>> cancel(@PathVariable Long id,
-                                              @RequestBody(required = false) AiAppDtos.CancelReq req,
-                                              HttpServletRequest request) {
+    public Result<Map<String, Object>> cancel(
+            @PathVariable Long id, @RequestBody(required = false) AiAppDtos.CancelReq req, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
         String reason = req == null ? null : req.reason();
         AiRequestEntity entity = requestService.cancel(id, userId, reason, true);
@@ -285,23 +301,24 @@ public class AiAdminChatController {
 
     @PostMapping("/messages/{id}/feedback")
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "提交回答反馈")
-    public Result<Map<String, Object>> feedback(@PathVariable Long id,
-                                                @Valid @RequestBody AiAppDtos.FeedbackReq req,
-                                                HttpServletRequest request) {
+    public Result<Map<String, Object>> feedback(
+            @PathVariable Long id, @Valid @RequestBody AiAppDtos.FeedbackReq req, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
         AiMessageEntity message = feedbackService.requireMessage(id, userId);
         feedbackService.submit(userId, message, req.feedbackType(), req.reasonCode(), req.comment());
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("messageId", id);
-        data.put("feedbackType", req.feedbackType() == null ? null : req.feedbackType().toUpperCase());
+        data.put(
+                "feedbackType",
+                req.feedbackType() == null ? null : req.feedbackType().toUpperCase());
         return Result.success("已记录", data);
     }
 
     /** 动作回执：管理端只接受"打开页面/填充筛选"这类无副作用动作 */
     @PostMapping("/actions/execute")
     @RequiresPermission(value = "admin:ai:config:view", name = "AI 助手使用", description = "执行助手动作")
-    public Result<Map<String, Object>> executeAction(@Valid @RequestBody AiAppDtos.ActionExecuteReq req,
-                                                     HttpServletRequest request) {
+    public Result<Map<String, Object>> executeAction(
+            @Valid @RequestBody AiAppDtos.ActionExecuteReq req, HttpServletRequest request) {
         Long userId = AiCaller.requireUserId(request);
         String type = req.actionType() == null ? "" : req.actionType().trim().toUpperCase();
         if (!AiConstants.ActionType.all().contains(type)) {
@@ -331,15 +348,16 @@ public class AiAdminChatController {
                     emitter.send(SseEmitter.event()
                             .id(String.valueOf(row.getSequenceNo()))
                             .name(row.getEventType())
-                            .data(row.getDataJson() == null ? "{}" : row.getDataJson(),
-                                    MediaType.APPLICATION_JSON));
+                            .data(row.getDataJson() == null ? "{}" : row.getDataJson(), MediaType.APPLICATION_JSON));
                     cursor = row.getSequenceNo();
                 }
                 AiRequestEntity entity = requestService.find(requestId);
                 if (entity == null || AiConstants.RequestStatus.isTerminal(entity.getStatus())) {
                     if (rows.isEmpty()) {
-                        emitter.send(SseEmitter.event().name("stream.end")
-                                .data("{\"status\":\"" + (entity == null ? "UNKNOWN" : entity.getStatus()) + "\"}",
+                        emitter.send(SseEmitter.event()
+                                .name("stream.end")
+                                .data(
+                                        "{\"status\":\"" + (entity == null ? "UNKNOWN" : entity.getStatus()) + "\"}",
                                         MediaType.APPLICATION_JSON));
                         emitter.complete();
                         return;
@@ -364,16 +382,20 @@ public class AiAdminChatController {
     private AiAppDtos.EventBatch batch(AiRequestEntity entity, Long after, Integer limit) {
         List<AiAppDtos.EventVo> events = new ArrayList<>();
         for (AiRequestEventEntity row : eventService.read(entity.getId(), after, limit)) {
-            events.add(new AiAppDtos.EventVo(entity.getId(), row.getSequenceNo(), row.getEventType(),
-                    toMap(row.getDataJson()), row.getCreateTime()));
+            events.add(new AiAppDtos.EventVo(
+                    entity.getId(),
+                    row.getSequenceNo(),
+                    row.getEventType(),
+                    toMap(row.getDataJson()),
+                    row.getCreateTime()));
         }
         long next = after == null ? 0L : after;
         if (!events.isEmpty()) {
             next = events.get(events.size() - 1).sequence();
         }
         // 同 App 端：终态 + 游标追平才算流结束，否则客户端会漏掉 message.completed
-        boolean terminal = AiConstants.RequestStatus.isTerminal(entity.getStatus())
-                && eventService.drained(entity.getId(), next);
+        boolean terminal =
+                AiConstants.RequestStatus.isTerminal(entity.getStatus()) && eventService.drained(entity.getId(), next);
         return new AiAppDtos.EventBatch(entity.getId(), entity.getStatus(), events, next, terminal);
     }
 
@@ -385,7 +407,6 @@ public class AiAdminChatController {
             accessService.requireExplicit(AiPlugin.Perms.ASSISTANT_USE);
         }
     }
-
 
     private static long parseLong(String value, long fallback) {
         if (value == null || value.isBlank()) {
@@ -412,11 +433,16 @@ public class AiAdminChatController {
     }
 
     private AiAppDtos.ConversationVo toVo(AiConversationEntity entity, AiAgentEntity agent) {
-        return new AiAppDtos.ConversationVo(entity.getId(),
+        return new AiAppDtos.ConversationVo(
+                entity.getId(),
                 agent == null ? null : agent.getAgentCode(),
                 agent == null ? null : agent.getName(),
-                entity.getTitle(), entity.getStatus(), entity.getMessageCount(), entity.getPinned(),
-                entity.getLastMessageTime(), entity.getCreateTime());
+                entity.getTitle(),
+                entity.getStatus(),
+                entity.getMessageCount(),
+                entity.getPinned(),
+                entity.getLastMessageTime(),
+                entity.getCreateTime());
     }
 
     private AiAppDtos.MessageVo toVo(AiMessageEntity entity) {
@@ -424,7 +450,8 @@ public class AiAdminChatController {
         var blocksNode = AiJson.readArray(entity.getBlocksJson());
         if (blocksNode != null) {
             for (var node : blocksNode) {
-                blocks.add(new AiAppDtos.Block(AiJson.text(node, "type", "text"),
+                blocks.add(new AiAppDtos.Block(
+                        AiJson.text(node, "type", "text"),
                         AiJson.text(node, "title", null),
                         toMap(AiJson.write(node.get("data")))));
             }
@@ -433,15 +460,28 @@ public class AiAdminChatController {
         var citationsNode = AiJson.readArray(entity.getCitationsJson());
         if (citationsNode != null) {
             for (var node : citationsNode) {
-                citations.add(new AiAppDtos.Citation(longOrNull(node, "sourceId"),
-                        AiJson.text(node, "sourceType", null), AiJson.text(node, "title", null),
-                        AiJson.text(node, "path", null), AiJson.text(node, "section", null),
-                        AiJson.text(node, "version", null), AiJson.text(node, "matchedText", null)));
+                citations.add(new AiAppDtos.Citation(
+                        longOrNull(node, "sourceId"),
+                        AiJson.text(node, "sourceType", null),
+                        AiJson.text(node, "title", null),
+                        AiJson.text(node, "path", null),
+                        AiJson.text(node, "section", null),
+                        AiJson.text(node, "version", null),
+                        AiJson.text(node, "matchedText", null)));
             }
         }
-        return new AiAppDtos.MessageVo(entity.getId(), entity.getConversationId(), entity.getRequestId(),
-                entity.getRole(), entity.getContent(), entity.getContentType(), entity.getStatus(),
-                blocks, citations, entity.getModelName(), entity.getCreateTime());
+        return new AiAppDtos.MessageVo(
+                entity.getId(),
+                entity.getConversationId(),
+                entity.getRequestId(),
+                entity.getRole(),
+                entity.getContent(),
+                entity.getContentType(),
+                entity.getStatus(),
+                blocks,
+                citations,
+                entity.getModelName(),
+                entity.getCreateTime());
     }
 
     private Map<String, Object> toMap(String json) {

@@ -1,5 +1,9 @@
 package com.astral.system.service.impl;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.RoleMapper;
@@ -10,6 +14,11 @@ import com.astral.system.notify.UserRoleChangeNotifier;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,16 +33,6 @@ import org.springframework.transaction.annotation.AnnotationTransactionAttribute
 import org.springframework.transaction.interceptor.TransactionInterceptor;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 /** Real Spring transactions and H2 writes verify that rolled-back role changes never produce notifications. */
 class UserRoleNotificationTest {
     private UserRoleServiceImpl service;
@@ -46,7 +45,8 @@ class UserRoleNotificationTest {
     @BeforeEach
     @SuppressWarnings("unchecked")
     void setUp() {
-        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "roles-test"), UserRole.class);
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), "roles-test"), UserRole.class);
         TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "roles-test"), Role.class);
         DriverManagerDataSource source = new DriverManagerDataSource("jdbc:h2:mem:" + UUID.randomUUID(), "sa", "");
         source.setUrl(source.getUrl() + ";DB_CLOSE_DELAY=-1");
@@ -67,29 +67,38 @@ class UserRoleNotificationTest {
         when(mapper.updateById(any(UserRole.class))).thenAnswer(call -> {
             UserRole row = call.getArgument(0);
             UserRole before = read(row.getId());
-            return before == null ? 0 : jdbc.update("UPDATE user_roles SET user_id=?, role_id=? WHERE id=?",
-                    row.getUserId() == null ? before.getUserId() : row.getUserId(),
-                    row.getRoleId() == null ? before.getRoleId() : row.getRoleId(), row.getId());
+            return before == null
+                    ? 0
+                    : jdbc.update(
+                            "UPDATE user_roles SET user_id=?, role_id=? WHERE id=?",
+                            row.getUserId() == null ? before.getUserId() : row.getUserId(),
+                            row.getRoleId() == null ? before.getRoleId() : row.getRoleId(),
+                            row.getId());
         });
-        when(mapper.deleteById(any(java.io.Serializable.class))).thenAnswer(call ->
-                jdbc.update("DELETE FROM user_roles WHERE id=?", (Object) call.getArgument(0)));
+        when(mapper.deleteById(any(java.io.Serializable.class)))
+                .thenAnswer(call -> jdbc.update("DELETE FROM user_roles WHERE id=?", (Object) call.getArgument(0)));
         UserRoleServiceImpl target = spy(new UserRoleServiceImpl(roles, new UserRoleChangeNotifier(roles, publisher)));
         ReflectionTestUtils.setField(target, "baseMapper", mapper);
         doAnswer(call -> jdbc.query("SELECT * FROM user_roles WHERE user_id=7", (rs, n) -> {
-            UserRole row = new UserRole();
-            row.setId(rs.getLong("id"));
-            row.setUserId(rs.getLong("user_id"));
-            row.setRoleId(rs.getLong("role_id"));
-            return row;
-        })).when(target).list(any(Wrapper.class));
+                    UserRole row = new UserRole();
+                    row.setId(rs.getLong("id"));
+                    row.setUserId(rs.getLong("user_id"));
+                    row.setRoleId(rs.getLong("role_id"));
+                    return row;
+                }))
+                .when(target)
+                .list(any(Wrapper.class));
         doAnswer(call -> jdbc.update("DELETE FROM user_roles WHERE user_id=7") > 0)
-                .when(target).remove(any(Wrapper.class));
+                .when(target)
+                .remove(any(Wrapper.class));
         doAnswer(call -> {
-            Collection<UserRole> rows = call.getArgument(0);
-            for (UserRole row : rows) insert(row);
-            if (failBatch) throw new DataIntegrityViolationException("simulated role write failure");
-            return true;
-        }).when(target).saveBatch(anyCollection());
+                    Collection<UserRole> rows = call.getArgument(0);
+                    for (UserRole row : rows) insert(row);
+                    if (failBatch) throw new DataIntegrityViolationException("simulated role write failure");
+                    return true;
+                })
+                .when(target)
+                .saveBatch(anyCollection());
         doAnswer(call -> read(call.getArgument(0))).when(target).getById(any());
         DataSourceTransactionManager manager = new DataSourceTransactionManager(source);
         transaction = new TransactionTemplate(manager);
@@ -153,7 +162,9 @@ class UserRoleNotificationTest {
 
     @Test
     void asyncDispatchFailureDoesNotFailCommittedRoleAssignment() {
-        doThrow(new IllegalStateException("executor unavailable")).when(publisher).publishAsync(anyString(), anyMap());
+        doThrow(new IllegalStateException("executor unavailable"))
+                .when(publisher)
+                .publishAsync(anyString(), anyMap());
         assertDoesNotThrow(() -> service.assignRoles(7L, List.of(2L)));
         assertEquals(2L, jdbc.queryForObject("SELECT role_id FROM user_roles", Long.class));
     }
@@ -196,13 +207,16 @@ class UserRoleNotificationTest {
     }
 
     private UserRole read(Object id) {
-        List<UserRole> rows = jdbc.query("SELECT * FROM user_roles WHERE id=?", (rs, n) -> {
-            UserRole row = new UserRole();
-            row.setId(rs.getLong("id"));
-            row.setUserId(rs.getLong("user_id"));
-            row.setRoleId(rs.getLong("role_id"));
-            return row;
-        }, id);
+        List<UserRole> rows = jdbc.query(
+                "SELECT * FROM user_roles WHERE id=?",
+                (rs, n) -> {
+                    UserRole row = new UserRole();
+                    row.setId(rs.getLong("id"));
+                    row.setUserId(rs.getLong("user_id"));
+                    row.setRoleId(rs.getLong("role_id"));
+                    return row;
+                },
+                id);
         return rows.isEmpty() ? null : rows.getFirst();
     }
 

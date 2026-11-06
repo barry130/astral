@@ -1,8 +1,5 @@
 package com.astral.system.controller;
 
-import java.util.List;
-import java.util.Map;
-
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.system.dto.MessageTemplateSaveDto;
@@ -10,6 +7,8 @@ import com.astral.system.dto.MessageTemplateVo;
 import com.astral.system.notify.MessageTemplateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
+import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;

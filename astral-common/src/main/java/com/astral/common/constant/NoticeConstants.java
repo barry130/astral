@@ -81,6 +81,5 @@ public class NoticeConstants {
     /** 反馈详情跳转：{@code astral://feedback/<feedbackId>} */
     public static final String LINK_FEEDBACK = LINK_SCHEME + "feedback/";
 
-    private NoticeConstants() {
-    }
+    private NoticeConstants() {}
 }

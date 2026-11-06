@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 用量 Mapper
  */
 @Mapper
-public interface AiUsageMapper extends BaseMapper<AiUsageEntity> {
-}
+public interface AiUsageMapper extends BaseMapper<AiUsageEntity> {}

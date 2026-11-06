@@ -5,10 +5,9 @@ import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PluginRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import java.util.List;
 
 /**
  * 插件 API 拦截器

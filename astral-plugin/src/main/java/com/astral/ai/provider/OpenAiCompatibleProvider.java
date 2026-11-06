@@ -9,12 +9,6 @@ import com.astral.ai.provider.AiProviderDtos.Message;
 import com.astral.ai.provider.AiProviderDtos.StreamListener;
 import com.astral.ai.provider.AiProviderDtos.ToolCall;
 import com.astral.ai.provider.AiProviderDtos.ToolSpec;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.ObjectNode;
-
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -29,6 +23,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * OpenAI 兼容协议的提供方实现。
@@ -86,9 +85,13 @@ public class OpenAiCompatibleProvider implements AiProvider {
                 throw new AiException("AI006", "上游返回 " + response.statusCode() + ": " + truncate(body));
             }
             ChatResult result = parseChatResponse(body);
-            log.debug("[OpenAi] chat traceId={} status={} cost={}ms tokens={}/{}",
-                    request.traceId(), response.statusCode(), System.currentTimeMillis() - start,
-                    result.promptTokens(), result.completionTokens());
+            log.debug(
+                    "[OpenAi] chat traceId={} status={} cost={}ms tokens={}/{}",
+                    request.traceId(),
+                    response.statusCode(),
+                    System.currentTimeMillis() - start,
+                    result.promptTokens(),
+                    result.completionTokens());
             return result;
         } catch (AiException e) {
             throw e;
@@ -118,8 +121,8 @@ public class OpenAiCompatibleProvider implements AiProvider {
                 String body = readBody(response.body());
                 throw new AiException("AI006", "上游返回 " + response.statusCode() + ": " + truncate(body));
             }
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
+            try (BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = readLineWithIdleGuard(reader, request)) != null) {
                     if (line.isEmpty() || line.startsWith(":")) {
@@ -175,7 +178,9 @@ public class OpenAiCompatibleProvider implements AiProvider {
                     if (calls != null && calls.isArray()) {
                         for (JsonNode call : calls) {
                             int index = AiJson.intValue(call, "index", 0);
-                            toolCalls.computeIfAbsent(index, key -> new ToolCallAccumulator()).merge(call);
+                            toolCalls
+                                    .computeIfAbsent(index, key -> new ToolCallAccumulator())
+                                    .merge(call);
                         }
                     }
                 }
@@ -188,8 +193,8 @@ public class OpenAiCompatibleProvider implements AiProvider {
                         resolved.add(call);
                     }
                 }
-                listener.onCompleted(new ChatResult(content.toString(), finishReason[0],
-                        tokens[0], tokens[1], resolved));
+                listener.onCompleted(
+                        new ChatResult(content.toString(), finishReason[0], tokens[0], tokens[1], resolved));
             }
         } catch (AiException e) {
             failOnce(finished, listener, e);
@@ -207,12 +212,20 @@ public class OpenAiCompatibleProvider implements AiProvider {
         long start = System.currentTimeMillis();
         try {
             ChatRequest probe = new ChatRequest(
-                    request.baseUrl(), request.apiKey(), request.modelCode(),
+                    request.baseUrl(),
+                    request.apiKey(),
+                    request.modelCode(),
                     List.of(Message.user("ping")),
-                    null, 0D, null, 8, null, null,
+                    null,
+                    0D,
+                    null,
+                    8,
+                    null,
+                    null,
                     Math.min(request.connectTimeoutMs(), 8000),
                     Math.min(request.readTimeoutMs(), 15000),
-                    0, request.traceId());
+                    0,
+                    request.traceId());
             HttpClient client = buildClient(probe);
             HttpRequest httpRequest = buildHttpRequest(probe, false);
             HttpResponse<InputStream> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
@@ -280,8 +293,11 @@ public class OpenAiCompatibleProvider implements AiProvider {
                 function.put("name", spec.name());
                 function.put("description", spec.description());
                 JsonNode params = AiJson.read(spec.parametersJson());
-                function.set("parameters", params != null && params.isObject()
-                        ? params : AiJson.mapper().createObjectNode().put("type", "object"));
+                function.set(
+                        "parameters",
+                        params != null && params.isObject()
+                                ? params
+                                : AiJson.mapper().createObjectNode().put("type", "object"));
             }
         }
         if (request.temperature() != null) {
@@ -293,7 +309,8 @@ public class OpenAiCompatibleProvider implements AiProvider {
         if (request.maxTokens() != null && request.maxTokens() > 0) {
             body.put("max_tokens", request.maxTokens());
         }
-        if (request.responseFormatJson() != null && !request.responseFormatJson().isBlank()) {
+        if (request.responseFormatJson() != null
+                && !request.responseFormatJson().isBlank()) {
             JsonNode format = AiJson.read(request.responseFormatJson());
             if (format != null && format.isObject()) {
                 body.set("response_format", format);
@@ -315,8 +332,7 @@ public class OpenAiCompatibleProvider implements AiProvider {
                 .timeout(Duration.ofMillis(request.readTimeoutMs() > 0 ? request.readTimeoutMs() : 120000))
                 .header("Content-Type", "application/json")
                 .header("Accept", stream ? "text/event-stream" : "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(
-                        AiJson.write(body), StandardCharsets.UTF_8));
+                .POST(HttpRequest.BodyPublishers.ofString(AiJson.write(body), StandardCharsets.UTF_8));
         if (request.apiKey() != null && !request.apiKey().isBlank()) {
             builder.header("Authorization", "Bearer " + request.apiKey());
         }
@@ -373,8 +389,8 @@ public class OpenAiCompatibleProvider implements AiProvider {
                     if (function == null) {
                         continue;
                     }
-                    calls.add(new ToolCall(id, AiJson.text(function, "name", ""),
-                            AiJson.text(function, "arguments", "{}")));
+                    calls.add(new ToolCall(
+                            id, AiJson.text(function, "name", ""), AiJson.text(function, "arguments", "{}")));
                 }
             }
         }
@@ -385,8 +401,12 @@ public class OpenAiCompatibleProvider implements AiProvider {
             promptTokens = AiJson.intValue(usage, "prompt_tokens", 0);
             completionTokens = AiJson.intValue(usage, "completion_tokens", 0);
         }
-        return new ChatResult(content == null ? "" : content,
-                AiJson.text(choice, "finish_reason", "stop"), promptTokens, completionTokens, calls);
+        return new ChatResult(
+                content == null ? "" : content,
+                AiJson.text(choice, "finish_reason", "stop"),
+                promptTokens,
+                completionTokens,
+                calls);
     }
 
     private static String truncate(String text) {
@@ -446,14 +466,12 @@ public class OpenAiCompatibleProvider implements AiProvider {
      */
     private String readLineWithIdleGuard(BufferedReader reader, ChatRequest request) throws Exception {
         int timeout = request.readTimeoutMs() > 0 ? request.readTimeoutMs() : DEFAULT_READ_TIMEOUT_MS;
-        java.util.concurrent.Future<String> future =
-                READ_EXECUTOR.submit(() -> reader.readLine());
+        java.util.concurrent.Future<String> future = READ_EXECUTOR.submit(() -> reader.readLine());
         try {
             return future.get(timeout, java.util.concurrent.TimeUnit.MILLISECONDS);
         } catch (java.util.concurrent.TimeoutException e) {
             future.cancel(true);
-            throw new AiException("AI006", "上游 " + (timeout / 1000)
-                    + " 秒内没有返回任何数据，已中断本次生成，请重试");
+            throw new AiException("AI006", "上游 " + (timeout / 1000) + " 秒内没有返回任何数据，已中断本次生成，请重试");
         } catch (java.util.concurrent.ExecutionException e) {
             Throwable cause = e.getCause();
             if (cause instanceof Exception ex) {

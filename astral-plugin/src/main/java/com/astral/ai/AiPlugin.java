@@ -6,10 +6,9 @@ import com.astral.plugin.api.PermissionProvider;
 import com.astral.plugin.api.PermissionProvider.PermissionDef;
 import com.astral.plugin.api.PluginFrontendExtension;
 import com.astral.plugin.api.PluginFrontendExtension.NavItem;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * Astral AI 插件入口。
@@ -106,9 +105,9 @@ public class AiPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
     public List<NavItem> getNavItems() {
         return List.of(
                 NavItem.pluginPage("AI 助手", "/dashboard/plugin/ai", "RobotOutlined", PERM_CONFIG_VIEW, 230),
-                NavItem.pluginPage("管理助手", "/dashboard/plugin/ai/assistant", "MessageOutlined", Perms.ASSISTANT_USE, 231),
-                NavItem.pluginPage("答疑", "/dashboard/plugin/ai/qa", "ReadOutlined", Perms.QA_USE, 232)
-        );
+                NavItem.pluginPage(
+                        "管理助手", "/dashboard/plugin/ai/assistant", "MessageOutlined", Perms.ASSISTANT_USE, 231),
+                NavItem.pluginPage("答疑", "/dashboard/plugin/ai/qa", "ReadOutlined", Perms.QA_USE, 232));
     }
 
     @Override
@@ -120,7 +119,6 @@ public class AiPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
                 new PermissionDef(PERM_CONVERSATION_EDIT, "AI 会话编辑", domain, TYPE_API, "重命名、置顶、删除自己的 AI 会话"),
                 new PermissionDef(PERM_MUSIC_FAVORITE, "音乐收藏动作", domain, TYPE_DATA, "允许助手触发收藏动作"),
                 new PermissionDef(PERM_MUSIC_PLAYLIST, "音乐歌单动作", domain, TYPE_DATA, "允许助手触发歌单相关动作"),
-
                 new PermissionDef("admin:ai:config:view", "AI 配置总览", domain, TYPE_API, "查看 AI 模块配置总览"),
                 new PermissionDef("admin:ai:provider:view", "AI 提供方查看", domain, TYPE_API, "查看 AI 提供方配置"),
                 new PermissionDef("admin:ai:provider:edit", "AI 提供方编辑", domain, TYPE_API, "新增、修改、删除 AI 提供方"),
@@ -137,12 +135,10 @@ public class AiPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
                 new PermissionDef("admin:ai:knowledge:edit", "AI 知识库编辑", domain, TYPE_API, "新增、修改知识源与文档"),
                 new PermissionDef("admin:ai:knowledge:sync", "AI 知识库同步", domain, TYPE_API, "触发知识库索引同步"),
                 new PermissionDef("admin:ai:tool:view", "AI 工具查看", domain, TYPE_API, "查看已登记工具"),
-                new PermissionDef("admin:ai:tool:edit", "AI 工具编辑", domain, TYPE_API,
-                        "修改工具风险等级与确认策略、维护声明式（HTTP）工具"),
+                new PermissionDef("admin:ai:tool:edit", "AI 工具编辑", domain, TYPE_API, "修改工具风险等级与确认策略、维护声明式（HTTP）工具"),
                 new PermissionDef("admin:ai:tool:approve", "AI 工具审批", domain, TYPE_API, "审批高风险工具调用"),
                 new PermissionDef("admin:ai:mcp:view", "MCP 服务器查看", domain, TYPE_API, "查看 MCP 服务器与发现的工具"),
-                new PermissionDef("admin:ai:mcp:edit", "MCP 服务器编辑", domain, TYPE_API,
-                        "新增、修改、删除 MCP 服务器，刷新远端工具清单"),
+                new PermissionDef("admin:ai:mcp:edit", "MCP 服务器编辑", domain, TYPE_API, "新增、修改、删除 MCP 服务器，刷新远端工具清单"),
                 new PermissionDef("admin:ai:quota:view", "AI 额度查看", domain, TYPE_API, "查看额度策略与用量"),
                 new PermissionDef("admin:ai:quota:edit", "AI 额度编辑", domain, TYPE_API, "新增、修改额度策略"),
                 new PermissionDef("admin:ai:usage:view", "AI 用量查看", domain, TYPE_API, "查看模型用量与费用"),
@@ -153,8 +149,7 @@ public class AiPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
                 new PermissionDef("admin:ai:audit:view", "AI 审计查看", domain, TYPE_API, "查看 AI 模块审计记录"),
                 new PermissionDef("admin:ai:assistant:use", "管理助手使用", domain, TYPE_API, "在管理后台使用管理助手"),
                 new PermissionDef("admin:ai:qa:use", "答疑助手使用", domain, TYPE_API, "在管理后台使用项目答疑助手"),
-                new PermissionDef("admin:ai:qa:export", "答疑导出", domain, TYPE_API, "导出答疑引用与答案")
-        );
+                new PermissionDef("admin:ai:qa:export", "答疑导出", domain, TYPE_API, "导出答疑引用与答案"));
     }
 
     /** 供内部代码引用的默认权限编码（避免散落魔法字符串） */
@@ -162,8 +157,7 @@ public class AiPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
         public static final String ASSISTANT_USE = "admin:ai:assistant:use";
         public static final String QA_USE = "admin:ai:qa:use";
 
-        private Perms() {
-        }
+        private Perms() {}
     }
 
     /** 种子智能体编码（初始化数据用，不参与运行期分支判断） */
@@ -172,8 +166,7 @@ public class AiPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
         public static final String ADMIN = "admin_assistant";
         public static final String QA = "admin_qa";
 
-        private SeedAgents() {
-        }
+        private SeedAgents() {}
     }
 
     /** 该插件支持的语言无关的常量复用 */

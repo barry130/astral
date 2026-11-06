@@ -9,13 +9,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Token管理控制器
@@ -28,7 +28,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 @RestController
 @RequestMapping("/api/v1/admin/system/token")
 @RequiredArgsConstructor
-@RequiresPermission(value = "admin:system:token:view", name = "Token查看", domain = "system",
+@RequiresPermission(
+        value = "admin:system:token:view",
+        name = "Token查看",
+        domain = "system",
         description = "在线 Token / 会话列表查看")
 public class TokenController {
 
@@ -46,9 +49,10 @@ public class TokenController {
      */
     @Operation(summary = "分页查询")
     @GetMapping("/page")
-    public Result<Page<TokenInfo>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                        @RequestParam(defaultValue = "10") Integer pageSize,
-                                        @RequestParam(required = false) Long userId) {
+    public Result<Page<TokenInfo>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) Long userId) {
         return Result.success(tokenService.pageFromSaToken(pageNum, pageSize, userId));
     }
 
@@ -60,7 +64,10 @@ public class TokenController {
      */
     @Operation(summary = "吊销Token")
     @PutMapping("/{id}/revoke")
-    @RequiresPermission(value = "admin:system:token:edit", name = "Token吊销", domain = "system",
+    @RequiresPermission(
+            value = "admin:system:token:edit",
+            name = "Token吊销",
+            domain = "system",
             description = "吊销单个 Token / 踢用户下线 / 清理过期 Token")
     public Result<Void> revoke(@PathVariable String id) {
         tokenService.revokeToken(id);

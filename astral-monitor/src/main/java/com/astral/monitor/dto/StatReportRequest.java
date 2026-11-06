@@ -3,9 +3,8 @@ package com.astral.monitor.dto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * 统计批量上报请求体

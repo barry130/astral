@@ -75,8 +75,7 @@ public final class ClientHeaders {
      * 首字符必须是字母或数字（避免 {@code .} / {@code -} 开头的纯符号串），
      * 后续每段由分隔符 {@code . _ + -} 接一串字母数字。空串不匹配。</p>
      */
-    private static final Pattern VERSION_PATTERN =
-            Pattern.compile("[0-9A-Za-z]+(?:[._+-][0-9A-Za-z]+)*");
+    private static final Pattern VERSION_PATTERN = Pattern.compile("[0-9A-Za-z]+(?:[._+-][0-9A-Za-z]+)*");
 
     /** 与 {@code sys_feedback.device} 列宽一致 */
     public static final int MAX_DEVICE = 128;
@@ -121,8 +120,7 @@ public final class ClientHeaders {
             Map.entry(UT_HARMONY, UT_HARMONY),
             Map.entry(UT_WEB, UT_WEB));
 
-    private ClientHeaders() {
-    }
+    private ClientHeaders() {}
 
     // ==================== 归一 ====================
 

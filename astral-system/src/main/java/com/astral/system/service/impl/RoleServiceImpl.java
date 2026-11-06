@@ -33,16 +33,14 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteRoleWithRelations(Long roleId) {
-        Long refs = userRoleMapper.selectCount(
-                new LambdaQueryWrapper<UserRole>().eq(UserRole::getRoleId, roleId));
+        Long refs = userRoleMapper.selectCount(new LambdaQueryWrapper<UserRole>().eq(UserRole::getRoleId, roleId));
         long userRefs = refs == null ? 0L : refs;
         if (userRefs > 0) {
             log.warn("删除角色被拒绝：仍被用户引用, roleId={}, 引用数={}", roleId, userRefs);
             throw new BusinessException("SYS006", userRefs);
         }
         // 清理权限关联与角色本身，同事务
-        rolePermissionService.remove(
-                new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, roleId));
+        rolePermissionService.remove(new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, roleId));
         removeById(roleId);
     }
 }

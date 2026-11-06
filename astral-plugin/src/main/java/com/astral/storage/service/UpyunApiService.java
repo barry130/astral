@@ -2,14 +2,6 @@ package com.astral.storage.service;
 
 import com.astral.common.exception.BusinessException;
 import com.astral.storage.entity.StorageConfigEntity;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.ObjectNode;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -20,6 +12,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 又拍云对象存储适配（官方 REST/FORM API 签名，文档 docs.upyun.com）
@@ -38,9 +37,8 @@ public class UpyunApiService {
     private static final String DEFAULT_ENDPOINT = "v0.api.upyun.com";
 
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private final HttpClient httpClient =
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     public UpyunApiService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -68,7 +66,11 @@ public class UpyunApiService {
             if (endpoint.isBlank() || !endpoint.matches("^[\\w.-]+(:\\d+)?$")) {
                 throw new BusinessException("COMMON002", "endpoint 必须为 API 域名，如 v0.api.upyun.com");
             }
-            return new UpyunOptions(bucket, endpoint, operator, password,
+            return new UpyunOptions(
+                    bucket,
+                    endpoint,
+                    operator,
+                    password,
                     node.path("publicBaseUrl").asText(null),
                     node.path("tokenKey").asText(null));
         } catch (BusinessException e) {
@@ -79,25 +81,22 @@ public class UpyunApiService {
     }
 
     /** 又拍云连接信息（password 只在服务端内存中流转） */
-    public record UpyunOptions(String bucket, String endpoint, String operator, String password,
-                              String publicBaseUrl, String tokenKey) {
-    }
+    public record UpyunOptions(
+            String bucket, String endpoint, String operator, String password, String publicBaseUrl, String tokenKey) {}
 
-    public record PresignedUrl(String url, long expiresAtEpochSeconds) {
-    }
+    public record PresignedUrl(String url, long expiresAtEpochSeconds) {}
 
     /** FORM 直传授权结果：浏览器以 multipart POST 提交 policy/authorization/file 字段 */
-    public record FormUploadGrant(String url, String policy, String authorization,
-                                  String saveKey, long expiresAtEpochSeconds) {
-    }
+    public record FormUploadGrant(
+            String url, String policy, String authorization, String saveKey, long expiresAtEpochSeconds) {}
 
     // ==================== 签名原语 ====================
 
     /** 操作员密码的 MD5（32 位小写）—又拍云签名密钥 */
     private String passwordMd5(String password) {
         try {
-            return HexFormat.of().formatHex(
-                    MessageDigest.getInstance("MD5").digest(password.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("MD5").digest(password.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             throw new IllegalStateException("MD5 计算失败", e);
         }
@@ -141,8 +140,8 @@ public class UpyunApiService {
 
     /** RFC1123 GMT 日期串 */
     private String httpDate() {
-        return java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
-                .format(java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC));
+        return java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME.format(
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC));
     }
 
     /** URI 编码：quote(safe='~/')——仅 / 与 ~ 保留，其余非保留字符转义 */
@@ -150,8 +149,14 @@ public class UpyunApiService {
         StringBuilder sb = new StringBuilder();
         for (byte b : uri.getBytes(StandardCharsets.UTF_8)) {
             char c = (char) (b & 0xFF);
-            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
-                    || c == '-' || c == '.' || c == '_' || c == '~' || c == '/') {
+            if ((c >= 'A' && c <= 'Z')
+                    || (c >= 'a' && c <= 'z')
+                    || (c >= '0' && c <= '9')
+                    || c == '-'
+                    || c == '.'
+                    || c == '_'
+                    || c == '~'
+                    || c == '/') {
                 sb.append(c);
             } else {
                 sb.append('%').append(String.format("%02X", (byte) c));
@@ -179,8 +184,7 @@ public class UpyunApiService {
         policyJson.put("date", date);
         String policy;
         try {
-            policy = Base64.getEncoder().encodeToString(
-                    policyJson.toString().getBytes(StandardCharsets.UTF_8));
+            policy = Base64.getEncoder().encodeToString(policyJson.toString().getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             throw new BusinessException("COMMON002", "policy 生成失败");
         }
@@ -212,13 +216,12 @@ public class UpyunApiService {
         return new DownloadUrl(url, etime);
     }
 
-    public record DownloadUrl(String url, long expiresAtEpochSeconds) {
-    }
+    public record DownloadUrl(String url, long expiresAtEpochSeconds) {}
 
     private String md5Hex(String data) {
         try {
-            return HexFormat.of().formatHex(
-                    MessageDigest.getInstance("MD5").digest(data.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("MD5").digest(data.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             throw new IllegalStateException("MD5 计算失败", e);
         }
@@ -232,18 +235,21 @@ public class UpyunApiService {
             UpyunOptions o = optionsOf(config);
             String uri = quotePath("/" + o.bucket() + "/" + key);
             String date = httpDate();
-            HttpResponse<Void> resp = httpClient.send(HttpRequest.newBuilder(
-                            URI.create("https://" + o.endpoint() + uri))
-                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                    .header("Authorization", restAuthorization(o, "HEAD", uri, date, null))
-                    .header("Date", date)
-                    .timeout(Duration.ofSeconds(8))
-                    .build(), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp = httpClient.send(
+                    HttpRequest.newBuilder(URI.create("https://" + o.endpoint() + uri))
+                            .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                            .header("Authorization", restAuthorization(o, "HEAD", uri, date, null))
+                            .header("Date", date)
+                            .timeout(Duration.ofSeconds(8))
+                            .build(),
+                    HttpResponse.BodyHandlers.discarding());
             if (resp.statusCode() != 200) {
                 return -1;
             }
-            return resp.headers().firstValue("x-upyun-file-size")
-                    .map(Long::parseLong).orElse(-1L);
+            return resp.headers()
+                    .firstValue("x-upyun-file-size")
+                    .map(Long::parseLong)
+                    .orElse(-1L);
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
@@ -258,13 +264,14 @@ public class UpyunApiService {
             UpyunOptions o = optionsOf(config);
             String uri = quotePath("/" + o.bucket() + "/" + key);
             String date = httpDate();
-            HttpResponse<Void> resp = httpClient.send(HttpRequest.newBuilder(
-                            URI.create("https://" + o.endpoint() + uri))
-                    .method("DELETE", HttpRequest.BodyPublishers.noBody())
-                    .header("Authorization", restAuthorization(o, "DELETE", uri, date, null))
-                    .header("Date", date)
-                    .timeout(Duration.ofSeconds(8))
-                    .build(), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp = httpClient.send(
+                    HttpRequest.newBuilder(URI.create("https://" + o.endpoint() + uri))
+                            .method("DELETE", HttpRequest.BodyPublishers.noBody())
+                            .header("Authorization", restAuthorization(o, "DELETE", uri, date, null))
+                            .header("Date", date)
+                            .timeout(Duration.ofSeconds(8))
+                            .build(),
+                    HttpResponse.BodyHandlers.discarding());
             if (resp.statusCode() != 200 && resp.statusCode() != 404) {
                 throw new BusinessException("STORAGE012", "又拍云删除返回 HTTP " + resp.statusCode());
             }
@@ -283,13 +290,14 @@ public class UpyunApiService {
             // GET /{bucket}/?usage 的 URI 参与签名的部分为 quote 后的路径（python-sdk: uri + args）
             String path = quotePath("/" + o.bucket() + "/");
             String date = httpDate();
-            HttpResponse<Void> resp = httpClient.send(HttpRequest.newBuilder(
-                            URI.create("https://" + o.endpoint() + path + "?usage"))
-                    .GET()
-                    .header("Authorization", restAuthorization(o, "GET", path + "?usage", date, null))
-                    .header("Date", date)
-                    .timeout(Duration.ofSeconds(8))
-                    .build(), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp = httpClient.send(
+                    HttpRequest.newBuilder(URI.create("https://" + o.endpoint() + path + "?usage"))
+                            .GET()
+                            .header("Authorization", restAuthorization(o, "GET", path + "?usage", date, null))
+                            .header("Date", date)
+                            .timeout(Duration.ofSeconds(8))
+                            .build(),
+                    HttpResponse.BodyHandlers.discarding());
             if (resp.statusCode() / 100 != 2) {
                 throw new IllegalStateException("HTTP " + resp.statusCode());
             }

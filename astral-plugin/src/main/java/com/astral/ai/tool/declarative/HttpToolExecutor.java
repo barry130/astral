@@ -1,5 +1,6 @@
 package com.astral.ai.tool.declarative;
 
+import com.astral.ai.common.AiException;
 import com.astral.ai.common.AiJson;
 import com.astral.ai.config.AiProperties;
 import com.astral.ai.entity.AiToolEntity;
@@ -7,11 +8,6 @@ import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
-import com.astral.ai.common.AiException;
-import lombok.extern.slf4j.Slf4j;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ObjectNode;
-
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -28,6 +24,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 声明式 HTTP 工具执行器。
@@ -64,8 +63,7 @@ public class HttpToolExecutor implements AiToolHandler {
     static final Pattern PLACEHOLDER = Pattern.compile("\\$\\{([A-Za-z0-9_.\\-]+(?::[A-Za-z0-9_.\\-]+)?)}");
 
     /** http(s) 绝对地址：scheme://authority + 可选的 path（可含 ?query） */
-    static final Pattern URL_SHAPE = Pattern.compile("^(https?)://([^/?#]+)(/.*)?$",
-            Pattern.CASE_INSENSITIVE);
+    static final Pattern URL_SHAPE = Pattern.compile("^(https?)://([^/?#]+)(/.*)?$", Pattern.CASE_INSENSITIVE);
 
     /** host 形态：域名段（字母数字点横线）或 [IPv6] + 可选 :端口 */
     static final Pattern AUTHORITY_SHAPE = Pattern.compile("^([A-Za-z0-9.\\-]+|\\[[0-9A-Fa-f:]+])(:\\d+)?$");
@@ -86,8 +84,7 @@ public class HttpToolExecutor implements AiToolHandler {
     private final AiProperties.HttpTool guard;
     private final HttpClient httpClient;
 
-    private HttpToolExecutor(AiToolEntity tool, ObjectNode config, AiProperties.HttpTool guard,
-                             HttpClient httpClient) {
+    private HttpToolExecutor(AiToolEntity tool, ObjectNode config, AiProperties.HttpTool guard, HttpClient httpClient) {
         this.tool = tool;
         this.config = config;
         this.guard = guard;
@@ -145,8 +142,7 @@ public class HttpToolExecutor implements AiToolHandler {
                     throw new AiException("AI008", "secret 引用非法: ${" + key + "}");
                 }
             } else if (!declared.contains(key)) {
-                throw new AiException("AI008",
-                        "模板使用了参数结构未声明的占位符: ${" + key + "}");
+                throw new AiException("AI008", "模板使用了参数结构未声明的占位符: ${" + key + "}");
             }
         }
         guardHost(hostOf(config), allowedHosts);
@@ -172,12 +168,12 @@ public class HttpToolExecutor implements AiToolHandler {
         }
         int timeout = AiJson.intValue(config, "timeoutMs", DEFAULT_TIMEOUT_MS);
         if (timeout < MIN_TIMEOUT_MS || timeout > MAX_TIMEOUT_MS) {
-            throw new AiException("AI008",
-                    "timeoutMs 必须在 " + MIN_TIMEOUT_MS + " 到 " + MAX_TIMEOUT_MS + " 毫秒之间");
+            throw new AiException("AI008", "timeoutMs 必须在 " + MIN_TIMEOUT_MS + " 到 " + MAX_TIMEOUT_MS + " 毫秒之间");
         }
         int maxBytes = AiJson.intValue(config, "maxResponseBytes", DEFAULT_MAX_RESPONSE_BYTES);
         if (maxBytes < MIN_MAX_RESPONSE_BYTES || maxBytes > MAX_MAX_RESPONSE_BYTES) {
-            throw new AiException("AI008",
+            throw new AiException(
+                    "AI008",
                     "maxResponseBytes 必须在 " + MIN_MAX_RESPONSE_BYTES + " 到 " + MAX_MAX_RESPONSE_BYTES + " 字节之间");
         }
         for (String field : List.of("summaryPath", "payloadPath")) {
@@ -187,12 +183,14 @@ public class HttpToolExecutor implements AiToolHandler {
             }
         }
         JsonNode headers = config.get("headers");
-        if (headers != null && !headers.isNull()
+        if (headers != null
+                && !headers.isNull()
                 && (!(headers instanceof ObjectNode) || !allTextValues((ObjectNode) headers))) {
             throw new AiException("AI008", "headers 必须是字符串键值对象");
         }
         JsonNode query = config.get("query");
-        if (query != null && !query.isNull()
+        if (query != null
+                && !query.isNull()
                 && (!(query instanceof ObjectNode) || !allTextValues((ObjectNode) query))) {
             throw new AiException("AI008", "query 必须是字符串键值对象");
         }
@@ -200,7 +198,9 @@ public class HttpToolExecutor implements AiToolHandler {
         if (body != null && !body.isNull() && !body.isString()) {
             throw new AiException("AI008", "body 必须是字符串模板（占位符按 JSON 规则渲染）");
         }
-        if (body != null && !body.isNull() && !WRITE_METHODS.contains(method)
+        if (body != null
+                && !body.isNull()
+                && !WRITE_METHODS.contains(method)
                 && !body.asString().isBlank()) {
             throw new AiException("AI008", method + " 请求不允许携带 body");
         }
@@ -298,10 +298,14 @@ public class HttpToolExecutor implements AiToolHandler {
 
     private static void requirePublicAddress(InetAddress address) {
         byte[] bytes = address.getAddress();
-        boolean uniqueLocalIpv6 = bytes != null && bytes.length == 16
-                && (bytes[0] == (byte) 0xfc || bytes[0] == (byte) 0xfd);
-        if (address.isLoopbackAddress() || address.isLinkLocalAddress() || address.isSiteLocalAddress()
-                || address.isAnyLocalAddress() || address.isMulticastAddress() || uniqueLocalIpv6) {
+        boolean uniqueLocalIpv6 =
+                bytes != null && bytes.length == 16 && (bytes[0] == (byte) 0xfc || bytes[0] == (byte) 0xfd);
+        if (address.isLoopbackAddress()
+                || address.isLinkLocalAddress()
+                || address.isSiteLocalAddress()
+                || address.isAnyLocalAddress()
+                || address.isMulticastAddress()
+                || uniqueLocalIpv6) {
             throw new AiException("AI008", "禁止调用私网/环回/链路本地地址: " + address.getHostAddress());
         }
     }
@@ -325,10 +329,18 @@ public class HttpToolExecutor implements AiToolHandler {
 
     @Override
     public AiToolDef definition() {
-        return new AiToolDef(tool.getToolCode(), tool.getName(), tool.getDescription(), HANDLER_KEY,
-                tool.getRiskLevel(), tool.getApprovalPolicy(), AiJson.splitCsv(tool.getClientTypes()),
-                AiJson.splitCsv(tool.getPermissionCodes()), tool.getArgumentsSchema(),
-                tool.getResultSchema(), tool.getSideEffects());
+        return new AiToolDef(
+                tool.getToolCode(),
+                tool.getName(),
+                tool.getDescription(),
+                HANDLER_KEY,
+                tool.getRiskLevel(),
+                tool.getApprovalPolicy(),
+                AiJson.splitCsv(tool.getClientTypes()),
+                AiJson.splitCsv(tool.getPermissionCodes()),
+                tool.getArgumentsSchema(),
+                tool.getResultSchema(),
+                tool.getSideEffects());
     }
 
     @Override
@@ -346,8 +358,7 @@ public class HttpToolExecutor implements AiToolHandler {
     private AiToolResult doExecute(AiToolContext context) throws Exception {
         String method = AiJson.text(config, "method", "GET").toUpperCase(Locale.ROOT);
         Function<String, String> secrets = key -> lookupSecret(key, guard.getSecrets());
-        ObjectNode args = context.arguments() == null
-                ? AiJson.mapper().createObjectNode() : context.arguments();
+        ObjectNode args = context.arguments() == null ? AiJson.mapper().createObjectNode() : context.arguments();
 
         String url = AiJson.text(config, "url", "");
         Matcher shape = URL_SHAPE.matcher(url);
@@ -394,8 +405,8 @@ public class HttpToolExecutor implements AiToolHandler {
             }
         }
         HttpRequest request = (body == null
-                ? builder.method(method, HttpRequest.BodyPublishers.noBody())
-                : builder.method(method, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)))
+                        ? builder.method(method, HttpRequest.BodyPublishers.noBody())
+                        : builder.method(method, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)))
                 .build();
         int maxBytes = clamp(config, "maxResponseBytes", DEFAULT_MAX_RESPONSE_BYTES);
         HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
@@ -420,8 +431,11 @@ public class HttpToolExecutor implements AiToolHandler {
             if (extracted instanceof ObjectNode object) {
                 payload = object;
             } else {
-                payload.set(payloadPath.contains(".") ? payloadPath.substring(payloadPath.lastIndexOf('.') + 1)
-                        : payloadPath, extracted);
+                payload.set(
+                        payloadPath.contains(".")
+                                ? payloadPath.substring(payloadPath.lastIndexOf('.') + 1)
+                                : payloadPath,
+                        extracted);
             }
         } else if (parsed instanceof ObjectNode object) {
             payload = object;
@@ -432,7 +446,9 @@ public class HttpToolExecutor implements AiToolHandler {
         JsonNode summaryNode = summaryPath.isEmpty() ? null : extractPath(parsed, summaryPath);
         String summary;
         if (summaryNode != null) {
-            summary = summaryNode.isString() ? summaryNode.asString() : AiJson.truncate(AiJson.write(summaryNode), SUMMARY_LIMIT);
+            summary = summaryNode.isString()
+                    ? summaryNode.asString()
+                    : AiJson.truncate(AiJson.write(summaryNode), SUMMARY_LIMIT);
         } else if (text.isBlank()) {
             summary = "HTTP 调用成功（无响应体）";
         } else {
@@ -473,10 +489,9 @@ public class HttpToolExecutor implements AiToolHandler {
         StringBuilder result = new StringBuilder();
         while (matcher.find()) {
             String key = matcher.group(1);
-            String value = key.startsWith("secret:")
-                    ? secrets.apply(key.substring("secret:".length())) : argText(args, key);
-            matcher.appendReplacement(result,
-                    Matcher.quoteReplacement(urlEncode ? encode(value) : value));
+            String value =
+                    key.startsWith("secret:") ? secrets.apply(key.substring("secret:".length())) : argText(args, key);
+            matcher.appendReplacement(result, Matcher.quoteReplacement(urlEncode ? encode(value) : value));
         }
         matcher.appendTail(result);
         return result.toString();
@@ -513,15 +528,15 @@ public class HttpToolExecutor implements AiToolHandler {
             String key = matcher.group(1);
             String replacement;
             if (key.startsWith("secret:")) {
-                replacement = AiJson.mapper()
-                        .writeValueAsString(secrets.apply(key.substring("secret:".length())));
+                replacement = AiJson.mapper().writeValueAsString(secrets.apply(key.substring("secret:".length())));
             } else {
                 JsonNode arg = args == null ? null : args.get(key);
                 if (arg == null || arg.isNull()) {
                     throw new AiException("AI008", "缺少参数: " + key);
                 }
                 replacement = arg.isObject() || arg.isArray() || arg.isNumber() || arg.isBoolean()
-                        ? AiJson.write(arg) : AiJson.mapper().writeValueAsString(arg.asString());
+                        ? AiJson.write(arg)
+                        : AiJson.mapper().writeValueAsString(arg.asString());
             }
             matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
         }
@@ -539,7 +554,8 @@ public class HttpToolExecutor implements AiToolHandler {
     }
 
     private static String encode(String value) {
-        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8).replace("+", "%20");
+        return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8)
+                .replace("+", "%20");
     }
 
     /**
@@ -552,8 +568,7 @@ public class HttpToolExecutor implements AiToolHandler {
             value = System.getenv(key);
         }
         if (value == null || value.isBlank()) {
-            throw new AiException("AI008", "找不到密钥: " + key
-                    + "（请在 astral.plugins.ai.http-tool.secrets 或同名环境变量里配置）");
+            throw new AiException("AI008", "找不到密钥: " + key + "（请在 astral.plugins.ai.http-tool.secrets 或同名环境变量里配置）");
         }
         return value;
     }

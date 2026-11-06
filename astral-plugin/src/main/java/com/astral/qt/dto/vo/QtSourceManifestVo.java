@@ -1,9 +1,8 @@
 package com.astral.qt.dto.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-
 import java.time.LocalDateTime;
+import lombok.Data;
 
 /**
  * 音源包 manifest 响应体（GET /api/v1/app/source/manifest）

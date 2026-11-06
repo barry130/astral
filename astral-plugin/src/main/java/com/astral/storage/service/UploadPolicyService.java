@@ -5,20 +5,19 @@ import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.entity.StorageFolderEntity;
 import com.astral.storage.mapper.StorageFileMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.ObjectNode;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 文件夹级上传策略（UPDATE_DESIGN.md §3.3）
@@ -34,6 +33,7 @@ public class UploadPolicyService {
 
     /** 登记后内容验证级别（storage_verify_content 字典值域） */
     public static final String VERIFY_NONE = "none";
+
     public static final String VERIFY_MAGIC = "magic";
     public static final String VERIFY_FULL = "full";
 
@@ -53,15 +53,22 @@ public class UploadPolicyService {
      * @param verifyContent    登记后内容验证级别：none/magic/full
      * @param maxPixels        图片像素总数上限；null = 不校验（仅 verifyContent=full 时可执行）
      */
-    public record PolicySpec(boolean requireLogin, long minSizeBytes, Long maxSizeBytes,
-                             List<String> allowedMimes, List<String> allowedExtensions,
-                             Integer dailyUploadLimit, String forceVisibility,
-                             String verifyContent, Long maxPixels) {
-    }
+    public record PolicySpec(
+            boolean requireLogin,
+            long minSizeBytes,
+            Long maxSizeBytes,
+            List<String> allowedMimes,
+            List<String> allowedExtensions,
+            Integer dailyUploadLimit,
+            String forceVisibility,
+            String verifyContent,
+            Long maxPixels) {}
 
     /** 解析文件夹策略；未配置返回全缺省值 */
     public PolicySpec resolve(StorageFolderEntity folder) {
-        if (folder == null || folder.getUploadPolicy() == null || folder.getUploadPolicy().isBlank()) {
+        if (folder == null
+                || folder.getUploadPolicy() == null
+                || folder.getUploadPolicy().isBlank()) {
             return new PolicySpec(true, 0, null, List.of(), List.of(), null, null, VERIFY_NONE, null);
         }
         return parse(folder.getUploadPolicy());
@@ -74,16 +81,27 @@ public class UploadPolicyService {
             return new PolicySpec(
                     node.path("requireLogin").asBoolean(true),
                     Math.max(0, node.path("minSizeBytes").asLong(0)),
-                    node.hasNonNull("maxSizeBytes") && node.get("maxSizeBytes").isNumber()
-                            && node.get("maxSizeBytes").asLong() > 0 ? node.get("maxSizeBytes").asLong() : null,
+                    node.hasNonNull("maxSizeBytes")
+                                    && node.get("maxSizeBytes").isNumber()
+                                    && node.get("maxSizeBytes").asLong() > 0
+                            ? node.get("maxSizeBytes").asLong()
+                            : null,
                     readStringList(node.get("allowedMimes")),
                     readStringList(node.get("allowedExtensions")),
-                    node.hasNonNull("dailyUploadLimit") && node.get("dailyUploadLimit").isInt()
-                            && node.get("dailyUploadLimit").asInt() > 0 ? node.get("dailyUploadLimit").asInt() : null,
-                    node.hasNonNull("forceVisibility") ? node.get("forceVisibility").asText() : null,
+                    node.hasNonNull("dailyUploadLimit")
+                                    && node.get("dailyUploadLimit").isInt()
+                                    && node.get("dailyUploadLimit").asInt() > 0
+                            ? node.get("dailyUploadLimit").asInt()
+                            : null,
+                    node.hasNonNull("forceVisibility")
+                            ? node.get("forceVisibility").asText()
+                            : null,
                     node.hasNonNull("verifyContent") ? node.get("verifyContent").asText(VERIFY_NONE) : VERIFY_NONE,
-                    node.hasNonNull("maxPixels") && node.get("maxPixels").isNumber()
-                            && node.get("maxPixels").asLong() > 0 ? node.get("maxPixels").asLong() : null);
+                    node.hasNonNull("maxPixels")
+                                    && node.get("maxPixels").isNumber()
+                                    && node.get("maxPixels").asLong() > 0
+                            ? node.get("maxPixels").asLong()
+                            : null);
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
@@ -142,8 +160,10 @@ public class UploadPolicyService {
                 }
             }
 
-            if (node.hasNonNull("forceVisibility") && !node.get("forceVisibility").isNull()) {
-                String visibility = node.get("forceVisibility").asText("").trim().toUpperCase(Locale.ROOT);
+            if (node.hasNonNull("forceVisibility")
+                    && !node.get("forceVisibility").isNull()) {
+                String visibility =
+                        node.get("forceVisibility").asText("").trim().toUpperCase(Locale.ROOT);
                 if (!StorageFolderEntity.VISIBILITY_PRIVATE.equals(visibility)
                         && !StorageFolderEntity.VISIBILITY_PUBLIC.equals(visibility)) {
                     throw new BusinessException("STORAGE029", "forceVisibility 仅支持 PRIVATE/PUBLIC");
@@ -151,7 +171,8 @@ public class UploadPolicyService {
                 out.put("forceVisibility", visibility);
             }
 
-            String verify = node.hasNonNull("verifyContent") && !node.get("verifyContent").isNull()
+            String verify = node.hasNonNull("verifyContent")
+                            && !node.get("verifyContent").isNull()
                     ? node.get("verifyContent").asText(VERIFY_NONE).trim().toLowerCase(Locale.ROOT)
                     : VERIFY_NONE;
             if (!VERIFY_NONE.equals(verify) && !VERIFY_MAGIC.equals(verify) && !VERIFY_FULL.equals(verify)) {

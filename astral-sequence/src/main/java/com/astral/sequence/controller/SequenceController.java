@@ -3,23 +3,22 @@ package com.astral.sequence.controller;
 import com.astral.common.annotation.RateLimit;
 import com.astral.common.constant.SequenceType;
 import com.astral.common.result.Result;
+import com.astral.log.annotation.OperateLog;
 import com.astral.sequence.controller.dto.SequenceBatchRequest;
 import com.astral.sequence.controller.dto.SequenceRequest;
 import com.astral.sequence.controller.dto.SequenceResponse;
 import com.astral.sequence.service.SequenceService;
-import com.astral.log.annotation.OperateLog;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/all/sequence")
@@ -33,12 +32,7 @@ public class SequenceController {
     public Result<SequenceResponse> next(@Valid @RequestBody SequenceRequest request) {
         String type = request.getType() != null ? request.getType() : null;
         long seq = sequenceService.next(request.getBizKey(), type);
-        SequenceResponse response = new SequenceResponse(
-                request.getBizKey(),
-                type,
-                seq,
-                System.currentTimeMillis()
-        );
+        SequenceResponse response = new SequenceResponse(request.getBizKey(), type, seq, System.currentTimeMillis());
         return Result.success(response);
     }
 
@@ -50,12 +44,8 @@ public class SequenceController {
         String seqStr = sequenceService.batch(request.getBizKey(), request.getCount(), type);
         String[] parts = seqStr.split(",");
         long lastSeq = Long.parseLong(parts[parts.length - 1]);
-        SequenceResponse response = new SequenceResponse(
-                request.getBizKey(),
-                type,
-                lastSeq,
-                System.currentTimeMillis()
-        );
+        SequenceResponse response =
+                new SequenceResponse(request.getBizKey(), type, lastSeq, System.currentTimeMillis());
         return Result.success(response);
     }
 
@@ -74,8 +64,7 @@ public class SequenceController {
                 .map(t -> Map.of(
                         "code", t.name(),
                         "value", t.getValue(),
-                        "description", getDescription(t)
-                ))
+                        "description", getDescription(t)))
                 .collect(Collectors.toList());
         return Result.success(types);
     }

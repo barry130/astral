@@ -3,13 +3,12 @@ package com.astral.plugin.core;
 import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PluginRegistry;
 import jakarta.annotation.PostConstruct;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.List;
 
 @Slf4j
 @Configuration

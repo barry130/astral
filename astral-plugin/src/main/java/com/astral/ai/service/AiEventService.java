@@ -6,13 +6,12 @@ import com.astral.ai.common.AiJson;
 import com.astral.ai.entity.AiRequestEventEntity;
 import com.astral.ai.mapper.AiRequestEventMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 请求事件流服务。
@@ -115,8 +114,8 @@ public class AiEventService {
         if (before == null) {
             return 0;
         }
-        return eventMapper.delete(new LambdaQueryWrapper<AiRequestEventEntity>()
-                .lt(AiRequestEventEntity::getCreateTime, before));
+        return eventMapper.delete(
+                new LambdaQueryWrapper<AiRequestEventEntity>().lt(AiRequestEventEntity::getCreateTime, before));
     }
 
     /** 事件 → 对外结构（保持 Map 形态，避免控制器重复转换） */

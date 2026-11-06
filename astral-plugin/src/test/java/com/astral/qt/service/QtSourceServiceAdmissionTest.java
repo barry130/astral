@@ -1,26 +1,25 @@
 package com.astral.qt.service;
 
-import com.astral.system.service.DictDataService;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
 import com.astral.qt.entity.QtSourceRelease;
 import com.astral.qt.mapper.QtSourceReleaseMapper;
 import com.astral.qt.mapper.QtSourceReportMapper;
-import tools.jackson.databind.ObjectMapper;
+import com.astral.system.service.DictDataService;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 应用版本准入（{@link QtSourceService#admissionOk}）的行为契约：
@@ -51,8 +50,8 @@ class QtSourceServiceAdmissionTest {
 
     @BeforeEach
     void setUp() {
-        service = new QtSourceService(releaseMapper, reportMapper, dictDataService, new ObjectMapper(),
-                packHeaderProbe);
+        service =
+                new QtSourceService(releaseMapper, reportMapper, dictDataService, new ObjectMapper(), packHeaderProbe);
     }
 
     private QtSourceRelease release(String appVersionCodes) {
@@ -78,11 +77,15 @@ class QtSourceServiceAdmissionTest {
         when(releaseMapper.selectList(any())).thenReturn(List.of(release("{\"1106\":[308]}")));
 
         // 鸿蒙端读不到 appVersionCode：请求不带该参数
-        assertNotNull(service.buildManifest(QtSourceRelease.PLATFORM_HARMONY, null, 1000L,
-                Set.of(QtSourceRelease.CHANNEL_STABLE)).getRelease());
-        assertEquals(2026102601L,
-                service.buildManifest(QtSourceRelease.PLATFORM_HARMONY, null, 1000L,
-                        Set.of(QtSourceRelease.CHANNEL_STABLE)).getRelease().getSourceVersionCode());
+        assertNotNull(service.buildManifest(
+                        QtSourceRelease.PLATFORM_HARMONY, null, 1000L, Set.of(QtSourceRelease.CHANNEL_STABLE))
+                .getRelease());
+        assertEquals(
+                2026102601L,
+                service.buildManifest(
+                                QtSourceRelease.PLATFORM_HARMONY, null, 1000L, Set.of(QtSourceRelease.CHANNEL_STABLE))
+                        .getRelease()
+                        .getSourceVersionCode());
     }
 
     @Test
@@ -90,8 +93,9 @@ class QtSourceServiceAdmissionTest {
     void admissionAllowsWhenVersionInWhitelist() {
         when(releaseMapper.selectList(any())).thenReturn(List.of(release("{\"1106\":[308]}")));
 
-        assertNotNull(service.buildManifest(QtSourceRelease.PLATFORM_HARMONY, 308L, 1000L,
-                Set.of(QtSourceRelease.CHANNEL_STABLE)).getRelease());
+        assertNotNull(service.buildManifest(
+                        QtSourceRelease.PLATFORM_HARMONY, 308L, 1000L, Set.of(QtSourceRelease.CHANNEL_STABLE))
+                .getRelease());
     }
 
     @Test
@@ -99,8 +103,9 @@ class QtSourceServiceAdmissionTest {
     void admissionRejectsWhenVersionNotInWhitelist() {
         when(releaseMapper.selectList(any())).thenReturn(List.of(release("{\"1106\":[308]}")));
 
-        assertNull(service.buildManifest(QtSourceRelease.PLATFORM_HARMONY, 200L, 1000L,
-                Set.of(QtSourceRelease.CHANNEL_STABLE)).getRelease());
+        assertNull(service.buildManifest(
+                        QtSourceRelease.PLATFORM_HARMONY, 200L, 1000L, Set.of(QtSourceRelease.CHANNEL_STABLE))
+                .getRelease());
     }
 
     @Test
@@ -108,9 +113,11 @@ class QtSourceServiceAdmissionTest {
     void admissionAllowsWhenPlatformUnconfigured() {
         when(releaseMapper.selectList(any())).thenReturn(List.of(release("{}")));
 
-        assertNotNull(service.buildManifest(QtSourceRelease.PLATFORM_ANDROID, 999L, 1000L,
-                Set.of(QtSourceRelease.CHANNEL_STABLE)).getRelease());
-        assertNotNull(service.buildManifest(QtSourceRelease.PLATFORM_ANDROID, null, 1000L,
-                Set.of(QtSourceRelease.CHANNEL_STABLE)).getRelease());
+        assertNotNull(service.buildManifest(
+                        QtSourceRelease.PLATFORM_ANDROID, 999L, 1000L, Set.of(QtSourceRelease.CHANNEL_STABLE))
+                .getRelease());
+        assertNotNull(service.buildManifest(
+                        QtSourceRelease.PLATFORM_ANDROID, null, 1000L, Set.of(QtSourceRelease.CHANNEL_STABLE))
+                .getRelease());
     }
 }

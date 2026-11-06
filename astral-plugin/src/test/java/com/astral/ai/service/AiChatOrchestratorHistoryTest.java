@@ -1,17 +1,16 @@
 package com.astral.ai.service;
 
-import com.astral.ai.provider.AiProviderDtos.Message;
-import com.astral.ai.provider.AiProviderDtos.ToolCall;
-import org.junit.jupiter.api.Test;
-
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
+
+import com.astral.ai.provider.AiProviderDtos.Message;
+import com.astral.ai.provider.AiProviderDtos.ToolCall;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.jupiter.api.Test;
 
 /**
  * 历史窗口配对修复的回归测试。
@@ -57,9 +56,11 @@ class AiChatOrchestratorHistoryTest {
         // 两个调用只留下一个结果：配对不全，助手消息与结果一起丢
         List<Message> input = List.of(
                 Message.user("放点爵士"),
-                Message.assistantToolCalls("", List.of(
-                        new ToolCall("call_1", "search_music", "{}"),
-                        new ToolCall("call_2", "get_song_detail", "{}"))),
+                Message.assistantToolCalls(
+                        "",
+                        List.of(
+                                new ToolCall("call_1", "search_music", "{}"),
+                                new ToolCall("call_2", "get_song_detail", "{}"))),
                 Message.tool("call_1", "search_music", "{\"songs\":[]}"),
                 Message.assistant("给你找了几首"));
 
@@ -101,10 +102,7 @@ class AiChatOrchestratorHistoryTest {
 
     @Test
     void leavesPlainConversationUntouched() throws Exception {
-        List<Message> input = List.of(
-                Message.system("你是音乐助手"),
-                Message.user("你好"),
-                Message.assistant("你好，想听点什么？"));
+        List<Message> input = List.of(Message.system("你是音乐助手"), Message.user("你好"), Message.assistant("你好，想听点什么？"));
 
         List<Message> result = invoke(input);
 

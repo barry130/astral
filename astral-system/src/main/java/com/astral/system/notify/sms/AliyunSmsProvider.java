@@ -1,5 +1,7 @@
 package com.astral.system.notify.sms;
 
+import com.astral.dao.entity.SysSmsProvider;
+import jakarta.annotation.Resource;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -10,12 +12,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-
-import com.astral.dao.entity.SysSmsProvider;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
@@ -50,12 +48,16 @@ public class AliyunSmsProvider implements SmsProvider {
     }
 
     @Override
-    public void send(SysSmsProvider provider, String phone, String signName, String templateCode, Map<String, String> params) throws Exception {
+    public void send(
+            SysSmsProvider provider, String phone, String signName, String templateCode, Map<String, String> params)
+            throws Exception {
         if (signName == null || signName.isBlank()) {
             throw new IllegalArgumentException("阿里云短信缺少签名（模板或 sys_sms_provider.sign_name）");
         }
-        String endpoint = provider.getEndpoint() == null || provider.getEndpoint().isBlank()
-                ? DEFAULT_ENDPOINT : provider.getEndpoint();
+        String endpoint =
+                provider.getEndpoint() == null || provider.getEndpoint().isBlank()
+                        ? DEFAULT_ENDPOINT
+                        : provider.getEndpoint();
         if (!endpoint.startsWith("http")) {
             endpoint = "https://" + endpoint;
         }
@@ -65,7 +67,9 @@ public class AliyunSmsProvider implements SmsProvider {
         p.put("Action", "SendSms");
         p.put("Format", "JSON");
         p.put("PhoneNumbers", phone);
-        p.put("RegionId", provider.getRegion() == null || provider.getRegion().isBlank() ? DEFAULT_REGION : provider.getRegion());
+        p.put(
+                "RegionId",
+                provider.getRegion() == null || provider.getRegion().isBlank() ? DEFAULT_REGION : provider.getRegion());
         p.put("SignName", signName);
         p.put("SignatureMethod", "HMAC-SHA1");
         p.put("SignatureNonce", UUID.randomUUID().toString());
@@ -95,7 +99,9 @@ public class AliyunSmsProvider implements SmsProvider {
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
                 .build();
-        String resp = httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString()).body();
+        String resp = httpClient
+                .send(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+                .body();
         log.info("[Sms][ALIYUN] phone={} template={} resp={}", phone, templateCode, resp);
 
         // {"Code":"OK","BizId":"...","RequestId":"..."}；失败如 isv.BUSINESS_LIMIT_CONTROL

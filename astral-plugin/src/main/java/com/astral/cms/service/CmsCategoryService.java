@@ -12,8 +12,6 @@ import com.astral.cms.mapper.CmsPostMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
 
 /**
  * CMS 分类服务（树形）
@@ -31,8 +30,10 @@ public class CmsCategoryService {
 
     @Resource
     private CmsCategoryMapper categoryMapper;
+
     @Resource
     private CmsPostMapper postMapper;
+
     @Resource
     private CmsPostCategoryMapper postCategoryMapper;
 
@@ -41,7 +42,8 @@ public class CmsCategoryService {
      */
     public List<CmsCategory> adminTree() {
         List<CmsCategory> all = categoryMapper.selectList(new LambdaQueryWrapper<CmsCategory>()
-                .orderByAsc(CmsCategory::getSort).orderByAsc(CmsCategory::getId));
+                .orderByAsc(CmsCategory::getSort)
+                .orderByAsc(CmsCategory::getId));
         Map<Long, Long> postCounts = countVisiblePostsByCategory();
         all.forEach(c -> c.setPostCount(postCounts.getOrDefault(c.getId(), 0L)));
         return buildTree(all);
@@ -86,8 +88,8 @@ public class CmsCategoryService {
 
     public void delete(Long id) {
         getByIdNotNull(id);
-        Long childCount = categoryMapper.selectCount(new LambdaQueryWrapper<CmsCategory>()
-                .eq(CmsCategory::getParentId, id));
+        Long childCount =
+                categoryMapper.selectCount(new LambdaQueryWrapper<CmsCategory>().eq(CmsCategory::getParentId, id));
         if (childCount > 0) {
             throw new CmsException("该分类下存在子分类，请先删除子分类");
         }
@@ -104,12 +106,16 @@ public class CmsCategoryService {
      * 统计引用该分类的未删除文章数（多分类关联表 + 主分类冗余列去重）
      */
     private long countPostsOfCategory(Long categoryId) {
-        Set<Long> postIds = new HashSet<>(postCategoryMapper.selectList(
-                        new LambdaQueryWrapper<CmsPostCategory>()
+        Set<Long> postIds =
+                new HashSet<>(postCategoryMapper
+                        .selectList(new LambdaQueryWrapper<CmsPostCategory>()
                                 .eq(CmsPostCategory::getCategoryId, categoryId))
-                .stream().map(CmsPostCategory::getPostId).toList());
+                        .stream()
+                        .map(CmsPostCategory::getPostId)
+                        .toList());
         // 兼容尚无关联行、只有冗余列的历史数据
-        postMapper.selectList(new LambdaQueryWrapper<CmsPost>()
+        postMapper
+                .selectList(new LambdaQueryWrapper<CmsPost>()
                         .select(CmsPost::getId)
                         .eq(CmsPost::getCategoryId, categoryId)
                         .isNull(CmsPost::getDeleteTime))
@@ -121,9 +127,8 @@ public class CmsCategoryService {
         if (postIds.isEmpty()) {
             return 0L;
         }
-        return postMapper.selectCount(new LambdaQueryWrapper<CmsPost>()
-                .in(CmsPost::getId, postIds)
-                .isNull(CmsPost::getDeleteTime));
+        return postMapper.selectCount(
+                new LambdaQueryWrapper<CmsPost>().in(CmsPost::getId, postIds).isNull(CmsPost::getDeleteTime));
     }
 
     /**
@@ -149,16 +154,18 @@ public class CmsCategoryService {
             }
             publishedIds.add(p.getId());
             if (p.getCategoryId() != null) {
-                categoryToPosts.computeIfAbsent(p.getCategoryId(), k -> new HashSet<>()).add(p.getId());
+                categoryToPosts
+                        .computeIfAbsent(p.getCategoryId(), k -> new HashSet<>())
+                        .add(p.getId());
             }
         }
         // 关联表优先：一篇多分类文章在每个所属分类下都计数
         if (!publishedIds.isEmpty()) {
             List<CmsPostCategory> links = postCategoryMapper.selectList(
-                    new LambdaQueryWrapper<CmsPostCategory>()
-                            .in(CmsPostCategory::getPostId, publishedIds));
+                    new LambdaQueryWrapper<CmsPostCategory>().in(CmsPostCategory::getPostId, publishedIds));
             for (CmsPostCategory link : links) {
-                categoryToPosts.computeIfAbsent(link.getCategoryId(), k -> new HashSet<>())
+                categoryToPosts
+                        .computeIfAbsent(link.getCategoryId(), k -> new HashSet<>())
                         .add(link.getPostId());
             }
         }
@@ -213,8 +220,8 @@ public class CmsCategoryService {
         if (blankToNull(slug) == null) {
             return;
         }
-        LambdaQueryWrapper<CmsCategory> lw = new LambdaQueryWrapper<CmsCategory>()
-                .eq(CmsCategory::getSlug, slug.trim());
+        LambdaQueryWrapper<CmsCategory> lw =
+                new LambdaQueryWrapper<CmsCategory>().eq(CmsCategory::getSlug, slug.trim());
         if (excludeId != null) {
             lw.ne(CmsCategory::getId, excludeId);
         }

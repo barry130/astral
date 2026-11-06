@@ -94,25 +94,36 @@ public class McpToolExecutor implements AiToolHandler {
 
     @Override
     public AiToolDef definition() {
-        return new AiToolDef(tool.getToolCode(), tool.getName(), tool.getDescription(), HANDLER_KEY,
-                tool.getRiskLevel(), tool.getApprovalPolicy(), AiJson.splitCsv(tool.getClientTypes()),
-                AiJson.splitCsv(tool.getPermissionCodes()), tool.getArgumentsSchema(),
-                tool.getResultSchema(), tool.getSideEffects());
+        return new AiToolDef(
+                tool.getToolCode(),
+                tool.getName(),
+                tool.getDescription(),
+                HANDLER_KEY,
+                tool.getRiskLevel(),
+                tool.getApprovalPolicy(),
+                AiJson.splitCsv(tool.getClientTypes()),
+                AiJson.splitCsv(tool.getPermissionCodes()),
+                tool.getArgumentsSchema(),
+                tool.getResultSchema(),
+                tool.getSideEffects());
     }
 
     @Override
     public AiToolResult execute(AiToolContext context) {
         AiProperties.HttpTool config = properties == null ? null : properties.getHttpTool();
         int timeoutSeconds = config == null ? 20 : config.getMcpTimeoutSeconds();
-        try (McpClient client = McpClient.connect(server.getUrl(), server.getHeadersJson(),
+        try (McpClient client = McpClient.connect(
+                server.getUrl(),
+                server.getHeadersJson(),
                 config == null ? null : config.getAllowedHosts(),
-                config == null ? null : config.getSecrets(), timeoutSeconds)) {
-            ObjectNode arguments = context.arguments() == null
-                    ? AiJson.mapper().createObjectNode() : context.arguments();
+                config == null ? null : config.getSecrets(),
+                timeoutSeconds)) {
+            ObjectNode arguments =
+                    context.arguments() == null ? AiJson.mapper().createObjectNode() : context.arguments();
             McpClient.McpCallResult result = client.callTool(toolName, arguments);
             if (result.error()) {
-                return AiToolResult.failed("MCP 工具 " + toolName + " 返回错误："
-                        + AiJson.truncate(result.text(), MAX_SUMMARY));
+                return AiToolResult.failed(
+                        "MCP 工具 " + toolName + " 返回错误：" + AiJson.truncate(result.text(), MAX_SUMMARY));
             }
             String text = result.text();
             String summary = text == null || text.isBlank()
@@ -124,8 +135,8 @@ public class McpToolExecutor implements AiToolHandler {
             return AiToolResult.failed(e.getMessage());
         } catch (Exception e) {
             log.warn("[AI] MCP 工具 {} 执行异常: {}", tool.getToolCode(), e.getMessage());
-            return AiToolResult.failed("MCP 工具执行失败：" + (e.getMessage() == null
-                    ? e.getClass().getSimpleName() : e.getMessage()));
+            return AiToolResult.failed(
+                    "MCP 工具执行失败：" + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
         }
     }
 

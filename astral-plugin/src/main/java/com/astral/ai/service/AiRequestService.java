@@ -8,16 +8,15 @@ import com.astral.ai.entity.AiAgentVersionEntity;
 import com.astral.ai.entity.AiRequestEntity;
 import com.astral.ai.mapper.AiRequestMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.lang.management.ManagementFactory;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * AI 请求生命周期服务。
@@ -57,9 +56,15 @@ public class AiRequestService {
      * @return 已落库的请求
      */
     @Transactional(rollbackFor = Exception.class)
-    public AiRequestEntity create(Long conversationId, AiAgentEntity agent, AiAgentVersionEntity version,
-                                  Long userId, String clientType, String idempotencyKey,
-                                  String inputSnapshot, String contextSnapshot) {
+    public AiRequestEntity create(
+            Long conversationId,
+            AiAgentEntity agent,
+            AiAgentVersionEntity version,
+            Long userId,
+            String clientType,
+            String idempotencyKey,
+            String inputSnapshot,
+            String contextSnapshot) {
         AiRequestEntity entity = new AiRequestEntity();
         entity.setConversationId(conversationId);
         entity.setAgentId(agent.getId());
@@ -122,8 +127,15 @@ public class AiRequestService {
     }
 
     /** 管理端分页查询 */
-    public List<AiRequestEntity> search(String status, Long agentId, Long userId, String clientType,
-                                        LocalDateTime from, LocalDateTime to, int pageNum, int pageSize) {
+    public List<AiRequestEntity> search(
+            String status,
+            Long agentId,
+            Long userId,
+            String clientType,
+            LocalDateTime from,
+            LocalDateTime to,
+            int pageNum,
+            int pageSize) {
         int size = Math.max(1, Math.min(MAX_PAGE_SIZE, pageSize));
         int num = Math.max(1, pageNum);
         return requestMapper.selectList(new LambdaQueryWrapper<AiRequestEntity>()
@@ -138,8 +150,8 @@ public class AiRequestService {
     }
 
     /** 统计满足条件的请求数 */
-    public long count(String status, Long agentId, Long userId, String clientType,
-                      LocalDateTime from, LocalDateTime to) {
+    public long count(
+            String status, Long agentId, Long userId, String clientType, LocalDateTime from, LocalDateTime to) {
         Long total = requestMapper.selectCount(new LambdaQueryWrapper<AiRequestEntity>()
                 .eq(status != null && !status.isBlank(), AiRequestEntity::getStatus, status)
                 .eq(agentId != null, AiRequestEntity::getAgentId, agentId)
@@ -190,8 +202,8 @@ public class AiRequestService {
     /** 置为等待工具/等待确认 */
     public void markWaiting(Long requestId, boolean approval) {
         AiRequestEntity entity = require(requestId);
-        entity.setStatus(approval ? AiConstants.RequestStatus.WAITING_APPROVAL
-                : AiConstants.RequestStatus.WAITING_TOOL);
+        entity.setStatus(
+                approval ? AiConstants.RequestStatus.WAITING_APPROVAL : AiConstants.RequestStatus.WAITING_TOOL);
         requestMapper.updateById(entity);
     }
 
@@ -267,7 +279,9 @@ public class AiRequestService {
     /** 正在运行（未终态）的请求数 */
     public long countRunning() {
         Long total = requestMapper.selectCount(new LambdaQueryWrapper<AiRequestEntity>()
-                .in(AiRequestEntity::getStatus, AiConstants.RequestStatus.RUNNING,
+                .in(
+                        AiRequestEntity::getStatus,
+                        AiConstants.RequestStatus.RUNNING,
                         AiConstants.RequestStatus.QUEUED,
                         AiConstants.RequestStatus.WAITING_TOOL,
                         AiConstants.RequestStatus.WAITING_APPROVAL));
@@ -293,11 +307,12 @@ public class AiRequestService {
         // 新请求已经开始流入：不带时间下限会把刚建好的活请求误标成「重启中断」，编排线程
         // 随后又会把状态盖回 SUCCEEDED，留下永远清不掉的脏 error_code（实测 req 15032）。
         LocalDateTime bootTime = LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(ManagementFactory.getRuntimeMXBean().getStartTime()),
-                ZoneId.systemDefault());
+                Instant.ofEpochMilli(ManagementFactory.getRuntimeMXBean().getStartTime()), ZoneId.systemDefault());
         List<AiRequestEntity> stale = requestMapper.selectList(new LambdaQueryWrapper<AiRequestEntity>()
                 .lt(AiRequestEntity::getCreateTime, bootTime)
-                .in(AiRequestEntity::getStatus, AiConstants.RequestStatus.QUEUED,
+                .in(
+                        AiRequestEntity::getStatus,
+                        AiConstants.RequestStatus.QUEUED,
                         AiConstants.RequestStatus.RUNNING,
                         AiConstants.RequestStatus.WAITING_TOOL,
                         AiConstants.RequestStatus.WAITING_APPROVAL));
@@ -312,9 +327,9 @@ public class AiRequestService {
             List<com.astral.ai.entity.AiMessageEntity> pending =
                     messageMapper.selectList(new LambdaQueryWrapper<com.astral.ai.entity.AiMessageEntity>()
                             .eq(com.astral.ai.entity.AiMessageEntity::getRequestId, entity.getId())
-                            .eq(com.astral.ai.entity.AiMessageEntity::getRole,
-                                    AiConstants.MessageRole.ASSISTANT)
-                            .in(com.astral.ai.entity.AiMessageEntity::getStatus,
+                            .eq(com.astral.ai.entity.AiMessageEntity::getRole, AiConstants.MessageRole.ASSISTANT)
+                            .in(
+                                    com.astral.ai.entity.AiMessageEntity::getStatus,
                                     AiConstants.MessageStatus.PENDING,
                                     AiConstants.MessageStatus.STREAMING));
             for (com.astral.ai.entity.AiMessageEntity message : pending) {
@@ -332,7 +347,8 @@ public class AiRequestService {
         List<com.astral.ai.entity.AiMessageEntity> orphans =
                 messageMapper.selectList(new LambdaQueryWrapper<com.astral.ai.entity.AiMessageEntity>()
                         .eq(com.astral.ai.entity.AiMessageEntity::getRole, AiConstants.MessageRole.ASSISTANT)
-                        .in(com.astral.ai.entity.AiMessageEntity::getStatus,
+                        .in(
+                                com.astral.ai.entity.AiMessageEntity::getStatus,
                                 AiConstants.MessageStatus.PENDING,
                                 AiConstants.MessageStatus.STREAMING)
                         .isNotNull(com.astral.ai.entity.AiMessageEntity::getRequestId));

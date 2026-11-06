@@ -17,9 +17,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * CMS 文章服务
@@ -40,21 +39,24 @@ public class CmsPostService {
 
     @Resource
     private CmsPostMapper postMapper;
+
     @Resource
     private CmsCategoryMapper categoryMapper;
+
     @Resource
     private CmsTagMapper tagMapper;
+
     @Resource
     private CmsPostTagMapper postTagMapper;
+
     @Resource
     private CmsPostCategoryMapper postCategoryMapper;
 
     // ==================== 管理端 ====================
 
-    public Page<CmsPost> adminPage(int pageNum, int pageSize, String status, Long categoryId,
-                                   Long tagId, String keyword) {
-        LambdaQueryWrapper<CmsPost> lw = new LambdaQueryWrapper<CmsPost>()
-                .isNull(CmsPost::getDeleteTime);
+    public Page<CmsPost> adminPage(
+            int pageNum, int pageSize, String status, Long categoryId, Long tagId, String keyword) {
+        LambdaQueryWrapper<CmsPost> lw = new LambdaQueryWrapper<CmsPost>().isNull(CmsPost::getDeleteTime);
         if (notBlank(status)) {
             lw.eq(CmsPost::getStatus, status.trim());
         }
@@ -62,9 +64,13 @@ public class CmsPostService {
             appendCategoryFilter(lw, categoryId);
         }
         if (tagId != null) {
-            List<Long> postIds = postTagMapper.selectList(new LambdaQueryWrapper<CmsPostTag>()
-                            .eq(CmsPostTag::getTagId, tagId))
-                    .stream().map(CmsPostTag::getPostId).distinct().toList();
+            List<Long> postIds =
+                    postTagMapper
+                            .selectList(new LambdaQueryWrapper<CmsPostTag>().eq(CmsPostTag::getTagId, tagId))
+                            .stream()
+                            .map(CmsPostTag::getPostId)
+                            .distinct()
+                            .toList();
             if (postIds.isEmpty()) {
                 return new Page<>(pageNum, Math.max(pageSize, 1));
             }
@@ -74,8 +80,8 @@ public class CmsPostService {
             lw.like(CmsPost::getTitle, keyword.trim());
         }
         lw.orderByDesc(CmsPost::getUpdateTime);
-        Page<CmsPost> page = postMapper.selectPage(new Page<>(Math.max(pageNum, 1),
-                Math.min(Math.max(pageSize, 1), 100)), lw);
+        Page<CmsPost> page =
+                postMapper.selectPage(new Page<>(Math.max(pageNum, 1), Math.min(Math.max(pageSize, 1), 100)), lw);
         fillCategoryAndTags(page.getRecords());
         return page;
     }
@@ -119,8 +125,7 @@ public class CmsPostService {
         checkSlugUnique(dto.getSlug(), id);
         List<Long> categoryIds = resolveCategoryIds(dto);
         LocalDateTime publishedAt = dto.getPublishedAt();
-        if (isPubliclyVisible(status)
-                && exist.getPublishedAt() == null && publishedAt == null) {
+        if (isPubliclyVisible(status) && exist.getPublishedAt() == null && publishedAt == null) {
             publishedAt = LocalDateTime.now();
         }
         LambdaUpdateWrapper<CmsPost> uw = new LambdaUpdateWrapper<CmsPost>()
@@ -142,9 +147,8 @@ public class CmsPostService {
     public void changeStatus(Long id, String status) {
         CmsPost exist = getByIdNotNull(id);
         String next = validateStatus(status);
-        LambdaUpdateWrapper<CmsPost> uw = new LambdaUpdateWrapper<CmsPost>()
-                .eq(CmsPost::getId, id)
-                .set(CmsPost::getStatus, next);
+        LambdaUpdateWrapper<CmsPost> uw =
+                new LambdaUpdateWrapper<CmsPost>().eq(CmsPost::getId, id).set(CmsPost::getStatus, next);
         if (isPubliclyVisible(next) && exist.getPublishedAt() == null) {
             uw.set(CmsPost::getPublishedAt, LocalDateTime.now());
         }
@@ -159,16 +163,13 @@ public class CmsPostService {
                 .set(CmsPost::getDeleteTime, LocalDateTime.now());
         postMapper.update(null, uw);
         postTagMapper.delete(new LambdaQueryWrapper<CmsPostTag>().eq(CmsPostTag::getPostId, id));
-        postCategoryMapper.delete(new LambdaQueryWrapper<CmsPostCategory>()
-                .eq(CmsPostCategory::getPostId, id));
+        postCategoryMapper.delete(new LambdaQueryWrapper<CmsPostCategory>().eq(CmsPostCategory::getPostId, id));
     }
 
     // ==================== 前台公开 ====================
 
-    public Page<CmsPost> publicPage(int pageNum, int pageSize, String categorySlug,
-                                    String tagSlug, String keyword) {
-        LambdaQueryWrapper<CmsPost> lw = new LambdaQueryWrapper<CmsPost>()
-                .isNull(CmsPost::getDeleteTime);
+    public Page<CmsPost> publicPage(int pageNum, int pageSize, String categorySlug, String tagSlug, String keyword) {
+        LambdaQueryWrapper<CmsPost> lw = new LambdaQueryWrapper<CmsPost>().isNull(CmsPost::getDeleteTime);
         appendVisibilityFilter(lw);
         if (notBlank(categorySlug)) {
             CmsCategory category = resolveCategory(categorySlug.trim());
@@ -182,9 +183,13 @@ public class CmsPostService {
             if (tag == null) {
                 return new Page<>(pageNum, Math.max(pageSize, 1));
             }
-            List<Long> postIds = postTagMapper.selectList(new LambdaQueryWrapper<CmsPostTag>()
-                            .eq(CmsPostTag::getTagId, tag.getId()))
-                    .stream().map(CmsPostTag::getPostId).distinct().toList();
+            List<Long> postIds =
+                    postTagMapper
+                            .selectList(new LambdaQueryWrapper<CmsPostTag>().eq(CmsPostTag::getTagId, tag.getId()))
+                            .stream()
+                            .map(CmsPostTag::getPostId)
+                            .distinct()
+                            .toList();
             if (postIds.isEmpty()) {
                 return new Page<>(pageNum, Math.max(pageSize, 1));
             }
@@ -193,11 +198,9 @@ public class CmsPostService {
         if (notBlank(keyword)) {
             lw.like(CmsPost::getTitle, keyword.trim());
         }
-        lw.orderByDesc(CmsPost::getIsTop)
-                .orderByDesc(CmsPost::getPublishedAt)
-                .orderByDesc(CmsPost::getId);
-        Page<CmsPost> page = postMapper.selectPage(new Page<>(Math.max(pageNum, 1),
-                Math.min(Math.max(pageSize, 1), 50)), lw);
+        lw.orderByDesc(CmsPost::getIsTop).orderByDesc(CmsPost::getPublishedAt).orderByDesc(CmsPost::getId);
+        Page<CmsPost> page =
+                postMapper.selectPage(new Page<>(Math.max(pageNum, 1), Math.min(Math.max(pageSize, 1), 50)), lw);
         page.getRecords().forEach(p -> p.setContent(null));
         fillCategoryAndTags(page.getRecords());
         return page;
@@ -213,13 +216,14 @@ public class CmsPostService {
                     .isNull(CmsPost::getDeleteTime)
                     .last("LIMIT 1"));
         }
-        if (post == null || post.getDeleteTime() != null
-                || !CmsVisibility.isVisible(post.getStatus())) {
+        if (post == null || post.getDeleteTime() != null || !CmsVisibility.isVisible(post.getStatus())) {
             throw new CmsException(404, "文章不存在或未发布");
         }
-        postMapper.update(null, new LambdaUpdateWrapper<CmsPost>()
-                .eq(CmsPost::getId, post.getId())
-                .setSql("views = views + 1"));
+        postMapper.update(
+                null,
+                new LambdaUpdateWrapper<CmsPost>()
+                        .eq(CmsPost::getId, post.getId())
+                        .setSql("views = views + 1"));
         fillCategoryAndTags(List.of(post));
         return post;
     }
@@ -264,10 +268,12 @@ public class CmsPostService {
      * <p>关联表优先；同时兼容只有 cms_post.category_id 冗余列、尚无关联行的历史数据。</p>
      */
     private void appendCategoryFilter(LambdaQueryWrapper<CmsPost> lw, Long categoryId) {
-        List<Long> postIds = postCategoryMapper.selectList(
-                        new LambdaQueryWrapper<CmsPostCategory>()
-                                .eq(CmsPostCategory::getCategoryId, categoryId))
-                .stream().map(CmsPostCategory::getPostId).distinct().toList();
+        List<Long> postIds = postCategoryMapper
+                .selectList(new LambdaQueryWrapper<CmsPostCategory>().eq(CmsPostCategory::getCategoryId, categoryId))
+                .stream()
+                .map(CmsPostCategory::getPostId)
+                .distinct()
+                .toList();
         if (postIds.isEmpty()) {
             lw.eq(CmsPost::getCategoryId, categoryId);
             return;
@@ -301,8 +307,7 @@ public class CmsPostService {
     }
 
     private void saveCategories(Long postId, List<Long> categoryIds) {
-        postCategoryMapper.delete(new LambdaQueryWrapper<CmsPostCategory>()
-                .eq(CmsPostCategory::getPostId, postId));
+        postCategoryMapper.delete(new LambdaQueryWrapper<CmsPostCategory>().eq(CmsPostCategory::getPostId, postId));
         if (categoryIds == null || categoryIds.isEmpty()) {
             return;
         }
@@ -324,8 +329,8 @@ public class CmsPostService {
         }
         // 文章 → 分类ID集合（关联表为准，回退冗余列）
         Map<Long, List<Long>> categoryIdsByPost = new HashMap<>();
-        postCategoryMapper.selectList(new LambdaQueryWrapper<CmsPostCategory>()
-                        .in(CmsPostCategory::getPostId, postIds))
+        postCategoryMapper
+                .selectList(new LambdaQueryWrapper<CmsPostCategory>().in(CmsPostCategory::getPostId, postIds))
                 .forEach(pc -> categoryIdsByPost
                         .computeIfAbsent(pc.getPostId(), k -> new ArrayList<>())
                         .add(pc.getCategoryId()));
@@ -344,8 +349,8 @@ public class CmsPostService {
         // 文章 → 标签
         Map<Long, List<Long>> tagIdsByPost = new HashMap<>();
         Set<Long> allTagIds = new HashSet<>();
-        postTagMapper.selectList(new LambdaQueryWrapper<CmsPostTag>()
-                        .in(CmsPostTag::getPostId, postIds))
+        postTagMapper
+                .selectList(new LambdaQueryWrapper<CmsPostTag>().in(CmsPostTag::getPostId, postIds))
                 .forEach(pt -> tagIdsByPost
                         .computeIfAbsent(pt.getPostId(), k -> new ArrayList<>())
                         .add(pt.getTagId()));
@@ -376,7 +381,9 @@ public class CmsPostService {
             p.setCategories(refs);
             p.setCategoryName(refs.isEmpty() ? null : refs.get(0).getName());
             p.setTags(tagIdsByPost.getOrDefault(p.getId(), List.of()).stream()
-                    .map(tagMap::get).filter(Objects::nonNull).toList());
+                    .map(tagMap::get)
+                    .filter(Objects::nonNull)
+                    .toList());
         }
     }
 
@@ -385,12 +392,14 @@ public class CmsPostService {
         if (tagIds == null || tagIds.isEmpty()) {
             return;
         }
-        List<Long> distinct = tagIds.stream().filter(Objects::nonNull).distinct().toList();
+        List<Long> distinct =
+                tagIds.stream().filter(Objects::nonNull).distinct().toList();
         if (distinct.isEmpty()) {
             return;
         }
         Set<Long> existIds = tagMapper.selectBatchIds(distinct).stream()
-                .map(CmsTag::getId).collect(java.util.stream.Collectors.toSet());
+                .map(CmsTag::getId)
+                .collect(java.util.stream.Collectors.toSet());
         for (Long tagId : distinct) {
             if (!existIds.contains(tagId)) {
                 continue;
@@ -411,8 +420,10 @@ public class CmsPostService {
     }
 
     private String validateStatus(String status) {
-        if (CmsPost.STATUS_DRAFT.equals(status) || CmsPost.STATUS_PUBLISHED.equals(status)
-                || CmsPost.STATUS_PRIVATE.equals(status) || CmsPost.STATUS_HIDDEN.equals(status)) {
+        if (CmsPost.STATUS_DRAFT.equals(status)
+                || CmsPost.STATUS_PUBLISHED.equals(status)
+                || CmsPost.STATUS_PRIVATE.equals(status)
+                || CmsPost.STATUS_HIDDEN.equals(status)) {
             return status;
         }
         throw new CmsException("不支持的内容状态：" + status);
@@ -438,15 +449,16 @@ public class CmsPostService {
             return categoryMapper.selectById(Long.parseLong(slugOrId));
         }
         return categoryMapper.selectOne(new LambdaQueryWrapper<CmsCategory>()
-                .eq(CmsCategory::getSlug, slugOrId).last("LIMIT 1"));
+                .eq(CmsCategory::getSlug, slugOrId)
+                .last("LIMIT 1"));
     }
 
     private CmsTag resolveTag(String slugOrId) {
         if (slugOrId.matches("\\d+")) {
             return tagMapper.selectById(Long.parseLong(slugOrId));
         }
-        return tagMapper.selectOne(new LambdaQueryWrapper<CmsTag>()
-                .eq(CmsTag::getSlug, slugOrId).last("LIMIT 1"));
+        return tagMapper.selectOne(
+                new LambdaQueryWrapper<CmsTag>().eq(CmsTag::getSlug, slugOrId).last("LIMIT 1"));
     }
 
     /**
@@ -463,8 +475,8 @@ public class CmsPostService {
             postIds.add(p.getId());
         }
         Map<Long, List<Long>> categoryIdsByPost = new HashMap<>();
-        postCategoryMapper.selectList(new LambdaQueryWrapper<CmsPostCategory>()
-                        .in(CmsPostCategory::getPostId, postIds))
+        postCategoryMapper
+                .selectList(new LambdaQueryWrapper<CmsPostCategory>().in(CmsPostCategory::getPostId, postIds))
                 .forEach(pc -> categoryIdsByPost
                         .computeIfAbsent(pc.getPostId(), k -> new ArrayList<>())
                         .add(pc.getCategoryId()));

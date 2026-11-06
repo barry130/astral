@@ -1,14 +1,5 @@
 package com.astral.system.controller;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
@@ -33,6 +24,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,8 +66,16 @@ public class NotifyRuleController {
     private static final String PERM_EDIT = "admin:system:notify:rule:edit";
 
     private static final Set<String> KNOWN_PLATFORMS = Set.of(
-            "all", "app-android", "app-ios", "app-windows", "app-linux", "app-macos",
-            "app-harmony", "web", "app", "pc");
+            "all",
+            "app-android",
+            "app-ios",
+            "app-windows",
+            "app-linux",
+            "app-macos",
+            "app-harmony",
+            "web",
+            "app",
+            "pc");
 
     private static final Set<String> RECIPIENT_TYPES = Set.of("FIXED", "PAYLOAD_FIELD", "ROLE");
 
@@ -92,24 +99,27 @@ public class NotifyRuleController {
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/event")
     public Result<List<NotifyEventVo>> events() {
-        List<NotifyEventVo> list = NotifyEventRegistry.list().stream().map(this::toEventVo).toList();
+        List<NotifyEventVo> list =
+                NotifyEventRegistry.list().stream().map(this::toEventVo).toList();
         return Result.success(list);
     }
 
     @Operation(summary = "按事件 + 渠道查询可选模板（规则编辑器的模板下拉数据源，返回模板 id）")
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/template")
-    public Result<java.util.List<java.util.Map<String, Object>>> templates(@RequestParam String eventCode,
-                                                                           @RequestParam String channel) {
+    public Result<java.util.List<java.util.Map<String, Object>>> templates(
+            @RequestParam String eventCode, @RequestParam String channel) {
         String ch = channel == null ? "" : channel.trim().toUpperCase();
         java.util.List<java.util.Map<String, Object>> out = new java.util.ArrayList<>();
         if ("SMS".equals(ch)) {
-            smsTemplateMapper.selectList(new LambdaQueryWrapper<SysSmsTemplate>()
+            smsTemplateMapper
+                    .selectList(new LambdaQueryWrapper<SysSmsTemplate>()
                             .eq(SysSmsTemplate::getEventCode, eventCode)
                             .orderByAsc(SysSmsTemplate::getId))
                     .forEach(t -> out.add(templateOption(t.getId(), t.getTemplateCode(), t.getTemplateName())));
         } else if ("EMAIL".equals(ch) || "INAPP".equals(ch)) {
-            mailTemplateMapper.selectList(new LambdaQueryWrapper<SysMailTemplate>()
+            mailTemplateMapper
+                    .selectList(new LambdaQueryWrapper<SysMailTemplate>()
                             .eq(SysMailTemplate::getScene, eventCode)
                             .eq(SysMailTemplate::getChannel, ch)
                             .orderByAsc(SysMailTemplate::getId))
@@ -131,12 +141,14 @@ public class NotifyRuleController {
     @Operation(summary = "分页查询")
     @RequiresPermission(value = PERM_VIEW, name = "订阅规则查看", description = "查看事件订阅规则")
     @GetMapping("/rule/page")
-    public Result<Page<NotifyRuleVo>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                           @RequestParam(defaultValue = "10") Integer pageSize,
-                                           @RequestParam(required = false) String eventCode,
-                                           @RequestParam(required = false) Integer enabled,
-                                           @RequestParam(required = false) String keyword) {
-        Page<SysNotifyRule> page = ruleService.page(new Page<>(pageNum, pageSize),
+    public Result<Page<NotifyRuleVo>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String eventCode,
+            @RequestParam(required = false) Integer enabled,
+            @RequestParam(required = false) String keyword) {
+        Page<SysNotifyRule> page = ruleService.page(
+                new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<SysNotifyRule>()
                         .eq(StringUtils.hasText(eventCode), SysNotifyRule::getEventCode, eventCode)
                         .eq(enabled != null, SysNotifyRule::getEnabled, enabled)
@@ -201,10 +213,10 @@ public class NotifyRuleController {
     public Result<Void> delete(@PathVariable Long id) {
         List<SysNotifyRuleChannel> channels = ruleChannelMapper.selectList(
                 new LambdaQueryWrapper<SysNotifyRuleChannel>().eq(SysNotifyRuleChannel::getRuleId, id));
-        channels.forEach(ch -> ruleRecipientMapper.delete(new LambdaQueryWrapper<SysNotifyRuleRecipient>()
-                .eq(SysNotifyRuleRecipient::getChannelId, ch.getId())));
-        ruleChannelMapper.delete(new LambdaQueryWrapper<SysNotifyRuleChannel>()
-                .eq(SysNotifyRuleChannel::getRuleId, id));
+        channels.forEach(ch -> ruleRecipientMapper.delete(
+                new LambdaQueryWrapper<SysNotifyRuleRecipient>().eq(SysNotifyRuleRecipient::getChannelId, ch.getId())));
+        ruleChannelMapper.delete(
+                new LambdaQueryWrapper<SysNotifyRuleChannel>().eq(SysNotifyRuleChannel::getRuleId, id));
         ruleService.removeById(id);
         return Result.success();
     }
@@ -236,7 +248,8 @@ public class NotifyRuleController {
         if (!StringUtils.hasText(dto.getEventCode())) {
             throw new BusinessException("NOTIFY009");
         }
-        Long dup = ruleService.lambdaQuery()
+        Long dup = ruleService
+                .lambdaQuery()
                 .eq(SysNotifyRule::getRuleName, dto.getRuleName().trim())
                 .ne(id != null, SysNotifyRule::getId, id)
                 .count();
@@ -293,7 +306,9 @@ public class NotifyRuleController {
             throw new BusinessException("NOTIFY013", channelCode);
         }
         for (NotifyRuleSaveDto.RecipientDto recipient : channel.getRecipients()) {
-            String type = recipient.getType() == null ? "" : recipient.getType().trim().toUpperCase(Locale.ROOT);
+            String type = recipient.getType() == null
+                    ? ""
+                    : recipient.getType().trim().toUpperCase(Locale.ROOT);
             if (!RECIPIENT_TYPES.contains(type)) {
                 throw new BusinessException("NOTIFY005", recipient.getType());
             }
@@ -301,7 +316,8 @@ public class NotifyRuleController {
                 throw new BusinessException("NOTIFY006");
             }
             if ("PAYLOAD_FIELD".equals(type)
-                    && event.payloadFieldNames().stream().noneMatch(f -> f.equals(recipient.getValue().trim()))) {
+                    && event.payloadFieldNames().stream()
+                            .noneMatch(f -> f.equals(recipient.getValue().trim()))) {
                 throw new BusinessException("NOTIFY007", recipient.getValue());
             }
         }
@@ -332,8 +348,8 @@ public class NotifyRuleController {
         List<SysNotifyRuleChannel> existing = ruleChannelMapper.selectList(
                 new LambdaQueryWrapper<SysNotifyRuleChannel>().eq(SysNotifyRuleChannel::getRuleId, ruleId));
         Map<String, SysNotifyRuleChannel> byCode = existing.stream()
-                .collect(Collectors.toMap(c -> c.getChannel().toUpperCase(Locale.ROOT), Function.identity(),
-                        (a, b) -> a));
+                .collect(Collectors.toMap(
+                        c -> c.getChannel().toUpperCase(Locale.ROOT), Function.identity(), (a, b) -> a));
         Set<String> keep = new LinkedHashSet<>();
         for (NotifyRuleSaveDto.ChannelDto channel : dto.getChannels()) {
             String code = channel.getChannel().trim().toUpperCase(Locale.ROOT);
@@ -392,8 +408,11 @@ public class NotifyRuleController {
             return null;
         }
         String normalized = java.util.Arrays.stream(platform.split(","))
-                .map(String::trim).map(s -> s.toLowerCase(Locale.ROOT)).filter(s -> !s.isEmpty())
-                .distinct().collect(Collectors.joining(","));
+                .map(String::trim)
+                .map(s -> s.toLowerCase(Locale.ROOT))
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .collect(Collectors.joining(","));
         return normalized.isBlank() ? null : normalized;
     }
 
@@ -407,12 +426,14 @@ public class NotifyRuleController {
         vo.setChannels(def.channels());
         vo.setRequiredChannels(def.requiredChannels());
         vo.setPayloadKeys(def.payloadFieldNames());
-        vo.setPayloadFields(def.payloadFields().stream().map(f -> {
-            NotifyEventVo.FieldVo field = new NotifyEventVo.FieldVo();
-            field.setName(f.name());
-            field.setDescription(f.description());
-            return field;
-        }).toList());
+        vo.setPayloadFields(def.payloadFields().stream()
+                .map(f -> {
+                    NotifyEventVo.FieldVo field = new NotifyEventVo.FieldVo();
+                    field.setName(f.name());
+                    field.setDescription(f.description());
+                    return field;
+                })
+                .toList());
         return vo;
     }
 
@@ -424,13 +445,17 @@ public class NotifyRuleController {
         List<Long> ruleIds = rules.stream().map(SysNotifyRule::getId).toList();
         List<SysNotifyRuleChannel> channels = ruleChannelMapper.selectList(
                 new LambdaQueryWrapper<SysNotifyRuleChannel>().in(SysNotifyRuleChannel::getRuleId, ruleIds));
-        List<Long> channelIds = channels.stream().map(SysNotifyRuleChannel::getId).toList();
-        Map<Long, List<SysNotifyRuleRecipient>> recipientsByChannel = channelIds.isEmpty() ? Map.of()
-                : ruleRecipientMapper.selectList(new LambdaQueryWrapper<SysNotifyRuleRecipient>()
-                        .in(SysNotifyRuleRecipient::getChannelId, channelIds))
-                .stream().collect(Collectors.groupingBy(SysNotifyRuleRecipient::getChannelId));
-        Map<Long, List<SysNotifyRuleChannel>> channelsByRule = channels.stream()
-                .collect(Collectors.groupingBy(SysNotifyRuleChannel::getRuleId));
+        List<Long> channelIds =
+                channels.stream().map(SysNotifyRuleChannel::getId).toList();
+        Map<Long, List<SysNotifyRuleRecipient>> recipientsByChannel = channelIds.isEmpty()
+                ? Map.of()
+                : ruleRecipientMapper
+                        .selectList(new LambdaQueryWrapper<SysNotifyRuleRecipient>()
+                                .in(SysNotifyRuleRecipient::getChannelId, channelIds))
+                        .stream()
+                        .collect(Collectors.groupingBy(SysNotifyRuleRecipient::getChannelId));
+        Map<Long, List<SysNotifyRuleChannel>> channelsByRule =
+                channels.stream().collect(Collectors.groupingBy(SysNotifyRuleChannel::getRuleId));
         List<NotifyRuleVo> out = new ArrayList<>(rules.size());
         for (SysNotifyRule rule : rules) {
             NotifyRuleVo vo = new NotifyRuleVo();
@@ -438,7 +463,8 @@ public class NotifyRuleController {
             vo.setRuleName(rule.getRuleName());
             vo.setEventCode(rule.getEventCode());
             vo.setEventName(NotifyEventRegistry.find(rule.getEventCode())
-                    .map(NotifyEventDef::name).orElse(rule.getEventCode()));
+                    .map(NotifyEventDef::name)
+                    .orElse(rule.getEventCode()));
             vo.setRemark(rule.getRemark());
             vo.setEnabled(rule.getEnabled());
             vo.setUpdateTime(rule.getUpdateTime());
@@ -461,12 +487,14 @@ public class NotifyRuleController {
                         }
                     }
                 }
-                cv.setRecipients(recipientsByChannel.getOrDefault(channel.getId(), List.of()).stream().map(r -> {
-                    NotifyRuleVo.RecipientVo rv = new NotifyRuleVo.RecipientVo();
-                    rv.setType(r.getRecipientType());
-                    rv.setValue(r.getRecipientValue());
-                    return rv;
-                }).toList());
+                cv.setRecipients(recipientsByChannel.getOrDefault(channel.getId(), List.of()).stream()
+                        .map(r -> {
+                            NotifyRuleVo.RecipientVo rv = new NotifyRuleVo.RecipientVo();
+                            rv.setType(r.getRecipientType());
+                            rv.setValue(r.getRecipientValue());
+                            return rv;
+                        })
+                        .toList());
                 channelVos.add(cv);
             }
             vo.setChannels(channelVos);

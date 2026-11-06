@@ -1,23 +1,22 @@
 package com.astral.monitor.service;
 
+import cn.hutool.crypto.digest.DigestUtil;
+import com.astral.common.util.ClientHeaders;
 import com.astral.dao.entity.StatDevice;
 import com.astral.dao.mapper.StatDeviceMapper;
 import com.astral.dao.mapper.StatErrorLogMapper;
 import com.astral.dao.mapper.StatMetricHourlyMapper;
 import com.astral.dao.mapper.StatPageHourlyMapper;
-import com.astral.common.util.ClientHeaders;
 import com.astral.monitor.dto.StatEventDTO;
-import cn.hutool.crypto.digest.DigestUtil;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 统计数据接入服务
@@ -47,8 +46,7 @@ public class StatIngestService {
     private static final long TS_MAX_SKEW_MS = 7L * 24 * 3600 * 1000;
 
     /** 匿名上报批次的并发准入上限（见 {@link #processBatchAsync}） */
-    private static final int MAX_CONCURRENT_BATCHES =
-            Integer.getInteger("astral.stat.max-concurrent-batches", 4);
+    private static final int MAX_CONCURRENT_BATCHES = Integer.getInteger("astral.stat.max-concurrent-batches", 4);
 
     /** 匿名上报批次并发信号量：满即拒绝（不排队，见 processBatchAsync） */
     private static final java.util.concurrent.Semaphore IN_FLIGHT =
@@ -79,8 +77,7 @@ public class StatIngestService {
         // 这里做「准入」而不是阻塞排队：排队只会把虚拟线程也堆起来，
         // 丢一批匿名统计远比拖垮业务接口划算（客户端失败即回队列重试，不丢数据）。
         if (!IN_FLIGHT.tryAcquire()) {
-            log.warn("[stat] 并发上报已满（{}），丢弃本批 total={} ip={}",
-                    MAX_CONCURRENT_BATCHES, events.size(), ip);
+            log.warn("[stat] 并发上报已满（{}），丢弃本批 total={} ip={}", MAX_CONCURRENT_BATCHES, events.size(), ip);
             return;
         }
         try {
@@ -179,9 +176,14 @@ public class StatIngestService {
     private void upsertDevice(StatEventDTO event, LocalDateTime eventTime, String ip) {
         LocalDate today = eventTime.toLocalDate();
         int updated = statDeviceMapper.updateLastActive(
-                event.getDeviceId(), event.getUt(),
-                event.getAppVersion(), event.getModel(), event.getOs(),
-                ip, today, eventTime);
+                event.getDeviceId(),
+                event.getUt(),
+                event.getAppVersion(),
+                event.getModel(),
+                event.getOs(),
+                ip,
+                today,
+                eventTime);
         if (updated == 0) {
             StatDevice device = new StatDevice();
             device.setDeviceId(event.getDeviceId());
@@ -204,13 +206,18 @@ public class StatIngestService {
     /**
      * 小时指标桶累加（先 UPDATE 后 INSERT，唯一键 bucket_hour+ut+app_version）
      */
-    private void incrementMetric(StatEventDTO event, LocalDateTime eventTime,
-                                 Long pv, Long visits, Long launches, Long durationMs, Long errorCount) {
+    private void incrementMetric(
+            StatEventDTO event,
+            LocalDateTime eventTime,
+            Long pv,
+            Long visits,
+            Long launches,
+            Long durationMs,
+            Long errorCount) {
         LocalDateTime bucketHour = toBucketHour(eventTime);
         String appVersion = event.getAppVersion() != null ? event.getAppVersion() : "";
         int updated = statMetricHourlyMapper.incrementMetric(
-                bucketHour, event.getUt(), appVersion,
-                pv, visits, launches, durationMs, errorCount);
+                bucketHour, event.getUt(), appVersion, pv, visits, launches, durationMs, errorCount);
         if (updated == 0) {
             com.astral.dao.entity.StatMetricHourly bucket = new com.astral.dao.entity.StatMetricHourly();
             bucket.setBucketHour(bucketHour);
@@ -225,8 +232,8 @@ public class StatIngestService {
                 statMetricHourlyMapper.insert(bucket);
             } catch (org.springframework.dao.DuplicateKeyException e) {
                 // 并发首报：已由其他线程建桶，补一次累加
-                statMetricHourlyMapper.incrementMetric(bucketHour, event.getUt(), appVersion,
-                        pv, visits, launches, durationMs, errorCount);
+                statMetricHourlyMapper.incrementMetric(
+                        bucketHour, event.getUt(), appVersion, pv, visits, launches, durationMs, errorCount);
             }
         }
     }
@@ -288,7 +295,8 @@ public class StatIngestService {
         if (stack != null && !stack.isBlank()) {
             firstStackLine = stack.strip().split("\n", 2)[0];
         }
-        String raw = (errorType == null ? "" : errorType) + "|" + (message == null ? "" : message) + "|" + firstStackLine;
+        String raw =
+                (errorType == null ? "" : errorType) + "|" + (message == null ? "" : message) + "|" + firstStackLine;
         return DigestUtil.md5Hex(raw);
     }
 

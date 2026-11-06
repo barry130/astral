@@ -8,14 +8,13 @@ import com.astral.system.service.PermissionService;
 import com.astral.system.service.RolePermissionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * 角色权限关联服务实现类
@@ -37,11 +36,9 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
                 : permissionIds.stream().filter(Objects::nonNull).distinct().toList();
 
         if (!distinct.isEmpty()) {
-            long found = permissionService.count(
-                    new LambdaQueryWrapper<Permission>().in(Permission::getId, distinct));
+            long found = permissionService.count(new LambdaQueryWrapper<Permission>().in(Permission::getId, distinct));
             if (found != distinct.size()) {
-                log.warn("分配权限失败：存在不存在的权限ID, roleId={}, 期望={}, 实际={}",
-                        roleId, distinct.size(), found);
+                log.warn("分配权限失败：存在不存在的权限ID, roleId={}, 期望={}, 实际={}", roleId, distinct.size(), found);
                 throw new BusinessException("SYS012", distinct.size() - found);
             }
         }

@@ -3,7 +3,6 @@ package com.astral.common.web;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
 import java.security.SecureRandom;
 import java.util.Base64;
 
@@ -45,14 +44,12 @@ public final class CsrfTokenSupport {
     public static final String CSRF_HEADER = "X-CSRF-Token";
 
     /** 不参与 CSRF 校验的方法：只读语义，不产生副作用 */
-    private static final java.util.Set<String> SAFE_METHODS =
-            java.util.Set.of("GET", "HEAD", "OPTIONS", "TRACE");
+    private static final java.util.Set<String> SAFE_METHODS = java.util.Set.of("GET", "HEAD", "OPTIONS", "TRACE");
 
     /** 128 位随机令牌：足够抗猜测，又不必上 HMAC */
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private CsrfTokenSupport() {
-    }
+    private CsrfTokenSupport() {}
 
     /** 请求方法是否为只读（不需要 CSRF 校验） */
     public static boolean isSafeMethod(String method) {
@@ -77,13 +74,23 @@ public final class CsrfTokenSupport {
     }
 
     /** 写 Cookie（HttpOnly / Secure / SameSite / Path / Max-Age 由调用方决定） */
-    public static void writeCookie(HttpServletResponse response, String name, String value,
-                                   boolean httpOnly, boolean secure, String sameSite,
-                                   String path, long maxAgeSeconds) {
+    public static void writeCookie(
+            HttpServletResponse response,
+            String name,
+            String value,
+            boolean httpOnly,
+            boolean secure,
+            String sameSite,
+            String path,
+            long maxAgeSeconds) {
         StringBuilder header = new StringBuilder()
-                .append(name).append('=').append(value)
-                .append("; Path=").append(path)
-                .append("; Max-Age=").append(maxAgeSeconds);
+                .append(name)
+                .append('=')
+                .append(value)
+                .append("; Path=")
+                .append(path)
+                .append("; Max-Age=")
+                .append(maxAgeSeconds);
         if (httpOnly) {
             header.append("; HttpOnly");
         }
@@ -97,8 +104,8 @@ public final class CsrfTokenSupport {
     }
 
     /** 清除 Cookie（Max-Age=0，属性与下发时保持一致，否则浏览器可能拒绝覆盖） */
-    public static void clearCookie(HttpServletResponse response, String name,
-                                   boolean secure, String sameSite, String path) {
+    public static void clearCookie(
+            HttpServletResponse response, String name, boolean secure, String sameSite, String path) {
         writeCookie(response, name, "", true, secure, sameSite, path, 0);
     }
 

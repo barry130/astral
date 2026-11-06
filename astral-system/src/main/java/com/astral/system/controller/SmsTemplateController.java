@@ -1,7 +1,5 @@
 package com.astral.system.controller;
 
-import java.util.Map;
-
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
@@ -14,17 +12,18 @@ import com.astral.system.notify.SysSmsTemplateService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 短信模板管理。与邮件模板的本质差异：短信正文在供应商侧备案审核，本地只存
@@ -56,8 +55,8 @@ public class SmsTemplateController {
     @Operation(summary = "分页查询")
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/page")
-    public Result<Page<SysSmsTemplate>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                             @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<SysSmsTemplate>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         return Result.success(templateService.page(new Page<>(pageNum, pageSize)));
     }
 
@@ -113,8 +112,10 @@ public class SmsTemplateController {
      * 供应商模板编码必填——本地没有正文，没有它发送无从谈起。
      */
     private void validateTemplate(SysSmsTemplate entity, boolean isCreate, Long id) {
-        boolean codePresent = entity.getTemplateCode() != null && !entity.getTemplateCode().isBlank();
-        boolean eventPresent = entity.getEventCode() != null && !entity.getEventCode().isBlank();
+        boolean codePresent =
+                entity.getTemplateCode() != null && !entity.getTemplateCode().isBlank();
+        boolean eventPresent =
+                entity.getEventCode() != null && !entity.getEventCode().isBlank();
         if (isCreate) {
             if (!codePresent) {
                 throw new BusinessException("SMS013");
@@ -122,7 +123,8 @@ public class SmsTemplateController {
             if (entity.getTemplateName() == null || entity.getTemplateName().isBlank() || !eventPresent) {
                 throw new BusinessException("SMS014");
             }
-            if (entity.getProviderTemplateCode() == null || entity.getProviderTemplateCode().isBlank()) {
+            if (entity.getProviderTemplateCode() == null
+                    || entity.getProviderTemplateCode().isBlank()) {
                 throw new BusinessException("SMS015");
             }
         }
@@ -130,7 +132,8 @@ public class SmsTemplateController {
             throw new BusinessException("SMS016");
         }
         if (codePresent) {
-            Long dup = templateService.lambdaQuery()
+            Long dup = templateService
+                    .lambdaQuery()
                     .eq(SysSmsTemplate::getTemplateCode, entity.getTemplateCode())
                     .ne(id != null, SysSmsTemplate::getId, id)
                     .count();
@@ -144,7 +147,8 @@ public class SmsTemplateController {
             if (event.channels().stream().noneMatch(NotifyChannel.SMS::equals)) {
                 throw new BusinessException("MAIL021", entity.getEventCode(), NotifyChannel.SMS);
             }
-            Long bound = templateService.lambdaQuery()
+            Long bound = templateService
+                    .lambdaQuery()
                     .eq(SysSmsTemplate::getEventCode, entity.getEventCode())
                     .ne(id != null, SysSmsTemplate::getId, id)
                     .count();

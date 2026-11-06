@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 提示词版本 Mapper
  */
 @Mapper
-public interface AiPromptVersionMapper extends BaseMapper<AiPromptVersionEntity> {
-}
+public interface AiPromptVersionMapper extends BaseMapper<AiPromptVersionEntity> {}

@@ -1,10 +1,9 @@
 package com.astral.qt.dto;
 
 import com.astral.qt.dto.vo.QtSourceArtifactVo;
-import lombok.Data;
-
 import java.util.List;
 import java.util.Map;
+import lombok.Data;
 
 /**
  * 新建 / 编辑音源包发布记录请求体

@@ -6,6 +6,4 @@ import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import org.springframework.stereotype.Service;
 
 @Service
-public class SysSmsLogServiceImpl extends ServiceImpl<SysSmsLogMapper, SysSmsLog>
-        implements SysSmsLogService {
-}
+public class SysSmsLogServiceImpl extends ServiceImpl<SysSmsLogMapper, SysSmsLog> implements SysSmsLogService {}

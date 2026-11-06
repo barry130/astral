@@ -23,6 +23,10 @@ import com.astral.common.result.Result;
 import com.astral.log.annotation.OperateLog;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,11 +35,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * AI 后台：工具登记、声明式工具维护与高风险工具审批。
@@ -102,11 +101,18 @@ public class AiAdminToolController {
     @PutMapping("/tools/{id}")
     @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "修改工具配置")
     @OperateLog("修改 AI 工具配置")
-    public Result<AiAdminDtos.ToolVo> updateTool(@PathVariable Long id,
-                                                 @Valid @RequestBody AiAdminDtos.ToolSaveReq req,
-                                                 HttpServletRequest request) {
-        return Result.success("保存成功", toVo(toolService.update(id, req.name(), req.description(),
-                req.riskLevel(), req.approvalPolicy(), req.status(), operatorId(request))));
+    public Result<AiAdminDtos.ToolVo> updateTool(
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.ToolSaveReq req, HttpServletRequest request) {
+        return Result.success(
+                "保存成功",
+                toVo(toolService.update(
+                        id,
+                        req.name(),
+                        req.description(),
+                        req.riskLevel(),
+                        req.approvalPolicy(),
+                        req.status(),
+                        operatorId(request))));
     }
 
     // ==================== 声明式工具（HTTP / SQL） ====================
@@ -118,23 +124,22 @@ public class AiAdminToolController {
      * HIGH + ADMIN_CONFIRM，传参无法放开。</p>
      */
     @PostMapping("/tools/http")
-    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
-            description = "新建声明式 HTTP 工具")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "新建声明式 HTTP 工具")
     @OperateLog("新建 AI 声明式 HTTP 工具")
-    public Result<AiAdminDtos.ToolVo> createHttpTool(@Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
-                                                     HttpServletRequest request) {
-        return Result.success("创建成功", toVo(toolService.createDeclarative(req,
-                AiConstants.ExecutorType.HTTP, operatorId(request))));
+    public Result<AiAdminDtos.ToolVo> createHttpTool(
+            @Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req, HttpServletRequest request) {
+        return Result.success(
+                "创建成功", toVo(toolService.createDeclarative(req, AiConstants.ExecutorType.HTTP, operatorId(request))));
     }
 
     /** 修改声明式 HTTP 工具（含执行配置），校验规则与新建一致 */
     @PutMapping("/tools/{id}/http")
-    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
-            description = "修改声明式 HTTP 工具")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "修改声明式 HTTP 工具")
     @OperateLog("修改 AI 声明式 HTTP 工具")
-    public Result<AiAdminDtos.ToolVo> updateHttpTool(@PathVariable Long id,
-                                                     @Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
-                                                     HttpServletRequest request) {
+    public Result<AiAdminDtos.ToolVo> updateHttpTool(
+            @PathVariable Long id,
+            @Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
+            HttpServletRequest request) {
         return Result.success("保存成功", toVo(toolService.updateDeclarative(id, req, operatorId(request))));
     }
 
@@ -145,23 +150,22 @@ public class AiAdminToolController {
      * 多语句、以及把入参拼进 SQL 的做法在保存与执行时都会被拒绝，参数一律 PreparedStatement 绑定。</p>
      */
     @PostMapping("/tools/sql")
-    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
-            description = "新建声明式 SQL 工具")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "新建声明式 SQL 工具")
     @OperateLog("新建 AI 声明式 SQL 工具")
-    public Result<AiAdminDtos.ToolVo> createSqlTool(@Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
-                                                    HttpServletRequest request) {
-        return Result.success("创建成功", toVo(toolService.createDeclarative(req,
-                AiConstants.ExecutorType.SQL, operatorId(request))));
+    public Result<AiAdminDtos.ToolVo> createSqlTool(
+            @Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req, HttpServletRequest request) {
+        return Result.success(
+                "创建成功", toVo(toolService.createDeclarative(req, AiConstants.ExecutorType.SQL, operatorId(request))));
     }
 
     /** 修改声明式 SQL 工具（含查询配置），校验规则与新建一致 */
     @PutMapping("/tools/{id}/sql")
-    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
-            description = "修改声明式 SQL 工具")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "修改声明式 SQL 工具")
     @OperateLog("修改 AI 声明式 SQL 工具")
-    public Result<AiAdminDtos.ToolVo> updateSqlTool(@PathVariable Long id,
-                                                    @Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
-                                                    HttpServletRequest request) {
+    public Result<AiAdminDtos.ToolVo> updateSqlTool(
+            @PathVariable Long id,
+            @Valid @RequestBody AiAdminDtos.DeclarativeToolSaveReq req,
+            HttpServletRequest request) {
         return Result.success("保存成功", toVo(toolService.updateDeclarative(id, req, operatorId(request))));
     }
 
@@ -172,15 +176,14 @@ public class AiAdminToolController {
      * 审计表（不属于任何会话），留痕走 {@link OperateLog}。</p>
      */
     @PostMapping("/tools/{id}/test-run")
-    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑",
-            description = "试跑工具")
+    @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "试跑工具")
     @OperateLog("测试运行 AI 工具")
-    public Result<AiAdminDtos.ToolTestRunVo> testRun(@PathVariable Long id,
-                                                     @Valid @RequestBody AiAdminDtos.ToolTestRunReq req) {
+    public Result<AiAdminDtos.ToolTestRunVo> testRun(
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.ToolTestRunReq req) {
         long started = System.currentTimeMillis();
         AiToolResult result = toolService.testRun(id, req.arguments());
-        return Result.success(new AiAdminDtos.ToolTestRunVo(result.status(), result.summary(),
-                result.payload(), System.currentTimeMillis() - started));
+        return Result.success(new AiAdminDtos.ToolTestRunVo(
+                result.status(), result.summary(), result.payload(), System.currentTimeMillis() - started));
     }
 
     // ==================== 审批 ====================
@@ -194,9 +197,8 @@ public class AiAdminToolController {
     @PostMapping("/tool-calls/{id}/approve")
     @RequiresPermission(value = "admin:ai:tool:approve", name = "AI 工具审批", description = "确认高风险工具执行")
     @OperateLog("审批 AI 高风险工具")
-    public Result<Map<String, Object>> approve(@PathVariable Long id,
-                                               @Valid @RequestBody AiAdminDtos.ToolApproveReq req,
-                                               HttpServletRequest request) {
+    public Result<Map<String, Object>> approve(
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.ToolApproveReq req, HttpServletRequest request) {
         AiToolCallEntity call = toolCallMapper.selectById(id);
         if (call == null) {
             throw new AiException("AI008", "工具调用不存在: " + id);
@@ -212,8 +214,8 @@ public class AiAdminToolController {
         boolean approved = Boolean.TRUE.equals(req.approved());
         call.setApprovedBy(operator);
         call.setApprovedAt(LocalDateTime.now());
-        call.setApprovalStatus(approved ? AiConstants.ApprovalPolicy.ADMIN_CONFIRM
-                : AiConstants.ToolCallStatus.REJECTED);
+        call.setApprovalStatus(
+                approved ? AiConstants.ApprovalPolicy.ADMIN_CONFIRM : AiConstants.ToolCallStatus.REJECTED);
 
         String status;
         String summary;
@@ -225,17 +227,16 @@ public class AiAdminToolController {
             status = AiConstants.ToolCallStatus.REJECTED;
             summary = "管理员已拒绝该操作";
         } else {
-            AiToolService.EffectiveTool effective = resolve(version.getId(), aiRequest.getClientType(),
-                    call.getToolCode());
+            AiToolService.EffectiveTool effective =
+                    resolve(version.getId(), aiRequest.getClientType(), call.getToolCode());
             if (effective == null) {
                 throw new AiException("AI008", "工具未绑定或已停用: " + call.getToolCode());
             }
             call.setStatus(AiConstants.ToolCallStatus.RUNNING);
             toolCallMapper.updateById(call);
-            AiToolResult result = orchestrator.invoke(aiRequest, agent, effective,
-                    AiJson.readObject(call.getArgumentsJson()), true, operator);
-            call.setStatus(result.isOk() ? AiConstants.ToolCallStatus.SUCCEEDED
-                    : AiConstants.ToolCallStatus.FAILED);
+            AiToolResult result = orchestrator.invoke(
+                    aiRequest, agent, effective, AiJson.readObject(call.getArgumentsJson()), true, operator);
+            call.setStatus(result.isOk() ? AiConstants.ToolCallStatus.SUCCEEDED : AiConstants.ToolCallStatus.FAILED);
             call.setResultJson(result.payload() == null ? null : AiJson.write(result.payload()));
             call.setErrorMessage(result.isOk() ? null : result.summary());
             call.setFinishedAt(LocalDateTime.now());
@@ -245,7 +246,8 @@ public class AiAdminToolController {
         }
 
         resume(aiRequest.getId());
-        return Result.success(approved ? "已执行" : "已拒绝",
+        return Result.success(
+                approved ? "已执行" : "已拒绝",
                 Map.of("toolCallId", id, "status", status, "summary", summary == null ? "" : summary));
     }
 
@@ -274,11 +276,24 @@ public class AiAdminToolController {
     }
 
     private AiAdminDtos.ToolVo toVo(AiToolEntity entity) {
-        return new AiAdminDtos.ToolVo(entity.getId(), entity.getToolCode(), entity.getName(),
-                entity.getDescription(), entity.getHandlerKey(), AiToolService.executorTypeOf(entity),
-                entity.getExecutorConfig(), AiJson.splitCsv(entity.getClientTypes()),
-                AiJson.splitCsv(entity.getPermissionCodes()), entity.getRiskLevel(), entity.getApprovalPolicy(),
-                entity.getArgumentsSchema(), entity.getResultSchema(), entity.getSideEffects(), entity.getStatus(),
-                toolService.handlerAvailable(entity), entity.getCreateTime(), entity.getUpdateTime());
+        return new AiAdminDtos.ToolVo(
+                entity.getId(),
+                entity.getToolCode(),
+                entity.getName(),
+                entity.getDescription(),
+                entity.getHandlerKey(),
+                AiToolService.executorTypeOf(entity),
+                entity.getExecutorConfig(),
+                AiJson.splitCsv(entity.getClientTypes()),
+                AiJson.splitCsv(entity.getPermissionCodes()),
+                entity.getRiskLevel(),
+                entity.getApprovalPolicy(),
+                entity.getArgumentsSchema(),
+                entity.getResultSchema(),
+                entity.getSideEffects(),
+                entity.getStatus(),
+                toolService.handlerAvailable(entity),
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 }

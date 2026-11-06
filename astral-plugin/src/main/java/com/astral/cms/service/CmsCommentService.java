@@ -13,10 +13,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,6 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 /**
  * CMS 评论服务（匿名提交 + 审核制）
@@ -44,10 +43,13 @@ public class CmsCommentService {
 
     @Resource
     private CmsCommentMapper commentMapper;
+
     @Resource
     private CmsPostMapper postMapper;
+
     @Resource
     private CmsPageMapper pageMapper;
+
     @Resource
     private CmsSettingService settingService;
 
@@ -91,8 +93,7 @@ public class CmsCommentService {
         boolean needReview = settingService.boolValue(CmsSettingService.KEY_COMMENT_NEED_REVIEW);
         comment.setStatus(needReview ? CmsComment.STATUS_PENDING : CmsComment.STATUS_APPROVED);
         comment.setIp(ip);
-        comment.setUserAgent(userAgent == null ? null
-                : userAgent.substring(0, Math.min(userAgent.length(), 256)));
+        comment.setUserAgent(userAgent == null ? null : userAgent.substring(0, Math.min(userAgent.length(), 256)));
         commentMapper.insert(comment);
         stripPrivateFields(comment);
         return comment;
@@ -100,8 +101,7 @@ public class CmsCommentService {
 
     // ==================== 管理端 ====================
 
-    public Page<CmsComment> adminPage(int pageNum, int pageSize, String status,
-                                      String targetType, String keyword) {
+    public Page<CmsComment> adminPage(int pageNum, int pageSize, String status, String targetType, String keyword) {
         LambdaQueryWrapper<CmsComment> lw = new LambdaQueryWrapper<>();
         if (notBlank(status)) {
             lw.eq(CmsComment::getStatus, status.trim());
@@ -114,8 +114,8 @@ public class CmsCommentService {
             lw.and(w -> w.like(CmsComment::getNickname, kw).or().like(CmsComment::getContent, kw));
         }
         lw.orderByDesc(CmsComment::getCreateTime);
-        Page<CmsComment> page = commentMapper.selectPage(
-                new Page<>(Math.max(pageNum, 1), Math.min(Math.max(pageSize, 1), 100)), lw);
+        Page<CmsComment> page =
+                commentMapper.selectPage(new Page<>(Math.max(pageNum, 1), Math.min(Math.max(pageSize, 1), 100)), lw);
         fillTargetTitles(page.getRecords());
         return page;
     }
@@ -128,9 +128,9 @@ public class CmsCommentService {
         if (!CmsComment.STATUS_APPROVED.equals(status) && !CmsComment.STATUS_REJECTED.equals(status)) {
             throw new CmsException("审核结果仅支持 approved / rejected");
         }
-        commentMapper.update(null, new LambdaUpdateWrapper<CmsComment>()
-                .eq(CmsComment::getId, id)
-                .set(CmsComment::getStatus, status));
+        commentMapper.update(
+                null,
+                new LambdaUpdateWrapper<CmsComment>().eq(CmsComment::getId, id).set(CmsComment::getStatus, status));
     }
 
     public void delete(Long id) {
@@ -168,14 +168,12 @@ public class CmsCommentService {
     private void requirePublishedTarget(String targetType, Long targetId) {
         if (CmsComment.TARGET_POST.equals(targetType)) {
             CmsPost post = postMapper.selectById(targetId);
-            if (post == null || post.getDeleteTime() != null
-                    || !CmsVisibility.isVisible(post.getStatus())) {
+            if (post == null || post.getDeleteTime() != null || !CmsVisibility.isVisible(post.getStatus())) {
                 throw new CmsException("文章不存在或未发布，无法评论");
             }
         } else {
             CmsPage page = pageMapper.selectById(targetId);
-            if (page == null || page.getDeleteTime() != null
-                    || !CmsVisibility.isVisible(page.getStatus())) {
+            if (page == null || page.getDeleteTime() != null || !CmsVisibility.isVisible(page.getStatus())) {
                 throw new CmsException("页面不存在或未发布，无法评论");
             }
         }

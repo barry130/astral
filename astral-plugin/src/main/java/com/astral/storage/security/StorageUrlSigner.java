@@ -4,10 +4,9 @@ import com.astral.common.exception.BusinessException;
 import com.astral.storage.config.StorageProperties;
 import com.astral.storage.entity.StorageConfigEntity;
 import com.astral.storage.entity.StorageFileEntity;
-import org.springframework.stereotype.Service;
-
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import org.springframework.stereotype.Service;
 
 /**
  * 下载签名 URL 签发（Astral 签发、Cloudflare Worker 校验）
@@ -26,8 +25,7 @@ public class StorageUrlSigner {
         this.properties = properties;
     }
 
-    public record SignedUrl(String url, long expiresAtEpochSeconds) {
-    }
+    public record SignedUrl(String url, long expiresAtEpochSeconds) {}
 
     public SignedUrl issue(StorageConfigEntity config, StorageFileEntity file) {
         String key = properties.getDownloadSigningKey();
@@ -41,8 +39,8 @@ public class StorageUrlSigner {
         long expires = Instant.now().getEpochSecond() + properties.getDownloadUrlTtlSeconds();
         int keyVersion = properties.getDownloadSigningKeyVersion();
         String signature = StorageHmac.sign(key.getBytes(StandardCharsets.UTF_8), canonical(expires, keyVersion, file));
-        String url = stripTrailingSlash(workerBase) + pathOf(file)
-                + "?e=" + expires + "&v=" + keyVersion + "&s=" + signature;
+        String url = stripTrailingSlash(workerBase) + pathOf(file) + "?e=" + expires + "&v=" + keyVersion + "&s="
+                + signature;
         return new SignedUrl(url, expires);
     }
 

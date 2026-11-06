@@ -12,15 +12,14 @@ import com.astral.monitor.service.StatReportService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 统计报表控制器（六个查询接口 + 版本下拉数据源）
@@ -118,8 +117,13 @@ public class StatReportController {
             @RequestParam(required = false) String appVersion,
             @RequestParam(required = false) String fingerprint) {
         return Result.success(statReportService.getErrorPage(
-                PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize),
-                errorType, source, ut, appVersion, fingerprint));
+                PageQuery.pageNum(pageNum),
+                PageQuery.pageSize(pageSize),
+                errorType,
+                source,
+                ut,
+                appVersion,
+                fingerprint));
     }
 
     /**

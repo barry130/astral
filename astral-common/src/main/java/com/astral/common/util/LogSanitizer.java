@@ -30,13 +30,40 @@ public final class LogSanitizer {
      * 不可漏：漏一个就是一条明文凭据留在库里。</p>
      */
     private static final Set<String> SENSITIVE_KEYS = Set.of(
-            "password", "passwd", "pwd", "oldpassword", "newpassword", "confirmpassword",
-            "passwordhash", "rawpassword",
-            "token", "accesstoken", "refreshtoken", "satoken", "idtoken", "authorization",
-            "secret", "secretkey", "secretid", "secretaccesskey", "accesskeysecret",
-            "accesskey", "accesskeyid", "operatorpassword", "tokenkey",
-            "apikey", "appsecret", "privatekey", "credential", "credentials",
-            "signature", "csrf", "csrftoken", "ticket", "totpsecret", "totpcode");
+            "password",
+            "passwd",
+            "pwd",
+            "oldpassword",
+            "newpassword",
+            "confirmpassword",
+            "passwordhash",
+            "rawpassword",
+            "token",
+            "accesstoken",
+            "refreshtoken",
+            "satoken",
+            "idtoken",
+            "authorization",
+            "secret",
+            "secretkey",
+            "secretid",
+            "secretaccesskey",
+            "accesskeysecret",
+            "accesskey",
+            "accesskeyid",
+            "operatorpassword",
+            "tokenkey",
+            "apikey",
+            "appsecret",
+            "privatekey",
+            "credential",
+            "credentials",
+            "signature",
+            "csrf",
+            "csrftoken",
+            "ticket",
+            "totpsecret",
+            "totpcode");
 
     /**
      * JSON 对象成员：{@code "key": value}。
@@ -53,11 +80,9 @@ public final class LogSanitizer {
             Pattern.DOTALL);
 
     /** 表单/查询串形态（{@code password=xxx&foo=1}） */
-    private static final Pattern FORM_PAIR = Pattern.compile(
-            "((?:^|[?&])([A-Za-z][A-Za-z0-9_\\-.]{0,63})=)([^&\\s]*)");
+    private static final Pattern FORM_PAIR = Pattern.compile("((?:^|[?&])([A-Za-z][A-Za-z0-9_\\-.]{0,63})=)([^&\\s]*)");
 
-    private LogSanitizer() {
-    }
+    private LogSanitizer() {}
 
     /**
      * 对一段（可能很长的）JSON / 表单文本做凭据脱敏。
@@ -92,7 +117,7 @@ public final class LogSanitizer {
      * 这类「前缀只是一个名词」的复合键）。单独成表是因为精确匹配永远列不完组合。
      */
     private static final String[] SENSITIVE_TOKENS = {
-            "password", "passwd", "pwd", "secret", "token", "apikey", "credential", "signature"
+        "password", "passwd", "pwd", "secret", "token", "apikey", "credential", "signature"
     };
 
     /**

@@ -1,7 +1,6 @@
 package com.astral.common.annotation;
 
 import com.astral.common.constant.PermissionType;
-
 import java.lang.annotation.*;
 
 /**

@@ -7,10 +7,9 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.Data;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Data;
 
 /**
  * CMS 文章
@@ -103,8 +102,7 @@ public class CmsPost {
         /** URL 别名（可空） */
         private String slug;
 
-        public CategoryRef() {
-        }
+        public CategoryRef() {}
 
         public CategoryRef(Long id, String name, String slug) {
             this.id = id;

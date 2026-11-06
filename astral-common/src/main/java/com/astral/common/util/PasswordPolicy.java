@@ -20,8 +20,7 @@ public final class PasswordPolicy {
     private static final int MIN_LENGTH = 8;
     private static final int MAX_LENGTH = 64;
 
-    private PasswordPolicy() {
-    }
+    private PasswordPolicy() {}
 
     /**
      * 校验密码强度

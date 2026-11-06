@@ -6,5 +6,4 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 /**
  * CMS 评论 Mapper
  */
-public interface CmsCommentMapper extends BaseMapper<CmsComment> {
-}
+public interface CmsCommentMapper extends BaseMapper<CmsComment> {}

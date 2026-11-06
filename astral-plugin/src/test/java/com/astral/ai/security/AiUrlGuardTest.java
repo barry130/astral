@@ -1,9 +1,9 @@
 package com.astral.ai.security;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.astral.ai.common.AiException;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 提供方 Base URL 的 SSRF 防护。
@@ -18,8 +18,7 @@ class AiUrlGuardTest {
         // 用 IP 字面量而不是域名：域名版本要靠 DNS 解析（AIR guard 会做 rebinding 检查），
         // 在无外网/DNS 受限的构建机（如 CNB 流水线）会解析失败被误判为内网地址。
         // 校验目标与「去尾部斜杠」无关，换成公网 IP 字面量同样成立。
-        assertEquals("https://11.22.33.44/v1",
-                AiUrlGuard.validateBaseUrl("https://11.22.33.44/v1///", null));
+        assertEquals("https://11.22.33.44/v1", AiUrlGuard.validateBaseUrl("https://11.22.33.44/v1///", null));
     }
 
     @Test
@@ -75,10 +74,8 @@ class AiUrlGuardTest {
     @Test
     void whitelistCanAuthorizeASpecificPrivateHost() {
         // 本地 Ollama 是受控例外：必须显式逐条授权
-        assertEquals("http://localhost:11434/v1",
-                AiUrlGuard.validateBaseUrl("http://localhost:11434/v1", "localhost"));
-        assertEquals("http://10.0.0.5/v1",
-                AiUrlGuard.validateBaseUrl("http://10.0.0.5/v1", " 10.0.0.5 , other "));
+        assertEquals("http://localhost:11434/v1", AiUrlGuard.validateBaseUrl("http://localhost:11434/v1", "localhost"));
+        assertEquals("http://10.0.0.5/v1", AiUrlGuard.validateBaseUrl("http://10.0.0.5/v1", " 10.0.0.5 , other "));
     }
 
     @Test
@@ -109,8 +106,7 @@ class AiUrlGuardTest {
     }
 
     private static void assertAi006(String url, String allowPrivateHosts) {
-        AiException error = assertThrows(AiException.class,
-                () -> AiUrlGuard.validateBaseUrl(url, allowPrivateHosts));
+        AiException error = assertThrows(AiException.class, () -> AiUrlGuard.validateBaseUrl(url, allowPrivateHosts));
         assertEquals("AI006", error.getErrorCode());
     }
 }

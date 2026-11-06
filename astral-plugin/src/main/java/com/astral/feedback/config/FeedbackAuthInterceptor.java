@@ -2,13 +2,13 @@ package com.astral.feedback.config;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.astral.common.result.Result;
-import tools.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 反馈插件 App 端认证拦截器
@@ -28,7 +28,8 @@ public class FeedbackAuthInterceptor implements HandlerInterceptor {
     private ObjectMapper objectMapper;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
         String uri = request.getRequestURI();
 
         // 仅拦截 App 端接口；非 App 端路径（管理端）由宿主拦截器处理
@@ -49,9 +50,7 @@ public class FeedbackAuthInterceptor implements HandlerInterceptor {
 
         if (userId == null) {
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write(objectMapper.writeValueAsString(
-                    Result.error(401, "登录状态已失效")
-            ));
+            response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, "登录状态已失效")));
             return false;
         }
 

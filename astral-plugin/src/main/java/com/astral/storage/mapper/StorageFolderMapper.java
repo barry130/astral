@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * sys_storage_folder Mapper
  */
 @Mapper
-public interface StorageFolderMapper extends BaseMapper<StorageFolderEntity> {
-}
+public interface StorageFolderMapper extends BaseMapper<StorageFolderEntity> {}

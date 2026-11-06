@@ -2,12 +2,11 @@ package com.astral.monitor.service.impl;
 
 import com.astral.monitor.dto.SystemMonitorDTO;
 import com.astral.monitor.service.SystemMonitorService;
-import org.springframework.stereotype.Service;
-
 import java.io.File;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
+import org.springframework.stereotype.Service;
 
 /**
  * 系统监控服务实现类
@@ -46,27 +45,27 @@ public class SystemMonitorServiceImpl implements SystemMonitorService {
     public SystemMonitorDTO getSystemInfo() {
         var memory = ManagementFactory.getMemoryMXBean();
         var heap = memory.getHeapMemoryUsage();
-        
+
         SystemMonitorDTO dto = new SystemMonitorDTO();
-        
+
         dto.setCpuUsage(getCpuUsage());
-        
+
         long totalHeap = heap.getMax();
         long usedHeap = heap.getUsed();
         dto.setTotalMemory(totalHeap);
         dto.setUsedMemory(usedHeap);
         dto.setAvailableMemory(totalHeap - usedHeap);
-        
+
         double memoryUsage = totalHeap > 0 ? (double) usedHeap / totalHeap * 100 : 0;
         dto.setMemoryUsage(memoryUsage);
-        
+
         dto.setThreadCount(Thread.activeCount());
         dto.setUptime(runtimeBean.getUptime());
         dto.setDiskUsage(getDiskUsage());
-        
+
         return dto;
     }
-    
+
     /**
      * 获取CPU使用率
      * <p>
@@ -86,20 +85,20 @@ public class SystemMonitorServiceImpl implements SystemMonitorService {
                     return cpuLoad * 100;
                 }
             }
-            
+
             double loadAverage = osBean.getSystemLoadAverage();
             if (loadAverage >= 0) {
                 int processors = Runtime.getRuntime().availableProcessors();
                 return Math.min(100, loadAverage * 100 / processors);
             }
-            
+
             return 0.0;
-            
+
         } catch (Exception e) {
             return 0.0;
         }
     }
-    
+
     /**
      * 获取磁盘使用率
      * <p>

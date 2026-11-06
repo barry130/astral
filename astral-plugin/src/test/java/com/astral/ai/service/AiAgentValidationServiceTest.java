@@ -1,5 +1,10 @@
 package com.astral.ai.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.astral.ai.common.AiConstants;
 import com.astral.ai.common.AiException;
 import com.astral.ai.config.AiProperties;
@@ -14,15 +19,9 @@ import com.astral.ai.entity.AiPromptVersionEntity;
 import com.astral.ai.entity.AiProviderEntity;
 import com.astral.ai.entity.AiProviderRouteEntity;
 import com.astral.ai.entity.AiToolEntity;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * 智能体版本发布前校验。
@@ -54,8 +53,16 @@ class AiAgentValidationServiceTest {
         providerService = mock(AiProviderService.class);
         quotaService = mock(AiQuotaService.class);
 
-        service = new AiAgentValidationService(agentService, promptService, toolService, knowledgeService,
-                routeService, modelService, providerService, quotaService, new AiProperties());
+        service = new AiAgentValidationService(
+                agentService,
+                promptService,
+                toolService,
+                knowledgeService,
+                routeService,
+                modelService,
+                providerService,
+                quotaService,
+                new AiProperties());
 
         // 默认：没有任何工具与知识源绑定
         when(toolService.listBindings(any())).thenReturn(List.of());
@@ -222,8 +229,7 @@ class AiAgentValidationServiceTest {
     @Test
     void emptyPromptBlocksPublish() {
         wireHealthyAgent(AiConstants.AgentType.MUSIC, "QT_UNIAPPX", "MOCK");
-        when(promptService.requireVersion(9L))
-                .thenReturn(prompt("   ", AiConstants.VersionStatus.PUBLISHED));
+        when(promptService.requireVersion(9L)).thenReturn(prompt("   ", AiConstants.VersionStatus.PUBLISHED));
 
         assertHasIssue(service.validate(versionOfAgent(1L)), "PROMPT_EMPTY", "ERROR");
     }
@@ -417,8 +423,7 @@ class AiAgentValidationServiceTest {
     void readyKnowledgeSourcePasses() {
         wireRoute(AiConstants.AgentType.QA, "ASTRAL_FRONT", "MOCK", true, true, true, 512);
         when(knowledgeService.listBindings(any())).thenReturn(List.of(knowledgeBinding(201L)));
-        when(knowledgeService.requireSource(201L))
-                .thenReturn(knowledgeSource(true, AiConstants.KnowledgeStatus.READY));
+        when(knowledgeService.requireSource(201L)).thenReturn(knowledgeSource(true, AiConstants.KnowledgeStatus.READY));
 
         assertTrue(service.validate(versionOfAgent(1L)).valid());
     }
@@ -429,8 +434,14 @@ class AiAgentValidationServiceTest {
         wireRoute(agentType, clients, providerType, true, true, true, 512);
     }
 
-    private void wireRoute(String agentType, String clients, String providerType,
-                           boolean routeEnabled, boolean modelEnabled, boolean providerEnabled, int maxTokens) {
+    private void wireRoute(
+            String agentType,
+            String clients,
+            String providerType,
+            boolean routeEnabled,
+            boolean modelEnabled,
+            boolean providerEnabled,
+            int maxTokens) {
         when(agentService.require(1L)).thenReturn(agent(agentType, clients, null));
 
         AiProviderRouteEntity route = new AiProviderRouteEntity();
@@ -454,8 +465,7 @@ class AiAgentValidationServiceTest {
         when(providerService.require(20L)).thenReturn(provider);
         when(providerService.resolveApiKey(any())).thenReturn("sk-test");
 
-        AiPromptVersionEntity prompt = prompt("你是音乐助手，可以帮用户找歌、播放与整理歌单。",
-                AiConstants.VersionStatus.PUBLISHED);
+        AiPromptVersionEntity prompt = prompt("你是音乐助手，可以帮用户找歌、播放与整理歌单。", AiConstants.VersionStatus.PUBLISHED);
         when(promptService.requireVersion(9L)).thenReturn(prompt);
     }
 
@@ -534,12 +544,13 @@ class AiAgentValidationServiceTest {
     }
 
     private static List<String> codes(AiAdminDtos.ValidationVo result) {
-        return result.issues().stream().map(AiAdminDtos.ValidationVo.ValidationIssue::code).toList();
+        return result.issues().stream()
+                .map(AiAdminDtos.ValidationVo.ValidationIssue::code)
+                .toList();
     }
 
     private static void assertHasIssue(AiAdminDtos.ValidationVo result, String code, String level) {
-        boolean found = result.issues().stream()
-                .anyMatch(i -> code.equals(i.code()) && level.equals(i.level()));
+        boolean found = result.issues().stream().anyMatch(i -> code.equals(i.code()) && level.equals(i.level()));
         assertTrue(found, () -> "期望 " + level + " " + code + "，实际：" + codes(result));
     }
 }

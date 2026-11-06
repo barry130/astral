@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * sys_storage_folder_permission Mapper
  */
 @Mapper
-public interface StorageFolderPermissionMapper extends BaseMapper<StorageFolderPermissionEntity> {
-}
+public interface StorageFolderPermissionMapper extends BaseMapper<StorageFolderPermissionEntity> {}

@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 额度策略 Mapper
  */
 @Mapper
-public interface AiQuotaPolicyMapper extends BaseMapper<AiQuotaPolicyEntity> {
-}
+public interface AiQuotaPolicyMapper extends BaseMapper<AiQuotaPolicyEntity> {}

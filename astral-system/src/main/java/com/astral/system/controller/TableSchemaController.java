@@ -13,23 +13,22 @@ import com.astral.schema.TableSchema;
 import com.astral.system.dto.CreateTableRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 表结构管理控制器
@@ -350,12 +349,11 @@ public class TableSchemaController {
             throw new BusinessException("SYS009");
         }
         Map<String, String> code = Map.of(
-            "entity", SchemaCodeGenerator.generateEntity(schema),
-            "mapper", SchemaCodeGenerator.generateMapper(schema),
-            "service", SchemaCodeGenerator.generateService(schema),
-            "serviceImpl", SchemaCodeGenerator.generateServiceImpl(schema),
-            "controller", SchemaCodeGenerator.generateController(schema)
-        );
+                "entity", SchemaCodeGenerator.generateEntity(schema),
+                "mapper", SchemaCodeGenerator.generateMapper(schema),
+                "service", SchemaCodeGenerator.generateService(schema),
+                "serviceImpl", SchemaCodeGenerator.generateServiceImpl(schema),
+                "controller", SchemaCodeGenerator.generateController(schema));
         return Result.success(code);
     }
 
@@ -369,8 +367,8 @@ public class TableSchemaController {
     @Operation(summary = "生成建表SQL")
     @RequiresPermission("admin:system:schema:view")
     @GetMapping("/{tableName}/sql")
-    public Result<String> generateSql(@PathVariable String tableName,
-                                      @RequestParam(value = "dialect", required = false) String dialect) {
+    public Result<String> generateSql(
+            @PathVariable String tableName, @RequestParam(value = "dialect", required = false) String dialect) {
         TableSchema schema = SchemaRegistry.getSchema(tableName);
         if (schema == null) {
             throw new BusinessException("SYS009");
@@ -406,9 +404,11 @@ public class TableSchemaController {
     @Operation(summary = "更新表结构")
     @RequiresSuper
     @PutMapping("/{tableName}")
-    public Result<Map<String, String>> updateSchema(@PathVariable String tableName,
-                                                    @RequestBody TableSchema newSchema,
-                                                    @RequestParam(value = "dialect", required = false) String dialect) throws IOException {
+    public Result<Map<String, String>> updateSchema(
+            @PathVariable String tableName,
+            @RequestBody TableSchema newSchema,
+            @RequestParam(value = "dialect", required = false) String dialect)
+            throws IOException {
         TableSchema oldSchema = SchemaRegistry.getSchema(tableName);
         if (oldSchema == null) {
             throw new BusinessException("SYS009");
@@ -420,9 +420,8 @@ public class TableSchemaController {
         String entityCode = SchemaCodeGenerator.generateEntity(newSchema);
 
         return Result.success(Map.of(
-            "alterSql", alterSql,
-            "entityCode", entityCode
-        ));
+                "alterSql", alterSql,
+                "entityCode", entityCode));
     }
 
     /**
@@ -436,9 +435,10 @@ public class TableSchemaController {
     @Operation(summary = "生成ALTER SQL")
     @RequiresSuper
     @PostMapping("/{tableName}/alter-sql")
-    public Result<String> generateAlterSql(@PathVariable String tableName,
-                                           @RequestBody TableSchema newSchema,
-                                           @RequestParam(value = "dialect", required = false) String dialect) {
+    public Result<String> generateAlterSql(
+            @PathVariable String tableName,
+            @RequestBody TableSchema newSchema,
+            @RequestParam(value = "dialect", required = false) String dialect) {
         TableSchema oldSchema = SchemaRegistry.getSchema(tableName);
         if (oldSchema == null) {
             throw new BusinessException("SYS009");

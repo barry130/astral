@@ -1,22 +1,21 @@
 package com.astral.auth.security;
 
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.Cipher;
-import javax.crypto.spec.OAEPParameterSpec;
-import javax.crypto.spec.PSource;
-import java.security.spec.MGF1ParameterSpec;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
+import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import javax.crypto.Cipher;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
@@ -48,8 +47,10 @@ public class RsaKeyManager {
             String parts[] = new String(encoded, "UTF-8").split("\\|");
             if (parts.length == 2) {
                 KeyFactory kf = KeyFactory.getInstance("RSA");
-                this.publicKey = kf.generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(parts[0])));
-                this.privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(parts[1])));
+                this.publicKey = kf.generatePublic(
+                        new X509EncodedKeySpec(Base64.getDecoder().decode(parts[0])));
+                this.privateKey = kf.generatePrivate(
+                        new PKCS8EncodedKeySpec(Base64.getDecoder().decode(parts[1])));
                 restrictToOwner(path);
                 log.info("RSA密钥对从文件加载成功: {}", path);
             } else {
@@ -70,8 +71,8 @@ public class RsaKeyManager {
         // 持久化到文件
         try {
             Files.createDirectories(path.getParent());
-            String encoded = Base64.getEncoder().encodeToString(publicKey.getEncoded())
-                    + "|" + Base64.getEncoder().encodeToString(privateKey.getEncoded());
+            String encoded = Base64.getEncoder().encodeToString(publicKey.getEncoded()) + "|"
+                    + Base64.getEncoder().encodeToString(privateKey.getEncoded());
             Files.writeString(path, encoded);
             restrictToOwner(path);
             log.info("RSA密钥对已持久化到文件: {}", path);
@@ -90,8 +91,10 @@ public class RsaKeyManager {
      */
     private void restrictToOwner(Path path) {
         try {
-            Files.setPosixFilePermissions(path,
-                    java.util.Set.of(java.nio.file.attribute.PosixFilePermission.OWNER_READ,
+            Files.setPosixFilePermissions(
+                    path,
+                    java.util.Set.of(
+                            java.nio.file.attribute.PosixFilePermission.OWNER_READ,
                             java.nio.file.attribute.PosixFilePermission.OWNER_WRITE));
         } catch (UnsupportedOperationException e) {
             log.debug("当前文件系统不支持 POSIX 权限，跳过私钥文件收紧: {}", path);
@@ -121,7 +124,9 @@ public class RsaKeyManager {
     public byte[] decryptPassword(byte[] encryptedPassword) throws GeneralSecurityException {
         try {
             Cipher cipher = Cipher.getInstance(OAEP_TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, privateKey,
+            cipher.init(
+                    Cipher.DECRYPT_MODE,
+                    privateKey,
                     new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT));
             return cipher.doFinal(encryptedPassword);
         } catch (GeneralSecurityException oaepFailure) {

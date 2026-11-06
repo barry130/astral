@@ -3,12 +3,6 @@ package com.astral.monitor.service;
 import com.astral.monitor.dto.DatabaseMonitorDTO;
 import com.zaxxer.hikari.HikariDataSource;
 import com.zaxxer.hikari.HikariPoolMXBean;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.stereotype.Service;
-
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -19,6 +13,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import javax.sql.DataSource;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
 
 /**
  * 数据库运行状况监控服务
@@ -85,7 +84,7 @@ public class DatabaseMonitorService {
 
         long start = System.nanoTime();
         try (Connection conn = dataSource.getConnection();
-             Statement statement = conn.createStatement()) {
+                Statement statement = conn.createStatement()) {
             // 取到连接之后，池必然已初始化——此时读水位才拿得到真实值。
             // 若放在 getConnection 之前读：Hikari 的 pool 字段是懒创建的，
             // 池未初始化时 getHikariPoolMXBean() 返回 null，水位会整组为 null，
@@ -120,7 +119,8 @@ public class DatabaseMonitorService {
     private void fillPoolMetrics(DatabaseMonitorDTO dto, DataSource dataSource) {
         dto.setPoolName(dataSource.getClass().getSimpleName());
         if (!(dataSource instanceof HikariDataSource hikari)) {
-            log.debug("数据源不是 HikariDataSource（实际 {}），本次不采集连接池水位",
+            log.debug(
+                    "数据源不是 HikariDataSource（实际 {}），本次不采集连接池水位",
                     dataSource.getClass().getName());
             return;
         }
@@ -130,8 +130,7 @@ public class DatabaseMonitorService {
         if (pool == null) {
             // 池尚未初始化。这条分支原先静默返回，是「页面显示 — 、日志里却查不出原因」的
             // 主要来源，故补一条日志；用 debug 级是因为启动竞态下会短暂出现，不该污染告警。
-            log.debug("Hikari 连接池尚未初始化，本次不采集水位（maxConnections={}）",
-                    hikari.getMaximumPoolSize());
+            log.debug("Hikari 连接池尚未初始化，本次不采集水位（maxConnections={}）", hikari.getMaximumPoolSize());
             return;
         }
         dto.setActiveConnections(pool.getActiveConnections());
@@ -151,7 +150,7 @@ public class DatabaseMonitorService {
             return null;
         }
         try (Statement statement = conn.createStatement();
-             ResultSet rs = statement.executeQuery(sql)) {
+                ResultSet rs = statement.executeQuery(sql)) {
             return rs.next() ? rs.getLong(1) : null;
         } catch (Exception e) {
             // 某些托管库会限制统计函数权限，取不到就留空，不影响其余指标

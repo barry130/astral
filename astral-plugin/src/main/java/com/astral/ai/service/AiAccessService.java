@@ -7,12 +7,11 @@ import com.astral.ai.common.AiJson;
 import com.astral.ai.entity.AiAgentEntity;
 import com.astral.ai.entity.AiAgentVersionEntity;
 import com.astral.auth.security.PermissionChecker;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 智能体的入口访问控制。

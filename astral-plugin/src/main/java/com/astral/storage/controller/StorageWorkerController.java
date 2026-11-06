@@ -8,19 +8,18 @@ import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.mapper.StorageConfigMapper;
 import com.astral.storage.service.StorageFileService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * storage 插件 Worker 专属 API（/api/v1/all/storage/worker/** 与 /origin/**）
@@ -50,20 +49,19 @@ public class StorageWorkerController {
         fileService.verifyContentAfterRegistration(file.getPublicId());
         // contentVersion/visibility 回传给 Worker 做上传预热（把内存中的字节直接写进边缘缓存，
         // 使永久链接/签名链接的首次访问无需回源三跳）
-        return Result.success(new WorkerCallbackResp(file.getPublicId(), file.getStatus(),
-                file.getContentVersion(), file.getVisibility()));
+        return Result.success(new WorkerCallbackResp(
+                file.getPublicId(), file.getStatus(), file.getContentVersion(), file.getVisibility()));
     }
 
-    public record WorkerCallbackResp(String publicId, String status, long contentVersion, String visibility) {
-    }
+    public record WorkerCallbackResp(String publicId, String status, long contentVersion, String visibility) {}
 
     /**
      * 下载回源元数据：Worker 验签缓存未命中时查询 Telegram 定位信息。
      * contentVersion 不匹配视为已失效（版本化缓存失效）。
      */
     @GetMapping("/origin/files/{publicId}/{contentVersion}")
-    public Result<StorageDtos.OriginFileView> originFile(@PathVariable String publicId,
-                                                         @PathVariable long contentVersion) {
+    public Result<StorageDtos.OriginFileView> originFile(
+            @PathVariable String publicId, @PathVariable long contentVersion) {
         StorageFileEntity file = fileService.getByPublicId(publicId);
         if (!StorageFileEntity.STATUS_AVAILABLE.equals(file.getStatus())) {
             throw new BusinessException("STORAGE016");
@@ -84,15 +82,13 @@ public class StorageWorkerController {
 
     /** 拉取待执行的远端删除任务（Worker 定时拉取后执行 deleteMessage） */
     @GetMapping("/worker/tasks/delete")
-    public Result<List<StorageDtos.WorkerTaskView>> pullDeleteTasks(
-            @RequestParam(defaultValue = "10") int limit) {
+    public Result<List<StorageDtos.WorkerTaskView>> pullDeleteTasks(@RequestParam(defaultValue = "10") int limit) {
         return Result.success(fileService.pullDeleteTasks(limit));
     }
 
     /** 删除任务确认：成功归档文件；失败进入指数退避重试 */
     @PostMapping("/worker/tasks/{taskId}/ack")
-    public Result<Void> ackTask(@PathVariable long taskId,
-                                @RequestBody StorageDtos.WorkerAckReq req) {
+    public Result<Void> ackTask(@PathVariable long taskId, @RequestBody StorageDtos.WorkerAckReq req) {
         fileService.ackDeleteTask(taskId, req.success(), req.errorMessage());
         return Result.success();
     }
@@ -108,8 +104,14 @@ public class StorageWorkerController {
         if (telegramFileId == null || telegramFileId.isBlank()) {
             throw new BusinessException("STORAGE016");
         }
-        return new StorageDtos.OriginFileView(file.getPublicId(), file.getContentVersion(), file.getStatus(),
-                file.getVisibility(), file.getContentType(), file.getSizeBytes(),
-                file.getOriginalName(), telegramFileId);
+        return new StorageDtos.OriginFileView(
+                file.getPublicId(),
+                file.getContentVersion(),
+                file.getStatus(),
+                file.getVisibility(),
+                file.getContentType(),
+                file.getSizeBytes(),
+                file.getOriginalName(),
+                telegramFileId);
     }
 }

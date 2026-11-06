@@ -1,9 +1,5 @@
 package com.astral.schema;
 
-import tools.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +7,9 @@ import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Schema到Entity的自动同步器
@@ -49,7 +48,8 @@ public class SchemaEntitySync {
                 return;
             }
             Path schemaDir = Paths.get(projectDir, "astral-schema", "src", "main", "resources", "schema");
-            Path entityDir = Paths.get(projectDir, "astral-dao", "src", "main", "java", "com", "astral", "dao", "entity");
+            Path entityDir =
+                    Paths.get(projectDir, "astral-dao", "src", "main", "java", "com", "astral", "dao", "entity");
 
             if (!Files.exists(schemaDir)) {
                 log.warn("Schema directory not found: {}", schemaDir);
@@ -57,7 +57,7 @@ public class SchemaEntitySync {
             }
 
             Files.createDirectories(entityDir);
-            
+
             Set<String> expectedEntities = new HashSet<>();
 
             try (Stream<Path> schemaPaths = Files.list(schemaDir)) {
@@ -69,7 +69,8 @@ public class SchemaEntitySync {
                         Path entityPath = entityDir.resolve(entityFileName);
                         expectedEntities.add(entityFileName);
 
-                        if (!Files.exists(entityPath) || !Files.readString(entityPath).equals(entityCode)) {
+                        if (!Files.exists(entityPath)
+                                || !Files.readString(entityPath).equals(entityCode)) {
                             Files.writeString(entityPath, entityCode);
                             log.info("Entity updated/created: {}", entityFileName);
                         }
@@ -109,7 +110,11 @@ public class SchemaEntitySync {
     private static String findProjectRoot() {
         Path current = Paths.get(System.getProperty("user.dir"));
         for (int i = 0; i < 4; i++) {
-            Path schemaDir = current.resolve("astral-schema").resolve("src").resolve("main").resolve("resources").resolve("schema");
+            Path schemaDir = current.resolve("astral-schema")
+                    .resolve("src")
+                    .resolve("main")
+                    .resolve("resources")
+                    .resolve("schema");
             if (Files.exists(schemaDir)) {
                 log.info("Found project root at: {}", current);
                 return current.toString();

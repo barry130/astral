@@ -14,17 +14,16 @@ import com.astral.sequence.generator.SimpleGenerator;
 import com.astral.sequence.generator.SnowflakeGenerator;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
-
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 生成器工厂
@@ -298,7 +297,8 @@ public class GeneratorFactory {
             case "REDIS" -> {
                 // Redis 生成器是条件加载的，使用前需要检查是否启用
                 if (redisGenerator == null) {
-                    throw new IllegalStateException("Redis generator is not enabled. Set astral.sequence.types.redis.enabled=true");
+                    throw new IllegalStateException(
+                            "Redis generator is not enabled. Set astral.sequence.types.redis.enabled=true");
                 }
                 yield redisGenerator;
             }

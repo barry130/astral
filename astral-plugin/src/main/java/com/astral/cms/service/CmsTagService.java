@@ -12,14 +12,13 @@ import com.astral.cms.mapper.CmsTagMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * CMS 标签服务
@@ -29,8 +28,10 @@ public class CmsTagService {
 
     @Resource
     private CmsTagMapper tagMapper;
+
     @Resource
     private CmsPostTagMapper postTagMapper;
+
     @Resource
     private CmsPostMapper postMapper;
 
@@ -38,8 +39,7 @@ public class CmsTagService {
      * 管理端标签列表（含关联已发布文章数）
      */
     public List<CmsTag> adminList() {
-        List<CmsTag> tags = tagMapper.selectList(new LambdaQueryWrapper<CmsTag>()
-                .orderByAsc(CmsTag::getId));
+        List<CmsTag> tags = tagMapper.selectList(new LambdaQueryWrapper<CmsTag>().orderByAsc(CmsTag::getId));
         fillPostCounts(tags);
         return tags;
     }
@@ -87,9 +87,8 @@ public class CmsTagService {
         tags.forEach(t -> tagIds.add(t.getId()));
         Set<Long> publishedPostIds = new HashSet<>();
         // 匿名访客只算已发布；登录的管理员把私密文章一起算进来
-        LambdaQueryWrapper<CmsPost> lw = new LambdaQueryWrapper<CmsPost>()
-                .select(CmsPost::getId)
-                .isNull(CmsPost::getDeleteTime);
+        LambdaQueryWrapper<CmsPost> lw =
+                new LambdaQueryWrapper<CmsPost>().select(CmsPost::getId).isNull(CmsPost::getDeleteTime);
         if (CmsVisibility.canViewPrivate()) {
             lw.in(CmsPost::getStatus, CmsPost.STATUS_PUBLISHED, CmsPost.STATUS_PRIVATE);
         } else {
@@ -102,8 +101,8 @@ public class CmsTagService {
         });
         Map<Long, Long> counts = new HashMap<>();
         if (!publishedPostIds.isEmpty()) {
-            postTagMapper.selectList(new LambdaQueryWrapper<CmsPostTag>()
-                            .in(CmsPostTag::getTagId, tagIds))
+            postTagMapper
+                    .selectList(new LambdaQueryWrapper<CmsPostTag>().in(CmsPostTag::getTagId, tagIds))
                     .forEach(pt -> {
                         if (publishedPostIds.contains(pt.getPostId())) {
                             counts.merge(pt.getTagId(), 1L, Long::sum);
@@ -117,8 +116,7 @@ public class CmsTagService {
         if (name == null || name.isBlank()) {
             throw new CmsException("标签名不能为空");
         }
-        LambdaQueryWrapper<CmsTag> lw = new LambdaQueryWrapper<CmsTag>()
-                .eq(CmsTag::getName, name.trim());
+        LambdaQueryWrapper<CmsTag> lw = new LambdaQueryWrapper<CmsTag>().eq(CmsTag::getName, name.trim());
         if (excludeId != null) {
             lw.ne(CmsTag::getId, excludeId);
         }

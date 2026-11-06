@@ -26,8 +26,7 @@ public final class ClientIp {
     public static final String DEFAULT_TRUSTED_PROXIES =
             "127.0.0.1,::1,0:0:0:0:0:0:0:1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16";
 
-    private ClientIp() {
-    }
+    private ClientIp() {}
 
     /**
      * 解析客户端 IP。
@@ -77,8 +76,7 @@ public final class ClientIp {
      * @return 去重后的条目集合
      */
     public static Set<String> parseTrusted(String trustedProxies) {
-        String source = (trustedProxies == null || trustedProxies.isBlank())
-                ? DEFAULT_TRUSTED_PROXIES : trustedProxies;
+        String source = (trustedProxies == null || trustedProxies.isBlank()) ? DEFAULT_TRUSTED_PROXIES : trustedProxies;
         Set<String> set = new LinkedHashSet<>();
         for (String part : source.split(",")) {
             String p = trimToNull(part);

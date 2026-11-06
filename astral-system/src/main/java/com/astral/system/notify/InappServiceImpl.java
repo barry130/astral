@@ -1,8 +1,5 @@
 package com.astral.system.notify;
 
-import java.time.LocalDateTime;
-import java.util.Map;
-
 import com.astral.common.constant.NoticeConstants;
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.SysMailTemplate;
@@ -10,10 +7,11 @@ import com.astral.dao.entity.SysNotice;
 import com.astral.dao.mapper.SysMailTemplateMapper;
 import com.astral.dao.mapper.SysNoticeMapper;
 import com.astral.system.notice.NoticeDisplay;
-import com.astral.system.notify.NotifyEventDef;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.time.LocalDateTime;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,13 +41,21 @@ public class InappServiceImpl implements InappService {
 
     @Override
     public void sendRaw(Long userId, String title, String content, String scene) {
-        insert(userId, title == null ? "" : title, content == null ? "" : content, scene,
-                NoticeConstants.TYPE_ANNOUNCE, null, null, null, null);
+        insert(
+                userId,
+                title == null ? "" : title,
+                content == null ? "" : content,
+                scene,
+                NoticeConstants.TYPE_ANNOUNCE,
+                null,
+                null,
+                null,
+                null);
     }
 
     @Override
-    public void sendTemplateRow(Long templateId, Long userId, Map<String, String> variables, String platform,
-            String sender) {
+    public void sendTemplateRow(
+            Long templateId, Long userId, Map<String, String> variables, String platform, String sender) {
         SysMailTemplate tpl = mailTemplateMapper.selectById(templateId);
         if (tpl == null || !NotifyChannel.INAPP.equals(tpl.getChannel())) {
             throw new IllegalStateException("站内信模板不存在或渠道不是 INAPP（templateId=" + templateId + "）");
@@ -57,8 +63,10 @@ public class InappServiceImpl implements InappService {
         // 类型标签：payload meta 字段 > 事件定义回退值 > announce（App 端消息中心按此打标签）
         String noticeType = variables == null ? null : variables.get("noticeType");
         if (noticeType == null || noticeType.isBlank()) {
-            noticeType = NotifyEventRegistry.find(tpl.getScene()).map(NotifyEventDef::noticeType)
-                    .filter(v -> v != null && !v.isBlank()).orElse(NoticeConstants.TYPE_ANNOUNCE);
+            noticeType = NotifyEventRegistry.find(tpl.getScene())
+                    .map(NotifyEventDef::noticeType)
+                    .filter(v -> v != null && !v.isBlank())
+                    .orElse(NoticeConstants.TYPE_ANNOUNCE);
         }
         // 跳转目标：payload 显式 url 优先，否则按 feedbackId 推「反馈详情」深链
         // （协议见 NoticeConstants.LINK_SCHEME；客户端解析不出来就按不可点处理）
@@ -67,8 +75,16 @@ public class InappServiceImpl implements InappService {
         if ((url == null || url.isBlank()) && feedbackId != null) {
             url = NoticeConstants.LINK_FEEDBACK + feedbackId;
         }
-        insert(userId, render(tpl.getSubject(), variables), render(tpl.getContent(), variables),
-                tpl.getScene(), noticeType, platform, feedbackId, url, sender);
+        insert(
+                userId,
+                render(tpl.getSubject(), variables),
+                render(tpl.getContent(), variables),
+                tpl.getScene(),
+                noticeType,
+                platform,
+                feedbackId,
+                url,
+                sender);
     }
 
     /**
@@ -79,12 +95,22 @@ public class InappServiceImpl implements InappService {
         if (sender != null && !sender.isBlank()) {
             return sender.trim();
         }
-        return NotifyEventRegistry.find(scene).map(NotifyEventDef::sender)
-                .filter(v -> v != null && !v.isBlank()).orElse(null);
+        return NotifyEventRegistry.find(scene)
+                .map(NotifyEventDef::sender)
+                .filter(v -> v != null && !v.isBlank())
+                .orElse(null);
     }
 
-    private void insert(Long userId, String title, String content, String scene, String noticeType,
-            String platform, Long feedbackId, String url, String sender) {
+    private void insert(
+            Long userId,
+            String title,
+            String content,
+            String scene,
+            String noticeType,
+            String platform,
+            Long feedbackId,
+            String url,
+            String sender) {
         SysNotice row = new SysNotice();
         row.setUserId(userId);
         row.setTitle(title);
@@ -98,8 +124,10 @@ public class InappServiceImpl implements InappService {
         if (url != null && !url.isBlank()) {
             row.setUrl(url);
         }
-        row.setChannel(NotifyEventRegistry.isFeedbackReply(scene) || platform == null || platform.isBlank()
-                ? NoticeConstants.CHANNEL_ALL : platform);
+        row.setChannel(
+                NotifyEventRegistry.isFeedbackReply(scene) || platform == null || platform.isBlank()
+                        ? NoticeConstants.CHANNEL_ALL
+                        : platform);
         row.setDisplay(DISPLAY_MESSAGE_CENTER);
         row.setIsShow(1L);
         row.setIsTop(0L);
@@ -114,7 +142,8 @@ public class InappServiceImpl implements InappService {
 
     @Override
     public Page<SysNotice> myPage(Long userId, int pageNum, int pageSize) {
-        Page<SysNotice> page = noticeMapper.selectPage(new Page<>(pageNum, pageSize),
+        Page<SysNotice> page = noticeMapper.selectPage(
+                new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<SysNotice>()
                         .eq(SysNotice::getUserId, userId)
                         .eq(SysNotice::getIsShow, 1L)
@@ -150,11 +179,13 @@ public class InappServiceImpl implements InappService {
 
     @Override
     public void markAllRead(Long userId) {
-        noticeMapper.update(null, new LambdaUpdateWrapper<SysNotice>()
-                .eq(SysNotice::getUserId, userId)
-                .eq(SysNotice::getIsShow, 1L)
-                .isNull(SysNotice::getReadTime)
-                .set(SysNotice::getReadTime, LocalDateTime.now()));
+        noticeMapper.update(
+                null,
+                new LambdaUpdateWrapper<SysNotice>()
+                        .eq(SysNotice::getUserId, userId)
+                        .eq(SysNotice::getIsShow, 1L)
+                        .isNull(SysNotice::getReadTime)
+                        .set(SysNotice::getReadTime, LocalDateTime.now()));
     }
 
     /** payload 是 {@code Map<String,String>}，id 从字符串解析；非法值当作「没有」 */

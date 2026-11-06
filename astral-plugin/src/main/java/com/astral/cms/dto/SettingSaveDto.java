@@ -1,9 +1,8 @@
 package com.astral.cms.dto;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-
 import java.util.Map;
+import lombok.Data;
 
 /**
  * 站点设置保存请求（KV 全量提交）

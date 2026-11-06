@@ -1,11 +1,10 @@
 package com.astral.qt.service;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Field;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 /**
  * 邮箱验证码校验脚本的结构校验。
@@ -33,8 +32,7 @@ class QtEmailCodeVerifyScriptTest {
         assertTrue(lua.contains("redis.call('DEL', KEYS[1])"), "超限必须作废验证码: " + lua);
         // 值相等必须用字符串比较，不能用数值比较（验证码可能有前导 0）
         assertTrue(lua.contains("stored == ARGV[1]"), "比较必须按字符串: " + lua);
-        assertTrue(lua.contains("return 1") && lua.contains("return -2"),
-                "返回码语义：1=通过 / -2=不存在: " + lua);
+        assertTrue(lua.contains("return 1") && lua.contains("return -2"), "返回码语义：1=通过 / -2=不存在: " + lua);
     }
 
     @Test

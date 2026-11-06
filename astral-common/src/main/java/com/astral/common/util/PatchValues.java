@@ -21,8 +21,7 @@ package com.astral.common.util;
  */
 public final class PatchValues {
 
-    private PatchValues() {
-    }
+    private PatchValues() {}
 
     /** 空白字符串归一为 null：文本控件清空提交 ""，语义上等于「清空」 */
     public static String blankToNull(String value) {

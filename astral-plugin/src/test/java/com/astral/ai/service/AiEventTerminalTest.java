@@ -1,10 +1,10 @@
 package com.astral.ai.service;
 
-import com.astral.ai.common.AiConstants;
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.astral.ai.common.AiConstants;
+import org.junit.jupiter.api.Test;
 
 /**
  * 事件流「读完才算结束」的回归测试。
@@ -41,7 +41,6 @@ class AiEventTerminalTest {
     /** 事件序号步长必须为正，否则 drained 永远追不平 */
     @Test
     void sequenceStepIsPositive() {
-        assertTrue(AiConstants.Runtime.EVENT_SEQUENCE_STEP > 0,
-                "事件序号步长必须为正，否则游标无法前进");
+        assertTrue(AiConstants.Runtime.EVENT_SEQUENCE_STEP > 0, "事件序号步长必须为正，否则游标无法前进");
     }
 }

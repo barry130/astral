@@ -15,13 +15,12 @@ import com.astral.ai.provider.MockAiProvider;
 import com.astral.ai.security.AiSecretCipher;
 import com.astral.ai.security.AiUrlGuard;
 import com.astral.common.exception.BusinessException;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 提供方配置与连通性测试。
@@ -71,12 +70,23 @@ public class AiProviderService {
 
     /** 新增提供方 */
     @Transactional(rollbackFor = Exception.class)
-    public AiProviderEntity create(String providerCode, String name, String providerType, String baseUrl,
-                                   String apiKey, String secretRef, Boolean enabled, Integer connectTimeoutMs,
-                                   Integer readTimeoutMs, Integer maxRetries, Integer weight, String remark,
-                                   Long operatorId) {
-        Long exists = providerMapper.selectCount(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiProviderEntity>()
-                .eq(AiProviderEntity::getProviderCode, providerCode));
+    public AiProviderEntity create(
+            String providerCode,
+            String name,
+            String providerType,
+            String baseUrl,
+            String apiKey,
+            String secretRef,
+            Boolean enabled,
+            Integer connectTimeoutMs,
+            Integer readTimeoutMs,
+            Integer maxRetries,
+            Integer weight,
+            String remark,
+            Long operatorId) {
+        Long exists = providerMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiProviderEntity>()
+                        .eq(AiProviderEntity::getProviderCode, providerCode));
         if (exists != null && exists > 0) {
             throw new BusinessException("AI006", "提供方编码已存在: " + providerCode);
         }
@@ -103,9 +113,20 @@ public class AiProviderService {
 
     /** 更新提供方（apiKey 为空表示不改） */
     @Transactional(rollbackFor = Exception.class)
-    public AiProviderEntity update(Long id, String name, String providerType, String baseUrl, String apiKey,
-                                   String secretRef, Boolean enabled, Integer connectTimeoutMs, Integer readTimeoutMs,
-                                   Integer maxRetries, Integer weight, String remark, Long operatorId) {
+    public AiProviderEntity update(
+            Long id,
+            String name,
+            String providerType,
+            String baseUrl,
+            String apiKey,
+            String secretRef,
+            Boolean enabled,
+            Integer connectTimeoutMs,
+            Integer readTimeoutMs,
+            Integer maxRetries,
+            Integer weight,
+            String remark,
+            Long operatorId) {
         AiProviderEntity entity = require(id);
         if (name != null) {
             entity.setName(name);
@@ -153,13 +174,15 @@ public class AiProviderService {
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         AiProviderEntity entity = require(id);
-        Long models = modelMapper.selectCount(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiModelEntity>()
-                .eq(AiModelEntity::getProviderId, id));
+        Long models = modelMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiModelEntity>()
+                        .eq(AiModelEntity::getProviderId, id));
         if (models != null && models > 0) {
             throw new BusinessException("AI006", "提供方下仍有模型，无法删除: " + entity.getName());
         }
-        Long routes = routeMapper.selectCount(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiProviderRouteEntity>()
-                .eq(AiProviderRouteEntity::getProviderId, id));
+        Long routes = routeMapper.selectCount(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiProviderRouteEntity>()
+                        .eq(AiProviderRouteEntity::getProviderId, id));
         if (routes != null && routes > 0) {
             throw new BusinessException("AI006", "提供方仍被路由引用，无法删除: " + entity.getName());
         }
@@ -190,11 +213,21 @@ public class AiProviderService {
         }
         HealthResult result;
         try {
-            ChatRequest request = new ChatRequest(entity.getBaseUrl(), resolveApiKey(entity), code,
-                    List.of(Message.user("ping")), List.of(), 0.0, null, 16, null, null,
+            ChatRequest request = new ChatRequest(
+                    entity.getBaseUrl(),
+                    resolveApiKey(entity),
+                    code,
+                    List.of(Message.user("ping")),
+                    List.of(),
+                    0.0,
+                    null,
+                    16,
+                    null,
+                    null,
                     entity.getConnectTimeoutMs() == null ? 15000 : entity.getConnectTimeoutMs(),
                     entity.getReadTimeoutMs() == null ? 120000 : entity.getReadTimeoutMs(),
-                    0, "health-" + id);
+                    0,
+                    "health-" + id);
             result = registry.require(entity.getProviderType()).testConnection(request);
         } catch (Exception e) {
             log.warn("[AI] 提供方连通性测试失败 provider={} reason={}", entity.getProviderCode(), e.getMessage());
@@ -215,14 +248,18 @@ public class AiProviderService {
             if (plain == null) {
                 if (!cipher.isConfigured()) {
                     // 服务器没配 KEK：密文在库里但没有任何口令能解开它
-                    throw new BusinessException("AI006", "提供方密钥已加密存储，但服务器未配置解密主密钥："
-                            + "请在部署环境的 deploy/.env 设置 ASTRAL_AI_SECRET_KEY（须与保存密钥时的值一致），"
-                            + "并确认 docker-compose.yml 已透传该变量，然后重启后端");
+                    throw new BusinessException(
+                            "AI006",
+                            "提供方密钥已加密存储，但服务器未配置解密主密钥："
+                                    + "请在部署环境的 deploy/.env 设置 ASTRAL_AI_SECRET_KEY（须与保存密钥时的值一致），"
+                                    + "并确认 docker-compose.yml 已透传该变量，然后重启后端");
                 }
                 // KEK 已配置但解不开：保存密钥后主密钥被更换过
-                throw new BusinessException("AI006", "提供方密钥无法解密：当前 ASTRAL_AI_SECRET_KEY "
-                        + "与保存该密钥时所用的主密钥不一致（或密文已损坏）。"
-                        + "请改回原主密钥，或在本提供方上重新保存 API Key 以重新加密");
+                throw new BusinessException(
+                        "AI006",
+                        "提供方密钥无法解密：当前 ASTRAL_AI_SECRET_KEY "
+                                + "与保存该密钥时所用的主密钥不一致（或密文已损坏）。"
+                                + "请改回原主密钥，或在本提供方上重新保存 API Key 以重新加密");
             }
             return plain;
         }

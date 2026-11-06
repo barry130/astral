@@ -6,5 +6,4 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 /**
  * CMS 分类 Mapper
  */
-public interface CmsCategoryMapper extends BaseMapper<CmsCategory> {
-}
+public interface CmsCategoryMapper extends BaseMapper<CmsCategory> {}

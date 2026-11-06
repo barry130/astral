@@ -3,17 +3,16 @@ package com.astral.system.notify;
 import com.astral.dao.entity.Role;
 import com.astral.dao.mapper.RoleMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /** 用户角色差异通知：只在业务事务提交后异步投递，通知异常不影响角色维护。 */
 @Slf4j
@@ -38,17 +37,27 @@ public class UserRoleChangeNotifier {
         try {
             Set<Long> changed = new LinkedHashSet<>(added);
             changed.addAll(removed);
-            Map<Long, String> names = roleMapper.selectList(new LambdaQueryWrapper<Role>()
-                            .in(Role::getId, changed)).stream()
-                    .collect(Collectors.toMap(Role::getId, r -> r.getRoleName() == null || r.getRoleName().isBlank()
-                            ? r.getRoleCode() == null ? String.valueOf(r.getId()) : r.getRoleCode()
-                            : r.getRoleName()));
+            Map<Long, String> names =
+                    roleMapper.selectList(new LambdaQueryWrapper<Role>().in(Role::getId, changed)).stream()
+                            .collect(Collectors.toMap(
+                                    Role::getId,
+                                    r -> r.getRoleName() == null
+                                                    || r.getRoleName().isBlank()
+                                            ? r.getRoleCode() == null ? String.valueOf(r.getId()) : r.getRoleCode()
+                                            : r.getRoleName()));
             String addedNames = roleNames(added, names);
             String removedNames = roleNames(removed, names);
             String summary = (added.isEmpty() ? "" : "您已获得" + addedNames + "角色权限。")
                     + (removed.isEmpty() ? "" : "您已被移除" + removedNames + "角色权限。");
-            Map<String, String> payload = Map.of("userId", userId.toString(), "addedRoles", addedNames,
-                    "removedRoles", removedNames, "changeSummary", summary);
+            Map<String, String> payload = Map.of(
+                    "userId",
+                    userId.toString(),
+                    "addedRoles",
+                    addedNames,
+                    "removedRoles",
+                    removedNames,
+                    "changeSummary",
+                    summary);
             if (TransactionSynchronizationManager.isSynchronizationActive()) {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
@@ -65,7 +74,8 @@ public class UserRoleChangeNotifier {
     }
 
     private String roleNames(Set<Long> ids, Map<Long, String> names) {
-        return ids.stream().map(id -> "「" + names.getOrDefault(id, "角色#" + id) + "」")
+        return ids.stream()
+                .map(id -> "「" + names.getOrDefault(id, "角色#" + id) + "」")
                 .collect(Collectors.joining("、"));
     }
 

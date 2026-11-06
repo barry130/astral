@@ -7,12 +7,11 @@ import com.astral.ai.entity.AiFeedbackEntity;
 import com.astral.ai.entity.AiMessageEntity;
 import com.astral.ai.mapper.AiFeedbackMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 消息反馈服务。
@@ -29,8 +28,8 @@ public class AiFeedbackService {
     private final AiConversationService conversationService;
 
     /** 提交或覆盖反馈 */
-    public AiFeedbackEntity submit(Long userId, AiMessageEntity message, String feedbackType,
-                                   String reasonCode, String comment) {
+    public AiFeedbackEntity submit(
+            Long userId, AiMessageEntity message, String feedbackType, String reasonCode, String comment) {
         String type = feedbackType == null ? null : feedbackType.trim().toUpperCase();
         if (type == null || !AiAppDtos.FEEDBACK_TYPES.contains(type)) {
             throw new AiException("AI008", "不支持的反馈类型: " + feedbackType);
@@ -73,8 +72,8 @@ public class AiFeedbackService {
     }
 
     /** 管理端反馈列表 */
-    public List<AiFeedbackEntity> search(String feedbackType, Long agentId, LocalDateTime from,
-                                         LocalDateTime to, int pageNum, int pageSize) {
+    public List<AiFeedbackEntity> search(
+            String feedbackType, Long agentId, LocalDateTime from, LocalDateTime to, int pageNum, int pageSize) {
         int size = Math.max(1, Math.min(200, pageSize));
         int num = Math.max(1, pageNum);
         return feedbackMapper.selectList(new LambdaQueryWrapper<AiFeedbackEntity>()

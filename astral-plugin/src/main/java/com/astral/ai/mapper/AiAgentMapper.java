@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 智能体 Mapper
  */
 @Mapper
-public interface AiAgentMapper extends BaseMapper<AiAgentEntity> {
-}
+public interface AiAgentMapper extends BaseMapper<AiAgentEntity> {}

@@ -4,9 +4,8 @@ import com.astral.dao.entity.DictData;
 import com.astral.dao.mapper.DictDataMapper;
 import com.astral.system.service.DictDataService;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 /**
  * 字典数据服务实现类

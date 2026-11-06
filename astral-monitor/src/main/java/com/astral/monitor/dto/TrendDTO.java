@@ -1,8 +1,7 @@
 package com.astral.monitor.dto;
 
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * 小时趋势数据传输对象（trend / api/trend）

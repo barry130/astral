@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * 告警渠道 Mapper
  */
 @Mapper
-public interface AlertChannelMapper extends BaseMapper<AlertChannel> {
-}
+public interface AlertChannelMapper extends BaseMapper<AlertChannel> {}

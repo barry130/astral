@@ -1,12 +1,5 @@
 package com.astral.schema;
 
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.SerializationFeature;
-import tools.jackson.databind.json.JsonMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.JarURLConnection;
@@ -21,6 +14,12 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Schema注册中心
@@ -43,9 +42,8 @@ public class SchemaRegistry {
     /** Schema缓存，以表名为key，线程安全 */
     private static final Map<String, TableSchema> SCHEMA_CACHE = new ConcurrentHashMap<>();
     /** JSON序列化器，启用格式化输出（Jackson 3 起 java.time 已内置，无需再注册 JavaTimeModule） */
-    private static final ObjectMapper MAPPER = JsonMapper.builder()
-            .enable(SerializationFeature.INDENT_OUTPUT)
-            .build();
+    private static final ObjectMapper MAPPER =
+            JsonMapper.builder().enable(SerializationFeature.INDENT_OUTPUT).build();
     /** 外部Schema文件存储目录 */
     private static Path externalSchemaDir;
 

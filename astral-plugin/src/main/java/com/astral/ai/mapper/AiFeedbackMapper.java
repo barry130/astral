@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 反馈 Mapper
  */
 @Mapper
-public interface AiFeedbackMapper extends BaseMapper<AiFeedbackEntity> {
-}
+public interface AiFeedbackMapper extends BaseMapper<AiFeedbackEntity> {}

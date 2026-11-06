@@ -7,5 +7,4 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SysMailTemplateServiceImpl extends ServiceImpl<SysMailTemplateMapper, SysMailTemplate>
-        implements SysMailTemplateService {
-}
+        implements SysMailTemplateService {}

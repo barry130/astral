@@ -9,5 +9,4 @@ import org.apache.ibatis.annotations.Mapper;
  * 继承 MyBatis-Plus BaseMapper，提供基础 CRUD 操作
  */
 @Mapper
-public interface PermissionMapper extends BaseMapper<Permission> {
-}
+public interface PermissionMapper extends BaseMapper<Permission> {}

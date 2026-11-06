@@ -14,21 +14,19 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import jakarta.validation.Valid;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 序列配置管理控制器
@@ -182,18 +180,20 @@ public class SequenceConfigController {
         assertNotSystemSequence(existing, "SEQ008");
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「清空前缀/后缀/日期格式」保存后仍是旧值。白名单逐列显式 set，可空列原样写入（含 null）。
-        sequenceConfigMapper.update(null, new LambdaUpdateWrapper<SequenceConfig>()
-                .eq(SequenceConfig::getId, id)
-                .set(SequenceConfig::getBizKey, config.getBizKey())
-                .set(SequenceConfig::getSequenceType, config.getSequenceType())
-                .set(SequenceConfig::getStep, PatchValues.orDefault(config.getStep(), 1000))
-                .set(SequenceConfig::getDateFormat, PatchValues.blankToNull(config.getDateFormat()))
-                .set(SequenceConfig::getPrefix, PatchValues.blankToNull(config.getPrefix()))
-                .set(SequenceConfig::getSuffix, PatchValues.blankToNull(config.getSuffix()))
-                .set(SequenceConfig::getMinValue, PatchValues.orDefault(config.getMinValue(), 1L))
-                .set(SequenceConfig::getEnabled, PatchValues.orDefault(config.getEnabled(), Boolean.TRUE))
-                .set(SequenceConfig::getDescription, PatchValues.blankToNull(config.getDescription()))
-                .set(SequenceConfig::getUpdateTime, LocalDateTime.now()));
+        sequenceConfigMapper.update(
+                null,
+                new LambdaUpdateWrapper<SequenceConfig>()
+                        .eq(SequenceConfig::getId, id)
+                        .set(SequenceConfig::getBizKey, config.getBizKey())
+                        .set(SequenceConfig::getSequenceType, config.getSequenceType())
+                        .set(SequenceConfig::getStep, PatchValues.orDefault(config.getStep(), 1000))
+                        .set(SequenceConfig::getDateFormat, PatchValues.blankToNull(config.getDateFormat()))
+                        .set(SequenceConfig::getPrefix, PatchValues.blankToNull(config.getPrefix()))
+                        .set(SequenceConfig::getSuffix, PatchValues.blankToNull(config.getSuffix()))
+                        .set(SequenceConfig::getMinValue, PatchValues.orDefault(config.getMinValue(), 1L))
+                        .set(SequenceConfig::getEnabled, PatchValues.orDefault(config.getEnabled(), Boolean.TRUE))
+                        .set(SequenceConfig::getDescription, PatchValues.blankToNull(config.getDescription()))
+                        .set(SequenceConfig::getUpdateTime, LocalDateTime.now()));
         config.setId(id);
         generatorFactory.evictConfigCache();
         return Result.success(config);

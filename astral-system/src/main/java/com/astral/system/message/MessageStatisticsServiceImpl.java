@@ -1,17 +1,5 @@
 package com.astral.system.message;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.SysMailLog;
 import com.astral.dao.entity.SysNotice;
@@ -23,6 +11,17 @@ import com.astral.system.dto.MessageDeliveryVo;
 import com.astral.system.dto.MessageStatisticsVo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -96,7 +95,8 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
         vo.setTodayFail(todayTally[2]);
 
         for (String channel : criteria.channels()) {
-            long[] t = tally(rows.stream().filter(row -> channel.equals(row.channel())).toList());
+            long[] t = tally(
+                    rows.stream().filter(row -> channel.equals(row.channel())).toList());
             MessageStatisticsVo.ChannelStat stat = new MessageStatisticsVo.ChannelStat();
             stat.setChannel(channel);
             stat.setTotal(t[0]);
@@ -190,8 +190,7 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
 
         List<Delivery> rows = load(criteria);
         // 三渠道合并排序：发送时间倒序，同一时刻按 id 倒序兜底（保证分页稳定、不重不漏）
-        rows.sort(Comparator
-                .comparing(Delivery::time, Comparator.nullsLast(Comparator.<LocalDateTime>reverseOrder()))
+        rows.sort(Comparator.comparing(Delivery::time, Comparator.nullsLast(Comparator.<LocalDateTime>reverseOrder()))
                 .thenComparing(Delivery::id, Comparator.nullsLast(Comparator.<Long>reverseOrder())));
 
         long total = rows.size();
@@ -224,9 +223,17 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
                     .le(criteria.end() != null, SysMailLog::getSendTime, criteria.end())
                     .eq(criteria.scene() != null, SysMailLog::getScene, criteria.scene());
             for (SysMailLog log : mailLogMapper.selectList(wrapper)) {
-                Delivery row = new Delivery(CHANNEL_EMAIL, log.getId(), log.getScene(), log.getToEmail(),
-                        log.getSubject(), log.getContent(), log.getStatus(), log.getErrorMsg(),
-                        log.getSendTime(), log.getPluginId());
+                Delivery row = new Delivery(
+                        CHANNEL_EMAIL,
+                        log.getId(),
+                        log.getScene(),
+                        log.getToEmail(),
+                        log.getSubject(),
+                        log.getContent(),
+                        log.getStatus(),
+                        log.getErrorMsg(),
+                        log.getSendTime(),
+                        log.getPluginId());
                 if (criteria.matches(row)) {
                     rows.add(row);
                 }
@@ -239,9 +246,17 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
                     .le(criteria.end() != null, SysSmsLog::getSendTime, criteria.end())
                     .eq(criteria.scene() != null, SysSmsLog::getScene, criteria.scene());
             for (SysSmsLog log : smsLogMapper.selectList(wrapper)) {
-                Delivery row = new Delivery(CHANNEL_SMS, log.getId(), log.getScene(), log.getPhone(),
-                        null, log.getContent(), log.getStatus(), log.getErrorMsg(),
-                        log.getSendTime(), log.getPluginId());
+                Delivery row = new Delivery(
+                        CHANNEL_SMS,
+                        log.getId(),
+                        log.getScene(),
+                        log.getPhone(),
+                        null,
+                        log.getContent(),
+                        log.getStatus(),
+                        log.getErrorMsg(),
+                        log.getSendTime(),
+                        log.getPluginId());
                 if (criteria.matches(row)) {
                     rows.add(row);
                 }
@@ -255,10 +270,17 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
                     .le(criteria.end() != null, SysNotice::getCreateTime, criteria.end())
                     .eq(criteria.scene() != null, SysNotice::getScene, criteria.scene());
             for (SysNotice notice : noticeMapper.selectList(wrapper)) {
-                Delivery row = new Delivery(CHANNEL_INAPP, notice.getId(), notice.getScene(),
+                Delivery row = new Delivery(
+                        CHANNEL_INAPP,
+                        notice.getId(),
+                        notice.getScene(),
                         notice.getUserId() == null ? "all" : String.valueOf(notice.getUserId()),
-                        notice.getTitle(), notice.getContent(), 1, null,
-                        notice.getCreateTime(), inappSender(notice.getSender()));
+                        notice.getTitle(),
+                        notice.getContent(),
+                        1,
+                        null,
+                        notice.getCreateTime(),
+                        inappSender(notice.getSender()));
                 if (criteria.matches(row)) {
                     rows.add(row);
                 }
@@ -316,7 +338,8 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
     /** total / success / fail 三件套 */
     private static long[] tally(List<Delivery> rows) {
         long total = rows.size();
-        long success = rows.stream().filter(MessageStatisticsServiceImpl::isSuccess).count();
+        long success =
+                rows.stream().filter(MessageStatisticsServiceImpl::isSuccess).count();
         return new long[] {total, success, total - success};
     }
 
@@ -333,8 +356,7 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
     /** 按总量倒序、总量相同按 key 字典序，保证输出稳定可测 */
     private static List<Map.Entry<String, long[]>> sortedByTotalDesc(Map<String, long[]> agg) {
         return agg.entrySet().stream()
-                .sorted(Comparator
-                        .comparingLong((Map.Entry<String, long[]> entry) -> entry.getValue()[0])
+                .sorted(Comparator.comparingLong((Map.Entry<String, long[]> entry) -> entry.getValue()[0])
                         .reversed()
                         .thenComparing(Map.Entry::getKey))
                 .toList();
@@ -371,8 +393,7 @@ public class MessageStatisticsServiceImpl implements MessageStatisticsService {
             Integer status,
             String errorMsg,
             LocalDateTime time,
-            String pluginId) {
-    }
+            String pluginId) {}
 
     /** 归一化后的筛选条件 */
     private record Criteria(

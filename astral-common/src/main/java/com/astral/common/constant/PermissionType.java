@@ -28,8 +28,7 @@ public final class PermissionType {
     /** 数据（后端结果可见范围 / 结果级权限） */
     public static final int DATA = 5;
 
-    private PermissionType() {
-    }
+    private PermissionType() {}
 
     /** 是否为前端菜单树类型（菜单管理/导航渲染用） */
     public static boolean isMenuType(Integer type) {

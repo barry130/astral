@@ -13,8 +13,7 @@ public final class AiPropertiesHolder {
 
     private static volatile boolean schemaReady = false;
 
-    private AiPropertiesHolder() {
-    }
+    private AiPropertiesHolder() {}
 
     public static void markSchemaReady() {
         schemaReady = true;

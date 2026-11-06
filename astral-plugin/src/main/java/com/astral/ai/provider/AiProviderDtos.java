@@ -10,12 +10,10 @@ import java.util.List;
  */
 public final class AiProviderDtos {
 
-    private AiProviderDtos() {
-    }
+    private AiProviderDtos() {}
 
     /** 对话消息（OpenAI 兼容格式） */
-    public record Message(String role, String content, String toolCallId, String toolName,
-                          List<ToolCall> toolCalls) {
+    public record Message(String role, String content, String toolCallId, String toolName, List<ToolCall> toolCalls) {
 
         public static Message system(String content) {
             return new Message("system", content, null, null, null);
@@ -39,12 +37,10 @@ public final class AiProviderDtos {
     }
 
     /** 模型请求的工具调用 */
-    public record ToolCall(String id, String name, String arguments) {
-    }
+    public record ToolCall(String id, String name, String arguments) {}
 
     /** 工具声明（发给模型） */
-    public record ToolSpec(String name, String description, String parametersJson) {
-    }
+    public record ToolSpec(String name, String description, String parametersJson) {}
 
     /** 一次对话请求 */
     public record ChatRequest(
@@ -61,18 +57,11 @@ public final class AiProviderDtos {
             int connectTimeoutMs,
             int readTimeoutMs,
             int maxRetries,
-            String traceId
-    ) {
-    }
+            String traceId) {}
 
     /** 非流式结果 */
     public record ChatResult(
-            String content,
-            String finishReason,
-            int promptTokens,
-            int completionTokens,
-            List<ToolCall> toolCalls
-    ) {
+            String content, String finishReason, int promptTokens, int completionTokens, List<ToolCall> toolCalls) {
         public static ChatResult empty() {
             return new ChatResult("", "stop", 0, 0, List.of());
         }
@@ -96,8 +85,7 @@ public final class AiProviderDtos {
         void onDelta(String text);
 
         /** 收到增量推理内容（部分模型支持，默认忽略） */
-        default void onReasoning(String text) {
-        }
+        default void onReasoning(String text) {}
 
         /** 流正常结束 */
         void onCompleted(ChatResult result);

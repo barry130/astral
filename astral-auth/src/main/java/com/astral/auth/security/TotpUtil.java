@@ -1,10 +1,10 @@
 package com.astral.auth.security;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * TOTP（RFC 6238）工具：时间步 30s、HMAC-SHA1、6 位动态码，允许 ±1 步时钟偏移。
@@ -27,8 +27,7 @@ public final class TotpUtil {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private TotpUtil() {
-    }
+    private TotpUtil() {}
 
     /** 生成随机密钥（Base32 编码，无填充） */
     public static String generateSecret() {

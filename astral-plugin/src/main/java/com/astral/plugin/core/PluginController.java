@@ -8,15 +8,14 @@ import com.astral.plugin.api.PluginFrontendExtension;
 import com.astral.plugin.api.PluginRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "插件管理")
 @RestController
@@ -32,9 +31,8 @@ public class PluginController {
     @Operation(summary = "获取所有插件")
     @GetMapping("/list")
     public Result<List<Map<String, Object>>> listPlugins() {
-        List<Map<String, Object>> result = pluginRegistry.getAllPlugins().stream()
-                .map(this::toPluginMap)
-                .collect(Collectors.toList());
+        List<Map<String, Object>> result =
+                pluginRegistry.getAllPlugins().stream().map(this::toPluginMap).collect(Collectors.toList());
         return Result.success(result);
     }
 
@@ -76,13 +74,15 @@ public class PluginController {
     @Operation(summary = "获取插件默认配置")
     @GetMapping("/configs")
     public Result<List<Map<String, Object>>> getPluginConfigs() {
-        List<Map<String, Object>> result = configProviders.stream().map(cp -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("pluginId", cp.getPluginId());
-            map.put("configPrefix", cp.getConfigPrefix());
-            map.put("defaultConfig", cp.getDefaultConfig());
-            return map;
-        }).collect(Collectors.toList());
+        List<Map<String, Object>> result = configProviders.stream()
+                .map(cp -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("pluginId", cp.getPluginId());
+                    map.put("configPrefix", cp.getConfigPrefix());
+                    map.put("defaultConfig", cp.getDefaultConfig());
+                    return map;
+                })
+                .collect(Collectors.toList());
         return Result.success(result);
     }
 

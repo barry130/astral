@@ -4,13 +4,12 @@ import com.astral.ai.entity.AiModelEntity;
 import com.astral.ai.mapper.AiModelMapper;
 import com.astral.common.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.math.BigDecimal;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.List;
 
 /**
  * 模型配置服务。
@@ -87,12 +86,17 @@ public class AiModelService {
             entity.setModelName(input.getModelName().trim());
         }
         entity.setModelKind(input.getModelKind() == null ? entity.getModelKind() : input.getModelKind());
-        entity.setSupportsStream(input.getSupportsStream() == null ? entity.getSupportsStream() : input.getSupportsStream());
-        entity.setSupportsTools(input.getSupportsTools() == null ? entity.getSupportsTools() : input.getSupportsTools());
+        entity.setSupportsStream(
+                input.getSupportsStream() == null ? entity.getSupportsStream() : input.getSupportsStream());
+        entity.setSupportsTools(
+                input.getSupportsTools() == null ? entity.getSupportsTools() : input.getSupportsTools());
         entity.setSupportsJson(input.getSupportsJson() == null ? entity.getSupportsJson() : input.getSupportsJson());
-        entity.setSupportsVision(input.getSupportsVision() == null ? entity.getSupportsVision() : input.getSupportsVision());
-        entity.setMaxContextTokens(input.getMaxContextTokens() == null ? entity.getMaxContextTokens() : input.getMaxContextTokens());
-        entity.setMaxOutputTokens(input.getMaxOutputTokens() == null ? entity.getMaxOutputTokens() : input.getMaxOutputTokens());
+        entity.setSupportsVision(
+                input.getSupportsVision() == null ? entity.getSupportsVision() : input.getSupportsVision());
+        entity.setMaxContextTokens(
+                input.getMaxContextTokens() == null ? entity.getMaxContextTokens() : input.getMaxContextTokens());
+        entity.setMaxOutputTokens(
+                input.getMaxOutputTokens() == null ? entity.getMaxOutputTokens() : input.getMaxOutputTokens());
         entity.setInputPrice(input.getInputPrice() == null ? entity.getInputPrice() : input.getInputPrice());
         entity.setOutputPrice(input.getOutputPrice() == null ? entity.getOutputPrice() : input.getOutputPrice());
         entity.setCurrency(input.getCurrency() == null ? entity.getCurrency() : input.getCurrency());

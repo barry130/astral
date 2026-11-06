@@ -3,14 +3,13 @@ package com.astral.sequence.service;
 import com.astral.dao.entity.SequenceHistory;
 import com.astral.dao.entity.SequenceStatistics;
 import com.astral.dao.mapper.SequenceStatisticsMapper;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * 序列历史 / 统计的异步写入器
@@ -35,11 +34,11 @@ public class SequenceAsyncWriter {
      * （此时容器早已启动完成）才被解析。
      */
     private final SequenceHistoryService historyService;
+
     private final SequenceStatisticsMapper statisticsMapper;
 
     public SequenceAsyncWriter(
-            @Lazy SequenceHistoryService historyService,
-            @Lazy SequenceStatisticsMapper statisticsMapper) {
+            @Lazy SequenceHistoryService historyService, @Lazy SequenceStatisticsMapper statisticsMapper) {
         this.historyService = historyService;
         this.statisticsMapper = statisticsMapper;
     }

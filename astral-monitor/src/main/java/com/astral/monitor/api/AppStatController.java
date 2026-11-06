@@ -1,6 +1,5 @@
 package com.astral.monitor.api;
 
-import org.springframework.beans.factory.annotation.Value;
 import com.astral.common.annotation.RateLimit;
 import com.astral.common.result.Result;
 import com.astral.common.util.ClientIp;
@@ -11,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,8 +42,7 @@ public class AppStatController {
     // 「按 IP 打穿连接池」的按钮交给公网。service 侧另有并发准入（MAX_CONCURRENT_BATCHES）。
     @RateLimit(key = "ip", limit = 60, duration = 60, message = "上报过于频繁，请稍后再试")
     @PostMapping("/report")
-    public Result<Void> report(@Valid @RequestBody StatReportRequest request,
-                               HttpServletRequest servletRequest) {
+    public Result<Void> report(@Valid @RequestBody StatReportRequest request, HttpServletRequest servletRequest) {
         String ip = resolveClientIp(servletRequest);
         statIngestService.processBatchAsync(request.getEvents(), ip);
         return Result.success();

@@ -2,14 +2,13 @@ package com.astral.dao.mapper;
 
 import com.astral.dao.entity.StatApiHourly;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 
 /**
  * 统计接口小时桶 Mapper 接口
@@ -25,19 +24,20 @@ public interface StatApiHourlyMapper extends BaseMapper<StatApiHourly> {
      * 否则会误累加到其它平台/版本的桶上。
      * </p>
      */
-    @Update("UPDATE stat_api_hourly SET call_count = call_count + #{callCount}, " +
-            "sum_ms = sum_ms + #{sumMs}, max_ms = GREATEST(max_ms, #{maxMs}) " +
-            "WHERE bucket_hour = #{bucketHour} AND uri = #{uri} AND method = #{method} " +
-            "AND status = #{status} AND ut = #{ut} AND app_version = #{appVersion}")
-    int incrementApi(@Param("bucketHour") LocalDateTime bucketHour,
-                     @Param("uri") String uri,
-                     @Param("method") String method,
-                     @Param("status") Integer status,
-                     @Param("ut") String ut,
-                     @Param("appVersion") String appVersion,
-                     @Param("callCount") long callCount,
-                     @Param("sumMs") long sumMs,
-                     @Param("maxMs") int maxMs);
+    @Update("UPDATE stat_api_hourly SET call_count = call_count + #{callCount}, "
+            + "sum_ms = sum_ms + #{sumMs}, max_ms = GREATEST(max_ms, #{maxMs}) "
+            + "WHERE bucket_hour = #{bucketHour} AND uri = #{uri} AND method = #{method} "
+            + "AND status = #{status} AND ut = #{ut} AND app_version = #{appVersion}")
+    int incrementApi(
+            @Param("bucketHour") LocalDateTime bucketHour,
+            @Param("uri") String uri,
+            @Param("method") String method,
+            @Param("status") Integer status,
+            @Param("ut") String ut,
+            @Param("appVersion") String appVersion,
+            @Param("callCount") long callCount,
+            @Param("sumMs") long sumMs,
+            @Param("maxMs") int maxMs);
 
     /**
      * 按日聚合接口 Top 榜（uri+method 维度，callCount 降序）
@@ -46,26 +46,26 @@ public interface StatApiHourlyMapper extends BaseMapper<StatApiHourly> {
      * 平台/版本为可选过滤：传空串（或 null）表示「全部平台」/「全部版本」。
      * </p>
      */
-    @Select("<script>" +
-            "SELECT uri AS \"apiPath\", method AS \"apiMethod\", " +
-            "SUM(call_count) AS \"callCount\", " +
-            "SUM(CASE WHEN status &lt; 400 THEN call_count ELSE 0 END) AS \"successCount\", " +
-            "SUM(CASE WHEN status &gt;= 400 THEN call_count ELSE 0 END) AS \"failureCount\", " +
-            "(SUM(sum_ms) / GREATEST(SUM(call_count), 1)) AS \"avgTime\", " +
-            "MAX(max_ms) AS \"maxTime\" " +
-            "FROM stat_api_hourly " +
-            "WHERE bucket_hour &gt;= #{start} AND bucket_hour &lt; #{end} " +
-            "<if test=\"ut != null and ut != ''\">AND ut = #{ut} </if>" +
-            "<if test=\"appVersion != null and appVersion != ''\">AND app_version = #{appVersion} </if>" +
-            "GROUP BY uri, method " +
-            "ORDER BY \"callCount\" DESC " +
-            "LIMIT #{limit}" +
-            "</script>")
-    List<Map<String, Object>> selectApiTop(@Param("start") LocalDateTime start,
-                                           @Param("end") LocalDateTime end,
-                                           @Param("ut") String ut,
-                                           @Param("appVersion") String appVersion,
-                                           @Param("limit") int limit);
+    @Select("<script>" + "SELECT uri AS \"apiPath\", method AS \"apiMethod\", "
+            + "SUM(call_count) AS \"callCount\", "
+            + "SUM(CASE WHEN status &lt; 400 THEN call_count ELSE 0 END) AS \"successCount\", "
+            + "SUM(CASE WHEN status &gt;= 400 THEN call_count ELSE 0 END) AS \"failureCount\", "
+            + "(SUM(sum_ms) / GREATEST(SUM(call_count), 1)) AS \"avgTime\", "
+            + "MAX(max_ms) AS \"maxTime\" "
+            + "FROM stat_api_hourly "
+            + "WHERE bucket_hour &gt;= #{start} AND bucket_hour &lt; #{end} "
+            + "<if test=\"ut != null and ut != ''\">AND ut = #{ut} </if>"
+            + "<if test=\"appVersion != null and appVersion != ''\">AND app_version = #{appVersion} </if>"
+            + "GROUP BY uri, method "
+            + "ORDER BY \"callCount\" DESC "
+            + "LIMIT #{limit}"
+            + "</script>")
+    List<Map<String, Object>> selectApiTop(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("ut") String ut,
+            @Param("appVersion") String appVersion,
+            @Param("limit") int limit);
 
     /**
      * 按日聚合所有接口的全量汇总（不分组，不计入 Top limit）
@@ -74,43 +74,43 @@ public interface StatApiHourlyMapper extends BaseMapper<StatApiHourly> {
      * 与 Top 榜保持同一套过滤条件，否则汇总卡片与榜单数字对不上。
      * </p>
      */
-    @Select("<script>" +
-            "SELECT " +
-            "COALESCE(SUM(call_count), 0) AS \"callCount\", " +
-            "COALESCE(SUM(CASE WHEN status &lt; 400 THEN call_count ELSE 0 END), 0) AS \"successCount\", " +
-            "COALESCE(SUM(CASE WHEN status &gt;= 400 THEN call_count ELSE 0 END), 0) AS \"failureCount\" " +
-            "FROM stat_api_hourly " +
-            "WHERE bucket_hour &gt;= #{start} AND bucket_hour &lt; #{end} " +
-            "<if test=\"ut != null and ut != ''\">AND ut = #{ut} </if>" +
-            "<if test=\"appVersion != null and appVersion != ''\">AND app_version = #{appVersion} </if>" +
-            "</script>")
-    Map<String, Object> selectApiSummary(@Param("start") LocalDateTime start,
-                                         @Param("end") LocalDateTime end,
-                                         @Param("ut") String ut,
-                                         @Param("appVersion") String appVersion);
+    @Select("<script>" + "SELECT "
+            + "COALESCE(SUM(call_count), 0) AS \"callCount\", "
+            + "COALESCE(SUM(CASE WHEN status &lt; 400 THEN call_count ELSE 0 END), 0) AS \"successCount\", "
+            + "COALESCE(SUM(CASE WHEN status &gt;= 400 THEN call_count ELSE 0 END), 0) AS \"failureCount\" "
+            + "FROM stat_api_hourly "
+            + "WHERE bucket_hour &gt;= #{start} AND bucket_hour &lt; #{end} "
+            + "<if test=\"ut != null and ut != ''\">AND ut = #{ut} </if>"
+            + "<if test=\"appVersion != null and appVersion != ''\">AND app_version = #{appVersion} </if>"
+            + "</script>")
+    Map<String, Object> selectApiSummary(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("ut") String ut,
+            @Param("appVersion") String appVersion);
 
     /**
      * 按日按接口聚合 24 小时趋势（callCount 与 avgMs）
      * <p>平台/版本为可选过滤：传空串（或 null）表示不做该维度限制。</p>
      */
-    @Select("<script>" +
-            "SELECT EXTRACT(HOUR FROM bucket_hour) AS \"hour\", " +
-            "SUM(call_count) AS \"callCount\", " +
-            "(SUM(sum_ms) / GREATEST(SUM(call_count), 1)) AS \"avgMs\" " +
-            "FROM stat_api_hourly " +
-            "WHERE bucket_hour &gt;= #{start} AND bucket_hour &lt; #{end} " +
-            "AND uri = #{uri} AND method = #{method} " +
-            "<if test=\"ut != null and ut != ''\">AND ut = #{ut} </if>" +
-            "<if test=\"appVersion != null and appVersion != ''\">AND app_version = #{appVersion} </if>" +
-            "GROUP BY EXTRACT(HOUR FROM bucket_hour) " +
-            "ORDER BY \"hour\"" +
-            "</script>")
-    List<Map<String, Object>> selectApiTrend(@Param("uri") String uri,
-                                             @Param("method") String method,
-                                             @Param("start") LocalDateTime start,
-                                             @Param("end") LocalDateTime end,
-                                             @Param("ut") String ut,
-                                             @Param("appVersion") String appVersion);
+    @Select("<script>" + "SELECT EXTRACT(HOUR FROM bucket_hour) AS \"hour\", "
+            + "SUM(call_count) AS \"callCount\", "
+            + "(SUM(sum_ms) / GREATEST(SUM(call_count), 1)) AS \"avgMs\" "
+            + "FROM stat_api_hourly "
+            + "WHERE bucket_hour &gt;= #{start} AND bucket_hour &lt; #{end} "
+            + "AND uri = #{uri} AND method = #{method} "
+            + "<if test=\"ut != null and ut != ''\">AND ut = #{ut} </if>"
+            + "<if test=\"appVersion != null and appVersion != ''\">AND app_version = #{appVersion} </if>"
+            + "GROUP BY EXTRACT(HOUR FROM bucket_hour) "
+            + "ORDER BY \"hour\""
+            + "</script>")
+    List<Map<String, Object>> selectApiTrend(
+            @Param("uri") String uri,
+            @Param("method") String method,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("ut") String ut,
+            @Param("appVersion") String appVersion);
 
     /**
      * 统计时间窗内指定状态码区间的请求总数（告警引擎 HTTP_5XX_COUNT 用）
@@ -120,11 +120,12 @@ public interface StatApiHourlyMapper extends BaseMapper<StatApiHourly> {
      * @param minStatus 状态码下界（含），如 500
      * @param maxStatus 状态码上界（含），如 599
      */
-    @Select("SELECT COALESCE(SUM(call_count), 0) FROM stat_api_hourly " +
-            "WHERE bucket_hour >= #{start} AND bucket_hour < #{end} " +
-            "AND status >= #{minStatus} AND status <= #{maxStatus}")
-    Long sumCallsByStatusRange(@Param("start") LocalDateTime start,
-                               @Param("end") LocalDateTime end,
-                               @Param("minStatus") int minStatus,
-                               @Param("maxStatus") int maxStatus);
+    @Select("SELECT COALESCE(SUM(call_count), 0) FROM stat_api_hourly "
+            + "WHERE bucket_hour >= #{start} AND bucket_hour < #{end} "
+            + "AND status >= #{minStatus} AND status <= #{maxStatus}")
+    Long sumCallsByStatusRange(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("minStatus") int minStatus,
+            @Param("maxStatus") int maxStatus);
 }

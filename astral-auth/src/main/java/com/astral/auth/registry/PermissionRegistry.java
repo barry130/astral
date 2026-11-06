@@ -7,6 +7,13 @@ import com.astral.dao.entity.Permission;
 import com.astral.dao.mapper.PermissionMapper;
 import com.astral.plugin.api.PermissionProvider;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.support.AopUtils;
@@ -16,14 +23,6 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * 权限注册器：把「代码里声明的权限」登记进 {@code sys_permission}。
@@ -82,10 +81,11 @@ public class PermissionRegistry {
 
         // 新权限排序从现有最大值往后排，保证管理端列表稳定
         int nextSort = permissionCatalog.all().stream()
-                .map(Permission::getSort)
-                .filter(java.util.Objects::nonNull)
-                .max(Comparator.naturalOrder())
-                .orElse(0) + 1;
+                        .map(Permission::getSort)
+                        .filter(java.util.Objects::nonNull)
+                        .max(Comparator.naturalOrder())
+                        .orElse(0)
+                + 1;
 
         List<PermissionDeclaration> missing = new ArrayList<>();
         for (PermissionDeclaration declaration : declarations.values()) {
@@ -111,11 +111,14 @@ public class PermissionRegistry {
                 entity.setStatus(1);
                 permissionMapper.insert(entity);
                 inserted++;
-                log.info("[PermissionRegistry] 新增权限登记: code={}, name={}, type={}, 来源={}",
-                        declaration.getCode(), declaration.resolvedName(), declaration.getType(), declaration.getSource());
+                log.info(
+                        "[PermissionRegistry] 新增权限登记: code={}, name={}, type={}, 来源={}",
+                        declaration.getCode(),
+                        declaration.resolvedName(),
+                        declaration.getType(),
+                        declaration.getSource());
             } catch (Exception e) {
-                log.warn("[PermissionRegistry] 权限登记失败（不影响启动）: code={}, err={}",
-                        declaration.getCode(), e.getMessage());
+                log.warn("[PermissionRegistry] 权限登记失败（不影响启动）: code={}, err={}", declaration.getCode(), e.getMessage());
             }
         }
         if (inserted > 0) {
@@ -130,8 +133,10 @@ public class PermissionRegistry {
 
     /** 扫描控制器方法/类上的 @RequiresPermission */
     private void collectFromControllers(Map<String, PermissionDeclaration> declarations) {
-        for (Class<? extends java.lang.annotation.Annotation> annotationType : List.of(RestController.class, Controller.class)) {
-            for (Map.Entry<String, Object> entry : applicationContext.getBeansWithAnnotation(annotationType).entrySet()) {
+        for (Class<? extends java.lang.annotation.Annotation> annotationType :
+                List.of(RestController.class, Controller.class)) {
+            for (Map.Entry<String, Object> entry :
+                    applicationContext.getBeansWithAnnotation(annotationType).entrySet()) {
                 Object bean = entry.getValue();
                 Class<?> targetClass = AopUtils.getTargetClass(bean);
                 RequiresPermission typeLevel = AnnotationUtils.findAnnotation(targetClass, RequiresPermission.class);
@@ -148,8 +153,8 @@ public class PermissionRegistry {
                         if (code == null || code.isBlank()) {
                             continue;
                         }
-                        declarations.putIfAbsent(code.trim(),
-                                PermissionDeclaration.fromAnnotation(annotation, source, code.trim()));
+                        declarations.putIfAbsent(
+                                code.trim(), PermissionDeclaration.fromAnnotation(annotation, source, code.trim()));
                     }
                 }
             }
@@ -158,7 +163,8 @@ public class PermissionRegistry {
 
     /** 收集插件 SPI 声明的权限 */
     private void collectFromPlugins(Map<String, PermissionDeclaration> declarations) {
-        for (PermissionProvider provider : applicationContext.getBeansOfType(PermissionProvider.class).values()) {
+        for (PermissionProvider provider :
+                applicationContext.getBeansOfType(PermissionProvider.class).values()) {
             String pluginId = provider.getClass().getSimpleName();
             List<PermissionProvider.PermissionDef> defs;
             try {

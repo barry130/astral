@@ -6,13 +6,12 @@ import com.astral.qt.mapper.QtAppUpdateMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 轻听 App 版本更新服务
@@ -104,8 +103,10 @@ public class QtAppService {
         }
         List<QtAppUpdate> list = listUpdatesByPlatform(type);
         QtAppUpdate official = list.stream()
-                .filter(u -> u.getVersionCode() != null && u.getVersionCode() == versionCode
-                        && versionName != null && versionName.equals(u.getVersionName()))
+                .filter(u -> u.getVersionCode() != null
+                        && u.getVersionCode() == versionCode
+                        && versionName != null
+                        && versionName.equals(u.getVersionName()))
                 .findFirst()
                 .orElse(null);
         return official;

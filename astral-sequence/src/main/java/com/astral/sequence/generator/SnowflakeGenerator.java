@@ -1,12 +1,11 @@
 package com.astral.sequence.generator;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 /**
  * Snowflake 算法序列号生成器
@@ -74,7 +73,6 @@ public class SnowflakeGenerator implements SequenceGenerator {
      */
     private final Map<String, ReentrantLock> keyLocks = new ConcurrentHashMap<>();
 
-
     /**
      * 构造：工作机器 ID / 数据中心 ID <b>必须来自配置</b>。
      *
@@ -97,9 +95,8 @@ public class SnowflakeGenerator implements SequenceGenerator {
             @Value("${astral.sequence.snowflake.worker-id:1}") long workerId,
             @Value("${astral.sequence.snowflake.datacenter-id:1}") long datacenterId) {
         if (workerId < 0 || workerId > MAX_WORKER_ID) {
-            throw new IllegalStateException(
-                    "astral.sequence.snowflake.worker-id 必须在 0-" + MAX_WORKER_ID + "，当前为 " + workerId
-                            + "；多实例部署时每个实例必须不同，否则会生成重复 ID");
+            throw new IllegalStateException("astral.sequence.snowflake.worker-id 必须在 0-" + MAX_WORKER_ID + "，当前为 "
+                    + workerId + "；多实例部署时每个实例必须不同，否则会生成重复 ID");
         }
         if (datacenterId < 0 || datacenterId > MAX_DATACENTER_ID) {
             throw new IllegalStateException(
@@ -144,8 +141,8 @@ public class SnowflakeGenerator implements SequenceGenerator {
                     timestamp = state.lastTimestamp;
                 } else {
                     // 回退时间超过容忍范围，拒绝生成 ID 以防止重复
-                    throw new IllegalStateException(
-                            String.format("Clock moved backwards by %d ms, refused to generate ID for bizKey=%s", diff, bizKey));
+                    throw new IllegalStateException(String.format(
+                            "Clock moved backwards by %d ms, refused to generate ID for bizKey=%s", diff, bizKey));
                 }
             }
 

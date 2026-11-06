@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 提供方 Mapper
  */
 @Mapper
-public interface AiProviderMapper extends BaseMapper<AiProviderEntity> {
-}
+public interface AiProviderMapper extends BaseMapper<AiProviderEntity> {}

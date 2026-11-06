@@ -1,12 +1,5 @@
 package com.astral.system.notify;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.SysMailTemplate;
 import com.astral.dao.entity.SysNotifyRule;
@@ -24,6 +17,12 @@ import com.astral.dao.mapper.UserMapper;
 import com.astral.dao.mapper.UserRoleMapper;
 import com.astral.system.mail.MailService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -73,9 +72,8 @@ public class NotifyPublisher {
     private final StringRedisTemplate stringRedisTemplate;
 
     /** 单条投递结果 */
-    public record PublishResult(Long ruleId, String ruleName, String channel,
-                                String recipient, boolean ok, String error) {
-    }
+    public record PublishResult(
+            Long ruleId, String ruleName, String channel, String recipient, boolean ok, String error) {}
 
     /**
      * 发布事件：按全部启用规则逐条投递。
@@ -95,8 +93,8 @@ public class NotifyPublisher {
             return results;
         }
         for (SysNotifyRule rule : rules) {
-            List<SysNotifyRuleChannel> channels = ruleChannelMapper.selectList(
-                    new LambdaQueryWrapper<SysNotifyRuleChannel>()
+            List<SysNotifyRuleChannel> channels =
+                    ruleChannelMapper.selectList(new LambdaQueryWrapper<SysNotifyRuleChannel>()
                             .eq(SysNotifyRuleChannel::getRuleId, rule.getId())
                             .eq(SysNotifyRuleChannel::getEnabled, 1));
             if (channels.isEmpty()) {
@@ -104,13 +102,18 @@ public class NotifyPublisher {
                 continue;
             }
             for (SysNotifyRuleChannel channel : channels) {
-                List<SysNotifyRuleRecipient> recipients = ruleRecipientMapper.selectList(
-                        new LambdaQueryWrapper<SysNotifyRuleRecipient>()
+                List<SysNotifyRuleRecipient> recipients =
+                        ruleRecipientMapper.selectList(new LambdaQueryWrapper<SysNotifyRuleRecipient>()
                                 .eq(SysNotifyRuleRecipient::getChannelId, channel.getId()));
                 List<String> resolved = resolveRecipients(rule, channel, recipients, payload, recipientsOverride);
                 if (resolved.isEmpty()) {
-                    results.add(new PublishResult(rule.getId(), rule.getRuleName(), channel.getChannel(),
-                            "-", false, "收件人为空（FIXED 未配置、payload 缺字段或角色下无启用用户）"));
+                    results.add(new PublishResult(
+                            rule.getId(),
+                            rule.getRuleName(),
+                            channel.getChannel(),
+                            "-",
+                            false,
+                            "收件人为空（FIXED 未配置、payload 缺字段或角色下无启用用户）"));
                     continue;
                 }
                 for (String recipient : resolved) {
@@ -129,18 +132,26 @@ public class NotifyPublisher {
     public void publishAsync(String eventCode, Map<String, String> payload) {
         try {
             List<PublishResult> results = publish(eventCode, payload, null);
-            results.stream().filter(r -> !r.ok()).forEach(r ->
-                    log.warn("[Notify] 异步投递失败 规则[{}]（{} → {}）: {}",
-                            r.ruleName(), r.channel(), r.recipient(), r.error()));
+            results.stream()
+                    .filter(r -> !r.ok())
+                    .forEach(r -> log.warn(
+                            "[Notify] 异步投递失败 规则[{}]（{} → {}）: {}",
+                            r.ruleName(),
+                            r.channel(),
+                            r.recipient(),
+                            r.error()));
         } catch (Exception e) {
             log.warn("[Notify] 事件 {} 异步发布失败: {}", eventCode, e.getMessage());
         }
     }
 
     /** 收件人解析：FIXED 直取 / PAYLOAD_FIELD 取 payload 字段 / ROLE 按角色展开；测试覆盖列表优先 */
-    private List<String> resolveRecipients(SysNotifyRule rule, SysNotifyRuleChannel channel,
-                                           List<SysNotifyRuleRecipient> recipients,
-                                           Map<String, String> payload, List<String> override) {
+    private List<String> resolveRecipients(
+            SysNotifyRule rule,
+            SysNotifyRuleChannel channel,
+            List<SysNotifyRuleRecipient> recipients,
+            Map<String, String> payload,
+            List<String> override) {
         if (override != null && !override.isEmpty()) {
             return override;
         }
@@ -149,7 +160,9 @@ public class NotifyPublisher {
         }
         List<String> resolved = new ArrayList<>();
         for (SysNotifyRuleRecipient recipient : recipients) {
-            String type = recipient.getRecipientType() == null ? "" : recipient.getRecipientType().toUpperCase();
+            String type = recipient.getRecipientType() == null
+                    ? ""
+                    : recipient.getRecipientType().toUpperCase();
             String value = recipient.getRecipientValue();
             switch (type) {
                 case "PAYLOAD_FIELD" -> {
@@ -178,14 +191,19 @@ public class NotifyPublisher {
             return List.of();
         }
         Role role = roleMapper.selectOne(new LambdaQueryWrapper<Role>()
-                .eq(Role::getRoleCode, roleCode.trim()).last("limit 1"));
+                .eq(Role::getRoleCode, roleCode.trim())
+                .last("limit 1"));
         if (role == null) {
             log.warn("[Notify] 收件人角色 {} 不存在，规则跳过", roleCode);
             return List.of();
         }
-        List<Long> userIds = userRoleMapper.selectList(new LambdaQueryWrapper<UserRole>()
-                        .eq(UserRole::getRoleId, role.getId()))
-                .stream().map(UserRole::getUserId).distinct().toList();
+        List<Long> userIds =
+                userRoleMapper
+                        .selectList(new LambdaQueryWrapper<UserRole>().eq(UserRole::getRoleId, role.getId()))
+                        .stream()
+                        .map(UserRole::getUserId)
+                        .distinct()
+                        .toList();
         if (userIds.isEmpty()) {
             return List.of();
         }
@@ -197,8 +215,11 @@ public class NotifyPublisher {
         boolean email = NotifyChannel.EMAIL.equalsIgnoreCase(channel.getChannel());
         boolean phone = NotifyChannel.SMS.equalsIgnoreCase(channel.getChannel());
         return users.stream()
-                .map(u -> email ? u.getEmail() : phone ? u.getPhone()
-                        : u.getId() == null ? "" : u.getId().toString())
+                .map(u -> email
+                        ? u.getEmail()
+                        : phone
+                                ? u.getPhone()
+                                : u.getId() == null ? "" : u.getId().toString())
                 .map(v -> v == null ? "" : v.trim())
                 .filter(v -> !v.isEmpty())
                 .toList();
@@ -209,16 +230,19 @@ public class NotifyPublisher {
      * 未登记的事件返回 null（不猜来源，读侧显示 unknown）。
      */
     private static String eventSender(String eventCode) {
-        return NotifyEventRegistry.find(eventCode).map(NotifyEventDef::sender)
-                .filter(v -> v != null && !v.isBlank()).orElse(null);
+        return NotifyEventRegistry.find(eventCode)
+                .map(NotifyEventDef::sender)
+                .filter(v -> v != null && !v.isBlank())
+                .orElse(null);
     }
 
-    private PublishResult deliver(SysNotifyRule rule, SysNotifyRuleChannel channel,
-                                  String recipient, Map<String, String> payload) {
-        String channelCode = channel.getChannel() == null ? "" : channel.getChannel().toUpperCase();
+    private PublishResult deliver(
+            SysNotifyRule rule, SysNotifyRuleChannel channel, String recipient, Map<String, String> payload) {
+        String channelCode =
+                channel.getChannel() == null ? "" : channel.getChannel().toUpperCase();
         if (recipient == null || recipient.isBlank()) {
-            return new PublishResult(rule.getId(), rule.getRuleName(), channelCode,
-                    "-", false, "收件人为空（FIXED 未配置、payload 缺字段或角色下无启用用户）");
+            return new PublishResult(
+                    rule.getId(), rule.getRuleName(), channelCode, "-", false, "收件人为空（FIXED 未配置、payload 缺字段或角色下无启用用户）");
         }
         try {
             Long templateId = resolveTemplateId(rule, channel);
@@ -236,12 +260,17 @@ public class NotifyPublisher {
                     } catch (NumberFormatException nfe) {
                         throw new IllegalStateException("站内信收件人必须是用户ID（收到: " + recipient + "）");
                     }
-                    inappService.sendTemplateRow(templateId, userId, payload, channel.getPlatform(),
-                            eventSender(rule.getEventCode()));
+                    inappService.sendTemplateRow(
+                            templateId, userId, payload, channel.getPlatform(), eventSender(rule.getEventCode()));
                 }
                 default -> {
-                    return new PublishResult(rule.getId(), rule.getRuleName(), channelCode,
-                            recipient, false, "未知渠道: " + channel.getChannel());
+                    return new PublishResult(
+                            rule.getId(),
+                            rule.getRuleName(),
+                            channelCode,
+                            recipient,
+                            false,
+                            "未知渠道: " + channel.getChannel());
                 }
             }
             increaseQuota(rule, channel, recipient, channelCode);
@@ -258,27 +287,28 @@ public class NotifyPublisher {
      * 短信查 sys_sms_template.event_code）。
      */
     private Long resolveTemplateId(SysNotifyRule rule, SysNotifyRuleChannel channel) {
-        String channelCode = channel.getChannel() == null ? "" : channel.getChannel().toUpperCase();
+        String channelCode =
+                channel.getChannel() == null ? "" : channel.getChannel().toUpperCase();
         if (channel.getTemplateId() != null) {
             if (NotifyChannel.SMS.equals(channelCode)) {
                 SysSmsTemplate tpl = smsTemplateMapper.selectById(channel.getTemplateId());
                 if (tpl == null || !rule.getEventCode().equals(tpl.getEventCode())) {
-                    throw new IllegalStateException("短信模板缺失或与规则的事件不一致（templateId="
-                            + channel.getTemplateId() + "）");
+                    throw new IllegalStateException("短信模板缺失或与规则的事件不一致（templateId=" + channel.getTemplateId() + "）");
                 }
             } else {
                 SysMailTemplate tpl = mailTemplateMapper.selectById(channel.getTemplateId());
-                if (tpl == null || !channelCode.equalsIgnoreCase(tpl.getChannel())
+                if (tpl == null
+                        || !channelCode.equalsIgnoreCase(tpl.getChannel())
                         || (tpl.getScene() != null && !tpl.getScene().equals(rule.getEventCode()))) {
-                    throw new IllegalStateException("邮件模板缺失或与规则的事件/渠道不一致（templateId="
-                            + channel.getTemplateId() + "）");
+                    throw new IllegalStateException("邮件模板缺失或与规则的事件/渠道不一致（templateId=" + channel.getTemplateId() + "）");
                 }
             }
             return channel.getTemplateId();
         }
         if (NotifyChannel.SMS.equals(channelCode)) {
             SysSmsTemplate tpl = smsTemplateMapper.selectOne(new LambdaQueryWrapper<SysSmsTemplate>()
-                    .eq(SysSmsTemplate::getEventCode, rule.getEventCode()).last("limit 1"));
+                    .eq(SysSmsTemplate::getEventCode, rule.getEventCode())
+                    .last("limit 1"));
             if (tpl == null) {
                 throw new IllegalStateException("事件 " + rule.getEventCode() + " 没有短信模板，且渠道未指定模板");
             }
@@ -286,22 +316,22 @@ public class NotifyPublisher {
         }
         SysMailTemplate tpl = mailTemplateMapper.selectOne(new LambdaQueryWrapper<SysMailTemplate>()
                 .eq(SysMailTemplate::getScene, rule.getEventCode())
-                .eq(SysMailTemplate::getChannel, channelCode).last("limit 1"));
+                .eq(SysMailTemplate::getChannel, channelCode)
+                .last("limit 1"));
         if (tpl == null) {
-            throw new IllegalStateException("事件 " + rule.getEventCode() + " 没有 " + channelCode
-                    + " 模板，且渠道未指定模板");
+            throw new IllegalStateException("事件 " + rule.getEventCode() + " 没有 " + channelCode + " 模板，且渠道未指定模板");
         }
         return tpl.getId();
     }
 
     private String quotaKey(SysNotifyRule rule, SysNotifyRuleChannel channel, String recipient) {
         boolean global = "GLOBAL".equalsIgnoreCase(channel.getDailyLimitScope());
-        return QUOTA_KEY_PREFIX + rule.getId() + ":" + channel.getChannel().toUpperCase()
-                + ":" + (global ? "_" : recipient) + ":" + LocalDate.now().format(DAY);
+        return QUOTA_KEY_PREFIX + rule.getId() + ":" + channel.getChannel().toUpperCase() + ":"
+                + (global ? "_" : recipient) + ":" + LocalDate.now().format(DAY);
     }
 
-    private boolean exceedQuota(SysNotifyRule rule, SysNotifyRuleChannel channel,
-                                String recipient, String channelCode) {
+    private boolean exceedQuota(
+            SysNotifyRule rule, SysNotifyRuleChannel channel, String recipient, String channelCode) {
         Integer limit = channel.getDailyLimit();
         if (limit == null || limit <= 0) {
             return false;
@@ -311,8 +341,7 @@ public class NotifyPublisher {
         return used >= limit;
     }
 
-    private void increaseQuota(SysNotifyRule rule, SysNotifyRuleChannel channel,
-                               String recipient, String channelCode) {
+    private void increaseQuota(SysNotifyRule rule, SysNotifyRuleChannel channel, String recipient, String channelCode) {
         Integer limit = channel.getDailyLimit();
         if (limit == null || limit <= 0) {
             return;
@@ -321,9 +350,9 @@ public class NotifyPublisher {
         Long used = stringRedisTemplate.opsForValue().increment(key);
         if (used != null && used == 1L) {
             LocalDateTime midnight = LocalDate.now().plusDays(1).atStartOfDay();
-            long ttlSeconds = java.time.Duration.between(LocalDateTime.now(), midnight).getSeconds() + 60;
-            stringRedisTemplate.expire(key,
-                    java.time.Duration.ofSeconds(Math.max(ttlSeconds, 60)));
+            long ttlSeconds =
+                    java.time.Duration.between(LocalDateTime.now(), midnight).getSeconds() + 60;
+            stringRedisTemplate.expire(key, java.time.Duration.ofSeconds(Math.max(ttlSeconds, 60)));
         }
     }
 }

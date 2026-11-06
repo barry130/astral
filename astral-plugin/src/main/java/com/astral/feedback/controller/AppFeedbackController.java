@@ -1,6 +1,6 @@
 package com.astral.feedback.controller;
 
-import org.springframework.beans.factory.annotation.Value;
+import cn.dev33.satoken.stp.StpUtil;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.common.util.ClientHeaders;
@@ -16,7 +16,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,10 +28,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import cn.dev33.satoken.stp.StpUtil;
-
-import java.util.List;
 
 /**
  * 反馈插件 App 端反馈控制器
@@ -62,36 +60,32 @@ public class AppFeedbackController {
     @Operation(summary = "提交反馈")
     @RequiresPermission(value = "user:feedback:submit", name = "反馈提交", description = "App 端提交反馈与追加回复")
     @PostMapping("/submit")
-    public Result<Feedback> submit(@Valid @RequestBody SubmitFeedbackDto dto,
-                                   HttpServletRequest request) {
+    public Result<Feedback> submit(@Valid @RequestBody SubmitFeedbackDto dto, HttpServletRequest request) {
         Long userId = currentUserId();
         String ip = clientIp(request);
         // 统一系统头：X-App-Ut（平台，回退遗留 X-Platform）/ X-App-Version（版本）/
         // X-Device（设备型号·主机名）/ X-OS（操作系统）。空值与超长在 ClientHeaders 内归一。
-        String platform = ClientHeaders.resolveUt(
-                request.getHeader(ClientHeaders.H_UT), request.getHeader(legacyPlatformHeader));
-        String appVersion = ClientHeaders.normalize(
-                request.getHeader(ClientHeaders.H_VERSION), ClientHeaders.MAX_VERSION);
-        String device = ClientHeaders.normalize(
-                request.getHeader(ClientHeaders.H_DEVICE), ClientHeaders.MAX_DEVICE);
-        String os = ClientHeaders.normalize(
-                request.getHeader(ClientHeaders.H_OS), ClientHeaders.MAX_OS);
-        return Result.success(
-                feedbackService.submit(userId, dto, blankToNull(device), blankToNull(os),
-                        blankToNull(appVersion), blankToNull(platform), ip));
+        String platform =
+                ClientHeaders.resolveUt(request.getHeader(ClientHeaders.H_UT), request.getHeader(legacyPlatformHeader));
+        String appVersion =
+                ClientHeaders.normalize(request.getHeader(ClientHeaders.H_VERSION), ClientHeaders.MAX_VERSION);
+        String device = ClientHeaders.normalize(request.getHeader(ClientHeaders.H_DEVICE), ClientHeaders.MAX_DEVICE);
+        String os = ClientHeaders.normalize(request.getHeader(ClientHeaders.H_OS), ClientHeaders.MAX_OS);
+        return Result.success(feedbackService.submit(
+                userId, dto, blankToNull(device), blankToNull(os), blankToNull(appVersion), blankToNull(platform), ip));
     }
 
     @Operation(summary = "我的反馈（分页，全部状态）")
     @GetMapping("/my")
-    public Result<Page<Feedback>> my(@RequestParam(defaultValue = "1") Integer pageNum,
-                                     @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<Feedback>> my(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         return Result.success(feedbackService.myPage(currentUserId(), pageNum, pageSize));
     }
 
     @Operation(summary = "公开列表（published AND is_public）")
     @GetMapping("/public")
-    public Result<Page<Feedback>> publicList(@RequestParam(defaultValue = "1") Integer pageNum,
-                                             @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<Feedback>> publicList(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         return Result.success(feedbackService.publicPage(pageNum, pageSize));
     }
 

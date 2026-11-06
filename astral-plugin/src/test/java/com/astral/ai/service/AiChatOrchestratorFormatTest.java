@@ -1,18 +1,17 @@
 package com.astral.ai.service;
 
-import com.astral.ai.common.AiConstants;
-import com.astral.ai.entity.AiAgentVersionEntity;
-import com.astral.ai.entity.AiToolEntity;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.astral.ai.common.AiConstants;
+import com.astral.ai.entity.AiAgentVersionEntity;
+import com.astral.ai.entity.AiToolEntity;
+import java.util.List;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
 
 /**
  * 响应格式与工具轮数的回归测试。
@@ -130,8 +129,7 @@ class AiChatOrchestratorFormatTest {
                 tool("get_user_likes", AiConstants.RiskLevel.READ),
                 tool("send_email", AiConstants.RiskLevel.HIGH));
 
-        List<AiToolService.EffectiveTool> remaining = AiChatOrchestrator.availableTools(
-                tools, Set.of("search_music"));
+        List<AiToolService.EffectiveTool> remaining = AiChatOrchestrator.availableTools(tools, Set.of("search_music"));
 
         List<String> codes = remaining.stream().map(t -> t.tool().getToolCode()).toList();
         assertFalse(codes.contains("search_music"), codes.toString());

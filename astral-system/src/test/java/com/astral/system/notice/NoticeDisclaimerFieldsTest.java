@@ -1,24 +1,23 @@
 package com.astral.system.notice;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.*;
+
 import com.astral.dao.entity.SysNotice;
 import com.astral.dao.mapper.SysNoticeMapper;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.*;
 
 /**
  * 首次启动免责声明专用两列（read_seconds / terms_version）的编辑落库口径。
@@ -66,7 +65,8 @@ class NoticeDisclaimerFieldsTest {
     private Object setValueOf(LambdaUpdateWrapper<SysNotice> wrapper, String column) {
         String sqlSet = wrapper.getSqlSet();
         assertTrue(sqlSet.contains(column + "="), column + " 必须在 update 白名单里");
-        Matcher m = Pattern.compile(column + "=#\\{ew\\.paramNameValuePairs\\.(\\w+)\\}").matcher(sqlSet);
+        Matcher m = Pattern.compile(column + "=#\\{ew\\.paramNameValuePairs\\.(\\w+)\\}")
+                .matcher(sqlSet);
         assertTrue(m.find(), "没能从 sqlSet 里解析出 " + column + " 的占位符：" + sqlSet);
         return wrapper.getParamNameValuePairs().get(m.group(1));
     }
@@ -163,8 +163,7 @@ class NoticeDisclaimerFieldsTest {
     // ==================== 渠道：免责声明投 App 六端且强制可关闭 ====================
 
     /** 免责声明固定投放的 App 六端（不含 web） */
-    private static final String APP_SIX_CHANNELS =
-            "app-android,app-ios,app-windows,app-linux,app-macos,app-harmony";
+    private static final String APP_SIX_CHANNELS = "app-android,app-ios,app-windows,app-linux,app-macos,app-harmony";
 
     /**
      * 声明被人勾了「不限平台」也必须收窄到 App 六端。
@@ -180,8 +179,7 @@ class NoticeDisclaimerFieldsTest {
 
         service.create(fresh);
 
-        assertEquals(APP_SIX_CHANNELS, fresh.getChannel(),
-                "不管后台勾了什么，声明只投 App 六端");
+        assertEquals(APP_SIX_CHANNELS, fresh.getChannel(), "不管后台勾了什么，声明只投 App 六端");
     }
 
     /**

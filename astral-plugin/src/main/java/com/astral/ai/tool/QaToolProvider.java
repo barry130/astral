@@ -18,16 +18,15 @@ import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PluginRegistry;
 import com.astral.system.service.DictDataService;
 import com.astral.system.service.DictTypeService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import tools.jackson.databind.node.ObjectNode;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 答疑助手工具集（设计文档 §4.9）。
@@ -66,8 +65,7 @@ public class QaToolProvider implements AiToolProvider {
                 new GetDictionaryDefinitionTool(),
                 new GetErrorCodeExplanationTool(),
                 new GetCurrentPluginStatusTool(),
-                new GetCurrentConfigSchemaTool()
-        );
+                new GetCurrentConfigSchemaTool());
     }
 
     // ==================== 文档检索 ====================
@@ -75,15 +73,21 @@ public class QaToolProvider implements AiToolProvider {
     private class SearchProjectDocumentTool implements AiToolHandler {
         @Override
         public AiToolDef definition() {
-            return new AiToolDef("search_project_document", "检索项目文档",
-                    "在已发布的项目文档库中检索与问题相关的段落，返回带标题、路径、章节与版本的引用。"
-                            + "如果返回为空，说明文档中没有相关内容，不要编造。",
-                    "qa.searchProjectDocument", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
-                    List.of(AiConstants.ClientType.ASTRAL_FRONT), List.of(),
-                    AiToolTypes.objectSchema("""
+            return new AiToolDef(
+                    "search_project_document",
+                    "检索项目文档",
+                    "在已发布的项目文档库中检索与问题相关的段落，返回带标题、路径、章节与版本的引用。" + "如果返回为空，说明文档中没有相关内容，不要编造。",
+                    "qa.searchProjectDocument",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
+                    List.of(AiConstants.ClientType.ASTRAL_FRONT),
+                    List.of(),
+                    AiToolTypes.objectSchema(
+                            """
                             {"query":{"type":"string","description":"检索关键词或问题"},
                              "topK":{"type":"integer","minimum":1,"maximum":20,"description":"返回条数，默认 6"}}"""),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
@@ -95,60 +99,82 @@ public class QaToolProvider implements AiToolProvider {
     private class GetApiContractTool implements AiToolHandler {
         @Override
         public AiToolDef definition() {
-            return new AiToolDef("get_api_contract", "查询接口契约",
+            return new AiToolDef(
+                    "get_api_contract",
+                    "查询接口契约",
                     "在 API 文档类知识源中检索某个接口的请求路径、参数、返回结构与错误码。",
-                    "qa.getApiContract", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
-                    List.of(AiConstants.ClientType.ASTRAL_FRONT), List.of(),
-                    AiToolTypes.objectSchema("""
+                    "qa.getApiContract",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
+                    List.of(AiConstants.ClientType.ASTRAL_FRONT),
+                    List.of(),
+                    AiToolTypes.objectSchema(
+                            """
                             {"query":{"type":"string","description":"接口路径或功能描述"},
                              "topK":{"type":"integer","minimum":1,"maximum":20,"description":"返回条数，默认 6"}}"""),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
         public AiToolResult execute(AiToolContext context) {
-            return search(context, context.arg("query"),
-                    List.of("API_DOCUMENT", "PROJECT_DOCUMENT"), "检索接口契约");
+            return search(context, context.arg("query"), List.of("API_DOCUMENT", "PROJECT_DOCUMENT"), "检索接口契约");
         }
     }
 
     private class GetPluginGuideTool implements AiToolHandler {
         @Override
         public AiToolDef definition() {
-            return new AiToolDef("get_plugin_guide", "查询插件开发指南",
+            return new AiToolDef(
+                    "get_plugin_guide",
+                    "查询插件开发指南",
                     "检索插件 SPI、生命周期、前端扩展、权限提供者等插件开发说明。",
-                    "qa.getPluginGuide", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
-                    List.of(AiConstants.ClientType.ASTRAL_FRONT), List.of(),
-                    AiToolTypes.objectSchema("""
+                    "qa.getPluginGuide",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
+                    List.of(AiConstants.ClientType.ASTRAL_FRONT),
+                    List.of(),
+                    AiToolTypes.objectSchema(
+                            """
                             {"query":{"type":"string","description":"插件相关问题"},
                              "topK":{"type":"integer","minimum":1,"maximum":20,"description":"返回条数，默认 6"}}"""),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
         public AiToolResult execute(AiToolContext context) {
-            return search(context, context.arg("query"),
-                    List.of("PLUGIN_DOCUMENT", "PROJECT_DOCUMENT"), "检索插件开发指南");
+            return search(context, context.arg("query"), List.of("PLUGIN_DOCUMENT", "PROJECT_DOCUMENT"), "检索插件开发指南");
         }
     }
 
     private class GetDeploymentGuideTool implements AiToolHandler {
         @Override
         public AiToolDef definition() {
-            return new AiToolDef("get_deployment_guide", "查询部署指南",
+            return new AiToolDef(
+                    "get_deployment_guide",
+                    "查询部署指南",
                     "检索环境变量、数据库迁移、反向代理、备份与升级等部署相关说明。",
-                    "qa.getDeploymentGuide", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
-                    List.of(AiConstants.ClientType.ASTRAL_FRONT), List.of(),
-                    AiToolTypes.objectSchema("""
+                    "qa.getDeploymentGuide",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
+                    List.of(AiConstants.ClientType.ASTRAL_FRONT),
+                    List.of(),
+                    AiToolTypes.objectSchema(
+                            """
                             {"query":{"type":"string","description":"部署相关问题"},
                              "topK":{"type":"integer","minimum":1,"maximum":20,"description":"返回条数，默认 6"}}"""),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
         public AiToolResult execute(AiToolContext context) {
-            return search(context, context.arg("query"),
-                    List.of("DEPLOYMENT_DOCUMENT", "RELEASE_NOTE", "FAQ", "PROJECT_DOCUMENT"), "检索部署指南");
+            return search(
+                    context,
+                    context.arg("query"),
+                    List.of("DEPLOYMENT_DOCUMENT", "RELEASE_NOTE", "FAQ", "PROJECT_DOCUMENT"),
+                    "检索部署指南");
         }
     }
 
@@ -157,13 +183,20 @@ public class QaToolProvider implements AiToolProvider {
     private class GetDictionaryDefinitionTool implements AiToolHandler {
         @Override
         public AiToolDef definition() {
-            return new AiToolDef("get_dictionary_definition", "查询数据字典",
+            return new AiToolDef(
+                    "get_dictionary_definition",
+                    "查询数据字典",
                     "读取某个字典编码下的全部取值与标签，用于解释状态、类型等枚举含义。只读。",
-                    "qa.getDictionaryDefinition", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
-                    List.of(AiConstants.ClientType.ASTRAL_FRONT), List.of(),
-                    AiToolTypes.objectSchema("""
+                    "qa.getDictionaryDefinition",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
+                    List.of(AiConstants.ClientType.ASTRAL_FRONT),
+                    List.of(),
+                    AiToolTypes.objectSchema(
+                            """
                             {"dictCode":{"type":"string","description":"字典编码，如 ai_request_status"}}"""),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
@@ -196,21 +229,28 @@ public class QaToolProvider implements AiToolProvider {
             payload.put("dictCode", matched.getDictCode());
             payload.put("dictName", matched.getDictName());
             payload.put("items", items);
-            return AiToolResult.ok("字典 " + matched.getDictCode() + " 共 " + items.size() + " 项。",
-                    AiToolTypes.payload(payload));
+            return AiToolResult.ok(
+                    "字典 " + matched.getDictCode() + " 共 " + items.size() + " 项。", AiToolTypes.payload(payload));
         }
     }
 
     private class GetErrorCodeExplanationTool implements AiToolHandler {
         @Override
         public AiToolDef definition() {
-            return new AiToolDef("get_error_code_explanation", "解释错误码",
+            return new AiToolDef(
+                    "get_error_code_explanation",
+                    "解释错误码",
                     "按错误码返回系统内置的中文含义，用于解释接口报错。只读。",
-                    "qa.getErrorCodeExplanation", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
-                    List.of(AiConstants.ClientType.ASTRAL_FRONT), List.of(),
-                    AiToolTypes.objectSchema("""
+                    "qa.getErrorCodeExplanation",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
+                    List.of(AiConstants.ClientType.ASTRAL_FRONT),
+                    List.of(),
+                    AiToolTypes.objectSchema(
+                            """
                             {"errorCode":{"type":"string","description":"错误码，如 AI005 或 COMMON005"}}"""),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
@@ -232,11 +272,18 @@ public class QaToolProvider implements AiToolProvider {
     private class GetCurrentPluginStatusTool implements AiToolHandler {
         @Override
         public AiToolDef definition() {
-            return new AiToolDef("get_current_plugin_status_readonly", "查询当前插件状态",
+            return new AiToolDef(
+                    "get_current_plugin_status_readonly",
+                    "查询当前插件状态",
                     "读取当前系统实际的插件启用状态。这是实时数据，不是文档内容，回答时必须标明来源。只读。",
-                    "qa.getCurrentPluginStatus", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
-                    List.of(AiConstants.ClientType.ASTRAL_FRONT), List.of(),
-                    AiToolTypes.emptySchema(), null, null);
+                    "qa.getCurrentPluginStatus",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
+                    List.of(AiConstants.ClientType.ASTRAL_FRONT),
+                    List.of(),
+                    AiToolTypes.emptySchema(),
+                    null,
+                    null);
         }
 
         @Override
@@ -261,11 +308,18 @@ public class QaToolProvider implements AiToolProvider {
     private class GetCurrentConfigSchemaTool implements AiToolHandler {
         @Override
         public AiToolDef definition() {
-            return new AiToolDef("get_current_config_schema_readonly", "查询配置项结构",
+            return new AiToolDef(
+                    "get_current_config_schema_readonly",
+                    "查询配置项结构",
                     "读取 AI 插件当前生效的配置项结构与默认值（不含密钥值）。属于实时数据，回答时需标明来源。只读。",
-                    "qa.getCurrentConfigSchema", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
-                    List.of(AiConstants.ClientType.ASTRAL_FRONT), List.of(),
-                    AiToolTypes.emptySchema(), null, null);
+                    "qa.getCurrentConfigSchema",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
+                    List.of(AiConstants.ClientType.ASTRAL_FRONT),
+                    List.of(),
+                    AiToolTypes.emptySchema(),
+                    null,
+                    null);
         }
 
         @Override
@@ -325,14 +379,14 @@ public class QaToolProvider implements AiToolProvider {
             return AiToolResult.failed("文档检索失败：" + e.getMessage());
         }
         if (hits.isEmpty()) {
-            return AiToolResult.ok("文档库中未检索到与该问题相关的内容（" + label + "）。如无依据，请如实说明未找到，不要编造。",
-                    AiToolTypes.emptyPayload());
+            return AiToolResult.ok("文档库中未检索到与该问题相关的内容（" + label + "）。如无依据，请如实说明未找到，不要编造。", AiToolTypes.emptyPayload());
         }
         List<Map<String, Object>> citations = new ArrayList<>();
         ObjectNode payload = AiToolTypes.emptyPayload();
         var list = payload.putArray("citations");
         for (AiKnowledgeService.AiCitationHit hit : hits) {
-            if (!sourceTypes.isEmpty() && hit.sourceType() != null
+            if (!sourceTypes.isEmpty()
+                    && hit.sourceType() != null
                     && !sourceTypes.contains(hit.sourceType().toUpperCase(Locale.ROOT))) {
                 continue;
             }
@@ -357,12 +411,10 @@ public class QaToolProvider implements AiToolProvider {
             node.put("excerpt", AiJson.truncate(hit.content(), MAX_EXCERPT));
         }
         if (citations.isEmpty()) {
-            return AiToolResult.ok("文档库中未检索到符合类型要求的内容（" + label + "）。如无依据，请如实说明未找到。",
-                    AiToolTypes.emptyPayload());
+            return AiToolResult.ok("文档库中未检索到符合类型要求的内容（" + label + "）。如无依据，请如实说明未找到。", AiToolTypes.emptyPayload());
         }
         payload.put("source", "PROJECT_DOCUMENT");
-        return AiToolResult.ok("检索到 " + citations.size() + " 段文档依据（" + label
-                + "）。回答时请逐条标注来源标题与章节。", payload);
+        return AiToolResult.ok("检索到 " + citations.size() + " 段文档依据（" + label + "）。回答时请逐条标注来源标题与章节。", payload);
     }
 
     /** 由请求反查本次绑定的智能体版本 */
@@ -397,7 +449,8 @@ public class QaToolProvider implements AiToolProvider {
 
     /** 校验知识源是否可用（供种子数据与后台提示复用） */
     static boolean usable(AiKnowledgeSourceEntity source) {
-        return source != null && Boolean.TRUE.equals(source.getEnabled())
+        return source != null
+                && Boolean.TRUE.equals(source.getEnabled())
                 && AiConstants.KnowledgeStatus.READY.equals(source.getStatus());
     }
 }

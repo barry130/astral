@@ -21,8 +21,7 @@ public final class CsvExportUtil {
 
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private CsvExportUtil() {
-    }
+    private CsvExportUtil() {}
 
     /**
      * 构建 CSV 内容

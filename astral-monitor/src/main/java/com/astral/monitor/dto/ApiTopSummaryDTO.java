@@ -20,8 +20,7 @@ public class ApiTopSummaryDTO {
     /** 当天全部接口成功率（0-100，两位小数） */
     private String successRate;
 
-    public ApiTopSummaryDTO() {
-    }
+    public ApiTopSummaryDTO() {}
 
     public ApiTopSummaryDTO(Long callCount, Long successCount, Long failureCount) {
         this.callCount = callCount;

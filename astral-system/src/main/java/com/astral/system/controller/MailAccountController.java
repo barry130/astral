@@ -9,18 +9,17 @@ import com.astral.system.mail.SysMailAccountService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-
-import java.time.LocalDateTime;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "邮箱账户")
 @RestController
@@ -53,8 +52,8 @@ public class MailAccountController {
     @Operation(summary = "分页查询")
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/page")
-    public Result<Page<SysMailAccount>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                             @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<SysMailAccount>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<SysMailAccount> page = accountService.page(new Page<>(pageNum, pageSize));
         page.getRecords().forEach(MailAccountController::withoutCredential);
         return Result.success(page);
@@ -146,7 +145,8 @@ public class MailAccountController {
     @PostMapping("/{id}/toggle")
     public Result<Void> toggle(@PathVariable Long id, @RequestParam Integer enabled) {
         // 同 update：单字段局部更新也走 lambdaUpdate 白名单，不构造半空实体走 updateById
-        accountService.lambdaUpdate()
+        accountService
+                .lambdaUpdate()
                 .eq(SysMailAccount::getId, id)
                 .set(SysMailAccount::getEnabled, enabled)
                 .set(SysMailAccount::getUpdateTime, LocalDateTime.now())

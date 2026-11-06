@@ -5,37 +5,35 @@ import com.astral.auth.security.PermissionCache;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.annotation.RequiresSuper;
 import com.astral.common.exception.BusinessException;
+import com.astral.common.result.Result;
+import com.astral.common.util.CsvExportUtil;
+import com.astral.common.util.PasswordPolicy;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.User;
 import com.astral.dao.entity.UserRole;
 import com.astral.system.service.RoleService;
 import com.astral.system.service.UserRoleService;
 import com.astral.system.service.UserService;
-import com.astral.common.result.Result;
-import com.astral.common.util.CsvExportUtil;
-import com.astral.common.util.PasswordPolicy;
-import org.springframework.http.ResponseEntity;
-import java.util.List;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 用户管理控制器
@@ -71,10 +69,11 @@ public class UserController {
     @Operation(summary = "分页查询")
     @RequiresPermission("admin:system:user:view")
     @GetMapping("/page")
-    public Result<Page<User>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                    @RequestParam(defaultValue = "10") Integer pageSize,
-                                    @RequestParam(required = false) String userType,
-                                    @RequestParam(required = false) String username) {
+    public Result<Page<User>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String userType,
+            @RequestParam(required = false) String username) {
         Page<User> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         // 统一管理所有类型用户（后台系统用户 + 插件 App 用户）
@@ -83,8 +82,10 @@ public class UserController {
         }
         if (username != null && !username.isBlank()) {
             wrapper.and(w -> w.like(User::getUsername, username)
-                    .or().like(User::getNickname, username)
-                    .or().like(User::getEmail, username));
+                    .or()
+                    .like(User::getNickname, username)
+                    .or()
+                    .like(User::getEmail, username));
         }
         wrapper.orderByDesc(User::getCreateTime);
         return Result.success(userService.page(page, wrapper));
@@ -97,26 +98,37 @@ public class UserController {
     @Operation(summary = "导出CSV")
     @RequiresPermission("admin:system:user:view")
     @GetMapping("/export")
-    public ResponseEntity<byte[]> exportCsv(@RequestParam(required = false) String userType,
-                                            @RequestParam(required = false) String username) {
+    public ResponseEntity<byte[]> exportCsv(
+            @RequestParam(required = false) String userType, @RequestParam(required = false) String username) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         if (userType != null && !userType.isBlank()) {
             wrapper.eq(User::getUserType, userType);
         }
         if (username != null && !username.isBlank()) {
             wrapper.and(w -> w.like(User::getUsername, username)
-                    .or().like(User::getNickname, username)
-                    .or().like(User::getEmail, username));
+                    .or()
+                    .like(User::getNickname, username)
+                    .or()
+                    .like(User::getEmail, username));
         }
         wrapper.orderByDesc(User::getCreateTime);
         List<User> users = userService.list(wrapper);
         byte[] csv = CsvExportUtil.build(
-                new String[]{"ID", "用户名", "昵称", "邮箱", "状态", "用户类型", "封禁/注销理由",
-                        "最后登录IP", "最后登录时间", "密码更新时间", "创建时间"},
-                users, u -> new Object[]{u.getId(), u.getUsername(), u.getNickname(), u.getEmail(),
-                        u.getStatus() != null && u.getStatus() == 1 ? "正常" : "禁用",
-                        u.getUserType(), u.getStatusReason(), u.getLoginIp(),
-                        u.getLoginTime(), u.getPwdUpdateTime(), u.getCreateTime()});
+                new String[] {"ID", "用户名", "昵称", "邮箱", "状态", "用户类型", "封禁/注销理由", "最后登录IP", "最后登录时间", "密码更新时间", "创建时间"},
+                users,
+                u -> new Object[] {
+                    u.getId(),
+                    u.getUsername(),
+                    u.getNickname(),
+                    u.getEmail(),
+                    u.getStatus() != null && u.getStatus() == 1 ? "正常" : "禁用",
+                    u.getUserType(),
+                    u.getStatusReason(),
+                    u.getLoginIp(),
+                    u.getLoginTime(),
+                    u.getPwdUpdateTime(),
+                    u.getCreateTime()
+                });
         String filename = "users-" + java.time.LocalDate.now() + ".csv";
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename*=UTF-8''" + filename)
@@ -176,9 +188,9 @@ public class UserController {
         entity.setId(id);
         // 防止 mass assignment：请求体是实体，客户端可以直接塞入敏感字段。
         // 置 null 后 MyBatis-Plus 默认策略（NOT_NULL）会跳过这些列，不会被覆盖。
-        entity.setUserType(null);      // 用户类型只能走 /{id}/type
-        entity.setPassword(null);      // 密码只能走 /{id}/password（含 BCrypt 处理）
-        entity.setDeleted(null);       // 逻辑删除标记不可由客户端改写
+        entity.setUserType(null); // 用户类型只能走 /{id}/type
+        entity.setPassword(null); // 密码只能走 /{id}/password（含 BCrypt 处理）
+        entity.setDeleted(null); // 逻辑删除标记不可由客户端改写
         entity.setPwdUpdateTime(null);
         entity.setLoginTime(null);
         entity.setLoginIp(null);
@@ -260,8 +272,8 @@ public class UserController {
     // 封禁不改变账号归属与权限集合（角色不变），可委派；真正的提权入口是 /{id}/type 与 /{id}/roles
     @RequiresPermission("admin:system:user:edit")
     @PutMapping("/{id}/status")
-    public Result<Void> changeStatus(@PathVariable Long id, @RequestParam Integer status,
-                                     @RequestParam(required = false) String reason) {
+    public Result<Void> changeStatus(
+            @PathVariable Long id, @RequestParam Integer status, @RequestParam(required = false) String reason) {
         if (userService.getById(id) == null) {
             throw BusinessException.of("用户不存在");
         }

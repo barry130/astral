@@ -16,12 +16,6 @@ import com.astral.system.service.DictDataService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,6 +26,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 音源包热更新服务（SOURCE_UPDATE_DESIGN §五）
@@ -91,8 +90,8 @@ public class QtSourceService {
      * @param visibleChannels 可见渠道集合，如 {@code [stable]} / {@code [stable, beta]}；
      *                        为空表示没有任何可见渠道，直接返回空 manifest
      */
-    public QtSourceManifestVo buildManifest(Long platform, Long appVersionCode, Long hostApiVersion,
-                                            Set<String> visibleChannels) {
+    public QtSourceManifestVo buildManifest(
+            Long platform, Long appVersionCode, Long hostApiVersion, Set<String> visibleChannels) {
         QtSourceManifestVo manifest = new QtSourceManifestVo();
         if (!QtSourceRelease.isSupportedPlatform(platform)) {
             return manifest;
@@ -132,8 +131,11 @@ public class QtSourceService {
         }
         manifest.setRelease(toVo(candidate, false));
         if (newestBad != null && newestBad.getSourceVersionCode() > candidate.getSourceVersionCode()) {
-            manifest.getRelease().setRollbackTo(newestBad.getRollbackTo() != null
-                    ? newestBad.getRollbackTo() : candidate.getSourceVersionCode());
+            manifest.getRelease()
+                    .setRollbackTo(
+                            newestBad.getRollbackTo() != null
+                                    ? newestBad.getRollbackTo()
+                                    : candidate.getSourceVersionCode());
         }
         return manifest;
     }
@@ -144,10 +146,11 @@ public class QtSourceService {
      * 一律按正式包处理，只要用户在 stable 基础集合内即可见——保持升级前的投放行为。</p>
      */
     private boolean isChannelVisible(QtSourceRelease release, Set<String> visibleChannels) {
-        String channel = release.getChannel() == null ? "" : release.getChannel().trim();
+        String channel =
+                release.getChannel() == null ? "" : release.getChannel().trim();
         if (QtSourceRelease.CHANNEL_BETA.equalsIgnoreCase(channel)) {
-            return DataScopeResolver.visible(visibleChannels, QtSourceRelease.CHANNEL_BETA,
-                    QtSourceRelease.CHANNEL_STABLE);
+            return DataScopeResolver.visible(
+                    visibleChannels, QtSourceRelease.CHANNEL_BETA, QtSourceRelease.CHANNEL_STABLE);
         }
         return DataScopeResolver.visible(visibleChannels, channel, QtSourceRelease.CHANNEL_STABLE);
     }
@@ -163,7 +166,8 @@ public class QtSourceService {
         report.setSourceVersionCode(dto.getSourceVersionCode());
         // 严格校验：未知 result 不能静默归为 smoke_failed（会虚增坏包信号污染统计），空值按 ok 兜底
         String result = dto.getResult() == null || dto.getResult().isBlank()
-                ? QtSourceReport.RESULT_OK : dto.getResult().trim().toLowerCase();
+                ? QtSourceReport.RESULT_OK
+                : dto.getResult().trim().toLowerCase();
         if (!QtSourceReport.RESULT_OK.equals(result) && !QtSourceReport.RESULT_SMOKE_FAILED.equals(result)) {
             throw new QtException("result 只支持 ok / smoke_failed");
         }
@@ -175,12 +179,12 @@ public class QtSourceService {
     // ==================== 管理端：列表 / 新建 / 编辑 / 生命周期 ====================
 
     /** 分页列表（按平台 / 渠道 / 发布状态筛选；full=1 时不分页返回全量，供调试） */
-    public Page<QtSourceReleaseVo> pageReleases(Integer pageNum, Integer pageSize, Long platform,
-                                                 String channel, Boolean published, boolean full) {
-        Page<QtSourceRelease> page = new Page<>(pageNum == null ? 1 : pageNum,
-                full || pageSize == null ? (full ? -1 : 10) : pageSize);
-        LambdaQueryWrapper<QtSourceRelease> wrapper = new LambdaQueryWrapper<QtSourceRelease>()
-                .orderByDesc(QtSourceRelease::getSourceVersionCode);
+    public Page<QtSourceReleaseVo> pageReleases(
+            Integer pageNum, Integer pageSize, Long platform, String channel, Boolean published, boolean full) {
+        Page<QtSourceRelease> page =
+                new Page<>(pageNum == null ? 1 : pageNum, full || pageSize == null ? (full ? -1 : 10) : pageSize);
+        LambdaQueryWrapper<QtSourceRelease> wrapper =
+                new LambdaQueryWrapper<QtSourceRelease>().orderByDesc(QtSourceRelease::getSourceVersionCode);
         if (channel != null && !channel.isBlank()) {
             wrapper.eq(QtSourceRelease::getChannel, channel.trim());
         }
@@ -219,14 +223,20 @@ public class QtSourceService {
             entity.setChannel(normalizeChannel(dto.getChannel()));
             entity.setNotes(dto.getNotes());
             entity.setAppVersionCodes(writeJson(appVersionCodesOrDefault(dto.getAppVersionCodes())));
-            entity.setArtifacts(writeJson(mergeArtifacts(readArtifacts(latestRelease(entity.getChannel())),
-                    dto.getArtifacts(), Boolean.TRUE.equals(dto.getReplaceArtifacts()))));
+            entity.setArtifacts(writeJson(mergeArtifacts(
+                    readArtifacts(latestRelease(entity.getChannel())),
+                    dto.getArtifacts(),
+                    Boolean.TRUE.equals(dto.getReplaceArtifacts()))));
             entity.setRollbackTo(dto.getRollbackTo());
             entity.setIsBad(0);
             entity.setIsPublished(0);
             releaseMapper.insert(entity);
-            log.info("[QtSource] 新建音源包 release: code={} name={} channel={} platforms={} artifacts={}",
-                    code, entity.getSourceVersionName(), entity.getChannel(), entity.getPlatforms(),
+            log.info(
+                    "[QtSource] 新建音源包 release: code={} name={} channel={} platforms={} artifacts={}",
+                    code,
+                    entity.getSourceVersionName(),
+                    entity.getChannel(),
+                    entity.getPlatforms(),
                     entity.getArtifacts());
             // 产物直发字段（packId/packVersionCode/packVersionName）异步补齐：
             // 客户端拿到后免 Range 探测直接比版（与 play 同口径），补不上客户端回退自行探测
@@ -263,8 +273,8 @@ public class QtSourceService {
                     appVersionCodesOrDefault(dto.getAppVersionCodes()), existingPlatforms(exist))));
         }
         if (dto.getArtifacts() != null) {
-            exist.setArtifacts(writeJson(mergeArtifacts(readArtifacts(exist), dto.getArtifacts(),
-                    Boolean.TRUE.equals(dto.getReplaceArtifacts()))));
+            exist.setArtifacts(writeJson(mergeArtifacts(
+                    readArtifacts(exist), dto.getArtifacts(), Boolean.TRUE.equals(dto.getReplaceArtifacts()))));
         }
         exist.setUpdateTime(LocalDateTime.now());
         releaseMapper.updateById(exist);
@@ -294,8 +304,7 @@ public class QtSourceService {
         QtSourceRelease patch = new QtSourceRelease();
         patch.setIsPublished(0);
         patch.setUpdateTime(LocalDateTime.now());
-        releaseMapper.update(patch, new LambdaQueryWrapper<QtSourceRelease>()
-                .eq(QtSourceRelease::getId, id));
+        releaseMapper.update(patch, new LambdaQueryWrapper<QtSourceRelease>().eq(QtSourceRelease::getId, id));
         log.info("[QtSource] 撤回音源包: code={} channel={}", exist.getSourceVersionCode(), exist.getChannel());
     }
 
@@ -308,10 +317,11 @@ public class QtSourceService {
             patch.setRollbackTo(rollbackTo);
         }
         patch.setUpdateTime(LocalDateTime.now());
-        releaseMapper.update(patch, new LambdaQueryWrapper<QtSourceRelease>()
-                .eq(QtSourceRelease::getId, id));
-        log.warn("[QtSource] 标记坏包: code={} channel={} rollbackTo={}",
-                exist.getSourceVersionCode(), exist.getChannel(),
+        releaseMapper.update(patch, new LambdaQueryWrapper<QtSourceRelease>().eq(QtSourceRelease::getId, id));
+        log.warn(
+                "[QtSource] 标记坏包: code={} channel={} rollbackTo={}",
+                exist.getSourceVersionCode(),
+                exist.getChannel(),
                 rollbackTo != null ? rollbackTo : exist.getRollbackTo());
     }
 
@@ -352,10 +362,13 @@ public class QtSourceService {
                 .ge(QtSourceRelease::getSourceVersionCode, dayBase)
                 .lt(QtSourceRelease::getSourceVersionCode, dayBase + 100));
         long code = dayBase + (todayCount == null ? 0 : todayCount) + 1;
-        Object maxObj = releaseMapper.selectObjs(new QueryWrapper<QtSourceRelease>()
-                        .select("MAX(source_version_code) AS max_code")).stream()
-                .filter(Objects::nonNull)
-                .findFirst().orElse(null);
+        Object maxObj =
+                releaseMapper
+                        .selectObjs(new QueryWrapper<QtSourceRelease>().select("MAX(source_version_code) AS max_code"))
+                        .stream()
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElse(null);
         if (maxObj instanceof Number max && code <= max.longValue()) {
             code = max.longValue() + 1;
         }
@@ -437,9 +450,8 @@ public class QtSourceService {
      * </ul>
      * </p>
      */
-    private List<QtSourceArtifactVo> mergeArtifacts(List<QtSourceArtifactVo> previous,
-                                                     List<QtSourceArtifactVo> submitted,
-                                                     boolean replace) {
+    private List<QtSourceArtifactVo> mergeArtifacts(
+            List<QtSourceArtifactVo> previous, List<QtSourceArtifactVo> submitted, boolean replace) {
         Map<String, QtSourceArtifactVo> merged = new LinkedHashMap<>();
         Set<String> deprecated = deprecatedArtifactPaths();
         if (previous != null && !replace) {
@@ -569,7 +581,8 @@ public class QtSourceService {
         }
         for (Long p : platforms) {
             if (!QtSourceRelease.isSupportedPlatform(p)) {
-                throw new QtException("平台类型不支持(1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS 1106-HarmonyOS)");
+                throw new QtException(
+                        "平台类型不支持(1101-Android 1102-iOS 1103-Windows 1104-Linux 1105-macOS 1106-HarmonyOS)");
             }
         }
         return platforms;
@@ -628,8 +641,7 @@ public class QtSourceService {
             return new LinkedHashMap<>();
         }
         try {
-            return objectMapper.readValue(json, new TypeReference<Map<String, List<Long>>>() {
-            });
+            return objectMapper.readValue(json, new TypeReference<Map<String, List<Long>>>() {});
         } catch (Exception e) {
             log.warn("[QtSource] app_version_codes 解析失败 id={}: {}", entity.getId(), e.getMessage());
             return new LinkedHashMap<>();
@@ -646,8 +658,7 @@ public class QtSourceService {
             return new ArrayList<>();
         }
         try {
-            return objectMapper.readValue(json, new TypeReference<List<QtSourceArtifactVo>>() {
-            });
+            return objectMapper.readValue(json, new TypeReference<List<QtSourceArtifactVo>>() {});
         } catch (Exception e) {
             log.warn("[QtSource] artifacts 解析失败 id={}: {}", entity.getId(), e.getMessage());
             return new ArrayList<>();

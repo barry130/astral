@@ -11,13 +11,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 站内通知服务实现：App 端通知的查询过滤链 + 管理端公告/通知 CRUD。
@@ -60,7 +59,8 @@ public class NoticeServiceImpl implements NoticeService {
 
     @Override
     public List<SysNotice> listForApp(String appVersion, boolean loggedIn, Long userId) {
-        return listForChannel(List.of(NoticeConstants.CHANNEL_ANDROID, NoticeConstants.CHANNEL_IOS), appVersion, loggedIn, userId);
+        return listForChannel(
+                List.of(NoticeConstants.CHANNEL_ANDROID, NoticeConstants.CHANNEL_IOS), appVersion, loggedIn, userId);
     }
 
     @Override
@@ -97,7 +97,8 @@ public class NoticeServiceImpl implements NoticeService {
             // 保留期：公告(announce)不受限；其余类型（通知）仅最近 N 天（N=0/空=不限）
             if (retentionFrom != null) {
                 qw.and(w -> w.eq(SysNotice::getNoticeType, NoticeConstants.TYPE_ANNOUNCE)
-                        .or().ge(SysNotice::getCreateTime, retentionFrom));
+                        .or()
+                        .ge(SysNotice::getCreateTime, retentionFrom));
             }
             qw.orderByDesc(SysNotice::getIsTop).orderByDesc(SysNotice::getCreateTime);
             return sysNoticeMapper.selectList(qw);
@@ -142,8 +143,14 @@ public class NoticeServiceImpl implements NoticeService {
     // ==================== 管理端 ====================
 
     @Override
-    public Page<SysNotice> page(int pageNum, int pageSize, String channel, String noticeType,
-                                String keyword, String startDate, String endDate) {
+    public Page<SysNotice> page(
+            int pageNum,
+            int pageSize,
+            String channel,
+            String noticeType,
+            String keyword,
+            String startDate,
+            String endDate) {
         Page<SysNotice> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<SysNotice> qw = new LambdaQueryWrapper<>();
         List<String> channelFilters = NoticeTargets.parseFilter(channel);
@@ -165,8 +172,11 @@ public class NoticeServiceImpl implements NoticeService {
             // 选「通知」要把历史 feedback/request 行一并带出来（存量 297 行不做数据迁移，
             // 老客户端仍按这两个值渲染标签）；「公告」及其它值保持精确匹配。
             if (NoticeConstants.TYPE_NOTICE.equals(noticeType)) {
-                qw.in(SysNotice::getNoticeType, NoticeConstants.TYPE_NOTICE,
-                        NoticeConstants.TYPE_LEGACY_FEEDBACK, NoticeConstants.TYPE_LEGACY_REQUEST);
+                qw.in(
+                        SysNotice::getNoticeType,
+                        NoticeConstants.TYPE_NOTICE,
+                        NoticeConstants.TYPE_LEGACY_FEEDBACK,
+                        NoticeConstants.TYPE_LEGACY_REQUEST);
             } else {
                 qw.eq(SysNotice::getNoticeType, noticeType);
             }
@@ -186,8 +196,10 @@ public class NoticeServiceImpl implements NoticeService {
 
     @Override
     public SysNotice create(SysNotice notice) {
-        notice.setChannel(NotifyEventRegistry.isFeedbackReply(notice.getScene())
-                ? NoticeConstants.CHANNEL_ALL : NoticeTargets.normalizeForStore(notice.getChannel()));
+        notice.setChannel(
+                NotifyEventRegistry.isFeedbackReply(notice.getScene())
+                        ? NoticeConstants.CHANNEL_ALL
+                        : NoticeTargets.normalizeForStore(notice.getChannel()));
         applyNotNullDefaults(notice);
         clampReadSeconds(notice);
         clampDisclaimerChannel(notice);
@@ -291,8 +303,7 @@ public class NoticeServiceImpl implements NoticeService {
         // 先按「是不是免责声明」定渠道，再进白名单分支：命中的渠道必须落库，
         // 否则编辑一条已有声明时（表单没提交 channel）会留着旧的手机端投放值。
         clampDisclaimerChannel(notice);
-        LambdaUpdateWrapper<SysNotice> uw = new LambdaUpdateWrapper<SysNotice>()
-                .eq(SysNotice::getId, id);
+        LambdaUpdateWrapper<SysNotice> uw = new LambdaUpdateWrapper<SysNotice>().eq(SysNotice::getId, id);
         // 事件归属取数据库行，避免编辑请求修改 scene 绕过回复通知的全平台约束。
         SysNotice existing = sysNoticeMapper.selectById(id);
         if (existing != null && NotifyEventRegistry.isFeedbackReply(existing.getScene())) {

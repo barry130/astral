@@ -1,14 +1,13 @@
 package com.astral.auth.security;
 
 import cn.dev33.satoken.stp.StpUtil;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 结果级权限解析器：把「用户持有的范围权限」解析为「该用户在某个作用域下的<b>可见值集合</b>」。

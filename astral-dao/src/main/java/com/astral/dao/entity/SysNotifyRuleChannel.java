@@ -1,13 +1,9 @@
 package com.astral.dao.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
-
 import java.time.LocalDateTime;
-
-import java.util.List;
+import lombok.Data;
 
 @Data
 @TableName("sys_notify_rule_channel")
@@ -45,5 +41,4 @@ public class SysNotifyRuleChannel {
 
     @TableField(value = "update_time", fill = FieldFill.UPDATE)
     private LocalDateTime updateTime;
-
 }

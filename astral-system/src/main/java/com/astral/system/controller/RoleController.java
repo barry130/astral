@@ -3,6 +3,8 @@ package com.astral.system.controller;
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.annotation.RequiresSuper;
+import com.astral.common.exception.BusinessException;
+import com.astral.common.result.Result;
 import com.astral.dao.entity.Permission;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.RolePermission;
@@ -10,27 +12,24 @@ import com.astral.system.service.PermissionService;
 import com.astral.system.service.RolePermissionService;
 import com.astral.system.service.RoleService;
 import com.astral.system.service.UserRoleService;
-import com.astral.common.exception.BusinessException;
-import com.astral.common.result.Result;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 角色管理控制器
@@ -64,8 +63,8 @@ public class RoleController {
     @Operation(summary = "分页查询")
     @RequiresPermission("admin:system:role:view")
     @GetMapping("/page")
-    public Result<Page<Role>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                   @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<Role>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<Role> page = new Page<>(pageNum, pageSize);
         return Result.success(roleService.page(page));
     }
@@ -114,7 +113,10 @@ public class RoleController {
     // 可委派：只改角色名称/描述/排序/状态等元信息。
     // is_super 是提权开关，不可由此入口改写，否则持有 admin:system:role:edit 的人只要
     // PUT {"isSuper":1} 就能把自己变成超管。
-    @RequiresPermission(value = "admin:system:role:edit", name = "角色维护", domain = "system",
+    @RequiresPermission(
+            value = "admin:system:role:edit",
+            name = "角色维护",
+            domain = "system",
             description = "角色的新增/修改/删除（分配权限与 is_super 变更仍仅限超管）")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody Role entity) {
@@ -192,12 +194,14 @@ public class RoleController {
     @RequiresPermission("admin:system:role:view")
     @GetMapping("/{id}/permissions")
     public Result<List<Permission>> getRolePermissions(@PathVariable Long id) {
-        List<RolePermission> rolePermissions = rolePermissionService.list(new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, id));
+        List<RolePermission> rolePermissions =
+                rolePermissionService.list(new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, id));
         if (rolePermissions.isEmpty()) {
             return Result.success(List.of());
         }
         // 提取权限ID列表，批量查询权限详情
-        List<Long> permissionIds = rolePermissions.stream().map(RolePermission::getPermissionId).collect(Collectors.toList());
+        List<Long> permissionIds =
+                rolePermissions.stream().map(RolePermission::getPermissionId).collect(Collectors.toList());
         List<Permission> permissions = permissionService.listByIds(permissionIds);
         return Result.success(permissions);
     }

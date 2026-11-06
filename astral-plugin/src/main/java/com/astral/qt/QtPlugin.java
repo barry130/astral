@@ -3,10 +3,9 @@ package com.astral.qt;
 import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PermissionProvider;
 import com.astral.plugin.api.PluginFrontendExtension;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * 轻听（App）后端 API 插件
@@ -72,13 +71,19 @@ public class QtPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
     @Override
     public List<PermissionDef> getPermissions() {
         return List.of(
-                new PermissionDef(PERM_ADMIN, "轻听管理", "qt", TYPE_API,
-                        "轻听插件后台管理（用户/版本更新/音源包/加速节点）"),
-                new PermissionDef(PERM_UPDATE_CHANNEL_BETA, "轻听测试版接收资格(版本更新)", "qt", TYPE_DATA,
+                new PermissionDef(PERM_ADMIN, "轻听管理", "qt", TYPE_API, "轻听插件后台管理（用户/版本更新/音源包/加速节点）"),
+                new PermissionDef(
+                        PERM_UPDATE_CHANNEL_BETA,
+                        "轻听测试版接收资格(版本更新)",
+                        "qt",
+                        TYPE_DATA,
                         "可看到 beta 渠道的版本更新；正式版版本号更高时仍收到正式版"),
-                new PermissionDef(PERM_SOURCE_CHANNEL_BETA, "轻听测试版接收资格(音源包)", "qt", TYPE_DATA,
-                        "可看到 beta 渠道的音源包；正式包版本号更高时仍收到正式包")
-        );
+                new PermissionDef(
+                        PERM_SOURCE_CHANNEL_BETA,
+                        "轻听测试版接收资格(音源包)",
+                        "qt",
+                        TYPE_DATA,
+                        "可看到 beta 渠道的音源包；正式包版本号更高时仍收到正式包"));
     }
 
     @Override
@@ -95,8 +100,6 @@ public class QtPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
 
     @Override
     public List<NavItem> getNavItems() {
-        return List.of(
-                NavItem.pluginPage("轻听API", "/dashboard/qt", "CustomerServiceOutlined", PERM_ADMIN, 200)
-        );
+        return List.of(NavItem.pluginPage("轻听API", "/dashboard/qt", "CustomerServiceOutlined", PERM_ADMIN, 200));
     }
 }

@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,8 +21,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * 通知管理 - 管理端控制器。
@@ -63,13 +62,14 @@ public class AdminNoticeController {
 
     @Operation(summary = "通知分页（channel 支持多选，逗号分隔平台值；notice_type/关键词/时间筛选）")
     @GetMapping("/page")
-    public Result<Page<SysNotice>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                        @RequestParam(defaultValue = "10") Integer pageSize,
-                                        @RequestParam(required = false) String channel,
-                                        @RequestParam(required = false) String noticeType,
-                                        @RequestParam(required = false) String keyword,
-                                        @RequestParam(required = false) String startDate,
-                                        @RequestParam(required = false) String endDate) {
+    public Result<Page<SysNotice>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String channel,
+            @RequestParam(required = false) String noticeType,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
         return Result.success(noticeService.page(pageNum, pageSize, channel, noticeType, keyword, startDate, endDate));
     }
 

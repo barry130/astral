@@ -12,12 +12,11 @@ import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.RolePermissionMapper;
 import com.astral.dao.mapper.UserRoleMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Sa-Token 权限/角色数据源。
@@ -83,9 +82,12 @@ public class StpInterfaceImpl implements StpInterface {
         if (permissionIds.isEmpty()) {
             return List.of();
         }
-        return permissionMapper.selectList(
-                new QueryWrapper<Permission>().in("id", permissionIds).eq("status", 1)
-        ).stream().map(Permission::getPermissionCode).collect(Collectors.toList());
+        return permissionMapper
+                .selectList(
+                        new QueryWrapper<Permission>().in("id", permissionIds).eq("status", 1))
+                .stream()
+                .map(Permission::getPermissionCode)
+                .collect(Collectors.toList());
     }
 
     private List<String> loadRoles(Object loginId) {
@@ -98,9 +100,9 @@ public class StpInterfaceImpl implements StpInterface {
 
     /** 用户持有的启用角色 */
     private List<Role> enabledRoles(Long userId) {
-        List<Long> roleIds = userRoleMapper.selectList(
-                new QueryWrapper<UserRole>().eq("user_id", userId)
-        ).stream().map(UserRole::getRoleId).collect(Collectors.toList());
+        List<Long> roleIds = userRoleMapper.selectList(new QueryWrapper<UserRole>().eq("user_id", userId)).stream()
+                .map(UserRole::getRoleId)
+                .collect(Collectors.toList());
         if (roleIds.isEmpty()) {
             return List.of();
         }
@@ -117,9 +119,10 @@ public class StpInterfaceImpl implements StpInterface {
         if (roleIds.isEmpty()) {
             return List.of();
         }
-        return rolePermissionMapper.selectList(
-                new QueryWrapper<RolePermission>().in("role_id", roleIds)
-        ).stream().map(RolePermission::getPermissionId).distinct().collect(Collectors.toList());
+        return rolePermissionMapper.selectList(new QueryWrapper<RolePermission>().in("role_id", roleIds)).stream()
+                .map(RolePermission::getPermissionId)
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     private Long parseLoginId(Object loginId) {

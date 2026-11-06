@@ -25,9 +25,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
-@RestControllerAdvice(assignableTypes = {
-        com.astral.feedback.controller.AdminFeedbackController.class
-})
+@RestControllerAdvice(assignableTypes = {com.astral.feedback.controller.AdminFeedbackController.class})
 public class FeedbackAdminExceptionHandler {
 
     @ExceptionHandler(FeedbackException.class)
@@ -41,7 +39,8 @@ public class FeedbackAdminExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public Result<Void> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
-                ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+                ? "参数校验失败"
+                : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
         return Result.error(320, msg);
     }
 
@@ -49,7 +48,8 @@ public class FeedbackAdminExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public Result<Void> handleBind(BindException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
-                ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+                ? "参数校验失败"
+                : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
         return Result.error(320, msg);
     }
 

@@ -1,12 +1,11 @@
 package com.astral.ai.common;
 
+import java.util.ArrayList;
+import java.util.List;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * AI 模块 JSON 工具。
@@ -19,8 +18,7 @@ public final class AiJson {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private AiJson() {
-    }
+    private AiJson() {}
 
     public static ObjectMapper mapper() {
         return MAPPER;

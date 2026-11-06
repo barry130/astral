@@ -12,10 +12,12 @@ import com.astral.qt.entity.QtAppUpdate;
 import com.astral.qt.service.QtAppService;
 import com.astral.qt.service.QtGithubAccelService;
 import com.astral.qt.service.QtSourceService;
-import tools.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -27,10 +29,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 轻听 App 公共控制器
@@ -69,19 +68,20 @@ public class QtAppController {
 
     @Operation(summary = "获取APP更新信息（按 user:qt:update:channel 可见集合投放，satoken 可选头识别人群）")
     @GetMapping("/update")
-    public Result<QtAppUpdate> getUpdate(@RequestParam("type") Long type,
-                                             @RequestParam("version") String version,
-                                             // 架构为可选参数：不上送（旧客户端）也能用，只是拿不到按架构挑选的那一份
-                                             @RequestParam(value = "arch", required = false) String arch,
-                                             @RequestHeader(value = "satoken", required = false) String satoken) {
+    public Result<QtAppUpdate> getUpdate(
+            @RequestParam("type") Long type,
+            @RequestParam("version") String version,
+            // 架构为可选参数：不上送（旧客户端）也能用，只是拿不到按架构挑选的那一份
+            @RequestParam(value = "arch", required = false) String arch,
+            @RequestHeader(value = "satoken", required = false) String satoken) {
         if (!QtAppUpdate.isSupportedPlatform(type)) {
             throw BusinessException.of(320, "暂不支持该类型");
         }
         // 可见集合 = {stable} ∪ 用户被授予的渠道（如 user:qt:update:channel:beta → beta；超管为全部已登记渠道）。
         // 权限只决定「能看见哪些渠道」，最终发哪个版本由业务在集合内按版本号最大者决定：
         // 正式版版本号更高时，持有测试权限的用户依然收到正式版。
-        Set<String> channels = dataScopeResolver.resolveChannelsByToken(
-                satoken, PermissionChecker.QT_UPDATE_CHANNEL_SCOPE);
+        Set<String> channels =
+                dataScopeResolver.resolveChannelsByToken(satoken, PermissionChecker.QT_UPDATE_CHANNEL_SCOPE);
         return Result.success(appService.getUpdate(type, version, channels, arch));
     }
 
@@ -125,10 +125,11 @@ public class QtAppController {
             @RequestParam(value = "appVersionCode", required = false) Long appVersionCode,
             @RequestParam(value = "hostApiVersion", required = false) Long hostApiVersion,
             @RequestHeader(value = "satoken", required = false) String satoken,
-            @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch) throws Exception {
+            @RequestHeader(value = "If-None-Match", required = false) String ifNoneMatch)
+            throws Exception {
         // 可见渠道集合：无权限者只有 stable，有 user:qt:source:channel:beta 者额外可见 beta
-        Set<String> channels = dataScopeResolver.resolveChannelsByToken(
-                satoken, PermissionChecker.QT_SOURCE_CHANNEL_SCOPE);
+        Set<String> channels =
+                dataScopeResolver.resolveChannelsByToken(satoken, PermissionChecker.QT_SOURCE_CHANNEL_SCOPE);
         QtSourceManifestVo manifest = sourceService.buildManifest(platform, appVersionCode, hostApiVersion, channels);
         // ETag 必须按「不含 generatedAt」的稳定内容计算：generatedAt 每次请求都变，
         // 直接对响应体做摘要会让 If-None-Match 永远不命中。稳定拷贝按包装后的结构来

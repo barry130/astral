@@ -1,15 +1,14 @@
 package com.astral.monitor.service;
 
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Component;
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 
 /**
  * 接口指标内存累加器（ApiMetricCollector）
@@ -57,7 +56,8 @@ public class ApiMetricCollector {
         // 旧实现由采集侧自己 start=now，导致「耗时恒为 0」——所有接口耗时报表都是假数据。
         // 现在由拦截器传「自 preHandle 起的纳秒数」；负数（时钟异常）当 0 处理。
         long costMs = Math.max(elapsedNs, 0L) / 1_000_000;
-        LocalDateTime bucketHour = LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime bucketHour =
+                LocalDateTime.now().withMinute(0).withSecond(0).withNano(0);
         ApiMetricKey key = new ApiMetricKey(bucketHour, uri, method, status, ut, appVersion);
         if (metrics.get(key) == null && metrics.mappingCount() >= MAX_BUCKETS) {
             // 桶数触顶：丢弃版本维度降级归并，避免被伪造的 X-App-Version 撑爆内存与落库行数。
@@ -73,8 +73,7 @@ public class ApiMetricCollector {
             // 使本次计数落到仍然生效的桶上，而不是丢失在已脱链的对象里。
             metrics.remove(key, bucket);
         }
-        log.warn("[stat] 指标入桶重试 {} 次仍失败，本次计数丢弃: uri={} method={} status={}",
-                MAX_INBOUND_RETRY, uri, method, status);
+        log.warn("[stat] 指标入桶重试 {} 次仍失败，本次计数丢弃: uri={} method={} status={}", MAX_INBOUND_RETRY, uri, method, status);
     }
 
     /**
@@ -117,8 +116,8 @@ public class ApiMetricCollector {
         private final String ut;
         private final String appVersion;
 
-        public ApiMetricKey(LocalDateTime bucketHour, String uri, String method, int status,
-                            String ut, String appVersion) {
+        public ApiMetricKey(
+                LocalDateTime bucketHour, String uri, String method, int status, String ut, String appVersion) {
             this.bucketHour = bucketHour;
             this.uri = uri;
             this.method = method;

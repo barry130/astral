@@ -1,10 +1,8 @@
 package com.astral.system.message;
 
 import java.time.LocalDateTime;
-
-import org.springframework.format.annotation.DateTimeFormat;
-
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 /**
  * 消息统计/明细的公共筛选条件，直接由管理端 GET 查询参数绑定（参数名 = 字段名）。

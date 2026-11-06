@@ -1,5 +1,9 @@
 package com.astral.qt.service;
 
+import com.astral.qt.dto.vo.QtSourceArtifactVo;
+import com.astral.qt.entity.QtSourceRelease;
+import com.astral.qt.mapper.QtSourceReleaseMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -8,17 +12,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Component;
-
-import com.astral.qt.dto.vo.QtSourceArtifactVo;
-import com.astral.qt.entity.QtSourceRelease;
-import com.astral.qt.mapper.QtSourceReleaseMapper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -69,8 +66,7 @@ public class QtPackHeaderProbe {
             .build();
 
     /** 包头解析结果（只关心升级比版需要的字段） */
-    public record PackHeader(String kind, String id, String name, long versionCode, String versionName) {
-    }
+    public record PackHeader(String kind, String id, String name, long versionCode, String versionName) {}
 
     /**
      * 宿主同款解析：找 {@code /*__QT_PACK__} 标记，取其后到最近 {@code &#42;/} 之间的 JSON。
@@ -99,7 +95,9 @@ public class QtPackHeaderProbe {
             if (kind.isEmpty() || id.isEmpty() || versionCode <= 0) {
                 return null;
             }
-            return new PackHeader(kind, id,
+            return new PackHeader(
+                    kind,
+                    id,
                     node.path("name").asString("").trim(),
                     versionCode,
                     node.path("versionName").asString("").trim());
@@ -184,15 +182,19 @@ public class QtPackHeaderProbe {
             PackHeader header = probe(a.getUrl(), timeout);
             headers.put(a.getUrl(), header);
             if (header == null) {
-                log.warn("[QtPackProbe] 产物包头探测失败: id={} path={} url={}（客户端将回退自行探测）",
-                        releaseId, a.getPath(), a.getUrl());
+                log.warn(
+                        "[QtPackProbe] 产物包头探测失败: id={} path={} url={}（客户端将回退自行探测）", releaseId, a.getPath(), a.getUrl());
                 continue;
             }
             // 发布前对账：产物包头版本与 release 版本号不一致 → 极可能是「新版本挂了旧产物」
             if (row.getSourceVersionCode() != null && header.versionCode() != row.getSourceVersionCode()) {
-                log.warn("[QtPackProbe] 产物包头版本与 release 不一致: id={} path={} 包头={} release={} "
+                log.warn(
+                        "[QtPackProbe] 产物包头版本与 release 不一致: id={} path={} 包头={} release={} "
                                 + "（请确认产物是否本次构建；客户端会以包头为准拒绝安装版本不符的更新）",
-                        releaseId, a.getPath(), header.versionCode(), row.getSourceVersionCode());
+                        releaseId,
+                        a.getPath(),
+                        header.versionCode(),
+                        row.getSourceVersionCode());
             }
         }
         if (headers.isEmpty()) {
@@ -230,17 +232,18 @@ public class QtPackHeaderProbe {
             QtSourceRelease patch = new QtSourceRelease();
             patch.setArtifacts(merged);
             patch.setUpdateTime(LocalDateTime.now());
-            releaseMapper.update(patch, new LambdaQueryWrapper<QtSourceRelease>()
-                    .eq(QtSourceRelease::getId, releaseId));
-            log.info("[QtPackProbe] 已回填产物直发字段: id={} count={} fields={}",
-                    releaseId, filled, headers.keySet());
+            releaseMapper.update(
+                    patch, new LambdaQueryWrapper<QtSourceRelease>().eq(QtSourceRelease::getId, releaseId));
+            log.info("[QtPackProbe] 已回填产物直发字段: id={} count={} fields={}", releaseId, filled, headers.keySet());
         }
         return filled;
     }
 
     private boolean hasDirectFields(QtSourceArtifactVo a) {
-        return a.getPackVersionCode() != null && a.getPackVersionCode() > 0
-                && a.getPackId() != null && !a.getPackId().isBlank();
+        return a.getPackVersionCode() != null
+                && a.getPackVersionCode() > 0
+                && a.getPackId() != null
+                && !a.getPackId().isBlank();
     }
 
     private List<QtSourceArtifactVo> readArtifacts(QtSourceRelease row) {
@@ -249,8 +252,7 @@ public class QtPackHeaderProbe {
             return new ArrayList<>();
         }
         try {
-            return objectMapper.readValue(json, new TypeReference<List<QtSourceArtifactVo>>() {
-            });
+            return objectMapper.readValue(json, new TypeReference<List<QtSourceArtifactVo>>() {});
         } catch (Exception e) {
             log.warn("[QtPackProbe] artifacts 解析失败 id={}: {}", row.getId(), e.getMessage());
             return new ArrayList<>();

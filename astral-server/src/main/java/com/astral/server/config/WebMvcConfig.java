@@ -23,8 +23,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 1. 全局统一认证拦截器（宿主管理区 + 轻听插件用户区合并，含 token 自动续期）；
         //    免认证白名单内置在 AuthInterceptor.PUBLIC_PATHS，401 统一返回 Result 结构，
         //    提示文案按区域区分。先于限流注册：确保 userId 属性已设置，user 类型限流才能正确识别。
-        registry.addInterceptor(authInterceptor)
-                .addPathPatterns("/api/**");
+        registry.addInterceptor(authInterceptor).addPathPatterns("/api/**");
 
         // 2. 接口指标采集拦截器（认证之后注册；采集入口不统计，防自举；
         //    astral.stat.enabled=false 时 Bean 不存在，自动跳过）
@@ -38,8 +37,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                             "/v3/api-docs/**",
                             "/swagger-ui.html",
                             "/doc.html",
-                            "/actuator/**"
-                    );
+                            "/actuator/**");
         }
 
         // 3. 限流拦截器（认证之后，user 属性已就绪）
@@ -50,7 +48,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/swagger-ui.html",
-                        "/doc.html"
-                );
+                        "/doc.html");
     }
 }

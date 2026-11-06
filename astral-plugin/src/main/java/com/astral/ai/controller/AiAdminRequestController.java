@@ -20,14 +20,6 @@ import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.common.util.PageQuery;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -36,6 +28,13 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * AI 后台：请求记录、会话与事件审计。
@@ -61,14 +60,15 @@ public class AiAdminRequestController {
     // ==================== 请求列表 ====================
 
     @GetMapping("/requests")
-    public Result<Map<String, Object>> requests(@RequestParam(required = false) String status,
-                                                @RequestParam(required = false) Long agentId,
-                                                @RequestParam(required = false) Long userId,
-                                                @RequestParam(required = false) String clientType,
-                                                @RequestParam(required = false) String from,
-                                                @RequestParam(required = false) String to,
-                                                @RequestParam(required = false) Long pageNum,
-                                                @RequestParam(required = false) Long pageSize) {
+    public Result<Map<String, Object>> requests(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long agentId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String clientType,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) Long pageNum,
+            @RequestParam(required = false) Long pageSize) {
         int num = (int) PageQuery.pageNum(pageNum == null ? 1 : pageNum);
         int size = (int) PageQuery.pageSize(pageSize == null ? PageQuery.DEFAULT_PAGE_SIZE : pageSize);
         String normalizedStatus = normalizeStatus(status);
@@ -76,8 +76,8 @@ public class AiAdminRequestController {
         LocalDateTime start = parseStart(from);
         LocalDateTime end = parseEnd(to);
 
-        List<AiRequestEntity> rows = requestService.search(normalizedStatus, agentId, userId,
-                normalizedClient, start, end, num, size);
+        List<AiRequestEntity> rows =
+                requestService.search(normalizedStatus, agentId, userId, normalizedClient, start, end, num, size);
         long total = requestService.count(normalizedStatus, agentId, userId, normalizedClient, start, end);
 
         Map<Long, AiAgentEntity> agents = new HashMap<>();
@@ -103,8 +103,8 @@ public class AiAdminRequestController {
     // ==================== 请求详情 ====================
 
     @GetMapping("/requests/{id}")
-    public Result<AiAdminDtos.RequestDetailVo> request(@PathVariable Long id,
-                                                       @RequestParam(required = false) Boolean content) {
+    public Result<AiAdminDtos.RequestDetailVo> request(
+            @PathVariable Long id, @RequestParam(required = false) Boolean content) {
         AiRequestEntity entity = requestService.require(id);
         AiAgentEntity agent = null;
         try {
@@ -116,28 +116,57 @@ public class AiAdminRequestController {
         for (AiToolCallEntity call : toolCallMapper.selectList(new LambdaQueryWrapper<AiToolCallEntity>()
                 .eq(AiToolCallEntity::getRequestId, id)
                 .orderByAsc(AiToolCallEntity::getId))) {
-            toolCalls.add(new AiAdminDtos.ToolCallVo(call.getId(), call.getRequestId(), call.getToolCode(),
-                    call.getToolName(), call.getRiskLevel(), call.getStatus(), call.getArgumentsJson(),
-                    call.getResultJson(), call.getErrorMessage(), call.getApprovalStatus(),
-                    call.getApprovedBy(), call.getApprovedAt(), call.getStartedAt(), call.getFinishedAt()));
+            toolCalls.add(new AiAdminDtos.ToolCallVo(
+                    call.getId(),
+                    call.getRequestId(),
+                    call.getToolCode(),
+                    call.getToolName(),
+                    call.getRiskLevel(),
+                    call.getStatus(),
+                    call.getArgumentsJson(),
+                    call.getResultJson(),
+                    call.getErrorMessage(),
+                    call.getApprovalStatus(),
+                    call.getApprovedBy(),
+                    call.getApprovedAt(),
+                    call.getStartedAt(),
+                    call.getFinishedAt()));
         }
         List<AiAdminDtos.EventVo> events = new ArrayList<>();
         for (AiRequestEventEntity row : eventService.readAll(id, AiEventService.MAX_BATCH)) {
-            events.add(new AiAdminDtos.EventVo(row.getSequenceNo(), row.getEventType(),
-                    row.getDataJson(), row.getCreateTime()));
+            events.add(new AiAdminDtos.EventVo(
+                    row.getSequenceNo(), row.getEventType(), row.getDataJson(), row.getCreateTime()));
         }
         List<AiAdminDtos.MessageVo> messages = new ArrayList<>();
         for (AiMessageEntity row : messageMapper.selectList(new LambdaQueryWrapper<AiMessageEntity>()
                 .eq(AiMessageEntity::getRequestId, id)
                 .orderByAsc(AiMessageEntity::getId))) {
-            messages.add(new AiAdminDtos.MessageVo(row.getId(), row.getConversationId(), row.getRequestId(),
-                    row.getRole(), row.getContent(), row.getContentType(), row.getStatus(),
-                    row.getBlocksJson(), row.getCitationsJson(), row.getModelName(),
-                    row.getInputTokens(), row.getOutputTokens(), row.getCreateTime()));
+            messages.add(new AiAdminDtos.MessageVo(
+                    row.getId(),
+                    row.getConversationId(),
+                    row.getRequestId(),
+                    row.getRole(),
+                    row.getContent(),
+                    row.getContentType(),
+                    row.getStatus(),
+                    row.getBlocksJson(),
+                    row.getCitationsJson(),
+                    row.getModelName(),
+                    row.getInputTokens(),
+                    row.getOutputTokens(),
+                    row.getCreateTime()));
         }
-        return Result.success(new AiAdminDtos.RequestDetailVo(toVo(entity, agent), entity.getInputSnapshot(),
-                entity.getContextSnapshot(), entity.getConfigurationSnapshot(), entity.getKnowledgeSnapshot(),
-                entity.getToolPolicySnapshot(), entity.getSafetyPolicySnapshot(), toolCalls, events, messages));
+        return Result.success(new AiAdminDtos.RequestDetailVo(
+                toVo(entity, agent),
+                entity.getInputSnapshot(),
+                entity.getContextSnapshot(),
+                entity.getConfigurationSnapshot(),
+                entity.getKnowledgeSnapshot(),
+                entity.getToolPolicySnapshot(),
+                entity.getSafetyPolicySnapshot(),
+                toolCalls,
+                events,
+                messages));
     }
 
     // ==================== 会话审计 ====================
@@ -154,18 +183,21 @@ public class AiAdminRequestController {
      */
     @GetMapping("/conversation-audits")
     @RequiresPermission(value = "admin:ai:conversation:view", name = "AI 会话查看", description = "查看 AI 会话列表")
-    public Result<Map<String, Object>> conversations(@RequestParam(required = false) Long agentId,
-                                                     @RequestParam(required = false) Long userId,
-                                                     @RequestParam(required = false) String clientType,
-                                                     @RequestParam(required = false) Long pageNum,
-                                                     @RequestParam(required = false) Long pageSize) {
+    public Result<Map<String, Object>> conversations(
+            @RequestParam(required = false) Long agentId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String clientType,
+            @RequestParam(required = false) Long pageNum,
+            @RequestParam(required = false) Long pageSize) {
         int num = (int) PageQuery.pageNum(pageNum == null ? 1 : pageNum);
         int size = (int) PageQuery.pageSize(pageSize == null ? PageQuery.DEFAULT_PAGE_SIZE : pageSize);
         LambdaQueryWrapper<AiConversationEntity> wrapper = new LambdaQueryWrapper<AiConversationEntity>()
                 .isNull(AiConversationEntity::getDeletedAt)
                 .eq(agentId != null, AiConversationEntity::getAgentId, agentId)
                 .eq(userId != null, AiConversationEntity::getUserId, userId)
-                .eq(clientType != null && !clientType.isBlank(), AiConversationEntity::getClientType,
+                .eq(
+                        clientType != null && !clientType.isBlank(),
+                        AiConversationEntity::getClientType,
                         normalizeClient(clientType))
                 .orderByDesc(AiConversationEntity::getId)
                 .last("limit " + size + " offset " + ((num - 1) * size));
@@ -204,11 +236,14 @@ public class AiAdminRequestController {
     }
 
     @GetMapping("/conversation-audits/{id}/messages")
-    @RequiresPermission(value = "admin:ai:conversation:content:view", name = "AI 会话正文查看",
+    @RequiresPermission(
+            value = "admin:ai:conversation:content:view",
+            name = "AI 会话正文查看",
             description = "查看 AI 会话完整内容（敏感操作，需审计）")
-    public Result<List<AiAdminDtos.MessageVo>> conversationMessages(@PathVariable Long id,
-                                                                   @RequestParam(required = false) Long beforeId,
-                                                                   @RequestParam(required = false) Integer limit) {
+    public Result<List<AiAdminDtos.MessageVo>> conversationMessages(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long beforeId,
+            @RequestParam(required = false) Integer limit) {
         AiConversationEntity conversation = conversationMapper.selectById(id);
         if (conversation == null) {
             throw new AiException("AI015", id);
@@ -224,10 +259,20 @@ public class AiAdminRequestController {
         // 倒序取出后正序返回，前端渲染更省事
         for (int i = rows.size() - 1; i >= 0; i--) {
             AiMessageEntity row = rows.get(i);
-            items.add(new AiAdminDtos.MessageVo(row.getId(), row.getConversationId(), row.getRequestId(),
-                    row.getRole(), row.getContent(), row.getContentType(), row.getStatus(),
-                    row.getBlocksJson(), row.getCitationsJson(), row.getModelName(),
-                    row.getInputTokens(), row.getOutputTokens(), row.getCreateTime()));
+            items.add(new AiAdminDtos.MessageVo(
+                    row.getId(),
+                    row.getConversationId(),
+                    row.getRequestId(),
+                    row.getRole(),
+                    row.getContent(),
+                    row.getContentType(),
+                    row.getStatus(),
+                    row.getBlocksJson(),
+                    row.getCitationsJson(),
+                    row.getModelName(),
+                    row.getInputTokens(),
+                    row.getOutputTokens(),
+                    row.getCreateTime()));
         }
         return Result.success(items);
     }
@@ -244,11 +289,24 @@ public class AiAdminRequestController {
                 versionNo = null;
             }
         }
-        return new AiAdminDtos.RequestVo(entity.getId(), entity.getConversationId(), entity.getAgentId(),
-                agent == null ? null : agent.getName(), entity.getAgentVersionId(), versionNo,
-                entity.getUserId(), entity.getClientType(), entity.getStatus(), entity.getErrorCode(),
-                entity.getErrorSummary(), entity.getTokenIn(), entity.getTokenOut(), durationMs(entity),
-                entity.getStartedAt(), entity.getFinishedAt(), entity.getCreateTime());
+        return new AiAdminDtos.RequestVo(
+                entity.getId(),
+                entity.getConversationId(),
+                entity.getAgentId(),
+                agent == null ? null : agent.getName(),
+                entity.getAgentVersionId(),
+                versionNo,
+                entity.getUserId(),
+                entity.getClientType(),
+                entity.getStatus(),
+                entity.getErrorCode(),
+                entity.getErrorSummary(),
+                entity.getTokenIn(),
+                entity.getTokenOut(),
+                durationMs(entity),
+                entity.getStartedAt(),
+                entity.getFinishedAt(),
+                entity.getCreateTime());
     }
 
     private Long durationMs(AiRequestEntity entity) {

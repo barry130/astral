@@ -4,12 +4,12 @@ import cn.dev33.satoken.stp.StpInterface;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.crypto.digest.BCrypt;
-import com.astral.common.exception.BusinessException;
-import com.astral.dao.entity.User;
 import com.astral.auth.registry.AppUserRoleService;
 import com.astral.auth.security.LoginDevice;
 import com.astral.auth.security.RsaKeyManager;
 import com.astral.auth.service.UserLoginMarker;
+import com.astral.common.exception.BusinessException;
+import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.qt.common.QtException;
 import com.astral.qt.dto.QtChangePwByEmailDto;
@@ -24,12 +24,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -37,6 +31,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.stereotype.Service;
 
 /**
  * 轻听用户服务
@@ -88,6 +87,7 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
     private static final String RATE_KEY = "qt:email:ratelimit:";
     /** 验证码失败次数：达到上限即作废当前验证码，必须重新发送才能再试 */
     private static final String CODE_FAIL_KEY = "qt:email:codefail:";
+
     private static final int MAX_CODE_FAILURES = 5;
 
     /**
@@ -96,8 +96,7 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
      * 另一次发送重新占位，无条件 delete 会误删别人的窗口；令牌比对后误删不可能发生。
      */
     private static final DefaultRedisScript<Long> RELEASE_RATE_LIMIT_SCRIPT = new DefaultRedisScript<>(
-            "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0",
-            Long.class);
+            "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0", Long.class);
 
     /**
      * 验证码「原子校验 + 失败自增 + 超限作废」脚本。
@@ -146,16 +145,18 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         if (user.getStatus() != null && user.getStatus() == 0) {
             throw new QtException("账号已注销");
         }
-        userMapper.update(null, new LambdaUpdateWrapper<User>()
-                .eq(User::getId, userId)
-                .set(User::getStatus, 0)
-                .set(User::getStatusReason, "用户自助注销")
-                .set(User::getNickname, "已注销用户")
-                .set(User::getEmail, null)
-                .set(User::getPhone, null)
-                .set(User::getAvatar, null)
-                .set(User::getDeviceId, null)
-                .set(User::getUpdateTime, java.time.LocalDateTime.now()));
+        userMapper.update(
+                null,
+                new LambdaUpdateWrapper<User>()
+                        .eq(User::getId, userId)
+                        .set(User::getStatus, 0)
+                        .set(User::getStatusReason, "用户自助注销")
+                        .set(User::getNickname, "已注销用户")
+                        .set(User::getEmail, null)
+                        .set(User::getPhone, null)
+                        .set(User::getAvatar, null)
+                        .set(User::getDeviceId, null)
+                        .set(User::getUpdateTime, java.time.LocalDateTime.now()));
         StpUtil.kickout(userId);
     }
 
@@ -163,13 +164,10 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         if (rsaKeyManager.isAccountLocked(dto.getUsername())) {
             throw new QtException("登录失败次数过多，账号已被锁定，请15分钟后再试");
         }
-        User user = userMapper.selectOne(
-                new LambdaQueryWrapper<User>()
-                        .eq(User::getUserType, USER_TYPE_APP)
-                        .and(w -> w.eq(User::getUsername, dto.getUsername())
-                                .or().eq(User::getEmail, dto.getUsername()))
-                        .last("LIMIT 1")
-        );
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getUserType, USER_TYPE_APP)
+                .and(w -> w.eq(User::getUsername, dto.getUsername()).or().eq(User::getEmail, dto.getUsername()))
+                .last("LIMIT 1"));
         if (user == null) {
             rsaKeyManager.recordLoginFailure(dto.getUsername());
             throw new QtException("当前用户名或邮箱不存在");
@@ -216,14 +214,15 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
             throw new QtException("两次密码不一致");
         }
 
-        Long conflict = userMapper.selectCount(
-                new LambdaQueryWrapper<User>()
-                        .eq(User::getUserType, USER_TYPE_APP)
-                        .and(w -> w.eq(User::getUsername, dto.getUsername())
-                                .or().eq(User::getEmail, dto.getEmail())
-                                .or().eq(User::getUsername, dto.getEmail())
-                                .or().eq(User::getEmail, dto.getUsername()))
-        );
+        Long conflict = userMapper.selectCount(new LambdaQueryWrapper<User>()
+                .eq(User::getUserType, USER_TYPE_APP)
+                .and(w -> w.eq(User::getUsername, dto.getUsername())
+                        .or()
+                        .eq(User::getEmail, dto.getEmail())
+                        .or()
+                        .eq(User::getUsername, dto.getEmail())
+                        .or()
+                        .eq(User::getEmail, dto.getUsername())));
         if (conflict != null && conflict > 0) {
             throw new QtException("当前用户名或邮箱已被注册");
         }
@@ -313,11 +312,9 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         // 能发什么事件由系统侧发信授权 fail-closed 控制（allowed_scenes 留空=全拒，见 MailServiceImpl.send），
         // 插件侧不再自带白名单。注意 body 同时用作验证码 Redis 存储键，changePwByEmail 只认
         // EMAIL_BODY_CHANGE_PW 这个键——授权里多勾的事件只会白耗配额，不会产生可用验证码。
-        User user = userMapper.selectOne(
-                new LambdaQueryWrapper<User>()
-                        .eq(User::getUserType, USER_TYPE_APP)
-                        .eq(User::getEmail, dto.getEmail())
-        );
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getUserType, USER_TYPE_APP)
+                .eq(User::getEmail, dto.getEmail()));
         if (user == null) {
             throw new QtException("当前邮箱不在系统中");
         }
@@ -336,16 +333,16 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
 
         // 委托系统邮件服务发送（插件授权/每日限额/随机账户/模板渲染/记录落库 均在系统侧完成）
         try {
-            List<NotifyPublisher.PublishResult> results = notifyPublisher.publish(dto.getBody(),
-                    Map.of("code", code, "email", dto.getEmail()), null);
-            boolean sent = results.stream()
-                    .anyMatch(r -> r.ok() && "EMAIL".equalsIgnoreCase(r.channel()));
+            List<NotifyPublisher.PublishResult> results =
+                    notifyPublisher.publish(dto.getBody(), Map.of("code", code, "email", dto.getEmail()), null);
+            boolean sent = results.stream().anyMatch(r -> r.ok() && "EMAIL".equalsIgnoreCase(r.channel()));
             if (!sent) {
                 String reason = results.stream()
                         .filter(r -> !r.ok() && "EMAIL".equalsIgnoreCase(r.channel()))
                         .map(NotifyPublisher.PublishResult::error)
                         .filter(e -> e != null && !e.isBlank())
-                        .findFirst().orElse("未配置可用的邮件渠道规则");
+                        .findFirst()
+                        .orElse("未配置可用的邮件渠道规则");
                 throw new BusinessException("MAIL005", reason);
             }
             // 发送成功后才落库验证码（TTL 控制有效期）；频控窗口已在上面原子占位
@@ -377,11 +374,9 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
     }
 
     public User changePwByEmail(QtChangePwByEmailDto dto) {
-        User user = userMapper.selectOne(
-                new LambdaQueryWrapper<User>()
-                        .eq(User::getUserType, USER_TYPE_APP)
-                        .eq(User::getEmail, dto.getEmail())
-        );
+        User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
+                .eq(User::getUserType, USER_TYPE_APP)
+                .eq(User::getEmail, dto.getEmail()));
         if (user == null) {
             throw new QtException("当前邮箱还未注册");
         }
@@ -427,8 +422,12 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         String failKey = codeFailKey(codeKey);
         Long codeTtl = stringRedisTemplate.getExpire(codeKey, TimeUnit.SECONDS);
         long ttl = codeTtl != null && codeTtl > 0 ? codeTtl : CODE_TTL.toSeconds();
-        Long result = stringRedisTemplate.execute(VERIFY_CODE_SCRIPT, List.of(codeKey, failKey),
-                input, String.valueOf(ttl), String.valueOf(MAX_CODE_FAILURES));
+        Long result = stringRedisTemplate.execute(
+                VERIFY_CODE_SCRIPT,
+                List.of(codeKey, failKey),
+                input,
+                String.valueOf(ttl),
+                String.valueOf(MAX_CODE_FAILURES));
         int code = result == null ? -2 : result.intValue();
         if (code == -1) {
             log.warn("[QtPlugin] 邮箱验证码尝试次数超限，验证码已作废: key={}", codeKey);
@@ -448,13 +447,10 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
 
         // 若邮箱变更，校验新邮箱唯一（仅限 APP 用户）
         if (!dto.getEmail().equals(user.getEmail())) {
-            Long count = userMapper.selectCount(
-                    new LambdaQueryWrapper<User>()
-                            .eq(User::getUserType, USER_TYPE_APP)
-                            .and(w -> w.eq(User::getEmail, dto.getEmail())
-                                    .or().eq(User::getUsername, dto.getEmail()))
-                            .ne(User::getId, userId)
-            );
+            Long count = userMapper.selectCount(new LambdaQueryWrapper<User>()
+                    .eq(User::getUserType, USER_TYPE_APP)
+                    .and(w -> w.eq(User::getEmail, dto.getEmail()).or().eq(User::getUsername, dto.getEmail()))
+                    .ne(User::getId, userId));
             if (count != null && count > 0) {
                 throw new QtException("当前邮箱已被使用");
             }
@@ -473,5 +469,4 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
         StpUtil.kickout(userId);
         return userMapper.selectById(userId);
     }
-
 }

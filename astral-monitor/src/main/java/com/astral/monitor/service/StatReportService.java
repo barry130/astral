@@ -1,11 +1,11 @@
 package com.astral.monitor.service;
 
-import com.astral.dao.entity.StatErrorLog;
 import com.astral.dao.entity.StatDevice;
+import com.astral.dao.entity.StatErrorLog;
 import com.astral.dao.entity.StatMetricHourly;
 import com.astral.dao.mapper.StatApiHourlyMapper;
-import com.astral.dao.mapper.StatErrorLogMapper;
 import com.astral.dao.mapper.StatDeviceMapper;
+import com.astral.dao.mapper.StatErrorLogMapper;
 import com.astral.dao.mapper.StatMetricHourlyMapper;
 import com.astral.monitor.dto.ApiTopDTO;
 import com.astral.monitor.dto.ApiTopResultDTO;
@@ -17,10 +17,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,6 +25,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 统计报表查询服务（六个报表接口）
@@ -88,8 +87,8 @@ public class StatReportService {
      * 设备统计概览（今日 vs 昨日）
      */
     public Map<String, DeviceOverviewDTO> getOverview(LocalDate date, String ut, String version) {
-        return cached("ov:" + date + ":" + keyPart(ut) + ":" + keyPart(version),
-                () -> getOverviewDirect(date, ut, version));
+        return cached(
+                "ov:" + date + ":" + keyPart(ut) + ":" + keyPart(version), () -> getOverviewDirect(date, ut, version));
     }
 
     private Map<String, DeviceOverviewDTO> getOverviewDirect(LocalDate date, String ut, String version) {
@@ -113,12 +112,11 @@ public class StatReportService {
         String versionFilter = normalize(version);
 
         DeviceOverviewDTO dto = new DeviceOverviewDTO();
-        dto.setNewDevices(statDeviceMapper.selectCount(
-                deviceQuery(ut, versionFilter, w -> w.eq("first_date", date))));
-        dto.setActiveDevices(statDeviceMapper.selectCount(
-                deviceQuery(ut, versionFilter, w -> w.eq("last_date", date))));
-        dto.setTotalDevices(statDeviceMapper.selectCount(
-                deviceQuery(ut, versionFilter, w -> w.le("first_date", date))));
+        dto.setNewDevices(statDeviceMapper.selectCount(deviceQuery(ut, versionFilter, w -> w.eq("first_date", date))));
+        dto.setActiveDevices(
+                statDeviceMapper.selectCount(deviceQuery(ut, versionFilter, w -> w.eq("last_date", date))));
+        dto.setTotalDevices(
+                statDeviceMapper.selectCount(deviceQuery(ut, versionFilter, w -> w.le("first_date", date))));
 
         QueryWrapper<StatMetricHourly> qw = new QueryWrapper<>();
         qw.select(
@@ -151,7 +149,8 @@ public class StatReportService {
         if (column == null) {
             throw new IllegalArgumentException("不支持的指标: " + metric);
         }
-        return cached("tr:" + metric + ":" + date + ":" + keyPart(ut) + ":" + keyPart(version),
+        return cached(
+                "tr:" + metric + ":" + date + ":" + keyPart(ut) + ":" + keyPart(version),
                 () -> getTrendDirect(metric, date, ut, version));
     }
 
@@ -176,8 +175,7 @@ public class StatReportService {
         LocalDateTime end = date.plusDays(1).atStartOfDay();
 
         QueryWrapper<StatMetricHourly> qw = new QueryWrapper<>();
-        qw.select("EXTRACT(HOUR FROM bucket_hour) AS \"hour\"",
-                        "COALESCE(SUM(" + column + "), 0) AS \"val\"")
+        qw.select("EXTRACT(HOUR FROM bucket_hour) AS \"hour\"", "COALESCE(SUM(" + column + "), 0) AS \"val\"")
                 .ge("bucket_hour", start)
                 .lt("bucket_hour", end)
                 .groupBy("EXTRACT(HOUR FROM bucket_hour)");
@@ -224,7 +222,8 @@ public class StatReportService {
      * </p>
      */
     public ApiTopResultDTO getApiTop(LocalDate date, int limit, String ut, String version) {
-        return cached("top:" + date + ":" + limit + ":" + keyPart(ut) + ":" + keyPart(version),
+        return cached(
+                "top:" + date + ":" + limit + ":" + keyPart(ut) + ":" + keyPart(version),
                 () -> getApiTopDirect(date, limit, ut, version));
     }
 
@@ -262,25 +261,27 @@ public class StatReportService {
     /**
      * 单接口 24 小时调用趋势（callCount 与 avgMs，补零）
      */
-    public Map<String, List<Long>> getApiTrend(String uri, String method, LocalDate date,
-                                              String ut, String version) {
-        return cached("apitr:" + uri + ":" + method + ":" + date + ":" + keyPart(ut) + ":" + keyPart(version),
+    public Map<String, List<Long>> getApiTrend(String uri, String method, LocalDate date, String ut, String version) {
+        return cached(
+                "apitr:" + uri + ":" + method + ":" + date + ":" + keyPart(ut) + ":" + keyPart(version),
                 () -> getApiTrendDirect(uri, method, date, ut, version));
     }
 
-    private Map<String, List<Long>> getApiTrendDirect(String uri, String method, LocalDate date,
-                                                      String ut, String version) {
+    private Map<String, List<Long>> getApiTrendDirect(
+            String uri, String method, LocalDate date, String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        List<Map<String, Object>> rows = statApiHourlyMapper.selectApiTrend(
-                uri, method, start, end, normalize(ut), normalize(version));
+        List<Map<String, Object>> rows =
+                statApiHourlyMapper.selectApiTrend(uri, method, start, end, normalize(ut), normalize(version));
 
         Map<Integer, Map<String, Long>> byHour = new HashMap<>();
         for (Map<String, Object> row : rows) {
             int hour = toInt(row.get("hour"));
-            byHour.put(hour, Map.of(
-                    "callCount", toLong(row.get("callCount")),
-                    "avgMs", toLong(row.get("avgMs"))));
+            byHour.put(
+                    hour,
+                    Map.of(
+                            "callCount", toLong(row.get("callCount")),
+                            "avgMs", toLong(row.get("avgMs"))));
         }
         List<Long> callCounts = new ArrayList<>(24);
         List<Long> avgMs = new ArrayList<>(24);
@@ -296,8 +297,14 @@ public class StatReportService {
      * 错误明细分页
      * <p>appVersion 复用既有 drill-down 语义（明细窗口内的版本约束），不另设 version 参数。</p>
      */
-    public Page<StatErrorLog> getErrorPage(long pageNum, long pageSize, String errorType,
-                                           String source, String ut, String appVersion, String fingerprint) {
+    public Page<StatErrorLog> getErrorPage(
+            long pageNum,
+            long pageSize,
+            String errorType,
+            String source,
+            String ut,
+            String appVersion,
+            String fingerprint) {
         QueryWrapper<StatErrorLog> qw = new QueryWrapper<>();
         String sourceFilter = normalize(source);
         if (sourceFilter != null) {
@@ -324,15 +331,16 @@ public class StatReportService {
      * 错误分组汇总（按 fingerprint）
      */
     public List<ErrorSummaryDTO> getErrorSummary(LocalDate date, String source, String ut, String version) {
-        return cached("err:" + date + ":" + keyPart(source) + ":" + keyPart(ut) + ":" + keyPart(version),
+        return cached(
+                "err:" + date + ":" + keyPart(source) + ":" + keyPart(ut) + ":" + keyPart(version),
                 () -> getErrorSummaryDirect(date, source, ut, version));
     }
 
     private List<ErrorSummaryDTO> getErrorSummaryDirect(LocalDate date, String source, String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        List<Map<String, Object>> rows = statErrorLogMapper.selectErrorSummary(
-                start, end, normalize(source), normalize(ut), normalize(version));
+        List<Map<String, Object>> rows =
+                statErrorLogMapper.selectErrorSummary(start, end, normalize(source), normalize(ut), normalize(version));
         List<ErrorSummaryDTO> list = new ArrayList<>(rows.size());
         for (Map<String, Object> row : rows) {
             ErrorSummaryDTO dto = new ErrorSummaryDTO();
@@ -358,8 +366,8 @@ public class StatReportService {
      * 全量列表本身按 count 降序，切片即第 pageNum 页。
      * </p>
      */
-    public Page<ErrorSummaryDTO> getErrorSummaryPage(LocalDate date, String source, String ut, String version,
-                                                     long pageNum, long pageSize) {
+    public Page<ErrorSummaryDTO> getErrorSummaryPage(
+            LocalDate date, String source, String ut, String version, long pageNum, long pageSize) {
         List<ErrorSummaryDTO> all = getErrorSummary(date, source, ut, version);
         long safePage = Math.max(pageNum, 1);
         long safeSize = Math.max(pageSize, 1);
@@ -391,8 +399,8 @@ public class StatReportService {
     /**
      * 设备统计查询（ut=all 不加平台过滤；version 为空不加版本过滤）
      */
-    private QueryWrapper<StatDevice> deviceQuery(String ut, String versionFilter,
-                                                 java.util.function.Consumer<QueryWrapper<StatDevice>> filter) {
+    private QueryWrapper<StatDevice> deviceQuery(
+            String ut, String versionFilter, java.util.function.Consumer<QueryWrapper<StatDevice>> filter) {
         QueryWrapper<StatDevice> qw = new QueryWrapper<>();
         filter.accept(qw);
         if (!isAll(ut)) {

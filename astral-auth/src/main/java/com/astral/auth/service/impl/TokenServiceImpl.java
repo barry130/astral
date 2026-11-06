@@ -3,16 +3,12 @@ package com.astral.auth.service.impl;
 import cn.dev33.satoken.dao.SaTokenDao;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
+import com.astral.auth.dto.TokenInfo;
+import com.astral.auth.service.TokenService;
 import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
-import com.astral.auth.dto.TokenInfo;
-import com.astral.auth.service.TokenService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -25,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * Token管理服务实现类
@@ -120,8 +119,7 @@ public class TokenServiceImpl implements TokenService {
 
                 // 计算Token过期时间
                 long timeout = StpUtil.getTokenTimeout(tokenValue);
-                LocalDateTime expireTime = timeout > 0 
-                    ? LocalDateTime.now().plusSeconds(timeout) : null;
+                LocalDateTime expireTime = timeout > 0 ? LocalDateTime.now().plusSeconds(timeout) : null;
 
                 // 提取登录IP和创建时间
                 String loginIp = (String) session.get("loginIp");
@@ -153,8 +151,7 @@ public class TokenServiceImpl implements TokenService {
 
         // 批量查询用户名，避免N+1查询问题
         if (!userIds.isEmpty()) {
-            Map<Long, String> usernameMap = userMapper.selectBatchIds(new ArrayList<>(userIds))
-                    .stream()
+            Map<Long, String> usernameMap = userMapper.selectBatchIds(new ArrayList<>(userIds)).stream()
                     .filter(u -> u != null)
                     .collect(Collectors.toMap(User::getId, User::getUsername));
 
@@ -162,8 +159,8 @@ public class TokenServiceImpl implements TokenService {
         }
 
         // 按创建时间倒序排序
-        allTokens.sort(Comparator.comparing(TokenInfo::getCreateTime, 
-                Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+        allTokens.sort(Comparator.comparing(TokenInfo::getCreateTime, Comparator.nullsLast(Comparator.naturalOrder()))
+                .reversed());
 
         // 手动分页。pageNum/pageSize 来自 query，必须先钳制再算偏移：
         // pageNum < 1 会得到负 fromIndex 并让 subList 抛 IndexOutOfBoundsException（500），
@@ -174,9 +171,7 @@ public class TokenServiceImpl implements TokenService {
         int fromIndex = (safePageNum - 1) * safePageSize;
         int toIndex = Math.min(fromIndex + safePageSize, total);
 
-        List<TokenInfo> pageData = fromIndex < total 
-                ? allTokens.subList(fromIndex, toIndex) 
-                : new ArrayList<>();
+        List<TokenInfo> pageData = fromIndex < total ? allTokens.subList(fromIndex, toIndex) : new ArrayList<>();
 
         Page<TokenInfo> page = new Page<>(safePageNum, safePageSize, total);
         page.setRecords(pageData);
@@ -259,12 +254,12 @@ public class TokenServiceImpl implements TokenService {
      * 会话时间字段的历史格式集合，按「新 → 旧」顺序依次尝试
      */
     private static final DateTimeFormatter[] SESSION_TIME_FORMATS = {
-            // 2026-09-27T17:42:07（当前写入格式 / Sa-Token 1.46 + Jackson 3 默认）
-            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
-            // 2026-09-27 17:42:07（Sa-Token 1.42 + Jackson 2 的 DATE_TIME_PATTERN）
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-            // 2026-09-27 17:42:07.123
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"),
+        // 2026-09-27T17:42:07（当前写入格式 / Sa-Token 1.46 + Jackson 3 默认）
+        DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+        // 2026-09-27 17:42:07（Sa-Token 1.42 + Jackson 2 的 DATE_TIME_PATTERN）
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+        // 2026-09-27 17:42:07.123
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"),
     };
 
     /**

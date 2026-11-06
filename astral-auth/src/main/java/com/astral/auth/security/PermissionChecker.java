@@ -4,14 +4,13 @@ import cn.dev33.satoken.stp.StpInterface;
 import cn.dev33.satoken.stp.StpUtil;
 import com.astral.common.constant.PermissionType;
 import com.astral.common.exception.BusinessException;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 权限校验器（RBAC：用户 → 角色 → 权限，含 super 角色与层级通配）。
@@ -85,10 +84,10 @@ public class PermissionChecker {
      */
     public static final Map<String, List<String>> LEGACY_ALIASES = Map.of(
             "qt_admin", List.of(QT_ADMIN_PERMISSION),
-            "qt_tester", List.of(
-                    QT_UPDATE_CHANNEL_SCOPE + ":" + CHANNEL_BETA,
-                    QT_SOURCE_CHANNEL_SCOPE + ":" + CHANNEL_BETA)
-    );
+            "qt_tester",
+                    List.of(
+                            QT_UPDATE_CHANNEL_SCOPE + ":" + CHANNEL_BETA,
+                            QT_SOURCE_CHANNEL_SCOPE + ":" + CHANNEL_BETA));
 
     /** Sa-Token 权限数据源（StpInterfaceImpl），用于按 loginId 显式拉取权限列表 */
     private final StpInterface stpInterface;
@@ -123,8 +122,10 @@ public class PermissionChecker {
         if (hasAnyPermission(permissionCodes)) {
             return;
         }
-        log.warn("权限校验失败(any): userId={}, permissions={}",
-                StpUtil.getLoginIdDefaultNull(), String.join(",", permissionCodes));
+        log.warn(
+                "权限校验失败(any): userId={}, permissions={}",
+                StpUtil.getLoginIdDefaultNull(),
+                String.join(",", permissionCodes));
         throw new BusinessException(ERROR_CODE_NO_PERMISSION);
     }
 

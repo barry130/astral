@@ -2,11 +2,6 @@ package com.astral.ai.tool.declarative;
 
 import com.astral.ai.common.AiException;
 import com.astral.ai.common.AiJson;
-import lombok.extern.slf4j.Slf4j;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.ObjectNode;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -19,6 +14,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 极简 MCP 客户端（Streamable HTTP 传输，2025-03-26 规范）。
@@ -42,6 +41,7 @@ public class McpClient implements AutoCloseable {
 
     /** 客户端标识（出现在 initialize 的 clientInfo 里，便于远端排障） */
     private static final String CLIENT_NAME = "astral-ai";
+
     private static final String CLIENT_VERSION = "1.0.0";
 
     private static final int DEFAULT_TIMEOUT_SECONDS = 20;
@@ -74,11 +74,14 @@ public class McpClient implements AutoCloseable {
      * @param timeoutSeconds 连接与读超时（秒）
      * @return 已握手的客户端
      */
-    public static McpClient connect(String url, String headersJson, List<String> allowedHosts,
-                                    Map<String, String> secrets, Integer timeoutSeconds) {
+    public static McpClient connect(
+            String url,
+            String headersJson,
+            List<String> allowedHosts,
+            Map<String, String> secrets,
+            Integer timeoutSeconds) {
         URI endpoint = requireEndpoint(url, allowedHosts);
-        int seconds = timeoutSeconds == null ? DEFAULT_TIMEOUT_SECONDS
-                : Math.max(3, Math.min(60, timeoutSeconds));
+        int seconds = timeoutSeconds == null ? DEFAULT_TIMEOUT_SECONDS : Math.max(3, Math.min(60, timeoutSeconds));
         McpClient client = new McpClient(endpoint, renderHeaders(headersJson, secrets), Duration.ofSeconds(seconds));
         client.initialize();
         return client;
@@ -87,9 +90,8 @@ public class McpClient implements AutoCloseable {
     // ==================== 对外方法 ====================
 
     /** 远端工具定义 */
-    public record McpToolInfo(String name, String title, String description, JsonNode inputSchema,
-                              Boolean readOnlyHint) {
-    }
+    public record McpToolInfo(
+            String name, String title, String description, JsonNode inputSchema, Boolean readOnlyHint) {}
 
     /** 列出远端全部工具（自动翻页） */
     public List<McpToolInfo> listTools() {
@@ -141,7 +143,10 @@ public class McpClient implements AutoCloseable {
                         text.append(text.isEmpty() ? "" : "\n").append(value);
                     }
                 } else if (!type.isBlank()) {
-                    text.append(text.isEmpty() ? "" : "\n").append("[").append(type).append("]");
+                    text.append(text.isEmpty() ? "" : "\n")
+                            .append("[")
+                            .append(type)
+                            .append("]");
                 }
             }
         }
@@ -154,8 +159,7 @@ public class McpClient implements AutoCloseable {
     }
 
     /** 工具调用结果 */
-    public record McpCallResult(boolean error, String text, ObjectNode payload) {
-    }
+    public record McpCallResult(boolean error, String text, ObjectNode payload) {}
 
     @Override
     public void close() {
@@ -163,10 +167,8 @@ public class McpClient implements AutoCloseable {
             return;
         }
         try {
-            HttpRequest request = baseRequest()
-                    .header("Mcp-Session-Id", sessionId)
-                    .DELETE()
-                    .build();
+            HttpRequest request =
+                    baseRequest().header("Mcp-Session-Id", sessionId).DELETE().build();
             http.send(request, HttpResponse.BodyHandlers.discarding());
         } catch (Exception e) {
             log.debug("[AI] 关闭 MCP 会话失败（忽略）: {}", e.getMessage());
@@ -199,8 +201,7 @@ public class McpClient implements AutoCloseable {
         JsonNode envelope = parseEnvelope(response, id);
         JsonNode error = envelope.get("error");
         if (error != null && !error.isNull()) {
-            throw new AiException("AI008", "MCP " + method + " 失败: "
-                    + AiJson.text(error, "message", "远端返回未知错误"));
+            throw new AiException("AI008", "MCP " + method + " 失败: " + AiJson.text(error, "message", "远端返回未知错误"));
         }
         return envelope.get("result");
     }
@@ -223,7 +224,8 @@ public class McpClient implements AutoCloseable {
         if (sessionId != null) {
             builder.header("Mcp-Session-Id", sessionId);
         }
-        HttpRequest request = builder.POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)).build();
+        HttpRequest request = builder.POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
+                .build();
         HttpResponse<String> response;
         try {
             response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
@@ -393,8 +395,8 @@ public class McpClient implements AutoCloseable {
             if (!HttpToolExecutor.KEY_SHAPE.matcher(key).matches()) {
                 throw new AiException("AI008", "请求头名称非法: " + key);
             }
-            String rendered = HttpToolExecutor.render(value.asString(), args,
-                    name -> HttpToolExecutor.lookupSecret(name, configured), false);
+            String rendered = HttpToolExecutor.render(
+                    value.asString(), args, name -> HttpToolExecutor.lookupSecret(name, configured), false);
             result.put(key, rendered);
         }
         return result;
@@ -410,7 +412,9 @@ public class McpClient implements AutoCloseable {
         JsonNode schema = item == null ? null : item.get("inputSchema");
         JsonNode annotations = item == null ? null : item.get("annotations");
         Boolean readOnlyHint = null;
-        if (annotations != null && annotations.has("readOnlyHint") && annotations.get("readOnlyHint").isBoolean()) {
+        if (annotations != null
+                && annotations.has("readOnlyHint")
+                && annotations.get("readOnlyHint").isBoolean()) {
             readOnlyHint = annotations.get("readOnlyHint").asBoolean();
         }
         return new McpToolInfo(name, title, description, schema, readOnlyHint);

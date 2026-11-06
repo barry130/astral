@@ -4,14 +4,13 @@ import com.astral.common.exception.BusinessException;
 import com.astral.storage.config.StorageProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 
 /**
  * Worker 服务身份 HMAC 拦截器（STORAGE017）
@@ -67,17 +66,16 @@ public class StorageWorkerAuthInterceptor implements HandlerInterceptor {
         }
 
         // Nonce 防重放：SETNX 失败说明该 Nonce 已在窗口内使用过
-        Boolean first = stringRedisTemplate.opsForValue().setIfAbsent(
-                NONCE_KEY_PREFIX + nonce, "1", Duration.ofSeconds(window * 2L));
+        Boolean first = stringRedisTemplate
+                .opsForValue()
+                .setIfAbsent(NONCE_KEY_PREFIX + nonce, "1", Duration.ofSeconds(window * 2L));
         if (!Boolean.TRUE.equals(first)) {
             log.warn("[Storage] Worker 请求 Nonce 重放: uri={}", request.getRequestURI());
             throw new BusinessException("STORAGE017");
         }
 
-        String canonical = request.getMethod() + "\n"
-                + request.getRequestURI() + "\n"
-                + timestamp.trim() + "\n"
-                + nonce;
+        String canonical =
+                request.getMethod() + "\n" + request.getRequestURI() + "\n" + timestamp.trim() + "\n" + nonce;
         boolean ok = StorageHmac.verify(secret.getBytes(StandardCharsets.UTF_8), canonical, signature);
         if (!ok) {
             log.warn("[Storage] Worker 请求签名校验失败: uri={}", request.getRequestURI());

@@ -11,12 +11,11 @@ import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.RolePermissionMapper;
 import com.astral.dao.mapper.UserRoleMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * App 端默认角色（{@code APP_USER}）的归属维护。
@@ -97,15 +96,13 @@ public class AppUserRoleService {
      */
     public int syncPermissions() {
         Long roleId = ensureRole();
-        List<Permission> appPermissions = permissionMapper.selectList(
-                new QueryWrapper<Permission>()
-                        .likeRight("permission_code", APP_PERMISSION_PREFIX)
-                        .eq("type", PermissionType.API));
+        List<Permission> appPermissions = permissionMapper.selectList(new QueryWrapper<Permission>()
+                .likeRight("permission_code", APP_PERMISSION_PREFIX)
+                .eq("type", PermissionType.API));
         int granted = 0;
         for (Permission p : appPermissions) {
-            Long exists = rolePermissionMapper.selectCount(new QueryWrapper<RolePermission>()
-                    .eq("role_id", roleId)
-                    .eq("permission_id", p.getId()));
+            Long exists = rolePermissionMapper.selectCount(
+                    new QueryWrapper<RolePermission>().eq("role_id", roleId).eq("permission_id", p.getId()));
             if (exists != null && exists > 0) {
                 continue;
             }
@@ -121,12 +118,12 @@ public class AppUserRoleService {
         // admin: 域 DATA 权限的误发存量一次性清理由 V20261001009 负责，这里不做全库清扫。
         int revoked = rolePermissionMapper.delete(new QueryWrapper<RolePermission>()
                 .eq("role_id", roleId)
-                .inSql("permission_id",
-                        "SELECT id FROM sys_permission WHERE permission_code LIKE '"
-                                + APP_PERMISSION_PREFIX + "%' AND type = " + PermissionType.DATA));
+                .inSql(
+                        "permission_id",
+                        "SELECT id FROM sys_permission WHERE permission_code LIKE '" + APP_PERMISSION_PREFIX
+                                + "%' AND type = " + PermissionType.DATA));
         if (revoked > 0) {
-            log.info("[AppUserRole] 已从 {} 收回范围(DATA)权限 {} 条（范围权限不随默认角色发放）",
-                    ROLE_CODE, revoked);
+            log.info("[AppUserRole] 已从 {} 收回范围(DATA)权限 {} 条（范围权限不随默认角色发放）", ROLE_CODE, revoked);
         }
         if (granted > 0 || revoked > 0) {
             permissionCache.bumpVersion();
@@ -145,9 +142,8 @@ public class AppUserRoleService {
             return;
         }
         Long roleId = ensureRole();
-        Long exists = userRoleMapper.selectCount(new QueryWrapper<UserRole>()
-                .eq("user_id", userId)
-                .eq("role_id", roleId));
+        Long exists = userRoleMapper.selectCount(
+                new QueryWrapper<UserRole>().eq("user_id", userId).eq("role_id", roleId));
         if (exists != null && exists > 0) {
             return;
         }

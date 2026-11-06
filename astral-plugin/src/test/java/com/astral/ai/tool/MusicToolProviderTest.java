@@ -1,13 +1,12 @@
 package com.astral.ai.tool;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.astral.ai.common.AiConstants;
 import com.astral.ai.common.AiJson;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.node.ObjectNode;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 音乐助手工具的搜索计划与候选处理。
@@ -33,8 +32,17 @@ class MusicToolProviderTest {
 
     private static AiToolTypes.AiToolContext context(ObjectNode arguments, ObjectNode context) {
         return new AiToolTypes.AiToolContext(
-                1L, 2L, 3L, 4L, "music_assistant", AiConstants.AgentType.MUSIC,
-                AiConstants.ClientType.QT_PC, arguments, context, false, null);
+                1L,
+                2L,
+                3L,
+                4L,
+                "music_assistant",
+                AiConstants.AgentType.MUSIC,
+                AiConstants.ClientType.QT_PC,
+                arguments,
+                context,
+                false,
+                null);
     }
 
     @Test
@@ -46,8 +54,10 @@ class MusicToolProviderTest {
             AiToolTypes.AiToolDef def = handler.definition();
             assertEquals(AiConstants.RiskLevel.READ, def.riskLevel(), def.toolCode());
             assertEquals(AiConstants.ApprovalPolicy.NONE, def.approvalPolicy(), def.toolCode());
-            assertEquals(List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
-                    def.clientTypes(), def.toolCode());
+            assertEquals(
+                    List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
+                    def.clientTypes(),
+                    def.toolCode());
             assertTrue(def.permissionCodes().isEmpty(), def.toolCode());
             assertNotNull(def.argumentsSchema(), def.toolCode());
         }
@@ -56,8 +66,7 @@ class MusicToolProviderTest {
     @Test
     void searchWithoutCandidatesAsksTheClientToSearch() {
         ObjectNode args = AiJson.readObject("{\"keywords\":[\"周杰伦\",\"晴天\"],\"limit\":10}");
-        ObjectNode ctx = AiJson.readObject(
-                "{\"installedSourceRegistry\":[\"netease\",\"qq\"]}");
+        ObjectNode ctx = AiJson.readObject("{\"installedSourceRegistry\":[\"netease\",\"qq\"]}");
 
         AiToolTypes.AiToolResult result = tool("search_music").execute(context(args, ctx));
 
@@ -103,8 +112,8 @@ class MusicToolProviderTest {
     @Test
     void sourceRegistryAcceptsObjectsAsWellAsPlainStrings() {
         ObjectNode args = AiJson.readObject("{\"sources\":[\"qq\"]}");
-        ObjectNode ctx = AiJson.readObject(
-                "{\"installedSourceRegistry\":[{\"id\":\"qq\"},{\"sourceId\":\"netease\"}]}");
+        ObjectNode ctx =
+                AiJson.readObject("{\"installedSourceRegistry\":[{\"id\":\"qq\"},{\"sourceId\":\"netease\"}]}");
 
         AiToolTypes.AiToolResult result = tool("search_music").execute(context(args, ctx));
 
@@ -123,7 +132,8 @@ class MusicToolProviderTest {
     @Test
     void candidatesFromTheClientAreHandedToTheModelInstead() {
         ObjectNode args = AiJson.readObject("{\"keywords\":[\"晴天\"]}");
-        ObjectNode ctx = AiJson.readObject("""
+        ObjectNode ctx = AiJson.readObject(
+                """
                 {"installedSourceRegistry":["netease"],
                  "musicCandidates":[
                    {"sourceId":"netease","songId":"186016","name":"晴天","artist":"周杰伦",
@@ -157,7 +167,11 @@ class MusicToolProviderTest {
             if (i > 0) {
                 items.append(',');
             }
-            items.append("{\"sourceId\":\"netease\",\"songId\":\"").append(i).append("\",\"name\":\"n").append(i).append("\"}");
+            items.append("{\"sourceId\":\"netease\",\"songId\":\"")
+                    .append(i)
+                    .append("\",\"name\":\"n")
+                    .append(i)
+                    .append("\"}");
         }
         ObjectNode ctx = AiJson.readObject("{\"musicCandidates\":[" + items + "]}");
 
@@ -168,12 +182,13 @@ class MusicToolProviderTest {
 
     @Test
     void songDetailReadsOnlyFromTheCandidateSet() {
-        ObjectNode ctx = AiJson.readObject("""
+        ObjectNode ctx = AiJson.readObject(
+                """
                 {"musicCandidates":[{"sourceId":"netease","songId":"186016","name":"晴天",
                   "artist":"周杰伦","album":"叶惠美","duration":269000,"quality":"320k"}]}""");
 
-        AiToolTypes.AiToolResult hit = tool("get_song_detail")
-                .execute(context(AiJson.readObject("{\"songId\":\"186016\"}"), ctx));
+        AiToolTypes.AiToolResult hit =
+                tool("get_song_detail").execute(context(AiJson.readObject("{\"songId\":\"186016\"}"), ctx));
         assertEquals(AiToolTypes.AiToolResult.SUCCEEDED, hit.status());
         assertEquals("晴天", hit.payload().get("name").asString());
         assertEquals("歌曲：晴天 - 周杰伦", hit.summary());
@@ -182,16 +197,16 @@ class MusicToolProviderTest {
                 .execute(context(AiJson.readObject("{\"songId\":\"186016\",\"sourceId\":\"qq\"}"), ctx));
         assertEquals(AiToolTypes.AiToolResult.FAILED, wrongSource.status());
 
-        AiToolTypes.AiToolResult miss = tool("get_song_detail")
-                .execute(context(AiJson.readObject("{\"songId\":\"nope\"}"), ctx));
+        AiToolTypes.AiToolResult miss =
+                tool("get_song_detail").execute(context(AiJson.readObject("{\"songId\":\"nope\"}"), ctx));
         assertEquals(AiToolTypes.AiToolResult.FAILED, miss.status());
         assertTrue(miss.summary().contains("search_music"));
     }
 
     @Test
     void songDetailRejectsMissingSongId() {
-        AiToolTypes.AiToolResult result = tool("get_song_detail")
-                .execute(context(AiJson.readObject("{}"), AiJson.readObject("{}")));
+        AiToolTypes.AiToolResult result =
+                tool("get_song_detail").execute(context(AiJson.readObject("{}"), AiJson.readObject("{}")));
 
         assertEquals(AiToolTypes.AiToolResult.REJECTED, result.status());
         assertTrue(result.summary().contains("songId"));
@@ -212,11 +227,9 @@ class MusicToolProviderTest {
 
     @Test
     void currentPlaylistCountsTheReportedQueue() {
-        ObjectNode ctx = AiJson.readObject(
-                "{\"currentQueue\":[{\"name\":\"a\"},{\"name\":\"b\"},{\"name\":\"c\"}]}");
+        ObjectNode ctx = AiJson.readObject("{\"currentQueue\":[{\"name\":\"a\"},{\"name\":\"b\"},{\"name\":\"c\"}]}");
 
-        AiToolTypes.AiToolResult result = tool("get_current_playlist")
-                .execute(context(AiJson.readObject("{}"), ctx));
+        AiToolTypes.AiToolResult result = tool("get_current_playlist").execute(context(AiJson.readObject("{}"), ctx));
 
         assertEquals(AiToolTypes.AiToolResult.SUCCEEDED, result.status());
         assertTrue(result.summary().contains("3"), result.summary());
@@ -226,8 +239,17 @@ class MusicToolProviderTest {
     @Test
     void nullContextNodeDoesNotBlowUp() {
         AiToolTypes.AiToolContext nullContext = new AiToolTypes.AiToolContext(
-                1L, 2L, 3L, 4L, "music_assistant", AiConstants.AgentType.MUSIC,
-                AiConstants.ClientType.QT_UNIAPPX, null, null, false, null);
+                1L,
+                2L,
+                3L,
+                4L,
+                "music_assistant",
+                AiConstants.AgentType.MUSIC,
+                AiConstants.ClientType.QT_UNIAPPX,
+                null,
+                null,
+                false,
+                null);
 
         for (AiToolTypes.AiToolHandler handler : provider.handlers()) {
             AiToolTypes.AiToolResult result = handler.execute(nullContext);
@@ -241,8 +263,7 @@ class MusicToolProviderTest {
     }
 
     private int limitOf(String argsJson, ObjectNode ctx) {
-        AiToolTypes.AiToolResult result = tool("search_music")
-                .execute(context(AiJson.readObject(argsJson), ctx));
+        AiToolTypes.AiToolResult result = tool("search_music").execute(context(AiJson.readObject(argsJson), ctx));
         return result.payload().get("limit").asInt();
     }
 }

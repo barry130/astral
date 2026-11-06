@@ -10,8 +10,7 @@ import java.util.List;
  */
 public final class AiConstants {
 
-    private AiConstants() {
-    }
+    private AiConstants() {}
 
     /** 智能体类型 */
     public static final class AgentType {
@@ -20,8 +19,7 @@ public final class AiConstants {
         public static final String QA = "QA";
         public static final String CUSTOM = "CUSTOM";
 
-        private AgentType() {
-        }
+        private AgentType() {}
 
         public static List<String> all() {
             return List.of(MUSIC, ADMIN, QA, CUSTOM);
@@ -34,8 +32,7 @@ public final class AiConstants {
         public static final String PUBLISHED = "PUBLISHED";
         public static final String DISABLED = "DISABLED";
 
-        private AgentStatus() {
-        }
+        private AgentStatus() {}
 
         public static List<String> all() {
             return List.of(DRAFT, PUBLISHED, DISABLED);
@@ -48,8 +45,7 @@ public final class AiConstants {
         public static final String PUBLISHED = "PUBLISHED";
         public static final String ARCHIVED = "ARCHIVED";
 
-        private VersionStatus() {
-        }
+        private VersionStatus() {}
 
         public static List<String> all() {
             return List.of(DRAFT, PUBLISHED, ARCHIVED);
@@ -62,8 +58,7 @@ public final class AiConstants {
         public static final String QT_PC = "QT_PC";
         public static final String ASTRAL_FRONT = "ASTRAL_FRONT";
 
-        private ClientType() {
-        }
+        private ClientType() {}
 
         public static List<String> all() {
             return List.of(QT_UNIAPPX, QT_PC, ASTRAL_FRONT);
@@ -80,8 +75,7 @@ public final class AiConstants {
         public static final String FAILED = "FAILED";
         public static final String CANCELLED = "CANCELLED";
 
-        private RequestStatus() {
-        }
+        private RequestStatus() {}
 
         public static List<String> all() {
             return List.of(QUEUED, RUNNING, WAITING_TOOL, WAITING_APPROVAL, SUCCEEDED, FAILED, CANCELLED);
@@ -101,8 +95,7 @@ public final class AiConstants {
         public static final String FAILED = "FAILED";
         public static final String CANCELLED = "CANCELLED";
 
-        private MessageStatus() {
-        }
+        private MessageStatus() {}
 
         public static List<String> all() {
             return List.of(PENDING, STREAMING, COMPLETED, FAILED, CANCELLED);
@@ -116,8 +109,7 @@ public final class AiConstants {
         public static final String SYSTEM = "SYSTEM";
         public static final String TOOL = "TOOL";
 
-        private MessageRole() {
-        }
+        private MessageRole() {}
     }
 
     /** 会话状态 */
@@ -126,8 +118,7 @@ public final class AiConstants {
         public static final String CLOSED = "CLOSED";
         public static final String DELETED = "DELETED";
 
-        private ConversationStatus() {
-        }
+        private ConversationStatus() {}
     }
 
     /** 工具风险等级 */
@@ -136,8 +127,7 @@ public final class AiConstants {
         public static final String DRAFT = "DRAFT";
         public static final String HIGH = "HIGH";
 
-        private RiskLevel() {
-        }
+        private RiskLevel() {}
 
         public static List<String> all() {
             return List.of(READ, DRAFT, HIGH);
@@ -161,8 +151,7 @@ public final class AiConstants {
         public static final String USER_CONFIRM = "USER_CONFIRM";
         public static final String ADMIN_CONFIRM = "ADMIN_CONFIRM";
 
-        private ApprovalPolicy() {
-        }
+        private ApprovalPolicy() {}
 
         public static List<String> all() {
             return List.of(NONE, USER_CONFIRM, ADMIN_CONFIRM);
@@ -174,8 +163,7 @@ public final class AiConstants {
         public static final String ENABLED = "ENABLED";
         public static final String DISABLED = "DISABLED";
 
-        private ToolStatus() {
-        }
+        private ToolStatus() {}
 
         public static List<String> all() {
             return List.of(ENABLED, DISABLED);
@@ -193,8 +181,7 @@ public final class AiConstants {
         /** 远端 MCP 工具（由服务器刷新发现，不在后台手工创建） */
         public static final String MCP = "MCP";
 
-        private ExecutorType() {
-        }
+        private ExecutorType() {}
 
         public static List<String> all() {
             return List.of(CODE, HTTP, SQL, MCP);
@@ -211,8 +198,7 @@ public final class AiConstants {
         public static final String REJECTED = "REJECTED";
         public static final String CANCELLED = "CANCELLED";
 
-        private ToolCallStatus() {
-        }
+        private ToolCallStatus() {}
     }
 
     /** 知识源状态 */
@@ -223,8 +209,7 @@ public final class AiConstants {
         public static final String FAILED = "FAILED";
         public static final String DISABLED = "DISABLED";
 
-        private KnowledgeStatus() {
-        }
+        private KnowledgeStatus() {}
 
         public static List<String> all() {
             return List.of(PENDING, INDEXING, READY, FAILED, DISABLED);
@@ -239,8 +224,7 @@ public final class AiConstants {
         public static final String FAILED = "FAILED";
         public static final String CANCELLED = "CANCELLED";
 
-        private IndexJobStatus() {
-        }
+        private IndexJobStatus() {}
 
         public static List<String> all() {
             return List.of(PENDING, RUNNING, SUCCEEDED, FAILED, CANCELLED);
@@ -264,8 +248,7 @@ public final class AiConstants {
         public static final String REQUEST_CANCELLED = "request.cancelled";
         public static final String REQUEST_FAILED = "request.failed";
 
-        private EventType() {
-        }
+        private EventType() {}
     }
 
     /** 客户端动作白名单（服务端签发、客户端二次校验） */
@@ -280,12 +263,19 @@ public final class AiConstants {
         public static final String OPEN_PLAYLIST = "OPEN_PLAYLIST";
         public static final String SEARCH_MUSIC = "SEARCH_MUSIC";
 
-        private ActionType() {
-        }
+        private ActionType() {}
 
         public static List<String> all() {
-            return List.of(PLAY_SONG, PLAY_LIST, ADD_TO_QUEUE, ADD_TO_FAVORITE,
-                    OPEN_SONG, OPEN_ARTIST, OPEN_ALBUM, OPEN_PLAYLIST, SEARCH_MUSIC);
+            return List.of(
+                    PLAY_SONG,
+                    PLAY_LIST,
+                    ADD_TO_QUEUE,
+                    ADD_TO_FAVORITE,
+                    OPEN_SONG,
+                    OPEN_ARTIST,
+                    OPEN_ALBUM,
+                    OPEN_PLAYLIST,
+                    SEARCH_MUSIC);
         }
     }
 
@@ -303,12 +293,19 @@ public final class AiConstants {
         public static final String PAGE_CONTEXT = "pageContext";
         public static final String SELECTED_RECORD = "selectedRecord";
 
-        private ContextKey() {
-        }
+        private ContextKey() {}
 
         public static List<String> musicKeys() {
-            return List.of(CURRENT_SONG, CURRENT_ARTIST, CURRENT_ALBUM, CURRENT_PLAYLIST, CURRENT_QUEUE,
-                    RECENTLY_PLAYED_SUMMARY, USER_PREFERENCE_SUMMARY, INSTALLED_SOURCE_REGISTRY, MUSIC_CANDIDATES);
+            return List.of(
+                    CURRENT_SONG,
+                    CURRENT_ARTIST,
+                    CURRENT_ALBUM,
+                    CURRENT_PLAYLIST,
+                    CURRENT_QUEUE,
+                    RECENTLY_PLAYED_SUMMARY,
+                    USER_PREFERENCE_SUMMARY,
+                    INSTALLED_SOURCE_REGISTRY,
+                    MUSIC_CANDIDATES);
         }
 
         public static List<String> adminKeys() {
@@ -323,8 +320,7 @@ public final class AiConstants {
         public static final String REGENERATE = "REGENERATE";
         public static final String REPORT = "REPORT";
 
-        private FeedbackType() {
-        }
+        private FeedbackType() {}
 
         public static List<String> all() {
             return List.of(LIKE, DISLIKE, REGENERATE, REPORT);
@@ -338,8 +334,7 @@ public final class AiConstants {
         public static final String ROLE = "ROLE";
         public static final String USER = "USER";
 
-        private QuotaScope() {
-        }
+        private QuotaScope() {}
 
         public static List<String> all() {
             return List.of(GLOBAL, AGENT, ROLE, USER);
@@ -352,8 +347,7 @@ public final class AiConstants {
         public static final String SETTLED = "SETTLED";
         public static final String RELEASED = "RELEASED";
 
-        private UsageStatus() {
-        }
+        private UsageStatus() {}
     }
 
     /** 知识源类型（决定答疑要检索哪一类文档） */
@@ -366,12 +360,17 @@ public final class AiConstants {
         public static final String FAQ = "FAQ";
         public static final String LIVE_READONLY_DATA = "LIVE_READONLY_DATA";
 
-        private KnowledgeSourceType() {
-        }
+        private KnowledgeSourceType() {}
 
         public static List<String> all() {
-            return List.of(PROJECT_DOCUMENT, API_DOCUMENT, PLUGIN_DOCUMENT, DEPLOYMENT_DOCUMENT,
-                    RELEASE_NOTE, FAQ, LIVE_READONLY_DATA);
+            return List.of(
+                    PROJECT_DOCUMENT,
+                    API_DOCUMENT,
+                    PLUGIN_DOCUMENT,
+                    DEPLOYMENT_DOCUMENT,
+                    RELEASE_NOTE,
+                    FAQ,
+                    LIVE_READONLY_DATA);
         }
     }
 
@@ -386,7 +385,6 @@ public final class AiConstants {
         /** 单条消息正文保存上限 */
         public static final int MAX_MESSAGE_CHARS = 200000;
 
-        private Runtime() {
-        }
+        private Runtime() {}
     }
 }

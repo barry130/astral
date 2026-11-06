@@ -1,16 +1,16 @@
 package com.astral.ai.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.astral.ai.common.AiConstants;
 import com.astral.ai.entity.AiAgentEntity;
 import com.astral.ai.entity.AiAgentVersionEntity;
 import com.astral.auth.security.PermissionChecker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * 版本解析的回归测试。

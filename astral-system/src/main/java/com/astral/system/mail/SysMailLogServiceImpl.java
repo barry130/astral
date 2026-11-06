@@ -5,20 +5,25 @@ import com.astral.dao.mapper.SysMailLogMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.stereotype.Service;
 
 @Service
-public class SysMailLogServiceImpl extends ServiceImpl<SysMailLogMapper, SysMailLog>
-        implements SysMailLogService {
+public class SysMailLogServiceImpl extends ServiceImpl<SysMailLogMapper, SysMailLog> implements SysMailLogService {
 
     @Override
-    public Page<SysMailLog> pageWithFilter(int pageNum, int pageSize, Long accountId, String pluginId,
-                                           String toEmail, Integer status, LocalDateTime start, LocalDateTime end) {
+    public Page<SysMailLog> pageWithFilter(
+            int pageNum,
+            int pageSize,
+            Long accountId,
+            String pluginId,
+            String toEmail,
+            Integer status,
+            LocalDateTime start,
+            LocalDateTime end) {
         LambdaQueryWrapper<SysMailLog> wrapper = new LambdaQueryWrapper<>();
         if (accountId != null) {
             wrapper.eq(SysMailLog::getAccountId, accountId);
@@ -50,8 +55,16 @@ public class SysMailLogServiceImpl extends ServiceImpl<SysMailLogMapper, SysMail
         map.put("fail", count(new LambdaQueryWrapper<SysMailLog>().eq(SysMailLog::getStatus, 0)));
         LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
         map.put("todayTotal", count(new LambdaQueryWrapper<SysMailLog>().ge(SysMailLog::getSendTime, startOfDay)));
-        map.put("todaySuccess", count(new LambdaQueryWrapper<SysMailLog>().ge(SysMailLog::getSendTime, startOfDay).eq(SysMailLog::getStatus, 1)));
-        map.put("todayFail", count(new LambdaQueryWrapper<SysMailLog>().ge(SysMailLog::getSendTime, startOfDay).eq(SysMailLog::getStatus, 0)));
+        map.put(
+                "todaySuccess",
+                count(new LambdaQueryWrapper<SysMailLog>()
+                        .ge(SysMailLog::getSendTime, startOfDay)
+                        .eq(SysMailLog::getStatus, 1)));
+        map.put(
+                "todayFail",
+                count(new LambdaQueryWrapper<SysMailLog>()
+                        .ge(SysMailLog::getSendTime, startOfDay)
+                        .eq(SysMailLog::getStatus, 0)));
         return map;
     }
 }

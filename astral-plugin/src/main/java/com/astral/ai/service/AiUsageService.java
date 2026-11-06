@@ -2,15 +2,11 @@ package com.astral.ai.service;
 
 import com.astral.ai.common.AiConstants;
 import com.astral.ai.entity.AiModelEntity;
-import com.astral.ai.mapper.AiModelMapper;
 import com.astral.ai.entity.AiRequestEntity;
 import com.astral.ai.entity.AiUsageEntity;
+import com.astral.ai.mapper.AiModelMapper;
 import com.astral.ai.mapper.AiUsageMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -19,6 +15,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 用量与费用服务。
@@ -99,8 +98,8 @@ public class AiUsageService {
     }
 
     /** 用量明细分页 */
-    public List<AiUsageEntity> search(Long userId, Long agentId, LocalDateTime from, LocalDateTime to,
-                                      int pageNum, int pageSize) {
+    public List<AiUsageEntity> search(
+            Long userId, Long agentId, LocalDateTime from, LocalDateTime to, int pageNum, int pageSize) {
         int size = Math.max(1, Math.min(200, pageSize));
         int num = Math.max(1, pageNum);
         return usageMapper.selectList(new LambdaQueryWrapper<AiUsageEntity>()
@@ -137,7 +136,9 @@ public class AiUsageService {
             if (row.getCurrency() != null && !row.getCurrency().isBlank()) {
                 currency = row.getCurrency();
             }
-            LocalDate day = row.getCreateTime() == null ? LocalDate.now() : row.getCreateTime().toLocalDate();
+            LocalDate day = row.getCreateTime() == null
+                    ? LocalDate.now()
+                    : row.getCreateTime().toLocalDate();
             long[] slot = byDay.computeIfAbsent(day, key -> new long[3]);
             slot[0] += 1;
             slot[1] += in;
@@ -146,23 +147,23 @@ public class AiUsageService {
         List<TrendPoint> trend = new ArrayList<>();
         byDay.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> trend.add(new TrendPoint(entry.getKey(),
-                        entry.getValue()[0], entry.getValue()[1], entry.getValue()[2])));
+                .forEach(entry -> trend.add(
+                        new TrendPoint(entry.getKey(), entry.getValue()[0], entry.getValue()[1], entry.getValue()[2])));
         return new Summary(requests, input, output, cost.setScale(6, RoundingMode.HALF_UP), currency, trend);
     }
 
     /** 今日用量（总览页用） */
     public long[] todayTokens() {
         LocalDateTime from = LocalDate.now().atStartOfDay();
-        List<AiUsageEntity> rows = usageMapper.selectList(new LambdaQueryWrapper<AiUsageEntity>()
-                .ge(AiUsageEntity::getCreateTime, from));
+        List<AiUsageEntity> rows =
+                usageMapper.selectList(new LambdaQueryWrapper<AiUsageEntity>().ge(AiUsageEntity::getCreateTime, from));
         long in = 0;
         long out = 0;
         for (AiUsageEntity row : rows) {
             in += row.getInputTokens() == null ? 0 : row.getInputTokens();
             out += row.getOutputTokens() == null ? 0 : row.getOutputTokens();
         }
-        return new long[]{in, out};
+        return new long[] {in, out};
     }
 
     // ==================== 内部 ====================
@@ -175,8 +176,12 @@ public class AiUsageService {
         entity.setAgentVersionId(request.getAgentVersionId());
         entity.setProviderId(model == null ? request.getProviderId() : model.getProviderId());
         entity.setModelId(model == null ? request.getModelId() : model.getId());
-        entity.setCurrency(model == null || model.getCurrency() == null || model.getCurrency().isBlank()
-                ? DEFAULT_CURRENCY : model.getCurrency());
+        entity.setCurrency(
+                model == null
+                                || model.getCurrency() == null
+                                || model.getCurrency().isBlank()
+                        ? DEFAULT_CURRENCY
+                        : model.getCurrency());
         return entity;
     }
 
@@ -195,13 +200,15 @@ public class AiUsageService {
         return in.add(out).setScale(6, RoundingMode.HALF_UP);
     }
 
-
     /** 区间汇总结果 */
-    public record Summary(long requestCount, long inputTokens, long outputTokens,
-                          BigDecimal estimatedCost, String currency, List<TrendPoint> trend) {
-    }
+    public record Summary(
+            long requestCount,
+            long inputTokens,
+            long outputTokens,
+            BigDecimal estimatedCost,
+            String currency,
+            List<TrendPoint> trend) {}
 
     /** 趋势点 */
-    public record TrendPoint(LocalDate date, long requestCount, long inputTokens, long outputTokens) {
-    }
+    public record TrendPoint(LocalDate date, long requestCount, long inputTokens, long outputTokens) {}
 }

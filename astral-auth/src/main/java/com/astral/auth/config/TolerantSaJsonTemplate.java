@@ -3,6 +3,12 @@ package com.astral.auth.config;
 import cn.dev33.satoken.exception.SaJsonConvertException;
 import cn.dev33.satoken.json.SaJsonTemplate;
 import cn.dev33.satoken.json.SaJsonTemplateForJackson3;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Map;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
@@ -15,13 +21,6 @@ import tools.jackson.databind.ext.javatime.deser.LocalDateTimeDeserializer;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.jsontype.PolymorphicTypeValidator;
 import tools.jackson.databind.module.SimpleModule;
-
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.Map;
 
 /**
  * 兼容新旧两种日期格式的 Sa-Token JSON 模板（Jackson 3）。
@@ -53,12 +52,12 @@ public class TolerantSaJsonTemplate implements SaJsonTemplate {
      * <p>顺序有讲究：ISO 放最前，保证新写入的数据走最快路径。</p>
      */
     private static final DateTimeFormatter[] LOCAL_DATE_TIME_FORMATS = {
-            // 2026-09-27T17:42:07（Jackson 3 / Sa-Token 1.46 默认）
-            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
-            // 2026-09-27 17:42:07（Sa-Token 1.42 的 DATE_TIME_PATTERN）
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-            // 2026-09-27 17:42:07.123
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"),
+        // 2026-09-27T17:42:07（Jackson 3 / Sa-Token 1.46 默认）
+        DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+        // 2026-09-27 17:42:07（Sa-Token 1.42 的 DATE_TIME_PATTERN）
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+        // 2026-09-27 17:42:07.123
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"),
     };
 
     /** 带类型信息（{@code @class}）的 Mapper，用于 SaSession 等对象 */
@@ -166,14 +165,12 @@ public class TolerantSaJsonTemplate implements SaJsonTemplate {
                 }
                 // 兜底：字符串形式的毫秒时间戳
                 try {
-                    return LocalDateTime.ofInstant(
-                            Instant.ofEpochMilli(Long.parseLong(value)), ZoneId.systemDefault());
+                    return LocalDateTime.ofInstant(Instant.ofEpochMilli(Long.parseLong(value)), ZoneId.systemDefault());
                 } catch (NumberFormatException ignored) {
                     // 走到这里说明真的解析不了，抛出可读异常
                 }
                 throw new DateTimeParseException(
-                        "无法解析 LocalDateTime，期望 ISO-8601 或 yyyy-MM-dd HH:mm:ss，实际为 '" + value + "'",
-                        value, 0);
+                        "无法解析 LocalDateTime，期望 ISO-8601 或 yyyy-MM-dd HH:mm:ss，实际为 '" + value + "'", value, 0);
             }
             // 数字 / 数组等形态沿用 Jackson 原生行为
             return LocalDateTimeDeserializer.INSTANCE.deserialize(p, ctxt);

@@ -1,7 +1,6 @@
 package com.astral.cms.common;
 
 import cn.dev33.satoken.stp.StpUtil;
-
 import java.util.List;
 
 /**
@@ -19,8 +18,7 @@ public final class CmsVisibility {
     /** Sa-Token 超管通配权限 */
     private static final String SUPER_PERMISSION = "*:*:*";
 
-    private CmsVisibility() {
-    }
+    private CmsVisibility() {}
 
     /**
      * 当前请求是否可查看私密内容。

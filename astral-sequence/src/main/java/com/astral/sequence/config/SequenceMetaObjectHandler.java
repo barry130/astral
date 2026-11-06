@@ -6,12 +6,11 @@ import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import java.time.LocalDateTime;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.context.annotation.Lazy;
-
-import java.time.LocalDateTime;
-import java.util.Set;
 
 /**
  * MyBatis-Plus 元对象处理器
@@ -50,12 +49,8 @@ public class SequenceMetaObjectHandler implements MetaObjectHandler {
      * <b>该集合只影响 id 填充，不影响 createTime / updateTime 等时间列。</b>
      * </p>
      */
-    private static final Set<String> EXCLUDED_TABLES = Set.of(
-            "sequence_config",
-            "sequence_statistics",
-            "sequence_history",
-            "sequence_segment"
-    );
+    private static final Set<String> EXCLUDED_TABLES =
+            Set.of("sequence_config", "sequence_statistics", "sequence_history", "sequence_segment");
 
     /** 号段生成器，用于自动生成主键 ID */
     private final SegmentGenerator segmentGenerator;

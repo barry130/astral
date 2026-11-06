@@ -1,10 +1,9 @@
 package com.astral.system.message;
 
-import java.util.List;
-
 import com.astral.system.dto.MessageDeliveryVo;
 import com.astral.system.dto.MessageStatisticsVo;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.util.List;
 
 /**
  * 消息统计：把邮件日志、短信日志、站内信三张表聚合成一个消息视图。

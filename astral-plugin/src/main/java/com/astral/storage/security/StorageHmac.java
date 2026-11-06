@@ -1,10 +1,10 @@
 package com.astral.storage.security;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * storage HMAC 工具
@@ -21,15 +21,15 @@ import java.util.Base64;
  */
 public final class StorageHmac {
 
-    private StorageHmac() {
-    }
+    private StorageHmac() {}
 
     /** 计算 HMAC-SHA256 并返回 Base64URL（无填充）签名 */
     public static String sign(byte[] key, String canonical) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(new SecretKeySpec(key, "HmacSHA256"));
-            return Base64.getUrlEncoder().withoutPadding()
+            return Base64.getUrlEncoder()
+                    .withoutPadding()
                     .encodeToString(mac.doFinal(canonical.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception e) {
             throw new IllegalStateException("HMAC 计算失败", e);

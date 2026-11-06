@@ -6,6 +6,9 @@ public interface PluginConfigProvider {
 
     Map<String, Object> getDefaultConfig();
 
-    default String getConfigPrefix() { return getPluginId(); }
+    default String getConfigPrefix() {
+        return getPluginId();
+    }
+
     String getPluginId();
 }

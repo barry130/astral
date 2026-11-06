@@ -26,7 +26,6 @@ public class PluginWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new PluginApiInterceptor(pluginRegistry))
-                .addPathPatterns("/api/v1/**");
+        registry.addInterceptor(new PluginApiInterceptor(pluginRegistry)).addPathPatterns("/api/v1/**");
     }
 }

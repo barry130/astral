@@ -2,24 +2,23 @@ package com.astral.system.controller;
 
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.annotation.RequiresSuper;
+import com.astral.common.result.Result;
 import com.astral.dao.entity.UserRole;
 import com.astral.system.service.UserRoleService;
-import com.astral.common.result.Result;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-
-import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 用户角色关联控制器
@@ -48,8 +47,8 @@ public class UserRoleController {
      */
     @Operation(summary = "分页查询")
     @GetMapping("/page")
-    public Result<Page<UserRole>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                               @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<UserRole>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<UserRole> page = new Page<>(pageNum, pageSize);
         return Result.success(userRoleService.page(page));
     }

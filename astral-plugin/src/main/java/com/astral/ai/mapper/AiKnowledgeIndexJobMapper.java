@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 知识索引任务 Mapper
  */
 @Mapper
-public interface AiKnowledgeIndexJobMapper extends BaseMapper<AiKnowledgeIndexJobEntity> {
-}
+public interface AiKnowledgeIndexJobMapper extends BaseMapper<AiKnowledgeIndexJobEntity> {}

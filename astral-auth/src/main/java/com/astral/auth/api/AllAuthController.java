@@ -8,15 +8,14 @@ import com.astral.common.annotation.RateLimit;
 import com.astral.common.result.Result;
 import com.astral.log.annotation.LoginLog;
 import jakarta.validation.Valid;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 认证控制器（通用路径 /api/v1/all/auth，管理端与 App 端共用）。
@@ -39,7 +38,8 @@ public class AllAuthController {
     @RateLimit(key = "ip", limit = 5, duration = 60, message = "登录尝试次数过多，请60秒后再试")
     @LoginLog("用户名密码登录")
     @PostMapping("/login")
-    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
+    public Result<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
         Result<LoginResponse> result = Result.success(authService.login(request));
         if (result.getData() != null) {
             httpRequest.setAttribute("username", result.getData().getUsername());

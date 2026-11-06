@@ -28,7 +28,6 @@ public class FeedbackWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(feedbackAuthInterceptor)
-                .addPathPatterns("/api/v1/app/feedback/**");
+        registry.addInterceptor(feedbackAuthInterceptor).addPathPatterns("/api/v1/app/feedback/**");
     }
 }

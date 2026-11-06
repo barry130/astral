@@ -2,11 +2,10 @@ package com.astral.monitor.service.impl;
 
 import com.astral.monitor.dto.JvmMonitorDTO;
 import com.astral.monitor.service.JvmMonitorService;
-import org.springframework.stereotype.Service;
-
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 /**
  * JVM监控服务实现类
@@ -40,10 +39,12 @@ public class JvmMonitorServiceImpl implements JvmMonitorService {
     public JvmMonitorDTO getJvmInfo() {
         var heapMem = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         var nonHeapMem = ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage();
-        
+
         List<GarbageCollectorMXBean> gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
-        long totalGcCount = gcBeans.stream().mapToLong(GarbageCollectorMXBean::getCollectionCount).sum();
-        
+        long totalGcCount = gcBeans.stream()
+                .mapToLong(GarbageCollectorMXBean::getCollectionCount)
+                .sum();
+
         JvmMonitorDTO dto = new JvmMonitorDTO();
         dto.setHeapUsed(heapMem.getUsed());
         dto.setHeapMax(heapMem.getMax());
@@ -53,7 +54,7 @@ public class JvmMonitorServiceImpl implements JvmMonitorService {
         dto.setUptime(ManagementFactory.getRuntimeMXBean().getUptime());
         dto.setJdkVersion(System.getProperty("java.version"));
         dto.setJvmName(ManagementFactory.getRuntimeMXBean().getVmName());
-        
+
         return dto;
     }
 }

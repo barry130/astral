@@ -13,11 +13,6 @@ import com.astral.ai.mapper.AiKnowledgeIndexJobMapper;
 import com.astral.ai.mapper.AiKnowledgeSourceMapper;
 import com.astral.common.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -30,6 +25,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 知识库服务：知识源、文档、分片索引与检索。
@@ -69,8 +68,8 @@ public class AiKnowledgeService {
 
     /** 全部知识源 */
     public List<AiKnowledgeSourceEntity> listSources() {
-        return sourceMapper.selectList(new LambdaQueryWrapper<AiKnowledgeSourceEntity>()
-                .orderByAsc(AiKnowledgeSourceEntity::getId));
+        return sourceMapper.selectList(
+                new LambdaQueryWrapper<AiKnowledgeSourceEntity>().orderByAsc(AiKnowledgeSourceEntity::getId));
     }
 
     /** 取知识源 */
@@ -89,9 +88,15 @@ public class AiKnowledgeService {
 
     /** 新增知识源 */
     @Transactional(rollbackFor = Exception.class)
-    public AiKnowledgeSourceEntity createSource(String sourceCode, String name, String sourceType,
-                                                String description, String pathPattern, Boolean enabled,
-                                                String syncMode, Long operatorId) {
+    public AiKnowledgeSourceEntity createSource(
+            String sourceCode,
+            String name,
+            String sourceType,
+            String description,
+            String pathPattern,
+            Boolean enabled,
+            String syncMode,
+            Long operatorId) {
         Long exists = sourceMapper.selectCount(new LambdaQueryWrapper<AiKnowledgeSourceEntity>()
                 .eq(AiKnowledgeSourceEntity::getSourceCode, sourceCode));
         if (exists != null && exists > 0) {
@@ -115,9 +120,15 @@ public class AiKnowledgeService {
 
     /** 更新知识源 */
     @Transactional(rollbackFor = Exception.class)
-    public AiKnowledgeSourceEntity updateSource(Long id, String name, String sourceType, String description,
-                                                String pathPattern, Boolean enabled, String syncMode,
-                                                Long operatorId) {
+    public AiKnowledgeSourceEntity updateSource(
+            Long id,
+            String name,
+            String sourceType,
+            String description,
+            String pathPattern,
+            Boolean enabled,
+            String syncMode,
+            Long operatorId) {
         AiKnowledgeSourceEntity entity = requireSource(id);
         if (name != null && !name.isBlank()) {
             entity.setName(name.trim());
@@ -166,22 +177,26 @@ public class AiKnowledgeService {
      * @return 文档实体
      */
     @Transactional(rollbackFor = Exception.class)
-    public AiKnowledgeDocumentEntity saveDocument(Long sourceId, String docKey, String title, String path,
-                                                  String section, String version, String content,
-                                                  Long operatorId) {
+    public AiKnowledgeDocumentEntity saveDocument(
+            Long sourceId,
+            String docKey,
+            String title,
+            String path,
+            String section,
+            String version,
+            String content,
+            Long operatorId) {
         requireSource(sourceId);
         if (content == null || content.isBlank()) {
             throw new BusinessException("AI013", "文档内容不能为空");
         }
-        String body = content.length() > MAX_DOCUMENT_CHARS
-                ? content.substring(0, MAX_DOCUMENT_CHARS) : content;
+        String body = content.length() > MAX_DOCUMENT_CHARS ? content.substring(0, MAX_DOCUMENT_CHARS) : content;
         String hash = sha256(body);
 
-        AiKnowledgeDocumentEntity entity = documentMapper.selectOne(
-                new LambdaQueryWrapper<AiKnowledgeDocumentEntity>()
-                        .eq(AiKnowledgeDocumentEntity::getSourceId, sourceId)
-                        .eq(AiKnowledgeDocumentEntity::getDocKey, docKey)
-                        .last("limit 1"));
+        AiKnowledgeDocumentEntity entity = documentMapper.selectOne(new LambdaQueryWrapper<AiKnowledgeDocumentEntity>()
+                .eq(AiKnowledgeDocumentEntity::getSourceId, sourceId)
+                .eq(AiKnowledgeDocumentEntity::getDocKey, docKey)
+                .last("limit 1"));
         boolean isNew = entity == null;
         if (isNew) {
             entity = new AiKnowledgeDocumentEntity();
@@ -213,8 +228,8 @@ public class AiKnowledgeService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteDocument(Long id) {
         AiKnowledgeDocumentEntity entity = requireDocument(id);
-        chunkMapper.delete(new LambdaQueryWrapper<AiKnowledgeChunkEntity>()
-                .eq(AiKnowledgeChunkEntity::getDocumentId, id));
+        chunkMapper.delete(
+                new LambdaQueryWrapper<AiKnowledgeChunkEntity>().eq(AiKnowledgeChunkEntity::getDocumentId, id));
         documentMapper.deleteById(id);
         refreshSourceCounters(entity.getSourceId());
     }
@@ -263,15 +278,16 @@ public class AiKnowledgeService {
         }
         job.setProcessedCount(processed);
         job.setFailedCount(failed);
-        job.setStatus(failed > 0 && processed == 0
-                ? AiConstants.IndexJobStatus.FAILED : AiConstants.IndexJobStatus.SUCCEEDED);
+        job.setStatus(
+                failed > 0 && processed == 0
+                        ? AiConstants.IndexJobStatus.FAILED
+                        : AiConstants.IndexJobStatus.SUCCEEDED);
         job.setFinishedAt(LocalDateTime.now());
         job.setErrorSummary(errors.isEmpty() ? null : String.join("; ", errors));
         jobMapper.updateById(job);
 
         source.setLastSyncTime(LocalDateTime.now());
-        source.setStatus(processed > 0 ? AiConstants.KnowledgeStatus.READY
-                : AiConstants.KnowledgeStatus.PENDING);
+        source.setStatus(processed > 0 ? AiConstants.KnowledgeStatus.READY : AiConstants.KnowledgeStatus.PENDING);
         source.setUpdatedBy(operatorId);
         sourceMapper.updateById(source);
         refreshSourceCounters(sourceId);
@@ -314,10 +330,12 @@ public class AiKnowledgeService {
             binding.setAgentVersionId(agentVersionId);
             binding.setEnabled(binding.getEnabled() == null || binding.getEnabled());
             binding.setPriority(binding.getPriority() == null ? sort : binding.getPriority());
-            binding.setRetrievalTopK(binding.getRetrievalTopK() == null ? 6
-                    : Math.max(1, Math.min(50, binding.getRetrievalTopK())));
-            binding.setCitationPolicy(binding.getCitationPolicy() == null
-                    ? "OPTIONAL" : binding.getCitationPolicy().toUpperCase(Locale.ROOT));
+            binding.setRetrievalTopK(
+                    binding.getRetrievalTopK() == null ? 6 : Math.max(1, Math.min(50, binding.getRetrievalTopK())));
+            binding.setCitationPolicy(
+                    binding.getCitationPolicy() == null
+                            ? "OPTIONAL"
+                            : binding.getCitationPolicy().toUpperCase(Locale.ROOT));
             agentKnowledgeMapper.insert(binding);
             sort++;
         }
@@ -351,9 +369,7 @@ public class AiKnowledgeService {
             Integer chunkNo,
             String matchedText,
             String content,
-            double score
-    ) {
-    }
+            double score) {}
 
     /**
      * 按智能体版本的知识绑定检索。
@@ -395,9 +411,8 @@ public class AiKnowledgeService {
             return List.of();
         }
 
-        List<AiKnowledgeChunkEntity> chunks = chunkMapper.selectList(
-                new LambdaQueryWrapper<AiKnowledgeChunkEntity>()
-                        .in(AiKnowledgeChunkEntity::getSourceId, sources.keySet()));
+        List<AiKnowledgeChunkEntity> chunks = chunkMapper.selectList(new LambdaQueryWrapper<AiKnowledgeChunkEntity>()
+                .in(AiKnowledgeChunkEntity::getSourceId, sources.keySet()));
         if (chunks.isEmpty()) {
             return List.of();
         }
@@ -416,8 +431,8 @@ public class AiKnowledgeService {
     }
 
     /** 打分：词面命中 + 标题加权 + 覆盖率，取每条分片最高分 */
-    private List<AiCitationHit> rankChunks(List<AiKnowledgeChunkEntity> chunks, Set<String> terms,
-                                           Map<Long, AiKnowledgeSourceEntity> sources) {
+    private List<AiCitationHit> rankChunks(
+            List<AiKnowledgeChunkEntity> chunks, Set<String> terms, Map<Long, AiKnowledgeSourceEntity> sources) {
         Map<Long, AiKnowledgeDocumentEntity> cache = new LinkedHashMap<>();
         List<AiCitationHit> hits = new ArrayList<>();
         for (AiKnowledgeChunkEntity chunk : chunks) {
@@ -451,7 +466,8 @@ public class AiKnowledgeService {
             }
             double coverage = (double) hitTerms / terms.size();
             double score = coverage * 100.0 + Math.min(occurrences, 20) * 1.5;
-            String title = document.getTitle() == null ? "" : document.getTitle().toLowerCase(Locale.ROOT);
+            String title =
+                    document.getTitle() == null ? "" : document.getTitle().toLowerCase(Locale.ROOT);
             if (firstTerm != null && title.contains(firstTerm)) {
                 score += 12;
             }
@@ -470,8 +486,7 @@ public class AiKnowledgeService {
                     chunk.getChunkNo(),
                     snippet(content, firstTerm),
                     content,
-                    score
-            ));
+                    score));
         }
         hits.sort(Comparator.comparingDouble(AiCitationHit::score).reversed());
         return hits;
@@ -556,8 +571,8 @@ public class AiKnowledgeService {
     private void refreshSourceCounters(Long sourceId) {
         Long documents = documentMapper.selectCount(new LambdaQueryWrapper<AiKnowledgeDocumentEntity>()
                 .eq(AiKnowledgeDocumentEntity::getSourceId, sourceId));
-        Long chunks = chunkMapper.selectCount(new LambdaQueryWrapper<AiKnowledgeChunkEntity>()
-                .eq(AiKnowledgeChunkEntity::getSourceId, sourceId));
+        Long chunks = chunkMapper.selectCount(
+                new LambdaQueryWrapper<AiKnowledgeChunkEntity>().eq(AiKnowledgeChunkEntity::getSourceId, sourceId));
         AiKnowledgeSourceEntity source = findSource(sourceId);
         if (source == null) {
             return;

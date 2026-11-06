@@ -6,12 +6,11 @@ import com.astral.ai.provider.AiProviderDtos.HealthResult;
 import com.astral.ai.provider.AiProviderDtos.Message;
 import com.astral.ai.provider.AiProviderDtos.StreamListener;
 import com.astral.ai.provider.AiProviderDtos.ToolSpec;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 本地模拟提供方（{@code provider_type = MOCK}）。
@@ -46,8 +45,12 @@ public class MockAiProvider implements AiProvider {
         String content = compose(request);
         int promptTokens = estimateTokens(request);
         int completionTokens = Math.max(1, content.length() / 3);
-        log.debug("[Mock] chat traceId={} model={} tokens={}/{}",
-                request.traceId(), request.modelCode(), promptTokens, completionTokens);
+        log.debug(
+                "[Mock] chat traceId={} model={} tokens={}/{}",
+                request.traceId(),
+                request.modelCode(),
+                promptTokens,
+                completionTokens);
         return new ChatResult(content, "stop", promptTokens, completionTokens, List.of());
     }
 
@@ -60,8 +63,8 @@ public class MockAiProvider implements AiProvider {
                 int end = Math.min(content.length(), i + CHUNK);
                 listener.onDelta(content.substring(i, end));
             }
-            listener.onCompleted(new ChatResult(content, "stop", promptTokens,
-                    Math.max(1, content.length() / 3), List.of()));
+            listener.onCompleted(
+                    new ChatResult(content, "stop", promptTokens, Math.max(1, content.length() / 3), List.of()));
         } catch (RuntimeException e) {
             listener.onError(e);
         }

@@ -2,12 +2,11 @@ package com.astral.dao.mapper;
 
 import com.astral.dao.entity.StatDevice;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
-
-import java.util.List;
 
 /**
  * 统计设备登记表 Mapper 接口
@@ -23,17 +22,18 @@ public interface StatDeviceMapper extends BaseMapper<StatDevice> {
      * app_version/model/os/last_ip 取最新上报值覆盖。
      * </p>
      */
-    @Update("UPDATE stat_device SET ut = #{ut}, app_version = #{appVersion}, model = #{model}, " +
-            "os = #{os}, last_ip = #{lastIp}, last_date = #{lastDate}, last_active_time = #{lastActiveTime} " +
-            "WHERE device_id = #{deviceId}")
-    int updateLastActive(@Param("deviceId") String deviceId,
-                         @Param("ut") String ut,
-                         @Param("appVersion") String appVersion,
-                         @Param("model") String model,
-                         @Param("os") String os,
-                         @Param("lastIp") String lastIp,
-                         @Param("lastDate") java.time.LocalDate lastDate,
-                         @Param("lastActiveTime") java.time.LocalDateTime lastActiveTime);
+    @Update("UPDATE stat_device SET ut = #{ut}, app_version = #{appVersion}, model = #{model}, "
+            + "os = #{os}, last_ip = #{lastIp}, last_date = #{lastDate}, last_active_time = #{lastActiveTime} "
+            + "WHERE device_id = #{deviceId}")
+    int updateLastActive(
+            @Param("deviceId") String deviceId,
+            @Param("ut") String ut,
+            @Param("appVersion") String appVersion,
+            @Param("model") String model,
+            @Param("os") String os,
+            @Param("lastIp") String lastIp,
+            @Param("lastDate") java.time.LocalDate lastDate,
+            @Param("lastActiveTime") java.time.LocalDateTime lastActiveTime);
 
     /**
      * 查询某平台下出现过的客户端版本列表（去重）
@@ -46,9 +46,9 @@ public interface StatDeviceMapper extends BaseMapper<StatDevice> {
      *
      * @param ut 平台标识（调用方保证非 all/空）
      */
-    @Select("SELECT app_version FROM stat_device " +
-            "WHERE ut = #{ut} AND app_version IS NOT NULL AND app_version <> '' " +
-            "GROUP BY app_version " +
-            "ORDER BY MAX(last_date) DESC, app_version DESC")
+    @Select("SELECT app_version FROM stat_device "
+            + "WHERE ut = #{ut} AND app_version IS NOT NULL AND app_version <> '' "
+            + "GROUP BY app_version "
+            + "ORDER BY MAX(last_date) DESC, app_version DESC")
     List<String> selectVersionsByUt(@Param("ut") String ut);
 }

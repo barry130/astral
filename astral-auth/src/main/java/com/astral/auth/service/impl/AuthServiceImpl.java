@@ -19,17 +19,16 @@ import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.List;
 
 @Service
 @Slf4j
@@ -40,10 +39,10 @@ public class AuthServiceImpl implements AuthService {
     /** 可信代理列表：决定是否采信 X-Forwarded-For（默认回环 + 私有网段） */
     @Value("${astral.web.trusted-proxies:" + ClientIp.DEFAULT_TRUSTED_PROXIES + "}")
     private String trustedProxies;
-    
+
     @Autowired
     private RsaKeyManager rsaKeyManager;
-    
+
     @Autowired
     private StpInterface stpInterface;
 
@@ -64,18 +63,16 @@ public class AuthServiceImpl implements AuthService {
         if (rsaKeyManager.isAccountLocked(request.getUsername())) {
             throw new BusinessException("AUTH003");
         }
-        
-        User user = userMapper.selectOne(
-            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User>()
+
+        User user = userMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User>()
                 .eq("username", request.getUsername())
-                .eq("deleted", 0)
-        );
-        
+                .eq("deleted", 0));
+
         if (user == null) {
             rsaKeyManager.recordLoginFailure(request.getUsername());
             throw new BusinessException("AUTH002");
         }
-        
+
         String password = request.getPassword();
         try {
             password = rsaKeyManager.decryptPasswordBase64(password);
@@ -87,7 +84,7 @@ public class AuthServiceImpl implements AuthService {
             rsaKeyManager.recordLoginFailure(request.getUsername());
             throw new BusinessException("AUTH002");
         }
-        
+
         if (!BCrypt.checkpw(password, user.getPassword())) {
             rsaKeyManager.recordLoginFailure(request.getUsername());
             throw new BusinessException("AUTH002");
@@ -111,7 +108,7 @@ public class AuthServiceImpl implements AuthService {
             }
         }
 
-rsaKeyManager.resetLoginFailures(request.getUsername());
+        rsaKeyManager.resetLoginFailures(request.getUsername());
 
         // device=ADMIN：is-share=false 下每次登录都是新 token，按「账号 × 端」隔离会话——
         // 管理端登出/被踢不影响同账号的 App 会话（反之亦然）
@@ -137,10 +134,10 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         // 回写最后登录时间与 IP 到 sys_user（会话里的副本只够 Token 管理页展示，库里的字段此前无人写）
         userLoginMarker.mark(user.getId(), getClientIp());
         String token = StpUtil.getTokenValue();
-        
+
         List<String> roles = stpInterface.getRoleList(user.getId(), null);
         List<String> permissions = stpInterface.getPermissionList(user.getId(), null);
-        
+
         LoginResponse response = new LoginResponse();
         response.setId(user.getId());
         response.setUsername(user.getUsername());
@@ -155,8 +152,7 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         // 响应体里的 token 字段保留 —— 原生/第三方调用方（如脚本、Swagger 调试）仍可按头使用。
         jakarta.servlet.http.HttpServletResponse httpResponse = AuthCookieWriter.currentResponse();
         if (httpResponse != null) {
-            response.setCsrfToken(authCookieWriter.writeLoginCookies(
-                    httpResponse, token, StpUtil.getTokenTimeout()));
+            response.setCsrfToken(authCookieWriter.writeLoginCookies(httpResponse, token, StpUtil.getTokenTimeout()));
         }
         return response;
     }
@@ -217,10 +213,10 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         // 同上：nickname 为 null 会让 SaSession.set 抛 NPE，必须兜底
         StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         loginUserTypeResolver.cacheCurrentUserType(user.getUserType());
-        
+
         List<String> roles = stpInterface.getRoleList(userId, null);
         List<String> permissions = stpInterface.getPermissionList(userId, null);
-        
+
         LoginResponse response = new LoginResponse();
         response.setId(user.getId());
         response.setUsername(user.getUsername());
@@ -246,8 +242,8 @@ rsaKeyManager.resetLoginFailures(request.getUsername());
         HttpServletResponse httpResponse = AuthCookieWriter.currentResponse();
         HttpServletRequest httpRequest = AuthCookieWriter.currentRequest();
         if (httpResponse != null && httpRequest != null) {
-            response.setCsrfToken(authCookieWriter.ensureCsrfToken(
-                    httpRequest, httpResponse, StpUtil.getTokenTimeout()));
+            response.setCsrfToken(
+                    authCookieWriter.ensureCsrfToken(httpRequest, httpResponse, StpUtil.getTokenTimeout()));
         }
         return response;
     }

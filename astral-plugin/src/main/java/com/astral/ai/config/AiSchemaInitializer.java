@@ -3,13 +3,12 @@ package com.astral.ai.config;
 import com.astral.ai.AiPropertiesHolder;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
+import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
-
-import javax.sql.DataSource;
 
 /**
  * AI 插件启动建表。

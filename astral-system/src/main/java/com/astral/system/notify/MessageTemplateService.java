@@ -1,13 +1,5 @@
 package com.astral.system.notify;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.SysMailTemplate;
 import com.astral.dao.entity.SysSmsTemplate;
@@ -15,6 +7,13 @@ import com.astral.system.dto.MessageTemplateSaveDto;
 import com.astral.system.dto.MessageTemplateVo;
 import com.astral.system.mail.MailService;
 import com.astral.system.mail.SysMailTemplateService;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,8 +48,8 @@ public class MessageTemplateService {
     public List<MessageTemplateVo> list() {
         Map<String, MessageTemplateVo> merged = new LinkedHashMap<>();
         for (SysMailTemplate row : mailTemplateService.list()) {
-            MessageTemplateVo vo = merged.computeIfAbsent(key(row.getScene(), row.getTemplateCode()),
-                    k -> newVo(row.getScene(), row.getTemplateCode()));
+            MessageTemplateVo vo = merged.computeIfAbsent(
+                    key(row.getScene(), row.getTemplateCode()), k -> newVo(row.getScene(), row.getTemplateCode()));
             vo.getChannels().add(row.getChannel());
             // EMAIL 行的主题/正文优先；只有 INAPP 行时用 INAPP 的内容兜底
             if (vo.getSubject() == null || NotifyChannel.EMAIL.equals(row.getChannel())) {
@@ -65,7 +64,8 @@ public class MessageTemplateService {
             vo.setUpdateTime(later(vo.getUpdateTime(), row.getUpdateTime()));
         }
         for (SysSmsTemplate row : smsTemplateService.list()) {
-            MessageTemplateVo vo = merged.computeIfAbsent(key(row.getEventCode(), row.getTemplateCode()),
+            MessageTemplateVo vo = merged.computeIfAbsent(
+                    key(row.getEventCode(), row.getTemplateCode()),
                     k -> newVo(row.getEventCode(), row.getTemplateCode()));
             vo.getChannels().add(NotifyChannel.SMS);
             if (vo.getTemplateName() == null) {
@@ -83,13 +83,15 @@ public class MessageTemplateService {
         }
         List<MessageTemplateVo> result = new ArrayList<>(merged.values());
         for (MessageTemplateVo vo : result) {
-            vo.setChannels(NotifyChannel.registered().stream().filter(vo.getChannels()::contains).toList());
-            NotifyEventRegistry.find(vo.getScene())
-                    .ifPresent(def -> vo.setSceneName(def.name()));
+            vo.setChannels(NotifyChannel.registered().stream()
+                    .filter(vo.getChannels()::contains)
+                    .toList());
+            NotifyEventRegistry.find(vo.getScene()).ifPresent(def -> vo.setSceneName(def.name()));
         }
         result.sort((a, b) -> {
             int byScene = Objects.toString(a.getScene(), "").compareTo(Objects.toString(b.getScene(), ""));
-            return byScene != 0 ? byScene
+            return byScene != 0
+                    ? byScene
                     : Objects.toString(a.getTemplateCode(), "").compareTo(Objects.toString(b.getTemplateCode(), ""));
         });
         return result;
@@ -115,8 +117,8 @@ public class MessageTemplateService {
     public void save(MessageTemplateSaveDto dto) {
         String code = require(dto.getTemplateCode(), "MAIL015");
         String scene = require(dto.getScene(), "MAIL016");
-        NotifyEventDef event = NotifyEventRegistry.find(scene)
-                .orElseThrow(() -> new BusinessException("MAIL009", scene));
+        NotifyEventDef event =
+                NotifyEventRegistry.find(scene).orElseThrow(() -> new BusinessException("MAIL009", scene));
         String name = require(dto.getTemplateName(), "MAIL016");
         List<String> channels = normalizeChannels(dto.getChannels(), event);
         boolean renderChannel = channels.stream().anyMatch(RENDER_CHANNELS::contains);
@@ -126,22 +128,30 @@ public class MessageTemplateService {
         }
         checkCodeAvailable(code, scene, channels);
 
-        String origCode = blankToNull(dto.getOriginalCode()) == null ? code : dto.getOriginalCode().trim();
-        String origScene = blankToNull(dto.getOriginalScene()) == null ? scene : dto.getOriginalScene().trim();
+        String origCode = blankToNull(dto.getOriginalCode()) == null
+                ? code
+                : dto.getOriginalCode().trim();
+        String origScene = blankToNull(dto.getOriginalScene()) == null
+                ? scene
+                : dto.getOriginalScene().trim();
 
-        List<SysMailTemplate> existingMail = mailTemplateService.lambdaQuery()
+        List<SysMailTemplate> existingMail = mailTemplateService
+                .lambdaQuery()
                 .eq(SysMailTemplate::getTemplateCode, origCode)
                 .eq(SysMailTemplate::getScene, origScene)
                 .list();
-        SysSmsTemplate existingSms = smsTemplateService.lambdaQuery()
+        SysSmsTemplate existingSms = smsTemplateService
+                .lambdaQuery()
                 .eq(SysSmsTemplate::getTemplateCode, origCode)
                 .eq(SysSmsTemplate::getEventCode, origScene)
-                .list().stream().findFirst().orElse(null);
+                .list()
+                .stream()
+                .findFirst()
+                .orElse(null);
 
         // 1) 删除不再需要的渠道行（取消勾选 / 改了编码或事件）
         for (SysMailTemplate row : existingMail) {
-            boolean keep = channels.contains(row.getChannel())
-                    && code.equals(origCode) && scene.equals(origScene);
+            boolean keep = channels.contains(row.getChannel()) && code.equals(origCode) && scene.equals(origScene);
             if (!keep) {
                 mailTemplateService.removeById(row.getId());
             }
@@ -157,7 +167,8 @@ public class MessageTemplateService {
             if (RENDER_CHANNELS.contains(channel)) {
                 SysMailTemplate row = existingMail.stream()
                         .filter(r -> channel.equals(r.getChannel()))
-                        .findFirst().orElseGet(SysMailTemplate::new);
+                        .findFirst()
+                        .orElseGet(SysMailTemplate::new);
                 row.setTemplateCode(code);
                 row.setTemplateName(name);
                 row.setScene(scene);
@@ -199,11 +210,13 @@ public class MessageTemplateService {
     public void delete(String templateCode, String scene) {
         String code = require(templateCode, "MAIL015");
         String sc = require(scene, "MAIL016");
-        mailTemplateService.lambdaUpdate()
+        mailTemplateService
+                .lambdaUpdate()
                 .eq(SysMailTemplate::getTemplateCode, code)
                 .eq(SysMailTemplate::getScene, sc)
                 .remove();
-        smsTemplateService.lambdaUpdate()
+        smsTemplateService
+                .lambdaUpdate()
                 .eq(SysSmsTemplate::getTemplateCode, code)
                 .eq(SysSmsTemplate::getEventCode, sc)
                 .remove();
@@ -219,7 +232,8 @@ public class MessageTemplateService {
         String rendered = template;
         if (vars != null) {
             for (Map.Entry<String, String> entry : vars.entrySet()) {
-                rendered = rendered.replace("${" + entry.getKey() + "}", entry.getValue() == null ? "" : entry.getValue());
+                rendered =
+                        rendered.replace("${" + entry.getKey() + "}", entry.getValue() == null ? "" : entry.getValue());
             }
         }
         return rendered;
@@ -228,12 +242,14 @@ public class MessageTemplateService {
     // ==================== 校验 ====================
 
     private List<String> normalizeChannels(List<String> raw, NotifyEventDef event) {
-        List<String> channels = raw == null ? List.of() : raw.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .distinct()
-                .toList();
+        List<String> channels = raw == null
+                ? List.of()
+                : raw.stream()
+                        .filter(Objects::nonNull)
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .distinct()
+                        .toList();
         if (channels.isEmpty()) {
             throw new BusinessException("MAIL020");
         }
@@ -287,7 +303,8 @@ public class MessageTemplateService {
     private void checkCodeAvailable(String code, String scene, List<String> channels) {
         for (String channel : channels) {
             if (RENDER_CHANNELS.contains(channel)) {
-                Long dup = mailTemplateService.lambdaQuery()
+                Long dup = mailTemplateService
+                        .lambdaQuery()
                         .eq(SysMailTemplate::getTemplateCode, code)
                         .eq(SysMailTemplate::getChannel, channel)
                         .ne(SysMailTemplate::getScene, scene)
@@ -295,7 +312,8 @@ public class MessageTemplateService {
                 if (dup != null && dup > 0) {
                     throw new BusinessException("MAIL008", code);
                 }
-                Long bound = mailTemplateService.lambdaQuery()
+                Long bound = mailTemplateService
+                        .lambdaQuery()
                         .eq(SysMailTemplate::getScene, scene)
                         .eq(SysMailTemplate::getChannel, channel)
                         .ne(SysMailTemplate::getTemplateCode, code)
@@ -306,14 +324,16 @@ public class MessageTemplateService {
             }
         }
         if (channels.contains(NotifyChannel.SMS)) {
-            Long dup = smsTemplateService.lambdaQuery()
+            Long dup = smsTemplateService
+                    .lambdaQuery()
                     .eq(SysSmsTemplate::getTemplateCode, code)
                     .ne(SysSmsTemplate::getEventCode, scene)
                     .count();
             if (dup != null && dup > 0) {
                 throw new BusinessException("MAIL008", code);
             }
-            Long bound = smsTemplateService.lambdaQuery()
+            Long bound = smsTemplateService
+                    .lambdaQuery()
                     .eq(SysSmsTemplate::getEventCode, scene)
                     .ne(SysSmsTemplate::getTemplateCode, code)
                     .count();

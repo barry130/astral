@@ -1,8 +1,5 @@
 package com.astral.system.controller;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
@@ -12,16 +9,18 @@ import com.astral.system.notify.sms.SmsProvider;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "短信供应商")
 @RestController
@@ -55,8 +54,8 @@ public class SmsProviderController {
     @Operation(summary = "分页查询")
     @RequiresPermission(value = PERM_VIEW, name = "短信通知查看", description = "查看短信供应商、模板与发送日志")
     @GetMapping("/page")
-    public Result<Page<SysSmsProvider>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                             @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<SysSmsProvider>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<SysSmsProvider> page = providerService.page(new Page<>(pageNum, pageSize));
         page.getRecords().forEach(SmsProviderController::withoutCredential);
         return Result.success(page);
@@ -73,7 +72,8 @@ public class SmsProviderController {
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/types")
     public Result<List<String>> types() {
-        return Result.success(providerImpls.stream().map(SmsProvider::type).sorted().toList());
+        return Result.success(
+                providerImpls.stream().map(SmsProvider::type).sorted().toList());
     }
 
     @Operation(summary = "新增")
@@ -159,7 +159,8 @@ public class SmsProviderController {
         if (providerImpls.stream().noneMatch(p -> p.type().equalsIgnoreCase(type))) {
             throw new BusinessException("SMS006", entity.getProviderType());
         }
-        Long dup = providerService.lambdaQuery()
+        Long dup = providerService
+                .lambdaQuery()
                 .eq(SysSmsProvider::getProviderName, entity.getProviderName())
                 .ne(id != null, SysSmsProvider::getId, id)
                 .count();

@@ -1,8 +1,7 @@
 package com.astral.monitor.dto;
 
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * 接口调用 Top 榜结果（含当天全量汇总）
@@ -18,8 +17,7 @@ public class ApiTopResultDTO {
     /** 当天全部接口汇总（limit 无关） */
     private ApiTopSummaryDTO summary;
 
-    public ApiTopResultDTO() {
-    }
+    public ApiTopResultDTO() {}
 
     public ApiTopResultDTO(List<ApiTopDTO> list, ApiTopSummaryDTO summary) {
         this.list = list;

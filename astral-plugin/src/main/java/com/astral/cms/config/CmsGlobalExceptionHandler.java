@@ -29,16 +29,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  */
 @Slf4j
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
-@RestControllerAdvice(assignableTypes = {
-        AppCmsController.class,
-        AdminCmsPostController.class,
-        AdminCmsCategoryController.class,
-        AdminCmsTagController.class,
-        AdminCmsPageController.class,
-        AdminCmsCommentController.class,
-        AdminCmsSettingController.class,
-        AdminCmsShareController.class
-})
+@RestControllerAdvice(
+        assignableTypes = {
+            AppCmsController.class,
+            AdminCmsPostController.class,
+            AdminCmsCategoryController.class,
+            AdminCmsTagController.class,
+            AdminCmsPageController.class,
+            AdminCmsCommentController.class,
+            AdminCmsSettingController.class,
+            AdminCmsShareController.class
+        })
 public class CmsGlobalExceptionHandler {
 
     @ExceptionHandler(CmsException.class)
@@ -52,7 +53,8 @@ public class CmsGlobalExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public Result<Void> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
-                ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+                ? "参数校验失败"
+                : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
         return Result.error(320, msg);
     }
 
@@ -60,7 +62,8 @@ public class CmsGlobalExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public Result<Void> handleBind(BindException e) {
         String msg = e.getBindingResult().getFieldErrors().isEmpty()
-                ? "参数校验失败" : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+                ? "参数校验失败"
+                : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
         return Result.error(320, msg);
     }
 

@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * sys_storage_audit Mapper
  */
 @Mapper
-public interface StorageAuditMapper extends BaseMapper<StorageAuditEntity> {
-}
+public interface StorageAuditMapper extends BaseMapper<StorageAuditEntity> {}

@@ -7,11 +7,6 @@ import com.astral.dao.mapper.SysMenuMapper;
 import com.astral.system.service.SysMenuService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -19,6 +14,10 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 菜单服务实现
@@ -35,9 +34,8 @@ public class SysMenuServiceImpl implements SysMenuService {
 
     @Override
     public List<SysMenu> listAll() {
-        return sysMenuMapper.selectList(new LambdaQueryWrapper<SysMenu>()
-                .orderByAsc(SysMenu::getSort)
-                .orderByAsc(SysMenu::getId));
+        return sysMenuMapper.selectList(
+                new LambdaQueryWrapper<SysMenu>().orderByAsc(SysMenu::getSort).orderByAsc(SysMenu::getId));
     }
 
     @Override
@@ -129,8 +127,8 @@ public class SysMenuServiceImpl implements SysMenuService {
         visited.add(rootId);
         while (!queue.isEmpty()) {
             Long current = queue.poll();
-            List<SysMenu> children = sysMenuMapper.selectList(
-                    new LambdaQueryWrapper<SysMenu>().eq(SysMenu::getParentId, current));
+            List<SysMenu> children =
+                    sysMenuMapper.selectList(new LambdaQueryWrapper<SysMenu>().eq(SysMenu::getParentId, current));
             List<Long> nextLevel = new ArrayList<>(children.size());
             for (SysMenu child : children) {
                 if (child.getId() == null || !visited.add(child.getId())) {

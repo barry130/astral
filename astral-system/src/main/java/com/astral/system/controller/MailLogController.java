@@ -7,14 +7,13 @@ import com.astral.system.mail.SysMailLogService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-
-import java.time.LocalDateTime;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "邮件统计")
 @RestController
@@ -30,17 +29,17 @@ public class MailLogController {
     @Operation(summary = "分页查询")
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/page")
-    public Result<Page<SysMailLog>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                         @RequestParam(defaultValue = "10") Integer pageSize,
-                                         @RequestParam(required = false) Long accountId,
-                                         @RequestParam(required = false) String pluginId,
-                                         @RequestParam(required = false) String toEmail,
-                                         @RequestParam(required = false) Integer status,
-                                         @RequestParam(required = false)
-                                         @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime start,
-                                         @RequestParam(required = false)
-                                         @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime end) {
-        return Result.success(logService.pageWithFilter(pageNum, pageSize, accountId, pluginId, toEmail, status, start, end));
+    public Result<Page<SysMailLog>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) Long accountId,
+            @RequestParam(required = false) String pluginId,
+            @RequestParam(required = false) String toEmail,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime start,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime end) {
+        return Result.success(
+                logService.pageWithFilter(pageNum, pageSize, accountId, pluginId, toEmail, status, start, end));
     }
 
     @Operation(summary = "统计概览")

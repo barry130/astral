@@ -11,5 +11,5 @@ import org.springframework.stereotype.Service;
  * <p>继承MyBatis-Plus的ServiceImpl，提供号段分配实体的标准CRUD操作</p>
  */
 @Service
-public class SequenceSegmentServiceImpl extends ServiceImpl<SequenceSegmentMapper, SequenceSegment> implements SequenceSegmentService {
-}
+public class SequenceSegmentServiceImpl extends ServiceImpl<SequenceSegmentMapper, SequenceSegment>
+        implements SequenceSegmentService {}

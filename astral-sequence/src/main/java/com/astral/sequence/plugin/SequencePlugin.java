@@ -11,13 +11,12 @@ import com.astral.schema.SchemaRegistry;
 import com.astral.schema.TableSchema;
 import com.astral.sequence.config.EntityIdSequenceProvider;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 序列生成服务插件
@@ -81,9 +80,7 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
 
     @Override
     public List<NavItem> getNavItems() {
-        return List.of(
-                NavItem.pluginPage("序列管理", "/dashboard/sequence", "ApiOutlined", "admin:sequence:view", 100)
-        );
+        return List.of(NavItem.pluginPage("序列管理", "/dashboard/sequence", "ApiOutlined", "admin:sequence:view", 100));
     }
 
     @Override
@@ -193,8 +190,7 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
      */
     private void alignHighWatermark(String bizKey, String tableName) {
         try {
-            if (!tableName.matches("[A-Za-z0-9_]+")
-                    || segmentMapper.countTableInCurrentSchema(tableName) == 0) {
+            if (!tableName.matches("[A-Za-z0-9_]+") || segmentMapper.countTableInCurrentSchema(tableName) == 0) {
                 return;
             }
             SequenceSegment segment = segmentMapper.selectByBizKey(bizKey);
@@ -204,9 +200,13 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
             long tableMax = segmentMapper.selectMaxId(tableName);
             long aligned = tableMax + segment.getStep();
             if (segment.getMaxValue() < aligned && segmentMapper.raiseMaxValue(bizKey, aligned) > 0) {
-                log.warn("[SequencePlugin] 高水位对齐：{} (表={}) max_value {} -> {}（表 MAX(id)={} 已越过号段，"
-                        + "多为迁移显式插入主键所致）",
-                        bizKey, tableName, segment.getMaxValue(), aligned, tableMax);
+                log.warn(
+                        "[SequencePlugin] 高水位对齐：{} (表={}) max_value {} -> {}（表 MAX(id)={} 已越过号段，" + "多为迁移显式插入主键所致）",
+                        bizKey,
+                        tableName,
+                        segment.getMaxValue(),
+                        aligned,
+                        tableMax);
             }
         } catch (Exception e) {
             log.warn("[SequencePlugin] 高水位对齐失败（不影响启动，下次启动重试）：{} - {}", bizKey, e.getMessage());

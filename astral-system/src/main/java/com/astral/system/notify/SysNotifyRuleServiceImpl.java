@@ -7,5 +7,4 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SysNotifyRuleServiceImpl extends ServiceImpl<SysNotifyRuleMapper, SysNotifyRule>
-        implements SysNotifyRuleService {
-}
+        implements SysNotifyRuleService {}

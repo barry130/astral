@@ -9,6 +9,9 @@ import com.astral.dao.mapper.StatErrorLogMapper;
 import com.astral.dao.mapper.StatMetricHourlyMapper;
 import com.astral.dao.mapper.StatPageHourlyMapper;
 import com.astral.monitor.service.ApiMetricCollector;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,10 +19,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Map;
 
 /**
  * 统计聚合与清理定时任务（StatAggregationJob）
@@ -72,9 +71,15 @@ public class StatAggregationJob {
                 int maxMs = value.getMaxMs();
 
                 int rows = statApiHourlyMapper.incrementApi(
-                        key.getBucketHour(), key.getUri(), key.getMethod(), key.getStatus(),
-                        key.getUt(), key.getAppVersion(),
-                        callCount, sumMs, maxMs);
+                        key.getBucketHour(),
+                        key.getUri(),
+                        key.getMethod(),
+                        key.getStatus(),
+                        key.getUt(),
+                        key.getAppVersion(),
+                        callCount,
+                        sumMs,
+                        maxMs);
                 if (rows > 0) {
                     updated++;
                     continue;
@@ -95,21 +100,39 @@ public class StatAggregationJob {
                 } catch (DuplicateKeyException e) {
                     // 并发建桶冲突：补一次累加
                     statApiHourlyMapper.incrementApi(
-                            key.getBucketHour(), key.getUri(), key.getMethod(), key.getStatus(),
-                            key.getUt(), key.getAppVersion(),
-                            callCount, sumMs, maxMs);
+                            key.getBucketHour(),
+                            key.getUri(),
+                            key.getMethod(),
+                            key.getStatus(),
+                            key.getUt(),
+                            key.getAppVersion(),
+                            callCount,
+                            sumMs,
+                            maxMs);
                     updated++;
                 }
             } catch (Exception e) {
                 failed++;
                 // 带上完整桶维度，便于按需从日志补录
-                log.error("[stat] 指标桶落库失败 bucketHour={} uri={} method={} status={} ut={} appVersion={} callCount={}: {}",
-                        key.getBucketHour(), key.getUri(), key.getMethod(), key.getStatus(),
-                        key.getUt(), key.getAppVersion(), value.getCallCount(), e.getMessage(), e);
+                log.error(
+                        "[stat] 指标桶落库失败 bucketHour={} uri={} method={} status={} ut={} appVersion={} callCount={}: {}",
+                        key.getBucketHour(),
+                        key.getUri(),
+                        key.getMethod(),
+                        key.getStatus(),
+                        key.getUt(),
+                        key.getAppVersion(),
+                        value.getCallCount(),
+                        e.getMessage(),
+                        e);
             }
         }
-        log.info("[stat] 接口指标落库完成 buckets={} updated={} inserted={} failed={}",
-                drained.size(), updated, inserted, failed);
+        log.info(
+                "[stat] 接口指标落库完成 buckets={} updated={} inserted={} failed={}",
+                drained.size(),
+                updated,
+                inserted,
+                failed);
     }
 
     /**
@@ -117,21 +140,31 @@ public class StatAggregationJob {
      */
     @Scheduled(cron = "0 0 4 * * ?")
     public void cleanExpired() {
-        LocalDateTime errorBefore = LocalDate.now().minusDays(errorRetentionDays).atStartOfDay();
-        LocalDateTime hourlyBefore = LocalDate.now().minusDays(hourlyRetentionDays).atStartOfDay();
+        LocalDateTime errorBefore =
+                LocalDate.now().minusDays(errorRetentionDays).atStartOfDay();
+        LocalDateTime hourlyBefore =
+                LocalDate.now().minusDays(hourlyRetentionDays).atStartOfDay();
 
-        int errors = statErrorLogMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatErrorLog>()
-                .lt("occur_time", errorBefore));
-        int api = statApiHourlyMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatApiHourly>()
-                .lt("bucket_hour", hourlyBefore));
-        int metric = statMetricHourlyMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatMetricHourly>()
-                .lt("bucket_hour", hourlyBefore));
-        int page = statPageHourlyMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatPageHourly>()
-                .lt("bucket_hour", hourlyBefore));
+        int errors = statErrorLogMapper.delete(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatErrorLog>()
+                        .lt("occur_time", errorBefore));
+        int api = statApiHourlyMapper.delete(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatApiHourly>()
+                        .lt("bucket_hour", hourlyBefore));
+        int metric = statMetricHourlyMapper.delete(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatMetricHourly>()
+                        .lt("bucket_hour", hourlyBefore));
+        int page = statPageHourlyMapper.delete(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatPageHourly>()
+                        .lt("bucket_hour", hourlyBefore));
 
         if (errors > 0 || api > 0 || metric > 0 || page > 0) {
-            log.info("[stat] 过期数据清理完成 errors={} apiBuckets={} metricBuckets={} pageBuckets={}",
-                    errors, api, metric, page);
+            log.info(
+                    "[stat] 过期数据清理完成 errors={} apiBuckets={} metricBuckets={} pageBuckets={}",
+                    errors,
+                    api,
+                    metric,
+                    page);
         }
     }
 }

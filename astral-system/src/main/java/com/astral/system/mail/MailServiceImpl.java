@@ -13,19 +13,18 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
-import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.stereotype.Service;
-
-import java.time.Duration;
 import jakarta.mail.internet.MimeMessage;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -33,8 +32,10 @@ public class MailServiceImpl implements MailService {
 
     @Resource
     private SysMailAccountMapper accountMapper;
+
     @Resource
     private SysMailTemplateMapper templateMapper;
+
     @Resource
     private SysMailLogMapper logMapper;
 
@@ -64,13 +65,16 @@ public class MailServiceImpl implements MailService {
         // 未绑定模板时回退内置样式直发（告警是系统自身触发的低频事件，不查授权、不占额度）。
         SysMailTemplate tpl = templateCache.get(NotifyEventRegistry.SYSTEM_ALERT, this::resolveTemplate);
         if (tpl != null) {
-            Map<String, String> vars = Map.of("title", subject == null ? "" : subject,
-                    "content", textBody == null ? "" : textBody);
+            Map<String, String> vars =
+                    Map.of("title", subject == null ? "" : subject, "content", textBody == null ? "" : textBody);
             String renderedSubject = render(tpl.getSubject(), vars);
             String content = renderAdmin(tpl.getContent(), vars);
-            sendWithAccount(toEmail,
+            sendWithAccount(
+                    toEmail,
                     renderedSubject == null || renderedSubject.isBlank() ? subject : renderedSubject,
-                    content, "system", NotifyEventRegistry.SYSTEM_ALERT);
+                    content,
+                    "system",
+                    NotifyEventRegistry.SYSTEM_ALERT);
             return;
         }
         String html = "<div style=\"font-family:sans-serif;padding:24px;white-space:pre-wrap;\">"
@@ -86,17 +90,16 @@ public class MailServiceImpl implements MailService {
      * 直查——兼容只建了模板、没填 scene 的存量数据与老调用方。
      */
     private SysMailTemplate resolveTemplate(String sceneOrCode) {
-        List<SysMailTemplate> byScene = templateMapper.selectList(
-                new LambdaQueryWrapper<SysMailTemplate>()
-                        .eq(SysMailTemplate::getScene, sceneOrCode)
-                        .eq(SysMailTemplate::getChannel, NotifyChannel.EMAIL)
-                        .orderByDesc(SysMailTemplate::getUpdateTime)
-                        .last("LIMIT 1"));
+        List<SysMailTemplate> byScene = templateMapper.selectList(new LambdaQueryWrapper<SysMailTemplate>()
+                .eq(SysMailTemplate::getScene, sceneOrCode)
+                .eq(SysMailTemplate::getChannel, NotifyChannel.EMAIL)
+                .orderByDesc(SysMailTemplate::getUpdateTime)
+                .last("LIMIT 1"));
         if (!byScene.isEmpty()) {
             return byScene.get(0);
         }
-        return templateMapper.selectOne(new LambdaQueryWrapper<SysMailTemplate>()
-                .eq(SysMailTemplate::getTemplateCode, sceneOrCode));
+        return templateMapper.selectOne(
+                new LambdaQueryWrapper<SysMailTemplate>().eq(SysMailTemplate::getTemplateCode, sceneOrCode));
     }
 
     /** 失效启用账户缓存：MailAccountController 的 create/update/delete/toggle 后调用 */
@@ -160,10 +163,11 @@ public class MailServiceImpl implements MailService {
         sendWithAccount(toEmail, subject, content, "system", scene);
     }
 
-    private void sendWithAccount(String toEmail, String subject, String content,
-                                 String pluginId, String scene) {
-        List<SysMailAccount> enabled = enabledAccountsCache.get(KEY_ENABLED_ACCOUNTS, k -> accountMapper.selectList(
-                new LambdaQueryWrapper<SysMailAccount>().eq(SysMailAccount::getEnabled, 1)));
+    private void sendWithAccount(String toEmail, String subject, String content, String pluginId, String scene) {
+        List<SysMailAccount> enabled = enabledAccountsCache.get(
+                KEY_ENABLED_ACCOUNTS,
+                k -> accountMapper.selectList(
+                        new LambdaQueryWrapper<SysMailAccount>().eq(SysMailAccount::getEnabled, 1)));
         if (enabled == null || enabled.isEmpty()) {
             throw new BusinessException("MAIL001");
         }
@@ -189,7 +193,14 @@ public class MailServiceImpl implements MailService {
                 log.warn("[Mail] 账户[{}]发送失败，尝试下一个: {}", acc.getAccountName(), e.getMessage());
             }
         }
-        saveLog(null, pluginId, scene, toEmail, subject, content, 0,
+        saveLog(
+                null,
+                pluginId,
+                scene,
+                toEmail,
+                subject,
+                content,
+                0,
                 lastError != null ? lastError.getMessage() : "未知错误");
         throw new BusinessException("MAIL005", lastError != null ? lastError.getMessage() : "");
     }
@@ -215,8 +226,8 @@ public class MailServiceImpl implements MailService {
 
         MimeMessage message = sender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        String fromName = (acc.getFromName() != null && !acc.getFromName().isBlank())
-                ? acc.getFromName() : acc.getFromAddr();
+        String fromName =
+                (acc.getFromName() != null && !acc.getFromName().isBlank()) ? acc.getFromName() : acc.getFromAddr();
         helper.setFrom(acc.getFromAddr(), fromName);
         helper.setTo(toEmail);
         helper.setSubject(subject);
@@ -295,8 +306,15 @@ public class MailServiceImpl implements MailService {
         return result;
     }
 
-    private void saveLog(Long accountId, String pluginId, String scene, String toEmail,
-                         String subject, String content, int status, String errorMsg) {
+    private void saveLog(
+            Long accountId,
+            String pluginId,
+            String scene,
+            String toEmail,
+            String subject,
+            String content,
+            int status,
+            String errorMsg) {
         try {
             SysMailLog log = new SysMailLog();
             log.setAccountId(accountId);

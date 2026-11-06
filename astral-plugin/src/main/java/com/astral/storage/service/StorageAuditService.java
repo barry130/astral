@@ -5,10 +5,9 @@ import com.astral.storage.entity.StorageAuditEntity;
 import com.astral.storage.mapper.StorageAuditMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import jakarta.annotation.Resource;
 
 /**
  * 存储审计服务
@@ -22,8 +21,14 @@ public class StorageAuditService {
     @Resource
     private StorageAuditMapper auditMapper;
 
-    public void record(String action, String subjectType, String subjectId,
-                       String targetType, String targetId, String detail, String result) {
+    public void record(
+            String action,
+            String subjectType,
+            String subjectId,
+            String targetType,
+            String targetId,
+            String detail,
+            String result) {
         try {
             StorageAuditEntity audit = new StorageAuditEntity();
             audit.setAction(action);
@@ -43,7 +48,8 @@ public class StorageAuditService {
 
     public Page<StorageAuditEntity> page(long current, long size) {
         try {
-            return auditMapper.selectPage(new Page<>(current, size),
+            return auditMapper.selectPage(
+                    new Page<>(current, size),
                     new LambdaQueryWrapper<StorageAuditEntity>().orderByDesc(StorageAuditEntity::getCreateTime));
         } catch (Exception e) {
             throw new BusinessException("COMMON003");

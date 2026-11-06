@@ -11,18 +11,17 @@ import com.astral.dao.mapper.StatApiHourlyMapper;
 import com.astral.dao.mapper.StatErrorLogMapper;
 import com.astral.system.mail.MailService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * 告警引擎：每分钟评估全部启用的告警规则，阈值命中即向绑定渠道发通知。
@@ -53,8 +52,8 @@ public class AlertEngine {
     public static final String METRIC_SERVER_ERROR = "SERVER_ERROR_COUNT";
     public static final String METRIC_CLIENT_ERROR = "CLIENT_ERROR_COUNT";
     public static final String METRIC_HTTP_5XX = "HTTP_5XX_COUNT";
-    public static final Set<String> SUPPORTED_METRICS = Set.of(
-            METRIC_SERVER_ERROR, METRIC_CLIENT_ERROR, METRIC_HTTP_5XX);
+    public static final Set<String> SUPPORTED_METRICS =
+            Set.of(METRIC_SERVER_ERROR, METRIC_CLIENT_ERROR, METRIC_HTTP_5XX);
 
     public static final String CHANNEL_EMAIL = "EMAIL";
     public static final String CHANNEL_SMS = "SMS";
@@ -115,8 +114,8 @@ public class AlertEngine {
                 return;
             }
         }
-        int windowMinutes = rule.getWindowMinutes() != null && rule.getWindowMinutes() > 0
-                ? rule.getWindowMinutes() : 5;
+        int windowMinutes =
+                rule.getWindowMinutes() != null && rule.getWindowMinutes() > 0 ? rule.getWindowMinutes() : 5;
         long value = queryMetric(normalizeMetric(rule.getMetric()), windowMinutes);
         long threshold = rule.getThreshold() != null ? rule.getThreshold() : 0;
         if (value < threshold) {
@@ -155,8 +154,12 @@ public class AlertEngine {
         String title = String.format("[Astral 告警] %s", rule.getName());
         String content = String.format(
                 "规则：%s%n指标：%s%n当前值：%d（阈值 %d，窗口 %d 分钟）%n时间：%s",
-                rule.getName(), normalizeMetric(rule.getMetric()), value, rule.getThreshold(),
-                windowMinutes, LocalDateTime.now());
+                rule.getName(),
+                normalizeMetric(rule.getMetric()),
+                value,
+                rule.getThreshold(),
+                windowMinutes,
+                LocalDateTime.now());
 
         boolean ok = false;
         String errorMsg = null;
@@ -197,9 +200,13 @@ public class AlertEngine {
         } catch (Exception e) {
             log.warn("[alert] 规则冷却时间更新失败: {}", e.getMessage());
         }
-        log.info("[alert] 规则[{}]触发：value={} threshold={} channel={} ok={}",
-                rule.getName(), value, rule.getThreshold(),
-                channel == null ? "无" : channel.getName(), ok);
+        log.info(
+                "[alert] 规则[{}]触发：value={} threshold={} channel={} ok={}",
+                rule.getName(),
+                value,
+                rule.getThreshold(),
+                channel == null ? "无" : channel.getName(),
+                ok);
     }
 
     /** 按渠道类型分发发送 */
@@ -244,8 +251,10 @@ public class AlertEngine {
             throw new IllegalArgumentException("WEBHOOK 渠道缺少 url");
         }
         StringBuilder json = new StringBuilder();
-        json.append("{\"title\":").append(jsonEscape(title))
-                .append(",\"content\":").append(jsonEscape(content))
+        json.append("{\"title\":")
+                .append(jsonEscape(title))
+                .append(",\"content\":")
+                .append(jsonEscape(content))
                 .append(",\"source\":\"astral-alert\"}");
         java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder()
                 .uri(java.net.URI.create(url.trim()))

@@ -24,8 +24,7 @@ public final class NotifyChannel {
     /** 站内信（sys_notify_inapp 按用户落库；模板复用 sys_mail_template channel=INAPP 本地渲染） */
     public static final String INAPP = "INAPP";
 
-    private NotifyChannel() {
-    }
+    private NotifyChannel() {}
 
     /** 已注册的全部渠道（通知中心渠道下拉/规则绑定的数据源） */
     public static List<String> registered() {

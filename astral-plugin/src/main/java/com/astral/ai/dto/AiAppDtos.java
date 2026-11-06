@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -18,8 +17,7 @@ import java.util.Map;
  */
 public final class AiAppDtos {
 
-    private AiAppDtos() {
-    }
+    private AiAppDtos() {}
 
     // ==================== 智能体发现 ====================
 
@@ -41,9 +39,7 @@ public final class AiAppDtos {
             String description,
             String icon,
             String entryConfig,
-            Capabilities capabilities
-    ) {
-    }
+            Capabilities capabilities) {}
 
     /**
      * 能力开关：前端据此显隐功能，<b>不作为权限依据</b>（权限仍由服务端校验）。
@@ -63,9 +59,7 @@ public final class AiAppDtos {
             boolean userContextEnabled,
             boolean citationRequired,
             boolean musicActionsEnabled,
-            String clientType
-    ) {
-    }
+            String clientType) {}
 
     // ==================== 会话 ====================
 
@@ -75,15 +69,10 @@ public final class AiAppDtos {
      * @param agentCode 智能体编码
      * @param title     标题（可空，服务端按首条消息补）
      */
-    public record ConversationCreateReq(
-            @NotBlank @Size(max = 64) String agentCode,
-            @Size(max = 200) String title
-    ) {
-    }
+    public record ConversationCreateReq(@NotBlank @Size(max = 64) String agentCode, @Size(max = 200) String title) {}
 
     /** 会话重命名请求 */
-    public record ConversationRenameReq(@NotBlank @Size(max = 200) String title) {
-    }
+    public record ConversationRenameReq(@NotBlank @Size(max = 200) String title) {}
 
     /** 会话视图 */
     public record ConversationVo(
@@ -95,9 +84,7 @@ public final class AiAppDtos {
             Integer messageCount,
             Boolean pinned,
             LocalDateTime lastMessageTime,
-            LocalDateTime createTime
-    ) {
-    }
+            LocalDateTime createTime) {}
 
     // ==================== 消息 ====================
 
@@ -116,9 +103,7 @@ public final class AiAppDtos {
             @NotBlank @Size(max = 20000) String content,
             @Size(max = 64) String clientMessageId,
             Map<String, Object> context,
-            @Size(max = 96) String idempotencyKey
-    ) {
-    }
+            @Size(max = 96) String idempotencyKey) {}
 
     /**
      * 发送消息响应。
@@ -130,13 +115,7 @@ public final class AiAppDtos {
      * @param stream            是否走流式
      */
     public record SendMessageResp(
-            Long requestId,
-            Long userMessageId,
-            Long assistantMessageId,
-            String status,
-            boolean stream
-    ) {
-    }
+            Long requestId, Long userMessageId, Long assistantMessageId, String status, boolean stream) {}
 
     /** 消息视图 */
     public record MessageVo(
@@ -150,9 +129,7 @@ public final class AiAppDtos {
             List<Block> blocks,
             List<Citation> citations,
             String modelName,
-            LocalDateTime createTime
-    ) {
-    }
+            LocalDateTime createTime) {}
 
     /**
      * 结构化块：音乐卡片等。
@@ -161,8 +138,7 @@ public final class AiAppDtos {
      * @param title 标题
      * @param data  块数据（JSON 对象）
      */
-    public record Block(String type, String title, Map<String, Object> data) {
-    }
+    public record Block(String type, String title, Map<String, Object> data) {}
 
     /**
      * 引用（答疑必须可核验）。
@@ -182,13 +158,10 @@ public final class AiAppDtos {
             String path,
             String section,
             String version,
-            String matchedText
-    ) {
-    }
+            String matchedText) {}
 
     /** 消息分页 */
-    public record MessagePage(List<MessageVo> items, Long nextCursor, boolean hasMore) {
-    }
+    public record MessagePage(List<MessageVo> items, Long nextCursor, boolean hasMore) {}
 
     // ==================== 事件 ====================
 
@@ -201,14 +174,12 @@ public final class AiAppDtos {
      * @param data      事件体
      * @param createdAt 发生时间
      */
-    public record EventVo(Long requestId, long sequence, String type, Map<String, Object> data,
-                          LocalDateTime createdAt) {
-    }
+    public record EventVo(
+            Long requestId, long sequence, String type, Map<String, Object> data, LocalDateTime createdAt) {}
 
     /** 事件批次 */
-    public record EventBatch(Long requestId, String status, List<EventVo> events, long nextSequence,
-                             boolean terminal) {
-    }
+    public record EventBatch(
+            Long requestId, String status, List<EventVo> events, long nextSequence, boolean terminal) {}
 
     // ==================== 动作 ====================
 
@@ -219,8 +190,7 @@ public final class AiAppDtos {
      * @param type     动作类型（白名单）
      * @param payload  动作参数
      */
-    public record ActionVo(String actionId, String type, Map<String, Object> payload) {
-    }
+    public record ActionVo(String actionId, String type, Map<String, Object> payload) {}
 
     /**
      * 动作执行回执（客户端本地执行后回报，用于审计与纠偏）。
@@ -234,9 +204,7 @@ public final class AiAppDtos {
             @NotBlank @Size(max = 64) String actionId,
             @NotBlank @Size(max = 32) String actionType,
             @NotNull Boolean success,
-            @Size(max = 512) String message
-    ) {
-    }
+            @Size(max = 512) String message) {}
 
     // ==================== 反馈 ====================
 
@@ -250,13 +218,10 @@ public final class AiAppDtos {
     public record FeedbackReq(
             @NotBlank @Size(max = 16) String feedbackType,
             @Size(max = 64) String reasonCode,
-            @Size(max = 1000) String comment
-    ) {
-    }
+            @Size(max = 1000) String comment) {}
 
     /** 取消请求 */
-    public record CancelReq(@Size(max = 200) String reason) {
-    }
+    public record CancelReq(@Size(max = 200) String reason) {}
 
     // ==================== 音乐助手上下文 ====================
 
@@ -282,9 +247,7 @@ public final class AiAppDtos {
             Integer duration,
             String coverUrl,
             String quality,
-            Map<String, Object> extra
-    ) {
-    }
+            Map<String, Object> extra) {}
 
     /**
      * 搜索计划（模型输出，服务端做 JSON Schema 级校验后下发客户端）。
@@ -296,13 +259,7 @@ public final class AiAppDtos {
      * @param filters  过滤条件
      */
     public record MusicSearchPlan(
-            String intent,
-            List<String> keywords,
-            List<String> sources,
-            Integer limit,
-            Map<String, Object> filters
-    ) {
-    }
+            String intent, List<String> keywords, List<String> sources, Integer limit, Map<String, Object> filters) {}
 
     /** 幂等去重用的最大条数上限 */
     public static final int MAX_CANDIDATES = 50;
@@ -347,6 +304,5 @@ public final class AiAppDtos {
     /** 候选条数钳制 */
     @Min(1)
     @Max(MAX_CANDIDATES)
-    public @interface CandidateLimit {
-    }
+    public @interface CandidateLimit {}
 }

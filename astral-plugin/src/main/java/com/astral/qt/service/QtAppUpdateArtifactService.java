@@ -7,14 +7,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 版本更新产物服务（UPDATE_ARTIFACT_DESIGN）
@@ -55,11 +54,10 @@ public class QtAppUpdateArtifactService {
 
     /** 保存校验直接读库，避免使用提交前缓存或把事务内数据放进公共缓存。 */
     public List<QtAppUpdateArtifact> listByUpdateIdForWrite(Long updateId) {
-        List<QtAppUpdateArtifact> list = artifactMapper.selectList(
-                new LambdaQueryWrapper<QtAppUpdateArtifact>()
-                        .eq(QtAppUpdateArtifact::getUpdateId, updateId)
-                        .orderByAsc(QtAppUpdateArtifact::getSort)
-                        .orderByAsc(QtAppUpdateArtifact::getId));
+        List<QtAppUpdateArtifact> list = artifactMapper.selectList(new LambdaQueryWrapper<QtAppUpdateArtifact>()
+                .eq(QtAppUpdateArtifact::getUpdateId, updateId)
+                .orderByAsc(QtAppUpdateArtifact::getSort)
+                .orderByAsc(QtAppUpdateArtifact::getId));
         return list == null ? new ArrayList<>() : list;
     }
 
@@ -196,8 +194,10 @@ public class QtAppUpdateArtifactService {
             if (item == null) {
                 continue;
             }
-            boolean hasDirect = item.getDownloadUrl() != null && !item.getDownloadUrl().isBlank();
-            boolean hasBrowser = item.getBrowserUrl() != null && !item.getBrowserUrl().isBlank();
+            boolean hasDirect =
+                    item.getDownloadUrl() != null && !item.getDownloadUrl().isBlank();
+            boolean hasBrowser =
+                    item.getBrowserUrl() != null && !item.getBrowserUrl().isBlank();
             if (!hasDirect && !hasBrowser) {
                 return "每个产物都要填写直链或浏览器下载地址之一";
             }
@@ -224,8 +224,8 @@ public class QtAppUpdateArtifactService {
         if (err != null) {
             throw new IllegalArgumentException(err);
         }
-        artifactMapper.delete(new LambdaQueryWrapper<QtAppUpdateArtifact>()
-                .eq(QtAppUpdateArtifact::getUpdateId, updateId));
+        artifactMapper.delete(
+                new LambdaQueryWrapper<QtAppUpdateArtifact>().eq(QtAppUpdateArtifact::getUpdateId, updateId));
         List<QtAppUpdateArtifact> saved = new ArrayList<>();
         if (items == null || items.isEmpty()) {
             evict(updateId);

@@ -21,6 +21,5 @@ public final class LoginDevice {
     /** 轻听 App 客户端（qt-uniappx） */
     public static final String APP = "APP";
 
-    private LoginDevice() {
-    }
+    private LoginDevice() {}
 }

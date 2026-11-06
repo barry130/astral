@@ -2,16 +2,15 @@ package com.astral.auth.security;
 
 import com.astral.dao.entity.Permission;
 import com.astral.dao.mapper.PermissionMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * 权限目录：{@code sys_permission} 的全量只读视图（含权限码 → 权限、按作用域前缀取范围值）。
@@ -119,6 +118,5 @@ public class PermissionCatalog {
         snapshot = null;
     }
 
-    private record Snapshot(String version, List<Permission> all, Map<String, Permission> byCode) {
-    }
+    private record Snapshot(String version, List<Permission> all, Map<String, Permission> byCode) {}
 }

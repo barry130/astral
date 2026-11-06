@@ -12,8 +12,8 @@ import com.astral.cms.service.CmsCategoryService;
 import com.astral.cms.service.CmsCommentService;
 import com.astral.cms.service.CmsPageService;
 import com.astral.cms.service.CmsPostService;
-import com.astral.cms.service.CmsShareService;
 import com.astral.cms.service.CmsSettingService;
+import com.astral.cms.service.CmsShareService;
 import com.astral.cms.service.CmsTagService;
 import com.astral.common.result.Result;
 import com.astral.common.util.ClientIp;
@@ -23,6 +23,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,9 +34,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * 内容管理插件前台公开接口（供 astral-blog 独立博客前台消费，可绑定单独域名）
@@ -53,16 +52,22 @@ public class AppCmsController {
 
     @Resource
     private CmsPostService postService;
+
     @Resource
     private CmsCategoryService categoryService;
+
     @Resource
     private CmsTagService tagService;
+
     @Resource
     private CmsPageService pageService;
+
     @Resource
     private CmsCommentService commentService;
+
     @Resource
     private CmsSettingService settingService;
+
     @Resource
     private CmsShareService shareService;
 
@@ -70,11 +75,12 @@ public class AppCmsController {
 
     @Operation(summary = "文章分页（仅已发布；categorySlug/tagSlug 支持别名或数字ID）")
     @GetMapping("/post/page")
-    public Result<Page<CmsPost>> postPage(@RequestParam(defaultValue = "1") Integer pageNum,
-                                          @RequestParam(defaultValue = "10") Integer pageSize,
-                                          @RequestParam(required = false) String categorySlug,
-                                          @RequestParam(required = false) String tagSlug,
-                                          @RequestParam(required = false) String keyword) {
+    public Result<Page<CmsPost>> postPage(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String categorySlug,
+            @RequestParam(required = false) String tagSlug,
+            @RequestParam(required = false) String keyword) {
         return Result.success(postService.publicPage(pageNum, pageSize, categorySlug, tagSlug, keyword));
     }
 
@@ -145,17 +151,17 @@ public class AppCmsController {
 
     @Operation(summary = "评论分页（仅已通过审核；不含隐私字段）")
     @GetMapping("/comment/page")
-    public Result<Page<CmsComment>> commentPage(@RequestParam String targetType,
-                                                @RequestParam Long targetId,
-                                                @RequestParam(defaultValue = "1") Integer pageNum,
-                                                @RequestParam(defaultValue = "20") Integer pageSize) {
+    public Result<Page<CmsComment>> commentPage(
+            @RequestParam String targetType,
+            @RequestParam Long targetId,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "20") Integer pageSize) {
         return Result.success(commentService.publicPage(targetType, targetId, pageNum, pageSize));
     }
 
     @Operation(summary = "匿名提交评论（限流：同IP 10分钟5条；受 comment_enabled / comment_need_review 开关控制）")
     @PostMapping("/comment")
-    public Result<CmsComment> submitComment(@Valid @RequestBody CommentSubmitDto dto,
-                                            HttpServletRequest request) {
+    public Result<CmsComment> submitComment(@Valid @RequestBody CommentSubmitDto dto, HttpServletRequest request) {
         return Result.success(commentService.submit(dto, clientIp(request), request.getHeader("User-Agent")));
     }
 

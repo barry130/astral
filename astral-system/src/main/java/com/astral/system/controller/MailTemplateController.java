@@ -1,10 +1,5 @@
 package com.astral.system.controller;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
@@ -17,16 +12,20 @@ import com.astral.system.notify.NotifyEventRegistry;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "邮件模板")
 @RestController
@@ -47,8 +46,8 @@ public class MailTemplateController {
     @Operation(summary = "分页查询")
     @RequiresPermission(PERM_VIEW)
     @GetMapping("/page")
-    public Result<Page<SysMailTemplate>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                              @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<SysMailTemplate>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         return Result.success(templateService.page(new Page<>(pageNum, pageSize)));
     }
 
@@ -117,9 +116,11 @@ public class MailTemplateController {
      * <p>更新时字段级判 null（直调 API 的局部更新只校验传了的字段）；新增时编码/场景/渠道必填。</p>
      */
     private void validateTemplate(SysMailTemplate entity, boolean isCreate, Long id) {
-        boolean codePresent = entity.getTemplateCode() != null && !entity.getTemplateCode().isBlank();
+        boolean codePresent =
+                entity.getTemplateCode() != null && !entity.getTemplateCode().isBlank();
         boolean scenePresent = entity.getScene() != null && !entity.getScene().isBlank();
-        boolean channelPresent = entity.getChannel() != null && !entity.getChannel().isBlank();
+        boolean channelPresent =
+                entity.getChannel() != null && !entity.getChannel().isBlank();
         if (isCreate) {
             if (!codePresent) {
                 throw new BusinessException("MAIL015");
@@ -131,13 +132,15 @@ public class MailTemplateController {
                 throw new BusinessException("MAIL020");
             }
         }
-        if (channelPresent && NotifyChannel.mailTemplateChannels().stream().noneMatch(c -> c.equals(entity.getChannel()))) {
+        if (channelPresent
+                && NotifyChannel.mailTemplateChannels().stream().noneMatch(c -> c.equals(entity.getChannel()))) {
             throw new BusinessException("MAIL019", entity.getChannel());
         }
         if (codePresent) {
             // 唯一性按 (编码, 渠道) 判断：合并模板把同一编码拆成 EMAIL/INAPP 两行，
             // 只按编码判重会把「另一渠道的兄弟行」误判成重复（id 非空时已按 id 排除自身）。
-            Long dup = templateService.lambdaQuery()
+            Long dup = templateService
+                    .lambdaQuery()
                     .eq(SysMailTemplate::getTemplateCode, entity.getTemplateCode())
                     .eq(channelPresent, SysMailTemplate::getChannel, entity.getChannel())
                     .ne(id != null, SysMailTemplate::getId, id)
@@ -152,7 +155,8 @@ public class MailTemplateController {
             if (channelPresent && event.channels().stream().noneMatch(c -> c.equals(entity.getChannel()))) {
                 throw new BusinessException("MAIL021", entity.getScene(), entity.getChannel());
             }
-            Long bound = templateService.lambdaQuery()
+            Long bound = templateService
+                    .lambdaQuery()
                     .eq(SysMailTemplate::getScene, entity.getScene())
                     .eq(channelPresent, SysMailTemplate::getChannel, entity.getChannel())
                     .ne(id != null, SysMailTemplate::getId, id)
@@ -162,8 +166,8 @@ public class MailTemplateController {
             }
             // 变量校验：模板里用到的变量必须是事件 payload 字段的子集（不要求覆盖全部字段，
             // 正文没用到 ${email} 的模板同样允许保存），校验后回写归一化结果。
-            entity.setVariables(normalizeVariables(entity.getVariables(), entity.getSubject(),
-                    entity.getContent(), event));
+            entity.setVariables(
+                    normalizeVariables(entity.getVariables(), entity.getSubject(), entity.getContent(), event));
         }
     }
 

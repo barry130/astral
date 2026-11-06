@@ -10,6 +10,8 @@ import com.astral.common.result.Result;
 import com.astral.log.annotation.OperateLog;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,9 +20,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * AI 后台：提示词模板与版本。
@@ -69,8 +68,8 @@ public class AiAdminPromptController {
     @OperateLog("新增 AI 提示词模板")
     public Result<AiAdminDtos.PromptTemplateVo> createPrompt(
             @Valid @RequestBody AiAdminDtos.PromptTemplateSaveReq req, HttpServletRequest request) {
-        AiPromptTemplateEntity entity = promptService.createTemplate(req.promptCode(), req.name(), req.scene(),
-                req.description(), operatorId(request));
+        AiPromptTemplateEntity entity = promptService.createTemplate(
+                req.promptCode(), req.name(), req.scene(), req.description(), operatorId(request));
         return Result.success("创建成功", toVo(entity));
     }
 
@@ -81,8 +80,8 @@ public class AiAdminPromptController {
             @PathVariable Long id,
             @Valid @RequestBody AiAdminDtos.PromptTemplateSaveReq req,
             HttpServletRequest request) {
-        AiPromptTemplateEntity entity = promptService.updateTemplate(id, req.name(), req.scene(),
-                req.description(), operatorId(request));
+        AiPromptTemplateEntity entity =
+                promptService.updateTemplate(id, req.name(), req.scene(), req.description(), operatorId(request));
         return Result.success("保存成功", toVo(entity));
     }
 
@@ -106,8 +105,13 @@ public class AiAdminPromptController {
             @PathVariable Long id,
             @Valid @RequestBody AiAdminDtos.PromptVersionSaveReq req,
             HttpServletRequest request) {
-        AiPromptVersionEntity version = promptService.createVersion(id, req.systemPrompt(),
-                req.userPromptTemplate(), req.variablesJson(), req.changelog(), operatorId(request));
+        AiPromptVersionEntity version = promptService.createVersion(
+                id,
+                req.systemPrompt(),
+                req.userPromptTemplate(),
+                req.variablesJson(),
+                req.changelog(),
+                operatorId(request));
         return Result.success("创建成功", toVo(version));
     }
 
@@ -118,16 +122,21 @@ public class AiAdminPromptController {
             @PathVariable Long versionId,
             @Valid @RequestBody AiAdminDtos.PromptVersionSaveReq req,
             HttpServletRequest request) {
-        AiPromptVersionEntity version = promptService.updateVersion(versionId, req.systemPrompt(),
-                req.userPromptTemplate(), req.variablesJson(), req.changelog(), operatorId(request));
+        AiPromptVersionEntity version = promptService.updateVersion(
+                versionId,
+                req.systemPrompt(),
+                req.userPromptTemplate(),
+                req.variablesJson(),
+                req.changelog(),
+                operatorId(request));
         return Result.success("保存成功", toVo(version));
     }
 
     @PostMapping("/prompt-versions/{versionId}/publish")
     @RequiresPermission(value = "admin:ai:prompt:edit", name = "AI 提示词编辑", description = "发布提示词版本")
     @OperateLog("发布 AI 提示词版本")
-    public Result<AiAdminDtos.PromptVersionVo> publishVersion(@PathVariable Long versionId,
-                                                              HttpServletRequest request) {
+    public Result<AiAdminDtos.PromptVersionVo> publishVersion(
+            @PathVariable Long versionId, HttpServletRequest request) {
         return Result.success("发布成功", toVo(promptService.publish(versionId, operatorId(request))));
     }
 
@@ -136,18 +145,33 @@ public class AiAdminPromptController {
     private AiAdminDtos.PromptTemplateVo toVo(AiPromptTemplateEntity entity) {
         AiPromptVersionEntity published = promptService.latestPublished(entity.getId());
         List<AiPromptVersionEntity> versions = promptService.listVersions(entity.getId());
-        return new AiAdminDtos.PromptTemplateVo(entity.getId(), entity.getPromptCode(), entity.getName(),
-                entity.getScene(), entity.getDescription(),
+        return new AiAdminDtos.PromptTemplateVo(
+                entity.getId(),
+                entity.getPromptCode(),
+                entity.getName(),
+                entity.getScene(),
+                entity.getDescription(),
                 published == null ? AiConstants.VersionStatus.DRAFT : AiConstants.VersionStatus.PUBLISHED,
                 published == null ? null : published.getId(),
                 published == null ? null : published.getVersionNo(),
-                versions.size(), entity.getCreateTime(), entity.getUpdateTime());
+                versions.size(),
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 
     private AiAdminDtos.PromptVersionVo toVo(AiPromptVersionEntity entity) {
-        return new AiAdminDtos.PromptVersionVo(entity.getId(), entity.getTemplateId(), entity.getVersionNo(),
-                entity.getStatus(), entity.getSystemPrompt(), entity.getUserPromptTemplate(),
-                entity.getVariablesJson(), entity.getChangelog(), entity.getPublishedBy(), entity.getPublishedAt(),
-                entity.getCreateTime(), entity.getUpdateTime());
+        return new AiAdminDtos.PromptVersionVo(
+                entity.getId(),
+                entity.getTemplateId(),
+                entity.getVersionNo(),
+                entity.getStatus(),
+                entity.getSystemPrompt(),
+                entity.getUserPromptTemplate(),
+                entity.getVariablesJson(),
+                entity.getChangelog(),
+                entity.getPublishedBy(),
+                entity.getPublishedAt(),
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 }

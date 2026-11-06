@@ -1,9 +1,8 @@
 package com.astral.ai.tool;
 
-import tools.jackson.databind.node.ObjectNode;
-
 import java.util.List;
 import java.util.Map;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * AI 工具的类型定义集合。
@@ -21,8 +20,7 @@ import java.util.Map;
  */
 public final class AiToolTypes {
 
-    private AiToolTypes() {
-    }
+    private AiToolTypes() {}
 
     /**
      * 工具静态定义（由代码提供，落库只为让后台可见可配）。
@@ -50,9 +48,7 @@ public final class AiToolTypes {
             List<String> permissionCodes,
             String argumentsSchema,
             String resultSchema,
-            String sideEffects
-    ) {
-    }
+            String sideEffects) {}
 
     /**
      * 工具执行上下文。
@@ -80,8 +76,7 @@ public final class AiToolTypes {
             ObjectNode arguments,
             ObjectNode context,
             boolean approved,
-            Long approvedBy
-    ) {
+            Long approvedBy) {
         /** 取字符串参数 */
         public String arg(String name) {
             if (arguments == null) {
@@ -143,12 +138,14 @@ public final class AiToolTypes {
 
         /** 拒绝 */
         public static AiToolResult rejected(String summary) {
-            return new AiToolResult(REJECTED, summary, com.astral.ai.common.AiJson.mapper().createObjectNode());
+            return new AiToolResult(
+                    REJECTED, summary, com.astral.ai.common.AiJson.mapper().createObjectNode());
         }
 
         /** 失败 */
         public static AiToolResult failed(String summary) {
-            return new AiToolResult(FAILED, summary, com.astral.ai.common.AiJson.mapper().createObjectNode());
+            return new AiToolResult(
+                    FAILED, summary, com.astral.ai.common.AiJson.mapper().createObjectNode());
         }
 
         /** 需要客户端执行 */
@@ -205,8 +202,8 @@ public final class AiToolTypes {
 
     /** 便捷构造：整型参数 */
     public static String intParam(String description, int min, int max) {
-        return "{\"type\":\"integer\",\"minimum\":" + min + ",\"maximum\":" + max
-                + ",\"description\":\"" + description + "\"}";
+        return "{\"type\":\"integer\",\"minimum\":" + min + ",\"maximum\":" + max + ",\"description\":\"" + description
+                + "\"}";
     }
 
     /** 便捷构造：字符串参数 */

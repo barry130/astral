@@ -6,5 +6,4 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 /**
  * CMS 页面（Wiki）Mapper
  */
-public interface CmsPageMapper extends BaseMapper<CmsPage> {
-}
+public interface CmsPageMapper extends BaseMapper<CmsPage> {}

@@ -11,6 +11,8 @@ import com.astral.common.result.Result;
 import com.astral.log.annotation.OperateLog;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,9 +22,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * AI 后台：知识源、文档与索引任务。
@@ -73,8 +72,14 @@ public class AiAdminKnowledgeController {
     @OperateLog("新增 AI 知识源")
     public Result<AiAdminDtos.KnowledgeSourceVo> createSource(
             @Valid @RequestBody AiAdminDtos.KnowledgeSourceSaveReq req, HttpServletRequest request) {
-        AiKnowledgeSourceEntity entity = knowledgeService.createSource(req.sourceCode(), req.name(),
-                req.sourceType(), req.description(), req.pathPattern(), req.enabled(), req.syncMode(),
+        AiKnowledgeSourceEntity entity = knowledgeService.createSource(
+                req.sourceCode(),
+                req.name(),
+                req.sourceType(),
+                req.description(),
+                req.pathPattern(),
+                req.enabled(),
+                req.syncMode(),
                 operatorId(request));
         return Result.success("创建成功", toVo(entity));
     }
@@ -86,8 +91,15 @@ public class AiAdminKnowledgeController {
             @PathVariable Long id,
             @Valid @RequestBody AiAdminDtos.KnowledgeSourceSaveReq req,
             HttpServletRequest request) {
-        AiKnowledgeSourceEntity entity = knowledgeService.updateSource(id, req.name(), req.sourceType(),
-                req.description(), req.pathPattern(), req.enabled(), req.syncMode(), operatorId(request));
+        AiKnowledgeSourceEntity entity = knowledgeService.updateSource(
+                id,
+                req.name(),
+                req.sourceType(),
+                req.description(),
+                req.pathPattern(),
+                req.enabled(),
+                req.syncMode(),
+                operatorId(request));
         return Result.success("保存成功", toVo(entity));
     }
 
@@ -111,8 +123,15 @@ public class AiAdminKnowledgeController {
             @PathVariable Long id,
             @Valid @RequestBody AiAdminDtos.KnowledgeDocumentSaveReq req,
             HttpServletRequest request) {
-        AiKnowledgeDocumentEntity entity = knowledgeService.saveDocument(id, req.docKey(), req.title(),
-                req.path(), req.section(), req.version(), req.content(), operatorId(request));
+        AiKnowledgeDocumentEntity entity = knowledgeService.saveDocument(
+                id,
+                req.docKey(),
+                req.title(),
+                req.path(),
+                req.section(),
+                req.version(),
+                req.content(),
+                operatorId(request));
         return Result.success("已保存并完成索引", toVo(entity));
     }
 
@@ -144,23 +163,52 @@ public class AiAdminKnowledgeController {
         for (AiKnowledgeDocumentEntity document : knowledgeService.listDocuments(entity.getId())) {
             chunks += document.getChunkCount() == null ? 0 : document.getChunkCount();
         }
-        return new AiAdminDtos.KnowledgeSourceVo(entity.getId(), entity.getSourceCode(), entity.getName(),
-                entity.getSourceType(), entity.getDescription(), entity.getPathPattern(), entity.getEnabled(),
-                entity.getSyncMode(), entity.getStatus(), entity.getLastSyncTime(),
-                entity.getDocumentCount(), chunks, entity.getCreateTime(), entity.getUpdateTime());
+        return new AiAdminDtos.KnowledgeSourceVo(
+                entity.getId(),
+                entity.getSourceCode(),
+                entity.getName(),
+                entity.getSourceType(),
+                entity.getDescription(),
+                entity.getPathPattern(),
+                entity.getEnabled(),
+                entity.getSyncMode(),
+                entity.getStatus(),
+                entity.getLastSyncTime(),
+                entity.getDocumentCount(),
+                chunks,
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 
     private AiAdminDtos.KnowledgeDocumentVo toVo(AiKnowledgeDocumentEntity entity) {
-        return new AiAdminDtos.KnowledgeDocumentVo(entity.getId(), entity.getSourceId(), entity.getDocKey(),
-                entity.getTitle(), entity.getPath(), entity.getSection(), entity.getVersion(),
-                entity.getContentHash(), entity.getStatus(), entity.getChunkCount(), entity.getIndexedAt(),
-                entity.getCreateTime(), entity.getUpdateTime());
+        return new AiAdminDtos.KnowledgeDocumentVo(
+                entity.getId(),
+                entity.getSourceId(),
+                entity.getDocKey(),
+                entity.getTitle(),
+                entity.getPath(),
+                entity.getSection(),
+                entity.getVersion(),
+                entity.getContentHash(),
+                entity.getStatus(),
+                entity.getChunkCount(),
+                entity.getIndexedAt(),
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 
     private AiAdminDtos.IndexJobVo toVo(AiKnowledgeIndexJobEntity entity) {
-        return new AiAdminDtos.IndexJobVo(entity.getId(), entity.getSourceId(), entity.getJobType(),
-                entity.getStatus(), entity.getTotalCount(), entity.getProcessedCount(), entity.getFailedCount(),
-                entity.getStartedAt(), entity.getFinishedAt(), entity.getErrorSummary());
+        return new AiAdminDtos.IndexJobVo(
+                entity.getId(),
+                entity.getSourceId(),
+                entity.getJobType(),
+                entity.getStatus(),
+                entity.getTotalCount(),
+                entity.getProcessedCount(),
+                entity.getFailedCount(),
+                entity.getStartedAt(),
+                entity.getFinishedAt(),
+                entity.getErrorSummary());
     }
 
     /** 供智能体版本引用校验时复用 */

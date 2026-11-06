@@ -1,8 +1,7 @@
 package com.astral.monitor.dto;
 
-import lombok.Data;
-
 import java.time.LocalDateTime;
+import lombok.Data;
 
 /**
  * 错误分组汇总数据传输对象（error/summary）

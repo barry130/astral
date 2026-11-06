@@ -30,7 +30,9 @@ public interface AstralPlugin {
 
     default void onDisable() {}
 
-    default boolean isEnabled() { return true; }
+    default boolean isEnabled() {
+        return true;
+    }
 
     /**
      * 是否为系统必需插件
@@ -41,5 +43,7 @@ public interface AstralPlugin {
      *
      * @return true 表示必需，管理端禁用操作将被拒绝
      */
-    default boolean isRequired() { return false; }
+    default boolean isRequired() {
+        return false;
+    }
 }

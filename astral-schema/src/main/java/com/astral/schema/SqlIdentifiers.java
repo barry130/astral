@@ -21,8 +21,7 @@ public final class SqlIdentifiers {
     /** 合法标识符：小写字母开头，其余为小写字母/数字/下划线，长度 1~64 */
     private static final Pattern PATTERN = Pattern.compile("^[a-z][a-z0-9_]{0,63}$");
 
-    private SqlIdentifiers() {
-    }
+    private SqlIdentifiers() {}
 
     /**
      * 判断标识符是否合法。

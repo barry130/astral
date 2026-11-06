@@ -18,6 +18,9 @@ import com.astral.common.result.Result;
 import com.astral.log.annotation.OperateLog;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,10 +30,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * AI 后台：智能体、版本、工具绑定与知识绑定。
@@ -82,25 +81,50 @@ public class AiAdminAgentController {
     @PostMapping("/agents")
     @RequiresPermission(value = "admin:ai:agent:edit", name = "AI 智能体编辑", description = "新增智能体")
     @OperateLog("新增 AI 智能体")
-    public Result<AiAdminDtos.AgentVo> createAgent(@Valid @RequestBody AiAdminDtos.AgentSaveReq req,
-                                                   HttpServletRequest request) {
-        AiAgentEntity entity = agentService.create(req.agentCode(), req.name(), req.agentType(),
-                req.description(), req.icon(), req.clientTypes(), req.entryConfig(), req.permissionCode(),
-                req.clientPermissionCodes(), req.quotaPolicyId(), req.allowUserContext(), req.allowFileContext(),
-                req.conversationEnabled(), req.feedbackEnabled(), req.sort(), operatorId(request));
+    public Result<AiAdminDtos.AgentVo> createAgent(
+            @Valid @RequestBody AiAdminDtos.AgentSaveReq req, HttpServletRequest request) {
+        AiAgentEntity entity = agentService.create(
+                req.agentCode(),
+                req.name(),
+                req.agentType(),
+                req.description(),
+                req.icon(),
+                req.clientTypes(),
+                req.entryConfig(),
+                req.permissionCode(),
+                req.clientPermissionCodes(),
+                req.quotaPolicyId(),
+                req.allowUserContext(),
+                req.allowFileContext(),
+                req.conversationEnabled(),
+                req.feedbackEnabled(),
+                req.sort(),
+                operatorId(request));
         return Result.success("创建成功", toVo(entity));
     }
 
     @PutMapping("/agents/{id}")
     @RequiresPermission(value = "admin:ai:agent:edit", name = "AI 智能体编辑", description = "修改智能体")
     @OperateLog("修改 AI 智能体")
-    public Result<AiAdminDtos.AgentVo> updateAgent(@PathVariable Long id,
-                                                   @Valid @RequestBody AiAdminDtos.AgentSaveReq req,
-                                                   HttpServletRequest request) {
-        AiAgentEntity entity = agentService.update(id, req.name(), req.agentType(), req.description(),
-                req.icon(), req.clientTypes(), req.entryConfig(), req.permissionCode(), req.clientPermissionCodes(),
-                req.quotaPolicyId(), req.allowUserContext(), req.allowFileContext(), req.conversationEnabled(),
-                req.feedbackEnabled(), req.sort(), operatorId(request));
+    public Result<AiAdminDtos.AgentVo> updateAgent(
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.AgentSaveReq req, HttpServletRequest request) {
+        AiAgentEntity entity = agentService.update(
+                id,
+                req.name(),
+                req.agentType(),
+                req.description(),
+                req.icon(),
+                req.clientTypes(),
+                req.entryConfig(),
+                req.permissionCode(),
+                req.clientPermissionCodes(),
+                req.quotaPolicyId(),
+                req.allowUserContext(),
+                req.allowFileContext(),
+                req.conversationEnabled(),
+                req.feedbackEnabled(),
+                req.sort(),
+                operatorId(request));
         return Result.success("保存成功", toVo(entity));
     }
 
@@ -141,13 +165,20 @@ public class AiAdminAgentController {
     @PostMapping("/agents/{id}/versions")
     @RequiresPermission(value = "admin:ai:agent:edit", name = "AI 智能体编辑", description = "新建草稿版本")
     @OperateLog("新建 AI 智能体草稿版本")
-    public Result<AiAdminDtos.AgentVersionVo> createVersion(@PathVariable Long id,
-                                                            @RequestBody AiAdminDtos.AgentVersionSaveReq req,
-                                                            HttpServletRequest request) {
-        AiAgentVersionEntity version = agentService.createDraftVersion(id, req.versionName(),
-                req.providerRouteId(), req.systemPromptVersionId(), req.contextPolicyJson(),
-                req.responseSchemaJson(), req.toolPolicyJson(), req.knowledgePolicyJson(),
-                req.modelParametersJson(), req.safetyPolicyJson(), req.quotaOverrideJson(),
+    public Result<AiAdminDtos.AgentVersionVo> createVersion(
+            @PathVariable Long id, @RequestBody AiAdminDtos.AgentVersionSaveReq req, HttpServletRequest request) {
+        AiAgentVersionEntity version = agentService.createDraftVersion(
+                id,
+                req.versionName(),
+                req.providerRouteId(),
+                req.systemPromptVersionId(),
+                req.contextPolicyJson(),
+                req.responseSchemaJson(),
+                req.toolPolicyJson(),
+                req.knowledgePolicyJson(),
+                req.modelParametersJson(),
+                req.safetyPolicyJson(),
+                req.quotaOverrideJson(),
                 operatorId(request));
         if (req.toolIds() != null) {
             toolService.replaceBindings(version.getId(), req.toolIds(), operatorId(request));
@@ -163,13 +194,22 @@ public class AiAdminAgentController {
     @PutMapping("/agent-versions/{versionId}")
     @RequiresPermission(value = "admin:ai:agent:edit", name = "AI 智能体编辑", description = "修改草稿版本")
     @OperateLog("修改 AI 智能体草稿版本")
-    public Result<AiAdminDtos.AgentVersionVo> updateVersion(@PathVariable Long versionId,
-                                                            @RequestBody AiAdminDtos.AgentVersionSaveReq req,
-                                                            HttpServletRequest request) {
-        AiAgentVersionEntity version = agentService.updateDraftVersion(versionId, req.versionName(),
-                req.providerRouteId(), req.systemPromptVersionId(), req.contextPolicyJson(),
-                req.responseSchemaJson(), req.toolPolicyJson(), req.knowledgePolicyJson(),
-                req.modelParametersJson(), req.safetyPolicyJson(), req.quotaOverrideJson(),
+    public Result<AiAdminDtos.AgentVersionVo> updateVersion(
+            @PathVariable Long versionId,
+            @RequestBody AiAdminDtos.AgentVersionSaveReq req,
+            HttpServletRequest request) {
+        AiAgentVersionEntity version = agentService.updateDraftVersion(
+                versionId,
+                req.versionName(),
+                req.providerRouteId(),
+                req.systemPromptVersionId(),
+                req.contextPolicyJson(),
+                req.responseSchemaJson(),
+                req.toolPolicyJson(),
+                req.knowledgePolicyJson(),
+                req.modelParametersJson(),
+                req.safetyPolicyJson(),
+                req.quotaOverrideJson(),
                 operatorId(request));
         if (req.toolIds() != null) {
             toolService.replaceBindings(version.getId(), req.toolIds(), operatorId(request));
@@ -185,8 +225,7 @@ public class AiAdminAgentController {
     @PostMapping("/agent-versions/{versionId}/publish")
     @RequiresPermission(value = "admin:ai:agent:publish", name = "AI 智能体发布", description = "发布版本")
     @OperateLog("发布 AI 智能体版本")
-    public Result<AiAdminDtos.AgentVersionVo> publishVersion(@PathVariable Long versionId,
-                                                             HttpServletRequest request) {
+    public Result<AiAdminDtos.AgentVersionVo> publishVersion(@PathVariable Long versionId, HttpServletRequest request) {
         AiAgentVersionEntity version = agentService.requireVersion(versionId);
         validationService.requireValid(version);
         return Result.success("发布成功", toVo(agentService.publish(versionId, operatorId(request))));
@@ -195,9 +234,8 @@ public class AiAdminAgentController {
     @PostMapping("/agents/{id}/rollback")
     @RequiresPermission(value = "admin:ai:agent:publish", name = "AI 智能体发布", description = "回滚到历史版本")
     @OperateLog("回滚 AI 智能体版本")
-    public Result<AiAdminDtos.AgentVersionVo> rollback(@PathVariable Long id,
-                                                       @RequestBody Map<String, Object> body,
-                                                       HttpServletRequest request) {
+    public Result<AiAdminDtos.AgentVersionVo> rollback(
+            @PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
         Object raw = body == null ? null : body.get("versionId");
         if (raw == null) {
             throw new BusinessException("AI007", "缺少 versionId");
@@ -224,13 +262,25 @@ public class AiAdminAgentController {
             } catch (RuntimeException e) {
                 continue;
             }
-            String effective = binding.getRiskOverride() == null || binding.getRiskOverride().isBlank()
-                    ? tool.getRiskLevel() : stronger(tool.getRiskLevel(), binding.getRiskOverride());
-            String approval = binding.getApprovalPolicy() == null || binding.getApprovalPolicy().isBlank()
-                    ? tool.getApprovalPolicy() : binding.getApprovalPolicy();
-            list.add(new AiAdminDtos.AgentToolVo(binding.getId(), binding.getAgentVersionId(),
-                    tool.getId(), tool.getToolCode(), tool.getName(), tool.getRiskLevel(), effective,
-                    approval, binding.getEnabled(), binding.getSort()));
+            String effective = binding.getRiskOverride() == null
+                            || binding.getRiskOverride().isBlank()
+                    ? tool.getRiskLevel()
+                    : stronger(tool.getRiskLevel(), binding.getRiskOverride());
+            String approval = binding.getApprovalPolicy() == null
+                            || binding.getApprovalPolicy().isBlank()
+                    ? tool.getApprovalPolicy()
+                    : binding.getApprovalPolicy();
+            list.add(new AiAdminDtos.AgentToolVo(
+                    binding.getId(),
+                    binding.getAgentVersionId(),
+                    tool.getId(),
+                    tool.getToolCode(),
+                    tool.getName(),
+                    tool.getRiskLevel(),
+                    effective,
+                    approval,
+                    binding.getEnabled(),
+                    binding.getSort()));
         }
         return Result.success(list);
     }
@@ -238,9 +288,8 @@ public class AiAdminAgentController {
     @PutMapping("/agent-versions/{versionId}/tools")
     @RequiresPermission(value = "admin:ai:agent:edit", name = "AI 智能体编辑", description = "绑定工具")
     @OperateLog("绑定 AI 智能体工具")
-    public Result<List<AiAdminDtos.AgentToolVo>> replaceTools(@PathVariable Long versionId,
-                                                              @RequestBody Map<String, Object> body,
-                                                              HttpServletRequest request) {
+    public Result<List<AiAdminDtos.AgentToolVo>> replaceTools(
+            @PathVariable Long versionId, @RequestBody Map<String, Object> body, HttpServletRequest request) {
         agentService.requireDraft(agentService.requireVersion(versionId));
         List<Long> ids = new ArrayList<>();
         Object raw = body == null ? null : body.get("toolIds");
@@ -271,9 +320,17 @@ public class AiAdminAgentController {
             } catch (RuntimeException ignored) {
                 name = null;
             }
-            list.add(new AiAdminDtos.AgentKnowledgeVo(binding.getId(), binding.getAgentVersionId(),
-                    binding.getKnowledgeSourceId(), name, type, binding.getEnabled(), binding.getPriority(),
-                    binding.getRetrievalTopK(), binding.getMinScore(), binding.getCitationPolicy()));
+            list.add(new AiAdminDtos.AgentKnowledgeVo(
+                    binding.getId(),
+                    binding.getAgentVersionId(),
+                    binding.getKnowledgeSourceId(),
+                    name,
+                    type,
+                    binding.getEnabled(),
+                    binding.getPriority(),
+                    binding.getRetrievalTopK(),
+                    binding.getMinScore(),
+                    binding.getCitationPolicy()));
         }
         return Result.success(list);
     }
@@ -322,13 +379,30 @@ public class AiAdminAgentController {
                 publishedNo = version.getVersionNo();
             }
         }
-        return new AiAdminDtos.AgentVo(entity.getId(), entity.getAgentCode(), entity.getName(),
-                entity.getAgentType(), entity.getDescription(), entity.getIcon(), entity.getStatus(),
-                AiJson.splitCsv(entity.getClientTypes()), entity.getEntryConfig(), entity.getPermissionCode(),
-                entity.getClientPermissionCodes(), entity.getQuotaPolicyId(), entity.getPublishedVersionId(),
-                publishedNo, entity.getAllowUserContext(), entity.getAllowFileContext(),
-                entity.getConversationEnabled(), entity.getFeedbackEnabled(), entity.getSort(),
-                versions.size(), drafts, entity.getCreateTime(), entity.getUpdateTime());
+        return new AiAdminDtos.AgentVo(
+                entity.getId(),
+                entity.getAgentCode(),
+                entity.getName(),
+                entity.getAgentType(),
+                entity.getDescription(),
+                entity.getIcon(),
+                entity.getStatus(),
+                AiJson.splitCsv(entity.getClientTypes()),
+                entity.getEntryConfig(),
+                entity.getPermissionCode(),
+                entity.getClientPermissionCodes(),
+                entity.getQuotaPolicyId(),
+                entity.getPublishedVersionId(),
+                publishedNo,
+                entity.getAllowUserContext(),
+                entity.getAllowFileContext(),
+                entity.getConversationEnabled(),
+                entity.getFeedbackEnabled(),
+                entity.getSort(),
+                versions.size(),
+                drafts,
+                entity.getCreateTime(),
+                entity.getUpdateTime());
     }
 
     private AiAdminDtos.AgentVersionVo toVo(AiAgentVersionEntity version) {
@@ -344,9 +418,11 @@ public class AiAdminAgentController {
         if (version.getSystemPromptVersionId() != null) {
             try {
                 var promptVersion = promptService.requireVersion(version.getSystemPromptVersionId());
-                promptName = promptService.findTemplate(promptVersion.getTemplateId()) == null ? null
-                        : promptService.findTemplate(promptVersion.getTemplateId()).getName()
-                        + " v" + promptVersion.getVersionNo();
+                promptName = promptService.findTemplate(promptVersion.getTemplateId()) == null
+                        ? null
+                        : promptService
+                                        .findTemplate(promptVersion.getTemplateId())
+                                        .getName() + " v" + promptVersion.getVersionNo();
             } catch (RuntimeException ignored) {
                 promptName = null;
             }
@@ -359,14 +435,33 @@ public class AiAdminAgentController {
         for (AiAgentKnowledgeEntity binding : knowledgeService.listBindings(version.getId())) {
             knowledgeIds.add(binding.getKnowledgeSourceId());
         }
-        return new AiAdminDtos.AgentVersionVo(version.getId(), version.getAgentId(), version.getVersionNo(),
-                version.getVersionName(), version.getStatus(), version.getProviderRouteId(), routeName,
-                version.getSystemPromptVersionId(), promptName, version.getClientTypesSnapshot(),
-                version.getEntryConfigSnapshot(), version.getContextPolicyJson(), version.getResponseSchemaJson(),
-                version.getToolPolicyJson(), version.getKnowledgePolicyJson(), version.getModelParametersJson(),
-                version.getSafetyPolicyJson(), version.getQuotaOverrideJson(), version.getValidationSummaryJson(),
-                version.getPublishedBy(), version.getPublishedAt(), version.getRollbackFromVersionId(),
-                toolIds, knowledgeIds, version.getCreateTime(), version.getUpdateTime());
+        return new AiAdminDtos.AgentVersionVo(
+                version.getId(),
+                version.getAgentId(),
+                version.getVersionNo(),
+                version.getVersionName(),
+                version.getStatus(),
+                version.getProviderRouteId(),
+                routeName,
+                version.getSystemPromptVersionId(),
+                promptName,
+                version.getClientTypesSnapshot(),
+                version.getEntryConfigSnapshot(),
+                version.getContextPolicyJson(),
+                version.getResponseSchemaJson(),
+                version.getToolPolicyJson(),
+                version.getKnowledgePolicyJson(),
+                version.getModelParametersJson(),
+                version.getSafetyPolicyJson(),
+                version.getQuotaOverrideJson(),
+                version.getValidationSummaryJson(),
+                version.getPublishedBy(),
+                version.getPublishedAt(),
+                version.getRollbackFromVersionId(),
+                toolIds,
+                knowledgeIds,
+                version.getCreateTime(),
+                version.getUpdateTime());
     }
 
     private static String stronger(String base, String override) {

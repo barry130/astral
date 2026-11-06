@@ -1,5 +1,13 @@
 package com.astral.ai.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.astral.ai.common.AiConstants;
 import com.astral.ai.common.AiException;
 import com.astral.ai.config.AiProperties;
@@ -8,19 +16,10 @@ import com.astral.ai.entity.AiToolEntity;
 import com.astral.ai.mapper.AiAgentToolMapper;
 import com.astral.ai.mapper.AiMcpServerMapper;
 import com.astral.ai.mapper.AiToolMapper;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * 后台编辑工具时的风险下限。
@@ -40,8 +39,13 @@ class AiToolServiceRiskFloorTest {
     void setUp() {
         toolMapper = mock(AiToolMapper.class);
         mcpServerMapper = mock(AiMcpServerMapper.class);
-        service = new AiToolService(toolMapper, mock(AiAgentToolMapper.class), List.of(),
-                new AiProperties(), mock(JdbcTemplate.class), mcpServerMapper);
+        service = new AiToolService(
+                toolMapper,
+                mock(AiAgentToolMapper.class),
+                List.of(),
+                new AiProperties(),
+                mock(JdbcTemplate.class),
+                mcpServerMapper);
         service.init();
         when(toolMapper.updateById(any(AiToolEntity.class))).thenReturn(1);
     }
@@ -72,19 +76,20 @@ class AiToolServiceRiskFloorTest {
 
     @Test
     void httpWriteToolCannotBeDowngraded() {
-        AiToolEntity tool = givenTool(AiConstants.ExecutorType.HTTP,
-                "{\"method\":\"POST\",\"url\":\"https://api.example.com/orders\"}");
-        AiException error = assertThrows(AiException.class,
-                () -> service.update(1L, null, null, AiConstants.RiskLevel.READ, null, null, 1L));
+        AiToolEntity tool = givenTool(
+                AiConstants.ExecutorType.HTTP, "{\"method\":\"POST\",\"url\":\"https://api.example.com/orders\"}");
+        AiException error = assertThrows(
+                AiException.class, () -> service.update(1L, null, null, AiConstants.RiskLevel.READ, null, null, 1L));
         assertTrue(error.getMessage().contains("最低 HIGH"), error.getMessage());
         assertEquals(AiConstants.RiskLevel.HIGH, tool.getRiskLevel());
     }
 
     @Test
     void httpWriteToolCannotDropApproval() {
-        AiToolEntity tool = givenTool(AiConstants.ExecutorType.HTTP,
-                "{\"method\":\"DELETE\",\"url\":\"https://api.example.com/orders\"}");
-        AiException error = assertThrows(AiException.class,
+        AiToolEntity tool = givenTool(
+                AiConstants.ExecutorType.HTTP, "{\"method\":\"DELETE\",\"url\":\"https://api.example.com/orders\"}");
+        AiException error = assertThrows(
+                AiException.class,
                 () -> service.update(1L, null, null, null, AiConstants.ApprovalPolicy.NONE, null, 1L));
         assertTrue(error.getMessage().contains("必须保留人工确认"), error.getMessage());
         assertEquals(AiConstants.ApprovalPolicy.ADMIN_CONFIRM, tool.getApprovalPolicy());
@@ -92,8 +97,8 @@ class AiToolServiceRiskFloorTest {
 
     @Test
     void httpReadToolCanBeAdjusted() {
-        AiToolEntity tool = givenTool(AiConstants.ExecutorType.HTTP,
-                "{\"method\":\"GET\",\"url\":\"https://api.example.com/orders\"}");
+        AiToolEntity tool = givenTool(
+                AiConstants.ExecutorType.HTTP, "{\"method\":\"GET\",\"url\":\"https://api.example.com/orders\"}");
         service.update(1L, null, null, AiConstants.RiskLevel.DRAFT, AiConstants.ApprovalPolicy.NONE, null, 1L);
         assertEquals(AiConstants.RiskLevel.DRAFT, tool.getRiskLevel());
         assertEquals(AiConstants.ApprovalPolicy.NONE, tool.getApprovalPolicy());
@@ -101,10 +106,9 @@ class AiToolServiceRiskFloorTest {
 
     @Test
     void unknownRiskLevelIsRejected() {
-        givenTool(AiConstants.ExecutorType.HTTP,
-                "{\"method\":\"GET\",\"url\":\"https://api.example.com/orders\"}");
-        AiException error = assertThrows(AiException.class,
-                () -> service.update(1L, null, null, "SUPER", null, null, 1L));
+        givenTool(AiConstants.ExecutorType.HTTP, "{\"method\":\"GET\",\"url\":\"https://api.example.com/orders\"}");
+        AiException error =
+                assertThrows(AiException.class, () -> service.update(1L, null, null, "SUPER", null, null, 1L));
         assertTrue(error.getMessage().contains("风险等级非法"), error.getMessage());
     }
 
@@ -112,8 +116,8 @@ class AiToolServiceRiskFloorTest {
     void mcpToolOnWritableServerCannotBeDowngraded() {
         givenServer(false);
         givenTool(AiConstants.ExecutorType.MCP, "{\"serverId\":9,\"toolName\":\"create_issue\"}");
-        AiException error = assertThrows(AiException.class,
-                () -> service.update(1L, null, null, AiConstants.RiskLevel.READ, null, null, 1L));
+        AiException error = assertThrows(
+                AiException.class, () -> service.update(1L, null, null, AiConstants.RiskLevel.READ, null, null, 1L));
         assertTrue(error.getMessage().contains("最低 HIGH"), error.getMessage());
     }
 
@@ -121,7 +125,8 @@ class AiToolServiceRiskFloorTest {
     void mcpToolOnWritableServerCannotDropApproval() {
         givenServer(false);
         givenTool(AiConstants.ExecutorType.MCP, "{\"serverId\":9,\"toolName\":\"create_issue\"}");
-        AiException error = assertThrows(AiException.class,
+        AiException error = assertThrows(
+                AiException.class,
                 () -> service.update(1L, null, null, null, AiConstants.ApprovalPolicy.NONE, null, 1L));
         assertTrue(error.getMessage().contains("必须保留人工确认"), error.getMessage());
     }
@@ -129,8 +134,8 @@ class AiToolServiceRiskFloorTest {
     @Test
     void mcpToolOnReadOnlyServerCanBeRead() {
         givenServer(true);
-        AiToolEntity tool = givenTool(AiConstants.ExecutorType.MCP,
-                "{\"serverId\":9,\"toolName\":\"search_issue\",\"readOnlyHint\":true}");
+        AiToolEntity tool = givenTool(
+                AiConstants.ExecutorType.MCP, "{\"serverId\":9,\"toolName\":\"search_issue\",\"readOnlyHint\":true}");
         service.update(1L, null, null, AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE, null, 1L);
         assertEquals(AiConstants.RiskLevel.READ, tool.getRiskLevel());
         assertEquals(AiConstants.ApprovalPolicy.NONE, tool.getApprovalPolicy());
@@ -139,17 +144,17 @@ class AiToolServiceRiskFloorTest {
     @Test
     void readOnlyServerDoesNotOverrideRemoteWriteHint() {
         givenServer(true);
-        givenTool(AiConstants.ExecutorType.MCP,
-                "{\"serverId\":9,\"toolName\":\"create_issue\",\"readOnlyHint\":false}");
-        AiException error = assertThrows(AiException.class,
-                () -> service.update(1L, null, null, AiConstants.RiskLevel.READ, null, null, 1L));
+        givenTool(
+                AiConstants.ExecutorType.MCP, "{\"serverId\":9,\"toolName\":\"create_issue\",\"readOnlyHint\":false}");
+        AiException error = assertThrows(
+                AiException.class, () -> service.update(1L, null, null, AiConstants.RiskLevel.READ, null, null, 1L));
         assertTrue(error.getMessage().contains("最低 HIGH"), error.getMessage());
     }
 
     @Test
     void sqlToolFloorIsRead() {
-        AiToolEntity tool = givenTool(AiConstants.ExecutorType.SQL,
-                "{\"sql\":\"select id from astral.sys_user\",\"columns\":[\"id\"]}");
+        AiToolEntity tool = givenTool(
+                AiConstants.ExecutorType.SQL, "{\"sql\":\"select id from astral.sys_user\",\"columns\":[\"id\"]}");
         service.update(1L, null, null, AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE, null, 1L);
         assertEquals(AiConstants.RiskLevel.READ, tool.getRiskLevel());
     }

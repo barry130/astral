@@ -1,5 +1,6 @@
 package com.astral.cms.controller;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.astral.cms.common.CmsException;
 import com.astral.cms.dto.ContentStatusDto;
 import com.astral.cms.dto.PageSaveDto;
@@ -7,11 +8,11 @@ import com.astral.cms.entity.CmsPage;
 import com.astral.cms.service.CmsPageService;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
-import cn.dev33.satoken.stp.StpUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,8 +22,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * 内容管理插件管理端-页面控制器（Wiki 层级页面）

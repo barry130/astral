@@ -2,18 +2,17 @@ package com.astral.ai.security;
 
 import com.astral.ai.common.AiException;
 import com.astral.ai.config.AiProperties;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-
-import javax.crypto.Cipher;
-import javax.crypto.Mac;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
+import javax.crypto.Cipher;
+import javax.crypto.Mac;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 /**
  * AI 提供方密钥加解密。
@@ -56,8 +55,10 @@ public class AiSecretCipher {
             return null;
         }
         if (!isConfigured()) {
-            throw new AiException("AI006", "未配置 astral.plugins.ai.secret-key，无法加密 API Key；"
-                    + "请用环境变量 ASTRAL_AI_SECRET_KEY 注入，或改填「密钥引用」指向环境变量");
+            throw new AiException(
+                    "AI006",
+                    "未配置 astral.plugins.ai.secret-key，无法加密 API Key；"
+                            + "请用环境变量 ASTRAL_AI_SECRET_KEY 注入，或改填「密钥引用」指向环境变量");
         }
         try {
             byte[] iv = new byte[IV_LENGTH];

@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,9 +25,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * 反馈插件管理端反馈控制器
@@ -43,13 +42,14 @@ public class AdminFeedbackController {
 
     @Operation(summary = "分页查询（status/type/keyword/startDate/endDate 筛选）")
     @GetMapping("/page")
-    public Result<Page<Feedback>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                       @RequestParam(defaultValue = "10") Integer pageSize,
-                                       @RequestParam(required = false) String status,
-                                       @RequestParam(required = false) String type,
-                                       @RequestParam(required = false) String keyword,
-                                       @RequestParam(required = false) String startDate,
-                                       @RequestParam(required = false) String endDate) {
+    public Result<Page<Feedback>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
         return Result.success(feedbackService.page(pageNum, pageSize, status, type, keyword, startDate, endDate));
     }
 

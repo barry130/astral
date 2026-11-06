@@ -14,12 +14,7 @@ import com.astral.system.notify.NotifyEventRegistry;
 import com.astral.system.notify.NotifyPublisher;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import jakarta.annotation.Resource;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -31,6 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 反馈服务
@@ -62,12 +60,15 @@ public class FeedbackService {
     static {
         STATUS_TRANSITIONS.put(Feedback.STATUS_PENDING, List.of(Feedback.STATUS_RECEIVED, Feedback.STATUS_DEPRECATED));
         STATUS_TRANSITIONS.put(Feedback.STATUS_RECEIVED, List.of(Feedback.STATUS_RESOLVED, Feedback.STATUS_DEPRECATED));
-        STATUS_TRANSITIONS.put(Feedback.STATUS_RESOLVED, List.of(Feedback.STATUS_PUBLISHED, Feedback.STATUS_DEPRECATED));
+        STATUS_TRANSITIONS.put(
+                Feedback.STATUS_RESOLVED, List.of(Feedback.STATUS_PUBLISHED, Feedback.STATUS_DEPRECATED));
         STATUS_TRANSITIONS.put(Feedback.STATUS_PUBLISHED, List.of(Feedback.STATUS_DEPRECATED));
         // 已废弃允许任意转回（防止误操作无法恢复）
-        STATUS_TRANSITIONS.put(Feedback.STATUS_DEPRECATED, List.of(
-                Feedback.STATUS_PENDING, Feedback.STATUS_RECEIVED,
-                Feedback.STATUS_RESOLVED, Feedback.STATUS_PUBLISHED));
+        STATUS_TRANSITIONS.put(
+                Feedback.STATUS_DEPRECATED,
+                List.of(
+                        Feedback.STATUS_PENDING, Feedback.STATUS_RECEIVED,
+                        Feedback.STATUS_RESOLVED, Feedback.STATUS_PUBLISHED));
     }
 
     /** 状态中文名 */
@@ -76,15 +77,20 @@ public class FeedbackService {
             Feedback.STATUS_RECEIVED, "已接收",
             Feedback.STATUS_RESOLVED, "已解决",
             Feedback.STATUS_PUBLISHED, "已发布",
-            Feedback.STATUS_DEPRECATED, "已废弃"
-    );
+            Feedback.STATUS_DEPRECATED, "已废弃");
 
     // ==================== App 端 ====================
 
     /** 提交反馈 */
     @Transactional(rollbackFor = Exception.class)
-    public Feedback submit(Long userId, com.astral.feedback.dto.SubmitFeedbackDto dto,
-                           String device, String os, String appVersion, String platform, String ip) {
+    public Feedback submit(
+            Long userId,
+            com.astral.feedback.dto.SubmitFeedbackDto dto,
+            String device,
+            String os,
+            String appVersion,
+            String platform,
+            String ip) {
         Feedback f = new Feedback();
         f.setUserId(userId);
         f.setType(normalizeType(dto.getType()));
@@ -102,9 +108,11 @@ public class FeedbackService {
         f.setUpdateTime(LocalDateTime.now());
         feedbackMapper.insert(f);
         // 触发点①：新反馈/需求提交 → 宿主事件（种子规则收件人 ROLE=ADMIN，群发管理员；无 userId）
-        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_NEW_SUBMISSION, Map.of(
-                "feedbackId", nullToEmpty(f.getId()),
-                "feedbackTitle", nullToEmpty(f.getTitle())));
+        notifyPublisher.publishAsync(
+                NotifyEventRegistry.FEEDBACK_NEW_SUBMISSION,
+                Map.of(
+                        "feedbackId", nullToEmpty(f.getId()),
+                        "feedbackTitle", nullToEmpty(f.getTitle())));
         return f;
     }
 
@@ -135,8 +143,7 @@ public class FeedbackService {
         if (f == null || f.getDeleteTime() != null) {
             throw new FeedbackException(300, "反馈不存在");
         }
-        boolean publicVisible = Feedback.STATUS_PUBLISHED.equals(f.getStatus())
-                && Boolean.TRUE.equals(f.getIsPublic());
+        boolean publicVisible = Feedback.STATUS_PUBLISHED.equals(f.getStatus()) && Boolean.TRUE.equals(f.getIsPublic());
         boolean self = userId != null && userId.equals(f.getUserId());
         if (!isAdmin && !publicVisible && !self) {
             throw new FeedbackException(403, "无权查看该反馈");
@@ -161,17 +168,19 @@ public class FeedbackService {
         }
         FeedbackReply r = insertReply(dto.getFeedbackId(), userId, dto.getContent());
         // 触发点②：用户回复 → 宿主事件（种子规则收件人 ROLE=ADMIN 群发管理员；无 userId）
-        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_USER_REPLIED, Map.of(
-                "feedbackId", nullToEmpty(f.getId()),
-                "feedbackTitle", nullToEmpty(f.getTitle())));
+        notifyPublisher.publishAsync(
+                NotifyEventRegistry.FEEDBACK_USER_REPLIED,
+                Map.of(
+                        "feedbackId", nullToEmpty(f.getId()),
+                        "feedbackTitle", nullToEmpty(f.getTitle())));
         return r;
     }
 
     // ==================== 管理端 ====================
 
     /** 分页（筛选 status/type/keyword/startDate/endDate） */
-    public Page<Feedback> page(int pageNum, int pageSize, String status, String type,
-                               String keyword, String startDate, String endDate) {
+    public Page<Feedback> page(
+            int pageNum, int pageSize, String status, String type, String keyword, String startDate, String endDate) {
         Page<Feedback> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Feedback> qw = new LambdaQueryWrapper<>();
         if (status != null && !status.isBlank()) {
@@ -240,8 +249,10 @@ public class FeedbackService {
         }
         List<String> allowed = STATUS_TRANSITIONS.get(from);
         if (!allowed.contains(to)) {
-            throw new FeedbackException(300, "不允许从「" + STATUS_NAMES.getOrDefault(from, from)
-                    + "」流转到「" + STATUS_NAMES.getOrDefault(to, to) + "」");
+            throw new FeedbackException(
+                    300,
+                    "不允许从「" + STATUS_NAMES.getOrDefault(from, from) + "」流转到「" + STATUS_NAMES.getOrDefault(to, to)
+                            + "」");
         }
         f.setStatus(to);
         f.setUpdateTime(LocalDateTime.now());
@@ -252,25 +263,31 @@ public class FeedbackService {
         String statusName = STATUS_NAMES.getOrDefault(to, to);
         if (Feedback.STATUS_PUBLISHED.equals(to)) {
             // 触发点③：状态变更 → 已发布（带 userId + statusName）
-            notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_STATUS_CHANGED, Map.of(
-                    "feedbackId", nullToEmpty(f.getId()),
-                    "userId", nullToEmpty(f.getUserId()),
-                    "feedbackTitle", nullToEmpty(f.getTitle()),
-                    "statusName", nullToEmpty(statusName)));
+            notifyPublisher.publishAsync(
+                    NotifyEventRegistry.FEEDBACK_STATUS_CHANGED,
+                    Map.of(
+                            "feedbackId", nullToEmpty(f.getId()),
+                            "userId", nullToEmpty(f.getUserId()),
+                            "feedbackTitle", nullToEmpty(f.getTitle()),
+                            "statusName", nullToEmpty(statusName)));
             // 触发点④：发布且公开时，另发「已公开发布」事件（带 userId）
             if (Boolean.TRUE.equals(f.getIsPublic())) {
-                notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_PUBLISHED, Map.of(
-                        "feedbackId", nullToEmpty(f.getId()),
-                        "userId", nullToEmpty(f.getUserId()),
-                        "feedbackTitle", nullToEmpty(f.getTitle())));
+                notifyPublisher.publishAsync(
+                        NotifyEventRegistry.FEEDBACK_PUBLISHED,
+                        Map.of(
+                                "feedbackId", nullToEmpty(f.getId()),
+                                "userId", nullToEmpty(f.getUserId()),
+                                "feedbackTitle", nullToEmpty(f.getTitle())));
             }
         } else if (Feedback.STATUS_DEPRECATED.equals(to)) {
             // 触发点⑤：状态变更 → 已废弃（带 userId + statusName）
-            notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_STATUS_CHANGED, Map.of(
-                    "feedbackId", nullToEmpty(f.getId()),
-                    "userId", nullToEmpty(f.getUserId()),
-                    "feedbackTitle", nullToEmpty(f.getTitle()),
-                    "statusName", nullToEmpty(statusName)));
+            notifyPublisher.publishAsync(
+                    NotifyEventRegistry.FEEDBACK_STATUS_CHANGED,
+                    Map.of(
+                            "feedbackId", nullToEmpty(f.getId()),
+                            "userId", nullToEmpty(f.getUserId()),
+                            "feedbackTitle", nullToEmpty(f.getTitle()),
+                            "statusName", nullToEmpty(statusName)));
         }
     }
 
@@ -285,10 +302,12 @@ public class FeedbackService {
         // 切为公开且已发布时，通知提交人
         if (target && Feedback.STATUS_PUBLISHED.equals(f.getStatus())) {
             // 触发点⑥：公开发布 → 宿主事件（带 userId）
-            notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_PUBLISHED, Map.of(
-                    "feedbackId", nullToEmpty(f.getId()),
-                    "userId", nullToEmpty(f.getUserId()),
-                    "feedbackTitle", nullToEmpty(f.getTitle())));
+            notifyPublisher.publishAsync(
+                    NotifyEventRegistry.FEEDBACK_PUBLISHED,
+                    Map.of(
+                            "feedbackId", nullToEmpty(f.getId()),
+                            "userId", nullToEmpty(f.getUserId()),
+                            "feedbackTitle", nullToEmpty(f.getTitle())));
         }
     }
 
@@ -309,10 +328,12 @@ public class FeedbackService {
         }
         FeedbackReply r = insertReply(dto.getFeedbackId(), adminId, dto.getContent());
         // 触发点⑦：管理员回复 → 宿主事件（带 userId，收件人为提交人）
-        notifyPublisher.publishAsync(NotifyEventRegistry.FEEDBACK_ADMIN_REPLIED, Map.of(
-                "feedbackId", nullToEmpty(f.getId()),
-                "userId", nullToEmpty(f.getUserId()),
-                "feedbackTitle", nullToEmpty(f.getTitle())));
+        notifyPublisher.publishAsync(
+                NotifyEventRegistry.FEEDBACK_ADMIN_REPLIED,
+                Map.of(
+                        "feedbackId", nullToEmpty(f.getId()),
+                        "userId", nullToEmpty(f.getUserId()),
+                        "feedbackTitle", nullToEmpty(f.getTitle())));
         return r;
     }
 
@@ -321,14 +342,20 @@ public class FeedbackService {
         Map<String, Object> result = new LinkedHashMap<>();
         long total = countByWrapper(w -> w.isNull(Feedback::getDeleteTime));
         result.put("total", total);
-        result.put("pending", countByWrapper(w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_PENDING)));
-        result.put("received", countByWrapper(w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_RECEIVED)));
-        result.put("resolved", countByWrapper(w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_RESOLVED)));
-        result.put("published", countByWrapper(w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_PUBLISHED)));
-        result.put("deprecated", countByWrapper(w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_DEPRECATED)));
+        result.put("pending", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
+                .eq(Feedback::getStatus, Feedback.STATUS_PENDING)));
+        result.put("received", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
+                .eq(Feedback::getStatus, Feedback.STATUS_RECEIVED)));
+        result.put("resolved", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
+                .eq(Feedback::getStatus, Feedback.STATUS_RESOLVED)));
+        result.put("published", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
+                .eq(Feedback::getStatus, Feedback.STATUS_PUBLISHED)));
+        result.put("deprecated", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
+                .eq(Feedback::getStatus, Feedback.STATUS_DEPRECATED)));
         // 今日新增
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        result.put("todayNew", countByWrapper(w -> w.isNull(Feedback::getDeleteTime).ge(Feedback::getCreateTime, todayStart)));
+        result.put("todayNew", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
+                .ge(Feedback::getCreateTime, todayStart)));
         // 未回复：无任何管理员回复的未完结反馈数
         result.put("unreplied", countUnreplied());
 
@@ -350,7 +377,8 @@ public class FeedbackService {
             LocalDateTime start = day.atStartOfDay();
             LocalDateTime end = day.plusDays(1).atStartOfDay();
             long count = countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
-                    .ge(Feedback::getCreateTime, start).lt(Feedback::getCreateTime, end));
+                    .ge(Feedback::getCreateTime, start)
+                    .lt(Feedback::getCreateTime, end));
             Map<String, Object> m = new HashMap<>();
             m.put("date", day.format(fmt));
             m.put("count", count);
@@ -402,9 +430,11 @@ public class FeedbackService {
         }
         // 获取所有有回复的反馈ID（任意回复都算"已联系"——简化：只要有人回复过即不算未回复）
         List<Long> feedbackIds = pending.stream().map(Feedback::getId).collect(Collectors.toList());
-        Set<Long> repliedIds = replyMapper.selectList(new LambdaQueryWrapper<FeedbackReply>()
-                        .in(FeedbackReply::getFeedbackId, feedbackIds))
-                .stream().map(FeedbackReply::getFeedbackId).collect(Collectors.toSet());
+        Set<Long> repliedIds = replyMapper
+                .selectList(new LambdaQueryWrapper<FeedbackReply>().in(FeedbackReply::getFeedbackId, feedbackIds))
+                .stream()
+                .map(FeedbackReply::getFeedbackId)
+                .collect(Collectors.toSet());
         return pending.stream().filter(f -> !repliedIds.contains(f.getId())).count();
     }
 

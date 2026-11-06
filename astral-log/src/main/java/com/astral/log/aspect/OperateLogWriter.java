@@ -2,12 +2,11 @@ package com.astral.log.aspect;
 
 import com.astral.dao.entity.OperateLog;
 import com.astral.log.service.LogService;
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
 
 /**
  * 操作日志异步写入器。
@@ -47,12 +46,28 @@ public class OperateLogWriter {
      */
     @Async("sequenceAsyncExecutor")
     public java.util.concurrent.CompletableFuture<Void> saveAsync(
-            String username, String operateType, String requestUrl, String requestMethod,
-            String requestParams, String responseResult, String ip, Integer status,
-            String errorMsg, long executeTime) {
+            String username,
+            String operateType,
+            String requestUrl,
+            String requestMethod,
+            String requestParams,
+            String responseResult,
+            String ip,
+            Integer status,
+            String errorMsg,
+            long executeTime) {
         try {
-            save(username, operateType, requestUrl, requestMethod, requestParams,
-                    responseResult, ip, status, errorMsg, executeTime);
+            save(
+                    username,
+                    operateType,
+                    requestUrl,
+                    requestMethod,
+                    requestParams,
+                    responseResult,
+                    ip,
+                    status,
+                    errorMsg,
+                    executeTime);
             return java.util.concurrent.CompletableFuture.completedFuture(null);
         } catch (Exception e) {
             // 日志保存失败绝不能影响主流程，但要留下记录
@@ -63,9 +78,17 @@ public class OperateLogWriter {
         }
     }
 
-    private void save(String username, String operateType, String requestUrl, String requestMethod,
-                      String requestParams, String responseResult, String ip, Integer status,
-                      String errorMsg, long executeTime) {
+    private void save(
+            String username,
+            String operateType,
+            String requestUrl,
+            String requestMethod,
+            String requestParams,
+            String responseResult,
+            String ip,
+            Integer status,
+            String errorMsg,
+            long executeTime) {
         log.debug("保存操作日志: operateType={}, status={}", operateType, status);
         OperateLog operateLog = new OperateLog();
         operateLog.setUsername(username);

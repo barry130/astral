@@ -3,6 +3,8 @@ package com.astral.auth.security;
 import cn.dev33.satoken.stp.StpUtil;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.exception.BusinessException;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -11,9 +13,6 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
-
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
 
 /**
  * {@code @RequiresPermission} / {@code @RequiresSuper} 的切面实现。
@@ -57,7 +56,9 @@ public class PermissionAspect {
         if (!StpUtil.isLogin() || permissionChecker.isSuperUser()) {
             return joinPoint.proceed();
         }
-        log.warn("拒绝非超管调用: {}#{}", joinPoint.getSignature().getDeclaringType().getSimpleName(),
+        log.warn(
+                "拒绝非超管调用: {}#{}",
+                joinPoint.getSignature().getDeclaringType().getSimpleName(),
                 joinPoint.getSignature().getName());
         throw new BusinessException("COMMON005");
     }
@@ -75,8 +76,11 @@ public class PermissionAspect {
         if (pass) {
             return;
         }
-        log.warn("权限校验失败: userId={}, 需要={}({})",
-                StpUtil.getLoginIdDefaultNull(), String.join(",", codes), annotation.mode());
+        log.warn(
+                "权限校验失败: userId={}, 需要={}({})",
+                StpUtil.getLoginIdDefaultNull(),
+                String.join(",", codes),
+                annotation.mode());
         throw new BusinessException("COMMON005");
     }
 

@@ -17,8 +17,7 @@ public final class AiCaller {
     /** 宿主拦截器写入的登录用户属性 */
     private static final String ATTR_USER_ID = "userId";
 
-    private AiCaller() {
-    }
+    private AiCaller() {}
 
     /**
      * 取当前登录用户 ID。
@@ -58,7 +57,8 @@ public final class AiCaller {
         if (request == null) {
             return null;
         }
-        return ClientIp.resolve(request.getHeader("X-Forwarded-For"),
+        return ClientIp.resolve(
+                request.getHeader("X-Forwarded-For"),
                 request.getHeader("X-Real-IP"),
                 request.getRemoteAddr(),
                 trustedProxies == null ? ClientIp.DEFAULT_TRUSTED_PROXIES : trustedProxies);

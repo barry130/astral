@@ -12,12 +12,11 @@ import com.astral.ai.entity.AiModelEntity;
 import com.astral.ai.entity.AiProviderEntity;
 import com.astral.ai.entity.AiProviderRouteEntity;
 import com.astral.ai.entity.AiToolEntity;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 智能体版本发布前校验。
@@ -80,15 +79,16 @@ public class AiAgentValidationService {
             String first = result.issues().stream()
                     .filter(i -> "ERROR".equals(i.level()))
                     .map(i -> i.message())
-                    .findFirst().orElse("配置不完整");
+                    .findFirst()
+                    .orElse("配置不完整");
             throw new com.astral.ai.common.AiException("AI007", first);
         }
     }
 
     // ==================== 逐项检查 ====================
 
-    private void checkClients(AiAgentEntity agent, AiAgentVersionEntity version,
-                              List<AiAdminDtos.ValidationVo.ValidationIssue> issues) {
+    private void checkClients(
+            AiAgentEntity agent, AiAgentVersionEntity version, List<AiAdminDtos.ValidationVo.ValidationIssue> issues) {
         List<String> clients = AiJson.splitCsv(agent.getClientTypes());
         if (clients.isEmpty()) {
             issues.add(error("CLIENT_EMPTY", "智能体未配置可用客户端", "clientTypes"));
@@ -152,13 +152,12 @@ public class AiAgentValidationService {
         }
     }
 
-    private void checkPrompt(AiAgentVersionEntity version, List<AiAdminDtos.ValidationVo.ValidationIssue> issues,
-                             AiAgentEntity agent) {
+    private void checkPrompt(
+            AiAgentVersionEntity version, List<AiAdminDtos.ValidationVo.ValidationIssue> issues, AiAgentEntity agent) {
         if (version.getSystemPromptVersionId() == null) {
             // 曾经只是 WARN，结果「缺提示词的版本」照样能发布：模型没有角色约束，
             // 音乐助手会回一段散文、不产出 blocks/actions，客户端拿不到可点的歌。
-            issues.add(error("PROMPT_MISSING", "未绑定系统提示词，发布后模型缺少角色约束，无法产出结构化结果",
-                    "systemPromptVersionId"));
+            issues.add(error("PROMPT_MISSING", "未绑定系统提示词，发布后模型缺少角色约束，无法产出结构化结果", "systemPromptVersionId"));
             return;
         }
         try {
@@ -172,25 +171,22 @@ public class AiAgentValidationService {
             } else if (system.length() > 20000) {
                 issues.add(warn("PROMPT_LONG", "提示词过长，可能挤占上下文", "systemPromptVersionId"));
             }
-            if (system != null && AiConstants.AgentType.MUSIC.equals(agent.getAgentType())
-                    && !system.contains("播放")) {
-                issues.add(warn("PROMPT_NO_PLAY_GUARD",
-                        "音乐助手提示词未提及播放约束，请确认已声明不得编造播放地址", "systemPromptVersionId"));
+            if (system != null && AiConstants.AgentType.MUSIC.equals(agent.getAgentType()) && !system.contains("播放")) {
+                issues.add(warn("PROMPT_NO_PLAY_GUARD", "音乐助手提示词未提及播放约束，请确认已声明不得编造播放地址", "systemPromptVersionId"));
             }
         } catch (RuntimeException e) {
             issues.add(error("PROMPT_MISSING", "绑定的提示词版本不存在", "systemPromptVersionId"));
         }
     }
 
-    private void checkSchema(AiAgentVersionEntity version, List<AiAdminDtos.ValidationVo.ValidationIssue> issues,
-                             AiAgentEntity agent) {
+    private void checkSchema(
+            AiAgentVersionEntity version, List<AiAdminDtos.ValidationVo.ValidationIssue> issues, AiAgentEntity agent) {
         String schema = version.getResponseSchemaJson();
         if (schema == null || schema.isBlank()) {
             // 音乐助手要靠 response schema 约束模型输出 {answer,blocks,actions}；
             // 缺了它模型会回纯文本，客户端就渲染不出歌曲卡片与播放动作。
             if (AiConstants.AgentType.MUSIC.equals(agent.getAgentType())) {
-                issues.add(error("SCHEMA_MISSING", "音乐助手必须配置响应 Schema，否则无法产出歌曲卡片与播放动作",
-                        "responseSchemaJson"));
+                issues.add(error("SCHEMA_MISSING", "音乐助手必须配置响应 Schema，否则无法产出歌曲卡片与播放动作", "responseSchemaJson"));
             }
             return;
         }
@@ -200,8 +196,8 @@ public class AiAgentValidationService {
         }
     }
 
-    private void checkTools(AiAgentVersionEntity version, AiAgentEntity agent,
-                            List<AiAdminDtos.ValidationVo.ValidationIssue> issues) {
+    private void checkTools(
+            AiAgentVersionEntity version, AiAgentEntity agent, List<AiAdminDtos.ValidationVo.ValidationIssue> issues) {
         List<AiAgentToolEntity> bindings = toolService.listBindings(version.getId());
         if (bindings.isEmpty()) {
             return;
@@ -219,29 +215,23 @@ public class AiAgentValidationService {
                 continue;
             }
             if (!toolService.handlerAvailable(tool)) {
-                issues.add(error("TOOL_NOT_IMPLEMENTED",
-                        "工具 " + tool.getToolCode() + " 缺少服务端处理器", "toolIds"));
+                issues.add(error("TOOL_NOT_IMPLEMENTED", "工具 " + tool.getToolCode() + " 缺少服务端处理器", "toolIds"));
             }
             List<String> toolClients = AiJson.splitCsv(tool.getClientTypes());
-            boolean compatible = toolClients.isEmpty()
-                    || toolClients.stream().anyMatch(agentClients::contains);
+            boolean compatible = toolClients.isEmpty() || toolClients.stream().anyMatch(agentClients::contains);
             if (!compatible) {
-                issues.add(error("TOOL_CLIENT_MISMATCH",
-                        "工具 " + tool.getToolCode() + " 不支持当前智能体的客户端", "toolIds"));
+                issues.add(error("TOOL_CLIENT_MISMATCH", "工具 " + tool.getToolCode() + " 不支持当前智能体的客户端", "toolIds"));
             }
             if (AiConstants.AgentType.MUSIC.equals(agent.getAgentType())
                     && !AiConstants.RiskLevel.READ.equals(tool.getRiskLevel())
                     && !AiConstants.RiskLevel.DRAFT.equals(tool.getRiskLevel())) {
-                issues.add(error("MUSIC_TOOL_RISK",
-                        "音乐助手不能引用高风险工具: " + tool.getToolCode(), "toolIds"));
+                issues.add(error("MUSIC_TOOL_RISK", "音乐助手不能引用高风险工具: " + tool.getToolCode(), "toolIds"));
             }
             if (AiConstants.AgentType.ADMIN.equals(agent.getAgentType()) && isMusicTool(tool)) {
-                issues.add(error("ADMIN_TOOL_SCOPE",
-                        "管理助手不能引用音乐端工具: " + tool.getToolCode(), "toolIds"));
+                issues.add(error("ADMIN_TOOL_SCOPE", "管理助手不能引用音乐端工具: " + tool.getToolCode(), "toolIds"));
             }
             if (AiConstants.AgentType.ADMIN.equals(agent.getAgentType())
-                    && !AiConstants.ClientType.ASTRAL_FRONT.equals(
-                    agentClients.isEmpty() ? "" : agentClients.get(0))) {
+                    && !AiConstants.ClientType.ASTRAL_FRONT.equals(agentClients.isEmpty() ? "" : agentClients.get(0))) {
                 issues.add(warn("ADMIN_CLIENT", "管理助手建议只挂在管理端", "clientTypes"));
             }
         }
@@ -258,12 +248,10 @@ public class AiAgentValidationService {
             try {
                 var source = knowledgeService.requireSource(binding.getKnowledgeSourceId());
                 if (!Boolean.TRUE.equals(source.getEnabled())) {
-                    issues.add(error("KNOWLEDGE_DISABLED",
-                            "知识源已停用: " + source.getName(), "knowledgeSourceIds"));
+                    issues.add(error("KNOWLEDGE_DISABLED", "知识源已停用: " + source.getName(), "knowledgeSourceIds"));
                 }
                 if (!AiConstants.KnowledgeStatus.READY.equals(source.getStatus())) {
-                    issues.add(error("KNOWLEDGE_NOT_READY",
-                            "知识源尚未完成索引: " + source.getName(), "knowledgeSourceIds"));
+                    issues.add(error("KNOWLEDGE_NOT_READY", "知识源尚未完成索引: " + source.getName(), "knowledgeSourceIds"));
                 }
             } catch (RuntimeException e) {
                 issues.add(error("KNOWLEDGE_MISSING", "绑定的知识源不存在", "knowledgeSourceIds"));
@@ -274,8 +262,8 @@ public class AiAgentValidationService {
         }
     }
 
-    private void checkQuota(AiAgentEntity agent, AiAgentVersionEntity version,
-                            List<AiAdminDtos.ValidationVo.ValidationIssue> issues) {
+    private void checkQuota(
+            AiAgentEntity agent, AiAgentVersionEntity version, List<AiAdminDtos.ValidationVo.ValidationIssue> issues) {
         String override = version.getQuotaOverrideJson();
         if (override != null && !override.isBlank() && AiJson.read(override) == null) {
             issues.add(error("QUOTA_INVALID", "额度覆盖配置不是合法 JSON", "quotaOverrideJson"));
@@ -286,7 +274,8 @@ public class AiAgentValidationService {
             if (node == null) {
                 issues.add(error("PARAMS_INVALID", "模型参数不是合法 JSON", "modelParametersJson"));
             } else {
-                double temperature = AiJson.text(node, "temperature", null) == null ? -1
+                double temperature = AiJson.text(node, "temperature", null) == null
+                        ? -1
                         : Double.parseDouble(AiJson.text(node, "temperature", "0"));
                 if (temperature > 2) {
                     issues.add(error("TEMPERATURE_RANGE", "temperature 必须在 0~2 之间", "modelParametersJson"));

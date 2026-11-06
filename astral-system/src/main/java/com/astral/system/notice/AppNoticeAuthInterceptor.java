@@ -30,7 +30,8 @@ public class AppNoticeAuthInterceptor implements HandlerInterceptor {
     private ObjectMapper objectMapper;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
         // 由 SaTokenContextFilter 从 satoken 请求头解析登录态
         Long userId = null;
         try {
@@ -45,9 +46,7 @@ public class AppNoticeAuthInterceptor implements HandlerInterceptor {
         if (userId == null) {
             // HTTP 200：App 端约定只看 body.code，非 200 状态码会被 axios 拦截器当网络错误
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write(objectMapper.writeValueAsString(
-                    Result.error(401, "登录状态已失效")
-            ));
+            response.getWriter().write(objectMapper.writeValueAsString(Result.error(401, "登录状态已失效")));
             return false;
         }
 

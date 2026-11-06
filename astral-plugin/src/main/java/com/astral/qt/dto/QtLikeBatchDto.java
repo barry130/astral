@@ -3,9 +3,8 @@ package com.astral.qt.dto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * 批量收藏请求体（LIKE_SYNC_DESIGN.md §2.5，POST /api/v1/app/user/like/batch）。

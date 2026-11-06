@@ -17,15 +17,14 @@ import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.OperateLog;
 import com.astral.log.service.OperateLogService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 /**
  * 后台总览与配置审计。
@@ -60,7 +59,9 @@ public class AiOverviewService {
     /** 首页概览 */
     public AiAdminDtos.OverviewVo overview() {
         List<AiProviderEntity> providers = providerService.list();
-        long enabledProviders = providers.stream().filter(p -> Boolean.TRUE.equals(p.getEnabled())).count();
+        long enabledProviders = providers.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getEnabled()))
+                .count();
 
         List<AiAgentEntity> agents = agentMapper.selectList(new LambdaQueryWrapper<AiAgentEntity>()
                 .isNull(AiAgentEntity::getDeletedAt)
@@ -72,21 +73,29 @@ public class AiOverviewService {
                 .map(AiAgentEntity::getPublishedVersionId)
                 .filter(java.util.Objects::nonNull)
                 .toList();
-        Map<Long, AiAgentVersionEntity> versionMap = versionIds.isEmpty()
-                ? new HashMap<>() : agentService.versionsByIds(versionIds);
+        Map<Long, AiAgentVersionEntity> versionMap =
+                versionIds.isEmpty() ? new HashMap<>() : agentService.versionsByIds(versionIds);
 
         List<AiAdminDtos.ProviderHealthVo> health = new ArrayList<>();
         for (AiProviderEntity provider : providers) {
-            health.add(new AiAdminDtos.ProviderHealthVo(provider.getId(), provider.getName(),
-                    provider.getHealthStatus(), provider.getLastHealthMessage(), provider.getLastHealthTime()));
+            health.add(new AiAdminDtos.ProviderHealthVo(
+                    provider.getId(),
+                    provider.getName(),
+                    provider.getHealthStatus(),
+                    provider.getLastHealthMessage(),
+                    provider.getLastHealthTime()));
         }
 
         List<AiAdminDtos.AgentBriefVo> briefs = new ArrayList<>();
         for (AiAgentEntity agent : agents) {
-            AiAgentVersionEntity published = agent.getPublishedVersionId() == null
-                    ? null : versionMap.get(agent.getPublishedVersionId());
-            briefs.add(new AiAdminDtos.AgentBriefVo(agent.getId(), agent.getAgentCode(), agent.getName(),
-                    agent.getAgentType(), agent.getStatus(),
+            AiAgentVersionEntity published =
+                    agent.getPublishedVersionId() == null ? null : versionMap.get(agent.getPublishedVersionId());
+            briefs.add(new AiAdminDtos.AgentBriefVo(
+                    agent.getId(),
+                    agent.getAgentCode(),
+                    agent.getName(),
+                    agent.getAgentType(),
+                    agent.getStatus(),
                     published == null ? null : published.getVersionNo(),
                     AiJson.splitCsv(agent.getClientTypes())));
         }
@@ -104,7 +113,9 @@ public class AiOverviewService {
                 modelMapper.selectCount(null),
                 routeMapper.selectCount(null),
                 agents.size(),
-                agents.stream().filter(a -> AiConstants.AgentStatus.PUBLISHED.equals(a.getStatus())).count(),
+                agents.stream()
+                        .filter(a -> AiConstants.AgentStatus.PUBLISHED.equals(a.getStatus()))
+                        .count(),
                 promptService.listTemplates().size(),
                 knowledgeService.listSources().size(),
                 tools.size(),
@@ -132,8 +143,15 @@ public class AiOverviewService {
                 .last("limit " + size + " offset " + ((num - 1) * size)));
         List<AiAdminDtos.AuditVo> result = new ArrayList<>();
         for (OperateLog row : rows) {
-            result.add(new AiAdminDtos.AuditVo(row.getId(), row.getOperateType(), "API", null,
-                    parseId(row.getUserId()), row.getUsername(), buildDetail(row), row.getIp(),
+            result.add(new AiAdminDtos.AuditVo(
+                    row.getId(),
+                    row.getOperateType(),
+                    "API",
+                    null,
+                    parseId(row.getUserId()),
+                    row.getUsername(),
+                    buildDetail(row),
+                    row.getIp(),
                     row.getCreateTime()));
         }
         return result;
@@ -146,7 +164,8 @@ public class AiOverviewService {
 
     private String buildDetail(OperateLog row) {
         StringBuilder sb = new StringBuilder();
-        sb.append(row.getRequestMethod() == null ? "" : row.getRequestMethod()).append(' ')
+        sb.append(row.getRequestMethod() == null ? "" : row.getRequestMethod())
+                .append(' ')
                 .append(row.getRequestUrl() == null ? "" : row.getRequestUrl());
         if (row.getStatus() != null && row.getStatus() == 0) {
             sb.append(" | 失败: ").append(row.getErrorMsg() == null ? "" : row.getErrorMsg());

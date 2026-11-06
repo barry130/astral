@@ -2,9 +2,9 @@ package com.astral.dao.mapper;
 
 import com.astral.dao.entity.SequenceSegment;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
@@ -34,8 +34,8 @@ public interface SequenceSegmentMapper extends BaseMapper<SequenceSegment> {
      * @param step    步长
      * @return 影响行数（0表示并发冲突）
      */
-    @Update("UPDATE sequence_segment SET max_value = max_value + #{step}, version = version + 1 " +
-            "WHERE biz_key = #{bizKey} AND version = #{version}")
+    @Update("UPDATE sequence_segment SET max_value = max_value + #{step}, version = version + 1 "
+            + "WHERE biz_key = #{bizKey} AND version = #{version}")
     int allocateNextSegment(@Param("bizKey") String bizKey, @Param("version") int version, @Param("step") int step);
 
     /**
@@ -47,11 +47,15 @@ public interface SequenceSegmentMapper extends BaseMapper<SequenceSegment> {
      * @param step     步长
      * @return 影响行数（0 = 已存在，由其它并发线程插入；依赖 uk_segment_biz_key 唯一索引）
      */
-    @Insert("INSERT INTO sequence_segment (biz_key, min_value, max_value, current_max_value, step, version, create_time, update_time) " +
-            "VALUES (#{bizKey}, #{minValue}, #{maxValue}, #{maxValue}, #{step}, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) " +
-            "ON CONFLICT (biz_key) DO NOTHING")
-    int insertSegment(@Param("bizKey") String bizKey, @Param("minValue") long minValue,
-                      @Param("maxValue") long maxValue, @Param("step") int step);
+    @Insert(
+            "INSERT INTO sequence_segment (biz_key, min_value, max_value, current_max_value, step, version, create_time, update_time) "
+                    + "VALUES (#{bizKey}, #{minValue}, #{maxValue}, #{maxValue}, #{step}, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) "
+                    + "ON CONFLICT (biz_key) DO NOTHING")
+    int insertSegment(
+            @Param("bizKey") String bizKey,
+            @Param("minValue") long minValue,
+            @Param("maxValue") long maxValue,
+            @Param("step") int step);
 
     /**
      * 查询业务表当前最大主键值（启动时高水位对齐用）。
@@ -68,7 +72,8 @@ public interface SequenceSegmentMapper extends BaseMapper<SequenceSegment> {
      * 判断表是否存在于当前 schema。高水位对齐前的探测：
      * 避免对「已登记 schema JSON 但物理表尚未建」的表每次启动报 missing relation 刷屏。
      */
-    @Select("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = #{tableName}")
+    @Select(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = #{tableName}")
     int countTableInCurrentSchema(@Param("tableName") String tableName);
 
     /**
@@ -77,7 +82,7 @@ public interface SequenceSegmentMapper extends BaseMapper<SequenceSegment> {
      *
      * @return 影响行数（0 = 无需对齐，或已被并发抬高）
      */
-    @Update("UPDATE sequence_segment SET max_value = #{newMaxValue}, update_time = CURRENT_TIMESTAMP " +
-            "WHERE biz_key = #{bizKey} AND max_value < #{newMaxValue}")
+    @Update("UPDATE sequence_segment SET max_value = #{newMaxValue}, update_time = CURRENT_TIMESTAMP "
+            + "WHERE biz_key = #{bizKey} AND max_value < #{newMaxValue}")
     int raiseMaxValue(@Param("bizKey") String bizKey, @Param("newMaxValue") long newMaxValue);
 }

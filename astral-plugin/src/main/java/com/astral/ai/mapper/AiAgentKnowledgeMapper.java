@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 智能体知识绑定 Mapper
  */
 @Mapper
-public interface AiAgentKnowledgeMapper extends BaseMapper<AiAgentKnowledgeEntity> {
-}
+public interface AiAgentKnowledgeMapper extends BaseMapper<AiAgentKnowledgeEntity> {}

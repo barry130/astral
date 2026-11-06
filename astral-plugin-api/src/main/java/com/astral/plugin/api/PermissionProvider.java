@@ -84,19 +84,44 @@ public interface PermissionProvider {
             this.description = description;
         }
 
-        public String getCode() { return code; }
-        public void setCode(String code) { this.code = code; }
+        public String getCode() {
+            return code;
+        }
 
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
+        public void setCode(String code) {
+            this.code = code;
+        }
 
-        public String getDomain() { return domain; }
-        public void setDomain(String domain) { this.domain = domain; }
+        public String getName() {
+            return name;
+        }
 
-        public int getType() { return type; }
-        public void setType(int type) { this.type = type; }
+        public void setName(String name) {
+            this.name = name;
+        }
 
-        public String getDescription() { return description; }
-        public void setDescription(String description) { this.description = description; }
+        public String getDomain() {
+            return domain;
+        }
+
+        public void setDomain(String domain) {
+            this.domain = domain;
+        }
+
+        public int getType() {
+            return type;
+        }
+
+        public void setType(int type) {
+            this.type = type;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
+        }
     }
 }

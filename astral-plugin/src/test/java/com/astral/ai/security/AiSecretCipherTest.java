@@ -1,10 +1,10 @@
 package com.astral.ai.security;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.astral.ai.common.AiException;
 import com.astral.ai.config.AiProperties;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * API Key 加解密与凭证来源判定。
@@ -119,7 +119,8 @@ class AiSecretCipherTest {
 
     @Test
     void hmacSha256HexMatchesReferenceVector() {
-        assertEquals("f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8",
+        assertEquals(
+                "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8",
                 AiSecretCipher.hmacSha256Hex("key", "The quick brown fox jumps over the lazy dog"));
     }
 }

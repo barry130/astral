@@ -43,6 +43,7 @@ public interface PluginFrontendExtension {
          * 由前端按登录用户权限列表过滤，避免「菜单可见但点进去全 403」。
          */
         private String permission;
+
         private int sort;
 
         public NavItem() {}
@@ -62,22 +63,57 @@ public interface PluginFrontendExtension {
             this.sort = sort;
         }
 
-        public String getLabel() { return label; }
-        public void setLabel(String label) { this.label = label; }
-        public String getPath() { return path; }
-        public void setPath(String path) { this.path = path; }
-        public String getIcon() { return icon; }
-        public void setIcon(String icon) { this.icon = icon; }
-        public String getParentPath() { return parentPath; }
-        public void setParentPath(String parentPath) { this.parentPath = parentPath; }
+        public String getLabel() {
+            return label;
+        }
+
+        public void setLabel(String label) {
+            this.label = label;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public String getIcon() {
+            return icon;
+        }
+
+        public void setIcon(String icon) {
+            this.icon = icon;
+        }
+
+        public String getParentPath() {
+            return parentPath;
+        }
+
+        public void setParentPath(String parentPath) {
+            this.parentPath = parentPath;
+        }
         /** 链式声明父级路径（返回自身）：插件一行声明「挂在哪个菜单下」，null = 顶层 */
         public NavItem withParent(String parentPath) {
             this.parentPath = parentPath;
             return this;
         }
-        public String getPermission() { return permission; }
-        public void setPermission(String permission) { this.permission = permission; }
-        public int getSort() { return sort; }
-        public void setSort(int sort) { this.sort = sort; }
+
+        public String getPermission() {
+            return permission;
+        }
+
+        public void setPermission(String permission) {
+            this.permission = permission;
+        }
+
+        public int getSort() {
+            return sort;
+        }
+
+        public void setSort(int sort) {
+            this.sort = sort;
+        }
     }
 }

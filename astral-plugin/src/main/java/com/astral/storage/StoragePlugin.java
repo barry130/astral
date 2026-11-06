@@ -2,10 +2,9 @@ package com.astral.storage;
 
 import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PluginFrontendExtension;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * 文件存储插件（Telegram + Cloudflare Worker 图床 MVP）
@@ -66,8 +65,7 @@ public class StoragePlugin implements AstralPlugin, PluginFrontendExtension {
 
     @Override
     public List<NavItem> getNavItems() {
-        return List.of(
-                NavItem.pluginPage("文件存储", "/dashboard/plugin/storage", "CloudUploadOutlined", "admin:storage:view", 220)
-        );
+        return List.of(NavItem.pluginPage(
+                "文件存储", "/dashboard/plugin/storage", "CloudUploadOutlined", "admin:storage:view", 220));
     }
 }

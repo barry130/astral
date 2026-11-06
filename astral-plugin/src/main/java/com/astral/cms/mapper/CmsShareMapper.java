@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * CMS 分享链接 Mapper
  */
 @Mapper
-public interface CmsShareMapper extends BaseMapper<CmsShare> {
-}
+public interface CmsShareMapper extends BaseMapper<CmsShare> {}

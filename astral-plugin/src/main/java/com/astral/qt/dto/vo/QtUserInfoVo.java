@@ -1,9 +1,8 @@
 package com.astral.qt.dto.vo;
 
 import com.astral.dao.entity.User;
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /** 用户信息 + token（用户已并入宿主 sys_user，统一走 Sa-Token */
 @Data

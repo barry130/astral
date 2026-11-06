@@ -8,5 +8,4 @@ import org.apache.ibatis.annotations.Mapper;
  * AI 知识分片 Mapper
  */
 @Mapper
-public interface AiKnowledgeChunkMapper extends BaseMapper<AiKnowledgeChunkEntity> {
-}
+public interface AiKnowledgeChunkMapper extends BaseMapper<AiKnowledgeChunkEntity> {}

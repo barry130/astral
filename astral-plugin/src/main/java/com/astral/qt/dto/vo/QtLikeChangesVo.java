@@ -1,8 +1,7 @@
 package com.astral.qt.dto.vo;
 
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * 增量拉取结果（LIKE_SYNC_DESIGN.md §2.3）

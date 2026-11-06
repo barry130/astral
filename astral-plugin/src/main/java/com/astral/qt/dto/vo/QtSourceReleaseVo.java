@@ -1,11 +1,10 @@
 package com.astral.qt.dto.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import lombok.Data;
 
 /**
  * 音源包发布信息（对外视图）

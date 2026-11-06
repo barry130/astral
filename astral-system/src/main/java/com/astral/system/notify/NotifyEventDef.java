@@ -38,15 +38,25 @@ public record NotifyEventDef(
         String sender) {
 
     /** 兼容旧签名（无必达渠道、未声明触发方） */
-    public NotifyEventDef(String code, String name, String description,
-                          List<NotifyEventField> payloadFields, List<String> channels, String noticeType) {
+    public NotifyEventDef(
+            String code,
+            String name,
+            String description,
+            List<NotifyEventField> payloadFields,
+            List<String> channels,
+            String noticeType) {
         this(code, name, description, payloadFields, channels, noticeType, List.of(), null);
     }
 
     /** 兼容旧签名（有必达渠道、未声明触发方） */
-    public NotifyEventDef(String code, String name, String description,
-                          List<NotifyEventField> payloadFields, List<String> channels, String noticeType,
-                          List<String> requiredChannels) {
+    public NotifyEventDef(
+            String code,
+            String name,
+            String description,
+            List<NotifyEventField> payloadFields,
+            List<String> channels,
+            String noticeType,
+            List<String> requiredChannels) {
         this(code, name, description, payloadFields, channels, noticeType, requiredChannels, null);
     }
 

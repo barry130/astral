@@ -3,12 +3,11 @@ package com.astral.auth.security;
 import com.astral.common.web.CsrfTokenSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import java.time.Duration;
 
 /**
  * 管理端认证 Cookie 的读写器。
@@ -60,7 +59,8 @@ public class AuthCookieWriter {
         CsrfTokenSupport.writeCookie(response, TOKEN_COOKIE, token, true, secure, sameSite, "/", maxAge);
         String csrf = CsrfTokenSupport.newToken();
         // CSRF Cookie 必须让前端读得到（HttpOnly=false），否则回填不了请求头
-        CsrfTokenSupport.writeCookie(response, CsrfTokenSupport.CSRF_COOKIE, csrf, false, secure, sameSite, "/", maxAge);
+        CsrfTokenSupport.writeCookie(
+                response, CsrfTokenSupport.CSRF_COOKIE, csrf, false, secure, sameSite, "/", maxAge);
         return csrf;
     }
 
@@ -83,7 +83,8 @@ public class AuthCookieWriter {
         }
         String csrf = CsrfTokenSupport.newToken();
         long maxAge = maxAgeSeconds > 0 ? maxAgeSeconds : DEFAULT_CSRF_MAX_AGE;
-        CsrfTokenSupport.writeCookie(response, CsrfTokenSupport.CSRF_COOKIE, csrf, false, secure, sameSite, "/", maxAge);
+        CsrfTokenSupport.writeCookie(
+                response, CsrfTokenSupport.CSRF_COOKIE, csrf, false, secure, sameSite, "/", maxAge);
         return csrf;
     }
 
@@ -105,7 +106,8 @@ public class AuthCookieWriter {
         HttpServletRequest request = currentRequest();
         String csrf = CsrfTokenSupport.readCookie(request, CsrfTokenSupport.CSRF_COOKIE);
         if (csrf != null && !csrf.isBlank()) {
-            CsrfTokenSupport.writeCookie(response, CsrfTokenSupport.CSRF_COOKIE, csrf, false, secure, sameSite, "/", timeoutSeconds);
+            CsrfTokenSupport.writeCookie(
+                    response, CsrfTokenSupport.CSRF_COOKIE, csrf, false, secure, sameSite, "/", timeoutSeconds);
         }
     }
 

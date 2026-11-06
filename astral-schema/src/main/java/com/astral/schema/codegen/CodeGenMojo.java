@@ -2,20 +2,19 @@ package com.astral.schema.codegen;
 
 import com.astral.schema.SchemaCodeGenerator;
 import com.astral.schema.TableSchema;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
-import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
-import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Maven代码生成插件
@@ -84,7 +83,8 @@ public class CodeGenMojo extends AbstractMojo {
         for (TableSchema schema : schemas) {
             try {
                 String entityCode = SchemaCodeGenerator.generateEntity(schema);
-                Path entityPath = baseDir.resolve(schema.getPackageName().replace('.', '/') + "/" + schema.getClassName() + ".java");
+                Path entityPath = baseDir.resolve(
+                        schema.getPackageName().replace('.', '/') + "/" + schema.getClassName() + ".java");
                 writeIfChanged(entityPath, entityCode);
                 getLog().info("  Generated Entity: " + schema.getClassName());
             } catch (Exception e) {

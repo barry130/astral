@@ -6,11 +6,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import tools.jackson.databind.node.ObjectNode;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 管理端后台配置 DTO 集合。
@@ -20,8 +19,7 @@ import java.util.List;
  */
 public final class AiAdminDtos {
 
-    private AiAdminDtos() {
-    }
+    private AiAdminDtos() {}
 
     // ==================== 提供方 ====================
 
@@ -53,9 +51,7 @@ public final class AiAdminDtos {
             @Min(1000) @Max(600000) Integer readTimeoutMs,
             @Min(0) @Max(5) Integer maxRetries,
             @Min(1) @Max(10000) Integer weight,
-            @Size(max = 512) String remark
-    ) {
-    }
+            @Size(max = 512) String remark) {}
 
     /** 提供方视图 */
     public record ProviderVo(
@@ -77,13 +73,10 @@ public final class AiAdminDtos {
             String remark,
             Integer modelCount,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     /** 连接测试结果 */
-    public record ProviderTestVo(boolean healthy, String message, long latencyMs, String healthStatus) {
-    }
+    public record ProviderTestVo(boolean healthy, String message, long latencyMs, String healthStatus) {}
 
     // ==================== 模型 ====================
 
@@ -121,9 +114,7 @@ public final class AiAdminDtos {
             BigDecimal outputPrice,
             @Size(max = 8) String currency,
             Boolean enabled,
-            @Size(max = 512) String remark
-    ) {
-    }
+            @Size(max = 512) String remark) {}
 
     /** 模型视图 */
     public record ModelVo(
@@ -145,9 +136,7 @@ public final class AiAdminDtos {
             Boolean enabled,
             String remark,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     // ==================== 路由 ====================
 
@@ -177,9 +166,7 @@ public final class AiAdminDtos {
             @Min(1) @Max(1000000) Integer maxTokens,
             String extraParametersJson,
             Boolean enabled,
-            @Size(max = 512) String remark
-    ) {
-    }
+            @Size(max = 512) String remark) {}
 
     /** 路由视图 */
     public record RouteVo(
@@ -199,9 +186,7 @@ public final class AiAdminDtos {
             Boolean enabled,
             String remark,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     // ==================== 智能体 ====================
 
@@ -239,9 +224,7 @@ public final class AiAdminDtos {
             Boolean allowFileContext,
             Boolean conversationEnabled,
             Boolean feedbackEnabled,
-            Integer sort
-    ) {
-    }
+            Integer sort) {}
 
     /** 智能体视图 */
     public record AgentVo(
@@ -267,9 +250,7 @@ public final class AiAdminDtos {
             Integer versionCount,
             Integer draftVersionCount,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     /**
      * 智能体版本保存请求（仅 DRAFT 可改）。
@@ -297,9 +278,7 @@ public final class AiAdminDtos {
             String modelParametersJson,
             String safetyPolicyJson,
             String quotaOverrideJson,
-            List<Long> toolIds
-    ) {
-    }
+            List<Long> toolIds) {}
 
     /** 智能体版本视图 */
     public record AgentVersionVo(
@@ -328,16 +307,13 @@ public final class AiAdminDtos {
             List<Long> toolIds,
             List<Long> knowledgeSourceIds,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     /** 版本校验结果 */
     public record ValidationVo(boolean valid, List<ValidationIssue> issues) {
 
         /** 单条校验问题 */
-        public record ValidationIssue(String code, String level, String message, String field) {
-        }
+        public record ValidationIssue(String code, String level, String message, String field) {}
     }
 
     // ==================== 提示词 ====================
@@ -354,9 +330,7 @@ public final class AiAdminDtos {
             @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$") String promptCode,
             @NotBlank @Size(max = 128) String name,
             @Size(max = 64) String scene,
-            @Size(max = 512) String description
-    ) {
-    }
+            @Size(max = 512) String description) {}
 
     /**
      * 提示词版本保存请求。
@@ -367,12 +341,7 @@ public final class AiAdminDtos {
      * @param changelog          变更说明
      */
     public record PromptVersionSaveReq(
-            String systemPrompt,
-            String userPromptTemplate,
-            String variablesJson,
-            @Size(max = 512) String changelog
-    ) {
-    }
+            String systemPrompt, String userPromptTemplate, String variablesJson, @Size(max = 512) String changelog) {}
 
     /** 提示词模板视图 */
     public record PromptTemplateVo(
@@ -386,9 +355,7 @@ public final class AiAdminDtos {
             Integer publishedVersionNo,
             Integer versionCount,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     /** 提示词版本视图 */
     public record PromptVersionVo(
@@ -403,9 +370,7 @@ public final class AiAdminDtos {
             Long publishedBy,
             LocalDateTime publishedAt,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     // ==================== 知识库 ====================
 
@@ -427,9 +392,7 @@ public final class AiAdminDtos {
             @Size(max = 512) String description,
             @Size(max = 512) String pathPattern,
             Boolean enabled,
-            @Size(max = 16) String syncMode
-    ) {
-    }
+            @Size(max = 16) String syncMode) {}
 
     /**
      * 知识文档保存请求。
@@ -447,9 +410,7 @@ public final class AiAdminDtos {
             @Size(max = 512) String path,
             @Size(max = 256) String section,
             @Size(max = 64) String version,
-            @NotBlank String content
-    ) {
-    }
+            @NotBlank String content) {}
 
     /** 知识源视图 */
     public record KnowledgeSourceVo(
@@ -466,9 +427,7 @@ public final class AiAdminDtos {
             Integer documentCount,
             Integer chunkCount,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     /** 知识文档视图 */
     public record KnowledgeDocumentVo(
@@ -484,9 +443,7 @@ public final class AiAdminDtos {
             Integer chunkCount,
             LocalDateTime indexedAt,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     /** 索引任务视图 */
     public record IndexJobVo(
@@ -499,9 +456,7 @@ public final class AiAdminDtos {
             Integer failedCount,
             LocalDateTime startedAt,
             LocalDateTime finishedAt,
-            String errorSummary
-    ) {
-    }
+            String errorSummary) {}
 
     /**
      * 智能体版本知识绑定请求。
@@ -519,9 +474,7 @@ public final class AiAdminDtos {
             Integer priority,
             @Min(1) @Max(50) Integer retrievalTopK,
             BigDecimal minScore,
-            @Size(max = 32) String citationPolicy
-    ) {
-    }
+            @Size(max = 32) String citationPolicy) {}
 
     /** 智能体知识绑定视图 */
     public record AgentKnowledgeVo(
@@ -534,9 +487,7 @@ public final class AiAdminDtos {
             Integer priority,
             Integer retrievalTopK,
             BigDecimal minScore,
-            String citationPolicy
-    ) {
-    }
+            String citationPolicy) {}
 
     // ==================== 工具 ====================
 
@@ -554,9 +505,7 @@ public final class AiAdminDtos {
             @Size(max = 512) String description,
             @Size(max = 16) String riskLevel,
             @Size(max = 24) String approvalPolicy,
-            @Size(max = 16) String status
-    ) {
-    }
+            @Size(max = 16) String status) {}
 
     /** 工具视图 */
     public record ToolVo(
@@ -577,9 +526,7 @@ public final class AiAdminDtos {
             String status,
             Boolean handlerAvailable,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     /**
      * 声明式工具（HTTP / SQL）保存请求。
@@ -598,8 +545,8 @@ public final class AiAdminDtos {
      * @param approvalPolicy  确认策略（仅 GET 生效）
      */
     public record DeclarativeToolSaveReq(
-            @NotBlank @Size(max = 64) @Pattern(regexp = "[a-z][a-z0-9_]{2,63}",
-                    message = "工具编码只能是小写字母开头的 snake_case") String toolCode,
+            @NotBlank @Size(max = 64) @Pattern(regexp = "[a-z][a-z0-9_]{2,63}", message = "工具编码只能是小写字母开头的 snake_case")
+                    String toolCode,
             @NotBlank @Size(max = 128) String name,
             @Size(max = 512) String description,
             List<String> clientTypes,
@@ -607,19 +554,14 @@ public final class AiAdminDtos {
             String argumentsSchema,
             @NotBlank String executorConfig,
             @Size(max = 16) String riskLevel,
-            @Size(max = 24) String approvalPolicy
-    ) {
-    }
+            @Size(max = 24) String approvalPolicy) {}
 
     /**
      * 工具测试运行请求。
      *
      * @param arguments 参数 JSON 文本（对 argumentsSchema 的一次样例填充）
      */
-    public record ToolTestRunReq(
-            @Size(max = 8192) String arguments
-    ) {
-    }
+    public record ToolTestRunReq(@Size(max = 8192) String arguments) {}
 
     /**
      * 工具测试运行结果。
@@ -629,13 +571,7 @@ public final class AiAdminDtos {
      * @param payload 结构化结果
      * @param elapsedMs 执行耗时（毫秒）
      */
-    public record ToolTestRunVo(
-            String status,
-            String summary,
-            ObjectNode payload,
-            long elapsedMs
-    ) {
-    }
+    public record ToolTestRunVo(String status, String summary, ObjectNode payload, long elapsedMs) {}
 
     /**
      * MCP 服务器保存请求。
@@ -653,9 +589,7 @@ public final class AiAdminDtos {
             @NotBlank @Size(max = 512) String url,
             @Size(max = 8192) String headers,
             Boolean readOnly,
-            @Size(max = 16) String status
-    ) {
-    }
+            @Size(max = 16) String status) {}
 
     /**
      * MCP 服务器视图。
@@ -684,9 +618,7 @@ public final class AiAdminDtos {
             Integer toolCountEnabled,
             LocalDateTime lastRefreshTime,
             String lastError,
-            LocalDateTime createTime
-    ) {
-    }
+            LocalDateTime createTime) {}
 
     /**
      * 智能体工具绑定请求。
@@ -704,9 +636,7 @@ public final class AiAdminDtos {
             Integer sort,
             @Size(max = 16) String riskOverride,
             @Size(max = 24) String approvalPolicy,
-            String argumentsSchemaOverride
-    ) {
-    }
+            String argumentsSchemaOverride) {}
 
     /** 智能体工具绑定视图 */
     public record AgentToolVo(
@@ -719,9 +649,7 @@ public final class AiAdminDtos {
             String effectiveRiskLevel,
             String approvalPolicy,
             Boolean enabled,
-            Integer sort
-    ) {
-    }
+            Integer sort) {}
 
     /**
      * 工具调用审批请求。
@@ -729,8 +657,7 @@ public final class AiAdminDtos {
      * @param approved 是否通过
      * @param comment  审批意见
      */
-    public record ToolApproveReq(@NotNull Boolean approved, @Size(max = 512) String comment) {
-    }
+    public record ToolApproveReq(@NotNull Boolean approved, @Size(max = 512) String comment) {}
 
     // ==================== 额度 ====================
 
@@ -776,9 +703,7 @@ public final class AiAdminDtos {
             @Min(0) Integer maxConcurrent,
             BigDecimal monthlyCostLimit,
             Boolean enabled,
-            @Size(max = 512) String remark
-    ) {
-    }
+            @Size(max = 512) String remark) {}
 
     /** 额度策略视图 */
     public record QuotaPolicyVo(
@@ -803,9 +728,7 @@ public final class AiAdminDtos {
             Boolean enabled,
             String remark,
             LocalDateTime createTime,
-            LocalDateTime updateTime
-    ) {
-    }
+            LocalDateTime updateTime) {}
 
     // ==================== 用量 / 请求 / 审计 ====================
 
@@ -824,9 +747,7 @@ public final class AiAdminDtos {
             BigDecimal estimatedCost,
             String currency,
             String status,
-            LocalDateTime createTime
-    ) {
-    }
+            LocalDateTime createTime) {}
 
     /** 用量汇总 */
     public record UsageSummaryVo(
@@ -835,13 +756,10 @@ public final class AiAdminDtos {
             long outputTokens,
             BigDecimal estimatedCost,
             String currency,
-            List<UsageTrendPoint> trend
-    ) {
-    }
+            List<UsageTrendPoint> trend) {}
 
     /** 用量趋势点 */
-    public record UsageTrendPoint(String date, long requestCount, long inputTokens, long outputTokens) {
-    }
+    public record UsageTrendPoint(String date, long requestCount, long inputTokens, long outputTokens) {}
 
     /** 请求列表视图（不含正文，避免敏感内容泄露） */
     public record RequestVo(
@@ -861,9 +779,7 @@ public final class AiAdminDtos {
             Long durationMs,
             LocalDateTime startedAt,
             LocalDateTime finishedAt,
-            LocalDateTime createTime
-    ) {
-    }
+            LocalDateTime createTime) {}
 
     /** 请求详情（正文需 conversation:content:view 权限） */
     public record RequestDetailVo(
@@ -876,9 +792,7 @@ public final class AiAdminDtos {
             String safetyPolicySnapshot,
             List<ToolCallVo> toolCalls,
             List<EventVo> events,
-            List<MessageVo> messages
-    ) {
-    }
+            List<MessageVo> messages) {}
 
     /** 工具调用视图 */
     public record ToolCallVo(
@@ -895,18 +809,10 @@ public final class AiAdminDtos {
             Long approvedBy,
             LocalDateTime approvedAt,
             LocalDateTime startedAt,
-            LocalDateTime finishedAt
-    ) {
-    }
+            LocalDateTime finishedAt) {}
 
     /** 请求事件视图 */
-    public record EventVo(
-            Long sequence,
-            String type,
-            String dataJson,
-            LocalDateTime createdAt
-    ) {
-    }
+    public record EventVo(Long sequence, String type, String dataJson, LocalDateTime createdAt) {}
 
     /** 消息视图（管理端审计用） */
     public record MessageVo(
@@ -922,9 +828,7 @@ public final class AiAdminDtos {
             String modelName,
             Integer inputTokens,
             Integer outputTokens,
-            LocalDateTime createTime
-    ) {
-    }
+            LocalDateTime createTime) {}
 
     /** 审计记录视图 */
     public record AuditVo(
@@ -936,9 +840,7 @@ public final class AiAdminDtos {
             String operatorName,
             String detail,
             String clientIp,
-            LocalDateTime createTime
-    ) {
-    }
+            LocalDateTime createTime) {}
 
     /** 配置总览 */
     public record OverviewVo(
@@ -960,17 +862,19 @@ public final class AiAdminDtos {
             long todayInputTokens,
             long todayOutputTokens,
             List<ProviderHealthVo> providerHealth,
-            List<AgentBriefVo> agents
-    ) {
-    }
+            List<AgentBriefVo> agents) {}
 
     /** 提供方健康摘要 */
-    public record ProviderHealthVo(Long id, String name, String healthStatus, String healthMessage,
-                                   LocalDateTime lastHealthTime) {
-    }
+    public record ProviderHealthVo(
+            Long id, String name, String healthStatus, String healthMessage, LocalDateTime lastHealthTime) {}
 
     /** 智能体摘要 */
-    public record AgentBriefVo(Long id, String agentCode, String name, String agentType, String status,
-                               Integer publishedVersionNo, List<String> clientTypes) {
-    }
+    public record AgentBriefVo(
+            Long id,
+            String agentCode,
+            String name,
+            String agentType,
+            String status,
+            Integer publishedVersionNo,
+            List<String> clientTypes) {}
 }

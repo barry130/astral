@@ -2,10 +2,9 @@ package com.astral.cms;
 
 import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PluginFrontendExtension;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * 内容管理（CMS）插件：博客 / Wiki
@@ -64,8 +63,6 @@ public class CmsPlugin implements AstralPlugin, PluginFrontendExtension {
 
     @Override
     public List<NavItem> getNavItems() {
-        return List.of(
-                NavItem.pluginPage("内容管理", "/dashboard/cms", "FileTextOutlined", "admin:cms:view", 220)
-        );
+        return List.of(NavItem.pluginPage("内容管理", "/dashboard/cms", "FileTextOutlined", "admin:cms:view", 220));
     }
 }

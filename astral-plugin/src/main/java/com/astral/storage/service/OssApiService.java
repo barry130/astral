@@ -2,13 +2,6 @@ package com.astral.storage.service;
 
 import com.astral.common.exception.BusinessException;
 import com.astral.storage.entity.StorageConfigEntity;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -20,6 +13,12 @@ import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 阿里云 OSS 适配（V1 签名，与 oss2 python-sdk Auth 一致）
@@ -36,9 +35,8 @@ import java.util.TreeMap;
 public class OssApiService {
 
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private final HttpClient httpClient =
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     public OssApiService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -66,7 +64,11 @@ public class OssApiService {
             if (accessKeyId.isBlank() || accessKeySecret.isBlank()) {
                 throw new BusinessException("STORAGE024");
             }
-            return new OssOptions(bucket, endpoint, accessKeyId, accessKeySecret,
+            return new OssOptions(
+                    bucket,
+                    endpoint,
+                    accessKeyId,
+                    accessKeySecret,
                     node.path("publicBaseUrl").asText(null));
         } catch (BusinessException e) {
             throw e;
@@ -76,12 +78,10 @@ public class OssApiService {
     }
 
     /** OSS 连接信息（accessKeySecret 只在服务端内存中流转） */
-    public record OssOptions(String bucket, String endpoint, String accessKeyId,
-                             String accessKeySecret, String publicBaseUrl) {
-    }
+    public record OssOptions(
+            String bucket, String endpoint, String accessKeyId, String accessKeySecret, String publicBaseUrl) {}
 
-    public record PresignedUrl(String url, long expiresAtEpochSeconds) {
-    }
+    public record PresignedUrl(String url, long expiresAtEpochSeconds) {}
 
     // ==================== 签名 ====================
 
@@ -89,13 +89,25 @@ public class OssApiService {
      * 计算 V1 StringToSign。headerDate 为 URL 签名时的绝对过期时间戳（替代 Date）。
      * canonicalizedResource = /{bucket}/{key}（对象操作）。
      */
-    private String stringToSign(String method, String date, String contentMd5, String contentType,
-                                Map<String, String> ossHeaders, String canonicalizedResource) {
+    private String stringToSign(
+            String method,
+            String date,
+            String contentMd5,
+            String contentType,
+            Map<String, String> ossHeaders,
+            String canonicalizedResource) {
         StringBuilder ossHeaderStr = new StringBuilder();
-        new TreeMap<>(ossHeaders).forEach((k, v) ->
-                ossHeaderStr.append(k.toLowerCase(Locale.ROOT)).append(':').append(v).append('\n'));
-        return String.join("\n", method, contentMd5 == null ? "" : contentMd5,
-                contentType == null ? "" : contentType, date)
+        new TreeMap<>(ossHeaders).forEach((k, v) -> ossHeaderStr
+                .append(k.toLowerCase(Locale.ROOT))
+                .append(':')
+                .append(v)
+                .append('\n'));
+        return String.join(
+                        "\n",
+                        method,
+                        contentMd5 == null ? "" : contentMd5,
+                        contentType == null ? "" : contentType,
+                        date)
                 + "\n" + ossHeaderStr + canonicalizedResource;
     }
 
@@ -125,7 +137,8 @@ public class OssApiService {
         OssOptions o = optionsOf(config);
         long exp = Instant.now().getEpochSecond() + Math.max(60, Math.min(ttlSeconds, 604800));
         String canonicalResource = "/" + o.bucket() + "/" + key;
-        String signature = hmacSha1Base64(o.accessKeySecret(),
+        String signature = hmacSha1Base64(
+                o.accessKeySecret(),
                 stringToSign(method, String.valueOf(exp), null, null, Map.of(), canonicalResource));
         String url = "https://" + o.bucket() + "." + o.endpoint()
                 + "/" + S3ObjectService.encodeKeyPath(key)
@@ -148,8 +161,8 @@ public class OssApiService {
     /** HEAD 对象：确认对象存在并取 Content-Length；不存在返回 -1 */
     public long headObject(StorageConfigEntity config, String key) {
         try {
-            HttpResponse<Void> resp = httpClient.send(signedRequest("HEAD", config, key),
-                    HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp =
+                    httpClient.send(signedRequest("HEAD", config, key), HttpResponse.BodyHandlers.discarding());
             return resp.statusCode() == 200
                     ? Long.parseLong(resp.headers().firstValue("Content-Length").orElse("-1"))
                     : -1;
@@ -164,8 +177,8 @@ public class OssApiService {
     /** DELETE 对象：OSS 删除不存在对象也返回 204，视为成功 */
     public void deleteObject(StorageConfigEntity config, String key) {
         try {
-            HttpResponse<Void> resp = httpClient.send(signedRequest("DELETE", config, key),
-                    HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp =
+                    httpClient.send(signedRequest("DELETE", config, key), HttpResponse.BodyHandlers.discarding());
             if (resp.statusCode() / 100 != 2) {
                 throw new BusinessException("STORAGE012", "OSS 删除返回 HTTP " + resp.statusCode());
             }
@@ -185,15 +198,16 @@ public class OssApiService {
             String host = o.bucket() + "." + o.endpoint();
             // 桶操作 canonicalizedResource = /{bucket}/ + 子资源（max-keys 为普通参数不参与 V1 资源串）
             String canonicalResource = "/" + o.bucket() + "/";
-            String signature = hmacSha1Base64(o.accessKeySecret(),
-                    stringToSign("GET", date, null, null, Map.of(), canonicalResource));
-            HttpResponse<Void> resp = httpClient.send(HttpRequest.newBuilder(
-                            URI.create("https://" + host + "/?max-keys=1"))
-                    .GET()
-                    .header("Date", date)
-                    .header("Authorization", "OSS " + o.accessKeyId() + ":" + signature)
-                    .timeout(Duration.ofSeconds(8))
-                    .build(), HttpResponse.BodyHandlers.discarding());
+            String signature = hmacSha1Base64(
+                    o.accessKeySecret(), stringToSign("GET", date, null, null, Map.of(), canonicalResource));
+            HttpResponse<Void> resp = httpClient.send(
+                    HttpRequest.newBuilder(URI.create("https://" + host + "/?max-keys=1"))
+                            .GET()
+                            .header("Date", date)
+                            .header("Authorization", "OSS " + o.accessKeyId() + ":" + signature)
+                            .timeout(Duration.ofSeconds(8))
+                            .build(),
+                    HttpResponse.BodyHandlers.discarding());
             if (resp.statusCode() / 100 != 2) {
                 throw new IllegalStateException("HTTP " + resp.statusCode());
             }
@@ -209,8 +223,8 @@ public class OssApiService {
         String date = httpDate();
         String host = o.bucket() + "." + o.endpoint();
         String canonicalResource = "/" + o.bucket() + "/" + key;
-        String signature = hmacSha1Base64(o.accessKeySecret(),
-                stringToSign(method, date, null, null, Map.of(), canonicalResource));
+        String signature = hmacSha1Base64(
+                o.accessKeySecret(), stringToSign(method, date, null, null, Map.of(), canonicalResource));
         return HttpRequest.newBuilder(URI.create("https://" + host + "/" + S3ObjectService.encodeKeyPath(key)))
                 .method(method, HttpRequest.BodyPublishers.noBody())
                 .header("Date", date)
@@ -220,8 +234,8 @@ public class OssApiService {
     }
 
     private String httpDate() {
-        return java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
-                .format(java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC));
+        return java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME.format(
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC));
     }
 
     // ==================== 原语 ====================

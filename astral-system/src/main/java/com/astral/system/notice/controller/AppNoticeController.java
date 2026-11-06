@@ -11,6 +11,7 @@ import com.astral.system.notice.dto.ReadAckDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,8 +22,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import java.util.List;
 
 /**
  * 通知管理 - App 端控制器。
@@ -49,26 +48,26 @@ public class AppNoticeController {
     @Resource
     private NoticeService noticeService;
 
-    @Operation(summary = "当前生效通知（公开，三展示位共用，按 display 位分发；平台取 X-App-Ut，"
-            + "兼容遗留 channel=app|pc|web|all，缺省 app）")
+    @Operation(summary = "当前生效通知（公开，三展示位共用，按 display 位分发；平台取 X-App-Ut，" + "兼容遗留 channel=app|pc|web|all，缺省 app）")
     @GetMapping("/active")
-    public Result<List<SysNotice>> active(@RequestParam(value = "versionCode", required = false) String versionCode,
-                                          @RequestParam(value = "channel", required = false) String channel,
-                                          @RequestHeader(value = ClientHeaders.H_UT, required = false) String utHeader,
-                                          @RequestHeader(value = ClientHeaders.H_PLATFORM_LEGACY, required = false) String legacyPlatform,
-                                          @RequestHeader(value = "satoken", required = false) String satoken) {
+    public Result<List<SysNotice>> active(
+            @RequestParam(value = "versionCode", required = false) String versionCode,
+            @RequestParam(value = "channel", required = false) String channel,
+            @RequestHeader(value = ClientHeaders.H_UT, required = false) String utHeader,
+            @RequestHeader(value = ClientHeaders.H_PLATFORM_LEGACY, required = false) String legacyPlatform,
+            @RequestHeader(value = "satoken", required = false) String satoken) {
         Long userId = tryCurrentUserId();
         List<String> targets = NoticeTargets.resolveTargets(utHeader, legacyPlatform, channel);
         return Result.success(noticeService.listForChannel(targets, versionCode, userId != null, userId));
     }
 
-    @Operation(summary = "消息中心（公告+通知，带 noticeType 标签；已读由前端缓存判断；"
-            + "平台取 X-App-Ut，兼容遗留 channel=app|pc|web|all，缺省 app）")
+    @Operation(summary = "消息中心（公告+通知，带 noticeType 标签；已读由前端缓存判断；" + "平台取 X-App-Ut，兼容遗留 channel=app|pc|web|all，缺省 app）")
     @RequiresPermission(value = "user:message:view", name = "消息查看", description = "App 端查看消息中心与未读数")
     @GetMapping("/center")
-    public Result<List<SysNotice>> center(@RequestParam(value = "channel", required = false) String channel,
-                                          @RequestHeader(value = ClientHeaders.H_UT, required = false) String utHeader,
-                                          @RequestHeader(value = ClientHeaders.H_PLATFORM_LEGACY, required = false) String legacyPlatform) {
+    public Result<List<SysNotice>> center(
+            @RequestParam(value = "channel", required = false) String channel,
+            @RequestHeader(value = ClientHeaders.H_UT, required = false) String utHeader,
+            @RequestHeader(value = ClientHeaders.H_PLATFORM_LEGACY, required = false) String legacyPlatform) {
         List<String> targets = NoticeTargets.resolveTargets(utHeader, legacyPlatform, channel);
         return Result.success(noticeService.listMessageCenter(currentUserId(), targets));
     }
@@ -76,9 +75,10 @@ public class AppNoticeController {
     @Operation(summary = "未读数（候选总数，已读判定在前端；平台取 X-App-Ut，兼容遗留 channel=app|pc|web|all，缺省 app）")
     @RequiresPermission(value = "user:message:view", name = "消息查看", description = "App 端查看消息中心与未读数")
     @GetMapping("/unread-count")
-    public Result<Long> unreadCount(@RequestParam(value = "channel", required = false) String channel,
-                                    @RequestHeader(value = ClientHeaders.H_UT, required = false) String utHeader,
-                                    @RequestHeader(value = ClientHeaders.H_PLATFORM_LEGACY, required = false) String legacyPlatform) {
+    public Result<Long> unreadCount(
+            @RequestParam(value = "channel", required = false) String channel,
+            @RequestHeader(value = ClientHeaders.H_UT, required = false) String utHeader,
+            @RequestHeader(value = ClientHeaders.H_PLATFORM_LEGACY, required = false) String legacyPlatform) {
         List<String> targets = NoticeTargets.resolveTargets(utHeader, legacyPlatform, channel);
         return Result.success(noticeService.countUnread(currentUserId(), targets));
     }

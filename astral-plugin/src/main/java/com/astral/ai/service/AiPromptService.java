@@ -7,13 +7,12 @@ import com.astral.ai.mapper.AiPromptTemplateMapper;
 import com.astral.ai.mapper.AiPromptVersionMapper;
 import com.astral.common.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.time.LocalDateTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 提示词模板与版本服务。
@@ -33,8 +32,8 @@ public class AiPromptService {
 
     /** 全部模板 */
     public List<AiPromptTemplateEntity> listTemplates() {
-        return templateMapper.selectList(new LambdaQueryWrapper<AiPromptTemplateEntity>()
-                .orderByAsc(AiPromptTemplateEntity::getId));
+        return templateMapper.selectList(
+                new LambdaQueryWrapper<AiPromptTemplateEntity>().orderByAsc(AiPromptTemplateEntity::getId));
     }
 
     /** 取模板 */
@@ -63,8 +62,8 @@ public class AiPromptService {
 
     /** 新增模板 */
     @Transactional(rollbackFor = Exception.class)
-    public AiPromptTemplateEntity createTemplate(String promptCode, String name, String scene,
-                                                 String description, Long operatorId) {
+    public AiPromptTemplateEntity createTemplate(
+            String promptCode, String name, String scene, String description, Long operatorId) {
         if (findTemplateByCode(promptCode) != null) {
             throw new BusinessException("AI007", "提示词编码已存在: " + promptCode);
         }
@@ -82,8 +81,8 @@ public class AiPromptService {
 
     /** 更新模板 */
     @Transactional(rollbackFor = Exception.class)
-    public AiPromptTemplateEntity updateTemplate(Long id, String name, String scene, String description,
-                                                 Long operatorId) {
+    public AiPromptTemplateEntity updateTemplate(
+            Long id, String name, String scene, String description, Long operatorId) {
         AiPromptTemplateEntity entity = requireTemplate(id);
         if (name != null && !name.isBlank()) {
             entity.setName(name.trim());
@@ -133,8 +132,13 @@ public class AiPromptService {
 
     /** 新建草稿版本 */
     @Transactional(rollbackFor = Exception.class)
-    public AiPromptVersionEntity createVersion(Long templateId, String systemPrompt, String userPromptTemplate,
-                                               String variablesJson, String changelog, Long operatorId) {
+    public AiPromptVersionEntity createVersion(
+            Long templateId,
+            String systemPrompt,
+            String userPromptTemplate,
+            String variablesJson,
+            String changelog,
+            Long operatorId) {
         requireTemplate(templateId);
         List<AiPromptVersionEntity> versions = listVersions(templateId);
         int nextNo = versions.isEmpty() ? 1 : versions.get(0).getVersionNo() + 1;
@@ -153,8 +157,13 @@ public class AiPromptService {
 
     /** 更新草稿版本（已发布不可改） */
     @Transactional(rollbackFor = Exception.class)
-    public AiPromptVersionEntity updateVersion(Long id, String systemPrompt, String userPromptTemplate,
-                                               String variablesJson, String changelog, Long operatorId) {
+    public AiPromptVersionEntity updateVersion(
+            Long id,
+            String systemPrompt,
+            String userPromptTemplate,
+            String variablesJson,
+            String changelog,
+            Long operatorId) {
         AiPromptVersionEntity entity = requireVersion(id);
         if (!AiConstants.VersionStatus.DRAFT.equals(entity.getStatus())) {
             throw new BusinessException("AI007", "提示词版本 v" + entity.getVersionNo() + " 已发布，不可修改");
@@ -185,10 +194,9 @@ public class AiPromptService {
         if (entity.getSystemPrompt() == null || entity.getSystemPrompt().isBlank()) {
             throw new BusinessException("AI007", "系统提示词不能为空");
         }
-        List<AiPromptVersionEntity> published = versionMapper.selectList(
-                new LambdaQueryWrapper<AiPromptVersionEntity>()
-                        .eq(AiPromptVersionEntity::getTemplateId, entity.getTemplateId())
-                        .eq(AiPromptVersionEntity::getStatus, AiConstants.VersionStatus.PUBLISHED));
+        List<AiPromptVersionEntity> published = versionMapper.selectList(new LambdaQueryWrapper<AiPromptVersionEntity>()
+                .eq(AiPromptVersionEntity::getTemplateId, entity.getTemplateId())
+                .eq(AiPromptVersionEntity::getStatus, AiConstants.VersionStatus.PUBLISHED));
         for (AiPromptVersionEntity old : published) {
             if (!old.getId().equals(entity.getId())) {
                 old.setStatus(AiConstants.VersionStatus.ARCHIVED);

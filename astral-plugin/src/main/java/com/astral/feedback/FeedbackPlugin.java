@@ -2,10 +2,9 @@ package com.astral.feedback;
 
 import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PluginFrontendExtension;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * 问题反馈插件
@@ -73,7 +72,6 @@ public class FeedbackPlugin implements AstralPlugin, PluginFrontendExtension {
         // 反馈管理页（类型筛选/列表标签用 feedback_type 字典，与通知无关）；
         // 插件业务页统一挂在「插件管理」下作为二级菜单（见 NavItem.PLUGIN_MANAGER_PATH）
         return List.of(
-                NavItem.pluginPage("反馈管理", "/dashboard/feedback", "MessageOutlined", "admin:feedback:view", 210)
-        );
+                NavItem.pluginPage("反馈管理", "/dashboard/feedback", "MessageOutlined", "admin:feedback:view", 210));
     }
 }

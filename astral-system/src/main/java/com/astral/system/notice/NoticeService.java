@@ -2,7 +2,6 @@ package com.astral.system.notice;
 
 import com.astral.dao.entity.SysNotice;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-
 import java.util.List;
 
 /**
@@ -93,8 +92,14 @@ public interface NoticeService {
      * @param noticeType 类型筛选：{@code announce} 精确匹配；{@code notice} 归并匹配历史
      *                   {@code feedback} / {@code request}（存量行不做数据迁移）；其余值精确匹配
      */
-    Page<SysNotice> page(int pageNum, int pageSize, String channel, String noticeType,
-                         String keyword, String startDate, String endDate);
+    Page<SysNotice> page(
+            int pageNum,
+            int pageSize,
+            String channel,
+            String noticeType,
+            String keyword,
+            String startDate,
+            String endDate);
 
     /** 新增通知（公告/定向）；渠道归一化与校验统一走 {@link NoticeTargets} */
     SysNotice create(SysNotice notice);

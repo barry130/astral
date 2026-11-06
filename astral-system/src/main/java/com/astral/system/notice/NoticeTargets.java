@@ -2,7 +2,6 @@ package com.astral.system.notice;
 
 import com.astral.common.constant.NoticeConstants;
 import com.astral.common.util.ClientHeaders;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -78,8 +77,11 @@ public final class NoticeTargets {
      * <p>顺序同 {@link #PLATFORMS}，保证 {@link #allAppValue} 的输出稳定。</p>
      */
     public static final List<String> APP_PLATFORMS = List.of(
-            ClientHeaders.UT_ANDROID, ClientHeaders.UT_IOS,
-            ClientHeaders.UT_WINDOWS, ClientHeaders.UT_LINUX, ClientHeaders.UT_MACOS,
+            ClientHeaders.UT_ANDROID,
+            ClientHeaders.UT_IOS,
+            ClientHeaders.UT_WINDOWS,
+            ClientHeaders.UT_LINUX,
+            ClientHeaders.UT_MACOS,
             ClientHeaders.UT_HARMONY);
 
     /** 移动端双平台（遗留 {@code app} 展开后的集合，也是缺省投放集合） */
@@ -102,8 +104,7 @@ public final class NoticeTargets {
      */
     public static final int MAX_STORED_LENGTH = 96;
 
-    private NoticeTargets() {
-    }
+    private NoticeTargets() {}
 
     // ==================== 请求侧：解析出「要看哪些平台」 ====================
 

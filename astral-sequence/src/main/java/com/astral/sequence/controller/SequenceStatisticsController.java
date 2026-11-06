@@ -1,22 +1,22 @@
 package com.astral.sequence.controller;
 
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.result.Result;
 import com.astral.dao.entity.SequenceStatistics;
 import com.astral.sequence.service.SequenceStatisticsService;
-import com.astral.common.result.Result;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 序列统计控制器
@@ -41,8 +41,8 @@ public class SequenceStatisticsController {
      */
     @Operation(summary = "分页查询")
     @GetMapping("/page")
-    public Result<Page<SequenceStatistics>> page(@RequestParam(defaultValue = "1") Integer pageNum,
-                                               @RequestParam(defaultValue = "10") Integer pageSize) {
+    public Result<Page<SequenceStatistics>> page(
+            @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
         Page<SequenceStatistics> page = new Page<>(pageNum, pageSize);
         return Result.success(sequenceStatisticsService.page(page));
     }

@@ -1,5 +1,9 @@
 package com.astral.system.notice;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import com.astral.dao.entity.SysNotice;
 import com.astral.dao.mapper.SysNoticeMapper;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -10,10 +14,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 /**
  * 反馈回复类通知的「全平台可见」约束在宿主通知服务里的落库口径。
@@ -31,7 +31,8 @@ class NoticePlatformTest {
     @ParameterizedTest
     @ValueSource(strings = {"feedbackAdminReplied", "feedbackUserReplied"})
     void editingReplyRetainsAllPlatformsUsingStoredScene(String scene) {
-        TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new MybatisConfiguration(), "notice-test"), SysNotice.class);
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), "notice-test"), SysNotice.class);
         SysNoticeMapper mapper = mock(SysNoticeMapper.class);
         NoticeServiceImpl service = new NoticeServiceImpl();
         ReflectionTestUtils.setField(service, "sysNoticeMapper", mapper);
@@ -49,7 +50,8 @@ class NoticePlatformTest {
         verify(mapper).update(isNull(), wrapper.capture());
         assertTrue(wrapper.getValue().getSqlSet().contains("channel="));
         assertTrue(((com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<SysNotice>) wrapper.getValue())
-                .getParamNameValuePairs().containsValue("all"));
+                .getParamNameValuePairs()
+                .containsValue("all"));
     }
 
     @ParameterizedTest

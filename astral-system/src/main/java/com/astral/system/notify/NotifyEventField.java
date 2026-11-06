@@ -11,5 +11,4 @@ package com.astral.system.notify;
  * @param name        字段名（即模板里的 ${占位符} 名）
  * @param description 字段含义与格式说明（如「6 位数字验证码，有效期 10 分钟」）
  */
-public record NotifyEventField(String name, String description) {
-}
+public record NotifyEventField(String name, String description) {}

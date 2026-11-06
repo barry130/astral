@@ -8,14 +8,13 @@ import com.astral.ai.entity.AiMessageEntity;
 import com.astral.ai.mapper.AiConversationMapper;
 import com.astral.ai.mapper.AiMessageMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 /**
  * 会话与消息持久化服务。
@@ -48,8 +47,7 @@ public class AiConversationService {
         LambdaQueryWrapper<AiConversationEntity> wrapper = new LambdaQueryWrapper<AiConversationEntity>()
                 .eq(AiConversationEntity::getUserId, userId)
                 .eq(agentId != null, AiConversationEntity::getAgentId, agentId)
-                .eq(clientType != null && !clientType.isBlank(),
-                        AiConversationEntity::getClientType, clientType)
+                .eq(clientType != null && !clientType.isBlank(), AiConversationEntity::getClientType, clientType)
                 .isNull(AiConversationEntity::getDeletedAt)
                 .orderByDesc(AiConversationEntity::getPinned)
                 .orderByDesc(AiConversationEntity::getLastMessageTime)
@@ -68,8 +66,7 @@ public class AiConversationService {
     /** 取会话并校验归属；不存在或不属于该用户抛 AI015 */
     public AiConversationEntity requireOwned(Long id, Long userId) {
         AiConversationEntity entity = find(id);
-        if (entity == null || entity.getDeletedAt() != null
-                || (userId != null && !userId.equals(entity.getUserId()))) {
+        if (entity == null || entity.getDeletedAt() != null || (userId != null && !userId.equals(entity.getUserId()))) {
             throw new AiException("AI015");
         }
         return entity;
@@ -130,7 +127,8 @@ public class AiConversationService {
         if (conversation == null) {
             return;
         }
-        boolean defaultTitle = conversation.getTitle() == null || conversation.getTitle().isBlank()
+        boolean defaultTitle = conversation.getTitle() == null
+                || conversation.getTitle().isBlank()
                 || "新会话".equals(conversation.getTitle());
         if (defaultTitle && firstUserContent != null && !firstUserContent.isBlank()) {
             conversation.setTitle(truncateTitle(firstUserContent));

@@ -1,10 +1,10 @@
 package com.astral.log.aspect;
 
+import cn.hutool.core.util.StrUtil;
 import com.astral.common.util.ClientIp;
 import com.astral.common.util.LogSanitizer;
-import cn.hutool.core.util.StrUtil;
-import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import java.lang.reflect.Method;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -16,8 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import java.lang.reflect.Method;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 操作日志AOP切面
@@ -54,8 +53,7 @@ public class OperateLogAspect {
      * 定义切点：拦截所有标注了 @OperateLog 注解的方法
      */
     @Pointcut("@annotation(com.astral.log.annotation.OperateLog)")
-    public void operateLogPointcut() {
-    }
+    public void operateLogPointcut() {}
 
     /**
      * 环绕通知：在目标方法执行前后捕获日志信息
@@ -94,13 +92,33 @@ public class OperateLogAspect {
             result = joinPoint.proceed();
             responseResult = getResponseResult(result);
             long executeTime = System.currentTimeMillis() - startTime;
-            operateLogWriter.saveAsync(username, operateType, requestUrl, requestMethod, requestParams, responseResult, ip, status, errorMsg, executeTime);
+            operateLogWriter.saveAsync(
+                    username,
+                    operateType,
+                    requestUrl,
+                    requestMethod,
+                    requestParams,
+                    responseResult,
+                    ip,
+                    status,
+                    errorMsg,
+                    executeTime);
             return result;
         } catch (Exception e) {
             status = 0;
             errorMsg = e.getMessage();
             long executeTime = System.currentTimeMillis() - startTime;
-            operateLogWriter.saveAsync(username, operateType, requestUrl, requestMethod, requestParams, responseResult, ip, status, errorMsg, executeTime);
+            operateLogWriter.saveAsync(
+                    username,
+                    operateType,
+                    requestUrl,
+                    requestMethod,
+                    requestParams,
+                    responseResult,
+                    ip,
+                    status,
+                    errorMsg,
+                    executeTime);
             throw e;
         }
     }
@@ -164,7 +182,8 @@ public class OperateLogAspect {
     private String getOperateType(ProceedingJoinPoint joinPoint) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
-        com.astral.log.annotation.OperateLog annotation = method.getAnnotation(com.astral.log.annotation.OperateLog.class);
+        com.astral.log.annotation.OperateLog annotation =
+                method.getAnnotation(com.astral.log.annotation.OperateLog.class);
         if (annotation != null && StrUtil.isNotEmpty(annotation.value())) {
             return annotation.value();
         }

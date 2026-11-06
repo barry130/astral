@@ -8,8 +8,7 @@ import com.astral.storage.entity.StorageConfigEntity;
  */
 public final class ProviderSupport {
 
-    private ProviderSupport() {
-    }
+    private ProviderSupport() {}
 
     /** S3 SigV4 家族（AWS Signature V4 + 预签名 URL 直传） */
     public static boolean isS3Family(String providerType) {
@@ -27,8 +26,7 @@ public final class ProviderSupport {
 
     /** 需要浏览器回执登记（上传完成后 POST /files/register）的家族 */
     public static boolean isRegisterFamily(String providerType) {
-        return isPresignedPutFamily(providerType)
-                || StorageConfigEntity.PROVIDER_UPYUN.equals(providerType);
+        return isPresignedPutFamily(providerType) || StorageConfigEntity.PROVIDER_UPYUN.equals(providerType);
     }
 
     /** 服务端直接操作对象（HEAD/DELETE 同步执行）的家族（除 TELEGRAM 外全部） */
@@ -42,7 +40,6 @@ public final class ProviderSupport {
     }
 
     public static boolean isKnown(String providerType) {
-        return StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)
-                || isRegisterFamily(providerType);
+        return StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType) || isRegisterFamily(providerType);
     }
 }

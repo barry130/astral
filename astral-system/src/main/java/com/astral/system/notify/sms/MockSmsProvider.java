@@ -1,8 +1,7 @@
 package com.astral.system.notify.sms;
 
-import java.util.Map;
-
 import com.astral.dao.entity.SysSmsProvider;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -20,8 +19,14 @@ public class MockSmsProvider implements SmsProvider {
     }
 
     @Override
-    public void send(SysSmsProvider provider, String phone, String signName, String templateCode, Map<String, String> params) {
-        log.info("[Sms][MOCK] provider={} phone={} sign={} template={} params={}",
-                provider.getProviderName(), phone, signName, templateCode, params);
+    public void send(
+            SysSmsProvider provider, String phone, String signName, String templateCode, Map<String, String> params) {
+        log.info(
+                "[Sms][MOCK] provider={} phone={} sign={} template={} params={}",
+                provider.getProviderName(),
+                phone,
+                signName,
+                templateCode,
+                params);
     }
 }

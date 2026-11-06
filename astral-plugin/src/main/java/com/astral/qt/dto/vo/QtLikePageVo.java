@@ -2,9 +2,8 @@ package com.astral.qt.dto.vo;
 
 import com.astral.qt.entity.QtLikePlaylist;
 import com.astral.qt.entity.QtLikeSong;
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * 全量分页拉取结果（LIKE_SYNC_DESIGN.md §2.4，首次/兜底同步）

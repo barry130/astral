@@ -9,8 +9,6 @@ import com.astral.cms.mapper.CmsPostMapper;
 import com.astral.cms.mapper.CmsShareMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.Resource;
-import org.springframework.stereotype.Service;
-
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -18,6 +16,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.stereotype.Service;
 
 /**
  * CMS 分享链接服务
@@ -38,10 +37,13 @@ public class CmsShareService {
 
     @Resource
     private CmsShareMapper shareMapper;
+
     @Resource
     private CmsPostMapper postMapper;
+
     @Resource
     private CmsPageMapper pageMapper;
+
     @Resource
     private CmsSettingService settingService;
 
@@ -61,8 +63,7 @@ public class CmsShareService {
      * 全部分享链接（管理端「分享管理」列表）
      */
     public List<CmsShare> listAll() {
-        List<CmsShare> shares = shareMapper.selectList(new LambdaQueryWrapper<CmsShare>()
-                .orderByDesc(CmsShare::getId));
+        List<CmsShare> shares = shareMapper.selectList(new LambdaQueryWrapper<CmsShare>().orderByDesc(CmsShare::getId));
         fillTargetTitles(shares);
         return shares;
     }
@@ -72,8 +73,7 @@ public class CmsShareService {
      *
      * @param expireAt 过期时间（NULL=永久）
      */
-    public CmsShare create(String targetType, Long targetId, LocalDateTime expireAt,
-                           String remark, Long createBy) {
+    public CmsShare create(String targetType, Long targetId, LocalDateTime expireAt, String remark, Long createBy) {
         String type = validateTargetType(targetType);
         requireTarget(type, targetId);
         if (expireAt != null && expireAt.isBefore(LocalDateTime.now())) {
@@ -164,8 +164,7 @@ public class CmsShareService {
             byte[] bytes = new byte[TOKEN_BYTES];
             RANDOM.nextBytes(bytes);
             String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-            if (shareMapper.selectCount(new LambdaQueryWrapper<CmsShare>()
-                    .eq(CmsShare::getToken, token)) == 0) {
+            if (shareMapper.selectCount(new LambdaQueryWrapper<CmsShare>().eq(CmsShare::getToken, token)) == 0) {
                 return token;
             }
         }
@@ -188,11 +187,13 @@ public class CmsShareService {
         }
         Map<Long, String> titles = new HashMap<>();
         if (!postIds.isEmpty()) {
-            postMapper.selectBatchIds(postIds.stream().distinct().toList())
+            postMapper
+                    .selectBatchIds(postIds.stream().distinct().toList())
                     .forEach(p -> titles.put(p.getId(), p.getTitle()));
         }
         if (!pageIds.isEmpty()) {
-            pageMapper.selectBatchIds(pageIds.stream().distinct().toList())
+            pageMapper
+                    .selectBatchIds(pageIds.stream().distinct().toList())
                     .forEach(p -> titles.put(p.getId(), p.getTitle()));
         }
         String base = shareBaseUrl();

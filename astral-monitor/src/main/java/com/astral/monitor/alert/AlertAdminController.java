@@ -16,23 +16,22 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 告警管理控制器：渠道 / 规则 / 触发记录
@@ -59,28 +58,36 @@ public class AlertAdminController {
     // ------------------------------------------------------------------
 
     @Operation(summary = "渠道列表")
-    @RequiresPermission(value = "admin:alert:channel:view", name = "告警渠道查看", domain = "alert",
+    @RequiresPermission(
+            value = "admin:alert:channel:view",
+            name = "告警渠道查看",
+            domain = "alert",
             description = "查看告警通知渠道与触发记录")
     @GetMapping("/channel/list")
     public Result<List<AlertChannel>> channelList() {
-        return Result.success(channelMapper.selectList(
-                new QueryWrapper<AlertChannel>().orderByDesc("create_time")));
+        return Result.success(channelMapper.selectList(new QueryWrapper<AlertChannel>().orderByDesc("create_time")));
     }
 
     @Data
     public static class ChannelRequest {
         @NotBlank(message = "渠道名称不能为空")
         private String name;
+
         @NotBlank(message = "渠道类型不能为空")
         private String type;
+
         @NotBlank(message = "渠道配置不能为空")
         private String config;
+
         private Integer enabled;
         private String remark;
     }
 
     @Operation(summary = "新建渠道")
-    @RequiresPermission(value = "admin:alert:channel:edit", name = "告警渠道编辑", domain = "alert",
+    @RequiresPermission(
+            value = "admin:alert:channel:edit",
+            name = "告警渠道编辑",
+            domain = "alert",
             description = "新建/修改/删除告警渠道")
     @PostMapping("/channel")
     public Result<Void> createChannel(@Valid @RequestBody ChannelRequest body) {
@@ -114,8 +121,8 @@ public class AlertAdminController {
         if (configError != null) {
             throw BusinessException.of(configError);
         }
-        Long count = channelMapper.selectCount(new QueryWrapper<AlertChannel>()
-                .eq("name", body.getName()).ne("id", id));
+        Long count = channelMapper.selectCount(
+                new QueryWrapper<AlertChannel>().eq("name", body.getName()).ne("id", id));
         if (count != null && count > 0) {
             throw BusinessException.of("渠道名称已存在");
         }
@@ -151,8 +158,8 @@ public class AlertAdminController {
             throw BusinessException.of("渠道不存在");
         }
         try {
-            alertEngine.deliver(channel, "[Astral 告警] 测试通知",
-                    "这是一条测试通知。渠道：" + channel.getName() + "，时间：" + LocalDateTime.now());
+            alertEngine.deliver(
+                    channel, "[Astral 告警] 测试通知", "这是一条测试通知。渠道：" + channel.getName() + "，时间：" + LocalDateTime.now());
             return Result.success();
         } catch (Exception e) {
             throw BusinessException.of("发送失败：" + e.getMessage());
@@ -170,42 +177,56 @@ public class AlertAdminController {
         List<AlertRule> rules = ruleMapper.selectList(new QueryWrapper<AlertRule>().orderByDesc("create_time"));
         // 附带渠道名，前端列表少一次 join
         List<AlertChannel> channels = channelMapper.selectList(null);
-        return Result.success(rules.stream().map(rule -> {
-            Map<String, Object> map = new java.util.LinkedHashMap<>();
-            map.put("id", rule.getId());
-            map.put("name", rule.getName());
-            map.put("metric", rule.getMetric());
-            map.put("threshold", rule.getThreshold());
-            map.put("windowMinutes", rule.getWindowMinutes());
-            map.put("channelId", rule.getChannelId());
-            map.put("channelName", channels.stream()
-                    .filter(c -> c.getId().equals(rule.getChannelId()))
-                    .findFirst().map(AlertChannel::getName).orElse(null));
-            map.put("cooldownMinutes", rule.getCooldownMinutes());
-            map.put("enabled", rule.getEnabled());
-            map.put("lastFiredAt", rule.getLastFiredAt());
-            map.put("createTime", rule.getCreateTime());
-            return map;
-        }).toList());
+        return Result.success(rules.stream()
+                .map(rule -> {
+                    Map<String, Object> map = new java.util.LinkedHashMap<>();
+                    map.put("id", rule.getId());
+                    map.put("name", rule.getName());
+                    map.put("metric", rule.getMetric());
+                    map.put("threshold", rule.getThreshold());
+                    map.put("windowMinutes", rule.getWindowMinutes());
+                    map.put("channelId", rule.getChannelId());
+                    map.put(
+                            "channelName",
+                            channels.stream()
+                                    .filter(c -> c.getId().equals(rule.getChannelId()))
+                                    .findFirst()
+                                    .map(AlertChannel::getName)
+                                    .orElse(null));
+                    map.put("cooldownMinutes", rule.getCooldownMinutes());
+                    map.put("enabled", rule.getEnabled());
+                    map.put("lastFiredAt", rule.getLastFiredAt());
+                    map.put("createTime", rule.getCreateTime());
+                    return map;
+                })
+                .toList());
     }
 
     @Data
     public static class RuleRequest {
         @NotBlank(message = "规则名称不能为空")
         private String name;
+
         @NotBlank(message = "指标不能为空")
         private String metric;
+
         @NotNull(message = "阈值不能为空")
         private Long threshold;
+
         private Integer windowMinutes;
+
         @NotNull(message = "渠道不能为空")
         private Long channelId;
+
         private Integer cooldownMinutes;
         private Integer enabled;
     }
 
     @Operation(summary = "新建规则")
-    @RequiresPermission(value = "admin:alert:rule:edit", name = "告警规则编辑", domain = "alert",
+    @RequiresPermission(
+            value = "admin:alert:rule:edit",
+            name = "告警规则编辑",
+            domain = "alert",
             description = "新建/修改/删除告警规则")
     @PostMapping("/rule")
     public Result<Void> createRule(@Valid @RequestBody RuleRequest body) {
@@ -235,8 +256,8 @@ public class AlertAdminController {
             throw BusinessException.of("规则不存在");
         }
         validateRule(body);
-        Long count = ruleMapper.selectCount(new QueryWrapper<AlertRule>()
-                .eq("name", body.getName()).ne("id", id));
+        Long count = ruleMapper.selectCount(
+                new QueryWrapper<AlertRule>().eq("name", body.getName()).ne("id", id));
         if (count != null && count > 0) {
             throw BusinessException.of("规则名称已存在");
         }
@@ -263,8 +284,8 @@ public class AlertAdminController {
     private void validateRule(RuleRequest body) {
         String metric = AlertEngine.normalizeMetric(body.getMetric());
         if (!AlertEngine.SUPPORTED_METRICS.contains(metric)) {
-            throw BusinessException.of("不支持的指标：" + body.getMetric()
-                    + "（可选 SERVER_ERROR_COUNT / CLIENT_ERROR_COUNT / HTTP_5XX_COUNT）");
+            throw BusinessException.of(
+                    "不支持的指标：" + body.getMetric() + "（可选 SERVER_ERROR_COUNT / CLIENT_ERROR_COUNT / HTTP_5XX_COUNT）");
         }
         if (channelMapper.selectById(body.getChannelId()) == null) {
             throw BusinessException.of("绑定的渠道不存在");
@@ -284,9 +305,10 @@ public class AlertAdminController {
     @Operation(summary = "触发记录分页")
     @RequiresPermission("admin:alert:channel:view")
     @GetMapping("/record/page")
-    public Result<Page<AlertRecord>> recordPage(@RequestParam(defaultValue = "1") long pageNum,
-                                                @RequestParam(defaultValue = "10") long pageSize,
-                                                @RequestParam(required = false) Long ruleId) {
+    public Result<Page<AlertRecord>> recordPage(
+            @RequestParam(defaultValue = "1") long pageNum,
+            @RequestParam(defaultValue = "10") long pageSize,
+            @RequestParam(required = false) Long ruleId) {
         QueryWrapper<AlertRecord> qw = new QueryWrapper<>();
         if (ruleId != null) {
             qw.eq("rule_id", ruleId);

@@ -7,13 +7,12 @@ import com.astral.ai.mapper.AiModelMapper;
 import com.astral.ai.mapper.AiProviderRouteMapper;
 import com.astral.common.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.math.BigDecimal;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.List;
 
 /**
  * 模型路由服务。
@@ -32,8 +31,8 @@ public class AiRouteService {
 
     /** 全部路由 */
     public List<AiProviderRouteEntity> list() {
-        return routeMapper.selectList(new LambdaQueryWrapper<AiProviderRouteEntity>()
-                .orderByAsc(AiProviderRouteEntity::getId));
+        return routeMapper.selectList(
+                new LambdaQueryWrapper<AiProviderRouteEntity>().orderByAsc(AiProviderRouteEntity::getId));
     }
 
     /** 取路由，不存在抛错 */
@@ -95,12 +94,15 @@ public class AiRouteService {
         if (input.getModelId() != null) {
             entity.setModelId(input.getModelId());
         }
-        entity.setFallbackModelId(input.getFallbackModelId() == null ? entity.getFallbackModelId() : input.getFallbackModelId());
+        entity.setFallbackModelId(
+                input.getFallbackModelId() == null ? entity.getFallbackModelId() : input.getFallbackModelId());
         entity.setTemperature(input.getTemperature() == null ? entity.getTemperature() : input.getTemperature());
         entity.setTopP(input.getTopP() == null ? entity.getTopP() : input.getTopP());
         entity.setMaxTokens(input.getMaxTokens() == null ? entity.getMaxTokens() : input.getMaxTokens());
-        entity.setExtraParametersJson(input.getExtraParametersJson() == null
-                ? entity.getExtraParametersJson() : input.getExtraParametersJson());
+        entity.setExtraParametersJson(
+                input.getExtraParametersJson() == null
+                        ? entity.getExtraParametersJson()
+                        : input.getExtraParametersJson());
         entity.setEnabled(input.getEnabled() == null ? entity.getEnabled() : input.getEnabled());
         entity.setRemark(input.getRemark() == null ? entity.getRemark() : input.getRemark());
         validate(entity);
@@ -126,12 +128,12 @@ public class AiRouteService {
         }
         if (entity.getTemperature() != null
                 && (entity.getTemperature().compareTo(BigDecimal.ZERO) < 0
-                || entity.getTemperature().compareTo(new BigDecimal("2")) > 0)) {
+                        || entity.getTemperature().compareTo(new BigDecimal("2")) > 0)) {
             throw new BusinessException("AI007", "temperature 必须在 0 ~ 2 之间");
         }
         if (entity.getTopP() != null
                 && (entity.getTopP().compareTo(BigDecimal.ZERO) < 0
-                || entity.getTopP().compareTo(BigDecimal.ONE) > 0)) {
+                        || entity.getTopP().compareTo(BigDecimal.ONE) > 0)) {
             throw new BusinessException("AI007", "topP 必须在 0 ~ 1 之间");
         }
     }

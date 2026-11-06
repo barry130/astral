@@ -7,18 +7,17 @@ import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolProvider;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.ObjectNode;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
  * 音乐助手工具集（设计文档 §6.3）。
@@ -54,8 +53,7 @@ public class MusicToolProvider implements AiToolProvider {
                 new GetCurrentSongTool(),
                 new GetCurrentPlaylistTool(),
                 new GetUserLikesTool(),
-                new GetPlayHistoryTool()
-        );
+                new GetPlayHistoryTool());
     }
 
     // ==================== 搜索计划类 ====================
@@ -71,19 +69,24 @@ public class MusicToolProvider implements AiToolProvider {
         @Override
         public AiToolDef definition() {
             return new AiToolDef(
-                    "search_music", "搜索音乐",
+                    "search_music",
+                    "搜索音乐",
                     "根据用户的自然语言描述生成多音源搜索计划。返回计划后由客户端执行实际搜索并回传候选歌曲，你再据此排序推荐。",
-                    "music.search", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
+                    "music.search",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema("""
+                    AiToolTypes.objectSchema(
+                            """
                             {"intent":{"type":"string","description":"搜索意图，如 recommend_music / find_song / find_similar"},
                              "keywords":{"type":"array","items":{"type":"string"},"description":"搜索关键词，2-6 个"},
                              "sources":{"type":"array","items":{"type":"string"},"description":"音源 ID，留空表示使用全部可用音源"},
                              "limit":{"type":"integer","minimum":1,"maximum":100,"description":"期望候选数量"},
                              "filters":{"type":"object","description":"过滤条件，如 language / mood / era / popularity"}}
                             """),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
@@ -98,16 +101,21 @@ public class MusicToolProvider implements AiToolProvider {
         @Override
         public AiToolDef definition() {
             return new AiToolDef(
-                    "search_artist", "搜索歌手",
+                    "search_artist",
+                    "搜索歌手",
                     "按歌手名或描述搜索歌手，返回搜索计划交由客户端执行。",
-                    "music.searchArtist", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
+                    "music.searchArtist",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema("""
+                    AiToolTypes.objectSchema(
+                            """
                             {"keywords":{"type":"array","items":{"type":"string"},"description":"歌手关键词"},
                              "sources":{"type":"array","items":{"type":"string"},"description":"音源 ID"}}
                             """),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
@@ -122,16 +130,21 @@ public class MusicToolProvider implements AiToolProvider {
         @Override
         public AiToolDef definition() {
             return new AiToolDef(
-                    "search_album", "搜索专辑",
+                    "search_album",
+                    "搜索专辑",
                     "按专辑名或歌手搜索专辑，返回搜索计划交由客户端执行。",
-                    "music.searchAlbum", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
+                    "music.searchAlbum",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema("""
+                    AiToolTypes.objectSchema(
+                            """
                             {"keywords":{"type":"array","items":{"type":"string"},"description":"专辑关键词"},
                              "sources":{"type":"array","items":{"type":"string"},"description":"音源 ID"}}
                             """),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
@@ -146,16 +159,21 @@ public class MusicToolProvider implements AiToolProvider {
         @Override
         public AiToolDef definition() {
             return new AiToolDef(
-                    "search_playlist", "搜索歌单",
+                    "search_playlist",
+                    "搜索歌单",
                     "按主题或场景搜索歌单，返回搜索计划交由客户端执行。",
-                    "music.searchPlaylist", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
+                    "music.searchPlaylist",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema("""
+                    AiToolTypes.objectSchema(
+                            """
                             {"keywords":{"type":"array","items":{"type":"string"},"description":"歌单关键词"},
                              "sources":{"type":"array","items":{"type":"string"},"description":"音源 ID"}}
                             """),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
@@ -172,16 +190,21 @@ public class MusicToolProvider implements AiToolProvider {
         @Override
         public AiToolDef definition() {
             return new AiToolDef(
-                    "get_song_detail", "查询歌曲详情",
+                    "get_song_detail",
+                    "查询歌曲详情",
                     "从客户端已回传的候选歌曲中查询某首歌的详细信息。",
-                    "music.songDetail", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
+                    "music.songDetail",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema("""
+                    AiToolTypes.objectSchema(
+                            """
                             {"songId":{"type":"string","description":"歌曲 ID"},
                              "sourceId":{"type":"string","description":"音源 ID"}}
                             """),
-                    null, null);
+                    null,
+                    null);
         }
 
         @Override
@@ -193,8 +216,7 @@ public class MusicToolProvider implements AiToolProvider {
             }
             for (AiAppDtos.MusicCandidate candidate : candidates(context)) {
                 boolean idMatch = songId.equals(candidate.songId());
-                boolean sourceMatch = sourceId == null || sourceId.isBlank()
-                        || sourceId.equals(candidate.sourceId());
+                boolean sourceMatch = sourceId == null || sourceId.isBlank() || sourceId.equals(candidate.sourceId());
                 if (idMatch && sourceMatch) {
                     ObjectNode payload = AiJson_mapper().createObjectNode();
                     payload.put("sourceId", candidate.sourceId());
@@ -217,11 +239,17 @@ public class MusicToolProvider implements AiToolProvider {
         @Override
         public AiToolDef definition() {
             return new AiToolDef(
-                    "get_current_song", "查询当前播放歌曲",
+                    "get_current_song",
+                    "查询当前播放歌曲",
                     "读取客户端上报的当前播放歌曲信息。",
-                    "music.currentSong", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
+                    "music.currentSong",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
-                    List.of(), AiToolTypes.emptySchema(), null, null);
+                    List.of(),
+                    AiToolTypes.emptySchema(),
+                    null,
+                    null);
         }
 
         @Override
@@ -244,11 +272,17 @@ public class MusicToolProvider implements AiToolProvider {
         @Override
         public AiToolDef definition() {
             return new AiToolDef(
-                    "get_current_playlist", "查询当前播放列表",
+                    "get_current_playlist",
+                    "查询当前播放列表",
                     "读取客户端上报的当前播放队列。",
-                    "music.currentPlaylist", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
+                    "music.currentPlaylist",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
-                    List.of(), AiToolTypes.emptySchema(), null, null);
+                    List.of(),
+                    AiToolTypes.emptySchema(),
+                    null,
+                    null);
         }
 
         @Override
@@ -274,11 +308,17 @@ public class MusicToolProvider implements AiToolProvider {
         @Override
         public AiToolDef definition() {
             return new AiToolDef(
-                    "get_user_likes", "查询用户收藏",
+                    "get_user_likes",
+                    "查询用户收藏",
                     "读取客户端上报的用户收藏摘要（仅在用户已登录且允许用户上下文时可用）。",
-                    "music.userLikes", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
+                    "music.userLikes",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
-                    List.of(), AiToolTypes.emptySchema(), null, null);
+                    List.of(),
+                    AiToolTypes.emptySchema(),
+                    null,
+                    null);
         }
 
         @Override
@@ -299,11 +339,17 @@ public class MusicToolProvider implements AiToolProvider {
         @Override
         public AiToolDef definition() {
             return new AiToolDef(
-                    "get_play_history", "查询播放历史",
+                    "get_play_history",
+                    "查询播放历史",
                     "读取客户端上报的最近播放摘要。",
-                    "music.playHistory", AiConstants.RiskLevel.READ, AiConstants.ApprovalPolicy.NONE,
+                    "music.playHistory",
+                    AiConstants.RiskLevel.READ,
+                    AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
-                    List.of(), AiToolTypes.emptySchema(), null, null);
+                    List.of(),
+                    AiToolTypes.emptySchema(),
+                    null,
+                    null);
         }
 
         @Override
@@ -346,12 +392,16 @@ public class MusicToolProvider implements AiToolProvider {
         }
         int limit = context.argInt("limit", AiAppDtos.DEFAULT_LIMIT, AiAppDtos.MIN_LIMIT, AiAppDtos.MAX_LIMIT);
         List<String> keywords = context.argList("keywords");
-        JsonNode filters = context.arguments() == null ? null : context.arguments().get("filters");
+        JsonNode filters =
+                context.arguments() == null ? null : context.arguments().get("filters");
 
         AiAppDtos.MusicSearchPlan plan = new AiAppDtos.MusicSearchPlan(
                 context.arg("intent") == null ? defaultIntent : context.arg("intent"),
-                keywords, sources, limit,
-                filters == null || !filters.isObject() ? Map.of()
+                keywords,
+                sources,
+                limit,
+                filters == null || !filters.isObject()
+                        ? Map.of()
                         : AiJson_mapper().convertValue(filters, Map.class));
 
         ObjectNode payload = AiJson_mapper().createObjectNode();
@@ -368,7 +418,8 @@ public class MusicToolProvider implements AiToolProvider {
             return AiToolResult.needClient(summary, payload);
         }
         ArrayNode candidateArray = payload.putArray("candidates");
-        StringBuilder readable = new StringBuilder("客户端已回传 ").append(candidates.size())
+        StringBuilder readable = new StringBuilder("客户端已回传 ")
+                .append(candidates.size())
                 .append(" 首候选歌曲（来源：客户端音源包）。")
                 .append("注意：候选池是客户端在用户发消息前按其原话预先搜索好的**固定一批**，")
                 .append("与你传的 keywords/filters 无关——换关键词、换音源再搜也只会拿到同一批，不要再调用任何搜索工具。")
@@ -390,14 +441,20 @@ public class MusicToolProvider implements AiToolProvider {
             if (candidate.extra() != null && !candidate.extra().isEmpty()) {
                 item.set("extra", AiJson_mapper().valueToTree(candidate.extra()));
             }
-            readable.append('\n').append(i + 1).append(". ")
-                    .append(nullToEmpty(candidate.name())).append(" - ")
+            readable.append('\n')
+                    .append(i + 1)
+                    .append(". ")
+                    .append(nullToEmpty(candidate.name()))
+                    .append(" - ")
                     .append(nullToEmpty(candidate.artist()));
             if (candidate.album() != null && !candidate.album().isBlank()) {
                 readable.append("（《").append(candidate.album()).append("》）");
             }
-            readable.append(" [sourceId=").append(nullToEmpty(candidate.sourceId()))
-                    .append(", songId=").append(nullToEmpty(candidate.songId())).append(']');
+            readable.append(" [sourceId=")
+                    .append(nullToEmpty(candidate.sourceId()))
+                    .append(", songId=")
+                    .append(nullToEmpty(candidate.songId()))
+                    .append(']');
         }
         return AiToolResult.ok(readable.toString(), payload);
     }
@@ -453,7 +510,8 @@ public class MusicToolProvider implements AiToolProvider {
                     AiJson_text(item, "artist", null),
                     AiJson_text(item, "album", null),
                     item.has("duration") && item.get("duration").isNumber()
-                            ? item.get("duration").asInt() : null,
+                            ? item.get("duration").asInt()
+                            : null,
                     AiJson_text(item, "coverUrl", null),
                     AiJson_text(item, "quality", null),
                     extra));

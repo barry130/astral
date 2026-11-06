@@ -55,8 +55,7 @@ public class AppUserRoleInitializer implements ApplicationRunner {
             // 每次 bump 一次版本的成本只是活跃会话各多查一次库，换取「迁移改动即时生效」。
             permissionCache.bumpVersion();
         } catch (Exception e) {
-            log.warn("[AppUserRole] 初始化失败（不影响启动，可在角色管理页手工分配 {}）：{}",
-                    AppUserRoleService.ROLE_CODE, e.getMessage(), e);
+            log.warn("[AppUserRole] 初始化失败（不影响启动，可在角色管理页手工分配 {}）：{}", AppUserRoleService.ROLE_CODE, e.getMessage(), e);
         }
     }
 }

@@ -17,16 +17,15 @@ import com.astral.qt.mapper.QtLikeSyncMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 轻听收藏同步服务
@@ -47,6 +46,7 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
 
     /** 全量分页默认/最大页大小 */
     private static final int LIKE_PAGE_SIZE_DEFAULT = 500;
+
     private static final int LIKE_PAGE_SIZE_MAX = 1000;
 
     @Resource
@@ -141,7 +141,11 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
 
     /** 批量操作的分段类型：同型连续段各自合成一条批量 SQL，段间按序执行保住原始顺序语义 */
     private enum BatchRunKind {
-        SONG_UPSERT, SONG_RM_PID, SONG_RM_ALL, PLAYLIST_UPSERT, PLAYLIST_RM
+        SONG_UPSERT,
+        SONG_RM_PID,
+        SONG_RM_ALL,
+        PLAYLIST_UPSERT,
+        PLAYLIST_RM
     }
 
     /** 一个连续同型段 */
@@ -236,7 +240,8 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
     /** 段内去重的自然键（同键保留最后一条，其 seq 最大=最终态） */
     private String batchOpKey(BatchRunKind kind, QtLikeBatchOpDto op) {
         return switch (kind) {
-            case SONG_UPSERT, SONG_RM_PID -> "s@" + op.getSid() + "@" + op.getPlatform() + "@" + normalizePid(op.getPid());
+            case SONG_UPSERT, SONG_RM_PID -> "s@" + op.getSid() + "@" + op.getPlatform() + "@"
+                    + normalizePid(op.getPid());
             case SONG_RM_ALL -> "a@" + op.getSid() + "@" + op.getPlatform();
             case PLAYLIST_UPSERT, PLAYLIST_RM -> "p@" + op.getPid() + "@" + op.getPlatform();
         };
@@ -257,7 +262,8 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
                 }
                 songMapper.upsertActiveBatch(rows);
             }
-            case SONG_RM_PID -> songMapper.softRemoveByPlaylistBatch(buildBatchSongRows(uid, items), uid, LocalDateTime.now());
+            case SONG_RM_PID -> songMapper.softRemoveByPlaylistBatch(
+                    buildBatchSongRows(uid, items), uid, LocalDateTime.now());
             case SONG_RM_ALL -> songMapper.softRemoveAllBatch(buildBatchSongRows(uid, items), uid, LocalDateTime.now());
             case PLAYLIST_UPSERT -> {
                 List<QtLikePlaylist> rows = new ArrayList<>(items.size());
@@ -363,20 +369,16 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
         int pageSize = size == null || size < 1 ? LIKE_PAGE_SIZE_DEFAULT : Math.min(size, LIKE_PAGE_SIZE_MAX);
         long offset = (long) (pageNo - 1) * pageSize;
 
-        List<QtLikeSong> songs = songMapper.selectList(
-                new LambdaQueryWrapper<QtLikeSong>()
-                        .eq(QtLikeSong::getUid, uid)
-                        .isNull(QtLikeSong::getDeletedAt)
-                        .orderByDesc(QtLikeSong::getUpdatedSeq)
-                        .last("LIMIT " + pageSize + " OFFSET " + offset)
-        );
-        List<QtLikePlaylist> playlists = playlistMapper.selectList(
-                new LambdaQueryWrapper<QtLikePlaylist>()
-                        .eq(QtLikePlaylist::getUid, uid)
-                        .isNull(QtLikePlaylist::getDeletedAt)
-                        .orderByDesc(QtLikePlaylist::getUpdatedSeq)
-                        .last("LIMIT " + pageSize + " OFFSET " + offset)
-        );
+        List<QtLikeSong> songs = songMapper.selectList(new LambdaQueryWrapper<QtLikeSong>()
+                .eq(QtLikeSong::getUid, uid)
+                .isNull(QtLikeSong::getDeletedAt)
+                .orderByDesc(QtLikeSong::getUpdatedSeq)
+                .last("LIMIT " + pageSize + " OFFSET " + offset));
+        List<QtLikePlaylist> playlists = playlistMapper.selectList(new LambdaQueryWrapper<QtLikePlaylist>()
+                .eq(QtLikePlaylist::getUid, uid)
+                .isNull(QtLikePlaylist::getDeletedAt)
+                .orderByDesc(QtLikePlaylist::getUpdatedSeq)
+                .last("LIMIT " + pageSize + " OFFSET " + offset));
         QtLikePageVo vo = new QtLikePageVo();
         vo.setSongs(songs);
         vo.setPlaylists(playlists);

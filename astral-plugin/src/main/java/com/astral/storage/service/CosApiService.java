@@ -2,13 +2,6 @@ package com.astral.storage.service;
 
 import com.astral.common.exception.BusinessException;
 import com.astral.storage.entity.StorageConfigEntity;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -21,6 +14,12 @@ import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 腾讯云 COS XML API 适配
@@ -37,9 +36,8 @@ import java.util.TreeMap;
 public class CosApiService {
 
     private final ObjectMapper objectMapper;
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private final HttpClient httpClient =
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     public CosApiService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
@@ -67,7 +65,11 @@ public class CosApiService {
             if (secretId.isBlank() || secretKey.isBlank()) {
                 throw new BusinessException("STORAGE024");
             }
-            return new CosOptions(bucket, region, secretId, secretKey,
+            return new CosOptions(
+                    bucket,
+                    region,
+                    secretId,
+                    secretKey,
                     node.path("publicBaseUrl").asText(null));
         } catch (BusinessException e) {
             throw e;
@@ -77,20 +79,21 @@ public class CosApiService {
     }
 
     /** COS 连接信息（secretKey 只在服务端内存中流转） */
-    public record CosOptions(String bucket, String region, String secretId, String secretKey,
-                             String publicBaseUrl) {
-    }
+    public record CosOptions(String bucket, String region, String secretId, String secretKey, String publicBaseUrl) {}
 
     /** 预签名 URL 统一结构（S3ObjectService.PresignedUrl 同构，直传/下载签发共用） */
-    public record PresignedUrl(String url, long expiresAtEpochSeconds) {
-    }
+    public record PresignedUrl(String url, long expiresAtEpochSeconds) {}
 
     // ==================== 签名 ====================
 
     /** 计算 q-authorization（可放 Header，也可整体编码后作为 URL 的 sign 参数） */
-    private String authorization(CosOptions o, String method, String uriPath,
-                                 Map<String, String> queryParams, Map<String, String> headers,
-                                 long ttlSeconds) {
+    private String authorization(
+            CosOptions o,
+            String method,
+            String uriPath,
+            Map<String, String> queryParams,
+            Map<String, String> headers,
+            long ttlSeconds) {
         long now = Instant.now().getEpochSecond() - 1;
         long exp = now + Math.max(60, Math.min(ttlSeconds, 86400));
         String keyTime = now + ";" + exp;
@@ -98,10 +101,8 @@ public class CosApiService {
         String signKey = hex(hmacSha1(o.secretKey().getBytes(StandardCharsets.UTF_8), keyTime));
         String paramsStr = canonicalParams(queryParams);
         String headersStr = canonicalParams(headers);
-        String formatString = String.join("\n", method.toUpperCase(Locale.ROOT), uriPath,
-                paramsStr, headersStr, "");
-        String stringToSign = String.join("\n", "sha1", keyTime,
-                hex(sha1(formatString)), "");
+        String formatString = String.join("\n", method.toUpperCase(Locale.ROOT), uriPath, paramsStr, headersStr, "");
+        String stringToSign = String.join("\n", "sha1", keyTime, hex(sha1(formatString)), "");
         String signature = hex(hmacSha1(signKey.getBytes(StandardCharsets.UTF_8), stringToSign));
 
         StringBuilder headerList = new StringBuilder();
@@ -136,8 +137,13 @@ public class CosApiService {
         StringBuilder sb = new StringBuilder();
         for (byte b : s.getBytes(StandardCharsets.UTF_8)) {
             char c = (char) (b & 0xFF);
-            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
-                    || c == '-' || c == '.' || c == '_' || c == '~') {
+            if ((c >= 'A' && c <= 'Z')
+                    || (c >= 'a' && c <= 'z')
+                    || (c >= '0' && c <= '9')
+                    || c == '-'
+                    || c == '.'
+                    || c == '_'
+                    || c == '~') {
                 sb.append(c);
             } else {
                 sb.append('%').append(String.format("%02X", (byte) c));
@@ -191,8 +197,8 @@ public class CosApiService {
 
     /** js-sdk replaceUrlParamList：把 q-url-param-list 的值在 URL 串内再编码一次 */
     private String reEncodeUrlParamList(String auth) {
-        java.util.regex.Matcher m = java.util.regex.Pattern
-                .compile("q-url-param-list=([^&]*)").matcher(auth);
+        java.util.regex.Matcher m =
+                java.util.regex.Pattern.compile("q-url-param-list=([^&]*)").matcher(auth);
         if (m.find()) {
             return m.replaceFirst("q-url-param-list=" + encodeRfc3986(m.group(1)));
         }
@@ -218,13 +224,14 @@ public class CosApiService {
             Map<String, String> headers = new TreeMap<>();
             headers.put("Host", host);
             String auth = authorization(o, "HEAD", uriPath, Map.of(), headers, 300);
-            HttpResponse<Void> resp = httpClient.send(HttpRequest.newBuilder(
-                            URI.create("https://" + host + uriPath))
-                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
-                    .header("Authorization", auth)
-                    .header("Date", httpDate())
-                    .timeout(Duration.ofSeconds(8))
-                    .build(), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp = httpClient.send(
+                    HttpRequest.newBuilder(URI.create("https://" + host + uriPath))
+                            .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                            .header("Authorization", auth)
+                            .header("Date", httpDate())
+                            .timeout(Duration.ofSeconds(8))
+                            .build(),
+                    HttpResponse.BodyHandlers.discarding());
             return resp.statusCode() == 200
                     ? Long.parseLong(resp.headers().firstValue("Content-Length").orElse("-1"))
                     : -1;
@@ -245,13 +252,14 @@ public class CosApiService {
             Map<String, String> headers = new TreeMap<>();
             headers.put("Host", host);
             String auth = authorization(o, "DELETE", uriPath, Map.of(), headers, 300);
-            HttpResponse<Void> resp = httpClient.send(HttpRequest.newBuilder(
-                            URI.create("https://" + host + uriPath))
-                    .method("DELETE", HttpRequest.BodyPublishers.noBody())
-                    .header("Authorization", auth)
-                    .header("Date", httpDate())
-                    .timeout(Duration.ofSeconds(8))
-                    .build(), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp = httpClient.send(
+                    HttpRequest.newBuilder(URI.create("https://" + host + uriPath))
+                            .method("DELETE", HttpRequest.BodyPublishers.noBody())
+                            .header("Authorization", auth)
+                            .header("Date", httpDate())
+                            .timeout(Duration.ofSeconds(8))
+                            .build(),
+                    HttpResponse.BodyHandlers.discarding());
             if (resp.statusCode() / 100 != 2) {
                 throw new BusinessException("STORAGE012", "COS 删除返回 HTTP " + resp.statusCode());
             }
@@ -275,13 +283,14 @@ public class CosApiService {
             // 签名时的 params 与 headers 均按 URL 编码规则参与 FormatString
             String auth = authorization(o, "GET", "/", params, headers, 300);
             String query = canonicalParams(params);
-            HttpResponse<Void> resp = httpClient.send(HttpRequest.newBuilder(
-                            URI.create("https://" + host + "/?" + query))
-                    .GET()
-                    .header("Authorization", auth)
-                    .header("Date", httpDate())
-                    .timeout(Duration.ofSeconds(8))
-                    .build(), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<Void> resp = httpClient.send(
+                    HttpRequest.newBuilder(URI.create("https://" + host + "/?" + query))
+                            .GET()
+                            .header("Authorization", auth)
+                            .header("Date", httpDate())
+                            .timeout(Duration.ofSeconds(8))
+                            .build(),
+                    HttpResponse.BodyHandlers.discarding());
             if (resp.statusCode() / 100 != 2) {
                 throw new IllegalStateException("HTTP " + resp.statusCode());
             }
@@ -293,8 +302,8 @@ public class CosApiService {
     }
 
     private String httpDate() {
-        return java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
-                .format(java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC));
+        return java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME.format(
+                java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC));
     }
 
     // ==================== 原语 ====================
