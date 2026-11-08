@@ -197,15 +197,21 @@ public class PermissionController {
         return result;
     }
 
-    /** 权限域：以 domain 字段为准，缺失（历史数据）时回退权限码首段 */
+    /** 优先显式 domain；当前权限码取第二段域，历史无端前缀的编码仍取首段。 */
     private String domainOf(Permission permission) {
         String domain = permission.getDomain();
         if (domain != null && !domain.isBlank()) {
             return domain;
         }
         String code = permission.getPermissionCode();
-        int idx = code == null ? -1 : code.indexOf(':');
-        return idx > 0 ? code.substring(0, idx) : "system";
+        if (code == null || code.isBlank()) {
+            return "system";
+        }
+        String[] parts = code.split(":", -1);
+        if (parts.length >= 4 && Set.of("admin", "user", "app", "all").contains(parts[0]) && !parts[1].isBlank()) {
+            return parts[1];
+        }
+        return parts.length > 1 && !parts[0].isBlank() ? parts[0] : "system";
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.astral.monitor.alert;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import tools.jackson.databind.ObjectMapper;
 
@@ -38,20 +39,14 @@ public class AlertConfigParser {
     /** 校验渠道配置完整性，返回 null=通过，否则为错误文案 */
     public String validate(String type, String configJson) {
         Map<String, String> config = parse(configJson);
-        String normalizedType = type == null ? "" : type.trim().toUpperCase();
+        String normalizedType = type == null ? "" : type.trim().toUpperCase(Locale.ROOT);
         return switch (normalizedType) {
-            case AlertEngine.CHANNEL_EMAIL -> config.get("to") == null
-                            || config.get("to").isBlank()
-                    ? "EMAIL 渠道 config 缺少 to（收件邮箱）"
-                    : null;
-            case AlertEngine.CHANNEL_WEBHOOK -> config.get("url") == null
-                            || config.get("url").isBlank()
-                    ? "WEBHOOK 渠道 config 缺少 url"
-                    : null;
-            case AlertEngine.CHANNEL_SMS -> config.get("phone") == null
-                            || config.get("phone").isBlank()
-                    ? "SMS 渠道 config 缺少 phone（手机号）"
-                    : null;
+            case AlertEngine.CHANNEL_EMAIL ->
+                config.get("to") == null || config.get("to").isBlank() ? "EMAIL 渠道 config 缺少 to（收件邮箱）" : null;
+            case AlertEngine.CHANNEL_WEBHOOK ->
+                config.get("url") == null || config.get("url").isBlank() ? "WEBHOOK 渠道 config 缺少 url" : null;
+            case AlertEngine.CHANNEL_SMS ->
+                config.get("phone") == null || config.get("phone").isBlank() ? "SMS 渠道 config 缺少 phone（手机号）" : null;
             default -> "不支持的渠道类型：" + type + "（仅 EMAIL / SMS / WEBHOOK）";
         };
     }

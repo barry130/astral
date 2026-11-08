@@ -25,6 +25,7 @@ import com.astral.ai.provider.AiProviderDtos.StreamListener;
 import com.astral.ai.provider.AiProviderDtos.ToolCall;
 import com.astral.ai.provider.AiProviderDtos.ToolSpec;
 import com.astral.ai.provider.AiProviderRegistry;
+import com.astral.ai.security.AiToolPermissionGate;
 import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
 import jakarta.annotation.PreDestroy;
@@ -35,8 +36,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -88,8 +89,7 @@ public class AiChatOrchestrator {
     private static final int MAX_KNOWLEDGE_HITS = 6;
 
     /** 缺省系统提示词（未配置 Prompt 时兜底，不含任何业务硬编码分支） */
-    private static final String FALLBACK_SYSTEM_PROMPT =
-            """
+    private static final String FALLBACK_SYSTEM_PROMPT = """
             你是 Astral 平台的智能助手。请使用简体中文回答，保持简洁、准确、可执行。
             当你不确定事实时，明确说明不确定，不要编造数据、引用或接口。
             """;
@@ -109,17 +109,99 @@ public class AiChatOrchestrator {
     private final AiProviderRegistry providerRegistry;
     private final AiToolCallMapper toolCallMapper;
     private final AiProperties properties;
+    private final AiToolPermissionGate toolPermissionGate;
 
     /** 编排线程池：固定大小，避免一次涌入把数据库连接打满 */
-    private final ExecutorService executor = Executors.newFixedThreadPool(8, runnable -> {
-        Thread thread = new Thread(runnable, "ai-orchestrator");
-        thread.setDaemon(true);
-        return thread;
-    });
+    private final ExecutorService executor = new java.util.concurrent.ThreadPoolExecutor(
+            8,
+            8,
+            0L,
+            java.util.concurrent.TimeUnit.MILLISECONDS,
+            new java.util.concurrent.ArrayBlockingQueue<>(32),
+            runnable -> {
+                Thread thread = new Thread(runnable, "ai-orchestrator");
+                thread.setDaemon(true);
+                return thread;
+            });
+
+    private final Set<Long> dispatched = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private void dispatch(Long requestId, Long assistantMessageId) {
+        if (!dispatched.add(requestId)) {
+            return;
+        }
+        try {
+            executor.submit(() -> {
+                try {
+                    runSafely(requestId, assistantMessageId);
+                } finally {
+                    dispatched.remove(requestId);
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException busy) {
+            dispatched.remove(requestId);
+            // The durable QUEUED row remains visible to the next maintenance pass.
+        }
+    }
+
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 15000, initialDelay = 15000)
+    public void recoverPending() {
+        if (!properties.isEnabled()) {
+            return;
+        }
+        requestService.failStaleRequests("AI012", "执行已超时，已停止继续处理");
+        usageService.markAbandonedUnknown();
+        var stale = toolCallMapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<
+                        AiToolCallEntity>()
+                .eq(AiToolCallEntity::getStatus, AiConstants.ToolCallStatus.RUNNING)
+                .apply(
+                        "COALESCE(approved_at, started_at) < {0}",
+                        LocalDateTime.now().minusSeconds(Math.max(60, properties.getRequestTimeoutSeconds())))
+                .isNotNull(AiToolCallEntity::getRequestId)
+                .last("limit 100"));
+        for (AiToolCallEntity call : stale) {
+            requestService.independentTransaction(() -> {
+                requestService.lock(call.getRequestId());
+                int changed = toolCallMapper.update(
+                        null,
+                        new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<AiToolCallEntity>()
+                                .eq(AiToolCallEntity::getId, call.getId())
+                                .eq(AiToolCallEntity::getStatus, AiConstants.ToolCallStatus.RUNNING)
+                                .set(AiToolCallEntity::getStatus, AiConstants.ToolCallStatus.UNKNOWN)
+                                .set(AiToolCallEntity::getErrorMessage, "执行中断，操作结果待核实，请勿重复操作")
+                                .set(AiToolCallEntity::getFinishedAt, LocalDateTime.now()));
+                if (changed == 1) {
+                    requestService.markUncertain(call.getRequestId());
+                    eventService.append(
+                            call.getRequestId(),
+                            AiConstants.EventType.TOOL_COMPLETED,
+                            Map.of(
+                                    "toolCallId",
+                                    call.getId(),
+                                    "status",
+                                    AiConstants.ToolCallStatus.UNKNOWN,
+                                    "summary",
+                                    "执行中断，操作结果待核实，请勿重复操作"));
+                }
+                return null;
+            });
+        }
+        for (AiRequestEntity request : requestService.queued()) {
+            AiMessageEntity assistant = latestAssistant(request.getId());
+            if (assistant != null) {
+                dispatch(request.getId(), assistant.getId());
+            }
+        }
+    }
 
     @PreDestroy
     public void shutdown() {
         executor.shutdownNow();
+        try {
+            executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     // ==================== 对外入口 ====================
@@ -154,15 +236,32 @@ public class AiChatOrchestrator {
                     existing.getId(), null, assistant == null ? null : assistant.getId(), existing.getStatus(), false);
         }
 
-        // 用户消息
-        AiMessageEntity userMessage = new AiMessageEntity();
-        userMessage.setConversationId(conversation.getId());
-        userMessage.setRole(AiConstants.MessageRole.USER);
-        userMessage.setContent(trimmed);
-        userMessage.setStatus(AiConstants.MessageStatus.COMPLETED);
-        userMessage.setContentType("TEXT");
-        conversationService.append(userMessage);
+        Start created;
+        try {
+            created = requestService.transaction(() ->
+                    createStart(agent, version, conversation, userId, clientType, trimmed, context, idempotencyKey));
+        } catch (org.springframework.dao.DuplicateKeyException conflict) {
+            AiRequestEntity winner = requestService.findByIdempotency(userId, agent.getId(), idempotencyKey);
+            if (winner == null) {
+                throw conflict;
+            }
+            AiMessageEntity assistant = latestAssistant(winner.getId());
+            return new Start(
+                    winner.getId(), null, assistant == null ? null : assistant.getId(), winner.getStatus(), false);
+        }
+        afterCommit(() -> dispatch(created.requestId(), created.assistantMessageId()));
+        return created;
+    }
 
+    private Start createStart(
+            AiAgentEntity agent,
+            AiAgentVersionEntity version,
+            AiConversationEntity conversation,
+            Long userId,
+            String clientType,
+            String trimmed,
+            Map<String, Object> context,
+            String idempotencyKey) {
         String inputSnapshot = snapshotInput(trimmed, context);
         AiRequestEntity request = requestService.create(
                 conversation.getId(),
@@ -173,8 +272,14 @@ public class AiChatOrchestrator {
                 idempotencyKey,
                 inputSnapshot,
                 AiJson.write(sanitizeContext(context, version, agent)));
+        AiMessageEntity userMessage = new AiMessageEntity();
+        userMessage.setConversationId(conversation.getId());
+        userMessage.setRole(AiConstants.MessageRole.USER);
+        userMessage.setContent(trimmed);
+        userMessage.setStatus(AiConstants.MessageStatus.COMPLETED);
+        userMessage.setContentType("TEXT");
         userMessage.setRequestId(request.getId());
-        conversationService.update(userMessage);
+        conversationService.append(userMessage);
 
         // 助手消息空壳（状态 PENDING，内容随流写入）
         AiMessageEntity assistantMessage = new AiMessageEntity();
@@ -201,14 +306,258 @@ public class AiChatOrchestrator {
                         "clientType",
                         String.valueOf(clientType)));
 
-        executor.submit(() -> runSafely(request.getId(), assistantMessage.getId()));
         return new Start(
                 request.getId(), userMessage.getId(), assistantMessage.getId(), AiConstants.RequestStatus.QUEUED, true);
     }
 
     /** 用户确认后继续执行挂起的工具 */
     public void resume(Long requestId, Long assistantMessageId) {
-        executor.submit(() -> runSafely(requestId, assistantMessageId));
+        if (requestService.queueResume(requestId)) {
+            afterCommit(() -> dispatch(requestId, assistantMessageId));
+        }
+    }
+
+    /** Shared approval entry: policy and requester identity remain separate from the approver. */
+    public Map<String, Object> approve(
+            Long callId, Long operator, boolean approved, String comment, boolean adminEntry) {
+        return requestService.withoutTransaction(
+                () -> approveWithoutTransaction(callId, operator, approved, comment, adminEntry));
+    }
+
+    private Map<String, Object> approveWithoutTransaction(
+            Long callId, Long operator, boolean approved, String comment, boolean adminEntry) {
+        if (operator == null) {
+            throw new AiException("AI008", "缺少确认人身份");
+        }
+        AiToolCallEntity hint = toolCallMapper.selectById(callId);
+        if (hint == null || hint.getRequestId() == null) {
+            throw new AiException("AI008", "工具调用不存在");
+        }
+        ApprovalClaim claim = requestService.independentTransaction(() -> {
+            AiRequestEntity request = requestService.lock(hint.getRequestId());
+            if (!AiConstants.RequestStatus.WAITING_APPROVAL.equals(request.getStatus())) {
+                throw new AiException("AI008", "请求已结束或不在待确认状态");
+            }
+            AiToolCallEntity call = toolCallMapper.selectById(callId);
+            if (!AiConstants.ToolCallStatus.WAITING_APPROVAL.equals(call.getStatus())) {
+                throw new AiException("AI008", "该工具调用不在待确认状态");
+            }
+            String policy = call.getApprovalStatus();
+            if (AiConstants.ApprovalPolicy.USER_CONFIRM.equals(policy)) {
+                if (!operator.equals(request.getUserId())) {
+                    throw new AiException("AI008", "只有请求发起人可以确认此操作");
+                }
+            } else if (AiConstants.ApprovalPolicy.ADMIN_CONFIRM.equals(policy) && adminEntry) {
+                toolPermissionGate.requireAdministratorApproval(operator);
+            } else {
+                throw new AiException("AI008", "此操作需要管理员审批");
+            }
+            if (call.getToolMessageId() == null
+                    || call.getAssistantMessageId() == null
+                    || call.getProviderToolCallId() == null) {
+                throw new AiException("AI008", "旧工具计划缺少恢复信息，请重新发起请求");
+            }
+            AiMessageEntity message = conversationService.message(call.getToolMessageId());
+            if (message == null
+                    || !request.getId().equals(message.getRequestId())
+                    || !AiConstants.MessageRole.TOOL.equals(message.getRole())) {
+                throw new AiException("AI008", "工具结果消息不存在");
+            }
+            AiToolService.EffectiveTool effective = null;
+            if (approved) {
+                effective = findTool(
+                        toolService.resolveEffective(request.getAgentVersionId(), request.getClientType()),
+                        call.getToolCode());
+                if (effective == null || !AiToolService.planHash(effective).equals(call.getPlanHash())) {
+                    throw new AiException("AI008", "工具配置在计划后已变更，请重新发起对话确认");
+                }
+            }
+            String executionToken = UUID.randomUUID().toString();
+            int claimed = toolCallMapper.update(
+                    null,
+                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<AiToolCallEntity>()
+                            .eq(AiToolCallEntity::getId, callId)
+                            .eq(AiToolCallEntity::getStatus, AiConstants.ToolCallStatus.WAITING_APPROVAL)
+                            .set(AiToolCallEntity::getStatus, AiConstants.ToolCallStatus.RUNNING)
+                            .set(AiToolCallEntity::getExecutionToken, executionToken)
+                            .set(AiToolCallEntity::getApprovedBy, operator)
+                            .set(AiToolCallEntity::getApprovedAt, LocalDateTime.now()));
+            if (claimed != 1) {
+                throw new AiException("AI008", "该工具调用不在待确认状态");
+            }
+            return new ApprovalClaim(request, call, effective, executionToken);
+        });
+        // Claim is committed before external effects. A crash can leave RUNNING for reconciliation,
+        // but must never turn this call back into a replayable WAITING_APPROVAL operation.
+        AiToolResult result;
+        if (!AiConstants.RequestStatus.WAITING_APPROVAL.equals(
+                requestService.require(claim.request().getId()).getStatus())) {
+            result = AiToolResult.rejected("请求已取消，未开始执行");
+        } else {
+            result = approved
+                    ? invoke(
+                            claim.request(),
+                            agentService.require(claim.request().getAgentId()),
+                            claim.effective(),
+                            AiJson.readObject(claim.call().getArgumentsJson()),
+                            true,
+                            operator,
+                            claim.call().getId())
+                    : AiToolResult.rejected("确认人已拒绝该操作");
+        }
+        return persistToolResult(claim, result);
+    }
+
+    private Map<String, Object> persistToolResult(ApprovalClaim claim, AiToolResult result) {
+        for (int attempt = 0; ; attempt++) {
+            try {
+                return finishApproval(claim, result);
+            } catch (org.springframework.dao.DataAccessException failure) {
+                if (attempt >= 2) {
+                    throw new AiException("AI008", "执行结果暂未保存，请由管理员核实，勿重复操作");
+                }
+            }
+        }
+    }
+
+    private Map<String, Object> finishApproval(ApprovalClaim claim, AiToolResult result) {
+        return requestService.independentTransaction(() -> {
+            AiRequestEntity request = requestService.lock(claim.request().getId());
+            AiToolCallEntity call = claim.call();
+            Long callId = call.getId();
+            String status = mapToolStatus(result);
+            AiToolCallEntity stored = toolCallMapper.selectById(callId);
+            if (stored != null
+                    && claim.token().equals(stored.getExecutionToken())
+                    && status.equals(stored.getStatus())
+                    && !AiConstants.ToolCallStatus.UNKNOWN.equals(status)) {
+                return Map.of(
+                        "toolCallId",
+                        callId,
+                        "status",
+                        status,
+                        "summary",
+                        result.summary() == null ? "工具执行完成" : result.summary());
+            }
+            int finished = toolCallMapper.update(
+                    null,
+                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<AiToolCallEntity>()
+                            .eq(AiToolCallEntity::getId, callId)
+                            .eq(AiToolCallEntity::getExecutionToken, claim.token())
+                            .in(
+                                    AiToolCallEntity::getStatus,
+                                    AiConstants.ToolCallStatus.RUNNING,
+                                    AiConstants.ToolCallStatus.UNKNOWN)
+                            .set(AiToolCallEntity::getStatus, status)
+                            .set(
+                                    AiToolCallEntity::getResultJson,
+                                    result.payload() == null ? null : AiJson.write(result.payload()))
+                            .set(AiToolCallEntity::getErrorMessage, result.isOk() ? null : result.summary())
+                            .set(AiToolCallEntity::getFinishedAt, LocalDateTime.now()));
+            if (finished != 1) {
+                throw new AiException("AI008", "工具执行结果已由其他处理者完成");
+            }
+            AiMessageEntity message = conversationService.message(call.getToolMessageId());
+            if (message == null || !request.getId().equals(message.getRequestId())) {
+                throw new AiException("AI008", "工具结果消息不存在");
+            }
+            message.setContent(result.summary() == null ? "工具执行完成" : result.summary());
+            message.setStatus(AiConstants.MessageStatus.COMPLETED);
+            var metadata = AiJson.mapper()
+                    .createObjectNode()
+                    .put("toolCallId", call.getProviderToolCallId())
+                    .put("toolName", call.getToolCode())
+                    .put("status", status);
+            message.setBlocksJson(AiJson.write(List.of(metadata)));
+            conversationService.update(message);
+            Map<String, Object> completed = new LinkedHashMap<>();
+            completed.put("toolCallId", callId);
+            completed.put("toolCode", call.getToolCode());
+            completed.put("status", status);
+            completed.put("summary", message.getContent());
+            if (AiToolResult.NEED_CLIENT.equals(result.status()) && result.payload() != null) {
+                completed.put("plan", result.payload());
+                completed.put("needClient", true);
+            }
+            eventService.append(request.getId(), AiConstants.EventType.TOOL_COMPLETED, completed);
+            if (AiConstants.ToolCallStatus.UNKNOWN.equals(status)) {
+                requestService.markUncertain(request.getId());
+                eventService.append(
+                        request.getId(),
+                        AiConstants.EventType.REQUEST_FAILED,
+                        Map.of("errorCode", "AI008", "message", "操作可能已执行，结果待管理员核实。请勿重复操作。"));
+            }
+            if (requestService.queueResume(request.getId())) {
+                AiMessageEntity next = nextAssistant(request, call.getAssistantMessageId());
+                afterCommit(() -> dispatch(request.getId(), next.getId()));
+            }
+            return Map.of("toolCallId", callId, "status", status, "summary", message.getContent());
+        });
+    }
+
+    private record ApprovalClaim(
+            AiRequestEntity request, AiToolCallEntity call, AiToolService.EffectiveTool effective, String token) {}
+
+    public Map<String, Object> reconcileTool(Long callId, Long operator, String outcome, String note) {
+        if (operator == null
+                || note == null
+                || note.isBlank()
+                || note.length() > 1000
+                || !(AiConstants.ToolCallStatus.SUCCEEDED.equals(outcome)
+                        || AiConstants.ToolCallStatus.FAILED.equals(outcome))) {
+            throw new AiException("AI008", "请提供已核实的执行结果和 1 至 1000 字的依据");
+        }
+        AiToolCallEntity hint = toolCallMapper.selectById(callId);
+        if (hint == null || hint.getRequestId() == null) throw new AiException("AI008", "工具调用不存在");
+        return requestService.independentTransaction(() -> {
+            AiRequestEntity request = requestService.lock(hint.getRequestId());
+            AiToolCallEntity call = toolCallMapper.selectById(callId);
+            if (!AiConstants.RequestStatus.isTerminal(request.getStatus())
+                    || !AiConstants.ToolCallStatus.UNKNOWN.equals(call.getStatus())
+                    || call.getReconciledAt() != null) {
+                throw new AiException("AI008", "仅可核对已结束请求中尚未核对的未知操作");
+            }
+            String summary = "人工核对：" + note.trim();
+            toolCallMapper.update(
+                    null,
+                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<AiToolCallEntity>()
+                            .eq(AiToolCallEntity::getId, callId)
+                            .eq(AiToolCallEntity::getStatus, AiConstants.ToolCallStatus.UNKNOWN)
+                            .set(AiToolCallEntity::getStatus, outcome)
+                            .set(AiToolCallEntity::getReconciledBy, operator)
+                            .set(AiToolCallEntity::getReconciledAt, LocalDateTime.now())
+                            .set(AiToolCallEntity::getReconciliationNote, note.trim()));
+            AiMessageEntity message = conversationService.message(call.getToolMessageId());
+            if (message != null && request.getId().equals(message.getRequestId())) {
+                message.setContent(summary);
+                message.setStatus(AiConstants.MessageStatus.COMPLETED);
+                message.setBlocksJson(AiJson.write(List.of(AiJson.mapper()
+                        .createObjectNode()
+                        .put("toolCallId", call.getProviderToolCallId())
+                        .put("toolName", call.getToolCode())
+                        .put("status", outcome))));
+                conversationService.update(message);
+            }
+            eventService.append(
+                    request.getId(),
+                    AiConstants.EventType.TOOL_COMPLETED,
+                    Map.of("toolCallId", callId, "status", outcome, "summary", summary, "reconciledBy", operator));
+            return Map.of("toolCallId", callId, "status", outcome, "summary", summary);
+        });
+    }
+
+    private static void afterCommit(Runnable action) {
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            action.run();
+                        }
+                    });
+        } else {
+            action.run();
+        }
     }
 
     /** 发起结果 */
@@ -217,17 +566,21 @@ public class AiChatOrchestrator {
     // ==================== 编排主流程 ====================
 
     private void runSafely(Long requestId, Long assistantMessageId) {
+        String token = requestService.claim(requestId, properties.getRequestTimeoutSeconds());
+        if (token == null) {
+            return;
+        }
         try {
-            run(requestId, assistantMessageId);
+            run(requestId, assistantMessageId, token);
         } catch (AiException e) {
-            fail(requestId, assistantMessageId, e.getErrorCode(), e.getMessage());
+            fail(requestId, assistantMessageId, e.getErrorCode(), e.getMessage(), token);
         } catch (Exception e) {
             log.error("[AI] 请求编排异常 requestId={}", requestId, e);
-            fail(requestId, assistantMessageId, "AI006", e.getMessage());
+            fail(requestId, assistantMessageId, "AI006", "请求执行失败，请稍后重试", token);
         }
     }
 
-    private void run(Long requestId, Long assistantMessageId) {
+    private void run(Long requestId, Long assistantMessageId, String token) {
         AiRequestEntity request = requestService.require(requestId);
         if (AiConstants.RequestStatus.CANCELLED.equals(request.getStatus())) {
             return;
@@ -240,20 +593,19 @@ public class AiChatOrchestrator {
         // 解析路由 / 提供方 / 模型
         Resolved resolved = resolve(version);
         requestService.markRunning(
-                requestId, resolved.provider().getId(), resolved.model().getId());
+                requestId, resolved.provider().getId(), resolved.model().getId(), token);
 
         // 额度预占（已预占过则跳过，resume 时复用）
         AiQuotaService.Limits limits = quotaService.resolveLimits(request.getUserId(), agent, version);
-        AiQuotaService.Reservation reservation =
-                quotaService.reserve(request.getUserId(), agent, version, inputChars(request), limits);
-        AiUsageEntity usage = usageService.reserve(requestService.require(requestId), resolved.model());
+        if (inputChars(request) > limits.maxInputChars()) {
+            throw new AiException("AI005", "输入超出字符上限");
+        }
 
-        boolean succeeded = false;
-        int tokenIn = 0;
-        int tokenOut = 0;
+        int tokenIn = request.getTokenIn() == null ? 0 : request.getTokenIn();
+        int tokenOut = request.getTokenOut() == null ? 0 : request.getTokenOut();
         StringBuilder answer = new StringBuilder();
         List<AiAppDtos.Citation> citations = List.of();
-        try {
+        {
             List<AiToolService.EffectiveTool> tools =
                     toolService.resolveEffective(version.getId(), request.getClientType());
 
@@ -269,8 +621,13 @@ public class AiChatOrchestrator {
             // 事故现场：模型在 4 轮里反复调 search_music，每轮拿到的 30 首候选完全相同，
             // 最终把「我先搜索…」当成最终回答。工具一直挂在可调用列表里，模型就会一直调。
             java.util.Set<String> exhaustedTools = new java.util.LinkedHashSet<>();
-            for (int round = 0; round < maxToolRounds; round++) {
-                if (cancelled(requestId)) {
+            long previousRounds = conversationService.byRequest(requestId).stream()
+                    .filter(row -> AiConstants.MessageRole.ASSISTANT.equals(row.getRole())
+                            && hasToolCalls(row.getBlocksJson()))
+                    .count();
+            boolean needsFinalAnswer = previousRounds >= maxToolRounds;
+            for (long round = previousRounds; round < maxToolRounds; round++) {
+                if (!requestService.owns(requestId, token)) {
                     return;
                 }
                 List<Message> messages = new ArrayList<>();
@@ -279,26 +636,67 @@ public class AiChatOrchestrator {
                 List<ToolSpec> specs = toolSpecs(availableTools(tools, exhaustedTools));
 
                 RoundResult result = callModel(
-                        request, assistant, resolved, messages, specs, answer.length() == 0 ? assistant : null);
+                        request,
+                        assistant,
+                        resolved,
+                        messages,
+                        specs,
+                        answer.length() == 0 ? assistant : null,
+                        token,
+                        limits);
                 tokenIn += result.promptTokens();
                 tokenOut += result.completionTokens();
-                if (!answer.isEmpty() && !result.content().isEmpty()) {
-                    answer.append('\n');
-                }
+                answer.setLength(0);
                 answer.append(result.content());
 
+                needsFinalAnswer = !result.toolCalls().isEmpty();
                 if (result.toolCalls().isEmpty()) {
                     break;
                 }
                 // 工具轮：先落库助手消息（含 toolCalls），再执行工具
-                persistAssistantToolCalls(assistant, result.toolCalls(), resolved.model());
-                boolean needApproval =
-                        executeTools(request, agent, version, conversation, result.toolCalls(), tools, assistant);
+                AiMessageEntity roundAssistant = assistant;
+                List<ApprovalClaim> automatic = new ArrayList<>();
+                boolean needApproval = requestService.transaction(() -> {
+                    requestService.lock(requestId);
+                    if (!requestService.owns(requestId, token)) {
+                        throw new AiException("AI007", "请求已取消或执行权失效");
+                    }
+                    roundAssistant.setContent(result.content());
+                    persistAssistantToolCalls(roundAssistant, result.toolCalls(), resolved.model());
+                    return planTools(request, conversation, result.toolCalls(), tools, roundAssistant, automatic);
+                });
+                for (ApprovalClaim claim : automatic) {
+                    AiToolResult toolResult = requestService.owns(requestId, token)
+                            ? invoke(
+                                    request,
+                                    agent,
+                                    claim.effective(),
+                                    AiJson.readObject(claim.call().getArgumentsJson()),
+                                    false,
+                                    null,
+                                    claim.call().getId())
+                            : AiToolResult.rejected("请求已取消或超时，未开始执行");
+                    persistToolResult(claim, toolResult);
+                }
                 if (needApproval) {
-                    requestService.markWaiting(requestId, true);
-                    conversationService.update(status(assistant, AiConstants.MessageStatus.STREAMING));
+                    requestService.transaction(() -> {
+                        requestService.lock(requestId);
+                        if (requestService.markWaiting(requestId, true, token)) {
+                            publishPendingApprovals(requestId, roundAssistant.getId());
+                        }
+                        return null;
+                    });
                     return;
                 }
+                if (!requestService.owns(requestId, token)) {
+                    return;
+                }
+                assistant = requestService.transaction(() -> {
+                    requestService.lock(requestId);
+                    if (!requestService.owns(requestId, token)) return null;
+                    return nextAssistant(request, roundAssistant.getId());
+                });
+                if (assistant == null) return;
                 // 成功执行过的工具在后续轮次不再提供（READ 类工具重复调用没有新信息）
                 for (ToolCall call : result.toolCalls()) {
                     exhaustedTools.add(call.name());
@@ -307,39 +705,44 @@ public class AiChatOrchestrator {
 
             // 工具轮用尽仍在调工具：模型会把「我先去搜索」这类过渡语当成最终回答，
             // 用户看到的就是一句空话。这里再给一次不带工具的机会，逼它用已有结果作答。
-            // 判定条件不能用「answer 为空」——本次事故里 answer 是「我会为你制定一个搜索计划。」，
-            // 非空但毫无信息量，兜底因此从未触发。改为「解析不出结构化 blocks」。
-            if (!cancelled(requestId) && !hasStructuredBlocks(answer.toString())) {
+            // 仅有未收束的工具轮需要这一次调用；普通文本答案直接完成。
+            if (requestService.owns(requestId, token) && needsFinalAnswer) {
                 List<Message> messages = new ArrayList<>();
-                messages.add(
-                        Message.system(
-                                systemPrompt
-                                        + """
+                messages.add(Message.system(systemPrompt + """
 
 
                         工具调用次数已用尽。请**立刻**基于上面已经拿到的工具结果直接作答，
-                        不要再请求任何工具。若确实缺少信息，就用现有结果给出最接近的推荐。
+                        不要再请求任何工具。若确实缺少信息，请明确说明。
                         """));
                 messages.addAll(history(conversation.getId()));
-                RoundResult result = callModel(request, assistant, resolved, messages, null, assistant);
+                RoundResult result = callModel(request, assistant, resolved, messages, null, assistant, token, limits);
                 tokenIn += result.promptTokens();
                 tokenOut += result.completionTokens();
+                answer.setLength(0);
                 answer.append(result.content());
             }
 
             if (cancelled(requestId)) {
                 return;
             }
-            finalize(request, assistant, answer.toString(), citations, resolved.model(), tokenIn, tokenOut);
-            succeeded = true;
-        } finally {
-            if (succeeded) {
-                quotaService.settle(reservation, answer.length());
-                usageService.settle(usage, tokenIn, tokenOut);
-            } else {
-                quotaService.release(reservation);
-                usageService.release(usage, tokenIn, tokenOut);
-            }
+            AiMessageEntity finalAssistant = assistant;
+            List<AiAppDtos.Citation> finalCitations = citations;
+            int totalIn = tokenIn;
+            int totalOut = tokenOut;
+            requestService.transaction(() -> {
+                requestService.lock(requestId);
+                if (requestService.markSucceeded(requestId, totalIn, totalOut, token)) {
+                    finalize(
+                            request,
+                            finalAssistant,
+                            answer.toString(),
+                            finalCitations,
+                            resolved.model(),
+                            totalIn,
+                            totalOut);
+                }
+                return null;
+            });
         }
     }
 
@@ -351,101 +754,184 @@ public class AiChatOrchestrator {
             Resolved resolved,
             List<Message> messages,
             List<ToolSpec> specs,
-            AiMessageEntity streaming) {
-        ChatRequest chatRequest = new ChatRequest(
-                resolved.provider().getBaseUrl(),
-                providerService.resolveApiKey(resolved.provider()),
-                resolved.model().getModelCode(),
-                messages,
-                specs == null || specs.isEmpty() ? null : specs,
-                routeTemperature(resolved.route()),
-                routeTopP(resolved.route()),
-                routeMaxTokens(resolved.route(), resolved.model()),
-                responseFormat(resolved.version().getResponseSchemaJson()),
-                resolved.route() == null ? null : resolved.route().getExtraParametersJson(),
-                resolved.provider().getConnectTimeoutMs() == null
-                        ? 10000
-                        : resolved.provider().getConnectTimeoutMs(),
-                resolved.provider().getReadTimeoutMs() == null
-                        ? 60000
-                        : resolved.provider().getReadTimeoutMs(),
-                resolved.provider().getMaxRetries() == null
-                        ? 0
-                        : resolved.provider().getMaxRetries(),
-                "ai-" + request.getId());
-
+            AiMessageEntity streaming,
+            String token,
+            AiQuotaService.Limits limits) {
+        int maxTokens = Math.min(routeMaxTokens(resolved.route(), resolved.model()), limits.maxOutputTokens());
+        if (resolved.model().getMaxContextTokens() != null) {
+            int available = resolved.model().getMaxContextTokens() - estimateInput(messages, specs);
+            maxTokens = Math.min(maxTokens, available);
+        }
+        int inputEstimate = estimateInput(messages, specs);
+        String apiKey = providerService.resolveApiKey(resolved.provider());
         AiProvider provider = providerRegistry.require(resolved.provider().getProviderType());
         StringBuilder content = new StringBuilder();
         List<ToolCall> toolCalls = new ArrayList<>();
         int[] tokens = new int[2];
+        AtomicBoolean usageKnown = new AtomicBoolean(false);
         String[] finish = {"stop"};
         Throwable[] error = {null};
         AtomicBoolean started = new AtomicBoolean(false);
+        AtomicBoolean completed = new AtomicBoolean(false);
+        boolean providerInvoked = false;
+        AiUsageEntity stage = usageService.reserveStage(
+                request.getId(),
+                token,
+                UUID.randomUUID().toString(),
+                resolved.model(),
+                inputEstimate,
+                maxTokens,
+                limits);
+        try {
+            int remainingBudget = requestService.remainingBudgetMillis(request.getId(), token);
+            ChatRequest chatRequest = new ChatRequest(
+                    resolved.provider().getBaseUrl(),
+                    apiKey,
+                    resolved.model().getModelCode(),
+                    messages,
+                    specs == null || specs.isEmpty() ? null : specs,
+                    routeTemperature(resolved.route()),
+                    routeTopP(resolved.route()),
+                    maxTokens,
+                    responseFormat(resolved.version().getResponseSchemaJson()),
+                    resolved.route() == null ? null : resolved.route().getExtraParametersJson(),
+                    Math.min(
+                            remainingBudget,
+                            resolved.provider().getConnectTimeoutMs() == null
+                                    ? 10000
+                                    : resolved.provider().getConnectTimeoutMs()),
+                    Math.min(
+                            remainingBudget,
+                            resolved.provider().getReadTimeoutMs() == null
+                                    ? 60000
+                                    : resolved.provider().getReadTimeoutMs()),
+                    resolved.provider().getMaxRetries() == null
+                            ? 0
+                            : resolved.provider().getMaxRetries(),
+                    "ai-" + request.getId());
 
-        provider.stream(chatRequest, new StreamListener() {
-            @Override
-            public void onDelta(String text) {
-                if (text == null || text.isEmpty()) {
-                    return;
-                }
-                if (started.compareAndSet(false, true)) {
-                    requestService.markFirstToken(request.getId());
+            providerInvoked = true;
+            provider.stream(chatRequest, new StreamListener() {
+                @Override
+                public void onDelta(String text) {
+                    if (!requestService.owns(request.getId(), token)) {
+                        throw new AiException("AI007", "请求已取消或超时");
+                    }
+                    if (text == null || text.isEmpty()) {
+                        return;
+                    }
+                    if (started.compareAndSet(false, true)) {
+                        requestService.markFirstToken(request.getId());
+                        eventService.append(
+                                request.getId(),
+                                AiConstants.EventType.MESSAGE_STARTED,
+                                Map.of("messageId", assistant.getId()));
+                    }
+                    content.append(text);
                     eventService.append(
                             request.getId(),
-                            AiConstants.EventType.MESSAGE_STARTED,
-                            Map.of("messageId", assistant.getId()));
+                            AiConstants.EventType.MESSAGE_DELTA,
+                            Map.of("messageId", assistant.getId(), "delta", text));
                 }
-                content.append(text);
-                eventService.append(
-                        request.getId(),
-                        AiConstants.EventType.MESSAGE_DELTA,
-                        Map.of("messageId", assistant.getId(), "delta", text));
-            }
 
-            @Override
-            public void onCompleted(ChatResult result) {
-                // Provider 契约：onCompleted 的 result.content() 是完整累积内容。
-                // 已收到过增量时它是同一份数据的重复副本，直接忽略（原 else-if 清空后未重写，
-                // 会把整段回答抹成空串 —— 助手气泡空白、content len=0 的根因）；
-                // 仅当全程没有任何增量（如非流式实现只回调 onCompleted）时才补发一次。
-                if (result.content() != null && !result.content().isEmpty() && !started.get()) {
-                    onDelta(result.content());
+                @Override
+                public void onCompleted(ChatResult result) {
+                    // Billing is authoritative even if publishing the completed content is cancelled.
+                    if (result.promptTokens() >= 0 && result.completionTokens() >= 0) {
+                        tokens[0] = result.promptTokens();
+                        tokens[1] = result.completionTokens();
+                        usageKnown.set(true);
+                    }
+                    // Provider 契约：onCompleted 的 result.content() 是完整累积内容。
+                    // 已收到过增量时它是同一份数据的重复副本，直接忽略（原 else-if 清空后未重写，
+                    // 会把整段回答抹成空串 —— 助手气泡空白、content len=0 的根因）；
+                    // 仅当全程没有任何增量（如非流式实现只回调 onCompleted）时才补发一次。
+                    if (result.content() != null && !result.content().isEmpty() && !started.get()) {
+                        onDelta(result.content());
+                    }
+                    if (result.toolCalls() != null) {
+                        toolCalls.addAll(result.toolCalls());
+                    }
+                    if (result.finishReason() != null) {
+                        finish[0] = result.finishReason();
+                    }
+                    completed.set(true);
                 }
-                if (result.toolCalls() != null) {
-                    toolCalls.addAll(result.toolCalls());
-                }
-                tokens[0] = result.promptTokens();
-                tokens[1] = result.completionTokens();
-                if (result.finishReason() != null) {
-                    finish[0] = result.finishReason();
-                }
-            }
 
-            @Override
-            public void onError(Throwable throwable) {
-                error[0] = throwable;
+                @Override
+                public void onUsage(int input, int output) {
+                    if (input >= 0 && output >= 0) {
+                        tokens[0] = input;
+                        tokens[1] = output;
+                        usageKnown.set(true);
+                    }
+                }
+
+                @Override
+                public void onError(Throwable throwable) {
+                    error[0] = throwable;
+                }
+            });
+        } finally {
+            if (!providerInvoked) {
+                usageService.releaseUnsentStage(stage.getId());
+            } else if (usageKnown.get()) {
+                usageService.settleStage(stage.getId(), tokens[0], tokens[1]);
+            } else {
+                usageService.markUnknown(stage.getId());
             }
-        });
+        }
 
         if (error[0] != null) {
-            throw error[0] instanceof AiException ai ? ai : new AiException("AI006", error[0].getMessage());
+            throw error[0] instanceof AiException ai ? ai : new AiException("AI006", "模型响应失败，请稍后重试");
         }
+        if (!completed.get()) throw new AiException("AI006", "模型响应未完成，请稍后重试");
         if (streaming != null && !started.get() && !content.isEmpty()) {
             requestService.markFirstToken(request.getId());
         }
         return new RoundResult(content.toString(), toolCalls, tokens[0], tokens[1], finish[0]);
     }
 
+    private static int estimateInput(List<Message> messages, List<ToolSpec> specs) {
+        // UTF-8 bytes are a conservative upper bound for byte-based model tokenizers.
+        long bytes = AiJson.write(messages).getBytes(java.nio.charset.StandardCharsets.UTF_8).length
+                + (specs == null ? 0 : AiJson.write(specs).getBytes(java.nio.charset.StandardCharsets.UTF_8).length)
+                + 64L;
+        return (int) Math.min(Integer.MAX_VALUE, bytes);
+    }
+
+    private static boolean hasToolCalls(String blocks) {
+        JsonNode value = AiJson.read(blocks);
+        return value != null && value.has("toolCalls");
+    }
+
+    private AiMessageEntity nextAssistant(AiRequestEntity request, Long parent) {
+        AiMessageEntity next = new AiMessageEntity();
+        next.setConversationId(request.getConversationId());
+        next.setRequestId(request.getId());
+        next.setParentMessageId(parent);
+        next.setRole(AiConstants.MessageRole.ASSISTANT);
+        next.setContent("");
+        next.setStatus(AiConstants.MessageStatus.PENDING);
+        return conversationService.append(next);
+    }
+
     // ==================== 工具执行 ====================
 
-    private boolean executeTools(
+    private boolean planTools(
             AiRequestEntity request,
-            AiAgentEntity agent,
-            AiAgentVersionEntity version,
             AiConversationEntity conversation,
             List<ToolCall> calls,
             List<AiToolService.EffectiveTool> tools,
-            AiMessageEntity assistant) {
+            AiMessageEntity assistant,
+            List<ApprovalClaim> automatic) {
+        if (calls.size() > 32
+                || calls.stream()
+                        .anyMatch(call -> call.id() == null || call.id().isBlank())
+                || calls.stream().map(ToolCall::id).distinct().count() != calls.size()) {
+            throw new AiException("AI008", "模型返回的工具调用标识或数量无效");
+        }
+        boolean waiting = false;
         for (ToolCall call : calls) {
             AiToolService.EffectiveTool effective = findTool(tools, call.name());
             if (effective == null) {
@@ -464,6 +950,8 @@ public class AiChatOrchestrator {
             ObjectNode arguments = AiJson.readObject(call.arguments());
             AiToolCallEntity record = new AiToolCallEntity();
             record.setRequestId(request.getId());
+            record.setProviderToolCallId(call.id());
+            record.setAssistantMessageId(assistant.getId());
             record.setToolCode(effective.tool().getToolCode());
             record.setToolName(effective.tool().getName());
             record.setRiskLevel(effective.risk());
@@ -477,6 +965,9 @@ public class AiChatOrchestrator {
                         AiConstants.ApprovalPolicy.ADMIN_CONFIRM.equals(effective.approval())
                                 ? AiConstants.ApprovalPolicy.ADMIN_CONFIRM
                                 : AiConstants.ApprovalPolicy.USER_CONFIRM);
+                // R3 计划期快照：审批时重算比对（executor_config/risk/approval），防审批窗口
+                // 内后台改配置导致「确认 A 执行 B」。
+                record.setPlanHash(AiToolService.planHash(effective));
                 toolCallMapper.insert(record);
                 eventService.append(
                         request.getId(),
@@ -490,31 +981,21 @@ public class AiChatOrchestrator {
                                 String.valueOf(effective.tool().getName()),
                                 "risk",
                                 effective.risk()));
-                eventService.append(
-                        request.getId(),
-                        AiConstants.EventType.TOOL_APPROVAL_REQUIRED,
-                        Map.of(
-                                "toolCallId",
-                                record.getId(),
-                                "toolCode",
-                                effective.tool().getToolCode(),
-                                "name",
-                                String.valueOf(effective.tool().getName()),
-                                "risk",
-                                effective.risk(),
-                                "arguments",
-                                arguments));
-                appendToolMessage(
+                AiMessageEntity pending = appendToolMessage(
                         conversation.getId(),
                         request.getId(),
                         call,
                         "该操作需要确认后执行：" + effective.tool().getName(),
                         AiToolResult.REQUIRES_APPROVAL);
-                return true;
+                record.setToolMessageId(pending.getId());
+                toolCallMapper.updateById(record);
+                waiting = true;
+                continue;
             }
 
             record.setStatus(AiConstants.ToolCallStatus.RUNNING);
             record.setApprovalStatus(AiConstants.ApprovalPolicy.NONE);
+            record.setExecutionToken(UUID.randomUUID().toString());
             toolCallMapper.insert(record);
             eventService.append(
                     request.getId(),
@@ -537,26 +1018,39 @@ public class AiChatOrchestrator {
                             "toolCode",
                             effective.tool().getToolCode()));
 
-            AiToolResult result = invoke(request, agent, effective, arguments, false, null);
-            record.setResultJson(result.payload() == null ? null : AiJson.write(result.payload()));
-            record.setStatus(mapToolStatus(result));
-            record.setFinishedAt(LocalDateTime.now());
+            AiMessageEntity resultMessage = appendToolMessage(
+                    conversation.getId(), request.getId(), call, "工具正在执行", AiConstants.ToolCallStatus.RUNNING);
+            record.setToolMessageId(resultMessage.getId());
             toolCallMapper.updateById(record);
-            // 只有 NEED_CLIENT 需要把搜索计划交给客户端执行，此时才把 payload 一起塞进事件；
-            // 其余工具的明细已经落在 ai_tool_call.result_json 里，事件不重复搬大对象。
-            Map<String, Object> completed = new LinkedHashMap<>();
-            completed.put("toolCallId", record.getId());
-            completed.put("toolCode", effective.tool().getToolCode());
-            completed.put("status", result.status());
-            completed.put("summary", String.valueOf(result.summary()));
-            if (AiToolResult.NEED_CLIENT.equals(result.status()) && result.payload() != null) {
-                completed.put("plan", result.payload());
-                completed.put("needClient", Boolean.TRUE);
-            }
-            eventService.append(request.getId(), AiConstants.EventType.TOOL_COMPLETED, completed);
-            appendToolMessage(conversation.getId(), request.getId(), call, result.summary(), result.status());
+            automatic.add(new ApprovalClaim(request, record, effective, record.getExecutionToken()));
         }
-        return false;
+        return waiting;
+    }
+
+    private void publishPendingApprovals(Long requestId, Long assistantId) {
+        var calls = toolCallMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AiToolCallEntity>()
+                        .eq(AiToolCallEntity::getRequestId, requestId)
+                        .eq(AiToolCallEntity::getAssistantMessageId, assistantId)
+                        .eq(AiToolCallEntity::getStatus, AiConstants.ToolCallStatus.WAITING_APPROVAL));
+        for (AiToolCallEntity call : calls) {
+            eventService.append(
+                    requestId,
+                    AiConstants.EventType.TOOL_APPROVAL_REQUIRED,
+                    Map.of(
+                            "toolCallId",
+                            call.getId(),
+                            "toolCode",
+                            call.getToolCode(),
+                            "name",
+                            String.valueOf(call.getToolName()),
+                            "risk",
+                            call.getRiskLevel(),
+                            "approvalPolicy",
+                            call.getApprovalStatus(),
+                            "arguments",
+                            AiJson.readObject(call.getArgumentsJson())));
+        }
     }
 
     /** 执行单个工具（供编排与「确认后执行」两条路径共用） */
@@ -567,6 +1061,26 @@ public class AiChatOrchestrator {
             ObjectNode arguments,
             boolean approved,
             Long approvedBy) {
+        return invoke(request, agent, effective, arguments, approved, approvedBy, null);
+    }
+
+    private AiToolResult invoke(
+            AiRequestEntity request,
+            AiAgentEntity agent,
+            AiToolService.EffectiveTool effective,
+            ObjectNode arguments,
+            boolean approved,
+            Long approvedBy,
+            Long toolCallId) {
+        // 执行期权限与后台试跑共用同一咽喉（AiToolPermissionGate），此处不得复制校验逻辑
+        AiToolPermissionGate.Outcome outcome =
+                toolPermissionGate.check(request.getUserId(), effective.tool(), effective.handler());
+        if (outcome == AiToolPermissionGate.Outcome.MALFORMED) {
+            return AiToolResult.rejected("工具权限配置异常，已拒绝执行");
+        }
+        if (outcome == AiToolPermissionGate.Outcome.DENIED) {
+            return AiToolResult.rejected("无权限调用工具");
+        }
         AiToolContext context = new AiToolContext(
                 request.getId(),
                 request.getConversationId(),
@@ -578,15 +1092,27 @@ public class AiChatOrchestrator {
                 arguments,
                 AiJson.readObject(request.getContextSnapshot()),
                 approved,
-                approvedBy);
+                approvedBy,
+                toolCallId);
         try {
-            return effective.handler().execute(context);
+            AiToolResult result = effective.handler().execute(context);
+            return uncertainIfWriteFailure(effective, result);
         } catch (AiException e) {
-            return AiToolResult.failed(e.getMessage());
+            return uncertainIfWriteFailure(effective, AiToolResult.failed("工具执行失败，请检查配置或网络"));
         } catch (Exception e) {
-            log.warn("[AI] 工具执行失败 tool={}: {}", effective.tool().getToolCode(), e.getMessage());
-            return AiToolResult.failed(e.getMessage() == null ? "工具执行失败" : e.getMessage());
+            log.warn(
+                    "[AI] 工具执行失败 tool={} type={}",
+                    effective.tool().getToolCode(),
+                    e.getClass().getSimpleName());
+            return uncertainIfWriteFailure(effective, AiToolResult.failed("工具执行失败，请检查配置或网络"));
         }
+    }
+
+    private static AiToolResult uncertainIfWriteFailure(AiToolService.EffectiveTool tool, AiToolResult result) {
+        if (!AiConstants.RiskLevel.READ.equals(tool.risk()) && AiToolResult.FAILED.equals(result.status())) {
+            return new AiToolResult(AiToolResult.UNKNOWN, "操作可能已执行，结果待管理员核实。请勿重复操作。", null);
+        }
+        return result;
     }
 
     /** 高风险工具必须确认；代码下限不可被后台配置绕过 */
@@ -598,6 +1124,9 @@ public class AiChatOrchestrator {
     }
 
     private String mapToolStatus(AiToolResult result) {
+        if (AiToolResult.UNKNOWN.equals(result.status())) {
+            return AiConstants.ToolCallStatus.UNKNOWN;
+        }
         if (result.isOk()) {
             return AiConstants.ToolCallStatus.SUCCEEDED;
         }
@@ -619,7 +1148,8 @@ public class AiChatOrchestrator {
         return null;
     }
 
-    private void appendToolMessage(Long conversationId, Long requestId, ToolCall call, String summary, String status) {
+    private AiMessageEntity appendToolMessage(
+            Long conversationId, Long requestId, ToolCall call, String summary, String status) {
         AiMessageEntity message = new AiMessageEntity();
         message.setConversationId(conversationId);
         message.setRequestId(requestId);
@@ -632,7 +1162,7 @@ public class AiChatOrchestrator {
         meta.put("toolName", call.name());
         meta.put("status", status);
         message.setBlocksJson(AiJson.write(List.of(meta)));
-        conversationService.append(message);
+        return conversationService.append(message);
     }
 
     private void persistAssistantToolCalls(AiMessageEntity assistant, List<ToolCall> calls, AiModelEntity model) {
@@ -645,7 +1175,7 @@ public class AiChatOrchestrator {
             items.add(item);
         }
         assistant.setBlocksJson(AiJson.write(Map.of("toolCalls", items)));
-        assistant.setStatus(AiConstants.MessageStatus.STREAMING);
+        assistant.setStatus(AiConstants.MessageStatus.COMPLETED);
         assistant.setModelName(model.getModelName());
         conversationService.update(assistant);
     }
@@ -720,32 +1250,31 @@ public class AiChatOrchestrator {
                         tokenIn,
                         "outputTokens",
                         tokenOut));
-        requestService.markSucceeded(request.getId(), tokenIn, tokenOut);
     }
 
-    private void fail(Long requestId, Long assistantMessageId, String errorCode, String message) {
+    private void fail(Long requestId, Long assistantMessageId, String errorCode, String message, String token) {
         try {
-            AiRequestEntity request = requestService.find(requestId);
-            if (request == null) {
-                return;
-            }
-            if (AiConstants.RequestStatus.CANCELLED.equals(request.getStatus())) {
-                return;
-            }
-            AiMessageEntity assistant = conversationService.message(assistantMessageId);
-            if (assistant != null) {
-                assistant.setStatus(AiConstants.MessageStatus.FAILED);
-                assistant.setContent(
-                        assistant.getContent() == null || assistant.getContent().isEmpty()
-                                ? "请求失败：" + safe(message)
-                                : assistant.getContent());
-                conversationService.update(assistant);
-            }
-            eventService.append(
-                    requestId,
-                    AiConstants.EventType.REQUEST_FAILED,
-                    Map.of("errorCode", String.valueOf(errorCode), "message", safe(message)));
-            requestService.markFailed(requestId, errorCode, message, 0, 0);
+            requestService.transaction(() -> {
+                requestService.lock(requestId);
+                if (!requestService.markFailed(requestId, errorCode, message, token)) {
+                    return null;
+                }
+                AiMessageEntity assistant = latestAssistant(requestId);
+                if (assistant != null && !AiConstants.MessageStatus.COMPLETED.equals(assistant.getStatus())) {
+                    assistant.setStatus(AiConstants.MessageStatus.FAILED);
+                    assistant.setContent(
+                            assistant.getContent() == null
+                                            || assistant.getContent().isEmpty()
+                                    ? "请求失败：" + safe(message)
+                                    : assistant.getContent());
+                    conversationService.update(assistant);
+                }
+                eventService.append(
+                        requestId,
+                        AiConstants.EventType.REQUEST_FAILED,
+                        Map.of("errorCode", String.valueOf(errorCode), "message", safe(message)));
+                return null;
+            });
         } catch (Exception e) {
             log.error("[AI] 失败收尾异常 requestId={}", requestId, e);
         }
@@ -804,7 +1333,10 @@ public class AiChatOrchestrator {
         for (AiMessageEntity row : rows) {
             // 历史窗口是按条数截断的，可能把「助手 toolCalls」与紧随其后的「tool 结果」切成两半。
             // 提供方会因此报 400（orphaned or duplicate tool result），所以在下面统一做配对修复。
-            if (row.getContent() == null || row.getContent().isBlank()) {
+            if ((row.getContent() == null || row.getContent().isBlank())
+                    && !(AiConstants.MessageRole.ASSISTANT.equals(row.getRole())
+                            && row.getBlocksJson() != null
+                            && row.getBlocksJson().contains("toolCalls"))) {
                 continue;
             }
             if (AiConstants.MessageRole.USER.equals(row.getRole())) {

@@ -17,6 +17,8 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * 消息模板（合并视图）读写。
@@ -113,7 +115,7 @@ public class MessageTemplateService {
 
     // ==================== 写入 ====================
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void save(MessageTemplateSaveDto dto) {
         String code = require(dto.getTemplateCode(), "MAIL015");
         String scene = require(dto.getScene(), "MAIL016");
@@ -126,8 +128,6 @@ public class MessageTemplateService {
         if (renderChannel) {
             variables = normalizeVariables(dto.getVariables(), dto.getSubject(), dto.getContent(), event);
         }
-        checkCodeAvailable(code, scene, channels);
-
         String origCode = blankToNull(dto.getOriginalCode()) == null
                 ? code
                 : dto.getOriginalCode().trim();
@@ -148,16 +148,16 @@ public class MessageTemplateService {
                 .stream()
                 .findFirst()
                 .orElse(null);
+        checkCodeAvailable(code, scene, channels, existingMail, existingSms);
 
-        // 1) 删除不再需要的渠道行（取消勾选 / 改了编码或事件）
+        // 1) 仅删除取消的渠道；改编码/事件保留 ID，已有规则的 template_id 仍可引用。
         for (SysMailTemplate row : existingMail) {
-            boolean keep = channels.contains(row.getChannel()) && code.equals(origCode) && scene.equals(origScene);
+            boolean keep = channels.contains(row.getChannel());
             if (!keep) {
                 mailTemplateService.removeById(row.getId());
             }
         }
-        if (existingSms != null
-                && (!channels.contains(NotifyChannel.SMS) || !code.equals(origCode) || !scene.equals(origScene))) {
+        if (existingSms != null && !channels.contains(NotifyChannel.SMS)) {
             smsTemplateService.removeById(existingSms.getId());
             existingSms = null;
         }
@@ -177,10 +177,10 @@ public class MessageTemplateService {
                 row.setContent(dto.getContent());
                 row.setVariables(variables);
                 row.setRemark(dto.getRemark());
-                if (row.getId() == null) {
-                    mailTemplateService.save(row);
-                } else {
-                    mailTemplateService.updateById(row);
+                boolean saved =
+                        row.getId() == null ? mailTemplateService.save(row) : mailTemplateService.updateById(row);
+                if (!saved) {
+                    throw BusinessException.of("模板已被其他操作修改，请刷新后重试");
                 }
             }
         }
@@ -195,18 +195,16 @@ public class MessageTemplateService {
             row.setAuditStatus(dto.getSmsAuditStatus() == null ? 0 : dto.getSmsAuditStatus());
             row.setAuditRemark(dto.getSmsAuditRemark());
             row.setRemark(dto.getRemark());
-            if (row.getId() == null) {
-                smsTemplateService.save(row);
-            } else {
-                smsTemplateService.updateById(row);
+            boolean saved = row.getId() == null ? smsTemplateService.save(row) : smsTemplateService.updateById(row);
+            if (!saved) {
+                throw BusinessException.of("模板已被其他操作修改，请刷新后重试");
             }
         }
 
-        mailService.evictTemplateCache();
-        smsService.evictTemplateCache();
+        evictAfterCommit();
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void delete(String templateCode, String scene) {
         String code = require(templateCode, "MAIL015");
         String sc = require(scene, "MAIL016");
@@ -220,8 +218,22 @@ public class MessageTemplateService {
                 .eq(SysSmsTemplate::getTemplateCode, code)
                 .eq(SysSmsTemplate::getEventCode, sc)
                 .remove();
-        mailService.evictTemplateCache();
-        smsService.evictTemplateCache();
+        evictAfterCommit();
+    }
+
+    private void evictAfterCommit() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    mailService.evictTemplateCache();
+                    smsService.evictTemplateCache();
+                }
+            });
+        } else {
+            mailService.evictTemplateCache();
+            smsService.evictTemplateCache();
+        }
     }
 
     /** 渲染预览（只做 ${var} 替换，不引入模板引擎） */
@@ -264,16 +276,6 @@ public class MessageTemplateService {
         return channels;
     }
 
-    private void requireVariables(String variables, NotifyEventDef event) {
-        List<String> declared = NotifyEventRegistry.parseList(variables);
-        List<String> missing = event.payloadFieldNames().stream()
-                .filter(field -> !declared.contains(field))
-                .toList();
-        if (!missing.isEmpty()) {
-            throw new BusinessException("MAIL010", String.join(", ", missing));
-        }
-    }
-
     /**
      * 校验并归一化模板变量。
      *
@@ -300,14 +302,21 @@ public class MessageTemplateService {
      * 编码/事件冲突校验： (code, channel) 全表唯一（改了编码要能被旧行腾位），
      * (scene, channel) 唯一（一个事件的一个渠道只允许一条模板）。
      */
-    private void checkCodeAvailable(String code, String scene, List<String> channels) {
+    private void checkCodeAvailable(
+            String code,
+            String scene,
+            List<String> channels,
+            List<SysMailTemplate> existingMail,
+            SysSmsTemplate existingSms) {
+        List<Long> existingIds =
+                existingMail.stream().map(SysMailTemplate::getId).toList();
         for (String channel : channels) {
             if (RENDER_CHANNELS.contains(channel)) {
                 Long dup = mailTemplateService
                         .lambdaQuery()
                         .eq(SysMailTemplate::getTemplateCode, code)
                         .eq(SysMailTemplate::getChannel, channel)
-                        .ne(SysMailTemplate::getScene, scene)
+                        .notIn(!existingIds.isEmpty(), SysMailTemplate::getId, existingIds)
                         .count();
                 if (dup != null && dup > 0) {
                     throw new BusinessException("MAIL008", code);
@@ -316,7 +325,7 @@ public class MessageTemplateService {
                         .lambdaQuery()
                         .eq(SysMailTemplate::getScene, scene)
                         .eq(SysMailTemplate::getChannel, channel)
-                        .ne(SysMailTemplate::getTemplateCode, code)
+                        .notIn(!existingIds.isEmpty(), SysMailTemplate::getId, existingIds)
                         .count();
                 if (bound != null && bound > 0) {
                     throw new BusinessException("MAIL013", scene);
@@ -327,7 +336,7 @@ public class MessageTemplateService {
             Long dup = smsTemplateService
                     .lambdaQuery()
                     .eq(SysSmsTemplate::getTemplateCode, code)
-                    .ne(SysSmsTemplate::getEventCode, scene)
+                    .ne(existingSms != null, SysSmsTemplate::getId, existingSms == null ? null : existingSms.getId())
                     .count();
             if (dup != null && dup > 0) {
                 throw new BusinessException("MAIL008", code);
@@ -335,7 +344,7 @@ public class MessageTemplateService {
             Long bound = smsTemplateService
                     .lambdaQuery()
                     .eq(SysSmsTemplate::getEventCode, scene)
-                    .ne(SysSmsTemplate::getTemplateCode, code)
+                    .ne(existingSms != null, SysSmsTemplate::getId, existingSms == null ? null : existingSms.getId())
                     .count();
             if (bound != null && bound > 0) {
                 throw new BusinessException("MAIL013", scene);

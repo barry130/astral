@@ -338,8 +338,8 @@ public class HttpStorageConfigService {
                     ? ""
                     : change.op().trim().toUpperCase(Locale.ROOT);
             switch (op) {
-                case HttpSecretEnvelope.OP_SET -> HttpSecretEnvelope.validateSecretValue(
-                        entry.getKey(), change.value());
+                case HttpSecretEnvelope.OP_SET ->
+                    HttpSecretEnvelope.validateSecretValue(entry.getKey(), change.value());
                 case HttpSecretEnvelope.OP_KEEP, HttpSecretEnvelope.OP_CLEAR -> {
                     // 离线态没有已存凭据，KEEP 只表示"前端未改动"，不作为已配置
                 }

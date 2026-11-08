@@ -36,7 +36,7 @@ public class AiSecretCipher {
 
     private final AiProperties aiProperties;
 
-    private final SecureRandom secureRandom = new SecureRandom();
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /** 是否已配置可用的加密口令 */
     public boolean isConfigured() {
@@ -51,31 +51,7 @@ public class AiSecretCipher {
      * @return 密文串；口令未配置时抛 AI006（不允许明文落库）
      */
     public String encrypt(String plain) {
-        if (plain == null || plain.isBlank()) {
-            return null;
-        }
-        if (!isConfigured()) {
-            throw new AiException(
-                    "AI006",
-                    "未配置 astral.plugins.ai.secret-key，无法加密 API Key；"
-                            + "请用环境变量 ASTRAL_AI_SECRET_KEY 注入，或改填「密钥引用」指向环境变量");
-        }
-        try {
-            byte[] iv = new byte[IV_LENGTH];
-            secureRandom.nextBytes(iv);
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.ENCRYPT_MODE, deriveKey(), new GCMParameterSpec(TAG_BITS, iv));
-            byte[] encrypted = cipher.doFinal(plain.getBytes(StandardCharsets.UTF_8));
-            return PREFIX
-                    + Base64.getUrlEncoder().withoutPadding().encodeToString(iv)
-                    + ":"
-                    + Base64.getUrlEncoder().withoutPadding().encodeToString(encrypted);
-        } catch (AiException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("[AiSecretCipher] 加密失败", e);
-            throw new AiException("AI006", "API Key 加密失败：" + e.getClass().getSimpleName());
-        }
+        return encryptWithKey(aiProperties.getSecretKey(), plain);
     }
 
     /**
@@ -85,6 +61,51 @@ public class AiSecretCipher {
      * @return 明文密钥；无法解密时返回 null（调用方按「凭证缺失」处理）
      */
     public String decrypt(String stored) {
+        return decryptWithKey(aiProperties.getSecretKey(), stored);
+    }
+
+    /**
+     * 以指定口令加密明文（静态入口，供无 Spring 上下文的调用方复用，如 MCP 请求头落库保护）。
+     *
+     * @param secretKey KEK；空表示未配置
+     * @param plain     明文
+     * @return 密文串；口令未配置时抛 AI006（不允许明文落库）
+     */
+    public static String encryptWithKey(String secretKey, String plain) {
+        if (plain == null || plain.isBlank()) {
+            return null;
+        }
+        if (secretKey == null || secretKey.isBlank()) {
+            throw new AiException(
+                    "AI006",
+                    "未配置 astral.plugins.ai.secret-key，无法加密敏感值；" + "请用环境变量 ASTRAL_AI_SECRET_KEY 注入，或改填「密钥引用」指向环境变量");
+        }
+        try {
+            byte[] iv = new byte[IV_LENGTH];
+            SECURE_RANDOM.nextBytes(iv);
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+            cipher.init(Cipher.ENCRYPT_MODE, deriveKey(secretKey), new GCMParameterSpec(TAG_BITS, iv));
+            byte[] encrypted = cipher.doFinal(plain.getBytes(StandardCharsets.UTF_8));
+            return PREFIX
+                    + Base64.getUrlEncoder().withoutPadding().encodeToString(iv)
+                    + ":"
+                    + Base64.getUrlEncoder().withoutPadding().encodeToString(encrypted);
+        } catch (AiException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[AiSecretCipher] 加密失败", e);
+            throw new AiException("AI006", "敏感值加密失败：" + e.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * 以指定口令解密密文（静态入口，与 {@link #encryptWithKey} 对偶）。
+     *
+     * @param secretKey KEK
+     * @param stored     数据库中的密文
+     * @return 明文；无法解密时返回 null（调用方按「凭证缺失」处理）
+     */
+    public static String decryptWithKey(String secretKey, String stored) {
         if (stored == null || stored.isBlank()) {
             return null;
         }
@@ -92,8 +113,8 @@ public class AiSecretCipher {
             log.warn("[AiSecretCipher] 密文格式不可识别，按缺失处理");
             return null;
         }
-        if (!isConfigured()) {
-            log.warn("[AiSecretCipher] 未配置 secret-key，无法解密已存密钥");
+        if (secretKey == null || secretKey.isBlank()) {
+            log.warn("[AiSecretCipher] 未配置 secret-key，无法解密已存密文");
             return null;
         }
         try {
@@ -105,7 +126,7 @@ public class AiSecretCipher {
             byte[] iv = Base64.getUrlDecoder().decode(body.substring(0, sep));
             byte[] data = Base64.getUrlDecoder().decode(body.substring(sep + 1));
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.DECRYPT_MODE, deriveKey(), new GCMParameterSpec(TAG_BITS, iv));
+            cipher.init(Cipher.DECRYPT_MODE, deriveKey(secretKey), new GCMParameterSpec(TAG_BITS, iv));
             return new String(cipher.doFinal(data), StandardCharsets.UTF_8);
         } catch (Exception e) {
             log.warn("[AiSecretCipher] 解密失败: {}", e.getMessage());
@@ -143,9 +164,9 @@ public class AiSecretCipher {
         return "NONE";
     }
 
-    private SecretKeySpec deriveKey() throws Exception {
+    private static SecretKeySpec deriveKey(String secretKey) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] keyBytes = digest.digest(aiProperties.getSecretKey().getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes = digest.digest(secretKey.getBytes(StandardCharsets.UTF_8));
         return new SecretKeySpec(keyBytes, "AES");
     }
 

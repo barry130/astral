@@ -3,6 +3,7 @@ package com.astral.storage.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -65,6 +66,7 @@ class UploadOperationServiceTest {
         StorageFolderEntity folder = new StorageFolderEntity();
         folder.setId(11L);
         folder.setTargetVersion(3L);
+        folder.setStatus(StorageFolderEntity.STATUS_ENABLED);
         // 两步上传仅允许 PUBLIC 目录（STORAGE059 门禁），测试基线文件夹按公开目录构造
         folder.setVisibility(StorageFolderEntity.VISIBILITY_PUBLIC);
         when(folderService.getById(11L)).thenReturn(folder);
@@ -152,6 +154,67 @@ class UploadOperationServiceTest {
         BusinessException ex =
                 assertThrows(BusinessException.class, () -> service.create(tooBig, "u1", "key-1", false));
         assertEquals("STORAGE045", ex.getErrorCode());
+    }
+
+    @Test
+    void disabledFolderIsRejectedBeforePolicyResolution() {
+        StorageFolderEntity disabled = new StorageFolderEntity();
+        disabled.setId(11L);
+        disabled.setStatus(StorageFolderEntity.STATUS_DISABLED);
+        disabled.setVisibility(StorageFolderEntity.VISIBILITY_PUBLIC);
+        when(folderService.getById(11L)).thenReturn(disabled);
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> service.create(req(), "u1", "key-1", false));
+        assertEquals("STORAGE025", ex.getErrorCode());
+    }
+
+    @Test
+    void contentTypeWithHeaderInjectionCharactersIsRejected() {
+        UploadOperationDtos.UploadCreateReq injected =
+                new UploadOperationDtos.UploadCreateReq(11L, "a.png", "image/png\r\nX-Injected: 1", 1024L, null);
+        BusinessException ex =
+                assertThrows(BusinessException.class, () -> service.create(injected, "u1", "key-1", false));
+        assertEquals("COMMON002", ex.getErrorCode());
+    }
+
+    @Test
+    void failoverStopsAfterMaxAttemptsIncludingFirstSend() {
+        StorageTargetResolver.Resolution resolution = new StorageTargetResolver.Resolution(
+                "FAILOVER",
+                11L,
+                3L,
+                "FOLDER",
+                List.of(new StorageTargetResolver.Tier(
+                        1,
+                        List.of(
+                                new StorageTargetResolver.Candidate(5L, 7L, "CUSTOM_HTTP", "a"),
+                                new StorageTargetResolver.Candidate(6L, 8L, "CUSTOM_HTTP", "b"),
+                                new StorageTargetResolver.Candidate(7L, 9L, "CUSTOM_HTTP", "c")))),
+                "{}");
+        when(resolver.parseSnapshot("{}", 11L, 3L)).thenReturn(resolution);
+        StorageUploadOperationEntity firstFailure = new StorageUploadOperationEntity();
+        firstFailure.setUploadId("u1");
+        firstFailure.setFolderId(11L);
+        firstFailure.setFolderVersion(3L);
+        firstFailure.setActorId("u1");
+        firstFailure.setRouteSnapshotJson("{}");
+        firstFailure.setChosenConfigId(5L);
+        firstFailure.setAttemptsJson("[]");
+        StorageUploadOperationEntity afterFirst = service.resolveNextCandidate(firstFailure, false);
+        assertNotNull(afterFirst);
+        assertEquals(6L, afterFirst.getChosenConfigId());
+        assertEquals("[5]", afterFirst.getAttemptsJson());
+
+        // 第二次失败时 attemptsJson 已含首个渠道，当前渠道再计入一次即达到 2 次总预算。
+        StorageUploadOperationEntity secondFailure = new StorageUploadOperationEntity();
+        secondFailure.setUploadId("u1");
+        secondFailure.setFolderId(11L);
+        secondFailure.setFolderVersion(3L);
+        secondFailure.setActorId("u1");
+        secondFailure.setRouteSnapshotJson("{}");
+        secondFailure.setChosenConfigId(6L);
+        secondFailure.setAttemptsJson("[5]");
+        assertNull(service.resolveNextCandidate(secondFailure, false));
     }
 
     private UploadOperationDtos.UploadCreateReq req() {

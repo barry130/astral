@@ -50,10 +50,21 @@ public class StorageWorkerController {
         // contentVersion/visibility 回传给 Worker 做上传预热（把内存中的字节直接写进边缘缓存，
         // 使永久链接/签名链接的首次访问无需回源三跳）
         return Result.success(new WorkerCallbackResp(
-                file.getPublicId(), file.getStatus(), file.getContentVersion(), file.getVisibility()));
+                file.getPublicId(),
+                file.getStatus(),
+                file.getContentVersion(),
+                file.getVisibility(),
+                matchesReceipt(file, req)));
     }
 
-    public record WorkerCallbackResp(String publicId, String status, long contentVersion, String visibility) {}
+    public record WorkerCallbackResp(
+            String publicId, String status, long contentVersion, String visibility, boolean contentMatches) {}
+
+    private boolean matchesReceipt(StorageFileEntity file, StorageDtos.WorkerCallbackReq receipt) {
+        JsonNode locator = objectMapper.readTree(file.getProviderLocatorJson());
+        return receipt.telegramFileId().equals(locator.path("fileId").asText())
+                && receipt.messageId().equals(locator.path("messageId").asText());
+    }
 
     /**
      * 下载回源元数据：Worker 验签缓存未命中时查询 Telegram 定位信息。
@@ -63,6 +74,10 @@ public class StorageWorkerController {
     public Result<StorageDtos.OriginFileView> originFile(
             @PathVariable String publicId, @PathVariable long contentVersion) {
         StorageFileEntity file = fileService.getByPublicId(publicId);
+        // 回源端点是 Telegram 专用链路：其他 Provider 的 locator 即使含 fileId 也不能被当成 Telegram 文件下发。
+        if (!StorageConfigEntity.PROVIDER_TELEGRAM.equals(file.getProviderType())) {
+            throw new BusinessException("STORAGE016");
+        }
         if (!StorageFileEntity.STATUS_AVAILABLE.equals(file.getStatus())) {
             throw new BusinessException("STORAGE016");
         }

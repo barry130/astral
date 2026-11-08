@@ -88,8 +88,37 @@ public class DictController {
     @PutMapping("/{id}")
     @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictData entity) {
-        entity.setId(id);
-        dictDataService.updateById(entity);
+        // 白名单更新：id 由路径决定。不能用 updateById(客户端实体)——MP 会把实体上
+        // 所有非 null 字段写进 SET（mass assignment），任意列都能被客户端改写。
+        var update = dictDataService.lambdaUpdate().eq(DictData::getId, id);
+        if (entity.getDictTypeId() != null) {
+            update.set(DictData::getDictTypeId, entity.getDictTypeId());
+        }
+        if (entity.getDictLabel() != null) {
+            update.set(DictData::getDictLabel, entity.getDictLabel());
+        }
+        if (entity.getDictValue() != null) {
+            update.set(DictData::getDictValue, entity.getDictValue());
+        }
+        if (entity.getDictSort() != null) {
+            update.set(DictData::getDictSort, entity.getDictSort());
+        }
+        if (entity.getCssClass() != null) {
+            update.set(DictData::getCssClass, entity.getCssClass());
+        }
+        if (entity.getListClass() != null) {
+            update.set(DictData::getListClass, entity.getListClass());
+        }
+        if (entity.getIsDefault() != null) {
+            update.set(DictData::getIsDefault, entity.getIsDefault());
+        }
+        if (entity.getStatus() != null) {
+            update.set(DictData::getStatus, entity.getStatus());
+        }
+        if (entity.getDescription() != null) {
+            update.set(DictData::getDescription, entity.getDescription());
+        }
+        update.update();
         return Result.success();
     }
 

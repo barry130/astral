@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.HandlerMapping;
 
 /**
  * 接口指标采集拦截器
@@ -60,7 +61,9 @@ public class ApiRequestMetricInterceptor implements HandlerInterceptor {
             HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
         Object startObj = request.getAttribute(ATTR_START_NS);
         if (startObj instanceof Long startNs) {
-            String uri = ClientHeaders.normalize(request.getRequestURI(), MAX_URI_LENGTH);
+            Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+            String uri =
+                    pattern == null ? "/__unmatched__" : ClientHeaders.normalize(pattern.toString(), MAX_URI_LENGTH);
             String ut =
                     ClientHeaders.resolveUt(request.getHeader(clientUtHeader), request.getHeader(legacyPlatformHeader));
             String appVersion = ClientHeaders.normalizeVersion(request.getHeader(clientVersionHeader));

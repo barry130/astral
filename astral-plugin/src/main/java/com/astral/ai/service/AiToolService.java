@@ -7,10 +7,13 @@ import com.astral.ai.config.AiProperties;
 import com.astral.ai.dto.AiAdminDtos;
 import com.astral.ai.entity.AiAgentToolEntity;
 import com.astral.ai.entity.AiMcpServerEntity;
+import com.astral.ai.entity.AiToolCallEntity;
 import com.astral.ai.entity.AiToolEntity;
 import com.astral.ai.mapper.AiAgentToolMapper;
 import com.astral.ai.mapper.AiMcpServerMapper;
+import com.astral.ai.mapper.AiToolCallMapper;
 import com.astral.ai.mapper.AiToolMapper;
+import com.astral.ai.security.AiToolPermissionGate;
 import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
@@ -21,7 +24,12 @@ import com.astral.ai.tool.declarative.McpToolExecutor;
 import com.astral.ai.tool.declarative.SqlToolExecutor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.annotation.PostConstruct;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -59,6 +67,12 @@ public class AiToolService {
 
     /** MCP 服务器（声明式 MCP 工具按 serverId 取远端地址） */
     private final AiMcpServerMapper mcpServerMapper;
+
+    /** 工具执行期权限咽喉（与编排 invoke 共用同一套校验，不复制两份） */
+    private final AiToolPermissionGate toolPermissionGate;
+
+    /** 试跑审计（ai_tool_call，source='test-run'） */
+    private final AiToolCallMapper toolCallMapper;
 
     /** handlerKey → 处理器 */
     private final Map<String, AiToolHandler> handlers = new LinkedHashMap<>();
@@ -203,6 +217,7 @@ public class AiToolService {
         }
         String[] floor = riskFloor(entity);
         String floorRisk = floor[0];
+        String floorApproval = floor[1];
         if (riskLevel != null && !riskLevel.isBlank()) {
             String target = riskLevel.toUpperCase(Locale.ROOT);
             if (!AiConstants.RiskLevel.all().contains(target)) {
@@ -219,8 +234,13 @@ public class AiToolService {
                 throw new AiException("AI008", "确认策略非法: " + target);
             }
             // 执行器要求强确认的，后台不能放开
-            if (AiConstants.RiskLevel.HIGH.equals(floorRisk) && AiConstants.ApprovalPolicy.NONE.equals(target)) {
-                throw new AiException("AI008", "高风险工具必须保留人工确认");
+            if (AiConstants.RiskLevel.HIGH.equals(floorRisk)
+                    && !AiConstants.ApprovalPolicy.ADMIN_CONFIRM.equals(target)) {
+                throw new AiException("AI008", "高风险工具必须保留人工确认（管理员确认）");
+            }
+            // floor 是二元组：非 HIGH 的声明确认（如 DRAFT + USER_CONFIRM）同样不能被清空
+            if (AiConstants.ApprovalPolicy.order(target) < AiConstants.ApprovalPolicy.order(floorApproval)) {
+                throw new AiException("AI008", "不能把确认策略降低到执行器要求之下（最低 " + floorApproval + "）");
             }
             entity.setApprovalPolicy(target);
         }
@@ -345,20 +365,37 @@ public class AiToolService {
     }
 
     /**
-     * 测试运行：用样例参数直接执行一次工具。
+     * 测试运行：以真实操作者身份直接执行一次工具。
      *
-     * <p>不写 {@code ai_tool_call} 审计表——它不属于任何会话，留痕交给后台操作日志；
-     * 由管理员手动触发，等同于「人工确认」，因此 HIGH 工具也直接执行。</p>
+     * <p>入口仅限超管（{@code @RequiresSuper}），但执行面不做合成旁路：停用工具拒绝执行；
+     * 执行前经 {@link AiToolPermissionGate}——与编排 {@code invoke} 同一套校验——核对操作者的
+     * 在册权限，清空 {@code permission_codes} 也拿不掉代码注册的权限下限。超管手动试跑等同于
+     * 「人工确认」（显式旁路仅此入口：{@code approved=true} 且 {@code approvedBy} 记录真实操作者），
+     * HIGH 工具因此可直接执行。</p>
+     *
+     * <p>每次试跑写一条 {@code ai_tool_call} 审计行（{@code source='test-run'}，
+     * 不归属任何 {@code ai_request}），留痕不再依赖操作日志。</p>
      *
      * @param id            工具
      * @param argumentsJson 参数 JSON 文本
+     * @param operatorId    触发试跑的管理员（{@code AiCaller.requireUserId} 取值）
      * @return 执行结果
      */
-    public AiToolResult testRun(Long id, String argumentsJson) {
+    public AiToolResult testRun(Long id, String argumentsJson, Long operatorId) {
         AiToolEntity entity = require(id);
+        if (!AiConstants.ToolStatus.ENABLED.equals(entity.getStatus())) {
+            throw new AiException("AI008", "工具已停用: " + entity.getToolCode());
+        }
         AiToolHandler handler = resolveHandler(entity);
         if (handler == null) {
             throw new AiException("AI008", "工具没有可执行处理器: " + entity.getToolCode());
+        }
+        AiToolPermissionGate.Outcome outcome = toolPermissionGate.check(operatorId, entity, handler);
+        if (outcome == AiToolPermissionGate.Outcome.MALFORMED) {
+            return AiToolResult.rejected("工具权限配置异常，已拒绝执行");
+        }
+        if (outcome == AiToolPermissionGate.Outcome.DENIED) {
+            return AiToolResult.rejected("无权限调用工具");
         }
         ObjectNode arguments = argumentsJson == null || argumentsJson.isBlank()
                 ? AiJson.mapper().createObjectNode()
@@ -366,10 +403,23 @@ public class AiToolService {
         if (arguments == null) {
             arguments = AiJson.mapper().createObjectNode();
         }
+        LocalDateTime now = LocalDateTime.now();
+        AiToolCallEntity record = new AiToolCallEntity();
+        record.setToolCode(entity.getToolCode());
+        record.setToolName(entity.getName());
+        record.setRiskLevel(entity.getRiskLevel());
+        record.setArgumentsJson(argumentsJson);
+        record.setSource(AiConstants.ToolCallSource.TEST_RUN);
+        record.setStatus(AiConstants.ToolCallStatus.RUNNING);
+        record.setApprovalStatus(AiConstants.ApprovalPolicy.NONE);
+        record.setApprovedBy(operatorId);
+        record.setApprovedAt(now);
+        record.setStartedAt(now);
+        toolCallMapper.insert(record);
         AiToolContext context = new AiToolContext(
                 null,
                 null,
-                null,
+                operatorId,
                 null,
                 "test-run",
                 AiConstants.AgentType.CUSTOM,
@@ -377,8 +427,28 @@ public class AiToolService {
                 arguments,
                 AiJson.mapper().createObjectNode(),
                 true,
-                null);
-        return handler.execute(context);
+                operatorId);
+        AiToolResult result;
+        try {
+            result = handler.execute(context);
+        } catch (AiException e) {
+            result = AiToolResult.failed(e.getMessage());
+        } catch (Exception e) {
+            log.warn("[AI] 试跑执行失败 tool={}: {}", entity.getToolCode(), e.getMessage());
+            result = AiToolResult.failed(e.getMessage() == null ? "工具执行失败" : e.getMessage());
+        }
+        if (result.isOk()) {
+            record.setStatus(AiConstants.ToolCallStatus.SUCCEEDED);
+        } else if (AiToolResult.REJECTED.equals(result.status())) {
+            record.setStatus(AiConstants.ToolCallStatus.REJECTED);
+        } else {
+            record.setStatus(AiConstants.ToolCallStatus.FAILED);
+        }
+        record.setResultJson(result.payload() == null ? null : AiJson.write(result.payload()));
+        record.setErrorMessage(result.isOk() ? null : result.summary());
+        record.setFinishedAt(LocalDateTime.now());
+        toolCallMapper.updateById(record);
+        return result;
     }
 
     /** 执行器类型归一化并校验 */
@@ -402,7 +472,7 @@ public class AiToolService {
         if (AiConstants.ExecutorType.HTTP.equals(type)) {
             HttpToolExecutor.validate(req.executorConfig(), req.argumentsSchema(), allowedHosts());
         } else if (AiConstants.ExecutorType.SQL.equals(type)) {
-            SqlToolExecutor.validate(req.executorConfig(), req.argumentsSchema());
+            SqlToolExecutor.validate(req.executorConfig(), req.argumentsSchema(), properties);
         } else {
             throw new AiException("AI008", "该执行器类型不支持手工创建: " + type);
         }
@@ -511,6 +581,7 @@ public class AiToolService {
     /** 整体替换某智能体版本的工具绑定 */
     @Transactional(rollbackFor = Exception.class)
     public void replaceBindings(Long agentVersionId, List<Long> toolIds, Long operatorId) {
+        requireDraftBinding(agentVersionId);
         agentToolMapper.delete(
                 new LambdaQueryWrapper<AiAgentToolEntity>().eq(AiAgentToolEntity::getAgentVersionId, agentVersionId));
         if (toolIds == null) {
@@ -529,7 +600,14 @@ public class AiToolService {
         }
     }
 
-    /** 新增单条绑定（带覆盖项） */
+    /**
+     * 新增单条绑定（带覆盖项）。
+     *
+     * <p>覆盖项只能收紧不能放宽：riskOverride 不得低于执行器 floor 与工具当前风险等级的较高者；
+     * approvalPolicy 不得低于执行器 floor 确认下限与工具当前确认策略的较高者
+     * （绑定把「声明要确认」的工具覆盖成 NONE 会让它真的免确认执行）。
+     * 非法值一律 AI008。</p>
+     */
     @Transactional(rollbackFor = Exception.class)
     public AiAgentToolEntity addBinding(
             Long agentVersionId,
@@ -538,10 +616,30 @@ public class AiToolService {
             Integer sort,
             String riskOverride,
             String approvalPolicy) {
+        requireDraftBinding(agentVersionId);
         AiToolEntity tool = require(toolId);
+        String[] floor = riskFloor(tool);
         if (riskOverride != null && !riskOverride.isBlank()) {
-            if (AiConstants.RiskLevel.order(riskOverride) < AiConstants.RiskLevel.order(tool.getRiskLevel())) {
-                throw new AiException("AI008", "风险覆盖只能提高不能降低");
+            String target = riskOverride.toUpperCase(Locale.ROOT);
+            if (!AiConstants.RiskLevel.all().contains(target)) {
+                throw new AiException("AI008", "风险等级非法: " + target);
+            }
+            int floorRiskOrder =
+                    Math.max(AiConstants.RiskLevel.order(floor[0]), AiConstants.RiskLevel.order(tool.getRiskLevel()));
+            if (AiConstants.RiskLevel.order(target) < floorRiskOrder) {
+                throw new AiException("AI008", "风险覆盖只能提高不能降低（执行器最低 " + floor[0] + "）");
+            }
+        }
+        if (approvalPolicy != null && !approvalPolicy.isBlank()) {
+            String target = approvalPolicy.toUpperCase(Locale.ROOT);
+            if (!AiConstants.ApprovalPolicy.all().contains(target)) {
+                throw new AiException("AI008", "确认策略非法: " + target);
+            }
+            int floorApprovalOrder = Math.max(
+                    AiConstants.ApprovalPolicy.order(floor[1]),
+                    AiConstants.ApprovalPolicy.order(tool.getApprovalPolicy()));
+            if (AiConstants.ApprovalPolicy.order(target) < floorApprovalOrder) {
+                throw new AiException("AI008", "确认策略覆盖只能提高不能降低");
             }
         }
         AiAgentToolEntity existing = agentToolMapper.selectOne(new LambdaQueryWrapper<AiAgentToolEntity>()
@@ -568,9 +666,16 @@ public class AiToolService {
     /** 删除单条绑定 */
     @Transactional(rollbackFor = Exception.class)
     public void removeBinding(Long agentVersionId, Long toolId) {
+        requireDraftBinding(agentVersionId);
         agentToolMapper.delete(new LambdaQueryWrapper<AiAgentToolEntity>()
                 .eq(AiAgentToolEntity::getAgentVersionId, agentVersionId)
                 .eq(AiAgentToolEntity::getToolId, toolId));
+    }
+
+    private void requireDraftBinding(Long versionId) {
+        if (!AiConstants.VersionStatus.DRAFT.equals(agentToolMapper.lockVersionStatus(versionId))) {
+            throw new AiException("AI007", "只能修改现有草稿版本的工具绑定");
+        }
     }
 
     /**
@@ -604,6 +709,19 @@ public class AiToolService {
                     : strongerRisk(tool.getRiskLevel(), binding.getRiskOverride());
             String approval =
                     binding.getApprovalPolicy() == null ? tool.getApprovalPolicy() : binding.getApprovalPolicy();
+            var definition = handler.definition();
+            risk = strongerRisk(risk, definition.riskLevel());
+            if (AiConstants.ApprovalPolicy.order(approval)
+                    < AiConstants.ApprovalPolicy.order(tool.getApprovalPolicy())) {
+                approval = tool.getApprovalPolicy();
+            }
+            if (AiConstants.ApprovalPolicy.order(approval)
+                    < AiConstants.ApprovalPolicy.order(definition.approvalPolicy())) {
+                approval = definition.approvalPolicy();
+            }
+            if (AiConstants.RiskLevel.HIGH.equals(risk)) {
+                approval = AiConstants.ApprovalPolicy.ADMIN_CONFIRM;
+            }
             result.add(new EffectiveTool(tool, handler, risk, approval, binding.getSort()));
         }
         result.sort(java.util.Comparator.comparing(t -> t.sort() == null ? 0 : t.sort()));
@@ -619,5 +737,36 @@ public class AiToolService {
      * @param approval 生效确认策略
      * @param sort     排序
      */
+    /**
+     * 计划期配置快照哈希：SHA-256("{executor_config}|{risk}|{approval}")。
+     *
+     * <p>覆盖后台在计划与审批之间可修改的三项——工具声明 executor_config 与绑定生效
+     * risk/approval。计划建 WAITING_APPROVAL 行时写入，审批时重算比对，防 TOCTOU
+     * （审计 2026-11-07 backend-ai-read-recovery R3）。null 一律按空串拼接。</p>
+     */
+    public static String planHash(AiToolEntity tool, String risk, String approval) {
+        String material = (tool == null || tool.getExecutorConfig() == null ? "" : tool.getExecutorConfig())
+                + "|"
+                + (risk == null ? "" : risk)
+                + "|"
+                + (approval == null ? "" : approval);
+        try {
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("SHA-256").digest(material.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new AiException("AI008", "SHA-256 摘要不可用: " + e.getMessage());
+        }
+    }
+
+    public static String planHash(EffectiveTool effective) {
+        if (effective.handler() instanceof McpToolExecutor mcp) {
+            AiToolEntity snapshot = new AiToolEntity();
+            snapshot.setExecutorConfig(
+                    planHash(effective.tool(), effective.risk(), effective.approval()) + ":" + mcp.planFingerprint());
+            return planHash(snapshot, effective.risk(), effective.approval());
+        }
+        return planHash(effective.tool(), effective.risk(), effective.approval());
+    }
+
     public record EffectiveTool(AiToolEntity tool, AiToolHandler handler, String risk, String approval, Integer sort) {}
 }

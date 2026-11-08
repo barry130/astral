@@ -132,8 +132,7 @@ class MusicToolProviderTest {
     @Test
     void candidatesFromTheClientAreHandedToTheModelInstead() {
         ObjectNode args = AiJson.readObject("{\"keywords\":[\"晴天\"]}");
-        ObjectNode ctx = AiJson.readObject(
-                """
+        ObjectNode ctx = AiJson.readObject("""
                 {"installedSourceRegistry":["netease"],
                  "musicCandidates":[
                    {"sourceId":"netease","songId":"186016","name":"晴天","artist":"周杰伦",
@@ -182,8 +181,7 @@ class MusicToolProviderTest {
 
     @Test
     void songDetailReadsOnlyFromTheCandidateSet() {
-        ObjectNode ctx = AiJson.readObject(
-                """
+        ObjectNode ctx = AiJson.readObject("""
                 {"musicCandidates":[{"sourceId":"netease","songId":"186016","name":"晴天",
                   "artist":"周杰伦","album":"叶惠美","duration":269000,"quality":"320k"}]}""");
 

@@ -20,7 +20,7 @@ public class AiException extends RuntimeException {
     public AiException(String errorCode, Object... args) {
         super(ErrorCodes.format(errorCode, args));
         this.errorCode = errorCode;
-        this.args = args;
+        this.args = args == null ? null : args.clone();
     }
 
     public String getErrorCode() {
@@ -28,6 +28,6 @@ public class AiException extends RuntimeException {
     }
 
     public Object[] getArgs() {
-        return args;
+        return args == null ? null : args.clone();
     }
 }

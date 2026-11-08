@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,6 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/ai")
 @RequiresPermission(value = "admin:ai:agent:view", name = "AI 智能体查看", description = "查看智能体与版本")
 @RequiredArgsConstructor
+@Transactional(rollbackFor = Exception.class)
 public class AiAdminAgentController {
 
     private final AiAgentService agentService;
@@ -226,7 +228,7 @@ public class AiAdminAgentController {
     @RequiresPermission(value = "admin:ai:agent:publish", name = "AI 智能体发布", description = "发布版本")
     @OperateLog("发布 AI 智能体版本")
     public Result<AiAdminDtos.AgentVersionVo> publishVersion(@PathVariable Long versionId, HttpServletRequest request) {
-        AiAgentVersionEntity version = agentService.requireVersion(versionId);
+        AiAgentVersionEntity version = agentService.lockVersionForPublication(versionId);
         validationService.requireValid(version);
         return Result.success("发布成功", toVo(agentService.publish(versionId, operatorId(request))));
     }
@@ -246,7 +248,9 @@ public class AiAdminAgentController {
         } catch (NumberFormatException e) {
             throw new BusinessException("AI007", "versionId 非法");
         }
-        return Result.success("已回滚", toVo(agentService.rollback(id, target, operatorId(request))));
+        var version = agentService.rollback(id, target, operatorId(request));
+        validationService.requireValid(version);
+        return Result.success("已回滚", toVo(version));
     }
 
     // ==================== 工具绑定 ====================

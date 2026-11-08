@@ -6,18 +6,14 @@ import com.astral.common.util.CsvExportUtil;
 import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.OperateLog;
 import com.astral.log.service.OperateLogService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -57,7 +53,8 @@ public class OperateLogController {
     @Operation(summary = "导出CSV")
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportCsv() {
-        Page<OperateLog> page = operateLogService.page(new Page<>(1, 10000, false));
+        Page<OperateLog> page = operateLogService.page(
+                new Page<>(1, 10000, false), new QueryWrapper<OperateLog>().orderByDesc("create_time"));
         byte[] csv = CsvExportUtil.build(
                 new String[] {"ID", "用户ID", "用户名", "模块", "操作类型", "请求方法", "请求URL", "IP", "状态", "耗时(ms)", "错误信息", "时间"},
                 page.getRecords(),
@@ -92,46 +89,5 @@ public class OperateLogController {
     @GetMapping("/{id}")
     public Result<OperateLog> getById(@PathVariable Long id) {
         return Result.success(operateLogService.getById(id));
-    }
-
-    /**
-     * 创建操作日志
-     *
-     * @param entity 操作日志实体
-     * @return 操作结果
-     */
-    @Operation(summary = "创建")
-    @PostMapping
-    public Result<Void> create(@Valid @RequestBody OperateLog entity) {
-        operateLogService.save(entity);
-        return Result.success();
-    }
-
-    /**
-     * 更新操作日志
-     *
-     * @param id 日志ID
-     * @param entity 操作日志实体（包含更新后的字段）
-     * @return 操作结果
-     */
-    @Operation(summary = "更新")
-    @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody OperateLog entity) {
-        entity.setId(id);
-        operateLogService.updateById(entity);
-        return Result.success();
-    }
-
-    /**
-     * 删除操作日志
-     *
-     * @param id 日志ID
-     * @return 操作结果
-     */
-    @Operation(summary = "删除")
-    @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable Long id) {
-        operateLogService.removeById(id);
-        return Result.success();
     }
 }

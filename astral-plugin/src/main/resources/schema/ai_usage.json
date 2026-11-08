@@ -4,6 +4,16 @@
     "moduleName":  "ai",
     "className":  "AiUsageEntity",
     "fields":  [
+                   {"columnName":"reconciled_by","fieldName":"reconciledBy","fieldType":"Long","jdbcType":"BIGINT","comment":"人工核对人"},
+                   {"columnName":"reconciled_at","fieldName":"reconciledAt","fieldType":"LocalDateTime","jdbcType":"TIMESTAMP","comment":"人工核对时间"},
+                   {"columnName":"reconciliation_note","fieldName":"reconciliationNote","fieldType":"String","jdbcType":"VARCHAR(1000)","comment":"人工核对依据"},
+                   {"columnName":"stage_key","fieldName":"stageKey","fieldType":"String","jdbcType":"VARCHAR(96)","comment":"请求内模型阶段幂等键"},
+                   {"columnName":"day_row_id","fieldName":"dayRowId","fieldType":"Long","jdbcType":"BIGINT","comment":"预占日额度行"},
+                   {"columnName":"month_row_id","fieldName":"monthRowId","fieldType":"Long","jdbcType":"BIGINT","comment":"预占月额度行"},
+                   {"columnName":"reserved_input_tokens","fieldName":"reservedInputTokens","fieldType":"Integer","jdbcType":"INTEGER","comment":"阶段预占输入tokens"},
+                   {"columnName":"reserved_output_tokens","fieldName":"reservedOutputTokens","fieldType":"Integer","jdbcType":"INTEGER","comment":"阶段预占输出tokens"},
+                   {"columnName":"input_price","fieldName":"inputPrice","fieldType":"BigDecimal","jdbcType":"DECIMAL(18,6)","comment":"阶段输入单价快照"},
+                   {"columnName":"output_price","fieldName":"outputPrice","fieldType":"BigDecimal","jdbcType":"DECIMAL(18,6)","comment":"阶段输出单价快照"},
                    {
                        "columnName":  "id",
                        "fieldName":  "id",
@@ -130,6 +140,8 @@
                    }
                ],
     "indexes":  [
+                    {"indexName":"idx_ai_usage_created","columns":["create_time"]},
+                    {"indexName":"idx_ai_usage_agent_created","columns":["agent_id","create_time"]},
                     {
                         "indexName":  "idx_ai_usage_user",
                         "columns":  [

@@ -61,8 +61,7 @@ class QtAdminControllerUpdateTest {
                 new MapperBuilderAssistant(new MybatisConfiguration(), "update-test"), QtAppUpdate.class);
         dataSource = new DriverManagerDataSource("jdbc:h2:mem:" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1", "sa", "");
         jdbc = new JdbcTemplate(dataSource);
-        jdbc.execute(
-                """
+        jdbc.execute("""
                 CREATE TABLE qt_app_update (
                     id BIGINT PRIMARY KEY, platforms VARCHAR(64), version_code BIGINT,
                     version_name VARCHAR(100), version_info VARCHAR(1000), update_type VARCHAR(20),
@@ -70,8 +69,7 @@ class QtAdminControllerUpdateTest {
                     download_mode VARCHAR(20), is_github BIGINT, is_force INT, is_published INT,
                     file_size BIGINT, md5 VARCHAR(100), create_time TIMESTAMP, update_time TIMESTAMP)
                 """);
-        jdbc.execute(
-                """
+        jdbc.execute("""
                 CREATE TABLE qt_app_update_artifact (
                     id BIGINT PRIMARY KEY, update_id BIGINT, platform BIGINT, arch VARCHAR(30),
                     download_url VARCHAR(1000), browser_url VARCHAR(1000), is_github BIGINT,

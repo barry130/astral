@@ -102,11 +102,13 @@ public class SqlToolExecutor implements AiToolHandler {
     private final AiToolEntity tool;
     private final ObjectNode config;
     private final JdbcTemplate jdbcTemplate;
+    private final AiProperties properties;
 
-    private SqlToolExecutor(AiToolEntity tool, ObjectNode config, JdbcTemplate jdbcTemplate) {
+    private SqlToolExecutor(AiToolEntity tool, ObjectNode config, JdbcTemplate jdbcTemplate, AiProperties properties) {
         this.tool = tool;
         this.config = config;
         this.jdbcTemplate = jdbcTemplate;
+        this.properties = properties;
     }
 
     /**
@@ -128,12 +130,12 @@ public class SqlToolExecutor implements AiToolHandler {
             return null;
         }
         try {
-            requireValidShape(config);
+            requireValidShape(config, properties);
         } catch (AiException e) {
             log.warn("[AI] 声明式 SQL 工具 {} 配置非法，已跳过: {}", tool.getToolCode(), e.getMessage());
             return null;
         }
-        return new SqlToolExecutor(tool, config, jdbcTemplate);
+        return new SqlToolExecutor(tool, config, jdbcTemplate, properties);
     }
 
     // ==================== 保存期校验 ====================
@@ -145,11 +147,15 @@ public class SqlToolExecutor implements AiToolHandler {
      * @param argumentsSchema    参数 JSON Schema 文本（可空）
      */
     public static void validate(String executorConfigJson, String argumentsSchema) {
+        validate(executorConfigJson, argumentsSchema, null);
+    }
+
+    public static void validate(String executorConfigJson, String argumentsSchema, AiProperties properties) {
         JsonNode parsed = executorConfigJson == null ? null : AiJson.read(executorConfigJson);
         if (!(parsed instanceof ObjectNode config) || config.isEmpty()) {
             throw new AiException("AI008", "执行配置必须是 JSON 对象");
         }
-        requireValidShape(config);
+        requireValidShape(config, properties);
         Set<String> declared = HttpToolExecutor.declaredArgs(argumentsSchema);
         for (String name : collectParams(config)) {
             if (!declared.contains(name)) {
@@ -160,6 +166,10 @@ public class SqlToolExecutor implements AiToolHandler {
 
     /** 结构与只读护栏校验，供 create() 与 validate() 复用 */
     static void requireValidShape(ObjectNode config) {
+        requireValidShape(config, null);
+    }
+
+    private static void requireValidShape(ObjectNode config, AiProperties properties) {
         String sql = AiJson.text(config, "sql", "");
         if (sql.isBlank()) {
             throw new AiException("AI008", "sql 不能为空");
@@ -197,6 +207,7 @@ public class SqlToolExecutor implements AiToolHandler {
                 throw new AiException("AI008", "columns 里的列名必须是字母开头的标识符: " + column);
             }
         }
+        SqlReadPolicy.validate(sql, properties);
     }
 
     /** 去掉 SQL 字符串字面量与注释，避免里面的关键字/分号造成误判 */
@@ -298,8 +309,8 @@ public class SqlToolExecutor implements AiToolHandler {
         } catch (AiException e) {
             return AiToolResult.failed(e.getMessage());
         } catch (Exception e) {
-            log.warn("[AI] SQL 工具 {} 执行失败: {}", tool.getToolCode(), e.getMessage());
-            return AiToolResult.failed(e.getMessage() == null ? "SQL 工具执行失败" : e.getMessage());
+            log.warn("[AI] SQL 工具 {} 执行失败: {}", tool.getToolCode(), e.getClass().getSimpleName());
+            return AiToolResult.failed("SQL 查询失败，请检查来源列配置和参数");
         }
     }
 
@@ -308,6 +319,7 @@ public class SqlToolExecutor implements AiToolHandler {
         ObjectNode args = context.arguments() == null ? AiJson.mapper().createObjectNode() : context.arguments();
         List<Object> params = new ArrayList<>();
         String prepared = toPrepared(sql, args, params);
+        prepared = SqlReadPolicy.prepare(prepared, properties);
         int maxRows = clamp(config, "maxRows", DEFAULT_MAX_ROWS, MAX_MAX_ROWS);
         int timeout = clamp(config, "timeoutSeconds", DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS);
         DataSource dataSource = jdbcTemplate.getDataSource();
@@ -431,7 +443,7 @@ public class SqlToolExecutor implements AiToolHandler {
         if (value instanceof Number || value instanceof Boolean || value instanceof String) {
             return AiJson.mapper().valueToTree(value);
         }
-        return AiJson.mapper().valueToTree(String.valueOf(value));
+        throw new AiException("AI008", "SQL 返回了未支持的复合数据类型，请显式选择标量列");
     }
 
     private static int clamp(ObjectNode config, String field, int def, int max) {

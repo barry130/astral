@@ -12,6 +12,7 @@ import com.astral.ai.mapper.AiAgentToolMapper;
 import com.astral.ai.mapper.AiAgentVersionMapper;
 import com.astral.common.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -197,93 +198,109 @@ public class AiAgentService {
             Boolean feedbackEnabled,
             Integer sort,
             Long operatorId) {
-        AiAgentEntity entity = require(id);
+        lockAgent(id);
+        var patch = new LambdaUpdateWrapper<AiAgentEntity>().eq(AiAgentEntity::getId, id);
         if (name != null && !name.isBlank()) {
-            entity.setName(name.trim());
+            patch.set(AiAgentEntity::getName, name.trim());
         }
         if (agentType != null && !agentType.isBlank()) {
             if (!AiConstants.AgentType.all().contains(agentType)) {
                 throw new BusinessException("AI007", "智能体类型非法: " + agentType);
             }
-            entity.setAgentType(agentType);
+            patch.set(AiAgentEntity::getAgentType, agentType);
         }
         if (description != null) {
-            entity.setDescription(description);
+            patch.set(AiAgentEntity::getDescription, description);
         }
         if (icon != null) {
-            entity.setIcon(icon);
+            patch.set(AiAgentEntity::getIcon, icon);
         }
         if (clientTypes != null) {
             List<String> clients = normalizeClients(clientTypes);
             if (clients.isEmpty()) {
                 throw new BusinessException("AI007", "至少需要选择一个可用客户端");
             }
-            entity.setClientTypes(AiJson.joinCsv(clients));
+            patch.set(AiAgentEntity::getClientTypes, AiJson.joinCsv(clients));
         }
         if (entryConfig != null) {
-            entity.setEntryConfig(entryConfig);
+            patch.set(AiAgentEntity::getEntryConfig, entryConfig);
         }
         if (permissionCode != null) {
-            entity.setPermissionCode(permissionCode.isBlank() ? null : permissionCode.trim());
+            patch.set(AiAgentEntity::getPermissionCode, permissionCode.isBlank() ? null : permissionCode.trim());
         }
         if (clientPermissionCodes != null) {
-            entity.setClientPermissionCodes(clientPermissionCodes.isBlank() ? null : clientPermissionCodes);
+            patch.set(
+                    AiAgentEntity::getClientPermissionCodes,
+                    clientPermissionCodes.isBlank() ? null : clientPermissionCodes);
         }
         if (quotaPolicyId != null) {
-            entity.setQuotaPolicyId(quotaPolicyId);
+            patch.set(AiAgentEntity::getQuotaPolicyId, quotaPolicyId);
         }
         if (allowUserContext != null) {
-            entity.setAllowUserContext(allowUserContext);
+            patch.set(AiAgentEntity::getAllowUserContext, allowUserContext);
         }
         if (allowFileContext != null) {
-            entity.setAllowFileContext(allowFileContext);
+            patch.set(AiAgentEntity::getAllowFileContext, allowFileContext);
         }
         if (conversationEnabled != null) {
-            entity.setConversationEnabled(conversationEnabled);
+            patch.set(AiAgentEntity::getConversationEnabled, conversationEnabled);
         }
         if (feedbackEnabled != null) {
-            entity.setFeedbackEnabled(feedbackEnabled);
+            patch.set(AiAgentEntity::getFeedbackEnabled, feedbackEnabled);
         }
         if (sort != null) {
-            entity.setSort(sort);
+            patch.set(AiAgentEntity::getSort, sort);
         }
-        entity.setUpdatedBy(operatorId);
-        agentMapper.updateById(entity);
-        return entity;
+        patch.set(AiAgentEntity::getUpdatedBy, operatorId);
+        patch.set(AiAgentEntity::getUpdateTime, LocalDateTime.now());
+        agentMapper.update(null, patch);
+        return require(id);
     }
 
     /** 下线智能体（不删除历史数据） */
     @Transactional(rollbackFor = Exception.class)
     public AiAgentEntity disable(Long id, Long operatorId) {
-        AiAgentEntity entity = require(id);
-        entity.setStatus(AiConstants.AgentStatus.DISABLED);
-        entity.setUpdatedBy(operatorId);
-        agentMapper.updateById(entity);
+        AiAgentEntity entity = lockAgent(id);
+        agentMapper.update(
+                null,
+                new LambdaUpdateWrapper<AiAgentEntity>()
+                        .eq(AiAgentEntity::getId, id)
+                        .set(AiAgentEntity::getStatus, AiConstants.AgentStatus.DISABLED)
+                        .set(AiAgentEntity::getUpdatedBy, operatorId)
+                        .set(AiAgentEntity::getUpdateTime, LocalDateTime.now()));
         log.info("[AI] 智能体已下线 code={} operator={}", entity.getAgentCode(), operatorId);
-        return entity;
+        return require(id);
     }
 
     /** 重新上线（需已存在发布版本） */
     @Transactional(rollbackFor = Exception.class)
     public AiAgentEntity enable(Long id, Long operatorId) {
-        AiAgentEntity entity = require(id);
+        AiAgentEntity entity = lockAgent(id);
         if (entity.getPublishedVersionId() == null) {
             throw new BusinessException("AI007", "该智能体还没有已发布版本，无法上线");
         }
-        entity.setStatus(AiConstants.AgentStatus.PUBLISHED);
-        entity.setUpdatedBy(operatorId);
-        agentMapper.updateById(entity);
-        return entity;
+        agentMapper.update(
+                null,
+                new LambdaUpdateWrapper<AiAgentEntity>()
+                        .eq(AiAgentEntity::getId, id)
+                        .set(AiAgentEntity::getStatus, AiConstants.AgentStatus.PUBLISHED)
+                        .set(AiAgentEntity::getUpdatedBy, operatorId)
+                        .set(AiAgentEntity::getUpdateTime, LocalDateTime.now()));
+        return require(id);
     }
 
     /** 逻辑删除 */
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id, Long operatorId) {
-        AiAgentEntity entity = require(id);
-        entity.setDeletedAt(LocalDateTime.now());
-        entity.setStatus(AiConstants.AgentStatus.DISABLED);
-        entity.setUpdatedBy(operatorId);
-        agentMapper.updateById(entity);
+        lockAgent(id);
+        agentMapper.update(
+                null,
+                new LambdaUpdateWrapper<AiAgentEntity>()
+                        .eq(AiAgentEntity::getId, id)
+                        .set(AiAgentEntity::getDeletedAt, LocalDateTime.now())
+                        .set(AiAgentEntity::getStatus, AiConstants.AgentStatus.DISABLED)
+                        .set(AiAgentEntity::getUpdatedBy, operatorId)
+                        .set(AiAgentEntity::getUpdateTime, LocalDateTime.now()));
     }
 
     // ==================== 版本维护 ====================
@@ -303,7 +320,8 @@ public class AiAgentService {
             String safetyPolicyJson,
             String quotaOverrideJson,
             Long operatorId) {
-        AiAgentEntity agent = require(agentId);
+        AiAgentEntity agent = lockAgent(agentId);
+        lockRoute(providerRouteId);
         List<AiAgentVersionEntity> versions = listVersions(agentId);
         int nextNo = versions.isEmpty() ? 1 : versions.get(0).getVersionNo() + 1;
         AiAgentVersionEntity version = new AiAgentVersionEntity();
@@ -347,41 +365,62 @@ public class AiAgentService {
             String safetyPolicyJson,
             String quotaOverrideJson,
             Long operatorId) {
-        AiAgentVersionEntity version = requireVersion(versionId);
+        AiAgentVersionEntity version = lockVersionForPublication(versionId);
         requireDraft(version);
+        var patch = new LambdaUpdateWrapper<AiAgentVersionEntity>()
+                .eq(AiAgentVersionEntity::getId, versionId)
+                .eq(AiAgentVersionEntity::getStatus, AiConstants.VersionStatus.DRAFT);
         if (versionName != null && !versionName.isBlank()) {
-            version.setVersionName(versionName.trim());
+            patch.set(AiAgentVersionEntity::getVersionName, versionName.trim());
         }
         if (providerRouteId != null) {
-            version.setProviderRouteId(providerRouteId);
+            lockRoute(providerRouteId);
+            patch.set(AiAgentVersionEntity::getProviderRouteId, providerRouteId);
         }
         if (systemPromptVersionId != null) {
-            version.setSystemPromptVersionId(systemPromptVersionId);
+            patch.set(AiAgentVersionEntity::getSystemPromptVersionId, systemPromptVersionId);
         }
         if (contextPolicyJson != null) {
-            version.setContextPolicyJson(contextPolicyJson);
+            patch.set(AiAgentVersionEntity::getContextPolicyJson, contextPolicyJson);
         }
         if (responseSchemaJson != null) {
-            version.setResponseSchemaJson(responseSchemaJson);
+            patch.set(AiAgentVersionEntity::getResponseSchemaJson, responseSchemaJson);
         }
         if (toolPolicyJson != null) {
-            version.setToolPolicyJson(toolPolicyJson);
+            patch.set(AiAgentVersionEntity::getToolPolicyJson, toolPolicyJson);
         }
         if (knowledgePolicyJson != null) {
-            version.setKnowledgePolicyJson(knowledgePolicyJson);
+            patch.set(AiAgentVersionEntity::getKnowledgePolicyJson, knowledgePolicyJson);
         }
         if (modelParametersJson != null) {
-            version.setModelParametersJson(modelParametersJson);
+            patch.set(AiAgentVersionEntity::getModelParametersJson, modelParametersJson);
         }
         if (safetyPolicyJson != null) {
-            version.setSafetyPolicyJson(safetyPolicyJson);
+            patch.set(AiAgentVersionEntity::getSafetyPolicyJson, safetyPolicyJson);
         }
         if (quotaOverrideJson != null) {
-            version.setQuotaOverrideJson(quotaOverrideJson);
+            patch.set(AiAgentVersionEntity::getQuotaOverrideJson, quotaOverrideJson);
         }
-        version.setUpdatedBy(operatorId);
-        versionMapper.updateById(version);
-        return version;
+        patch.set(AiAgentVersionEntity::getUpdatedBy, operatorId)
+                .set(AiAgentVersionEntity::getUpdateTime, LocalDateTime.now());
+        if (versionMapper.update(null, patch) != 1) throw new BusinessException("AI007", "草稿已变化，请刷新后重试");
+        return requireVersion(versionId);
+    }
+
+    /** Lock ordering for edits/publication is agent → version → route. Caller transaction retains the locks. */
+    @Transactional(rollbackFor = Exception.class)
+    public AiAgentVersionEntity lockVersionForPublication(Long versionId) {
+        AiAgentVersionEntity observed = requireVersion(versionId);
+        lockAgent(observed.getAgentId());
+        AiAgentVersionEntity current = versionMapper.lock(versionId);
+        if (current == null) throw new BusinessException("AI007", "智能体版本不存在");
+        return current;
+    }
+
+    private AiAgentEntity lockAgent(Long id) {
+        AiAgentEntity agent = agentMapper.lock(id);
+        if (agent == null) throw new BusinessException("AI002", "智能体不存在");
+        return agent;
     }
 
     /** 版本必须是草稿，否则拒绝（版本不可变约束的唯一出口） */
@@ -394,10 +433,8 @@ public class AiAgentService {
     /** 发布版本：归档旧的已发布版本并切换智能体指针 */
     @Transactional(rollbackFor = Exception.class)
     public AiAgentVersionEntity publish(Long versionId, Long operatorId) {
-        AiAgentVersionEntity version = requireVersion(versionId);
-        if (AiConstants.VersionStatus.PUBLISHED.equals(version.getStatus())) {
-            throw new BusinessException("AI007", "该版本已是发布状态");
-        }
+        AiAgentVersionEntity version = lockVersionForPublication(versionId);
+        requireDraft(version);
         AiAgentEntity agent = require(version.getAgentId());
 
         List<AiAgentVersionEntity> published = versionMapper.selectList(new LambdaQueryWrapper<AiAgentVersionEntity>()
@@ -405,25 +442,36 @@ public class AiAgentService {
                 .eq(AiAgentVersionEntity::getStatus, AiConstants.VersionStatus.PUBLISHED));
         for (AiAgentVersionEntity old : published) {
             if (!old.getId().equals(version.getId())) {
-                old.setStatus(AiConstants.VersionStatus.ARCHIVED);
-                versionMapper.updateById(old);
+                versionMapper.update(
+                        null,
+                        new LambdaUpdateWrapper<AiAgentVersionEntity>()
+                                .eq(AiAgentVersionEntity::getId, old.getId())
+                                .set(AiAgentVersionEntity::getStatus, AiConstants.VersionStatus.ARCHIVED)
+                                .set(AiAgentVersionEntity::getUpdateTime, LocalDateTime.now()));
             }
         }
 
-        version.setStatus(AiConstants.VersionStatus.PUBLISHED);
-        version.setPublishedBy(operatorId);
-        version.setPublishedAt(LocalDateTime.now());
-        version.setClientTypesSnapshot(agent.getClientTypes());
-        version.setEntryConfigSnapshot(agent.getEntryConfig());
-        version.setUpdatedBy(operatorId);
-        versionMapper.updateById(version);
-
-        agent.setPublishedVersionId(version.getId());
-        agent.setStatus(AiConstants.AgentStatus.PUBLISHED);
-        agent.setUpdatedBy(operatorId);
-        agentMapper.updateById(agent);
+        versionMapper.update(
+                null,
+                new LambdaUpdateWrapper<AiAgentVersionEntity>()
+                        .eq(AiAgentVersionEntity::getId, versionId)
+                        .set(AiAgentVersionEntity::getStatus, AiConstants.VersionStatus.PUBLISHED)
+                        .set(AiAgentVersionEntity::getPublishedBy, operatorId)
+                        .set(AiAgentVersionEntity::getPublishedAt, LocalDateTime.now())
+                        .set(AiAgentVersionEntity::getClientTypesSnapshot, agent.getClientTypes())
+                        .set(AiAgentVersionEntity::getEntryConfigSnapshot, agent.getEntryConfig())
+                        .set(AiAgentVersionEntity::getUpdatedBy, operatorId)
+                        .set(AiAgentVersionEntity::getUpdateTime, LocalDateTime.now()));
+        agentMapper.update(
+                null,
+                new LambdaUpdateWrapper<AiAgentEntity>()
+                        .eq(AiAgentEntity::getId, agent.getId())
+                        .set(AiAgentEntity::getPublishedVersionId, versionId)
+                        .set(AiAgentEntity::getStatus, AiConstants.AgentStatus.PUBLISHED)
+                        .set(AiAgentEntity::getUpdatedBy, operatorId)
+                        .set(AiAgentEntity::getUpdateTime, LocalDateTime.now()));
         log.info("[AI] 智能体发布 code={} version={} operator={}", agent.getAgentCode(), version.getVersionNo(), operatorId);
-        return version;
+        return requireVersion(versionId);
     }
 
     /**
@@ -438,11 +486,12 @@ public class AiAgentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public AiAgentVersionEntity rollback(Long agentId, Long targetVersionId, Long operatorId) {
-        AiAgentEntity agent = require(agentId);
+        AiAgentEntity agent = lockAgent(agentId);
         AiAgentVersionEntity target = requireVersion(targetVersionId);
         if (!agent.getId().equals(target.getAgentId())) {
             throw new BusinessException("AI007", "目标版本不属于该智能体");
         }
+        lockRoute(target.getProviderRouteId());
         List<AiAgentVersionEntity> versions = listVersions(agentId);
         int nextNo = versions.isEmpty() ? 1 : versions.get(0).getVersionNo() + 1;
         AiAgentVersionEntity version = new AiAgentVersionEntity();
@@ -467,6 +516,12 @@ public class AiAgentService {
         versionMapper.insert(version);
         copyRuntimeBindingsFrom(target.getId(), version.getId());
         return publish(version.getId(), operatorId);
+    }
+
+    private void lockRoute(Long routeId) {
+        if (routeId != null && versionMapper.lockRoute(routeId) == null) {
+            throw new BusinessException("AI007", "模型路由不存在");
+        }
     }
 
     /**

@@ -85,9 +85,21 @@ public class SequenceAsyncWriter {
      */
     @Async("sequenceAsyncExecutor")
     public CompletableFuture<Void> updateStatisticsAsync(String bizKey, long currentValue) {
+        return updateStatisticsAsync(bizKey, currentValue, 1);
+    }
+
+    /**
+     * 异步更新统计数据，并累计本次生成数量。
+     *
+     * @param bizKey       业务键
+     * @param currentValue 当前序列号值
+     * @param generated    本次生成的数量
+     */
+    @Async("sequenceAsyncExecutor")
+    public CompletableFuture<Void> updateStatisticsAsync(String bizKey, long currentValue, long generated) {
         try {
             statisticsMapper.insertIfAbsent(bizKey);
-            statisticsMapper.updateCurrentValueByBizKey(bizKey, currentValue, LocalDateTime.now());
+            statisticsMapper.updateCurrentValueByBizKey(bizKey, currentValue, generated, LocalDateTime.now());
         } catch (Exception e) {
             log.warn("Async statistics update failed: bizKey={}", bizKey, e);
         }
@@ -107,7 +119,8 @@ public class SequenceAsyncWriter {
                 return CompletableFuture.completedFuture(null);
             }
             statisticsMapper.insertIfAbsent(bizKey);
-            statisticsMapper.updateCurrentValueByBizKey(bizKey, stat.getCurrentValue(), LocalDateTime.now());
+            long currentValue = stat.getCurrentValue() != null ? stat.getCurrentValue() : 0L;
+            statisticsMapper.updateCurrentValueByBizKey(bizKey, currentValue, 1, LocalDateTime.now());
         } catch (Exception e) {
             log.warn("Async statistics upsert failed: bizKey={}", bizKey, e);
         }

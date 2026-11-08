@@ -9,6 +9,7 @@ import com.astral.cms.entity.CmsPostCategory;
 import com.astral.cms.mapper.CmsCategoryMapper;
 import com.astral.cms.mapper.CmsPostCategoryMapper;
 import com.astral.cms.mapper.CmsPostMapper;
+import com.astral.cms.mapper.CmsTreeMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.annotation.Resource;
@@ -21,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * CMS 分类服务（树形）
@@ -36,6 +38,9 @@ public class CmsCategoryService {
 
     @Resource
     private CmsPostCategoryMapper postCategoryMapper;
+
+    @Resource
+    private CmsTreeMapper treeMapper;
 
     /**
      * 管理端分类树（全量，含可见文章数）
@@ -56,7 +61,9 @@ public class CmsCategoryService {
         return adminTree();
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public Long create(CategorySaveDto dto) {
+        treeMapper.lockCategories();
         checkSlugUnique(dto.getSlug(), null);
         checkParent(dto.getParentId(), null);
         CmsCategory category = new CmsCategory();
@@ -69,7 +76,9 @@ public class CmsCategoryService {
         return category.getId();
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void update(Long id, CategorySaveDto dto) {
+        treeMapper.lockCategories();
         CmsCategory exist = getByIdNotNull(id);
         if (exist.getName().equals(dto.getName()) && dto.getName().isBlank()) {
             throw new CmsException("分类名称不能为空");
@@ -86,7 +95,9 @@ public class CmsCategoryService {
         categoryMapper.update(null, uw);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
+        treeMapper.lockCategories();
         getByIdNotNull(id);
         Long childCount =
                 categoryMapper.selectCount(new LambdaQueryWrapper<CmsCategory>().eq(CmsCategory::getParentId, id));
@@ -186,16 +197,8 @@ public class CmsCategoryService {
                 byParent.computeIfAbsent(pid, k -> new ArrayList<>()).add(c);
             }
         }
-        attachChildren(roots, byParent);
+        for (CmsCategory category : all) category.setChildren(byParent.getOrDefault(category.getId(), List.of()));
         return roots;
-    }
-
-    private void attachChildren(List<CmsCategory> nodes, Map<Long, List<CmsCategory>> byParent) {
-        for (CmsCategory node : nodes) {
-            List<CmsCategory> children = byParent.getOrDefault(node.getId(), List.of());
-            node.setChildren(children);
-            attachChildren(children, byParent);
-        }
     }
 
     private void checkParent(Long parentId, Long selfId) {
@@ -203,9 +206,9 @@ public class CmsCategoryService {
             return;
         }
         Long cur = parentId;
-        int guard = 0;
-        while (cur != null && guard++ < 50) {
-            if (cur.equals(selfId)) {
+        Set<Long> visited = new HashSet<>();
+        while (cur != null && cur != 0L) {
+            if (cur.equals(selfId) || !visited.add(cur)) {
                 throw new CmsException("父分类不能选择自身或自身的子孙分类");
             }
             CmsCategory parent = categoryMapper.selectById(cur);

@@ -9,19 +9,18 @@ import com.astral.ai.provider.AiProviderDtos.Message;
 import com.astral.ai.provider.AiProviderDtos.StreamListener;
 import com.astral.ai.provider.AiProviderDtos.ToolCall;
 import com.astral.ai.provider.AiProviderDtos.ToolSpec;
+import com.astral.ai.security.AiUrlGuard;
+import com.astral.common.http.BoundedHttpTransport;
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -32,13 +31,13 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * OpenAI 兼容协议的提供方实现。
  *
- * <p>用 JDK {@link HttpClient} 直连，不引入额外 SDK——厂商差异（路径、鉴权头、字段名）
+ * <p>通过共享有界 HTTP 传输连接，厂商差异（路径、鉴权头、字段名）
  * 通过 {@code base_url} 与 {@code extra_parameters_json} 吸收。安全要点：</p>
  * <ul>
  *   <li>不记录请求头与密钥；日志只打 traceId 与状态码；</li>
  *   <li>连接/读取/整体超时都有上限，避免长挂；</li>
  *   <li>流式解析按 SSE 逐行读取，遇到 {@code [DONE]} 收尾；</li>
- *   <li>上游错误体截断后写入异常消息，避免把整页 HTML 灌进日志。</li>
+ *   <li>错误响应只返回固定原因，不反射上游正文或连接凭据。</li>
  * </ul>
  */
 @Slf4j
@@ -51,22 +50,7 @@ public class OpenAiCompatibleProvider implements AiProvider {
     /** 非流式响应体上限 4MB，防止异常上游打爆内存 */
     private static final int MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 
-    /** 上游错误信息截断长度 */
-    private static final int MAX_ERROR_CHARS = 400;
-
-    /** 空闲读超时默认值：上游 90 秒不吐一个字就当中断（配置里给了 readTimeoutMs 时以配置为准） */
-    private static final int DEFAULT_READ_TIMEOUT_MS = 90_000;
-
-    /**
-     * SSE 单行读取的执行器。
-     *
-     * <p>JDK {@code HttpRequest.timeout} 管不到响应体流，读阻塞时只能靠「外部掐断」，
-     * 所以每次读都丢到这里的线程上，由调用线程带超时等待。用虚拟线程：一次生成只占
-     * 一个读任务，不会有队列压力；命名便于 jstack 排查。</p>
-     */
-    private static final java.util.concurrent.ExecutorService READ_EXECUTOR =
-            java.util.concurrent.Executors.newThreadPerTaskExecutor(
-                    Thread.ofVirtual().name("ai-sse-read-", 0).factory());
+    private static final int MAX_SSE_LINE_CHARS = 256 * 1024;
 
     @Override
     public String type() {
@@ -76,55 +60,41 @@ public class OpenAiCompatibleProvider implements AiProvider {
     @Override
     public ChatResult chat(ChatRequest request) {
         long start = System.currentTimeMillis();
-        HttpClient client = buildClient(request);
-        HttpRequest httpRequest = buildHttpRequest(request, false);
         try {
-            HttpResponse<InputStream> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
-            String body = readBody(response.body());
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new AiException("AI006", "上游返回 " + response.statusCode() + ": " + truncate(body));
-            }
-            ChatResult result = parseChatResponse(body);
+            ChatResult result = exchange(request, false, (status, headers, input) -> {
+                requireSuccess(status);
+                return parseChatResponse(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+            });
             log.debug(
-                    "[OpenAi] chat traceId={} status={} cost={}ms tokens={}/{}",
+                    "[OpenAi] chat traceId={} cost={}ms tokens={}/{}",
                     request.traceId(),
-                    response.statusCode(),
                     System.currentTimeMillis() - start,
                     result.promptTokens(),
                     result.completionTokens());
             return result;
         } catch (AiException e) {
             throw e;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new AiException("AI006", "请求被中断");
         } catch (Exception e) {
-            log.warn("[OpenAi] chat 失败 traceId={}: {}", request.traceId(), e.getMessage());
-            throw new AiException("AI006", truncate(e.getMessage()));
+            throw new AiException("AI006", "模型连接失败、响应无效或超过限制，请检查服务配置");
         }
     }
 
     @Override
     public void stream(ChatRequest request, StreamListener listener) {
-        HttpClient client = buildClient(request);
-        HttpRequest httpRequest = buildHttpRequest(request, true);
         AtomicBoolean finished = new AtomicBoolean(false);
         StringBuilder content = new StringBuilder();
         StringBuilder reasoning = new StringBuilder();
         Map<Integer, ToolCallAccumulator> toolCalls = new LinkedHashMap<>();
-        int[] tokens = new int[2];
+        int[] tokens = {-1, -1};
         String[] finishReason = {"stop"};
 
         try {
-            HttpResponse<InputStream> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                String body = readBody(response.body());
-                throw new AiException("AI006", "上游返回 " + response.statusCode() + ": " + truncate(body));
-            }
-            try (BufferedReader reader =
-                    new BufferedReader(new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
+            exchange(request, true, (status, headers, input) -> {
+                requireSuccess(status);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
+                boolean complete = false;
                 String line;
-                while ((line = readLineWithIdleGuard(reader, request)) != null) {
+                while ((line = readBoundedLine(reader)) != null) {
                     if (line.isEmpty() || line.startsWith(":")) {
                         continue;
                     }
@@ -133,20 +103,22 @@ public class OpenAiCompatibleProvider implements AiProvider {
                     }
                     String payload = line.substring(5).trim();
                     if ("[DONE]".equals(payload)) {
+                        complete = true;
                         break;
                     }
                     JsonNode node = AiJson.read(payload);
                     if (node == null) {
-                        continue;
+                        throw new AiException("AI006", "模型流响应格式无效");
                     }
                     JsonNode error = node.get("error");
                     if (error != null && !error.isNull()) {
-                        throw new AiException("AI006", truncate(AiJson.text(error, "message", "上游返回错误")));
+                        throw new AiException("AI006", "模型服务返回错误");
                     }
                     JsonNode usage = node.get("usage");
                     if (usage != null && !usage.isNull()) {
                         tokens[0] = AiJson.intValue(usage, "prompt_tokens", tokens[0]);
                         tokens[1] = AiJson.intValue(usage, "completion_tokens", tokens[1]);
+                        listener.onUsage(tokens[0], tokens[1]);
                     }
                     JsonNode choices = node.get("choices");
                     if (choices == null || !choices.isArray() || choices.isEmpty()) {
@@ -156,6 +128,7 @@ public class OpenAiCompatibleProvider implements AiProvider {
                     String reason = AiJson.text(choice, "finish_reason", null);
                     if (reason != null) {
                         finishReason[0] = reason;
+                        complete = true;
                     }
                     JsonNode delta = choice.get("delta");
                     if (delta == null || delta.isNull()) {
@@ -178,13 +151,16 @@ public class OpenAiCompatibleProvider implements AiProvider {
                     if (calls != null && calls.isArray()) {
                         for (JsonNode call : calls) {
                             int index = AiJson.intValue(call, "index", 0);
+                            if (index < 0 || index >= 32) throw new AiException("AI006", "模型工具调用数量超过限制");
                             toolCalls
                                     .computeIfAbsent(index, key -> new ToolCallAccumulator())
                                     .merge(call);
                         }
                     }
                 }
-            }
+                if (!complete) throw new AiException("AI006", "模型响应提前中断，请重试");
+                return null;
+            });
             if (finished.compareAndSet(false, true)) {
                 List<ToolCall> resolved = new ArrayList<>();
                 for (ToolCallAccumulator accumulator : toolCalls.values()) {
@@ -198,12 +174,8 @@ public class OpenAiCompatibleProvider implements AiProvider {
             }
         } catch (AiException e) {
             failOnce(finished, listener, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            failOnce(finished, listener, new AiException("AI006", "请求被中断"));
         } catch (Exception e) {
-            log.warn("[OpenAi] stream 失败 traceId={}: {}", request.traceId(), e.getMessage());
-            failOnce(finished, listener, new AiException("AI006", truncate(e.getMessage())));
+            failOnce(finished, listener, new AiException("AI006", "模型连接失败、响应无效或超过限制，请重试"));
         }
     }
 
@@ -222,24 +194,14 @@ public class OpenAiCompatibleProvider implements AiProvider {
                     8,
                     null,
                     null,
-                    Math.min(request.connectTimeoutMs(), 8000),
-                    Math.min(request.readTimeoutMs(), 15000),
+                    request.connectTimeoutMs() > 0 ? Math.min(request.connectTimeoutMs(), 8000) : 8000,
+                    request.readTimeoutMs() > 0 ? Math.min(request.readTimeoutMs(), 8000) : 8000,
                     0,
                     request.traceId());
-            HttpClient client = buildClient(probe);
-            HttpRequest httpRequest = buildHttpRequest(probe, false);
-            HttpResponse<InputStream> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofInputStream());
-            String body = readBody(response.body());
-            long latency = System.currentTimeMillis() - start;
-            if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                return HealthResult.ok(latency);
-            }
-            if (response.statusCode() == 401 || response.statusCode() == 403) {
-                return HealthResult.fail("凭证无效或无权访问（HTTP " + response.statusCode() + "）");
-            }
-            return HealthResult.fail("HTTP " + response.statusCode() + ": " + truncate(body));
+            chat(probe);
+            return HealthResult.ok(System.currentTimeMillis() - start);
         } catch (Exception e) {
-            return HealthResult.fail(truncate(e.getMessage()));
+            return HealthResult.fail("模型连接或响应校验失败，请检查地址、凭据与模型配置");
         }
     }
 
@@ -249,19 +211,39 @@ public class OpenAiCompatibleProvider implements AiProvider {
         }
     }
 
-    private HttpClient buildClient(ChatRequest request) {
-        int connect = request.connectTimeoutMs() > 0 ? request.connectTimeoutMs() : 10000;
-        return HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(connect))
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .build();
+    private static void requireSuccess(int status) {
+        if (status < 200 || status >= 300) throw new AiException("AI006", "模型服务返回 HTTP " + status);
     }
 
-    private HttpRequest buildHttpRequest(ChatRequest request, boolean stream) {
-        String url = endpoint(request.baseUrl());
+    private <T> T exchange(ChatRequest request, boolean stream, BoundedHttpTransport.StreamHandler<T> handler)
+            throws java.io.IOException {
+        URI target = URI.create(endpoint(request.baseUrl()));
+        Map<String, String> headers = new LinkedHashMap<>();
+        headers.put("Content-Type", "application/json");
+        headers.put("Accept", stream ? "text/event-stream" : "application/json");
+        if (request.apiKey() != null && !request.apiKey().isBlank())
+            headers.put("Authorization", "Bearer " + request.apiKey());
+        if (request.traceId() != null) headers.put("X-Request-Id", request.traceId());
+        int budget = request.readTimeoutMs() > 0 ? Math.min(request.readTimeoutMs(), 300000) : 90000;
+        int connectBudget =
+                request.connectTimeoutMs() > 0 ? Math.min(request.connectTimeoutMs(), budget) : Math.min(10000, budget);
+        return BoundedHttpTransport.stream(
+                target,
+                "POST",
+                headers,
+                buildBody(request, stream),
+                Duration.ofMillis(budget),
+                Duration.ofMillis(connectBudget),
+                MAX_RESPONSE_BYTES,
+                uri -> AiUrlGuard.approve(uri, AiUrlGuard.configuredPrivateHosts()),
+                handler);
+    }
+
+    private byte[] buildBody(ChatRequest request, boolean stream) {
         ObjectNode body = AiJson.mapper().createObjectNode();
         body.put("model", request.modelCode());
         body.put("stream", stream);
+        if (stream) body.putObject("stream_options").put("include_usage", true);
         ArrayNode messages = body.putArray("messages");
         for (Message message : request.messages()) {
             ObjectNode item = messages.addObject();
@@ -320,47 +302,41 @@ public class OpenAiCompatibleProvider implements AiProvider {
         JsonNode extra = AiJson.read(request.extraParametersJson());
         if (extra != null && extra.isObject()) {
             for (Map.Entry<String, JsonNode> entry : extra.properties()) {
-                if (body.has(entry.getKey())) {
+                if (java.util.Set.of(
+                                        "model",
+                                        "stream",
+                                        "messages",
+                                        "tools",
+                                        "tool_choice",
+                                        "max_tokens",
+                                        "max_completion_tokens",
+                                        "max_output_tokens",
+                                        "stream_options",
+                                        "n")
+                                .contains(entry.getKey())
+                        || body.has(entry.getKey())) {
                     continue;
                 }
                 body.set(entry.getKey(), entry.getValue());
             }
         }
 
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .timeout(Duration.ofMillis(request.readTimeoutMs() > 0 ? request.readTimeoutMs() : 120000))
-                .header("Content-Type", "application/json")
-                .header("Accept", stream ? "text/event-stream" : "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(AiJson.write(body), StandardCharsets.UTF_8));
-        if (request.apiKey() != null && !request.apiKey().isBlank()) {
-            builder.header("Authorization", "Bearer " + request.apiKey());
-        }
-        if (request.traceId() != null) {
-            builder.header("X-Request-Id", request.traceId());
-        }
-        return builder.build();
+        return AiJson.write(body).getBytes(StandardCharsets.UTF_8);
     }
 
     /** 拼接 completions 路径：base_url 已带 /v1 或已是完整端点都能工作 */
     static String endpoint(String baseUrl) {
-        String base = baseUrl == null ? "" : baseUrl.trim();
-        while (base.endsWith("/")) {
-            base = base.substring(0, base.length() - 1);
+        URI base = URI.create(baseUrl == null ? "" : baseUrl.trim());
+        if (base.getHost() == null || base.getUserInfo() != null || base.getFragment() != null) {
+            throw new AiException("AI006", "模型服务地址无效");
         }
-        if (base.endsWith("/chat/completions")) {
-            return base;
+        String path = base.getRawPath() == null ? "" : base.getRawPath();
+        while (path.endsWith("/")) {
+            path = path.substring(0, path.length() - 1);
         }
-        return base + "/chat/completions";
-    }
-
-    private String readBody(InputStream stream) {
-        try (InputStream in = stream) {
-            byte[] buffer = in.readNBytes(MAX_RESPONSE_BYTES);
-            return new String(buffer, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            return "";
-        }
+        if (!path.endsWith("/chat/completions")) path += "/chat/completions";
+        return base.getScheme() + "://" + base.getRawAuthority() + path
+                + (base.getRawQuery() == null ? "" : "?" + base.getRawQuery());
     }
 
     private ChatResult parseChatResponse(String body) {
@@ -370,7 +346,7 @@ public class OpenAiCompatibleProvider implements AiProvider {
         }
         JsonNode error = node.get("error");
         if (error != null && !error.isNull()) {
-            throw new AiException("AI006", truncate(AiJson.text(error, "message", "上游返回错误")));
+            throw new AiException("AI006", "模型服务返回错误");
         }
         JsonNode choices = node.get("choices");
         if (choices == null || !choices.isArray() || choices.isEmpty()) {
@@ -394,12 +370,12 @@ public class OpenAiCompatibleProvider implements AiProvider {
                 }
             }
         }
-        int promptTokens = 0;
-        int completionTokens = 0;
+        int promptTokens = -1;
+        int completionTokens = -1;
         JsonNode usage = node.get("usage");
         if (usage != null && !usage.isNull()) {
-            promptTokens = AiJson.intValue(usage, "prompt_tokens", 0);
-            completionTokens = AiJson.intValue(usage, "completion_tokens", 0);
+            promptTokens = AiJson.intValue(usage, "prompt_tokens", -1);
+            completionTokens = AiJson.intValue(usage, "completion_tokens", -1);
         }
         return new ChatResult(
                 content == null ? "" : content,
@@ -407,14 +383,6 @@ public class OpenAiCompatibleProvider implements AiProvider {
                 promptTokens,
                 completionTokens,
                 calls);
-    }
-
-    private static String truncate(String text) {
-        if (text == null || text.isBlank()) {
-            return "上游无响应内容";
-        }
-        String single = text.replaceAll("\\s+", " ").trim();
-        return single.length() <= MAX_ERROR_CHARS ? single : single.substring(0, MAX_ERROR_CHARS) + "...";
     }
 
     /** SSE 增量 tool_calls 分片累积器 */
@@ -447,37 +415,18 @@ public class OpenAiCompatibleProvider implements AiProvider {
                 return null;
             }
             String args = arguments.isEmpty() ? "{}" : arguments.toString();
-            return new ToolCall(id == null ? "call_" + Math.abs(name.hashCode()) : id, name, args);
+            return new ToolCall(id == null || id.isBlank() ? "call_" + UUID.randomUUID() : id, name, args);
         }
     }
 
-    /**
-     * 带空闲上限的 {@code readLine}。
-     *
-     * <p>{@link HttpRequest#timeout} 只覆盖到「收到响应头」为止，对
-     * {@code BodyHandlers.ofInputStream()} 返回的响应体流不生效：上游把 SSE 头发完
-     * 之后不再吐数据（网关挂住、连接被中间设备黑洞），{@code readLine()} 就会永久
-     * 阻塞，把编排线程占死，界面上表现为请求一直「生成中」、token 恒为 0。</p>
-     *
-     * <p>这里把每次读取放到独立线程上跑，主线程最多等
-     * {@code readTimeoutMs}；超时就关掉响应流（让阻塞的读立刻抛异常退出）并抛
-     * {@code AI006}，把失败暴露给用户，而不是静默卡住。用「单次读取」而不是
-     * 「整段耗时」作上限，是为了不误杀正常的长回答：只要上游还在吐字就一直续期。</p>
-     */
-    private String readLineWithIdleGuard(BufferedReader reader, ChatRequest request) throws Exception {
-        int timeout = request.readTimeoutMs() > 0 ? request.readTimeoutMs() : DEFAULT_READ_TIMEOUT_MS;
-        java.util.concurrent.Future<String> future = READ_EXECUTOR.submit(() -> reader.readLine());
-        try {
-            return future.get(timeout, java.util.concurrent.TimeUnit.MILLISECONDS);
-        } catch (java.util.concurrent.TimeoutException e) {
-            future.cancel(true);
-            throw new AiException("AI006", "上游 " + (timeout / 1000) + " 秒内没有返回任何数据，已中断本次生成，请重试");
-        } catch (java.util.concurrent.ExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof Exception ex) {
-                throw ex;
-            }
-            throw new AiException("AI006", truncate(String.valueOf(cause)));
+    private static String readBoundedLine(BufferedReader reader) throws java.io.IOException {
+        StringBuilder line = new StringBuilder();
+        int character;
+        while ((character = reader.read()) != -1) {
+            if (character == '\n') return line.toString();
+            if (character != '\r') line.append((char) character);
+            if (line.length() > MAX_SSE_LINE_CHARS) throw new java.io.IOException("模型流事件超过大小限制");
         }
+        return line.isEmpty() ? null : line.toString();
     }
 }

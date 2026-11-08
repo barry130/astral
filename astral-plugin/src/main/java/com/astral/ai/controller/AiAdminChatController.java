@@ -71,6 +71,19 @@ public class AiAdminChatController {
     /** SSE 单连接最长存活时间（毫秒） */
     private static final long SSE_TIMEOUT_MILLIS = 180_000L;
 
+    @PostMapping("/chat/tool-calls/{id}/approve")
+    @RequiresPermission(
+            value = {"admin:ai:assistant:use", "admin:ai:qa:use"},
+            name = "AI 对话确认",
+            description = "确认本人发起的工具操作")
+    public Result<Map<String, Object>> approveOwn(
+            @PathVariable Long id,
+            @Valid @RequestBody com.astral.ai.dto.AiAdminDtos.ToolApproveReq req,
+            HttpServletRequest request) {
+        return Result.success(orchestrator.approve(
+                id, AiCaller.requireUserId(request), Boolean.TRUE.equals(req.approved()), req.comment(), false));
+    }
+
     private final AiAccessService accessService;
     private final AiAgentService agentService;
     private final AiConversationService conversationService;
@@ -199,15 +212,15 @@ public class AiAdminChatController {
         conversationService.requireOwned(id, userId);
         int size = limit == null
                 ? AiConversationService.DEFAULT_PAGE_SIZE
-                : Math.max(1, Math.min(AiConversationService.MAX_PAGE_SIZE, limit));
+                : Math.max(1, Math.min(AiConversationService.MAX_PAGE_SIZE - 1, limit));
         List<AiMessageEntity> rows = conversationService.messages(id, beforeId, size + 1);
         boolean hasMore = rows.size() > size;
-        List<AiMessageEntity> page = hasMore ? rows.subList(0, size) : rows;
+        List<AiMessageEntity> page = hasMore ? rows.subList(rows.size() - size, rows.size()) : rows;
         List<AiAppDtos.MessageVo> items = new ArrayList<>();
         for (AiMessageEntity row : page) {
             items.add(toVo(row));
         }
-        Long nextCursor = page.isEmpty() ? null : page.get(page.size() - 1).getId();
+        Long nextCursor = page.isEmpty() ? null : page.getFirst().getId();
         return Result.success(new AiAppDtos.MessagePage(items, nextCursor, hasMore));
     }
 
@@ -273,7 +286,7 @@ public class AiAdminChatController {
             @org.springframework.web.bind.annotation.RequestHeader(value = "Last-Event-ID", required = false)
                     String lastEventId) {
         Long userId = AiCaller.requireUserId(request);
-        AiRequestEntity entity = requestService.requireOwned(id, userId);
+        requestService.requireOwned(id, userId);
         long start = after != null ? after : parseLong(lastEventId, 0L);
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         AtomicBoolean closed = new AtomicBoolean(false);
@@ -295,6 +308,18 @@ public class AiAdminChatController {
         data.put("requestId", id);
         data.put("status", entity.getStatus());
         return Result.success("已取消", data);
+    }
+
+    @PostMapping("/chat/requests/{id}/cancel")
+    @RequiresPermission(
+            value = {"admin:ai:assistant:use", "admin:ai:qa:use"},
+            name = "AI 对话停止",
+            description = "停止本人发起的请求")
+    public Result<Map<String, Object>> cancelOwn(
+            @PathVariable Long id, @RequestBody(required = false) AiAppDtos.CancelReq req, HttpServletRequest request) {
+        AiRequestEntity entity =
+                requestService.cancel(id, AiCaller.requireUserId(request), req == null ? null : req.reason(), false);
+        return Result.success(Map.of("requestId", id, "status", entity.getStatus()));
     }
 
     // ==================== 反馈与动作 ====================

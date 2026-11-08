@@ -21,7 +21,8 @@ import java.io.Serializable;
  *
  * <p>各插件历史上的响应封装（{@code error(String)} 默认码为 300）已全部收敛到本类，
  * 因此本类的默认错误码同为 {@link ApiConstants#BUSINESS_ERROR_CODE}（300），行为与旧封装一致；
- * 需要别的业务语义（参数错误 401/403/429…）时显式调用 {@code error(int code, ...)}。</p>
+ * 需要别的业务语义（参数错误 320 / 未登录 401 / 无权限 403 / 限流 429…）时显式调用
+ * {@code error(int code, ...)}。</p>
  */
 public class Result<T> implements Serializable {
 

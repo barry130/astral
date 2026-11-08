@@ -76,17 +76,20 @@ public class SysMenuServiceImpl implements SysMenuService {
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 编辑弹窗里「清空图标」保存后不会生效。白名单逐列显式 set。
         // 注意本入口既是整表单提交，也被拖拽排序用局部 payload（只带 sort/parentId）调用，
-        // 因此未提交（null）的列一律回落 existing（保持原值），只有空串才算「清空」。
+        // 未提交（null）的列不参与 SET，避免覆盖读取之后其他请求已提交的字段；空串才算清空。
         LambdaUpdateWrapper<SysMenu> update = new LambdaUpdateWrapper<SysMenu>()
                 .eq(SysMenu::getId, id)
-                .set(SysMenu::getParentId, newParentId)
-                .set(SysMenu::getName, PatchValues.orDefault(menu.getName(), existing.getName()))
-                .set(SysMenu::getIcon, PatchValues.orCurrent(menu.getIcon(), existing.getIcon()))
-                .set(SysMenu::getPath, PatchValues.orCurrent(menu.getPath(), existing.getPath()))
-                .set(SysMenu::getPermission, PatchValues.orCurrent(menu.getPermission(), existing.getPermission()))
-                .set(SysMenu::getSort, PatchValues.orDefault(menu.getSort(), existing.getSort()))
-                .set(SysMenu::getVisible, PatchValues.orDefault(menu.getVisible(), existing.getVisible()))
-                .set(SysMenu::getType, PatchValues.orDefault(menu.getType(), existing.getType()))
+                .set(menu.getParentId() != null, SysMenu::getParentId, menu.getParentId())
+                .set(menu.getName() != null, SysMenu::getName, menu.getName())
+                .set(menu.getIcon() != null, SysMenu::getIcon, PatchValues.blankToNull(menu.getIcon()))
+                .set(menu.getPath() != null, SysMenu::getPath, PatchValues.blankToNull(menu.getPath()))
+                .set(
+                        menu.getPermission() != null,
+                        SysMenu::getPermission,
+                        PatchValues.blankToNull(menu.getPermission()))
+                .set(menu.getSort() != null, SysMenu::getSort, menu.getSort())
+                .set(menu.getVisible() != null, SysMenu::getVisible, menu.getVisible())
+                .set(menu.getType() != null, SysMenu::getType, menu.getType())
                 .set(SysMenu::getUpdateTime, LocalDateTime.now());
         sysMenuMapper.update(null, update);
         // 回读库中最新行：入参可能是局部 payload（拖拽排序只带 sort/parentId），原样回显会缺字段

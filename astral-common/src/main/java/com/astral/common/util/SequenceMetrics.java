@@ -34,7 +34,10 @@ public class SequenceMetrics {
     public static void recordGeneration() {
         totalGenerated.incrementAndGet();
         windowCount.incrementAndGet();
-        updateQps();
+        // 快路径只读 volatile：QPS 每秒最多结算一次，不能每取一个号都去抢类锁。
+        if (System.currentTimeMillis() - windowStartTime >= 1000L) {
+            updateQps();
+        }
     }
 
     /**
@@ -84,7 +87,7 @@ public class SequenceMetrics {
      * 将累计计数、窗口计数、窗口起点和 QPS 全部归零，
      * 通常用于监控面板刷新或测试用例清理环境。
      */
-    public static void reset() {
+    public static synchronized void reset() {
         totalGenerated.set(0);
         windowCount.set(0);
         windowStartTime = System.currentTimeMillis();

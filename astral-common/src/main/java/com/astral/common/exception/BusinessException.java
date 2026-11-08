@@ -31,14 +31,14 @@ public class BusinessException extends RuntimeException {
     public BusinessException(String errorCode, Object... args) {
         super(args.length > 0 ? ErrorCodes.format(errorCode, args) : ErrorCodes.getMessage(errorCode));
         this.errorCode = errorCode;
-        this.args = args;
+        this.args = args == null ? null : args.clone();
         this.code = null;
     }
 
     private BusinessException(String errorCode, Object[] args, String message, Integer code) {
         super(message);
         this.errorCode = errorCode;
-        this.args = args;
+        this.args = args == null ? null : args.clone();
         this.code = code;
     }
 
@@ -57,7 +57,7 @@ public class BusinessException extends RuntimeException {
     }
 
     public Object[] getArgs() {
-        return args;
+        return args == null ? null : args.clone();
     }
 
     /** 显式业务码；为 null 时由全局异常处理器根据 {@link #getErrorCode()} 映射 */

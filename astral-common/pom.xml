@@ -15,16 +15,25 @@
     <name>astral-common</name>
     <description>Common utilities and constants</description>
 
-    <!-- 本模块只提供 Result / ErrorCode / BusinessException / RateLimit 等纯工具与常量，
-         源码仅依赖 java.* + Servlet API（CsrfTokenSupport 需要读写 Cookie）。
+    <!-- 本模块提供纯工具、常量及有界出站 HTTP 传输，依赖 Java / HttpComponents / Servlet API。
          刻意不引入 Spring / spring-boot-starter-web：Servlet API 由容器（Tomcat）与
          各调用方（astral-auth/astral-server 已通过 starter-web 传递引入）提供，
          在这里声明为 provided 不会传染 Spring 到所有模块。 -->
     <dependencies>
+        <!-- Shared bounded outbound transport with DNS pinning; no Spring dependency. -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

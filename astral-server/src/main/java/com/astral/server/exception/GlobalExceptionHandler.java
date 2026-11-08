@@ -92,14 +92,14 @@ public class GlobalExceptionHandler {
             return DEFAULT_BUSINESS_CODE;
         }
         return switch (errorCode) {
-                // 未登录 / 凭据错误 / Token 失效（AUTH010/011 = 登录需补 TOTP 动态码，同属凭据未齐）
-            case "AUTH001", "AUTH002", "AUTH004", "AUTH005", "AUTH006", "AUTH007", "AUTH010", "AUTH011" -> ApiConstants
-                    .UNAUTHORIZED_CODE;
-                // 账号锁定 / 限流类：语义上属于「稍后再试」；STORAGE042 = 上传并发已满（设计 §7.5 要求 429）
+            // 未登录 / 凭据错误 / Token 失效（AUTH010/011 = 登录需补 TOTP 动态码，同属凭据未齐）
+            case "AUTH001", "AUTH002", "AUTH004", "AUTH005", "AUTH006", "AUTH007", "AUTH010", "AUTH011" ->
+                ApiConstants.UNAUTHORIZED_CODE;
+            // 账号锁定 / 限流类：语义上属于「稍后再试」；STORAGE042 = 上传并发已满（设计 §7.5 要求 429）
             case "AUTH003", "AUTH008", "STORAGE007", "STORAGE026", "STORAGE042" -> ApiConstants.TOO_MANY_REQUESTS_CODE;
-                // 权限不足
+            // 权限不足
             case "COMMON005", "STORAGE013", "STORAGE014", "STORAGE015", "STORAGE018" -> ApiConstants.FORBIDDEN_CODE;
-                // 其余业务失败（含「数据不存在」「冲突」等：服务端已处理，属业务结论而非传输失败）
+            // 其余业务失败（含「数据不存在」「冲突」等：服务端已处理，属业务结论而非传输失败）
             default -> DEFAULT_BUSINESS_CODE;
         };
     }

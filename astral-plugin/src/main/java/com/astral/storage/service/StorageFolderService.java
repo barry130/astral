@@ -8,12 +8,14 @@ import com.astral.storage.entity.StorageFolderConfigEntity;
 import com.astral.storage.entity.StorageFolderEntity;
 import com.astral.storage.entity.StorageFolderPermissionEntity;
 import com.astral.storage.entity.StoragePermissionConfigEntity;
+import com.astral.storage.entity.StorageUploadOperationEntity;
 import com.astral.storage.mapper.StorageConfigMapper;
 import com.astral.storage.mapper.StorageFileMapper;
 import com.astral.storage.mapper.StorageFolderConfigMapper;
 import com.astral.storage.mapper.StorageFolderMapper;
 import com.astral.storage.mapper.StorageFolderPermissionMapper;
 import com.astral.storage.mapper.StoragePermissionConfigMapper;
+import com.astral.storage.mapper.StorageUploadOperationMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -60,9 +62,11 @@ public class StorageFolderService {
     private final StorageAuditService auditService;
     private final UploadPolicyService policyService;
     private final StorageTargetResolver targetResolver;
+    private final StorageUploadOperationMapper operationMapper;
+    private final LegacyUploadReceiptService receiptService;
 
     /** 目录安全锁：授权、绑定与可见性变更都走这把锁（§8.4 锁顺序：树锁 → 目录安全锁 → ...） */
-    private static String securityLockKey(Long folderId) {
+    static String securityLockKey(Long folderId) {
         return "storage-folder-security:" + folderId;
     }
 
@@ -167,7 +171,16 @@ public class StorageFolderService {
             if (row.getExpiresTime() != null && row.getExpiresTime().isBefore(LocalDateTime.now())) {
                 continue;
             }
-            permsByFolderId.putIfAbsent(row.getFolderId(), normalizePermissions(row.getPermissions()));
+            // 历史数据/重复提交可能同一用户在同一目录存在多行授权；权限必须取并集，
+            // 只取首行（putIfAbsent）会让「另起一行补授 UPLOAD」在列表上显示为不可上传，
+            // 且与实际 hasPermission 判断不一致。所有者已标 ALL，保持最高优先级。
+            String current = permsByFolderId.get(row.getFolderId());
+            String merged = normalizePermissions(row.getPermissions());
+            if (current == null) {
+                permsByFolderId.put(row.getFolderId(), merged);
+            } else if (!"ALL".equals(current)) {
+                permsByFolderId.put(row.getFolderId(), mergePermissions(current, merged));
+            }
         }
         if (permsByFolderId.isEmpty()) {
             return List.of();
@@ -375,7 +388,25 @@ public class StorageFolderService {
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id, String operator) {
         fileMapper.lockUploadKey("storage-folder-tree");
+        // 与 update/savePermissions 使用同一把目录安全锁（锁顺序：树锁 → 安全锁），
+        // 避免删除与授权全量替换交错产生「目录已删、授权行仍被重新插入」的孤儿授权。
+        fileMapper.lockUploadKey(securityLockKey(id));
         getById(id);
+        Long pending = operationMapper.selectCount(new LambdaQueryWrapper<StorageUploadOperationEntity>()
+                .eq(StorageUploadOperationEntity::getFolderId, id)
+                .and(w -> w.in(
+                                StorageUploadOperationEntity::getState,
+                                StorageUploadOperationEntity.STATE_RECEIVING,
+                                StorageUploadOperationEntity.STATE_SENDING,
+                                StorageUploadOperationEntity.STATE_REMOTE_SUCCEEDED,
+                                StorageUploadOperationEntity.STATE_UNKNOWN_OUTCOME)
+                        .or(created -> created.eq(
+                                        StorageUploadOperationEntity::getState,
+                                        StorageUploadOperationEntity.STATE_CREATED)
+                                .gt(StorageUploadOperationEntity::getIntentExpiresAt, LocalDateTime.now()))));
+        if ((pending != null && pending > 0) || receiptService.hasPending(id)) {
+            throw new BusinessException("COMMON002", "文件夹仍有上传或待核对的远端结果，无法删除");
+        }
         Long children = folderMapper.selectCount(
                 new LambdaQueryWrapper<StorageFolderEntity>().eq(StorageFolderEntity::getParentId, id));
         if (children != null && children > 0) {
@@ -477,17 +508,24 @@ public class StorageFolderService {
         SetOfLong folderConfigIds = new SetOfLong(orderedBindings(folderId).stream()
                 .map(StorageFolderConfigEntity::getStorageConfigId)
                 .collect(Collectors.toCollection(LinkedHashSet::new)));
+        java.util.Set<String> seenSubjects = new java.util.HashSet<>();
         for (StorageDtos.FolderPermRow row : rows) {
             String subjectType =
-                    row.subjectType() == null ? "" : row.subjectType().trim();
+                    row.subjectType() == null ? "" : row.subjectType().trim().toUpperCase(Locale.ROOT);
             String subjectId = row.subjectId() == null ? "" : row.subjectId().trim();
             String permissions = normalizePermissions(row.permissions());
             if (subjectId.isEmpty() || permissions.isEmpty()) {
                 continue;
             }
-            if (!StorageFolderPermissionEntity.SUBJECT_USER.equals(subjectType)
-                    && !StorageFolderPermissionEntity.SUBJECT_PLUGIN.equals(subjectType)) {
-                throw new BusinessException("COMMON002", "非法的授权主体类型: " + subjectType);
+            // 当前权限消费链只接受 USER：PLUGIN 行会被 hasPermission 静默忽略，
+            // 若允许保存会造成“授权成功但永远不生效”的假象，故在写入边界显式拒绝。
+            if (!StorageFolderPermissionEntity.SUBJECT_USER.equals(subjectType)) {
+                throw new BusinessException("COMMON002", "暂不支持该授权主体类型: " + subjectType);
+            }
+            // 同一主体在一个目录只能有一行：多行会让权限与授权配置子集产生歧义
+            // （历史上正是重复行导致首行覆盖/任意行判权）。重复提交直接拒绝，由管理端合并后重试。
+            if (!seenSubjects.add(subjectType + ":" + subjectId)) {
+                throw new BusinessException("COMMON002", "同一授权主体重复提交: " + subjectType + ":" + subjectId);
             }
             StorageFolderPermissionEntity perm = new StorageFolderPermissionEntity();
             perm.setFolderId(folderId);
@@ -614,30 +652,37 @@ public class StorageFolderService {
      * 所有者拥有全部权限；否则查授权记录（未撤销、未过期、权限集合包含目标权限）。
      */
     public boolean hasPermission(String userId, StorageFolderEntity folder, String perm) {
-        if (userId == null) {
+        if (userId == null || folder == null) {
             return false;
         }
         if (StorageFolderEntity.OWNER_USER.equals(folder.getOwnerType()) && userId.equals(folder.getOwnerId())) {
             return true;
         }
-        StorageFolderPermissionEntity permRow =
-                permMapper.selectOne(new LambdaQueryWrapper<StorageFolderPermissionEntity>()
+        // 同一用户在同一目录可能存在多行授权（历史重复提交）。权限按所有未撤销、未过期行的并集判断；
+        // 只取 LIMIT 1 的任意一行会造成「明明有 UPLOAD 授权却被拒绝」或未来某行被误当唯一授权。
+        List<StorageFolderPermissionEntity> permRows =
+                permMapper.selectList(new LambdaQueryWrapper<StorageFolderPermissionEntity>()
                         .eq(StorageFolderPermissionEntity::getFolderId, folder.getId())
                         .eq(StorageFolderPermissionEntity::getSubjectType, StorageFolderPermissionEntity.SUBJECT_USER)
                         .eq(StorageFolderPermissionEntity::getSubjectId, userId)
-                        .isNull(StorageFolderPermissionEntity::getRevokedTime)
-                        .last("LIMIT 1"));
-        if (permRow == null) {
-            return false;
+                        .isNull(StorageFolderPermissionEntity::getRevokedTime));
+        LocalDateTime now = LocalDateTime.now();
+        for (StorageFolderPermissionEntity permRow : permRows) {
+            if (permRow.getExpiresTime() != null && permRow.getExpiresTime().isBefore(now)) {
+                continue;
+            }
+            if (normalizedList(permRow.getPermissions()).contains(perm)) {
+                return true;
+            }
         }
-        if (permRow.getExpiresTime() != null && permRow.getExpiresTime().isBefore(LocalDateTime.now())) {
-            return false;
-        }
-        return normalizedList(permRow.getPermissions()).contains(perm);
+        return false;
     }
 
     public void requirePermission(String userId, Long folderId, String perm) {
         StorageFolderEntity folder = getById(folderId);
+        if (folder == null) {
+            throw new BusinessException("STORAGE016");
+        }
         if (!hasPermission(userId, folder, perm)) {
             throw new BusinessException("STORAGE013");
         }
@@ -671,6 +716,22 @@ public class StorageFolderService {
 
     private List<String> normalizedList(String raw) {
         return List.of(normalizePermissions(raw).split(","));
+    }
+
+    /** 合并多行授权的权限并集，保留 READ,UPLOAD,UPDATE,DELETE,MANAGE 的稳定顺序 */
+    private String mergePermissions(String left, String right) {
+        LinkedHashSet<String> merged = new LinkedHashSet<>();
+        for (String perm : normalizedList(left)) {
+            if (!perm.isEmpty()) {
+                merged.add(perm);
+            }
+        }
+        for (String perm : normalizedList(right)) {
+            if (!perm.isEmpty()) {
+                merged.add(perm);
+            }
+        }
+        return String.join(",", merged);
     }
 
     // ==================== 版本与解析 ====================

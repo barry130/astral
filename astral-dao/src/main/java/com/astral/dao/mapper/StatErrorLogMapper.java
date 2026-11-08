@@ -53,8 +53,33 @@ public interface StatErrorLogMapper extends BaseMapper<StatErrorLog> {
             + "<if test=\"appVersion != null and appVersion != ''\">AND e.app_version = #{appVersion} </if>"
             + "GROUP BY e.fingerprint "
             + "ORDER BY \"count\" DESC"
+            + "<if test=\"limit != null and limit > 0\"> LIMIT #{limit} OFFSET #{offset}</if>"
             + "</script>")
     List<Map<String, Object>> selectErrorSummary(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("source") String source,
+            @Param("ut") String ut,
+            @Param("appVersion") String appVersion,
+            @Param("limit") Integer limit,
+            @Param("offset") Long offset);
+
+    /**
+     * 统计指定条件下错误分组（fingerprint）的总数。
+     * <p>与 {@link #selectErrorSummary} 使用同一套时间/平台/版本过滤条件，
+     * 供分页接口返回真实 total，同时避免把全部分组读进内存。</p>
+     */
+    @Select("<script>"
+            + "SELECT COUNT(*) FROM ("
+            + "SELECT e.fingerprint FROM stat_error_log e "
+            + "WHERE e.occur_time &gt;= #{start} AND e.occur_time &lt; #{end} "
+            + "<if test=\"source != null and source != ''\">AND e.source = #{source} </if>"
+            + "<if test=\"ut != null and ut != ''\">AND e.ut = #{ut} </if>"
+            + "<if test=\"appVersion != null and appVersion != ''\">AND e.app_version = #{appVersion} </if>"
+            + "GROUP BY e.fingerprint"
+            + ") t"
+            + "</script>")
+    long countErrorSummary(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
             @Param("source") String source,

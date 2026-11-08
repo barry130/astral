@@ -76,7 +76,39 @@ public final class AiToolTypes {
             ObjectNode arguments,
             ObjectNode context,
             boolean approved,
-            Long approvedBy) {
+            Long approvedBy,
+            Long toolCallId) {
+        public AiToolContext(
+                Long requestId,
+                Long conversationId,
+                Long userId,
+                Long agentId,
+                String agentCode,
+                String agentType,
+                String clientType,
+                ObjectNode arguments,
+                ObjectNode context,
+                boolean approved,
+                Long approvedBy) {
+            this(
+                    requestId,
+                    conversationId,
+                    userId,
+                    agentId,
+                    agentCode,
+                    agentType,
+                    clientType,
+                    arguments,
+                    context,
+                    approved,
+                    approvedBy,
+                    null);
+        }
+
+        /** Stable logical operation identity for handlers that support downstream idempotency. */
+        public String executionKey() {
+            return toolCallId == null ? null : "ai-tool-" + toolCallId;
+        }
         /** 取字符串参数 */
         public String arg(String name) {
             if (arguments == null) {
@@ -114,6 +146,7 @@ public final class AiToolTypes {
      * @param payload 结构化数据（同时写入 ai_tool_call.result_json）
      */
     public record AiToolResult(String status, String summary, ObjectNode payload) {
+        public static final String UNKNOWN = "UNKNOWN";
 
         /** 状态：成功 */
         public static final String SUCCEEDED = "SUCCEEDED";

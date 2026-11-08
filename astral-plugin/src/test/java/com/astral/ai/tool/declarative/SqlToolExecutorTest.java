@@ -26,14 +26,12 @@ import tools.jackson.databind.node.ObjectNode;
  */
 class SqlToolExecutorTest {
 
-    private static final String CONFIG =
-            """
-            {"sql":"select id, user_name from astral.sys_user where status = #{status} limit 10",
-             "columns":["id","user_name"],"maxRows":10,"timeoutSeconds":3}
+    private static final String CONFIG = """
+            {"sql":"select id, username from astral.sys_user where status = #{status} limit 10",
+             "columns":["id","username"],"maxRows":10,"timeoutSeconds":3}
             """;
 
-    private static final String SCHEMA =
-            """
+    private static final String SCHEMA = """
             {"type":"object","properties":{"status":{"type":"integer"}},"required":["status"]}
             """;
 
@@ -122,10 +120,9 @@ class SqlToolExecutorTest {
     @Test
     @DisplayName("注释与字符串字面量里的关键字/分号不参与判断")
     void ignoresLiteralsAndComments() {
-        String sql =
-                """
+        String sql = """
                 select id -- 这里写 delete 也没关系
-                from astral.sys_user /* update 同理; */ where name = 'insert; drop'
+                from astral.sys_user /* update 同理; */ where nickname = 'insert; drop'
                 """;
         SqlToolExecutor.requireValidShape(config(sql, "[\"id\"]"));
         String stripped = SqlToolExecutor.stripLiteralsAndComments(sql);
@@ -183,16 +180,14 @@ class SqlToolExecutorTest {
     @Test
     @DisplayName("占位符必须是参数结构里声明过的")
     void rejectsUndeclaredPlaceholder() throws Exception {
-        String json =
-                """
-                {"sql":"select id from astral.sys_user where status = #{status} and name = #{name}",
+        String json = """
+                {"sql":"select id from astral.sys_user where status = #{status} and nickname = #{name}",
                  "columns":["id"]}
                 """;
         AiException error = assertThrows(AiException.class, () -> SqlToolExecutor.validate(json, SCHEMA));
         assertTrue(error.getMessage().contains("name"));
         // 声明齐全时通过
-        String schema =
-                """
+        String schema = """
                 {"type":"object","properties":{"status":{"type":"integer"},"name":{"type":"string"}}}
                 """;
         SqlToolExecutor.validate(json, schema);
@@ -248,8 +243,7 @@ class SqlToolExecutorTest {
     void unavailableWithBrokenConfig() {
         AiToolEntity tool = new AiToolEntity();
         tool.setToolCode("query_user");
-        tool.setExecutorConfig(
-                """
+        tool.setExecutorConfig("""
                 {"sql":"delete from astral.sys_user","columns":["id"]}
                 """);
         assertNull(SqlToolExecutor.create(tool, new org.springframework.jdbc.core.JdbcTemplate(), null));

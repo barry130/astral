@@ -1,6 +1,11 @@
 package com.astral.common.annotation;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * 声明式超级管理员校验：标注的方法（或整个控制器）要求当前登录用户是超级管理员。
@@ -14,4 +19,5 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@Inherited
 public @interface RequiresSuper {}

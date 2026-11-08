@@ -39,7 +39,7 @@
       "fieldType": "Integer",
       "jdbcType": "INT",
       "comment": "步长",
-      "defaultValue": "100"
+      "defaultValue": "1000"
     },
     {
       "columnName": "date_format",

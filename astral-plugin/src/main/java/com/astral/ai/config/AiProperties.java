@@ -66,6 +66,15 @@ public class AiProperties {
     /** 声明式 HTTP 工具（executor_type='HTTP'）的执行护栏 */
     private HttpTool httpTool = new HttpTool();
 
+    /** Trusted SQL read policy, independent of editable tool configuration. No wildcard columns. */
+    private SqlTool sqlTool = new SqlTool();
+
+    @Data
+    public static class SqlTool {
+        /** Additional schema.table -> readable source columns, configured by the deployment owner. */
+        private Map<String, List<String>> allowedColumns = new LinkedHashMap<>();
+    }
+
     /**
      * 声明式 HTTP 工具护栏。
      *

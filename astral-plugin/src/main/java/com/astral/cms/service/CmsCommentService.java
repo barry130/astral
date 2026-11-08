@@ -13,13 +13,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.annotation.Resource;
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -33,13 +34,24 @@ public class CmsCommentService {
 
     /** 同 IP 限流窗口（秒），来自 astral.plugins.cms.rate-limit-window-seconds */
     @Value("${astral.plugins.cms.rate-limit-window-seconds:600}")
-    private long throttleWindowSeconds;
+    private long throttleWindowSeconds = 600;
     /** 同 IP 窗口内最多提交条数，来自 astral.plugins.cms.rate-limit-count */
     @Value("${astral.plugins.cms.rate-limit-count:5}")
-    private int throttleMax;
+    private int throttleMax = 5;
 
-    /** IP → 提交时间戳列表（内存限流） */
-    private final Map<String, List<Long>> submitLog = new ConcurrentHashMap<>();
+    /** Access order follows successful admissions; full capacity rejects new IPs instead of resetting live counters. */
+    private final LinkedHashMap<String, ArrayDeque<Long>> submitLog = new LinkedHashMap<>();
+
+    private final LongSupplier ticker;
+    private static final int MAX_THROTTLE_IPS = 10_000;
+
+    public CmsCommentService() {
+        this(System::nanoTime);
+    }
+
+    CmsCommentService(LongSupplier ticker) {
+        this.ticker = ticker;
+    }
 
     @Resource
     private CmsCommentMapper commentMapper;
@@ -140,26 +152,24 @@ public class CmsCommentService {
 
     // ==================== 私有辅助 ====================
 
-    private void checkThrottle(String ip) {
+    private synchronized void checkThrottle(String ip) {
         String key = ip == null || ip.isBlank() ? "unknown" : ip;
-        long now = System.currentTimeMillis();
-        // 粗粒度防内存膨胀：键过多时清理过期桶
-        if (submitLog.size() > 1000) {
-            submitLog.entrySet().removeIf(e -> {
-                synchronized (e.getValue()) {
-                    return e.getValue().stream().allMatch(t -> now - t > throttleWindowSeconds * 1000L);
-                }
-            });
+        long now = ticker.getAsLong();
+        long window = java.util.concurrent.TimeUnit.SECONDS.toNanos(Math.clamp(throttleWindowSeconds, 1, 86_400));
+        // Oldest last-admission first: each expired bucket is visited once, not a full scan per request.
+        while (!submitLog.isEmpty() && now - submitLog.firstEntry().getValue().getLast() >= window) {
+            submitLog.pollFirstEntry();
         }
-        List<Long> list = submitLog.computeIfAbsent(key, k -> new ArrayList<>());
-        synchronized (list) {
-            list.removeIf(t -> now - t > throttleWindowSeconds * 1000L);
-            if (list.size() >= throttleMax) {
-                log.warn("[CmsPlugin] 评论限流触发 ip={}", key);
-                throw new CmsException("评论太频繁啦，请稍后再试");
-            }
-            list.add(now);
+        ArrayDeque<Long> list = submitLog.get(key);
+        if (list == null) {
+            if (submitLog.size() >= MAX_THROTTLE_IPS) throw new CmsException("评论请求较多，请稍后再试");
+            list = new ArrayDeque<>();
         }
+        while (!list.isEmpty() && now - list.getFirst() >= window) list.removeFirst();
+        if (list.size() >= Math.clamp(throttleMax, 1, 100)) throw new CmsException("评论太频繁啦，请稍后再试");
+        list.addLast(now);
+        submitLog.remove(key);
+        submitLog.putLast(key, list);
     }
 
     /**
@@ -192,15 +202,17 @@ public class CmsCommentService {
                 pageIds.add(c.getTargetId());
             }
         }
-        Map<Long, String> titles = new HashMap<>();
+        Map<Long, String> postTitles = new HashMap<>();
+        Map<Long, String> pageTitles = new HashMap<>();
         if (!postIds.isEmpty()) {
-            postMapper.selectBatchIds(postIds).forEach(p -> titles.put(p.getId(), p.getTitle()));
+            postMapper.selectBatchIds(postIds).forEach(p -> postTitles.put(p.getId(), p.getTitle()));
         }
         if (!pageIds.isEmpty()) {
-            pageMapper.selectBatchIds(pageIds).forEach(p -> titles.put(p.getId(), p.getTitle()));
+            pageMapper.selectBatchIds(pageIds).forEach(p -> pageTitles.put(p.getId(), p.getTitle()));
         }
         for (CmsComment c : comments) {
-            String title = titles.get(c.getTargetId());
+            String title =
+                    (CmsComment.TARGET_POST.equals(c.getTargetType()) ? postTitles : pageTitles).get(c.getTargetId());
             c.setTargetTitle(title == null ? "（目标已删除）" : title);
         }
     }

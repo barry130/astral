@@ -17,15 +17,17 @@ import com.astral.dao.mapper.UserMapper;
 import com.astral.dao.mapper.UserRoleMapper;
 import com.astral.system.mail.MailService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -46,7 +48,7 @@ import org.springframework.stereotype.Service;
  *
  * <p>限额：每个渠道行可设每日上限（0/空 = 不限），口径两种——按收件人（同一人当天
  * 同一规则同一渠道的条数）或全局（该规则该渠道当天总条数）。计数放 Redis，
- * 成功发送后才 +1，跨天按服务器时区自然归零。</p>
+ * 发送前原子预占，明确发送失败时归还，跨天按服务器时区自然归零。</p>
  *
  * <p>业务侧异步触发用 {@link #publishAsync}：通知失败绝不阻断主流程，结果只记日志。</p>
  */
@@ -57,6 +59,18 @@ public class NotifyPublisher {
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String QUOTA_KEY_PREFIX = "astral:notify:quota:";
+    private static final DefaultRedisScript<Long> RESERVE_QUOTA = new DefaultRedisScript<>("""
+            local used = tonumber(redis.call('GET', KEYS[1]) or '0')
+            if used >= tonumber(ARGV[1]) then return 0 end
+            local reserved = redis.call('INCR', KEYS[1])
+            if reserved == 1 then redis.call('EXPIRE', KEYS[1], ARGV[2]) end
+            return 1
+            """, Long.class);
+    private static final DefaultRedisScript<Long> RELEASE_QUOTA = new DefaultRedisScript<>("""
+            local used = tonumber(redis.call('GET', KEYS[1]) or '0')
+            if used > 0 then return redis.call('DECR', KEYS[1]) end
+            return 0
+            """, Long.class);
 
     private final SysNotifyRuleService ruleService;
     private final SysNotifyRuleChannelMapper ruleChannelMapper;
@@ -93,19 +107,33 @@ public class NotifyPublisher {
             return results;
         }
         for (SysNotifyRule rule : rules) {
-            List<SysNotifyRuleChannel> channels =
-                    ruleChannelMapper.selectList(new LambdaQueryWrapper<SysNotifyRuleChannel>()
-                            .eq(SysNotifyRuleChannel::getRuleId, rule.getId())
-                            .eq(SysNotifyRuleChannel::getEnabled, 1));
+            List<SysNotifyRuleChannel> channels;
+            try {
+                channels = ruleChannelMapper.selectList(new LambdaQueryWrapper<SysNotifyRuleChannel>()
+                        .eq(SysNotifyRuleChannel::getRuleId, rule.getId())
+                        .eq(SysNotifyRuleChannel::getEnabled, 1));
+            } catch (Exception e) {
+                log.warn("[Notify] 渠道配置读取失败 ruleId={}", rule.getId(), e);
+                results.add(new PublishResult(rule.getId(), rule.getRuleName(), "-", "-", false, "渠道配置读取失败"));
+                continue;
+            }
             if (channels.isEmpty()) {
                 log.info("[Notify] 规则[{}] 无启用渠道，跳过", rule.getRuleName());
                 continue;
             }
             for (SysNotifyRuleChannel channel : channels) {
-                List<SysNotifyRuleRecipient> recipients =
-                        ruleRecipientMapper.selectList(new LambdaQueryWrapper<SysNotifyRuleRecipient>()
-                                .eq(SysNotifyRuleRecipient::getChannelId, channel.getId()));
-                List<String> resolved = resolveRecipients(rule, channel, recipients, payload, recipientsOverride);
+                List<String> resolved;
+                try {
+                    List<SysNotifyRuleRecipient> recipients =
+                            ruleRecipientMapper.selectList(new LambdaQueryWrapper<SysNotifyRuleRecipient>()
+                                    .eq(SysNotifyRuleRecipient::getChannelId, channel.getId()));
+                    resolved = resolveRecipients(rule, channel, recipients, payload, recipientsOverride);
+                } catch (Exception e) {
+                    log.warn("[Notify] 收件人解析失败 ruleId={} channelId={}", rule.getId(), channel.getId(), e);
+                    results.add(new PublishResult(
+                            rule.getId(), rule.getRuleName(), channel.getChannel(), "-", false, "收件人解析失败"));
+                    continue;
+                }
                 if (resolved.isEmpty()) {
                     results.add(new PublishResult(
                             rule.getId(),
@@ -162,7 +190,7 @@ public class NotifyPublisher {
         for (SysNotifyRuleRecipient recipient : recipients) {
             String type = recipient.getRecipientType() == null
                     ? ""
-                    : recipient.getRecipientType().toUpperCase();
+                    : recipient.getRecipientType().toUpperCase(Locale.ROOT);
             String value = recipient.getRecipientValue();
             switch (type) {
                 case "PAYLOAD_FIELD" -> {
@@ -239,17 +267,15 @@ public class NotifyPublisher {
     private PublishResult deliver(
             SysNotifyRule rule, SysNotifyRuleChannel channel, String recipient, Map<String, String> payload) {
         String channelCode =
-                channel.getChannel() == null ? "" : channel.getChannel().toUpperCase();
+                channel.getChannel() == null ? "" : channel.getChannel().toUpperCase(Locale.ROOT);
         if (recipient == null || recipient.isBlank()) {
             return new PublishResult(
                     rule.getId(), rule.getRuleName(), channelCode, "-", false, "收件人为空（FIXED 未配置、payload 缺字段或角色下无启用用户）");
         }
+        String reservationKey = null;
         try {
             Long templateId = resolveTemplateId(rule, channel);
-            if (exceedQuota(rule, channel, recipient, channelCode)) {
-                throw new IllegalStateException("超出每日限额（" + channel.getDailyLimit() + " 条/天，口径 "
-                        + (channel.getDailyLimitScope() == null ? "RECIPIENT" : channel.getDailyLimitScope()) + "）");
-            }
+            reservationKey = reserveQuota(rule, channel, recipient);
             switch (channelCode) {
                 case NotifyChannel.EMAIL -> mailService.testSendTemplate(templateId, null, recipient, payload);
                 case NotifyChannel.SMS -> smsService.testSendTemplate(templateId, null, recipient, payload);
@@ -263,19 +289,18 @@ public class NotifyPublisher {
                     inappService.sendTemplateRow(
                             templateId, userId, payload, channel.getPlatform(), eventSender(rule.getEventCode()));
                 }
-                default -> {
-                    return new PublishResult(
-                            rule.getId(),
-                            rule.getRuleName(),
-                            channelCode,
-                            recipient,
-                            false,
-                            "未知渠道: " + channel.getChannel());
-                }
+                default -> throw new IllegalStateException("未知渠道: " + channel.getChannel());
             }
-            increaseQuota(rule, channel, recipient, channelCode);
             return new PublishResult(rule.getId(), rule.getRuleName(), channelCode, recipient, true, null);
         } catch (Exception e) {
+            if (reservationKey != null) {
+                try {
+                    stringRedisTemplate.execute(RELEASE_QUOTA, List.of(reservationKey));
+                } catch (Exception releaseError) {
+                    // 无法确认归还时保留占用，不能因此放宽每日上限。
+                    log.warn("[Notify] 投递失败后的额度归还失败 ruleId={}", rule.getId(), releaseError);
+                }
+            }
             log.warn("[Notify] 规则[{}]投递失败（{} → {}）: {}", rule.getRuleName(), channelCode, recipient, e.getMessage());
             return new PublishResult(rule.getId(), rule.getRuleName(), channelCode, recipient, false, e.getMessage());
         }
@@ -288,7 +313,7 @@ public class NotifyPublisher {
      */
     private Long resolveTemplateId(SysNotifyRule rule, SysNotifyRuleChannel channel) {
         String channelCode =
-                channel.getChannel() == null ? "" : channel.getChannel().toUpperCase();
+                channel.getChannel() == null ? "" : channel.getChannel().toUpperCase(Locale.ROOT);
         if (channel.getTemplateId() != null) {
             if (NotifyChannel.SMS.equals(channelCode)) {
                 SysSmsTemplate tpl = smsTemplateMapper.selectById(channel.getTemplateId());
@@ -324,35 +349,28 @@ public class NotifyPublisher {
         return tpl.getId();
     }
 
-    private String quotaKey(SysNotifyRule rule, SysNotifyRuleChannel channel, String recipient) {
+    private String reserveQuota(SysNotifyRule rule, SysNotifyRuleChannel channel, String recipient) {
+        Integer limit = channel.getDailyLimit();
+        if (limit == null || limit <= 0) {
+            return null;
+        }
+        ZonedDateTime now = ZonedDateTime.now();
         boolean global = "GLOBAL".equalsIgnoreCase(channel.getDailyLimitScope());
-        return QUOTA_KEY_PREFIX + rule.getId() + ":" + channel.getChannel().toUpperCase() + ":"
-                + (global ? "_" : recipient) + ":" + LocalDate.now().format(DAY);
-    }
-
-    private boolean exceedQuota(
-            SysNotifyRule rule, SysNotifyRuleChannel channel, String recipient, String channelCode) {
-        Integer limit = channel.getDailyLimit();
-        if (limit == null || limit <= 0) {
-            return false;
+        String key =
+                QUOTA_KEY_PREFIX + rule.getId() + ":" + channel.getChannel().toUpperCase(Locale.ROOT) + ":"
+                        + (global ? "_" : recipient) + ":" + now.format(DAY);
+        long ttlSeconds = Duration.between(now, now.toLocalDate().plusDays(1).atStartOfDay(now.getZone()))
+                        .getSeconds()
+                + 60;
+        Long reserved = stringRedisTemplate.execute(
+                RESERVE_QUOTA, List.of(key), limit.toString(), Long.toString(Math.max(ttlSeconds, 60)));
+        if (reserved == null) {
+            throw new IllegalStateException("无法确认每日额度，请稍后重试");
         }
-        String value = stringRedisTemplate.opsForValue().get(quotaKey(rule, channel, recipient));
-        int used = value == null ? 0 : Integer.parseInt(value);
-        return used >= limit;
-    }
-
-    private void increaseQuota(SysNotifyRule rule, SysNotifyRuleChannel channel, String recipient, String channelCode) {
-        Integer limit = channel.getDailyLimit();
-        if (limit == null || limit <= 0) {
-            return;
+        if (reserved != 1L) {
+            throw new IllegalStateException("超出每日限额（" + limit + " 条/天，口径 " + (global ? "GLOBAL" : "RECIPIENT") + "）");
         }
-        String key = quotaKey(rule, channel, recipient);
-        Long used = stringRedisTemplate.opsForValue().increment(key);
-        if (used != null && used == 1L) {
-            LocalDateTime midnight = LocalDate.now().plusDays(1).atStartOfDay();
-            long ttlSeconds =
-                    java.time.Duration.between(LocalDateTime.now(), midnight).getSeconds() + 60;
-            stringRedisTemplate.expire(key, java.time.Duration.ofSeconds(Math.max(ttlSeconds, 60)));
-        }
+        // 保存本次预占的日期和收件人键，跨午夜失败也只归还本次许可。
+        return key;
     }
 }

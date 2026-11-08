@@ -21,8 +21,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
      * <p>封面（LIKE_SONG_PIC_SYNC_DESIGN.md D4）：仅当新值非空时覆盖，
      * 新值为空/null 时保留库中旧值，防止旧客户端把已有封面擦掉。</p>
      */
-    @Insert({
-        """
+    @Insert({"""
             INSERT INTO qt_like_song
                 (id, uid, sid, pid, platform, name, singer, album, hash, pic_url, deleted_at,
                  create_time, update_time, updated_seq, updated_at)
@@ -39,8 +38,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
                 updated_seq = EXCLUDED.updated_seq,
                 updated_at = EXCLUDED.updated_at,
                 update_time = EXCLUDED.update_time
-            """
-    })
+            """})
     int upsertActive(@Param("e") QtLikeSong e, @Param("seq") long seq, @Param("now") LocalDateTime now);
 
     /**
@@ -51,8 +49,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
      * 会触发 PG 「ON CONFLICT DO UPDATE command cannot affect row a second time」错误。
      * id 由号段填充器对集合参数逐个自动填充。</p>
      */
-    @Insert({
-        """
+    @Insert({"""
             <script>
             INSERT INTO qt_like_song
                 (id, uid, sid, pid, platform, name, singer, album, hash, pic_url, deleted_at,
@@ -73,15 +70,13 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
                 updated_at = EXCLUDED.updated_at,
                 update_time = EXCLUDED.update_time
             </script>
-            """
-    })
+            """})
     int upsertActiveBatch(@Param("list") List<QtLikeSong> list);
 
     /**
      * 取消收藏单曲（带 pid）：仅软删除该歌曲在指定歌单下的收藏行，推进 seq（幂等）。
      */
-    @Update(
-            """
+    @Update("""
             UPDATE qt_like_song
             SET deleted_at = #{now}, update_time = #{now}, updated_seq = #{seq}, updated_at = #{now}
             WHERE uid = #{uid} AND sid = #{sid} AND platform = #{platform} AND pid = #{pid}
@@ -98,8 +93,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
     /**
      * 取消收藏单曲（不带 pid）：软删除该歌曲在全部歌单下的收藏行，推进 seq（幂等）。
      */
-    @Update(
-            """
+    @Update("""
             UPDATE qt_like_song
             SET deleted_at = #{now}, update_time = #{now}, updated_seq = #{seq}, updated_at = #{now}
             WHERE uid = #{uid} AND sid = #{sid} AND platform = #{platform} AND deleted_at IS NULL
@@ -117,8 +111,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
      * 同一歌曲在其他歌单/无归属（pid=''）的行不受影响；已删除行不再变更（幂等）。
      * 成员行产生 song deleted changes 事件，其他端收到后只摘掉该 pid，不会误删其他歌单里的收藏。</p>
      */
-    @Update(
-            """
+    @Update("""
             UPDATE qt_like_song
             SET deleted_at = #{now}, update_time = #{now}, updated_seq = #{seq}, updated_at = #{now}
             WHERE uid = #{uid} AND pid = #{pid} AND deleted_at IS NULL
@@ -131,8 +124,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
      * 每行携带自己的 updated_seq（VALUES 源），幂等（已删除行不再变更）。
      * <p>调用方必须保证 list 内 (sid, platform, pid) 唯一。</p>
      */
-    @Update({
-        """
+    @Update({"""
             <script>
             UPDATE qt_like_song AS l
             SET deleted_at = #{now}, update_time = #{now}, updated_at = #{now}, updated_seq = v.seq
@@ -147,8 +139,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
               AND l.sid = v.sid AND l.platform = v.platform AND l.pid = v.pid
               AND l.deleted_at IS NULL
             </script>
-            """
-    })
+            """})
     int softRemoveByPlaylistBatch(
             @Param("list") List<QtLikeSong> list, @Param("uid") Long uid, @Param("now") LocalDateTime now);
 
@@ -157,8 +148,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
      * 每行携带自己的 updated_seq，幂等（已删除行不再变更）。
      * <p>调用方必须保证 list 内 (sid, platform) 唯一。</p>
      */
-    @Update({
-        """
+    @Update({"""
             <script>
             UPDATE qt_like_song AS l
             SET deleted_at = #{now}, update_time = #{now}, updated_at = #{now}, updated_seq = v.seq
@@ -172,8 +162,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
               AND l.sid = v.sid AND l.platform = v.platform
               AND l.deleted_at IS NULL
             </script>
-            """
-    })
+            """})
     int softRemoveAllBatch(
             @Param("list") List<QtLikeSong> list, @Param("uid") Long uid, @Param("now") LocalDateTime now);
 
@@ -183,8 +172,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
      * <p>uid 必传：pid 跨用户可能重名，绝不能只按 pid 删（同 {@link #softRemoveAllByPlaylist}）。
      * 入参复用歌单实体（只需要 pid/updatedSeq 字段）。</p>
      */
-    @Update({
-        """
+    @Update({"""
             <script>
             UPDATE qt_like_song AS l
             SET deleted_at = #{now}, update_time = #{now}, updated_at = #{now}, updated_seq = v.seq
@@ -197,8 +185,7 @@ public interface QtLikeSongMapper extends BaseMapper<QtLikeSong> {
             WHERE l.uid = #{uid} AND l.pid = v.pid
               AND l.deleted_at IS NULL
             </script>
-            """
-    })
+            """})
     int softRemoveAllByPlaylistBatch(
             @Param("list") List<QtLikePlaylist> list, @Param("uid") Long uid, @Param("now") LocalDateTime now);
 

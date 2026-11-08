@@ -4,15 +4,18 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import com.astral.auth.security.PermissionCache;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.UserRoleMapper;
+import com.astral.system.controller.UserRoleController;
 import com.astral.system.notify.NotifyEventRegistry;
 import com.astral.system.notify.NotifyPublisher;
 import com.astral.system.notify.UserRoleChangeNotifier;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import java.util.Collection;
 import java.util.List;
@@ -74,6 +77,22 @@ class UserRoleNotificationTest {
                             row.getUserId() == null ? before.getUserId() : row.getUserId(),
                             row.getRoleId() == null ? before.getRoleId() : row.getRoleId(),
                             row.getId());
+        });
+        when(mapper.update(isNull(), any(Wrapper.class))).thenAnswer(call -> {
+            LambdaUpdateWrapper<UserRole> update = call.getArgument(1);
+            String sql = "UPDATE user_roles SET " + update.getSqlSet() + " WHERE " + update.getSqlSegment();
+            var params = update.getParamNameValuePairs();
+            java.util.regex.Matcher placeholders = java.util.regex.Pattern.compile(
+                            "#\\{ew\\.paramNameValuePairs\\.([^}]+)}")
+                    .matcher(sql);
+            List<Object> values = new java.util.ArrayList<>();
+            StringBuilder prepared = new StringBuilder();
+            while (placeholders.find()) {
+                values.add(params.get(placeholders.group(1)));
+                placeholders.appendReplacement(prepared, "?");
+            }
+            placeholders.appendTail(prepared);
+            return jdbc.update(prepared.toString(), values.toArray());
         });
         when(mapper.deleteById(any(java.io.Serializable.class)))
                 .thenAnswer(call -> jdbc.update("DELETE FROM user_roles WHERE id=?", (Object) call.getArgument(0)));
@@ -189,6 +208,19 @@ class UserRoleNotificationTest {
         clearInvocations(publisher);
         assertTrue(service.updateById(row));
         verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void controllerUpdatePreservesRoleChangeNotificationsAfterCommit() {
+        jdbc.update("INSERT INTO user_roles VALUES (1,7,1)");
+        UserRole row = new UserRole();
+        row.setRoleId(2L);
+        UserRoleController controller = new UserRoleController(service, mock(PermissionCache.class));
+
+        controller.update(1L, row);
+
+        assertEquals("「轻听测试者」", onlyPayload().get("addedRoles"));
+        assertEquals(2L, service.getById(1L).getRoleId());
     }
 
     @Test

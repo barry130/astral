@@ -21,6 +21,7 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -144,13 +145,18 @@ public class StorageTargetResolver {
         if (userId == null || isOwner(folder, userId)) {
             return rotateForIntent(folderResolution);
         }
-        StorageFolderPermissionEntity grant = activeGrant(folder.getId(), userId);
-        if (grant == null) {
+        List<StorageFolderPermissionEntity> grants = activeUploadGrants(folder.getId(), userId);
+        if (grants.isEmpty()) {
             return rotateForIntent(folderResolution);
         }
-        List<StoragePermissionConfigEntity> grantBindings = orderedGrantBindings(grant.getId());
-        if (grantBindings.isEmpty()) {
-            return rotateForIntent(folderResolution);
+        List<StoragePermissionConfigEntity> grantBindings = new ArrayList<>();
+        for (StorageFolderPermissionEntity grant : grants) {
+            List<StoragePermissionConfigEntity> rows = orderedGrantBindings(grant.getId());
+            if (rows.isEmpty()) {
+                // 任一有效 UPLOAD 授权未限定配置 = 跟随文件夹绑定全集，与单行语义保持一致。
+                return rotateForIntent(folderResolution);
+            }
+            grantBindings.addAll(rows);
         }
         // 防御性子集过滤：授权写入时已校验 ⊆ 文件夹绑定，这里按当前可用集合再过滤一遍
         Map<Long, Candidate> available = new LinkedHashMap<>();
@@ -166,10 +172,169 @@ public class StorageTargetResolver {
             }
         }
         if (tiers.isEmpty()) {
-            // 授权绑定的配置已全部失效 → 回落文件夹绑定全集，不让授权行把上传彻底堵死
-            return rotateForIntent(folderResolution);
+            // 授权是权限的上界：授权内配置全部失效时必须失败关闭，绝不能回落到文件夹全集，
+            // 否则一条「只允许 A 渠道」的授权会因 A 停用而突然获得 B/C 渠道的上传能力。
+            throw new BusinessException("STORAGE041", "授权范围内没有可用的存储配置");
         }
         return build(folderResolution.strategy(), folder, SOURCE_GRANT, tiers, true);
+    }
+
+    /**
+     * 解析创建意图时落库的 v2 路由快照。候选顺序/priority/configVersion 只来自快照，
+     * 不会实时 resolve 增补新候选；folderId/folderVersion 与当前操作不一致时失败关闭。
+     */
+    public Resolution parseSnapshot(String json, Long expectedFolderId, Long expectedFolderVersion) {
+        if (json == null || json.isBlank()) {
+            throw new BusinessException("STORAGE047", "上传意图缺少路由快照");
+        }
+        if (json.length() > MAX_SNAPSHOT_CHARS) {
+            throw new BusinessException("STORAGE047", "路由快照超长");
+        }
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            if (root == null
+                    || !root.path("v").isIntegralNumber()
+                    || root.path("v").asInt() != 2) {
+                throw invalidSnapshot();
+            }
+            if (!root.path("folderId").isIntegralNumber()
+                    || !root.path("folderVersion").isIntegralNumber()) {
+                throw invalidSnapshot();
+            }
+            long folderId = root.path("folderId").asLong();
+            long folderVersion = root.path("folderVersion").asLong();
+            if (!Objects.equals(expectedFolderId, folderId) || !Objects.equals(expectedFolderVersion, folderVersion)) {
+                throw new BusinessException("STORAGE047", "路由快照与上传意图的目录版本不一致");
+            }
+            String strategy = text(root, "strategy").toUpperCase(java.util.Locale.ROOT);
+            if (!StorageFolderEntity.STRATEGY_FAILOVER.equals(strategy)
+                    && !StorageFolderEntity.STRATEGY_ROUND_ROBIN.equals(strategy)) {
+                throw invalidSnapshot();
+            }
+            String source = text(root, "source").toUpperCase(java.util.Locale.ROOT);
+            if (!SOURCE_FOLDER.equals(source) && !SOURCE_GRANT.equals(source)) {
+                throw invalidSnapshot();
+            }
+            JsonNode tierNodes = root.path("tiers");
+            if (!tierNodes.isArray() || tierNodes.isEmpty() || tierNodes.size() > 32) {
+                throw invalidSnapshot();
+            }
+            List<Tier> tiers = new ArrayList<>();
+            LinkedHashSet<Long> seenConfigIds = new LinkedHashSet<>();
+            int candidateCount = 0;
+            for (JsonNode tierNode : tierNodes) {
+                if (!tierNode.isObject() || !tierNode.path("priority").isIntegralNumber()) {
+                    throw invalidSnapshot();
+                }
+                JsonNode priorityNode = tierNode.path("priority");
+                long rawPriority = priorityNode.asLong();
+                // 与 sys_storage_folder_config.CHECK (priority BETWEEN 0 AND 10000)
+                // 及 StorageFolderService.normalizePriority 的落库范围保持一致：0 是合法最小优先级，
+                // 快照解析若拒绝 0 会让按默认/前端最小值创建的意图永远无法重放。
+                if (rawPriority < 0 || rawPriority > 10000) {
+                    throw invalidSnapshot();
+                }
+                int priority = (int) rawPriority;
+                JsonNode candidateNodes = tierNode.path("candidates");
+                if (!candidateNodes.isArray() || candidateNodes.isEmpty()) {
+                    throw invalidSnapshot();
+                }
+                List<Candidate> candidates = new ArrayList<>();
+                for (JsonNode node : candidateNodes) {
+                    if (!node.isObject()
+                            || !node.path("configId").isIntegralNumber()
+                            || !node.path("configVersion").isIntegralNumber()) {
+                        throw invalidSnapshot();
+                    }
+                    long configId = node.path("configId").asLong();
+                    long configVersion = node.path("configVersion").asLong();
+                    String providerType = text(node, "providerType").toUpperCase(java.util.Locale.ROOT);
+                    if (configId <= 0 || configVersion < 0 || !isSelectable(providerType)) {
+                        throw invalidSnapshot();
+                    }
+                    if (!seenConfigIds.add(configId) || ++candidateCount > 128) {
+                        throw invalidSnapshot();
+                    }
+                    candidates.add(new Candidate(configId, configVersion, providerType, ""));
+                }
+                tiers.add(new Tier(priority, List.copyOf(candidates)));
+            }
+            return new Resolution(strategy, folderId, folderVersion, source, List.copyOf(tiers), json);
+        } catch (BusinessException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new BusinessException("STORAGE047", "路由快照损坏");
+        }
+    }
+
+    /**
+     * 发送/故障转移前对单个快照候选做当前事实复核：目录版本、渠道启停/版本、操作者当前授权。
+     * 复核不推进轮询游标，也不会把快照之外的候选加回来。
+     */
+    public Candidate requireCurrentCandidate(
+            StorageFolderEntity folder,
+            String userId,
+            boolean folderAclExempt,
+            Long expectedFolderId,
+            Long expectedFolderVersion,
+            Long configId,
+            Long expectedConfigVersion) {
+        requireFolder(folder);
+        if (!Objects.equals(expectedFolderId, folder.getId())
+                || !Objects.equals(expectedFolderVersion, versionOf(folder))) {
+            throw new BusinessException("STORAGE047", "目录目标版本已变更");
+        }
+        if (!StorageFolderEntity.STATUS_ENABLED.equals(folder.getStatus())) {
+            throw new BusinessException("STORAGE025", "目录已停用");
+        }
+        Resolution currentFolder = resolveForFolder(folder);
+        Candidate current = null;
+        for (Candidate candidate : currentFolder.flatCandidates()) {
+            if (Objects.equals(candidate.configId(), configId)) {
+                current = candidate;
+                break;
+            }
+        }
+        if (current == null) {
+            throw new BusinessException("STORAGE041", "候选渠道已停用或不再属于目录绑定");
+        }
+        if (expectedConfigVersion != null && !expectedConfigVersion.equals(current.configVersion())) {
+            throw new BusinessException("STORAGE047", "候选渠道配置版本已变更");
+        }
+        if (!folderAclExempt && userId != null && !isOwner(folder, userId)) {
+            List<StorageFolderPermissionEntity> grants = activeUploadGrants(folder.getId(), userId);
+            if (grants.isEmpty()) {
+                throw new BusinessException("STORAGE013", "目录上传授权已撤销");
+            }
+            boolean unrestricted = false;
+            LinkedHashSet<Long> allowedConfigIds = new LinkedHashSet<>();
+            for (StorageFolderPermissionEntity grant : grants) {
+                List<StoragePermissionConfigEntity> rows = orderedGrantBindings(grant.getId());
+                if (rows.isEmpty()) {
+                    unrestricted = true;
+                    break;
+                }
+                for (StoragePermissionConfigEntity row : rows) {
+                    allowedConfigIds.add(row.getStorageConfigId());
+                }
+            }
+            if (!unrestricted && !allowedConfigIds.contains(configId)) {
+                throw new BusinessException("STORAGE041", "候选渠道不在当前授权范围内");
+            }
+        }
+        return current;
+    }
+
+    private static BusinessException invalidSnapshot() {
+        return new BusinessException("STORAGE047", "路由快照格式无效");
+    }
+
+    private static String text(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        if (!value.isTextual() || value.asText().isBlank()) {
+            throw invalidSnapshot();
+        }
+        return value.asText();
     }
 
     // ============================================================
@@ -193,8 +358,8 @@ public class StorageTargetResolver {
             }
             tierList.add(new Tier(entry.getKey(), candidates));
         }
-        Resolution resolution = new Resolution(
-                strategy, folder.getId(), folder.getTargetVersion(), source, List.copyOf(tierList), null);
+        Resolution resolution =
+                new Resolution(strategy, folder.getId(), versionOf(folder), source, List.copyOf(tierList), null);
         return withSnapshot(resolution);
     }
 
@@ -288,21 +453,43 @@ public class StorageTargetResolver {
                 .orderByAsc(StoragePermissionConfigEntity::getId));
     }
 
-    private StorageFolderPermissionEntity activeGrant(Long folderId, String userId) {
-        StorageFolderPermissionEntity grant =
-                permissionMapper.selectOne(new LambdaQueryWrapper<StorageFolderPermissionEntity>()
+    /**
+     * 取该用户全部有效且含 UPLOAD 的授权行（按 id 稳定排序）。
+     *
+     * <p>只取 LIMIT 1 的任意行会漏掉另一行授予的 UPLOAD/配置子集；过期行也可能被错误选中。
+     * 多行授权的配置子集按并集处理，权限本身由 {@link StorageFolderService#hasPermission} 合并判断。</p>
+     */
+    private List<StorageFolderPermissionEntity> activeUploadGrants(Long folderId, String userId) {
+        List<StorageFolderPermissionEntity> rows =
+                permissionMapper.selectList(new LambdaQueryWrapper<StorageFolderPermissionEntity>()
                         .eq(StorageFolderPermissionEntity::getFolderId, folderId)
                         .eq(StorageFolderPermissionEntity::getSubjectType, StorageFolderPermissionEntity.SUBJECT_USER)
                         .eq(StorageFolderPermissionEntity::getSubjectId, userId)
                         .isNull(StorageFolderPermissionEntity::getRevokedTime)
-                        .last("LIMIT 1"));
-        if (grant == null) {
-            return null;
+                        .orderByAsc(StorageFolderPermissionEntity::getId));
+        LocalDateTime now = LocalDateTime.now();
+        List<StorageFolderPermissionEntity> active = new ArrayList<>();
+        for (StorageFolderPermissionEntity row : rows) {
+            if (row.getExpiresTime() != null && row.getExpiresTime().isBefore(now)) {
+                continue;
+            }
+            if (hasUploadPermission(row.getPermissions())) {
+                active.add(row);
+            }
         }
-        if (grant.getExpiresTime() != null && grant.getExpiresTime().isBefore(LocalDateTime.now())) {
-            return null;
+        return active;
+    }
+
+    private static boolean hasUploadPermission(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return false;
         }
-        return grant;
+        for (String permission : raw.split(",")) {
+            if (StorageFolderPermissionEntity.PERM_UPLOAD.equalsIgnoreCase(permission.trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isOwner(StorageFolderEntity folder, String userId) {

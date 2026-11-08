@@ -44,6 +44,9 @@ public class AiAgentKnowledgeEntity {
     /** 过滤策略 */
     private String filterPolicyJson;
 
+    /** 相关度尺度版本 */
+    private String scoreScale;
+
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

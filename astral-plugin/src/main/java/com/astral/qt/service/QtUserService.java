@@ -397,15 +397,23 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
             throw new QtException("当前验证码不正确");
         }
 
-        user.setPassword(BCrypt.hashpw(dto.getPassword()));
-        user.setUpdateTime(LocalDateTime.now());
-        userMapper.updateById(user);
+        int changed = userMapper.update(
+                null,
+                new LambdaUpdateWrapper<User>()
+                        .eq(User::getId, user.getId())
+                        .eq(User::getUserType, USER_TYPE_APP)
+                        .eq(User::getEmail, dto.getEmail())
+                        .eq(User::getPassword, user.getPassword())
+                        .set(User::getPassword, BCrypt.hashpw(dto.getPassword()))
+                        .set(User::getPwdUpdateTime, LocalDateTime.now())
+                        .set(User::getUpdateTime, LocalDateTime.now()));
+        if (changed != 1) throw new QtException("账号信息已变化，请重新获取验证码");
 
         // 验证码一次性失效（连同失败计数），注销该用户所有会话
         stringRedisTemplate.delete(List.of(redisKey, codeFailKey(redisKey)));
         StpUtil.kickout(user.getId());
 
-        return user;
+        return userMapper.selectById(user.getId());
     }
 
     /**
@@ -441,7 +449,7 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
 
     public User updateUser(Long userId, QtUpdateUserDto dto) {
         User user = userMapper.selectById(userId);
-        if (user == null) {
+        if (user == null || !USER_TYPE_APP.equals(user.getUserType())) {
             throw new QtException("用户不存在");
         }
 
@@ -454,16 +462,20 @@ public class QtUserService extends ServiceImpl<UserMapper, User> {
             if (count != null && count > 0) {
                 throw new QtException("当前邮箱已被使用");
             }
-            user.setEmail(dto.getEmail());
         }
-
-        user.setNickname(dto.getNickname());
-        user.setAvatar(dto.getAvatar());
+        var patch = new LambdaUpdateWrapper<User>()
+                .eq(User::getId, userId)
+                .eq(User::getUserType, USER_TYPE_APP)
+                .set(User::getEmail, dto.getEmail())
+                .set(User::getNickname, dto.getNickname())
+                .set(User::getAvatar, dto.getAvatar())
+                .set(User::getUpdateTime, LocalDateTime.now());
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
-            user.setPassword(BCrypt.hashpw(dto.getPassword()));
+            patch.eq(User::getPassword, user.getPassword())
+                    .set(User::getPassword, BCrypt.hashpw(dto.getPassword()))
+                    .set(User::getPwdUpdateTime, LocalDateTime.now());
         }
-        user.setUpdateTime(LocalDateTime.now());
-        userMapper.updateById(user);
+        if (userMapper.update(null, patch) != 1) throw new QtException("账号信息已变化，请重新登录后重试");
 
         // 更新资料后强制下线，前端重新登录（与参考实现一致）
         StpUtil.kickout(userId);

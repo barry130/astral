@@ -59,18 +59,11 @@ public class StorageWorkerAuthInterceptor implements HandlerInterceptor {
             throw new BusinessException("STORAGE017");
         }
         long window = properties.getOriginTimestampWindowSeconds();
-        long skew = Math.abs(System.currentTimeMillis() / 1000 - ts);
-        if (skew > window) {
-            log.warn("[Storage] Worker 请求时间戳超窗: skew={}s", skew);
-            throw new BusinessException("STORAGE017");
-        }
-
-        // Nonce 防重放：SETNX 失败说明该 Nonce 已在窗口内使用过
-        Boolean first = stringRedisTemplate
-                .opsForValue()
-                .setIfAbsent(NONCE_KEY_PREFIX + nonce, "1", Duration.ofSeconds(window * 2L));
-        if (!Boolean.TRUE.equals(first)) {
-            log.warn("[Storage] Worker 请求 Nonce 重放: uri={}", request.getRequestURI());
+        long nowSeconds = System.currentTimeMillis() / 1000;
+        // 用区间比较而不是 Math.abs(now - ts)：Long.MIN_VALUE 取绝对值会溢出成负数，
+        // 使极端时间戳绕过窗口校验。区间比较没有任何算术溢出。
+        if (ts < nowSeconds - window || ts > nowSeconds + window) {
+            log.warn("[Storage] Worker 请求时间戳超窗: ts={}, now={}", ts, nowSeconds);
             throw new BusinessException("STORAGE017");
         }
 
@@ -79,6 +72,15 @@ public class StorageWorkerAuthInterceptor implements HandlerInterceptor {
         boolean ok = StorageHmac.verify(secret.getBytes(StandardCharsets.UTF_8), canonical, signature);
         if (!ok) {
             log.warn("[Storage] Worker 请求签名校验失败: uri={}", request.getRequestURI());
+            throw new BusinessException("STORAGE017");
+        }
+
+        // 先验签再写 Nonce：未通过签名的请求不得消耗 Redis key（否则匿名者可批量灌入 Nonce）。
+        Boolean first = stringRedisTemplate
+                .opsForValue()
+                .setIfAbsent(NONCE_KEY_PREFIX + nonce, "1", Duration.ofSeconds(window * 2L));
+        if (!Boolean.TRUE.equals(first)) {
+            log.warn("[Storage] Worker 请求 Nonce 重放: uri={}", request.getRequestURI());
             throw new BusinessException("STORAGE017");
         }
         return true;

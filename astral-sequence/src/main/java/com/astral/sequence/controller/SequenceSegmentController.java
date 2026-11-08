@@ -1,26 +1,29 @@
 package com.astral.sequence.controller;
 
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
+import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.SequenceSegment;
 import com.astral.sequence.service.SequenceSegmentService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 号段分配控制器
- * <p>提供序列号段分配记录的CRUD操作</p>
+ * <p>
+ * 号段表是发号器的运行时状态，只能由 {@code SegmentGenerator} 通过乐观锁维护。
+ * 管理端只提供只读查询；原先生成的创建/更新/删除接口会把 max_value/version 直接暴露给
+ * 任意持有 {@code admin:sequence:edit} 的账号，一旦误删号段行，下一次发号会重新从 1 开始，
+ * 与已有主键冲突。为确保 ID 不重复，这里不提供写接口。
+ * </p>
  */
 @Tag(name = "号段分配表")
 @RestController
@@ -43,7 +46,7 @@ public class SequenceSegmentController {
     @GetMapping("/page")
     public Result<Page<SequenceSegment>> page(
             @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
-        Page<SequenceSegment> page = new Page<>(pageNum, pageSize);
+        Page<SequenceSegment> page = new Page<>(PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize));
         return Result.success(sequenceSegmentService.page(page));
     }
 
@@ -56,50 +59,10 @@ public class SequenceSegmentController {
     @Operation(summary = "根据ID查询")
     @GetMapping("/{id}")
     public Result<SequenceSegment> getById(@PathVariable Long id) {
-        return Result.success(sequenceSegmentService.getById(id));
-    }
-
-    /**
-     * 创建号段分配记录
-     *
-     * @param entity 号段分配实体
-     * @return 操作结果
-     */
-    @Operation(summary = "创建")
-    @RequiresPermission("admin:sequence:edit")
-    @PostMapping
-    public Result<Void> create(@RequestBody SequenceSegment entity) {
-        sequenceSegmentService.save(entity);
-        return Result.success();
-    }
-
-    /**
-     * 更新号段分配记录
-     *
-     * @param id 号段记录ID
-     * @param entity 号段分配实体（包含更新后的字段）
-     * @return 操作结果
-     */
-    @Operation(summary = "更新")
-    @RequiresPermission("admin:sequence:edit")
-    @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody SequenceSegment entity) {
-        entity.setId(id);
-        sequenceSegmentService.updateById(entity);
-        return Result.success();
-    }
-
-    /**
-     * 删除号段分配记录
-     *
-     * @param id 号段记录ID
-     * @return 操作结果
-     */
-    @Operation(summary = "删除")
-    @RequiresPermission("admin:sequence:edit")
-    @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable Long id) {
-        sequenceSegmentService.removeById(id);
-        return Result.success();
+        SequenceSegment segment = sequenceSegmentService.getById(id);
+        if (segment == null) {
+            throw BusinessException.of("号段记录不存在");
+        }
+        return Result.success(segment);
     }
 }

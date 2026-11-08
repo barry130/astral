@@ -1,5 +1,6 @@
 package com.astral.monitor.alert;
 
+import com.astral.common.http.BoundedHttpTransport;
 import com.astral.dao.entity.AlertChannel;
 import com.astral.dao.entity.AlertRecord;
 import com.astral.dao.entity.AlertRule;
@@ -11,9 +12,11 @@ import com.astral.dao.mapper.StatApiHourlyMapper;
 import com.astral.dao.mapper.StatErrorLogMapper;
 import com.astral.system.mail.MailService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -72,10 +75,8 @@ public class AlertEngine {
     /** 渠道配置解析器（JSON 容错），引擎与测试接口共用 */
     private final AlertConfigParser configParser = new AlertConfigParser();
 
-    /** WEBHOOK 发送复用 HttpClient（进程内共享） */
-    private final java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    /** Webhook 出站地址策略：保存时校验 + 每次发送前复检（防 SSRF/DNS rebinding 基础防护） */
+    private final WebhookUrlPolicy webhookUrlPolicy;
 
     /** 规则评估互斥锁：fixedDelay 串行本来不会重入，防御手动触发与定时并发 */
     private final Object evaluateLock = new Object();
@@ -117,7 +118,12 @@ public class AlertEngine {
         int windowMinutes =
                 rule.getWindowMinutes() != null && rule.getWindowMinutes() > 0 ? rule.getWindowMinutes() : 5;
         long value = queryMetric(normalizeMetric(rule.getMetric()), windowMinutes);
-        long threshold = rule.getThreshold() != null ? rule.getThreshold() : 0;
+        // 旧数据/直接改库可能留下 null 或 <=0 的阈值；按 0 处理会让规则每轮都命中并持续轰炸渠道。
+        if (rule.getThreshold() == null || rule.getThreshold() < 1) {
+            log.warn("[alert] 规则[{}]阈值非法（{}），本轮跳过", rule.getName(), rule.getThreshold());
+            return;
+        }
+        long threshold = rule.getThreshold();
         if (value < threshold) {
             return;
         }
@@ -165,6 +171,8 @@ public class AlertEngine {
         String errorMsg = null;
         if (channel == null) {
             errorMsg = "绑定渠道不存在（id=" + rule.getChannelId() + "）";
+        } else if (!Integer.valueOf(1).equals(channel.getEnabled())) {
+            errorMsg = "绑定渠道已停用";
         } else {
             try {
                 deliver(channel, title, content);
@@ -193,10 +201,18 @@ public class AlertEngine {
             log.warn("[alert] 触发记录落库失败: {}", e.getMessage());
         }
 
-        // 更新冷却锚点（无论发送成败，避免失败渠道每分钟重试轰炸）
-        rule.setLastFiredAt(LocalDateTime.now());
+        // 更新冷却锚点（无论发送成败，避免失败渠道每分钟重试轰炸）。
+        // 只写 last_fired_at：updateById(rule) 会把评估开始时读到的整行旧值写回，
+        // 覆盖管理员在此期间对阈值/窗口/渠道的修改（丢失更新）。
+        LocalDateTime firedAt = LocalDateTime.now();
+        rule.setLastFiredAt(firedAt);
         try {
-            alertRuleMapper.updateById(rule);
+            alertRuleMapper.update(
+                    null,
+                    new LambdaUpdateWrapper<AlertRule>()
+                            .eq(AlertRule::getId, rule.getId())
+                            .set(AlertRule::getLastFiredAt, firedAt)
+                            .set(AlertRule::getUpdateTime, firedAt));
         } catch (Exception e) {
             log.warn("[alert] 规则冷却时间更新失败: {}", e.getMessage());
         }
@@ -211,7 +227,7 @@ public class AlertEngine {
 
     /** 按渠道类型分发发送 */
     public void deliver(AlertChannel channel, String title, String content) throws Exception {
-        String type = channel.getType() == null ? "" : channel.getType().toUpperCase();
+        String type = channel.getType() == null ? "" : channel.getType().toUpperCase(Locale.ROOT);
         Map<String, String> config = configParser.parse(channel.getConfig());
         switch (type) {
             case CHANNEL_EMAIL -> deliverEmail(config, title, content);
@@ -250,26 +266,52 @@ public class AlertEngine {
         if (url == null || url.isBlank()) {
             throw new IllegalArgumentException("WEBHOOK 渠道缺少 url");
         }
+        java.net.URI target;
+        try {
+            target = java.net.URI.create(url.trim());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Webhook URL 格式非法");
+        }
         StringBuilder json = new StringBuilder();
         json.append("{\"title\":")
                 .append(jsonEscape(title))
                 .append(",\"content\":")
                 .append(jsonEscape(content))
                 .append(",\"source\":\"astral-alert\"}");
-        java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder()
-                .uri(java.net.URI.create(url.trim()))
-                .timeout(Duration.ofSeconds(10))
-                .header("Content-Type", "application/json")
-                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(json.toString()));
-        String headerName = config.getOrDefault("header", "X-Astral-Alert");
-        String secret = config.get("secret");
-        if (secret != null && !secret.isBlank()) {
-            builder.header(headerName, secret);
+        Map<String, String> requestHeaders = new java.util.LinkedHashMap<>();
+        requestHeaders.put("Content-Type", "application/json");
+        String headerName = config.getOrDefault("header", "X-Astral-Alert").trim();
+        if (!headerName.matches("[A-Za-z0-9-]{1,64}")) {
+            throw new IllegalArgumentException("WEBHOOK 自定义 header 名称非法");
         }
-        java.net.http.HttpResponse<String> response =
-                httpClient.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("Webhook 响应 " + response.statusCode());
+        String secret = config.get("secret");
+        validateWebhookSecret(secret);
+        if (secret != null && !secret.isBlank()) {
+            requestHeaders.put(headerName, secret);
+        }
+        var response = BoundedHttpTransport.send(
+                target,
+                "POST",
+                requestHeaders,
+                json.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                Duration.ofSeconds(10),
+                65536,
+                webhookUrlPolicy::approve);
+        if (response.status() < 200 || response.status() >= 300) {
+            throw new IllegalStateException("Webhook 响应 " + response.status());
+        }
+    }
+
+    private static void validateWebhookSecret(String secret) {
+        if (secret == null) {
+            return;
+        }
+        for (int i = 0; i < secret.length(); i++) {
+            char value = secret.charAt(i);
+            // Validate before the HTTP builder, whose IllegalArgumentException includes the value.
+            if ((value < 0x20 && value != '\t') || value == 0x7f || value > 0xff) {
+                throw new IllegalArgumentException("WEBHOOK secret 含有非法请求头字符");
+            }
         }
     }
 
@@ -295,10 +337,36 @@ public class AlertEngine {
     }
 
     public static String normalizeMetric(String metric) {
-        return metric == null ? "" : metric.trim().toUpperCase();
+        return metric == null ? "" : metric.trim().toUpperCase(Locale.ROOT);
     }
 
     public AlertConfigParser getConfigParser() {
         return configParser;
+    }
+
+    /**
+     * 渠道配置完整校验（管理端保存前调用）。
+     *
+     * <p>在基础 JSON 必填项之外，对 WEBHOOK 追加出站地址策略校验，
+     * 确保普通告警编辑权限无法保存指向内网/任意第三方的 URL。</p>
+     *
+     * @return null=通过，否则为可直接展示的错误文案
+     */
+    public String validateChannelConfig(String type, String configJson) {
+        String basicError = configParser.validate(type, configJson);
+        if (basicError != null) {
+            return basicError;
+        }
+        String normalizedType = type == null ? "" : type.trim().toUpperCase(java.util.Locale.ROOT);
+        if (CHANNEL_WEBHOOK.equals(normalizedType)) {
+            try {
+                Map<String, String> config = configParser.parse(configJson);
+                validateWebhookSecret(config.get("secret"));
+                webhookUrlPolicy.validate(config.get("url"));
+            } catch (IllegalArgumentException e) {
+                return e.getMessage();
+            }
+        }
+        return null;
     }
 }

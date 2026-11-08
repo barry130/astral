@@ -1,7 +1,7 @@
 package com.astral.storage.service;
 
+import com.astral.common.exception.BusinessException;
 import com.astral.storage.entity.StorageFileEntity;
-import com.astral.storage.entity.StorageFolderEntity;
 import com.astral.storage.entity.StorageUploadOperationEntity;
 import com.astral.storage.mapper.StorageFileMapper;
 import com.astral.storage.mapper.StorageFolderMapper;
@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -45,10 +46,10 @@ public class UploadOperationRecoveryJob {
 
     private final StorageUploadOperationMapper operationMapper;
     private final StorageFileMapper fileMapper;
-    private final StorageFolderMapper folderMapper;
     private final UploadAdmissionControl admissionControl;
     private final ObjectMapper objectMapper;
     private final PlatformTransactionManager transactionManager;
+    private final StorageFolderMapper folderMapper;
 
     @Scheduled(fixedDelayString = "#{${astral.plugins.storage.upload-operation.recovery-interval-seconds:60} * 1000}")
     public void recover() {
@@ -80,6 +81,7 @@ public class UploadOperationRecoveryJob {
     }
 
     private void recoverOne(StorageUploadOperationEntity candidate, LocalDateTime now) {
+        fileMapper.lockUploadKey(StorageFolderService.securityLockKey(candidate.getFolderId()));
         StorageUploadOperationEntity operation = operationMapper.selectById(candidate.getId());
         if (operation == null) {
             return;
@@ -149,6 +151,19 @@ public class UploadOperationRecoveryJob {
     }
 
     private void recoverRemoteSucceeded(StorageUploadOperationEntity operation, LocalDateTime now) {
+        if (folderMapper.selectById(operation.getFolderId()) == null) {
+            // Keep the confirmed remote result and charge for reconciliation; never create an orphan file.
+            operationMapper.update(
+                    null,
+                    Wrappers.<StorageUploadOperationEntity>lambdaUpdate()
+                            .eq(StorageUploadOperationEntity::getId, operation.getId())
+                            .eq(
+                                    StorageUploadOperationEntity::getState,
+                                    StorageUploadOperationEntity.STATE_REMOTE_SUCCEEDED)
+                            .set(StorageUploadOperationEntity::getFailureCode, "FOLDER_MISSING")
+                            .set(StorageUploadOperationEntity::getUpdateTime, now));
+            return;
+        }
         Map<String, Object> payload = readJson(operation.getSafeResultJson());
         String url = payload.get("url") == null ? null : String.valueOf(payload.get("url"));
         if (url == null || url.isBlank()) {
@@ -166,9 +181,20 @@ public class UploadOperationRecoveryJob {
             operationMapper.update(null, update);
             return;
         }
-        StorageFolderEntity folder = folderMapper.selectById(operation.getFolderId());
+        // 幂等：主路径可能已插入文件、随后在操作行 CAS 前崩溃，恢复任务重跑不能再次插入
+        // （sys_storage_file.upload_operation_id 唯一索引会令整个事务反复回滚，操作永远停在 REMOTE_SUCCEEDED）。
+        StorageFileEntity existing = fileMapper.selectOne(new LambdaQueryWrapper<StorageFileEntity>()
+                .eq(StorageFileEntity::getUploadOperationId, operation.getId())
+                .last("LIMIT 1"));
+        if (existing != null) {
+            markCommitted(operation, existing.getId(), now);
+            log.info("恢复任务发现文件已登记，仅补操作状态: uploadId={}, fileId={}", operation.getUploadId(), existing.getId());
+            return;
+        }
         StorageFileEntity file = new StorageFileEntity();
-        file.setPublicId(operation.getPublicId());
+        // 公开 ID 必须重新生成：uploadId/publicId 是外部可见标识，恢复路径不得把意图 ID 直接当文件 ID
+        // （主路径 registerCommittedFile 同样使用 fresh randomId）。
+        file.setPublicId(UUID.randomUUID().toString().replace("-", ""));
         file.setUploadId(operation.getUploadId());
         file.setUploadOperationId(operation.getId());
         file.setFolderId(operation.getFolderId());
@@ -180,7 +206,9 @@ public class UploadOperationRecoveryJob {
         file.setSizeBytes(operation.getActualSize() == null ? 0L : operation.getActualSize());
         file.setChecksum(operation.getActualSha256());
         file.setContentVersion(1L);
-        file.setVisibility(folder == null || folder.getVisibility() == null ? "PRIVATE" : folder.getVisibility());
+        // 两段式代传文件一律 PUBLIC（§11.3）：上游是公开图床，恢复路径不能跟随目录当前可见性
+        // （目录可能在上传后被改回 PRIVATE），否则会生成不可访问却已计费的本地记录。
+        file.setVisibility(StorageFileEntity.VISIBILITY_PUBLIC);
         file.setStatus(StorageFileEntity.STATUS_AVAILABLE);
         file.setUploaderType(StorageUploadOperationEntity.ACTOR_USER);
         file.setUploaderId(operation.getActorId());
@@ -188,19 +216,27 @@ public class UploadOperationRecoveryJob {
         file.setUpdateTime(now);
         fileMapper.insert(file);
 
+        markCommitted(operation, file.getId(), now);
+        log.info("已补登记远端成功但未落库的上传: uploadId={}, fileId={}", operation.getUploadId(), file.getId());
+    }
+
+    private void markCommitted(StorageUploadOperationEntity operation, Long fileId, LocalDateTime now) {
         LambdaUpdateWrapper<StorageUploadOperationEntity> update = Wrappers.<StorageUploadOperationEntity>lambdaUpdate()
                 .eq(StorageUploadOperationEntity::getId, operation.getId())
                 .eq(StorageUploadOperationEntity::getState, StorageUploadOperationEntity.STATE_REMOTE_SUCCEEDED)
                 .set(StorageUploadOperationEntity::getState, StorageUploadOperationEntity.STATE_COMMITTED)
-                .set(StorageUploadOperationEntity::getFileId, file.getId())
+                .set(StorageUploadOperationEntity::getFileId, fileId)
                 .set(StorageUploadOperationEntity::getQuotaCharge, StorageUploadOperationEntity.CHARGE_CONSUMED)
                 .set(StorageUploadOperationEntity::getCompletedAt, now)
                 .set(
                         StorageUploadOperationEntity::getVersion,
                         operation.getVersion() == null ? 1L : operation.getVersion() + 1)
                 .set(StorageUploadOperationEntity::getUpdateTime, now);
-        operationMapper.update(null, update);
-        log.info("已补登记远端成功但未落库的上传: uploadId={}, fileId={}", operation.getUploadId(), file.getId());
+        if (operationMapper.update(null, update) == 0) {
+            // 状态已被其他执行者推进（或文件登记与操作 CAS 之间发生并发）：抛异常回滚本次文件插入，
+            // 下一轮恢复从最新状态重新幂等处理，不能静默留下「文件已建、操作仍 REMOTE_SUCCEEDED」。
+            throw new BusinessException("STORAGE055");
+        }
     }
 
     private Map<String, Object> readJson(String json) {

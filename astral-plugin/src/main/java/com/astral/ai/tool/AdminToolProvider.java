@@ -1,5 +1,6 @@
 package com.astral.ai.tool;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.astral.ai.common.AiConstants;
 import com.astral.ai.common.AiJson;
 import com.astral.ai.dto.AiAdminDtos;
@@ -31,6 +32,7 @@ import com.astral.system.service.SysConfigService;
 import com.astral.system.service.UserRoleService;
 import com.astral.system.service.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.lang.management.ManagementFactory;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -59,6 +61,12 @@ import tools.jackson.databind.node.ObjectNode;
  *
  * <p>即便确认通过，执行前也会重新走一遍业务 Service 的对象级校验，而不是直接写库——
  * 这样助手永远不可能绕过权限体系。</p>
+ *
+ * <p>每个工具都声明其触碰资源的管理端权限码（{@code definition().permissionCodes()}），
+ * 由执行前权限咽喉（{@code AiToolPermissionGate}）强制：只读/草稿工具要求对应资源的
+ * view 级权限，高风险写操作要求 edit 级权限，整体换角色只允许超管（{@code *:*:*}，
+ * 等价于 HTTP 面 {@code admin:ai:tool:edit} 之外另加的 {@code @RequiresSuper} 语义）。
+ * 空权限码仅适用于纯数学/日期类工具，本工具集没有这类工具。</p>
  */
 @Slf4j
 @Component
@@ -132,7 +140,7 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
+                    List.of("admin:monitor:view"),
                     AiToolTypes.emptySchema(),
                     null,
                     null);
@@ -169,7 +177,7 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
+                    List.of("admin:plugin:view"),
                     AiToolTypes.emptySchema(),
                     null,
                     null);
@@ -202,7 +210,7 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
+                    List.of("admin:system:user:view"),
                     AiToolTypes.emptySchema(),
                     null,
                     null);
@@ -233,7 +241,7 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
+                    List.of("admin:system:permission:view"),
                     AiToolTypes.emptySchema(),
                     null,
                     null);
@@ -270,7 +278,7 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
+                    List.of("admin:storage:view"),
                     AiToolTypes.emptySchema(),
                     null,
                     null);
@@ -302,9 +310,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:log:view"),
+                    AiToolTypes.objectSchema("""
                             {"keyword":{"type":"string","description":"用户名或模块关键字"},
                              "status":{"type":"integer","description":"1 成功 / 0 失败"},
                              "days":{"type":"integer","minimum":1,"maximum":30,"description":"最近几天，默认 3"}}"""),
@@ -355,9 +362,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:log:view"),
+                    AiToolTypes.objectSchema("""
                             {"keyword":{"type":"string","description":"用户名关键字"},
                              "status":{"type":"integer","description":"1 成功 / 0 失败"},
                              "days":{"type":"integer","minimum":1,"maximum":30,"description":"最近几天，默认 3"}}"""),
@@ -407,9 +413,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:feedback:view"),
+                    AiToolTypes.objectSchema("""
                             {"status":{"type":"string","description":"反馈状态，如 PENDING / DONE"},
                              "days":{"type":"integer","minimum":1,"maximum":90,"description":"最近几天，默认 7"}}"""),
                     null,
@@ -451,9 +456,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:ai:usage:view"),
+                    AiToolTypes.objectSchema("""
                             {"days":{"type":"integer","minimum":1,"maximum":90,"description":"统计天数，默认 7"}}"""),
                     null,
                     null);
@@ -472,6 +476,7 @@ public class AdminToolProvider implements AiToolProvider {
             data.put("outputTokens", summary.outputTokens());
             data.put("estimatedCost", summary.estimatedCost());
             data.put("currency", summary.currency());
+            data.put("costs", summary.costs());
             List<Map<String, Object>> trend = new ArrayList<>();
             for (AiUsageService.TrendPoint point : summary.trend()) {
                 Map<String, Object> row = new LinkedHashMap<>();
@@ -498,7 +503,7 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.READ,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
+                    List.of("admin:ai:config:view"),
                     AiToolTypes.emptySchema(),
                     null,
                     null);
@@ -555,9 +560,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.DRAFT,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:message:edit"),
+                    AiToolTypes.objectSchema("""
                             {"topic":{"type":"string","description":"公告主题"},
                              "keyPoints":{"type":"array","items":{"type":"string"},"description":"需要覆盖的要点"},
                              "tone":{"type":"string","description":"语气，如 正式 / 简洁 / 亲和"}}"""),
@@ -598,9 +602,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.DRAFT,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:system:mail:view"),
+                    AiToolTypes.objectSchema("""
                             {"topic":{"type":"string","description":"邮件主题"},
                              "audience":{"type":"string","description":"目标收件人群体"},
                              "keyPoints":{"type":"array","items":{"type":"string"},"description":"要点"}}"""),
@@ -641,9 +644,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.DRAFT,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:feedback:view"),
+                    AiToolTypes.objectSchema("""
                             {"feedbackId":{"type":"integer","description":"反馈 ID"},
                              "conclusion":{"type":"string","description":"处理结论，如 已修复 / 已排期 / 需要更多信息"}}"""),
                     null,
@@ -690,9 +692,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.DRAFT,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:system:config:view"),
+                    AiToolTypes.objectSchema("""
                             {"configKey":{"type":"string","description":"配置键"},
                              "targetValue":{"type":"string","description":"目标值（勿含密钥）"},
                              "reason":{"type":"string","description":"变更原因"}}"""),
@@ -738,9 +739,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.DRAFT,
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:plugin:view"),
+                    AiToolTypes.objectSchema("""
                             {"pluginId":{"type":"string","description":"插件 ID"},
                              "operation":{"type":"string","description":"DISABLE / ENABLE / UPGRADE"}}"""),
                     null,
@@ -798,6 +798,7 @@ public class AdminToolProvider implements AiToolProvider {
                 String name,
                 String description,
                 String handlerKey,
+                List<String> permissionCodes,
                 String argumentsSchema,
                 String sideEffects) {
             return new AiToolDef(
@@ -808,7 +809,7 @@ public class AdminToolProvider implements AiToolProvider {
                     AiConstants.RiskLevel.HIGH,
                     AiConstants.ApprovalPolicy.ADMIN_CONFIRM,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
-                    List.of(),
+                    permissionCodes,
                     argumentsSchema,
                     null,
                     sideEffects);
@@ -823,8 +824,8 @@ public class AdminToolProvider implements AiToolProvider {
                     "停用模型提供方",
                     "停用某个 AI 模型提供方，停用后引用它的路由与智能体将无法调用。高风险，需确认。",
                     "admin.disableProvider",
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:ai:provider:edit"),
+                    AiToolTypes.objectSchema("""
                             {"providerId":{"type":"integer","description":"提供方 ID"},
                              "reason":{"type":"string","description":"停用原因"}}"""),
                     "停用后该提供方不再参与路由");
@@ -842,17 +843,17 @@ public class AdminToolProvider implements AiToolProvider {
             AiProviderEntity provider = providerService.require(providerId);
             providerService.update(
                     provider.getId(),
-                    provider.getName(),
-                    provider.getProviderType(),
-                    provider.getBaseUrl(),
                     null,
-                    provider.getSecretRef(),
+                    null,
+                    null,
+                    null,
+                    null,
                     Boolean.FALSE,
-                    provider.getConnectTimeoutMs(),
-                    provider.getReadTimeoutMs(),
-                    provider.getMaxRetries(),
-                    provider.getWeight(),
-                    provider.getRemark(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
                     context.userId());
             return AiToolResult.ok(
                     "提供方「" + provider.getName() + "」已停用。",
@@ -868,8 +869,8 @@ public class AdminToolProvider implements AiToolProvider {
                     "修改系统配置",
                     "修改一个已存在的系统配置项的值。高风险，需确认；密钥类配置一律拒绝。",
                     "admin.updateConfig",
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:system:config:edit"),
+                    AiToolTypes.objectSchema("""
                             {"configKey":{"type":"string","description":"已存在的配置键"},
                              "configValue":{"type":"string","description":"新值"},
                              "reason":{"type":"string","description":"变更原因"}}"""),
@@ -890,8 +891,14 @@ public class AdminToolProvider implements AiToolProvider {
             if (config == null) {
                 return AiToolResult.rejected("配置项不存在，助手不允许新增配置：" + key);
             }
-            config.setConfigValue(value);
-            configService.updateById(config);
+            boolean updated = configService.update(new LambdaUpdateWrapper<SysConfig>()
+                    .eq(SysConfig::getId, config.getId())
+                    .eq(SysConfig::getConfigKey, key.trim())
+                    .set(SysConfig::getConfigValue, value)
+                    .set(SysConfig::getUpdateTime, LocalDateTime.now()));
+            if (!updated) {
+                return AiToolResult.failed("配置项未更新，请刷新后核对");
+            }
             configService.evictCache();
             return AiToolResult.ok(
                     "配置项 " + key + " 已更新。", AiToolTypes.payload(Map.of("configKey", key, "updated", true)));
@@ -906,8 +913,8 @@ public class AdminToolProvider implements AiToolProvider {
                     "修改用户状态",
                     "启用或禁用某个用户账号。高风险，需确认；不允许禁用最后一个超级管理员。",
                     "admin.changeUserStatus",
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:system:user:edit"),
+                    AiToolTypes.objectSchema("""
                             {"userId":{"type":"integer","description":"用户 ID"},
                              "status":{"type":"integer","description":"1 启用 / 0 禁用"},
                              "reason":{"type":"string","description":"原因"}}"""),
@@ -925,17 +932,34 @@ public class AdminToolProvider implements AiToolProvider {
             if (userId == null || status == null) {
                 return AiToolResult.rejected("缺少 userId 或 status");
             }
+            if (status != 0 && status != 1) {
+                return AiToolResult.rejected("status 只允许 0 或 1");
+            }
+            String reason = context.arg("reason");
+            if (status == 0 && (reason == null || reason.isBlank())) {
+                return AiToolResult.rejected("封禁时必须填写理由");
+            }
             User user = userService.getById(userId);
             if (user == null || Integer.valueOf(1).equals(user.getDeleted())) {
                 return AiToolResult.rejected("用户不存在：" + userId);
             }
             if (status == 0
+                    && "ADMIN".equals(user.getUserType())
                     && count("SELECT count(*) FROM sys_user WHERE deleted = 0 AND status = 1 AND user_type = 'ADMIN'")
                             <= 1) {
                 return AiToolResult.rejected("系统中仅剩一个可用管理员，禁止禁用该账号");
             }
-            user.setStatus(status);
-            userService.updateById(user);
+            User patch = new User();
+            patch.setId(userId);
+            patch.setStatus(status);
+            patch.setStatusReason(status == 0 ? reason.trim() : "");
+            patch.setUpdateTime(LocalDateTime.now());
+            if (!userService.updateById(patch)) {
+                return AiToolResult.failed("用户状态未更新，请刷新后核对");
+            }
+            if (status == 0) {
+                StpUtil.kickout(userId);
+            }
             return AiToolResult.ok(
                     "用户「" + user.getUsername() + "」状态已更新为 " + status + "。",
                     AiToolTypes.payload(Map.of("userId", userId, "status", status)));
@@ -950,8 +974,8 @@ public class AdminToolProvider implements AiToolProvider {
                     "调整用户角色",
                     "整体替换某个用户的角色集合。高风险，需确认；不允许移除最后一个超级管理员的角色。",
                     "admin.changeRolePermission",
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("*:*:*"),
+                    AiToolTypes.objectSchema("""
                             {"userId":{"type":"integer","description":"用户 ID"},
                              "roleIds":{"type":"array","items":{"type":"integer"},"description":"新的角色 ID 集合"},
                              "reason":{"type":"string","description":"原因"}}"""),
@@ -997,8 +1021,8 @@ public class AdminToolProvider implements AiToolProvider {
                     "删除存储文件",
                     "按公开 ID 删除一个存储文件。高风险，需确认；删除走存储插件自身的审计与异步清理流程。",
                     "admin.deleteFile",
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:storage:edit"),
+                    AiToolTypes.objectSchema("""
                             {"publicId":{"type":"string","description":"文件公开 ID"},
                              "reason":{"type":"string","description":"删除原因"}}"""),
                     "删除后不可恢复");
@@ -1028,8 +1052,8 @@ public class AdminToolProvider implements AiToolProvider {
                     "发布站内公告",
                     "直接发布一条站内公告。高风险，需确认；发布后立即对目标受众可见。",
                     "admin.publishNotice",
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:message:edit"),
+                    AiToolTypes.objectSchema("""
                             {"title":{"type":"string","description":"公告标题"},
                              "content":{"type":"string","description":"公告正文"},
                              "noticeType":{"type":"string","description":"公告类型，如 SYSTEM"},
@@ -1070,8 +1094,8 @@ public class AdminToolProvider implements AiToolProvider {
                     "发送通知邮件",
                     "通过系统邮件插件发送一封模板邮件。高风险，需确认；只允许使用已配置的模板场景。",
                     "admin.sendEmail",
-                    AiToolTypes.objectSchema(
-                            """
+                    List.of("admin:system:notify:rule:edit"),
+                    AiToolTypes.objectSchema("""
                             {"toEmail":{"type":"string","description":"收件邮箱"},
                              "sceneCode":{"type":"string","description":"邮件模板场景编码"},
                              "variables":{"type":"object","description":"模板变量"}}"""),
@@ -1096,9 +1120,30 @@ public class AdminToolProvider implements AiToolProvider {
             }
             List<NotifyPublisher.PublishResult> results =
                     notifyPublisher.publish(scene.trim(), variables, List.of(to.trim()));
-            return AiToolResult.ok(
-                    "邮件已提交发送至 " + to,
-                    AiToolTypes.payload(Map.of("toEmail", to, "sceneCode", scene, "submitted", true)));
+            if (results.isEmpty()) {
+                return AiToolResult.rejected("没有可用的邮件投递规则，请检查通知订阅配置");
+            }
+            long submitted = results.stream()
+                    .filter(result -> "EMAIL".equals(result.channel()) && result.ok())
+                    .count();
+            long failed = results.stream().filter(result -> !result.ok()).count();
+            ObjectNode payload = AiToolTypes.payload(Map.of(
+                    "toEmail",
+                    to.trim(),
+                    "sceneCode",
+                    scene.trim(),
+                    "submitted",
+                    submitted > 0,
+                    "submittedCount",
+                    submitted,
+                    "failedCount",
+                    failed));
+            if (submitted == 0 || failed > 0) {
+                // A provider can accept a message before a transport failure; never automatically resend.
+                return new AiToolResult(
+                        AiToolResult.UNKNOWN, "邮件投递未全部确认成功（已确认 " + submitted + " 条），请核对通知日志后再决定是否重试", payload);
+            }
+            return AiToolResult.ok("邮件已提交发送至 " + to, payload);
         }
     }
 

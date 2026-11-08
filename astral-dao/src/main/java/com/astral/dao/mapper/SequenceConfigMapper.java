@@ -3,6 +3,7 @@ package com.astral.dao.mapper;
 import com.astral.dao.entity.SequenceConfig;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
@@ -21,4 +22,8 @@ public interface SequenceConfigMapper extends BaseMapper<SequenceConfig> {
      */
     @Select("SELECT * FROM sequence_config WHERE biz_key = #{bizKey}")
     SequenceConfig selectByBizKey(@Param("bizKey") String bizKey);
+
+    @Select("SELECT * FROM sequence_config WHERE id=#{id} FOR UPDATE")
+    @Options(useCache = false, flushCache = Options.FlushCachePolicy.TRUE)
+    SequenceConfig lockById(@Param("id") Long id);
 }

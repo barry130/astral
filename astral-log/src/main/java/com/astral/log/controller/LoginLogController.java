@@ -6,17 +6,14 @@ import com.astral.common.util.CsvExportUtil;
 import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.LoginLog;
 import com.astral.log.service.LoginLogService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,7 +53,8 @@ public class LoginLogController {
     @Operation(summary = "导出CSV")
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportCsv() {
-        Page<LoginLog> page = loginLogService.page(new Page<>(1, 10000, false));
+        Page<LoginLog> page = loginLogService.page(
+                new Page<>(1, 10000, false), new QueryWrapper<LoginLog>().orderByDesc("login_time"));
         byte[] csv = CsvExportUtil.build(
                 new String[] {"ID", "用户ID", "用户名", "登录类型", "IP", "归属地", "浏览器", "操作系统", "状态", "消息", "登录时间"},
                 page.getRecords(),
@@ -90,46 +88,5 @@ public class LoginLogController {
     @GetMapping("/{id}")
     public Result<LoginLog> getById(@PathVariable Long id) {
         return Result.success(loginLogService.getById(id));
-    }
-
-    /**
-     * 创建登录日志
-     *
-     * @param entity 登录日志实体
-     * @return 操作结果
-     */
-    @Operation(summary = "创建")
-    @PostMapping
-    public Result<Void> create(@RequestBody LoginLog entity) {
-        loginLogService.save(entity);
-        return Result.success();
-    }
-
-    /**
-     * 更新登录日志
-     *
-     * @param id 日志ID
-     * @param entity 登录日志实体（包含更新后的字段）
-     * @return 操作结果
-     */
-    @Operation(summary = "更新")
-    @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody LoginLog entity) {
-        entity.setId(id);
-        loginLogService.updateById(entity);
-        return Result.success();
-    }
-
-    /**
-     * 删除登录日志
-     *
-     * @param id 日志ID
-     * @return 操作结果
-     */
-    @Operation(summary = "删除")
-    @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable Long id) {
-        loginLogService.removeById(id);
-        return Result.success();
     }
 }

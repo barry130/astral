@@ -35,8 +35,8 @@ public class StorageBatchService {
             try {
                 switch (req.action()) {
                     case "delete" -> fileService.requestDelete(id, userId, admin);
-                    case "move" -> managerService.update(
-                            id, new StorageDtos.FileUpdateReq(null, req.folderId()), userId, admin);
+                    case "move" ->
+                        managerService.update(id, new StorageDtos.FileUpdateReq(null, req.folderId()), userId, admin);
                     case "visibility" -> fileService.changeVisibility(id, userId, req.visibility(), admin);
                     default -> throw new IllegalStateException("Unsupported batch action");
                 }

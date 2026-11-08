@@ -67,20 +67,20 @@ public interface NoticeService {
     /**
      * 消息中心列表（App 端，Android + iOS）
      * <p>在 {@link #listForApp} 基础上追加 display 含消息中心位，返回带 noticeType 供前端区分标签；
-     * 已读状态由前端缓存判断，后端不返回 read 字段。</p>
+     * 点对点消息返回 readTime；广播已读状态由客户端缓存判断。</p>
      */
     List<SysNotice> listMessageCenter(Long userId);
 
     /** 消息中心列表（指定平台集合） */
     List<SysNotice> listMessageCenter(Long userId, List<String> targets);
 
-    /** 未读数（候选总数，App 端）：已读判定在前端缓存，清缓存 = 全部未读 */
+    /** 点对点未读数 + 广播候选数（广播已读仍由客户端扣除）。 */
     long countUnread(Long userId);
 
-    /** 未读数（候选总数，指定平台集合） */
+    /** 点对点未读数 + 广播候选数，指定平台集合。 */
     long countUnread(Long userId, List<String> targets);
 
-    /** 已读回执（本期仅记日志，不落表） */
+    /** 持久化本人的点对点消息已读时间，不改广播或他人消息。 */
     void readAck(Long userId, List<Long> ids);
 
     // ==================== 管理端 ====================

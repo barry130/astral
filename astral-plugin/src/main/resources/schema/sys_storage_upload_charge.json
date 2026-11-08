@@ -1,0 +1,20 @@
+{
+  "tableName": "sys_storage_upload_charge",
+  "tableComment": "直传上传消费记录（删除或移动文件不退回额度）",
+  "moduleName": "storage",
+  "className": "StorageUploadChargeEntity",
+  "fields": [
+    {"columnName":"id","fieldName":"id","fieldType":"Long","jdbcType":"BIGINT","isPrimaryKey":true,"mybatisPlusIdType":"INPUT"},
+    {"columnName":"upload_id","fieldName":"uploadId","fieldType":"String","jdbcType":"VARCHAR","length":64,"isRequired":true},
+    {"columnName":"file_id","fieldName":"fileId","fieldType":"Long","jdbcType":"BIGINT","isRequired":true},
+    {"columnName":"folder_id","fieldName":"folderId","fieldType":"Long","jdbcType":"BIGINT","isRequired":true},
+    {"columnName":"actor_id","fieldName":"actorId","fieldType":"String","jdbcType":"VARCHAR","length":64},
+    {"columnName":"quota_day","fieldName":"quotaDay","fieldType":"LocalDate","jdbcType":"DATE","isRequired":true},
+    {"columnName":"charge","fieldName":"charge","fieldType":"Boolean","jdbcType":"BOOLEAN","isRequired":true},
+    {"columnName":"create_time","fieldName":"createTime","fieldType":"LocalDateTime","jdbcType":"TIMESTAMP","isAutoFill":"INSERT"}
+  ],
+  "indexes": [
+    {"indexName":"uk_storage_upload_charge_upload","columns":["upload_id"],"isUnique":true},
+    {"indexName":"idx_storage_upload_charge_quota","columns":["folder_id","actor_id","quota_day"]}
+  ]
+}

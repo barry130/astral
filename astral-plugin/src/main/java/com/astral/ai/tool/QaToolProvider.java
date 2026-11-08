@@ -82,8 +82,7 @@ public class QaToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"query":{"type":"string","description":"检索关键词或问题"},
                              "topK":{"type":"integer","minimum":1,"maximum":20,"description":"返回条数，默认 6"}}"""),
                     null,
@@ -108,8 +107,7 @@ public class QaToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"query":{"type":"string","description":"接口路径或功能描述"},
                              "topK":{"type":"integer","minimum":1,"maximum":20,"description":"返回条数，默认 6"}}"""),
                     null,
@@ -134,8 +132,7 @@ public class QaToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"query":{"type":"string","description":"插件相关问题"},
                              "topK":{"type":"integer","minimum":1,"maximum":20,"description":"返回条数，默认 6"}}"""),
                     null,
@@ -160,8 +157,7 @@ public class QaToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"query":{"type":"string","description":"部署相关问题"},
                              "topK":{"type":"integer","minimum":1,"maximum":20,"description":"返回条数，默认 6"}}"""),
                     null,
@@ -192,8 +188,7 @@ public class QaToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"dictCode":{"type":"string","description":"字典编码，如 ai_request_status"}}"""),
                     null,
                     null);
@@ -246,8 +241,7 @@ public class QaToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.ASTRAL_FRONT),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"errorCode":{"type":"string","description":"错误码，如 AI005 或 COMMON005"}}"""),
                     null,
                     null);

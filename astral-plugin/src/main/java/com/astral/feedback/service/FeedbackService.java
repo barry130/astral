@@ -134,7 +134,10 @@ public class FeedbackService {
         qw.eq(Feedback::getIsPublic, true);
         qw.isNull(Feedback::getDeleteTime);
         qw.orderByDesc(Feedback::getCreateTime);
-        return feedbackMapper.selectPage(page, qw);
+        Page<Feedback> result = feedbackMapper.selectPage(page, qw);
+        // 公开列表对任何登录用户可见，属「他人反馈」：抹除 IP/联系方式/设备等隐私字段（D-FB-01）。
+        result.getRecords().forEach(this::redactForPublic);
+        return result;
     }
 
     /** 详情（本人 或 published+public，否则 403） */
@@ -148,7 +151,21 @@ public class FeedbackService {
         if (!isAdmin && !publicVisible && !self) {
             throw new FeedbackException(403, "无权查看该反馈");
         }
+        // 非本人、非管理员的公开可见读取：抹除隐私字段后再返回（D-FB-01）。
+        if (!isAdmin && !self) {
+            redactForPublic(f);
+        }
         return f;
+    }
+
+    /** 公开视图脱敏：抹除 IP、联系方式、设备标识（本人/管理员不受影响）。 */
+    private void redactForPublic(Feedback f) {
+        if (f == null) {
+            return;
+        }
+        f.setIp(null);
+        f.setContact(null);
+        f.setDevice(null);
     }
 
     /** 回复列表（升序，JOIN 昵称/用户类型） */
@@ -342,20 +359,31 @@ public class FeedbackService {
         Map<String, Object> result = new LinkedHashMap<>();
         long total = countByWrapper(w -> w.isNull(Feedback::getDeleteTime));
         result.put("total", total);
-        result.put("pending", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
-                .eq(Feedback::getStatus, Feedback.STATUS_PENDING)));
-        result.put("received", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
-                .eq(Feedback::getStatus, Feedback.STATUS_RECEIVED)));
-        result.put("resolved", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
-                .eq(Feedback::getStatus, Feedback.STATUS_RESOLVED)));
-        result.put("published", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
-                .eq(Feedback::getStatus, Feedback.STATUS_PUBLISHED)));
-        result.put("deprecated", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
-                .eq(Feedback::getStatus, Feedback.STATUS_DEPRECATED)));
+        result.put(
+                "pending",
+                countByWrapper(
+                        w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_PENDING)));
+        result.put(
+                "received",
+                countByWrapper(
+                        w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_RECEIVED)));
+        result.put(
+                "resolved",
+                countByWrapper(
+                        w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_RESOLVED)));
+        result.put(
+                "published",
+                countByWrapper(
+                        w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_PUBLISHED)));
+        result.put(
+                "deprecated",
+                countByWrapper(
+                        w -> w.isNull(Feedback::getDeleteTime).eq(Feedback::getStatus, Feedback.STATUS_DEPRECATED)));
         // 今日新增
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        result.put("todayNew", countByWrapper(w -> w.isNull(Feedback::getDeleteTime)
-                .ge(Feedback::getCreateTime, todayStart)));
+        result.put(
+                "todayNew",
+                countByWrapper(w -> w.isNull(Feedback::getDeleteTime).ge(Feedback::getCreateTime, todayStart)));
         // 未回复：无任何管理员回复的未完结反馈数
         result.put("unreplied", countUnreplied());
 

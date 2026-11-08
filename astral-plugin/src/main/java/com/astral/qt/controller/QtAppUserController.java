@@ -44,7 +44,16 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -137,6 +146,7 @@ public class QtAppUserController {
     }
 
     @Operation(summary = "发送邮箱验证码")
+    @RateLimit(key = "ip", limit = 5, duration = 60, message = "发送过于频繁，请60秒后再试")
     @PostMapping("/email")
     public Result<Void> sendEmail(@Valid @RequestBody QtSendEmailDto dto) {
         userService.sendEmail(dto);

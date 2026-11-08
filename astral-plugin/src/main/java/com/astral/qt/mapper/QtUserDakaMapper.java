@@ -21,8 +21,7 @@ public interface QtUserDakaMapper extends BaseMapper<QtUserDaka> {
     List<LocalDate> getAllDakaDates(@Param("uid") Long uid);
 
     /** 有效总积分 = 总积分 - 使用积分签到的积分(每个扣10) */
-    @Select(
-            """
+    @Select("""
             SELECT COALESCE(SUM(integral),0) - (SELECT COALESCE(COUNT(*),0)*10 FROM qt_user_daka WHERE uid = #{uid} AND is_use_code = 1)
             FROM qt_user_daka WHERE uid = #{uid}
             """)

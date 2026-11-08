@@ -14,6 +14,15 @@
   schema/表/种子/字典全部由 Flyway 完成。
 - 应急关闭：环境变量 `FLYWAY_ENABLED=false`（仅排查问题用，正常部署必须开启）。
 
+## 历史迁移兼容
+
+历史 `V*.sql` 保持已发布字节与校验和。两类前置兼容处理随应用自动注册，无需人工修库或 `repair`：
+
+- `beforeEachMigrate__ensure_sys_notice.sql` 在空库/基线判定后、持有迁移锁时，仅在当前 schema 缺表时补齐通知表。早于正式宿主建表版本的通知增量因此可正常执行；已有通知表与业务数据由原增量转换。
+- `HistoricalSeedCompatibilityCallback` 只在指定版本、完整脚本名、已知 SQL 全部匹配时，用同一迁移事务替代三条有条件失败的种子 INSERT。26001 已有 `qt_tester` 时不再误插入；29001 多条规则补 EMAIL 渠道/收件人时使用确定顺序的互异 ID。替代执行失败会回滚，不跳过错误；成功后只跳过对应原语句。
+
+独立使用 `Flyway.configure()` 的工具需显式注册 Java callback，且保留默认 SQL callback 发现；Spring Boot 自动收集 callback bean。隔离 PostgreSQL 回归见 `FreshDatabaseMigrationTest`、`NoticeMigrationCompatibilityTest`，覆盖新库、无 history 基线、旧通知与授权保留、失败重试、并发迁移和校验和稳定。
+
 ## 脚本清单
 
 | 版本 | 文件 | 说明 | 存量库 |
@@ -81,7 +90,7 @@ V{yyyyMMddNNN}__{下划线小写描述}.sql    例：V20260915001__add_user_avat
 | 20261020001 | `V20261020001__notice_read_seconds_terms_version.sql` | `sys_notice` 增 `read_seconds BIGINT`（开屏弹窗读秒，NULL/0=不读秒）与 `terms_version VARCHAR(32)`（条款版本号）。用途：把 qt-pc 首次启动的免责声明/开源通知从硬编码改成后台下发——判定「这条公告是免责声明」的唯一依据是 `terms_version` 非空（不新增 `scene` 常量，避免牵连 `NotifyEventRegistry` 里反馈回复通知的全平台规则）；`terms_version` 一变客户端就重新弹一次。两列都可空、纯增列。**必须用 `to_regclass('sys_notice')` 守卫**：该表由 feedback 插件 `@PostConstruct` 初始化器建（`feedback-schema.sql`），**晚于 Flyway**，全新空库上裸 `ALTER` 会 `relation does not exist` 并阻断启动，而 `ADD COLUMN IF NOT EXISTS` 只对「列」幂等、不管「表不存在」；表缺失时跳过是安全的（`feedback-schema.sql` 的 CREATE 已是带两列的新结构）。`sys_notice.json` 同批加两字段 | 执行 |
 | 20261022001 | `V20261022001__cms_dict.sql` | 内容管理（CMS）数据字典（`cms_content_status` / `cms_comment_status` 等），前端下拉不得硬编码 | 执行 |
 | 20261024001 | `V20261024001__cms_private_share_dict.sql` | CMS 新增「私密」内容状态 + 分享目标类型字典（`dict_code` 守卫 + `(dict_type_id, dict_value)` 幂等） | 执行 |
-| 20261027001 | `V20261027001__sys_notice_to_host.sql` | **站内通知表建表权收归宿主**：`sys_notice` 此前由 feedback 插件的 `@PostConstruct` 初始化器创建（插件表、晚于 Flyway），导致「禁用反馈插件 → 通知能力一起消失」。本脚本用 `CREATE TABLE IF NOT EXISTS` + 6 个 `CREATE INDEX IF NOT EXISTS` + 每列 `COMMENT`（放在 `DO $$ … IF to_regclass('sys_notice') IS NOT NULL … EXECUTE format(…)` 块里，兼容语句顺序）承接建表口径；`feedback-schema.sql` 的 §3.3 与 `FeedbackSchemaInitializer` 的 `sys_notice` 段同批删除，宿主与插件的实体/mapper 仍在 `astral-dao`（`com.astral.dao.entity.SysNotice`）。**历史遗留不做修订**：更早的 `V20261001007`/`V20261002006` 仍是对 `sys_notice` 的裸 `ALTER`，全新空库按序执行时该表尚不存在，该版本会失败（已知遗留，与既有 `V20261001008` 同类问题一致；不动历史脚本是「只增不改」的红线） | 执行 |
+| 20261027001 | `V20261027001__sys_notice_to_host.sql` | **站内通知表建表权收归宿主**：承接通知表、索引和注释，宿主与插件共享 `astral-dao` 实体/mapper。更早通知增量的空库缺表问题已由 `beforeEachMigrate__ensure_sys_notice.sql` 兼容处理；所有历史版本与校验和保持不变。 | 执行 |
 | 20261027002 | `V20261027002__notice_type_announce_notice.sql` | **通知类型三值收敛为两值**：`notice_type` 字典保留 `announce`（公告）并新增 `notice`（通知，sort 2），把 `feedback`(id=131)/`request`(id=132) 置 `status=0`（禁用而非删除，存量行值不变、历史数据仍可解释）。`sys_notice.notice_type` 的存量 `feedback`/`request` 行**不做 UPDATE**——服务端查询按 `notice_type IN ('notice','feedback','request')` 兼容、前端渲染把非 `announce` 一律显示「通知」。种子按 `COALESCE(MAX(id),0)+ROW_NUMBER()` 取号 + `dict_type_id+dict_value` 的 `NOT EXISTS` 守卫；`notice_type` 字典的 id 段与 `sequence_segment` 高水位同批抬高 | 执行 |
 
 ## 新增一个变更的流程
@@ -118,3 +127,20 @@ FROM astral.flyway_schema_history ORDER BY installed_rank;
 | 20261029004 | `V20261029004__drop_mail_plugin_auth.sql` | **删除「插件发信授权」整套**（表 `sys_mail_plugin_auth` + 权限码）——授权入口 `MailService.send(pluginId,…)` / `SmsService.send(pluginId,…)` 已全仓零调用，发信改由通知规则决定渠道 | 执行 |
 | 20261029005 | `V20261029005__menu_message_statistics.sql` | 菜单数据修正：「邮箱统计」→「消息统计」，路径 `/dashboard/system/mail/log` → `/dashboard/system/message/statistics`（侧边栏渲染的是 `sys_menu` 表，只改前端代码不生效） | 执行 |
 | 20261029006 | `V20261029006__notice_type_personal_fix.sql` | 「用户角色变更 / 系统告警 / 找回密码验证码」历史站内信 `notice_type` 由 `announce` 改回 `notice`（事件定义 `NotifyEventRegistry` 已同批修正）；手工新建公告不受影响 | 执行 |
+
+## 2026-11 审阅修复增量
+
+| 版本 | 作用 |
+|---|---|
+| 20261107001 / 07002 | 工具调用来源与执行配置 plan hash |
+| 20261108001 | 请求执行租约、工具结果身份、分阶段用量与额度账本 |
+| 20261108002 / 08003 | 存储持久计数与旧上传票据，独立全局序列 |
+| 20261108004 | 知识检索索引和一次性归一评分 |
+| 20261108005 / 08006 / 08007 | 用量/工具人工核对及状态字典 |
+| 20261108008 | 知识任务持久游标、活动任务索引与默认状态；无游标的旧未完成任务转失败供显式重试 |
+
+已经发布的历史迁移文件和校验和不修改。`beforeEachMigrate__ensure_sys_notice.sql` 在正式迁移锁内补齐历史通知表前置依赖；`HistoricalSeedCompatibilityCallback` 只对三个精确匹配的历史种子语句执行等价纠偏，替换失败仍中止事务。
+
+PostgreSQL 启动由 `PostgresMigrationStrategy` 在调用 Flyway 前获取按 schema/history 表区分的事务 advisory lock，覆盖空库检查、自动baseline与整条迁移链，避免两个实例同时首次启动时空历史表竞态。最多等待锁5分钟，失败直接中止启动；独立连接事务在完成/异常时回滚释放锁。连接池需能提供该锁连接及Flyway自己的连接。其他数据库不使用PostgreSQL锁；当前运行库仍是PostgreSQL。
+
+插件auto-schema与08008使用相同的一次性cursor安装条件：从旧表转换失败任务；已由另一入口升级的durable任务保留当前状态和游标。不得每次启动无条件把RUNNING重置为FAILED。

@@ -1,6 +1,7 @@
 package com.astral.storage.service;
 
 import com.astral.common.exception.BusinessException;
+import com.astral.common.http.BoundedHttpTransport;
 import com.astral.storage.config.StorageProperties;
 import com.astral.storage.entity.StorageConfigEntity;
 import com.astral.storage.http.ApprovedTargetPolicy;
@@ -10,6 +11,7 @@ import com.astral.storage.http.HttpResponseParser;
 import com.astral.storage.http.HttpSecretEnvelope;
 import com.astral.storage.http.HttpTemplateEngine;
 import com.astral.storage.http.HttpUploadProfile;
+import com.astral.storage.http.PinnedDnsResolver;
 import com.astral.storage.mapper.StorageConfigMapper;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -18,13 +20,9 @@ import java.io.UncheckedIOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.net.http.HttpClient;
-import java.net.http.HttpConnectTimeoutException;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -32,10 +30,26 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.client5.http.ConnectTimeoutException;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.stereotype.Component;
 
 /**
@@ -47,8 +61,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>安全底线：仅 HTTPS + 画像端点必须仍在批准清单内；不跟随重定向；不复用连接失败到未知结果；
  * 响应体读取即封顶（超限即 PARSE 失败，不整包缓冲）；错误只回固定安全码，绝不回传上游正文/凭据。
- * 唯一例外：渠道测试 probe（仅管理端诊断入口）会回传经截断脱敏的上游错误摘要（≤140 字符、
- * 剥离控制字符与凭据字面量），真实上传路径仍只消费固定安全码。</p>
+ * 渠道测试只返回传输阶段与 HTTP 状态，不回传上游错误正文。</p>
  */
 @Slf4j
 @Component
@@ -67,17 +80,32 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
     /** 单次尝试默认预算 30s，硬顶 60s */
     public static final int MAX_ATTEMPT_MS = 60000;
 
-    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    /** 建连硬上限 5s；总预算仍由 attemptMs 绝对截止时间封顶 */
+    private static final long CONNECT_TIMEOUT_MS = 5000L;
 
-    /** 上游错误摘要提取：JSON 的 message/status_txt/error 字段（诊断用，见 {@link #upstreamReason}） */
-    private static final Pattern UPSTREAM_REASON_FIELD =
-            Pattern.compile("\"(?:message|status_txt|error)\"\\s*:\\s*\"([^\"]{0,200})\"");
+    /** 共享守护调度器只负责到点取消实际请求，不执行任何业务逻辑 */
+    private static final ScheduledExecutorService DEADLINE_SCHEDULER = Executors.newScheduledThreadPool(1, r -> {
+        Thread thread = new Thread(r, "storage-http-upload-deadline");
+        thread.setDaemon(true);
+        return thread;
+    });
 
-    private static final HttpClient CLIENT = HttpClient.newBuilder()
-            .connectTimeout(CONNECT_TIMEOUT)
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .version(HttpClient.Version.HTTP_1_1)
-            .build();
+    /** 测试可替换：系统 DNS 只允许在这里发生一次 */
+    @FunctionalInterface
+    interface HostResolver {
+        InetAddress[] resolve(String host) throws UnknownHostException;
+    }
+
+    /** 测试可替换：真实客户端必须绑定 PinnedDnsResolver，禁止再次系统解析 */
+    @FunctionalInterface
+    interface HttpClientFactory {
+        CloseableHttpClient create(PinnedDnsResolver resolver, long connectTimeoutMs, long attemptMs)
+                throws IOException;
+    }
+
+    private volatile HostResolver hostResolver = PinnedDnsResolver::resolvePublicIpv4;
+    private volatile HttpClientFactory httpClientFactory = HttpUploadGateway::buildPinnedClient;
+    private volatile ScheduledExecutorService deadlineScheduler = DEADLINE_SCHEDULER;
 
     /** 1×1 PNG，仅用于渠道连通性探测 */
     private static final byte[] PROBE_PNG = {
@@ -239,10 +267,22 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
      * 不依赖对方模块的 Service，避免跨线编译耦合。
      */
     public Channel loadChannel(long configId) {
-        StorageConfigEntity config = configMapper.selectById(configId);
+        return channelFrom(configMapper.selectById(configId));
+    }
+
+    /** The caller commits its SENDING transition before releasing this configuration row lock. */
+    public Channel loadChannelForSend(long configId) {
+        if (!org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("Sending authorization requires a transaction");
+        }
+        return channelFrom(configMapper.lockForSend(configId));
+    }
+
+    private Channel channelFrom(StorageConfigEntity config) {
         if (config == null || !StorageConfigEntity.STATUS_ENABLED.equals(config.getStatus())) {
             throw new BusinessException("STORAGE002");
         }
+        long configId = config.getId();
         if (!PROVIDER_CUSTOM_HTTP.equalsIgnoreCase(config.getProviderType())) {
             throw new BusinessException("STORAGE039");
         }
@@ -258,7 +298,10 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
             // 直接透传，让客户端看到可排查的原因而不是无参 040
             throw ex;
         } catch (RuntimeException ex) {
-            log.warn("自定义 HTTP 渠道信封解析失败: configId={}, reason={}", configId, ex.getMessage());
+            log.warn(
+                    "自定义 HTTP 渠道信封解析失败: configId={}, reason={}",
+                    configId,
+                    ex.getClass().getSimpleName());
             throw new BusinessException("STORAGE040", "渠道凭据信封解析失败，请在管理端重新保存该渠道");
         }
         if (envelope.profile() == null) {
@@ -270,8 +313,25 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
         } catch (BusinessException ex) {
             throw ex;
         } catch (RuntimeException ex) {
-            log.warn("自定义 HTTP 画像校验失败: configId={}, reason={}", configId, ex.getMessage());
+            log.warn(
+                    "自定义 HTTP 画像校验失败: configId={}, reason={}",
+                    configId,
+                    ex.getClass().getSimpleName());
             throw new BusinessException("STORAGE040");
+        }
+        // 服务端绑定证明必须与当前渠道和本次校验命中的批准目标一致：否则一份曾用于 A 渠道/A 目标的
+        // 信封被复制到 B 渠道（或画像端点被改写）时，旧凭据会被发往新地址，凭据边界失效。
+        HttpSecretEnvelope.Binding binding = envelope.binding();
+        if (!config.getId().equals(binding.channelId())
+                || !binding.origin().equals(validated.target().getOrigin())
+                || !binding.path().equals(validated.target().getPath())) {
+            log.warn(
+                    "自定义 HTTP 渠道凭据绑定不匹配: configId={}, bindingChannelId={}, bindingOrigin={}, bindingPath={}",
+                    configId,
+                    binding.channelId(),
+                    binding.origin(),
+                    binding.path());
+            throw new BusinessException("STORAGE034", "渠道凭据绑定与当前渠道或目标不一致，请在管理端重新保存该渠道");
         }
         long version = config.getConfigVersion() == null ? 0L : config.getConfigVersion();
         return new Channel(
@@ -285,6 +345,11 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
 
     /** 发送一次；不抛 IO 异常，所有失败都分类返回 */
     public Result send(Channel channel, Attempt attempt) {
+        return send(channel, attempt, attemptMs(channel.profile()));
+    }
+
+    private Result send(Channel channel, Attempt attempt, int budgetMs) {
+        long expiresAt = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(budgetMs);
         HttpUploadProfile profile = channel.profile();
         HttpTemplateEngine.RenderContext context = new HttpTemplateEngine.RenderContext(
                 attempt.uploadId(),
@@ -307,7 +372,10 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
                     context,
                     "fileNameTemplate");
         } catch (RuntimeException ex) {
-            log.warn("上传 URL/头部渲染失败: uploadId={}, reason={}", attempt.uploadId(), ex.getMessage());
+            log.warn(
+                    "上传 URL/头部渲染失败: uploadId={}, reason={}",
+                    attempt.uploadId(),
+                    ex.getClass().getSimpleName());
             return Result.notSent("TEMPLATE_ERROR");
         }
         // 批准目标在画像校验阶段已确定（channel.target()），这里只做渲染后 URI 的合法性复核：
@@ -328,12 +396,26 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
         if (uri.getUserInfo() != null || uri.getFragment() != null) {
             return Result.notSent("TARGET_NOT_APPROVED");
         }
+        // 唯一一次系统 DNS；后续实际连接只使用这份已校验的公网 IPv4，不再查询系统 DNS。
+        InetAddress[] resolved;
         try {
-            rejectNonPublicHost(uri.getHost());
-        } catch (UnknownHostException ex) {
-            return Result.notSent("DNS_FAILED");
+            resolved = BoundedHttpTransport.approve(
+                    uri,
+                    Duration.ofNanos(Math.max(1, expiresAt - System.nanoTime())),
+                    targetUri -> hostResolver.resolve(targetUri.getHost()));
         } catch (IOException ex) {
-            log.warn("上游目标地址不被允许: uploadId={}, reason={}", attempt.uploadId(), ex.getMessage());
+            return Result.notSent(System.nanoTime() >= expiresAt ? "ATTEMPT_TIMEOUT" : "DNS_FAILED");
+        } catch (RuntimeException ex) {
+            log.warn(
+                    "上游地址校验失败: uploadId={}, reason={}",
+                    attempt.uploadId(),
+                    ex.getClass().getSimpleName());
+            return Result.notSent("TARGET_NOT_APPROVED");
+        }
+        PinnedDnsResolver pinned;
+        try {
+            pinned = new PinnedDnsResolver(uri.getHost(), resolved);
+        } catch (IllegalArgumentException ex) {
             return Result.notSent("TARGET_NOT_APPROVED");
         }
 
@@ -342,98 +424,195 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
         try {
             body = multipartBody(profile, fields, renderedFileName, attempt, boundary);
         } catch (IOException | UncheckedIOException ex) {
-            log.warn("multipart 组装失败: uploadId={}, reason={}", attempt.uploadId(), ex.getMessage());
+            log.warn(
+                    "multipart 组装失败: uploadId={}, reason={}",
+                    attempt.uploadId(),
+                    ex.getClass().getSimpleName());
             return Result.notSent("BODY_BUILD_FAILED");
         }
 
-        HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
-                .timeout(Duration.ofMillis(attemptMs(profile)))
-                .POST(HttpRequest.BodyPublishers.ofByteArray(body));
+        long attemptMs = TimeUnit.NANOSECONDS.toMillis(expiresAt - System.nanoTime());
+        if (attemptMs <= 0) {
+            return Result.notSent("ATTEMPT_TIMEOUT");
+        }
+        long connectTimeoutMs = Math.min(CONNECT_TIMEOUT_MS, attemptMs);
+        HttpPost request = new HttpPost(uri);
+        request.setEntity(new ByteArrayEntity(
+                body, org.apache.hc.core5.http.ContentType.parse("multipart/form-data; boundary=" + boundary)));
         for (Map.Entry<String, String> header : headers.entrySet()) {
             if ("content-type".equalsIgnoreCase(header.getKey())) {
                 continue;
             }
-            builder.header(header.getKey(), header.getValue());
+            request.setHeader(header.getKey(), header.getValue());
         }
-        builder.header("Content-Type", "multipart/form-data; boundary=" + boundary);
-        builder.header("Accept-Encoding", "identity");
+        request.setHeader("Accept-Encoding", "identity");
+        request.setConfig(RequestConfig.custom()
+                .setConnectTimeout(Timeout.ofMilliseconds(connectTimeoutMs))
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(connectTimeoutMs))
+                .setResponseTimeout(Timeout.ofMilliseconds(attemptMs))
+                .setRedirectsEnabled(false)
+                .setContentCompressionEnabled(false)
+                .setProtocolUpgradeEnabled(false)
+                .setHardCancellationEnabled(true)
+                .build());
 
-        HttpResponse<InputStream> response;
+        AtomicBoolean deadlineHit = new AtomicBoolean(false);
+        ScheduledFuture<?> deadlineTask = null;
+        CloseableHttpClient client = null;
         try {
-            response = CLIENT.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
-        } catch (HttpConnectTimeoutException ex) {
-            return Result.notSent("CONNECT_TIMEOUT");
+            client = httpClientFactory.create(pinned, connectTimeoutMs, attemptMs);
+            if (System.nanoTime() >= expiresAt) {
+                return Result.notSent("ATTEMPT_TIMEOUT");
+            }
+            deadlineTask = deadlineScheduler.schedule(
+                    () -> {
+                        deadlineHit.set(true);
+                        // cancel() 同时中断阻塞中的连接/读写，避免 responseTimeout 仅作为空闲超时
+                        // 无法约束慢速握手/慢速发送造成的总预算超时。
+                        request.cancel();
+                    },
+                    Math.max(0, expiresAt - System.nanoTime()),
+                    TimeUnit.NANOSECONDS);
+            try (CloseableHttpResponse response = client.execute(request)) {
+                int status = response.getCode();
+                byte[] responseBody;
+                try (InputStream in = response.getEntity() == null
+                        ? InputStream.nullInputStream()
+                        : response.getEntity().getContent()) {
+                    responseBody = readCapped(in, MAX_RESPONSE_BYTES);
+                } catch (ResponseTooLargeException ex) {
+                    return Result.unknown(status, "RESPONSE_TOO_LARGE");
+                } catch (IOException ex) {
+                    return deadlineHit.get()
+                            ? Result.unknown(status, "ATTEMPT_TIMEOUT")
+                            : Result.unknown(status, "RESPONSE_READ_FAILED");
+                }
+                if (deadlineHit.get()) {
+                    return Result.unknown(status, "ATTEMPT_TIMEOUT");
+                }
+                if (status >= 300 && status < 400) {
+                    return Result.rejected(status, "UPSTREAM_REDIRECT");
+                }
+                if (status >= 500) {
+                    return Result.unknown(status, "UPSTREAM_5XX");
+                }
+                if (status >= 400) {
+                    return Result.rejected(status, "UPSTREAM_4XX");
+                }
+                if (status < 200) {
+                    return Result.rejected(status, "UPSTREAM_HTTP_STATUS");
+                }
+
+                HttpResponseParser.ParsedResult parsed;
+                try {
+                    parsed = responseParser.parse(
+                            status,
+                            new String(responseBody, StandardCharsets.UTF_8),
+                            profile,
+                            channel.target(),
+                            channel.secrets());
+                } catch (BusinessException ex) {
+                    log.warn(
+                            "上游响应解析失败: uploadId={}, code={}",
+                            attempt.uploadId(),
+                            ex.getClass().getSimpleName());
+                    return Result.unknown(status, "PARSE_FAILED");
+                }
+                switch (parsed.kind()) {
+                    case OK:
+                        // §3.4.6：远端大小是记录性元数据（上游可压缩/转码），不与本地声明比对——
+                        // 本地完整性由 actualSha256 保障；误判 UNKNOWN 会冻结操作并永久占用额度。
+                        return new Result(
+                                Kind.REMOTE_CREATED,
+                                status,
+                                "OK",
+                                parsed.url(),
+                                parsed.thumbUrl(),
+                                parsed.remoteId(),
+                                parsed.remoteSizeBytes(),
+                                parsed.width(),
+                                parsed.height());
+                    case URL_REJECTED:
+                        // 上游已创建，但回传 URL 不可用：对象存在，不能当失败重传
+                        return Result.unknown(status, "OUTPUT_URL_REJECTED");
+                    case CREDENTIAL_REFLECTION:
+                        return Result.unknown(status, "CREDENTIAL_REFLECTION");
+                    case PARSE_FAILED:
+                    default:
+                        return Result.unknown(status, "PARSE_FAILED");
+                }
+            }
+        } catch (ConnectTimeoutException ex) {
+            return deadlineHit.get() ? Result.unknown(null, "ATTEMPT_TIMEOUT") : Result.notSent("CONNECT_TIMEOUT");
+        } catch (org.apache.hc.client5.http.HttpHostConnectException ex) {
+            if (deadlineHit.get()) {
+                return Result.unknown(null, "ATTEMPT_TIMEOUT");
+            }
+            return hasCause(ex, NoRouteToHostException.class)
+                    ? Result.notSent("NO_ROUTE")
+                    : Result.notSent("CONNECT_REFUSED");
+        } catch (NoRouteToHostException ex) {
+            return deadlineHit.get() ? Result.unknown(null, "ATTEMPT_TIMEOUT") : Result.notSent("NO_ROUTE");
         } catch (ConnectException ex) {
-            return Result.notSent("CONNECT_REFUSED");
+            return deadlineHit.get() ? Result.unknown(null, "ATTEMPT_TIMEOUT") : Result.notSent("CONNECT_REFUSED");
         } catch (UnknownHostException ex) {
             return Result.notSent("DNS_FAILED");
-        } catch (NoRouteToHostException ex) {
-            return Result.notSent("NO_ROUTE");
-        } catch (HttpTimeoutException ex) {
+        } catch (SSLHandshakeException ex) {
+            // 证书链无效/主机名不匹配/协议握手失败都发生在 HTTP 请求写出之前，可安全换目标重试。
+            log.warn(
+                    "上游 TLS 握手失败: uploadId={}, reason={}",
+                    attempt.uploadId(),
+                    ex.getClass().getSimpleName());
+            return deadlineHit.get() ? Result.unknown(null, "ATTEMPT_TIMEOUT") : Result.notSent("TLS_HANDSHAKE_FAILED");
+        } catch (SSLException ex) {
+            log.warn(
+                    "上游 TLS 连接失败: uploadId={}, reason={}",
+                    attempt.uploadId(),
+                    ex.getClass().getSimpleName());
+            return Result.unknown(null, deadlineHit.get() ? "ATTEMPT_TIMEOUT" : "TLS_ERROR");
+        } catch (SocketTimeoutException ex) {
+            // 只有 ConnectTimeoutException 已证明处于连接阶段；其余 SocketTimeout 可能发生在发送/读取，
+            // 无法证明请求未到达上游，必须按 UNKNOWN 处理。
             return Result.unknown(null, "ATTEMPT_TIMEOUT");
-        } catch (IOException ex) {
-            return Result.unknown(null, "IO_ERROR");
-        } catch (InterruptedException ex) {
+        } catch (java.io.InterruptedIOException ex) {
+            if (deadlineHit.get()) {
+                return Result.unknown(null, "ATTEMPT_TIMEOUT");
+            }
             Thread.currentThread().interrupt();
             return Result.unknown(null, "INTERRUPTED");
-        }
-
-        int status = response.statusCode();
-        byte[] responseBody;
-        try (InputStream in = response.body()) {
-            responseBody = readCapped(in, MAX_RESPONSE_BYTES);
-        } catch (ResponseTooLargeException ex) {
-            return Result.unknown(status, "RESPONSE_TOO_LARGE");
         } catch (IOException ex) {
-            return Result.unknown(status, "RESPONSE_READ_FAILED");
-        }
-        if (status >= 300 && status < 400) {
-            return Result.rejected(status, "UPSTREAM_REDIRECT");
-        }
-        if (status >= 500) {
-            return Result.unknown(status, "UPSTREAM_5XX", upstreamReason(channel, responseBody));
-        }
-        if (status >= 400) {
-            return Result.rejected(status, "UPSTREAM_4XX", upstreamReason(channel, responseBody));
-        }
-        if (status < 200 || status > 299) {
-            return Result.rejected(status, "UPSTREAM_HTTP_STATUS", upstreamReason(channel, responseBody));
-        }
-
-        HttpResponseParser.ParsedResult parsed;
-        try {
-            parsed = responseParser.parse(
-                    status,
-                    new String(responseBody, StandardCharsets.UTF_8),
-                    profile,
-                    channel.target(),
-                    channel.secrets());
-        } catch (BusinessException ex) {
-            log.warn("上游响应解析失败: uploadId={}, code={}", attempt.uploadId(), ex.getMessage());
-            return Result.unknown(status, "PARSE_FAILED");
-        }
-        switch (parsed.kind()) {
-            case OK:
-                // §3.4.6：远端大小是记录性元数据（上游可压缩/转码），不与本地声明比对——
-                // 本地完整性由 actualSha256 保障；误判 UNKNOWN 会冻结操作并永久占用额度。
-                return new Result(
-                        Kind.REMOTE_CREATED,
-                        status,
-                        "OK",
-                        parsed.url(),
-                        parsed.thumbUrl(),
-                        parsed.remoteId(),
-                        parsed.remoteSizeBytes(),
-                        parsed.width(),
-                        parsed.height());
-            case URL_REJECTED:
-                // 上游已创建，但回传 URL 不可用：对象存在，不能当失败重传
-                return Result.unknown(status, "OUTPUT_URL_REJECTED");
-            case CREDENTIAL_REFLECTION:
-                return Result.unknown(status, "CREDENTIAL_REFLECTION");
-            case PARSE_FAILED:
-            default:
-                return Result.unknown(status, "PARSE_FAILED");
+            // 只有握手失败证明 HTTP 正文尚未发送；普通 TLS 错误也可能发生在发送后读取回执时。
+            if (hasCause(ex, SSLHandshakeException.class)) {
+                log.warn(
+                        "上游 TLS 握手失败: uploadId={}, reason={}",
+                        attempt.uploadId(),
+                        ex.getClass().getSimpleName());
+                return deadlineHit.get()
+                        ? Result.unknown(null, "ATTEMPT_TIMEOUT")
+                        : Result.notSent("TLS_HANDSHAKE_FAILED");
+            }
+            if (hasCause(ex, SSLException.class)) {
+                log.warn(
+                        "上游 TLS 连接失败: uploadId={}, reason={}",
+                        attempt.uploadId(),
+                        ex.getClass().getSimpleName());
+                return Result.unknown(null, deadlineHit.get() ? "ATTEMPT_TIMEOUT" : "TLS_ERROR");
+            }
+            return Result.unknown(null, deadlineHit.get() ? "ATTEMPT_TIMEOUT" : "IO_ERROR");
+        } finally {
+            if (deadlineTask != null) {
+                deadlineTask.cancel(false);
+            }
+            if (client != null) {
+                try {
+                    client.close();
+                } catch (IOException ex) {
+                    log.debug(
+                            "关闭上传 HTTP 客户端失败: uploadId={}, reason={}",
+                            attempt.uploadId(),
+                            ex.getClass().getSimpleName());
+                }
+            }
         }
     }
 
@@ -460,70 +639,64 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
                 PROBE_PNG.length,
                 PROBE_PNG,
                 sha256Hex(PROBE_PNG));
-        Result result = send(channel, attempt);
+        int budgetMs = request.attemptMs() > 0 ? Math.min(request.attemptMs(), attemptMs(profile)) : attemptMs(profile);
+        Result result = send(channel, attempt, budgetMs);
         return switch (result.kind()) {
-            case REMOTE_CREATED -> new TestOutcome(
-                    true, "OK", "上游已接收探测内容", result.httpStatus(), result.remoteSizeBytes());
-            case DEFINITE_REJECTED -> new TestOutcome(
-                    false,
-                    result.safeCode(),
-                    "上游拒绝探测请求" + upstreamSuffix(result),
-                    result.httpStatus(),
-                    result.remoteSizeBytes());
-            case NOT_SENT -> TestOutcome.unavailable(result.safeCode(), "未能建立到上游的可信 HTTPS 连接");
-            case UNKNOWN -> new TestOutcome(
-                    false,
-                    result.safeCode(),
-                    "上游结果未知，请稍后核对" + upstreamSuffix(result),
-                    result.httpStatus(),
-                    result.remoteSizeBytes());
+            case REMOTE_CREATED ->
+                new TestOutcome(true, "OK", "上游已接收探测内容", result.httpStatus(), result.remoteSizeBytes());
+            case DEFINITE_REJECTED ->
+                new TestOutcome(
+                        false,
+                        result.safeCode(),
+                        "上游拒绝探测请求" + upstreamSuffix(result),
+                        result.httpStatus(),
+                        result.remoteSizeBytes());
+            case NOT_SENT -> TestOutcome.unavailable(result.safeCode(), notSentMessage(result.safeCode()));
+            case UNKNOWN ->
+                new TestOutcome(
+                        false,
+                        result.safeCode(),
+                        "上游结果未知，请稍后核对" + upstreamSuffix(result),
+                        result.httpStatus(),
+                        result.remoteSizeBytes());
         };
     }
 
     // ==================== 内部 ====================
 
-    /** 探测消息后缀：透传脱敏后的上游错误摘要（仅管理端诊断可见） */
-    private static String upstreamSuffix(Result result) {
-        String head = result.httpStatus() == null ? "" : "HTTP " + result.httpStatus();
-        String reason = result.upstreamReason();
-        if (reason != null && !reason.isBlank()) {
-            return "（" + (head.isBlank() ? "" : head + "：") + reason + "）";
-        }
-        return head.isBlank() ? "" : "（" + head + "）";
+    /** 未发出类失败的诊断消息：按传输阶段给出可排查原因，不臆测为「结果未知」 */
+    private static String notSentMessage(String safeCode) {
+        return switch (safeCode == null ? "" : safeCode) {
+            case "TLS_HANDSHAKE_FAILED" -> "上游 HTTPS 证书校验或握手失败（请检查证书链与主机名）";
+            case "TLS_ERROR" -> "上游 HTTPS 连接失败（TLS 协议错误）";
+            case "CONNECT_TIMEOUT" -> "连接上游超时";
+            case "ATTEMPT_TIMEOUT" -> "上游请求超时，未发出上传内容";
+            case "CONNECT_REFUSED" -> "上游拒绝连接";
+            case "DNS_FAILED" -> "上游域名解析失败";
+            case "NO_ROUTE" -> "无法路由到上游地址";
+            case "TARGET_NOT_APPROVED" -> "目标地址不在批准清单内";
+            case "BAD_URL" -> "目标 URL 非法";
+            case "TEMPLATE_ERROR" -> "请求模板渲染失败";
+            default -> "未能建立到上游的可信 HTTPS 连接";
+        };
     }
 
-    /**
-     * 从上游错误响应提取诊断摘要：优先 JSON 的 message/status_txt/error 字段，否则退化为整段文本前缀。
-     * 统一截断 140 字符、剥离控制字符，并把命中的渠道凭据字面量替换为 ***；
-     * 该摘要只进入 probe 的管理端测试消息，真实上传路径（UploadOperationService）只消费 safeCode，
-     * 「错误只回固定安全码」的边界在此一处、有损放宽。
-     */
-    private static String upstreamReason(Channel channel, byte[] body) {
-        if (body == null || body.length == 0) {
-            return null;
-        }
-        String text = new String(body, StandardCharsets.UTF_8);
-        String reason = null;
-        Matcher matcher = UPSTREAM_REASON_FIELD.matcher(text);
-        while (reason == null && matcher.find()) {
-            String candidate = matcher.group(1).trim();
-            if (!candidate.isBlank()) {
-                reason = candidate;
+    private static boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {
+        Throwable current = throwable;
+        int depth = 0;
+        while (current != null && depth++ < 8) {
+            if (type.isInstance(current)) {
+                return true;
             }
+            current = current.getCause();
         }
-        if (reason == null) {
-            reason = text.replaceAll("\\s+", " ").trim();
-        }
-        reason = reason.replaceAll("[\\x00-\\x1F\\x7F]", "");
-        if (reason.length() > 140) {
-            reason = reason.substring(0, 140);
-        }
-        for (String secret : channel.secrets().values()) {
-            if (secret != null && !secret.isBlank() && reason.contains(secret)) {
-                reason = reason.replace(secret, "***");
-            }
-        }
-        return reason.isBlank() ? null : reason;
+        return false;
+    }
+
+    /** 上游正文可能以任意编码回显凭据，诊断仅使用可信状态字段。 */
+    private static String upstreamSuffix(Result result) {
+        String head = result.httpStatus() == null ? "" : "HTTP " + result.httpStatus();
+        return head.isBlank() ? "" : "（" + head + "）";
     }
 
     private int attemptMs(HttpUploadProfile profile) {
@@ -564,69 +737,48 @@ public class HttpUploadGateway implements HttpChannelTestTransport {
         return out.toByteArray();
     }
 
-    private void rejectNonPublicHost(String host) throws IOException {
-        InetAddress[] addresses = InetAddress.getAllByName(host);
-        if (addresses.length == 0) {
-            throw new UnknownHostException(host);
-        }
-        for (InetAddress address : addresses) {
-            if (!isPublicIpv4(address)) {
-                throw new IOException("目标地址不是公网 IPv4");
-            }
-        }
+    /**
+     * 生产客户端：连接管理器绑定 PinnedDnsResolver，实际 Socket.connect 只使用已校验 IPv4；
+     * 原 HTTPS URI 主机保留，TLS 仍按原主机名做 SNI/证书校验。
+     */
+    static CloseableHttpClient buildPinnedClient(PinnedDnsResolver resolver, long connectTimeoutMs, long attemptMs) {
+        PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                .setDnsResolver(resolver)
+                .setDefaultConnectionConfig(ConnectionConfig.custom()
+                        .setConnectTimeout(Timeout.ofMilliseconds(connectTimeoutMs))
+                        // socket timeout 只做单次读写保底；整次 attempt 的硬边界由 scheduled cancel 保证。
+                        .setSocketTimeout(Timeout.ofMilliseconds(attemptMs))
+                        .build())
+                .build();
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(Timeout.ofMilliseconds(connectTimeoutMs))
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(connectTimeoutMs))
+                .setResponseTimeout(Timeout.ofMilliseconds(attemptMs))
+                .setRedirectsEnabled(false)
+                .setContentCompressionEnabled(false)
+                .setProtocolUpgradeEnabled(false)
+                .setHardCancellationEnabled(true)
+                .build();
+        return HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .disableAutomaticRetries()
+                .disableCookieManagement()
+                .disableContentCompression()
+                .disableRedirectHandling()
+                .setDefaultRequestConfig(requestConfig)
+                .build();
     }
 
-    private boolean isPublicIpv4(InetAddress address) {
-        if (address.isAnyLocalAddress()
-                || address.isLoopbackAddress()
-                || address.isLinkLocalAddress()
-                || address.isSiteLocalAddress()
-                || address.isMulticastAddress()) {
-            return false;
-        }
-        byte[] raw = address.getAddress();
-        if (raw.length != 4) {
-            return false;
-        }
-        int first = raw[0] & 0xFF;
-        int second = raw[1] & 0xFF;
-        if (first == 0 || first == 10 || first == 127) {
-            return false;
-        }
-        if (first == 100 && second >= 64 && second <= 127) {
-            return false;
-        }
-        if (first == 169 && second == 254) {
-            return false;
-        }
-        if (first == 172 && second >= 16 && second <= 31) {
-            return false;
-        }
-        if (first == 192) {
-            if (second == 168 || second == 0 || second == 2) {
-                // 192.168/16 私有；192.0.0/24 文档保留；192.0.2/24 TEST-NET-1
-                return false;
-            }
-            if (second == 88 && (raw[2] & 0xFF) == 99) {
-                // 192.88.99/24 6to4 中继保留
-                return false;
-            }
-        }
-        if (first == 198) {
-            if ((second & 0xFE) == 18) {
-                // 198.18/15 基准测试
-                return false;
-            }
-            if (second == 51 && (raw[2] & 0xFF) == 100) {
-                // 198.51.100/24 TEST-NET-2
-                return false;
-            }
-        }
-        if (first == 203 && second == 0 && (raw[2] & 0xFF) == 113) {
-            // 203.0.113/24 TEST-NET-3
-            return false;
-        }
-        return first < 224;
+    void setHostResolverForTest(HostResolver resolver) {
+        this.hostResolver = resolver;
+    }
+
+    void setHttpClientFactoryForTest(HttpClientFactory factory) {
+        this.httpClientFactory = factory;
+    }
+
+    void setDeadlineSchedulerForTest(ScheduledExecutorService scheduler) {
+        this.deadlineScheduler = scheduler;
     }
 
     private static byte[] readCapped(InputStream in, int cap) throws IOException {

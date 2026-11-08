@@ -69,10 +69,13 @@ public final class AiAppDtos {
      * @param agentCode 智能体编码
      * @param title     标题（可空，服务端按首条消息补）
      */
-    public record ConversationCreateReq(@NotBlank @Size(max = 64) String agentCode, @Size(max = 200) String title) {}
+    public record ConversationCreateReq(
+            @NotBlank @Size(max = 64) String agentCode,
+            @Size(max = 200) String title) {}
 
     /** 会话重命名请求 */
-    public record ConversationRenameReq(@NotBlank @Size(max = 200) String title) {}
+    public record ConversationRenameReq(
+            @NotBlank @Size(max = 200) String title) {}
 
     /** 会话视图 */
     public record ConversationVo(

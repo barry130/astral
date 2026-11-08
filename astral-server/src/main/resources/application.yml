@@ -182,6 +182,16 @@ astral:
     default-type: segment
     default-step: 1000
 
+  # 告警
+  monitor:
+    alert:
+      webhook:
+        # 允许的 Webhook origin（逗号分隔，只写 scheme://host[:port]）。
+        # 默认仅放行钉钉/飞书/企业微信官方机器人；新增第三方或自建服务必须在此显式批准。
+        allowed-origins: ${ALERT_WEBHOOK_ALLOWED_ORIGINS:https://oapi.dingtalk.com,https://open.feishu.cn,https://qyapi.weixin.qq.com}
+        # 仅限内网自建 Webhook：默认 false。开启后仍禁止云元数据地址（169.254.169.254 等）。
+        allow-private-network: ${ALERT_WEBHOOK_ALLOW_PRIVATE_NETWORK:false}
+
   # 全端统计
   stat:
     enabled: ${STAT_ENABLED:true}
@@ -238,11 +248,10 @@ management:
     health:
       show-details: always
 
-  logging:
-    level:
-      root: INFO
-      # 默认 INFO：原先的 DEBUG 会让全库 SQL + 内部流程日志持续刷屏，且经 StdOutImpl 把敏感参数打到控制台。
-      # 排查问题时按需临时调高对应包（如 com.astral.dao.mapper、com.astral.schema）到 DEBUG/TRACE。
-      com.astral: INFO
+logging:
+  level:
+    root: INFO
+    # 排查问题时按需临时调高具体包，避免全库 SQL 和敏感参数持续刷屏。
+    com.astral: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{requestId:-}] %-5level %logger{36} - %msg%n"

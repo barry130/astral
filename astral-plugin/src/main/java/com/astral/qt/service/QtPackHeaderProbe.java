@@ -1,19 +1,25 @@
 package com.astral.qt.service;
 
+import com.astral.common.http.BoundedHttpTransport;
+import com.astral.common.http.NetworkAddresses;
 import com.astral.qt.dto.vo.QtSourceArtifactVo;
 import com.astral.qt.entity.QtSourceRelease;
 import com.astral.qt.mapper.QtSourceReleaseMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.type.TypeReference;
@@ -42,7 +48,6 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class QtPackHeaderProbe {
 
     /** 包头自述标记（与宿主/构建脚本同款）：产物首行 /*__QT_PACK__{json}*&#47; */
@@ -60,10 +65,39 @@ public class QtPackHeaderProbe {
     private final QtSourceReleaseMapper releaseMapper;
     private final ObjectMapper objectMapper;
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NORMAL)
-            .connectTimeout(Duration.ofSeconds(3))
-            .build();
+    private final BoundedHttpTransport.TargetPolicy targetPolicy;
+
+    @Value("${qt.pack-probe.allow-private-hosts:}")
+    private String allowPrivateHosts = "";
+
+    @Autowired
+    public QtPackHeaderProbe(QtSourceReleaseMapper releaseMapper, ObjectMapper objectMapper) {
+        this.releaseMapper = releaseMapper;
+        this.objectMapper = objectMapper;
+        this.targetPolicy = this::approve;
+    }
+
+    QtPackHeaderProbe(
+            QtSourceReleaseMapper releaseMapper,
+            ObjectMapper objectMapper,
+            BoundedHttpTransport.TargetPolicy targetPolicy) {
+        this.releaseMapper = releaseMapper;
+        this.objectMapper = objectMapper;
+        this.targetPolicy = targetPolicy;
+    }
+
+    private InetAddress[] approve(URI target) throws IOException {
+        String host = target.getHost().toLowerCase(Locale.ROOT).replace("[", "").replace("]", "");
+        boolean allowed =
+                Arrays.stream(allowPrivateHosts.split(",")).map(String::trim).anyMatch(host::equalsIgnoreCase);
+        InetAddress[] addresses = InetAddress.getAllByName(host);
+        for (InetAddress address : addresses) {
+            if (NetworkAddresses.isMetadata(address) || (!allowed && !NetworkAddresses.isPublic(address))) {
+                throw new IOException("产物目标地址未获批准");
+            }
+        }
+        return addresses;
+    }
 
     /** 包头解析结果（只关心升级比版需要的字段） */
     public record PackHeader(String kind, String id, String name, long versionCode, String versionName) {}
@@ -115,25 +149,32 @@ public class QtPackHeaderProbe {
             return null;
         }
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(timeout)
-                    .header("Range", "bytes=0-" + (PROBE_RANGE_BYTES - 1))
-                    .header("User-Agent", "astral-pack-probe/1.0")
-                    .GET()
-                    .build();
-            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-            int status = response.statusCode();
-            if (status != 200 && status != 206) {
-                log.warn("[QtPackProbe] 产物探测非 2xx: status={} url={}", status, url);
-                return null;
+            if (timeout == null || timeout.isZero() || timeout.isNegative()) return null;
+            long deadline = System.nanoTime() + timeout.toNanos();
+            URI target = URI.create(url);
+            for (int redirects = 0; redirects <= 5; redirects++) {
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0) return null;
+                var response = BoundedHttpTransport.prefix(
+                        target,
+                        Map.of("Range", "bytes=0-" + (PROBE_RANGE_BYTES - 1), "User-Agent", "astral-pack-probe/1.0"),
+                        Duration.ofNanos(remaining),
+                        PROBE_RANGE_BYTES,
+                        targetPolicy);
+                if (response.status() == 200 || response.status() == 206) {
+                    return parsePackHeader(response.text(), objectMapper);
+                }
+                if (!Set.of(301, 302, 303, 307, 308).contains(response.status()) || redirects == 5) return null;
+                String location = response.header("location");
+                if (location.isBlank()) return null;
+                URI next = target.resolve(location);
+                if ("https".equalsIgnoreCase(target.getScheme()) && !"https".equalsIgnoreCase(next.getScheme()))
+                    return null;
+                target = next;
             }
-            byte[] body = response.body();
-            if (body == null || body.length == 0) {
-                return null;
-            }
-            return parsePackHeader(new String(body, java.nio.charset.StandardCharsets.UTF_8), objectMapper);
+            return null;
         } catch (Exception e) {
-            log.warn("[QtPackProbe] 产物探测失败: url={} err={}", url, e.getMessage());
+            log.warn("[QtPackProbe] 产物探测失败（地址不可用、响应无效或超出时间预算）");
             return null;
         }
     }

@@ -30,9 +30,8 @@ public class SystemMonitorServiceImpl implements SystemMonitorService {
      * <p>
      * 采集以下指标：
      * <ul>
-     *   <li>CPU使用率：优先使用进程CPU负载，回退到系统负载平均值</li>
-     *   <li>堆内存使用情况：从MemoryMXBean获取</li>
-     *   <li>内存使用率：已使用堆内存 / 最大堆内存</li>
+     *   <li>主机 CPU 和物理内存：从操作系统扩展 MXBean 获取，不支持时返回未知</li>
+     *   <li>JVM 堆内存：从 MemoryMXBean 单独获取</li>
      *   <li>活跃线程数：Thread.activeCount()</li>
      *   <li>运行时间：JVM启动至今的毫秒数</li>
      *   <li>磁盘使用率：当前工作目录所在磁盘的使用率</li>
@@ -50,16 +49,20 @@ public class SystemMonitorServiceImpl implements SystemMonitorService {
 
         dto.setCpuUsage(getCpuUsage());
 
-        long totalHeap = heap.getMax();
-        long usedHeap = heap.getUsed();
-        dto.setTotalMemory(totalHeap);
-        dto.setUsedMemory(usedHeap);
-        dto.setAvailableMemory(totalHeap - usedHeap);
+        dto.setHeapUsed(heap.getUsed());
+        dto.setHeapMax(heap.getMax() >= 0 ? heap.getMax() : null);
+        if (osBean instanceof com.sun.management.OperatingSystemMXBean extended) {
+            long total = extended.getTotalMemorySize();
+            long available = extended.getFreeMemorySize();
+            if (total > 0 && available >= 0 && available <= total) {
+                dto.setTotalMemory(total);
+                dto.setAvailableMemory(available);
+                dto.setUsedMemory(total - available);
+                dto.setMemoryUsage((total - available) * 100.0 / total);
+            }
+        }
 
-        double memoryUsage = totalHeap > 0 ? (double) usedHeap / totalHeap * 100 : 0;
-        dto.setMemoryUsage(memoryUsage);
-
-        dto.setThreadCount(Thread.activeCount());
+        dto.setThreadCount(ManagementFactory.getThreadMXBean().getThreadCount());
         dto.setUptime(runtimeBean.getUptime());
         dto.setDiskUsage(getDiskUsage());
 
@@ -69,33 +72,24 @@ public class SystemMonitorServiceImpl implements SystemMonitorService {
     /**
      * 获取CPU使用率
      * <p>
-     * 获取策略：
-     * 1. 优先尝试使用 Sun 扩展的 OperatingSystemMXBean 获取进程CPU负载（更精确）
-     * 2. 如果不可用，回退到系统负载平均值 / CPU核心数 的估算方式
-     * 3. 如果都不可用，返回 0.0
+     * 使用操作系统整体 CPU 采样，不将进程负载或 load average 伪装成主机利用率。
      * </p>
      *
      * @return CPU使用率（百分比）
      */
-    private double getCpuUsage() {
+    private Double getCpuUsage() {
         try {
             if (osBean instanceof com.sun.management.OperatingSystemMXBean sunOsBean) {
-                double cpuLoad = sunOsBean.getProcessCpuLoad();
-                if (cpuLoad >= 0) {
+                double cpuLoad = sunOsBean.getCpuLoad();
+                if (Double.isFinite(cpuLoad) && cpuLoad >= 0 && cpuLoad <= 1) {
                     return cpuLoad * 100;
                 }
             }
 
-            double loadAverage = osBean.getSystemLoadAverage();
-            if (loadAverage >= 0) {
-                int processors = Runtime.getRuntime().availableProcessors();
-                return Math.min(100, loadAverage * 100 / processors);
-            }
-
-            return 0.0;
+            return null;
 
         } catch (Exception e) {
-            return 0.0;
+            return null;
         }
     }
 
@@ -108,14 +102,14 @@ public class SystemMonitorServiceImpl implements SystemMonitorService {
      *
      * @return 磁盘使用率（百分比）
      */
-    private double getDiskUsage() {
+    private Double getDiskUsage() {
         try {
             File file = new File(".");
             long total = file.getTotalSpace();
             long free = file.getFreeSpace();
-            return total > 0 ? (double) (total - free) / total * 100 : 0;
+            return total > 0 ? (double) (total - free) / total * 100 : null;
         } catch (Exception e) {
-            return 0.0;
+            return null;
         }
     }
 }

@@ -8,6 +8,7 @@ import com.astral.dao.mapper.StatErrorLogMapper;
 import com.astral.dao.mapper.StatMetricHourlyMapper;
 import com.astral.dao.mapper.StatPageHourlyMapper;
 import com.astral.monitor.dto.StatEventDTO;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,6 +18,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * 统计数据接入服务
@@ -54,6 +56,12 @@ public class StatIngestService {
 
     /** 错误堆栈最大长度（16KB，超限截断） */
     private static final int MAX_STACK_LENGTH = 16 * 1024;
+
+    /** extra 扩展字段序列化后的最大字节数（2KB，超限整条事件丢弃） */
+    private static final int MAX_EXTRA_BYTES = 2 * 1024;
+
+    /** 仅用于计算 extra 序列化大小；stat 事件结构固定，复用无状态 mapper */
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     /** 合法事件类型 */
     private static final Set<String> VALID_EVENTS = Set.of("launcher", "show", "hide", "page", "error", "custom");
@@ -115,6 +123,10 @@ public class StatIngestService {
      * 处理单个事件（按 §4.1 处理规则分发）
      */
     private boolean processOne(StatEventDTO event, String ip) {
+        if (isExtraTooLarge(event.getExtra())) {
+            log.warn("[stat] extra 超过 {} 字节上限，丢弃事件 evt={}", MAX_EXTRA_BYTES, event.getEvt());
+            return false;
+        }
         if (event.getEvt() == null || !VALID_EVENTS.contains(event.getEvt())) {
             log.warn("[stat] 非法事件类型丢弃: {}", event.getEvt());
             return false;
@@ -309,6 +321,25 @@ public class StatIngestService {
 
     private static boolean isBlank(String s) {
         return s == null || s.isBlank();
+    }
+
+    /**
+     * 校验 extra 序列化后不超过 2KB。
+     * <p>DTO 的 {@code Object extra} 无法用 Bean Validation 的 {@code @Size} 约束；
+     * 不校验时客户端可塞入任意大的嵌套对象，在匿名入口放大内存占用。
+     * 无法序列化的值同样视为非法，避免把不可预期的结构传入后续处理。</p>
+     */
+    private boolean isExtraTooLarge(Object extra) {
+        if (extra == null) {
+            return false;
+        }
+        try {
+            String json = JSON_MAPPER.writeValueAsString(extra);
+            return json.getBytes(StandardCharsets.UTF_8).length > MAX_EXTRA_BYTES;
+        } catch (Exception e) {
+            log.debug("[stat] extra 无法序列化，按非法值丢弃: {}", e.getMessage());
+            return true;
+        }
     }
 
     /**

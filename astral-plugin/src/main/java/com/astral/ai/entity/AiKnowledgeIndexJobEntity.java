@@ -46,6 +46,12 @@ public class AiKnowledgeIndexJobEntity {
     /** 错误摘要 */
     private String errorSummary;
 
+    /** 已完成的文档游标 */
+    private Long lastDocumentId;
+
+    /** 提交时的文档上界 */
+    private Long endDocumentId;
+
     /** 创建人 */
     private Long createdBy;
 

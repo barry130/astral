@@ -1,8 +1,12 @@
 package com.astral.schema;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -48,15 +52,42 @@ public class SchemaCodeGenerator {
         String packageName = schema.getPackageName();
         String className = schema.getClassName();
 
-        sb.append("package ").append(packageName).append(";\n\n");
-        sb.append("import com.baomidou.mybatisplus.annotation.*;\n");
-        sb.append("import com.fasterxml.jackson.annotation.JsonProperty;\n");
+        boolean hasTableId = schema.getFields().stream().anyMatch(f -> Boolean.TRUE.equals(f.getIsPrimaryKey()));
+        boolean hasTableLogic = schema.getFields().stream().anyMatch(f -> Boolean.TRUE.equals(f.getIsLogicDelete()));
+        boolean hasVersion = schema.getFields().stream().anyMatch(f -> Boolean.TRUE.equals(f.getIsVersion()));
+        boolean hasTableField = schema.getFields().stream().anyMatch(SchemaCodeGenerator::needsTableField)
+                || (schema.getNonDbFields() != null && !schema.getNonDbFields().isEmpty());
+        boolean hasJsonIgnore = schema.getFields().stream().anyMatch(f -> Boolean.TRUE.equals(f.getIsJsonIgnore()));
+        boolean hasList = schema.getFields().stream().anyMatch(f -> isListType(f.getFieldType()))
+                || (schema.getNonDbFields() != null
+                        && schema.getNonDbFields().stream().anyMatch(f -> isListType(f.getFieldType())));
+
+        // 统一用 TreeSet 输出字典序 import，保证生成结果与 Spotless/Palantir 的 import 排序一致。
+        TreeSet<String> imports = new TreeSet<>();
+        imports.add("com.baomidou.mybatisplus.annotation.TableName");
+        if (hasTableId) {
+            imports.add("com.baomidou.mybatisplus.annotation.IdType");
+            imports.add("com.baomidou.mybatisplus.annotation.TableId");
+        }
+        if (hasTableLogic) {
+            imports.add("com.baomidou.mybatisplus.annotation.TableLogic");
+        }
+        if (hasVersion) {
+            imports.add("com.baomidou.mybatisplus.annotation.Version");
+        }
+        if (hasTableField) {
+            imports.add("com.baomidou.mybatisplus.annotation.FieldFill");
+            imports.add("com.baomidou.mybatisplus.annotation.TableField");
+        }
+        if (hasJsonIgnore) {
+            imports.add("com.fasterxml.jackson.annotation.JsonProperty");
+        }
         // 字段声明了 jsonFormat 时按该格式收发日期（如 "yyyy-MM-dd HH:mm:ss"）：用于兼容已发布客户端
         // 发送的非 ISO 时间字符串，否则 Jackson 无法反序列化到 LocalDateTime（详见 CODING_GUIDE §3.6）。
         boolean hasJsonFormat = schema.getFields().stream()
                 .anyMatch(f -> f.getJsonFormat() != null && !f.getJsonFormat().isBlank());
         if (hasJsonFormat) {
-            sb.append("import com.fasterxml.jackson.annotation.JsonFormat;\n");
+            imports.add("com.fasterxml.jackson.annotation.JsonFormat");
         }
         // 实体 String 字段若对应库表 VARCHAR(N)，生成 @Size(max=N)：入参超长时由 Bean Validation
         // 拦截为 400（COMMON002），避免打到 DB 触发 value too long 的未捕获 500（详见 CODING_GUIDE §3.6）。
@@ -64,7 +95,7 @@ public class SchemaCodeGenerator {
         boolean hasSize =
                 schema.getFields().stream().anyMatch(f -> isVarchar(f) && f.getLength() != null && f.getLength() > 0);
         if (hasSize) {
-            sb.append("import jakarta.validation.constraints.Size;\n");
+            imports.add("jakarta.validation.constraints.Size");
         }
         // 库表 NOT NULL 且无默认值、非自动填充的列，生成 @NotNull：入参缺失时由 Bean Validation
         // 拦截为 400，避免打到 DB 触发 not-null 约束的未捕获 500（详见 CODING_GUIDE §3.6）。
@@ -75,23 +106,30 @@ public class SchemaCodeGenerator {
                         && f.getDefaultValue() == null
                         && f.getIsAutoFill() == null);
         if (hasNotNull) {
-            sb.append("import jakarta.validation.constraints.NotNull;\n");
+            imports.add("jakarta.validation.constraints.NotNull");
         }
-        sb.append("import lombok.Data;\n\n");
-
         boolean hasLocalDate = schema.getFields().stream().anyMatch(f -> "LocalDate".equals(f.getFieldType()));
         boolean hasLocalDateTime = schema.getFields().stream().anyMatch(f -> "LocalDateTime".equals(f.getFieldType()));
-
         if (hasLocalDate) {
-            sb.append("import java.time.LocalDate;\n");
+            imports.add("java.time.LocalDate");
         }
         if (hasLocalDateTime) {
-            sb.append("import java.time.LocalDateTime;\n");
+            imports.add("java.time.LocalDateTime");
         }
-        if (hasLocalDate || hasLocalDateTime) {
-            sb.append("\n");
+        if (schema.getFields().stream().anyMatch(field -> "BigDecimal".equals(field.getFieldType()))
+                || (schema.getNonDbFields() != null
+                        && schema.getNonDbFields().stream()
+                                .anyMatch(field -> "BigDecimal".equals(field.getFieldType())))) {
+            imports.add("java.math.BigDecimal");
         }
-        sb.append("import java.util.List;\n\n");
+        if (hasList) {
+            imports.add("java.util.List");
+        }
+        imports.add("lombok.Data");
+
+        sb.append("package ").append(packageName).append(";\n\n");
+        imports.forEach(i -> sb.append("import ").append(i).append(";\n"));
+        sb.append("\n");
         sb.append("@Data\n");
         sb.append("@TableName(\"").append(schema.getTableName()).append("\")\n");
         sb.append("public class ").append(className).append(" {\n\n");
@@ -170,6 +208,9 @@ public class SchemaCodeGenerator {
             }
         }
 
+        if (sb.length() > 1 && sb.charAt(sb.length() - 2) == '\n') {
+            sb.setLength(sb.length() - 1);
+        }
         sb.append("}\n");
         return sb.toString();
     }
@@ -313,7 +354,15 @@ public class SchemaCodeGenerator {
         sb.append("import io.swagger.v3.oas.annotations.Operation;\n");
         sb.append("import io.swagger.v3.oas.annotations.tags.Tag;\n");
         sb.append("import lombok.RequiredArgsConstructor;\n");
-        sb.append("import org.springframework.web.bind.annotation.*;\n");
+        sb.append("import org.springframework.web.bind.annotation.DeleteMapping;\n");
+        sb.append("import org.springframework.web.bind.annotation.GetMapping;\n");
+        sb.append("import org.springframework.web.bind.annotation.PathVariable;\n");
+        sb.append("import org.springframework.web.bind.annotation.PostMapping;\n");
+        sb.append("import org.springframework.web.bind.annotation.PutMapping;\n");
+        sb.append("import org.springframework.web.bind.annotation.RequestBody;\n");
+        sb.append("import org.springframework.web.bind.annotation.RequestMapping;\n");
+        sb.append("import org.springframework.web.bind.annotation.RequestParam;\n");
+        sb.append("import org.springframework.web.bind.annotation.RestController;\n");
         sb.append("import jakarta.validation.Valid;\n\n");
         sb.append("@Tag(name = \"").append(schema.getTableComment()).append("\")\n");
         sb.append("@RestController\n");
@@ -332,7 +381,8 @@ public class SchemaCodeGenerator {
                 .append(className)
                 .append(">> page(@RequestParam(defaultValue = \"1\") Integer pageNum,\n");
         sb.append(
-                "                                               @RequestParam(defaultValue = \"10\") Integer pageSize) {\n");
+                "                                               @RequestParam(defaultValue = \"10\") Integer pageSize)"
+                        + " {\n");
         sb.append("        Page<").append(className).append("> page = new Page<>(pageNum, pageSize);\n");
         sb.append("        return Result.success(")
                 .append(lowercaseFirst(className))
@@ -426,7 +476,7 @@ public class SchemaCodeGenerator {
         // 标识符校验 + 加引号：表名会被拼进 DDL，未校验即构成 DDL 注入；
         // 加引号同时避免与 SQL 关键字（如 user、order）冲突
         SqlIdentifiers.requireValid(tableName, "表名");
-        String quotedTable = SqlIdentifiers.quote(tableName);
+        String quotedTable = quoteIdentifier(tableName, db);
         sb.append("CREATE TABLE IF NOT EXISTS ").append(quotedTable).append(" (\n");
 
         List<String> columnDefs =
@@ -453,17 +503,7 @@ public class SchemaCodeGenerator {
 
         if (schema.getIndexes() != null) {
             for (IndexSchema index : schema.getIndexes()) {
-                sb.append("CREATE ")
-                        .append(index.isUnique() ? "UNIQUE " : "")
-                        .append("INDEX ")
-                        .append(db == SqlDialect.POSTGRESQL ? "IF NOT EXISTS " : "")
-                        .append(SqlIdentifiers.quote(index.getIndexName()))
-                        .append(" ON ")
-                        .append(quotedTable)
-                        .append("(")
-                        .append(String.join(", ", index.getColumns()))
-                        .append(")")
-                        .append(";\n");
+                appendCreateIndex(sb, schema, index, quotedTable, db);
             }
         }
 
@@ -473,6 +513,164 @@ public class SchemaCodeGenerator {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * 追加一条 CREATE INDEX 语句。
+     * <p>
+     * 索引名与每个索引列都经过 {@link SqlIdentifiers#requireValid} 白名单校验后再引用：
+     * 索引定义来自 JSON/管理端，若直接拼接即可注入任意 DDL。索引名缺省时按
+     * {@code idx_/uk_ + 表名 + 列名} 生成稳定名称，兼容可选的 indexName。
+     * </p>
+     *
+     * @param sb         输出缓冲
+     * @param schema     所属表 Schema（用于校验索引列存在）
+     * @param index      索引定义
+     * @param quotedTable 已引用的表名
+     * @param dialect    SQL方言
+     */
+    private static void appendCreateIndex(
+            StringBuilder sb, TableSchema schema, IndexSchema index, String quotedTable, SqlDialect dialect) {
+        String indexName = resolveIndexName(schema.getTableName(), index);
+        List<String> columns = validateIndexColumns(schema, index);
+        sb.append("CREATE ")
+                .append(index.isUnique() ? "UNIQUE " : "")
+                .append("INDEX ")
+                .append(dialect == SqlDialect.POSTGRESQL ? "IF NOT EXISTS " : "")
+                .append(quoteIdentifier(indexName, dialect))
+                .append(" ON ")
+                .append(quotedTable)
+                .append("(")
+                .append(columns.stream().map(c -> quoteIdentifier(c, dialect)).collect(Collectors.joining(", ")))
+                .append(");\n");
+    }
+
+    /**
+     * 追加一条 DROP INDEX 语句（MySQL 与 PostgreSQL 语法不同）。
+     *
+     * @param sb          输出缓冲
+     * @param index       索引定义
+     * @param rawTableName 原始表名（未命名索引需要用它还原自动索引名）
+     * @param quotedTable 已引用的表名
+     * @param dialect     SQL方言
+     */
+    private static void appendDropIndex(
+            StringBuilder sb, IndexSchema index, String rawTableName, String quotedTable, SqlDialect dialect) {
+        String indexName = resolveIndexName(rawTableName, index);
+        if (dialect == SqlDialect.MYSQL) {
+            sb.append("DROP INDEX ")
+                    .append(quoteIdentifier(indexName, dialect))
+                    .append(" ON ")
+                    .append(quotedTable)
+                    .append(";\n");
+        } else {
+            sb.append("DROP INDEX IF EXISTS ")
+                    .append(quoteIdentifier(indexName, dialect))
+                    .append(";\n");
+        }
+    }
+
+    /**
+     * 解析索引名：显式名称必须合法；缺省时按表名与列名生成稳定名称（≤63 字符）。
+     *
+     * @param tableName 表名，可为 null（仅删除旧索引时不需要）
+     * @param index     索引定义
+     * @return 合法索引名
+     */
+    private static String resolveIndexName(String tableName, IndexSchema index) {
+        String explicit = index.getIndexName();
+        if (explicit != null && !explicit.isBlank()) {
+            return SqlIdentifiers.requireValid(explicit.trim(), "索引名");
+        }
+        List<String> columns = index.getColumns();
+        if (columns == null || columns.isEmpty()) {
+            throw new IllegalArgumentException("索引名与索引列不能同时为空");
+        }
+        StringBuilder base = new StringBuilder(index.isUnique() ? "uk_" : "idx_");
+        if (tableName != null) {
+            base.append(tableName).append('_');
+        }
+        base.append(columns.stream()
+                .map(c -> c == null ? "" : c.trim().toLowerCase(Locale.ROOT))
+                .collect(Collectors.joining("_")));
+        String name = base.toString();
+        if (name.length() > 60) {
+            // hashCode 可能为负；使用无符号十六进制，后缀仍只包含合法标识符字符。
+            name = name.substring(0, 51) + "_" + Integer.toUnsignedString(name.hashCode(), 16);
+        }
+        return SqlIdentifiers.requireValid(name, "索引名");
+    }
+
+    /**
+     * 校验索引列非空、合法且确实存在于表字段中。
+     *
+     * @param schema 表 Schema
+     * @param index  索引定义
+     * @return 校验后的列名列表
+     */
+    private static List<String> validateIndexColumns(TableSchema schema, IndexSchema index) {
+        if (index.getColumns() == null || index.getColumns().isEmpty()) {
+            throw new IllegalArgumentException("索引 " + index.getIndexName() + " 缺少索引列");
+        }
+        List<String> validColumns = schema.getFields().stream()
+                .map(FieldSchema::getColumnName)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        List<String> columns = new ArrayList<>(index.getColumns().size());
+        for (String raw : index.getColumns()) {
+            String column = SqlIdentifiers.requireValid(raw == null ? null : raw.trim(), "索引列");
+            if (!validColumns.contains(column)) {
+                throw new IllegalArgumentException("索引列不存在: " + column);
+            }
+            columns.add(column);
+        }
+        return columns;
+    }
+
+    /**
+     * 索引变更签名：唯一性 + 列顺序。名称相同但签名不同视为需要重建。
+     *
+     * @param index 索引定义
+     * @return 签名
+     */
+    private static String indexSignature(IndexSchema index) {
+        return (index.isUnique() ? "U:" : "N:")
+                + (index.getColumns() == null
+                        ? ""
+                        : index.getColumns().stream()
+                                .map(c -> c == null ? "" : c.trim().toLowerCase(Locale.ROOT))
+                                .collect(Collectors.joining(",")));
+    }
+
+    /**
+     * 按索引名建立索引映射；未命名索引使用与建表一致的自动名称作为键。
+     *
+     * @param schema 表 Schema
+     * @return 有序索引映射
+     */
+    private static Map<String, IndexSchema> indexesByName(TableSchema schema) {
+        Map<String, IndexSchema> result = new LinkedHashMap<>();
+        if (schema.getIndexes() == null) {
+            return result;
+        }
+        for (IndexSchema index : schema.getIndexes()) {
+            result.put(resolveIndexName(schema.getTableName(), index), index);
+        }
+        return result;
+    }
+
+    /**
+     * 按方言引用标识符：MySQL 用反引号，PostgreSQL 用双引号。
+     *
+     * @param name    合法标识符
+     * @param dialect SQL方言
+     * @return 引用后的标识符
+     */
+    private static String quoteIdentifier(String name, SqlDialect dialect) {
+        if (dialect == SqlDialect.MYSQL) {
+            return "`" + name.replace("`", "``") + "`";
+        }
+        return SqlIdentifiers.quote(name);
     }
 
     /**
@@ -488,7 +686,9 @@ public class SchemaCodeGenerator {
         boolean autoIncrement = Boolean.TRUE.equals(field.getIsAutoIncrement());
 
         SqlIdentifiers.requireValid(field.getColumnName(), "列名");
-        col.append("    ").append(SqlIdentifiers.quote(field.getColumnName())).append(" ");
+        col.append("    ")
+                .append(quoteIdentifier(field.getColumnName(), dialect))
+                .append(" ");
         col.append(getSqlType(field, dialect, autoIncrement));
         if (autoIncrement && dialect == SqlDialect.MYSQL) {
             col.append(" AUTO_INCREMENT");
@@ -554,7 +754,10 @@ public class SchemaCodeGenerator {
             return upper;
         }
         if (v.length() >= 2 && v.startsWith("'") && v.endsWith("'")) {
-            return v;
+            // 形如 'abc' 的默认值：剥掉外层引号、还原 '' 转义后重新转义。
+            // 旧实现原样返回，攻击者可用 'x'; DROP TABLE ...; --' 从默认值字段注入任意 DDL。
+            String inner = v.substring(1, v.length() - 1).replace("''", "'");
+            return "'" + escapeSqlLiteral(inner) + "'";
         }
         return "'" + escapeSqlLiteral(v) + "'";
     }
@@ -658,16 +861,6 @@ public class SchemaCodeGenerator {
     }
 
     /**
-     * 将JDBC类型映射为SQL类型（PostgreSQL方言）
-     *
-     * @param field 字段Schema
-     * @return SQL类型字符串
-     */
-    private static String getSqlType(FieldSchema field) {
-        return getSqlType(field, SqlDialect.POSTGRESQL, Boolean.TRUE.equals(field.getIsAutoIncrement()));
-    }
-
-    /**
      * 将JDBC类型映射为指定方言的SQL类型
      * <p>
      * 默认VARCHAR长度为255，DECIMAL/NUMERIC精度为(10,2)。
@@ -767,7 +960,8 @@ public class SchemaCodeGenerator {
         SqlDialect db = dialect == null ? SqlDialect.POSTGRESQL : dialect;
         StringBuilder sb = new StringBuilder();
         SqlIdentifiers.requireValid(newSchema.getTableName(), "表名");
-        String tableName = SqlIdentifiers.quote(newSchema.getTableName());
+        String rawTableName = newSchema.getTableName();
+        String tableName = quoteIdentifier(rawTableName, db);
 
         List<String> oldColumnNames =
                 oldSchema.getFields().stream().map(FieldSchema::getColumnName).collect(Collectors.toList());
@@ -807,7 +1001,7 @@ public class SchemaCodeGenerator {
                         .append(buildColumnDef(newField, db).trim())
                         .append(";\n");
                 if (db == SqlDialect.POSTGRESQL && hasText(newField.getComment())) {
-                    sb.append(generateColumnCommentSql(tableName, newField));
+                    sb.append(generateColumnCommentSql(rawTableName, newField));
                 }
             }
         }
@@ -818,7 +1012,7 @@ public class SchemaCodeGenerator {
                 sb.append("ALTER TABLE ")
                         .append(tableName)
                         .append(" DROP COLUMN ")
-                        .append(SqlIdentifiers.quote(oldField.getColumnName()))
+                        .append(quoteIdentifier(oldField.getColumnName(), db))
                         .append(";\n");
             }
         }
@@ -853,7 +1047,7 @@ public class SchemaCodeGenerator {
                 sb.append("ALTER TABLE ")
                         .append(tableName)
                         .append(" ALTER COLUMN ")
-                        .append(SqlIdentifiers.quote(newField.getColumnName()))
+                        .append(quoteIdentifier(newField.getColumnName(), db))
                         .append(" TYPE ")
                         .append(getSqlType(newField, db, Boolean.TRUE.equals(newField.getIsAutoIncrement())))
                         .append(";\n");
@@ -862,7 +1056,7 @@ public class SchemaCodeGenerator {
                 sb.append("ALTER TABLE ")
                         .append(tableName)
                         .append(" ALTER COLUMN ")
-                        .append(SqlIdentifiers.quote(newField.getColumnName()))
+                        .append(quoteIdentifier(newField.getColumnName(), db))
                         .append(Boolean.TRUE.equals(newField.getIsRequired()) ? " SET NOT NULL" : " DROP NOT NULL")
                         .append(";\n");
             }
@@ -870,7 +1064,7 @@ public class SchemaCodeGenerator {
                 sb.append("ALTER TABLE ")
                         .append(tableName)
                         .append(" ALTER COLUMN ")
-                        .append(SqlIdentifiers.quote(newField.getColumnName()));
+                        .append(quoteIdentifier(newField.getColumnName(), db));
                 if (hasText(newField.getDefaultValue())) {
                     sb.append(" SET DEFAULT ").append(formatDefaultValue(newField.getDefaultValue(), db));
                 } else {
@@ -879,7 +1073,28 @@ public class SchemaCodeGenerator {
                 sb.append(";\n");
             }
             if (commentChanged) {
-                sb.append(generateColumnCommentSql(tableName, newField));
+                sb.append(generateColumnCommentSql(rawTableName, newField));
+            }
+        }
+
+        // 5. 索引差异：删除消失/变化的索引，再创建新增/变化的索引。
+        // 旧实现完全忽略 indexes，改 JSON 后建表 SQL 有索引、ALTER SQL 却没有，线上表结构静默漂移。
+        Map<String, IndexSchema> oldIndexes = indexesByName(oldSchema);
+        Map<String, IndexSchema> newIndexes = indexesByName(newSchema);
+        for (Map.Entry<String, IndexSchema> entry : oldIndexes.entrySet()) {
+            IndexSchema newIndex = newIndexes.get(entry.getKey());
+            IndexSchema oldIndex = entry.getValue();
+            boolean changed = newIndex == null || !indexSignature(oldIndex).equals(indexSignature(newIndex));
+            if (changed) {
+                appendDropIndex(sb, oldIndex, rawTableName, tableName, db);
+            }
+        }
+        for (Map.Entry<String, IndexSchema> entry : newIndexes.entrySet()) {
+            IndexSchema oldIndex = oldIndexes.get(entry.getKey());
+            IndexSchema newIndex = entry.getValue();
+            boolean changed = oldIndex == null || !indexSignature(oldIndex).equals(indexSignature(newIndex));
+            if (changed) {
+                appendCreateIndex(sb, newSchema, newIndex, tableName, db);
             }
         }
 
@@ -922,8 +1137,51 @@ public class SchemaCodeGenerator {
      * @return 是否相等
      */
     private static boolean typeEqual(FieldSchema oldField, FieldSchema newField) {
-        return Objects.equals(oldField.getJdbcType(), newField.getJdbcType())
-                && Objects.equals(oldField.getLength(), newField.getLength());
+        String oldType = normalizeType(oldField.getJdbcType());
+        String newType = normalizeType(newField.getJdbcType());
+        return Objects.equals(oldType, newType) && Objects.equals(oldField.getLength(), newField.getLength());
+    }
+
+    /**
+     * 规范化 JDBC 类型名称：去空白并转大写，避免 {@code varchar} 与 {@code VARCHAR} 被误判为类型变更。
+     *
+     * @param jdbcType 原始类型
+     * @return 规范化后的类型
+     */
+    private static String normalizeType(String jdbcType) {
+        return jdbcType == null ? null : jdbcType.trim().toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * 判断字段生成时是否需要 {@code @TableField}（列名映射或自动填充）。
+     *
+     * @param field 字段Schema
+     * @return 需要返回 true
+     */
+    private static boolean needsTableField(FieldSchema field) {
+        boolean hasColumnName =
+                field.getColumnName() != null && !field.getColumnName().equals(field.getFieldName());
+        if (hasColumnName) {
+            return true;
+        }
+        if (field.getIsAutoFill() != null) {
+            return true;
+        }
+        String fieldName = field.getFieldName();
+        return "createTime".equals(fieldName)
+                || "createdAt".equals(fieldName)
+                || "updateTime".equals(fieldName)
+                || "updatedAt".equals(fieldName);
+    }
+
+    /**
+     * 判断字段 Java 类型是否为 List 类型（用于按需生成 import）。
+     *
+     * @param fieldType 字段类型
+     * @return List 类型返回 true
+     */
+    private static boolean isListType(String fieldType) {
+        return fieldType != null && (fieldType.startsWith("List<") || fieldType.startsWith("java.util.List<"));
     }
 
     /**

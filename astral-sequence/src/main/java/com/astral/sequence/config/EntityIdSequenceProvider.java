@@ -1,5 +1,6 @@
 package com.astral.sequence.config;
 
+import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -89,7 +90,7 @@ public class EntityIdSequenceProvider {
 
         name = name.trim();
         if (name.isEmpty()) name = "astral";
-        name = name.toLowerCase().replaceAll("[^a-z0-9_]", "_");
+        name = name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_]", "_");
         return name;
     }
 }

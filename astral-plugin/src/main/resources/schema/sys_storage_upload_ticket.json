@@ -1,0 +1,23 @@
+{
+  "tableName": "sys_storage_upload_ticket",
+  "tableComment": "直传凭证与远端回执（不依赖Redis或可删除文件行）",
+  "moduleName": "storage",
+  "className": "StorageUploadTicketEntity",
+  "fields": [
+    {"columnName":"id","fieldName":"id","fieldType":"Long","jdbcType":"BIGINT","isPrimaryKey":true,"mybatisPlusIdType":"INPUT"},
+    {"columnName":"upload_id","fieldName":"uploadId","fieldType":"String","jdbcType":"VARCHAR","length":64,"isRequired":true},
+    {"columnName":"folder_id","fieldName":"folderId","fieldType":"Long","jdbcType":"BIGINT","isRequired":true},
+    {"columnName":"actor_id","fieldName":"actorId","fieldType":"String","jdbcType":"VARCHAR","length":64},
+    {"columnName":"payload_json","fieldName":"payloadJson","fieldType":"String","jdbcType":"TEXT","isRequired":true},
+    {"columnName":"receipt_json","fieldName":"receiptJson","fieldType":"String","jdbcType":"TEXT"},
+    {"columnName":"expires_at","fieldName":"expiresAt","fieldType":"LocalDateTime","jdbcType":"TIMESTAMP","isRequired":true},
+    {"columnName":"state","fieldName":"state","fieldType":"String","jdbcType":"VARCHAR","length":24,"isRequired":true},
+    {"columnName":"file_id","fieldName":"fileId","fieldType":"Long","jdbcType":"BIGINT"},
+    {"columnName":"create_time","fieldName":"createTime","fieldType":"LocalDateTime","jdbcType":"TIMESTAMP","isAutoFill":"INSERT"},
+    {"columnName":"update_time","fieldName":"updateTime","fieldType":"LocalDateTime","jdbcType":"TIMESTAMP","isAutoFill":"INSERT_UPDATE"}
+  ],
+  "indexes": [
+    {"indexName":"uk_storage_upload_ticket_upload","columns":["upload_id"],"isUnique":true},
+    {"indexName":"idx_storage_upload_ticket_pending","columns":["folder_id","state","expires_at"]}
+  ]
+}

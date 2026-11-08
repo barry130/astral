@@ -77,8 +77,7 @@ public class MusicToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"intent":{"type":"string","description":"搜索意图，如 recommend_music / find_song / find_similar"},
                              "keywords":{"type":"array","items":{"type":"string"},"description":"搜索关键词，2-6 个"},
                              "sources":{"type":"array","items":{"type":"string"},"description":"音源 ID，留空表示使用全部可用音源"},
@@ -109,8 +108,7 @@ public class MusicToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"keywords":{"type":"array","items":{"type":"string"},"description":"歌手关键词"},
                              "sources":{"type":"array","items":{"type":"string"},"description":"音源 ID"}}
                             """),
@@ -138,8 +136,7 @@ public class MusicToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"keywords":{"type":"array","items":{"type":"string"},"description":"专辑关键词"},
                              "sources":{"type":"array","items":{"type":"string"},"description":"音源 ID"}}
                             """),
@@ -167,8 +164,7 @@ public class MusicToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"keywords":{"type":"array","items":{"type":"string"},"description":"歌单关键词"},
                              "sources":{"type":"array","items":{"type":"string"},"description":"音源 ID"}}
                             """),
@@ -198,8 +194,7 @@ public class MusicToolProvider implements AiToolProvider {
                     AiConstants.ApprovalPolicy.NONE,
                     List.of(AiConstants.ClientType.QT_UNIAPPX, AiConstants.ClientType.QT_PC),
                     List.of(),
-                    AiToolTypes.objectSchema(
-                            """
+                    AiToolTypes.objectSchema("""
                             {"songId":{"type":"string","description":"歌曲 ID"},
                              "sourceId":{"type":"string","description":"音源 ID"}}
                             """),

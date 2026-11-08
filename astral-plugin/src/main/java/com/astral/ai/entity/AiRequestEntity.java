@@ -5,106 +5,116 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import lombok.Data;
 
-/**
- * AI 请求
- */
 @Data
 @TableName("ai_request")
 public class AiRequestEntity {
 
-    /** 主键 */
-    @TableId(value = "id", type = IdType.INPUT)
+    @TableField("worker_token")
+    private String workerToken;
+
+    @TableField("lease_until")
+    private LocalDateTime leaseUntil;
+
+    @TableField("quota_counted")
+    private Boolean quotaCounted;
+
+    @TableField("quota_active")
+    private Boolean quotaActive;
+
+    @TableId(type = IdType.INPUT)
     private Long id;
 
-    /** 会话 ID */
+    @TableField("conversation_id")
+    @NotNull
     private Long conversationId;
 
-    /** 智能体 ID */
+    @TableField("agent_id")
+    @NotNull
     private Long agentId;
 
-    /** 智能体版本 ID */
+    @TableField("agent_version_id")
+    @NotNull
     private Long agentVersionId;
 
-    /** 用户 ID */
+    @TableField("user_id")
+    @NotNull
     private Long userId;
 
-    /** 客户端类型 */
+    @TableField("client_type")
     private String clientType;
 
-    /** 请求状态 */
     private String status;
 
-    /** 幂等键 */
+    @TableField("idempotency_key")
     private String idempotencyKey;
 
-    /** 提供方 ID */
+    @TableField("provider_id")
     private Long providerId;
 
-    /** 模型 ID */
+    @TableField("model_id")
     private Long modelId;
 
-    /** 提示词版本 ID */
+    @TableField("prompt_version_id")
     private Long promptVersionId;
 
-    /** 输入快照 */
+    @TableField("input_snapshot")
     private String inputSnapshot;
 
-    /** 上下文快照 */
+    @TableField("context_snapshot")
     private String contextSnapshot;
 
-    /** 版本配置快照 */
+    @TableField("configuration_snapshot")
     private String configurationSnapshot;
 
-    /** 知识策略快照 */
+    @TableField("knowledge_snapshot")
     private String knowledgeSnapshot;
 
-    /** 工具策略快照 */
+    @TableField("tool_policy_snapshot")
     private String toolPolicySnapshot;
 
-    /** 上下文策略快照 */
+    @TableField("context_policy_snapshot")
     private String contextPolicySnapshot;
 
-    /** 响应结构快照 */
+    @TableField("response_schema_snapshot")
     private String responseSchemaSnapshot;
 
-    /** 安全策略快照 */
+    @TableField("safety_policy_snapshot")
     private String safetyPolicySnapshot;
 
-    /** 额度策略快照 */
+    @TableField("quota_policy_snapshot")
     private String quotaPolicySnapshot;
 
-    /** 错误码 */
+    @TableField("error_code")
     private String errorCode;
 
-    /** 错误摘要 */
+    @TableField("error_summary")
     private String errorSummary;
 
-    /** 取消原因 */
+    @TableField("cancel_reason")
     private String cancelReason;
 
-    /** 输入 Token */
+    @TableField("token_in")
     private Integer tokenIn;
 
-    /** 输出 Token */
+    @TableField("token_out")
     private Integer tokenOut;
 
-    /** 开始时间 */
+    @TableField("started_at")
     private LocalDateTime startedAt;
 
-    /** 首 Token 时间 */
+    @TableField("first_token_at")
     private LocalDateTime firstTokenAt;
 
-    /** 结束时间 */
+    @TableField("finished_at")
     private LocalDateTime finishedAt;
 
-    /** 创建时间 */
-    @TableField(fill = FieldFill.INSERT)
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /** 更新时间 */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

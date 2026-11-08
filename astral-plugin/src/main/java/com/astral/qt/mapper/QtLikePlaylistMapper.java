@@ -17,8 +17,7 @@ public interface QtLikePlaylistMapper extends BaseMapper<QtLikePlaylist> {
      * 收藏歌单：全量唯一键 upsert（uk_like_playlist_key）。
      * 冲突时复活软删行（deleted_at 置空）、刷新封面/名称并推进 seq；空字段不覆盖已有元数据。
      */
-    @Insert({
-        """
+    @Insert({"""
             INSERT INTO qt_like_playlist
                 (id, uid, pid, platform, pic_url, name, is_import, deleted_at,
                  create_time, update_time, updated_seq, updated_at)
@@ -32,8 +31,7 @@ public interface QtLikePlaylistMapper extends BaseMapper<QtLikePlaylist> {
                 updated_seq = EXCLUDED.updated_seq,
                 updated_at = EXCLUDED.updated_at,
                 update_time = EXCLUDED.update_time
-            """
-    })
+            """})
     int upsertActive(@Param("e") QtLikePlaylist e, @Param("seq") long seq, @Param("now") LocalDateTime now);
 
     /**
@@ -42,8 +40,7 @@ public interface QtLikePlaylistMapper extends BaseMapper<QtLikePlaylist> {
      * <p>调用方必须保证 list 内 (uid, pid, platform) 唯一——同语句同键两次会触发
      * PG 「cannot affect row a second time」错误。id 由号段填充器对集合参数逐个自动填充。</p>
      */
-    @Insert({
-        """
+    @Insert({"""
             <script>
             INSERT INTO qt_like_playlist
                 (id, uid, pid, platform, pic_url, name, is_import, deleted_at,
@@ -61,8 +58,7 @@ public interface QtLikePlaylistMapper extends BaseMapper<QtLikePlaylist> {
                 updated_at = EXCLUDED.updated_at,
                 update_time = EXCLUDED.update_time
             </script>
-            """
-    })
+            """})
     int upsertActiveBatch(@Param("list") List<QtLikePlaylist> list);
 
     /**
@@ -70,8 +66,7 @@ public interface QtLikePlaylistMapper extends BaseMapper<QtLikePlaylist> {
      * 每行携带自己的 updated_seq，幂等（已删除行不再变更）。
      * <p>调用方必须保证 list 内 (pid, platform) 唯一。</p>
      */
-    @Update({
-        """
+    @Update({"""
             <script>
             UPDATE qt_like_playlist AS l
             SET deleted_at = #{now}, update_time = #{now}, updated_at = #{now}, updated_seq = v.seq
@@ -85,14 +80,12 @@ public interface QtLikePlaylistMapper extends BaseMapper<QtLikePlaylist> {
               AND l.pid = v.pid AND l.platform = v.platform
               AND l.deleted_at IS NULL
             </script>
-            """
-    })
+            """})
     int softRemoveBatch(
             @Param("list") List<QtLikePlaylist> list, @Param("uid") Long uid, @Param("now") LocalDateTime now);
 
     /** 取消收藏歌单：软删除并推进 seq（幂等：已删除行不再变更） */
-    @Update(
-            """
+    @Update("""
             UPDATE qt_like_playlist
             SET deleted_at = #{now}, update_time = #{now}, updated_seq = #{seq}, updated_at = #{now}
             WHERE uid = #{uid} AND pid = #{pid} AND platform = #{platform} AND deleted_at IS NULL

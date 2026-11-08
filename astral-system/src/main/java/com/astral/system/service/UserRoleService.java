@@ -22,4 +22,7 @@ public interface UserRoleService extends IService<UserRole> {
      * @throws com.astral.common.exception.BusinessException 存在不存在的角色ID时
      */
     void assignRoles(Long userId, List<Long> roleIds);
+
+    /** 只更新关联的用户/角色，并在事务提交后通知受影响用户。null 表示保留该字段。 */
+    boolean updateAssignment(Long id, Long userId, Long roleId);
 }

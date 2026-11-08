@@ -64,7 +64,7 @@ public class StatEventDTO {
     @Size(max = 1024)
     private String message;
 
-    /** 堆栈（error 可选，服务端限制 ≤16KB） */
+    /** 堆栈（error 可选，服务端截断到 ≤16KB） */
     private String stack;
 
     /** 发布标识（预留 Sentry release 对齐） */

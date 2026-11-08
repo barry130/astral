@@ -140,23 +140,52 @@ public class StatAggregationJob {
      */
     @Scheduled(cron = "0 0 4 * * ?")
     public void cleanExpired() {
-        LocalDateTime errorBefore =
-                LocalDate.now().minusDays(errorRetentionDays).atStartOfDay();
-        LocalDateTime hourlyBefore =
-                LocalDate.now().minusDays(hourlyRetentionDays).atStartOfDay();
-
-        int errors = statErrorLogMapper.delete(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatErrorLog>()
-                        .lt("occur_time", errorBefore));
-        int api = statApiHourlyMapper.delete(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatApiHourly>()
-                        .lt("bucket_hour", hourlyBefore));
-        int metric = statMetricHourlyMapper.delete(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatMetricHourly>()
-                        .lt("bucket_hour", hourlyBefore));
-        int page = statPageHourlyMapper.delete(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatPageHourly>()
-                        .lt("bucket_hour", hourlyBefore));
+        // 保留天数 <=0 时关闭该类别清理：负值会让 minusDays 得到未来时间并删空整表，
+        // 配置误写一个 -1 就是不可恢复的数据事故。
+        int errors = 0;
+        int api = 0;
+        int metric = 0;
+        int page = 0;
+        if (errorRetentionDays > 0) {
+            LocalDateTime errorBefore =
+                    LocalDate.now().minusDays(errorRetentionDays).atStartOfDay();
+            try {
+                errors = statErrorLogMapper.delete(
+                        new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatErrorLog>()
+                                .lt("occur_time", errorBefore));
+            } catch (Exception e) {
+                log.error("[stat] 过期错误日志清理失败，保留数据待下次重试: {}", e.getMessage(), e);
+            }
+        } else {
+            log.warn("[stat] astral.stat.error-retention-days={} 非正数，跳过错误日志清理", errorRetentionDays);
+        }
+        if (hourlyRetentionDays > 0) {
+            LocalDateTime hourlyBefore =
+                    LocalDate.now().minusDays(hourlyRetentionDays).atStartOfDay();
+            try {
+                api = statApiHourlyMapper.delete(
+                        new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatApiHourly>()
+                                .lt("bucket_hour", hourlyBefore));
+            } catch (Exception e) {
+                log.error("[stat] 过期接口桶清理失败，保留数据待下次重试: {}", e.getMessage(), e);
+            }
+            try {
+                metric = statMetricHourlyMapper.delete(
+                        new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatMetricHourly>()
+                                .lt("bucket_hour", hourlyBefore));
+            } catch (Exception e) {
+                log.error("[stat] 过期指标桶清理失败，保留数据待下次重试: {}", e.getMessage(), e);
+            }
+            try {
+                page = statPageHourlyMapper.delete(
+                        new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<StatPageHourly>()
+                                .lt("bucket_hour", hourlyBefore));
+            } catch (Exception e) {
+                log.error("[stat] 过期页面桶清理失败，保留数据待下次重试: {}", e.getMessage(), e);
+            }
+        } else {
+            log.warn("[stat] astral.stat.hourly-retention-days={} 非正数，跳过小时桶清理", hourlyRetentionDays);
+        }
 
         if (errors > 0 || api > 0 || metric > 0 || page > 0) {
             log.info(

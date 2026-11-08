@@ -1,6 +1,10 @@
 package com.astral.log.annotation;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * 操作日志注解
@@ -25,4 +29,11 @@ public @interface OperateLog {
      * @return 操作类型描述
      */
     String value() default "";
+
+    /**
+     * Whether request/response payloads and exception messages may be persisted.
+     * Sensitive reads must opt out: actor, target URI, outcome and exception type
+     * remain auditable without copying content into the broader operation-log scope.
+     */
+    boolean recordPayloads() default true;
 }

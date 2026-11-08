@@ -1,9 +1,10 @@
 package com.astral.ai.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -13,9 +14,10 @@ import com.astral.ai.config.AiProperties;
 import com.astral.ai.entity.AiAgentEntity;
 import com.astral.ai.entity.AiAgentVersionEntity;
 import com.astral.ai.entity.AiQuotaPolicyEntity;
-import com.astral.ai.entity.AiUserQuotaEntity;
 import com.astral.ai.mapper.AiQuotaPolicyMapper;
 import com.astral.ai.mapper.AiUserQuotaMapper;
+import com.astral.dao.entity.UserRole;
+import com.astral.system.service.UserRoleService;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import java.math.BigDecimal;
@@ -37,22 +39,37 @@ class AiQuotaServiceTest {
     private AiUserQuotaMapper quotaMapper;
     private AiProperties properties;
     private AiQuotaService service;
+    private UserRoleService roles;
 
     @BeforeEach
     void setUp() {
         TableInfoHelper.initTableInfo(
                 new MapperBuilderAssistant(new MybatisConfiguration(), "test"), AiQuotaPolicyEntity.class);
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), "test-role"), UserRole.class);
 
         policyMapper = mock(AiQuotaPolicyMapper.class);
         quotaMapper = mock(AiUserQuotaMapper.class);
         properties = new AiProperties();
-        service = new AiQuotaService(policyMapper, quotaMapper, null, properties);
+        roles = mock(UserRoleService.class);
+        when(roles.list(org.mockito.ArgumentMatchers.<com.baomidou.mybatisplus.core.conditions.Wrapper<UserRole>>any()))
+                .thenReturn(List.of());
+        service = new AiQuotaService(policyMapper, quotaMapper, roles, properties);
 
         // 默认没有任何策略：所有 selectList 都返回空
         when(policyMapper.selectList(any())).thenReturn(List.of());
     }
 
     // ==================== 默认与兜底 ====================
+
+    @Test
+    void unavailableRolePoliciesCannotSilentlyRelaxQuota() {
+        when(roles.list(org.mockito.ArgumentMatchers.<com.baomidou.mybatisplus.core.conditions.Wrapper<UserRole>>any()))
+                .thenThrow(new IllegalStateException("fixture connection details"));
+        var failure = assertThrows(AiException.class, () -> service.resolveLimits(1L, agent(2L, null), version(null)));
+        assertEquals("AI005", failure.getErrorCode());
+        assertEquals("AI 使用额度不足：无法确认角色额度，请稍后重试", failure.getMessage());
+    }
 
     @Test
     void withoutAnyPolicyTheHardCapsBecomeTheLimits() {
@@ -92,7 +109,7 @@ class AiQuotaServiceTest {
         user.setDailyRequests(50);
         user.setMaxInputChars(20_000);
 
-        // 依次是 GLOBAL、AGENT、USER 三次查询（角色查询因未配置 UserRoleService 而被跳过）
+        // 依次是 GLOBAL、AGENT、USER 三次查询（当前用户没有角色）
         stubPolicies(List.of(global), List.of(), List.of(user));
 
         AiQuotaService.Limits limits = service.resolveLimits(1L, agent(2L, null), version(null));
@@ -224,65 +241,7 @@ class AiQuotaServiceTest {
         assertEquals(properties.getHardMaxOutputTokens(), limits.maxOutputTokens());
     }
 
-    // ==================== 预占 ====================
-
-    @Test
-    void inputLongerThanTheLimitIsRejectedBeforeTouchingTheDatabase() {
-        AiQuotaService.Limits limits = limits(100, 3);
-
-        AiException error =
-                assertThrows(AiException.class, () -> service.reserve(1L, agent(2L, null), version(null), 101, limits));
-
-        assertEquals("AI005", error.getErrorCode());
-    }
-
-    @Test
-    void exceedingConcurrencyIsRejectedAndDoesNotLeakTheSlot() {
-        stubQuotaRows();
-        AiQuotaService.Limits limits = limits(100, 1);
-
-        AiQuotaService.Reservation first = service.reserve(1L, agent(2L, null), version(null), 10, limits);
-        assertNotNull(first);
-
-        AiException error =
-                assertThrows(AiException.class, () -> service.reserve(1L, agent(2L, null), version(null), 10, limits));
-        assertEquals("AI005", error.getErrorCode());
-
-        // 第二个请求被拒后必须把自己占的槽退掉，否则这个用户再也发不出请求
-        service.release(first);
-        assertDoesNotThrow(() -> service.reserve(1L, agent(2L, null), version(null), 10, limits));
-    }
-
-    @Test
-    void concurrencyIsCountedPerUserAndAgentPair() {
-        stubQuotaRows();
-        AiQuotaService.Limits limits = limits(100, 1);
-
-        assertNotNull(service.reserve(1L, agent(2L, null), version(null), 10, limits));
-        // 不同用户互不影响
-        assertNotNull(service.reserve(9L, agent(2L, null), version(null), 10, limits));
-        // 同一用户不同智能体也不互相挤占
-        assertNotNull(service.reserve(1L, agent(3L, null), version(null), 10, limits));
-    }
-
-    @Test
-    void exhaustingTheDailyQuotaReleasesTheConcurrencySlot() {
-        stubQuotaRows();
-        // 日额度已用尽的信号：addWithinLimits 返回 0
-        when(quotaMapper.addWithinLimits(any(), anyInt(), anyLong(), anyLong(), any(), any(), any()))
-                .thenReturn(0);
-
-        AiQuotaService.Limits limits = limits(100, 1);
-
-        AiException error =
-                assertThrows(AiException.class, () -> service.reserve(1L, agent(2L, null), version(null), 10, limits));
-        assertEquals("AI005", error.getErrorCode());
-
-        // 槽位必须归还，否则额度恢复后该用户仍然发不出请求
-        when(quotaMapper.addWithinLimits(any(), anyInt(), anyLong(), anyLong(), any(), any(), any()))
-                .thenReturn(1);
-        assertDoesNotThrow(() -> service.reserve(1L, agent(2L, null), version(null), 10, limits));
-    }
+    // Stage accounting and concurrency are covered through AiApprovalLifecycleTest with real transactions.
 
     // ==================== 辅助 ====================
 
@@ -293,30 +252,6 @@ class AiQuotaServiceTest {
             stub = stub.thenReturn(batch);
         }
         stub.thenReturn(List.of());
-    }
-
-    private void stubQuotaRows() {
-        AiUserQuotaEntity row = new AiUserQuotaEntity();
-        row.setId(500L);
-        when(quotaMapper.selectOne(any())).thenReturn(row);
-        when(quotaMapper.addWithinLimits(any(), anyInt(), anyLong(), anyLong(), any(), any(), any()))
-                .thenReturn(1);
-    }
-
-    private AiQuotaService.Limits limits(int maxInputChars, int maxConcurrent) {
-        return new AiQuotaService.Limits(
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                maxInputChars,
-                properties.getHardMaxContextTokens(),
-                properties.getHardMaxOutputTokens(),
-                maxConcurrent,
-                null,
-                List.of());
     }
 
     private static AiQuotaPolicyEntity policy(String code, String scope) {

@@ -1,14 +1,33 @@
 package com.astral.storage.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.astral.common.exception.BusinessException;
+import com.astral.storage.entity.StorageConfigEntity;
 import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.entity.StorageTaskEntity;
 import com.astral.storage.mapper.StorageFileMapper;
 import com.astral.storage.mapper.StorageTaskMapper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,27 +35,36 @@ class StorageFileServiceTest {
     private StorageFileMapper mapper;
     private StorageTaskMapper tasks;
     private StorageFolderService folders;
+    private StorageConfigCache configCache;
+    private UploadPolicyService policyService;
     private WorkerCachePurgeService purger;
     private StorageRemoteDeleteService remoteDelete;
+    private StorageAuditService audit;
     private StorageFileService service;
     private StorageFileEntity file;
 
     @BeforeEach
     void setUp() {
+        var metadata = new MapperBuilderAssistant(new MybatisConfiguration(), "audit-storage-file-test");
+        metadata.setCurrentNamespace(StorageFileMapper.class.getName());
+        TableInfoHelper.initTableInfo(metadata, StorageFileEntity.class);
         mapper = mock(StorageFileMapper.class);
+        when(mapper.update(isNull(), any(LambdaUpdateWrapper.class))).thenReturn(1);
         tasks = mock(StorageTaskMapper.class);
         folders = mock(StorageFolderService.class);
         purger = mock(WorkerCachePurgeService.class);
         remoteDelete = mock(StorageRemoteDeleteService.class);
-        var configCache = mock(StorageConfigCache.class);
+        configCache = mock(StorageConfigCache.class);
+        policyService = mock(UploadPolicyService.class);
+        audit = mock(StorageAuditService.class);
         service = spy(new StorageFileService(
                 mapper,
                 tasks,
                 configCache,
                 folders,
-                mock(StorageAuditService.class),
+                audit,
                 null,
-                null,
+                policyService,
                 null,
                 null,
                 null,
@@ -55,6 +83,7 @@ class StorageFileServiceTest {
         file.setContentVersion(1L);
         file.setStatus("AVAILABLE");
         doReturn(file).when(service).getByPublicId("public-id");
+        when(mapper.deleteById(1L)).thenReturn(1);
     }
 
     @Test
@@ -97,10 +126,79 @@ class StorageFileServiceTest {
     }
 
     @Test
+    void lostVisibilityCasDoesNotMutateMemoryPurgeCacheOrRecordSuccess() {
+        when(mapper.update(isNull(), any(LambdaUpdateWrapper.class))).thenReturn(0);
+
+        BusinessException ex = assertThrows(
+                BusinessException.class, () -> service.changeVisibility("public-id", "admin", "PUBLIC", true));
+
+        assertEquals(300, ex.getCode());
+        assertEquals("PRIVATE", file.getVisibility());
+        assertEquals(1L, file.getContentVersion());
+        verifyNoInteractions(purger, audit);
+        verify(mapper, never()).updateById(any(StorageFileEntity.class));
+    }
+
+    @Test
+    void visibilityVersionOverflowFailsBeforeAnyMutation() {
+        file.setContentVersion(Long.MAX_VALUE);
+
+        assertThrows(BusinessException.class, () -> service.changeVisibility("public-id", "admin", "PUBLIC", true));
+
+        assertEquals("PRIVATE", file.getVisibility());
+        assertEquals(Long.MAX_VALUE, file.getContentVersion());
+        verify(mapper, never()).updateById(any(StorageFileEntity.class));
+        verify(mapper, never()).update(isNull(), any(LambdaUpdateWrapper.class));
+        verifyNoInteractions(purger, audit);
+    }
+
+    @Test
+    void zeroRowDeleteFailsBeforeAnyRemoteCleanupOrSuccessAudit() {
+        file.setProviderType("R2");
+        when(mapper.deleteById(1L)).thenReturn(0);
+
+        BusinessException ex =
+                assertThrows(BusinessException.class, () -> service.requestDelete("public-id", "admin", true));
+
+        assertEquals("STORAGE021", ex.getErrorCode());
+        verifyNoInteractions(remoteDelete, tasks, purger, audit);
+    }
+
+    @Test
     void visibilityChangeTriggersWorkerCachePurge() {
         // 可见性变更递增版本后，必须异步失效旧版本（递增前的 contentVersion=1）的边缘缓存键
         service.changeVisibility("public-id", "admin", "PUBLIC", true);
         verify(purger).purgeFileAsync(isNull(), eq("public-id"), eq(1L), isNull());
+    }
+
+    @Test
+    void verificationUsesAtomicRejectionAndSkipsCleanupWhenFileAlreadyChanged() {
+        file.setProviderType("CUSTOM_HTTP");
+        file.setStorageConfigId(9L);
+        StorageConfigEntity config = new StorageConfigEntity();
+        config.setId(9L);
+        config.setStatus(StorageConfigEntity.STATUS_ENABLED);
+        when(configCache.getById(9L)).thenReturn(config);
+        when(policyService.resolve(any()))
+                .thenReturn(new UploadPolicyService.PolicySpec(
+                        true,
+                        0,
+                        null,
+                        java.util.List.of(),
+                        java.util.List.of(),
+                        null,
+                        null,
+                        UploadPolicyService.VERIFY_MAGIC,
+                        null));
+        when(policyService.rejectLegacyFile(1L)).thenReturn(false);
+
+        BusinessException ex =
+                assertThrows(BusinessException.class, () -> service.verifyContentAfterRegistration("public-id"));
+
+        assertEquals("STORAGE019", ex.getErrorCode(), "CUSTOM_HTTP 无浏览器登记后的拉取验证实现");
+        verify(policyService).rejectLegacyFile(1L);
+        verify(mapper, never()).updateById(any(StorageFileEntity.class));
+        verifyNoInteractions(remoteDelete, tasks);
     }
 
     @Test
@@ -133,6 +231,32 @@ class StorageFileServiceTest {
         verifyNoInteractions(tasks);
         verifyNoInteractions(remoteDelete);
         verifyNoInteractions(purger);
+    }
+
+    @Test
+    void browserRegisterIdempotentReturnRejectsDifferentUploader() {
+        StorageFileEntity existing = new StorageFileEntity();
+        existing.setUploadId("up-1");
+        existing.setUploaderId("owner");
+        when(mapper.selectOne(any())).thenReturn(existing);
+
+        BusinessException ex = assertThrows(
+                BusinessException.class, () -> service.registerFromBrowser("up-1", "intruder", "127.0.0.1"));
+
+        assertEquals("STORAGE013", ex.getErrorCode());
+        verify(mapper).lockUploadKey("storage-upload:up-1");
+    }
+
+    @Test
+    void browserRegisterIdempotentReturnAllowsSameUploader() {
+        StorageFileEntity existing = new StorageFileEntity();
+        existing.setUploadId("up-1");
+        existing.setUploaderId("owner");
+        when(mapper.selectOne(any())).thenReturn(existing);
+
+        StorageFileEntity result = service.registerFromBrowser("up-1", "owner", "127.0.0.1");
+
+        assertSame(existing, result);
     }
 }
 

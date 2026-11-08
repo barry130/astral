@@ -1,26 +1,27 @@
 package com.astral.sequence.controller;
 
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
+import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.SequenceStatistics;
 import com.astral.sequence.service.SequenceStatisticsService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 序列统计控制器
- * <p>提供序列使用统计数据的CRUD操作</p>
+ * <p>
+ * 序列统计由发号器异步维护，是只读的运行时观测数据；管理端不提供写入接口，
+ * 避免手工改写 current_value 等统计字段造成观测值与真实号段不一致。
+ * </p>
  */
 @Tag(name = "序列统计表")
 @RestController
@@ -43,7 +44,7 @@ public class SequenceStatisticsController {
     @GetMapping("/page")
     public Result<Page<SequenceStatistics>> page(
             @RequestParam(defaultValue = "1") Integer pageNum, @RequestParam(defaultValue = "10") Integer pageSize) {
-        Page<SequenceStatistics> page = new Page<>(pageNum, pageSize);
+        Page<SequenceStatistics> page = new Page<>(PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize));
         return Result.success(sequenceStatisticsService.page(page));
     }
 
@@ -56,50 +57,10 @@ public class SequenceStatisticsController {
     @Operation(summary = "根据ID查询")
     @GetMapping("/{id}")
     public Result<SequenceStatistics> getById(@PathVariable Long id) {
-        return Result.success(sequenceStatisticsService.getById(id));
-    }
-
-    /**
-     * 创建序列统计记录
-     *
-     * @param entity 序列统计实体
-     * @return 操作结果
-     */
-    @Operation(summary = "创建")
-    @RequiresPermission("admin:sequence:edit")
-    @PostMapping
-    public Result<Void> create(@RequestBody SequenceStatistics entity) {
-        sequenceStatisticsService.save(entity);
-        return Result.success();
-    }
-
-    /**
-     * 更新序列统计记录
-     *
-     * @param id 统计记录ID
-     * @param entity 序列统计实体（包含更新后的字段）
-     * @return 操作结果
-     */
-    @Operation(summary = "更新")
-    @RequiresPermission("admin:sequence:edit")
-    @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody SequenceStatistics entity) {
-        entity.setId(id);
-        sequenceStatisticsService.updateById(entity);
-        return Result.success();
-    }
-
-    /**
-     * 删除序列统计记录
-     *
-     * @param id 统计记录ID
-     * @return 操作结果
-     */
-    @Operation(summary = "删除")
-    @RequiresPermission("admin:sequence:edit")
-    @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable Long id) {
-        sequenceStatisticsService.removeById(id);
-        return Result.success();
+        SequenceStatistics statistics = sequenceStatisticsService.getById(id);
+        if (statistics == null) {
+            throw BusinessException.of("序列统计记录不存在");
+        }
+        return Result.success(statistics);
     }
 }

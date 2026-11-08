@@ -1,14 +1,9 @@
 package com.astral.ai.controller;
 
+import com.astral.ai.common.AiCaller;
 import com.astral.ai.common.AiConstants;
-import com.astral.ai.common.AiException;
 import com.astral.ai.common.AiJson;
 import com.astral.ai.dto.AiAdminDtos;
-import com.astral.ai.entity.AiAgentEntity;
-import com.astral.ai.entity.AiAgentVersionEntity;
-import com.astral.ai.entity.AiMessageEntity;
-import com.astral.ai.entity.AiRequestEntity;
-import com.astral.ai.entity.AiToolCallEntity;
 import com.astral.ai.entity.AiToolEntity;
 import com.astral.ai.mapper.AiToolCallMapper;
 import com.astral.ai.service.AiAgentService;
@@ -18,12 +13,11 @@ import com.astral.ai.service.AiRequestService;
 import com.astral.ai.service.AiToolService;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
 import com.astral.common.annotation.RequiresPermission;
-import com.astral.common.exception.BusinessException;
+import com.astral.common.annotation.RequiresSuper;
 import com.astral.common.result.Result;
 import com.astral.log.annotation.OperateLog;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +85,7 @@ public class AiAdminToolController {
      * <p>插件启动时已自动同步；此接口用于升级后不重启就补齐新增工具，或在排障时手动重放。</p>
      */
     @PostMapping("/tools/sync")
+    @RequiresSuper
     @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "同步代码工具定义")
     @OperateLog("同步 AI 工具定义")
     public Result<Map<String, Object>> syncTools(HttpServletRequest request) {
@@ -99,6 +94,7 @@ public class AiAdminToolController {
     }
 
     @PutMapping("/tools/{id}")
+    @RequiresSuper
     @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "修改工具配置")
     @OperateLog("修改 AI 工具配置")
     public Result<AiAdminDtos.ToolVo> updateTool(
@@ -124,6 +120,7 @@ public class AiAdminToolController {
      * HIGH + ADMIN_CONFIRM，传参无法放开。</p>
      */
     @PostMapping("/tools/http")
+    @RequiresSuper
     @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "新建声明式 HTTP 工具")
     @OperateLog("新建 AI 声明式 HTTP 工具")
     public Result<AiAdminDtos.ToolVo> createHttpTool(
@@ -134,6 +131,7 @@ public class AiAdminToolController {
 
     /** 修改声明式 HTTP 工具（含执行配置），校验规则与新建一致 */
     @PutMapping("/tools/{id}/http")
+    @RequiresSuper
     @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "修改声明式 HTTP 工具")
     @OperateLog("修改 AI 声明式 HTTP 工具")
     public Result<AiAdminDtos.ToolVo> updateHttpTool(
@@ -150,6 +148,7 @@ public class AiAdminToolController {
      * 多语句、以及把入参拼进 SQL 的做法在保存与执行时都会被拒绝，参数一律 PreparedStatement 绑定。</p>
      */
     @PostMapping("/tools/sql")
+    @RequiresSuper
     @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "新建声明式 SQL 工具")
     @OperateLog("新建 AI 声明式 SQL 工具")
     public Result<AiAdminDtos.ToolVo> createSqlTool(
@@ -160,6 +159,7 @@ public class AiAdminToolController {
 
     /** 修改声明式 SQL 工具（含查询配置），校验规则与新建一致 */
     @PutMapping("/tools/{id}/sql")
+    @RequiresSuper
     @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "修改声明式 SQL 工具")
     @OperateLog("修改 AI 声明式 SQL 工具")
     public Result<AiAdminDtos.ToolVo> updateSqlTool(
@@ -172,16 +172,18 @@ public class AiAdminToolController {
     /**
      * 用样例参数试跑工具。
      *
-     * <p>由管理员手动触发，等同「人工确认」，HIGH 工具直接执行；不写 {@code ai_tool_call}
-     * 审计表（不属于任何会话），留痕走 {@link OperateLog}。</p>
+     * <p>仅超管可触发，且以真实操作者身份执行：停用工具拒绝、在册权限经与编排
+     * {@code invoke} 同一套权限咽喉校验、每次试跑写 {@code ai_tool_call} 审计行
+     * （{@code source='test-run'}）。手动触发等同「人工确认」，HIGH 工具直接执行。</p>
      */
     @PostMapping("/tools/{id}/test-run")
+    @RequiresSuper
     @RequiresPermission(value = "admin:ai:tool:edit", name = "AI 工具编辑", description = "试跑工具")
     @OperateLog("测试运行 AI 工具")
     public Result<AiAdminDtos.ToolTestRunVo> testRun(
-            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.ToolTestRunReq req) {
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.ToolTestRunReq req, HttpServletRequest request) {
         long started = System.currentTimeMillis();
-        AiToolResult result = toolService.testRun(id, req.arguments());
+        AiToolResult result = toolService.testRun(id, req.arguments(), AiCaller.requireUserId(request));
         return Result.success(new AiAdminDtos.ToolTestRunVo(
                 result.status(), result.summary(), result.payload(), System.currentTimeMillis() - started));
     }
@@ -199,80 +201,8 @@ public class AiAdminToolController {
     @OperateLog("审批 AI 高风险工具")
     public Result<Map<String, Object>> approve(
             @PathVariable Long id, @Valid @RequestBody AiAdminDtos.ToolApproveReq req, HttpServletRequest request) {
-        AiToolCallEntity call = toolCallMapper.selectById(id);
-        if (call == null) {
-            throw new AiException("AI008", "工具调用不存在: " + id);
-        }
-        if (!AiConstants.ToolCallStatus.WAITING_APPROVAL.equals(call.getStatus())) {
-            throw new AiException("AI008", "该工具调用不在待确认状态");
-        }
-        Long operator = operatorId(request);
-        AiRequestEntity aiRequest = requestService.require(call.getRequestId());
-        AiAgentEntity agent = agentService.require(aiRequest.getAgentId());
-        AiAgentVersionEntity version = agentService.requireVersion(aiRequest.getAgentVersionId());
-
-        boolean approved = Boolean.TRUE.equals(req.approved());
-        call.setApprovedBy(operator);
-        call.setApprovedAt(LocalDateTime.now());
-        call.setApprovalStatus(
-                approved ? AiConstants.ApprovalPolicy.ADMIN_CONFIRM : AiConstants.ToolCallStatus.REJECTED);
-
-        String status;
-        String summary;
-        if (!approved) {
-            call.setStatus(AiConstants.ToolCallStatus.REJECTED);
-            call.setFinishedAt(LocalDateTime.now());
-            call.setErrorMessage(req.comment() == null ? "管理员拒绝执行" : req.comment());
-            toolCallMapper.updateById(call);
-            status = AiConstants.ToolCallStatus.REJECTED;
-            summary = "管理员已拒绝该操作";
-        } else {
-            AiToolService.EffectiveTool effective =
-                    resolve(version.getId(), aiRequest.getClientType(), call.getToolCode());
-            if (effective == null) {
-                throw new AiException("AI008", "工具未绑定或已停用: " + call.getToolCode());
-            }
-            call.setStatus(AiConstants.ToolCallStatus.RUNNING);
-            toolCallMapper.updateById(call);
-            AiToolResult result = orchestrator.invoke(
-                    aiRequest, agent, effective, AiJson.readObject(call.getArgumentsJson()), true, operator);
-            call.setStatus(result.isOk() ? AiConstants.ToolCallStatus.SUCCEEDED : AiConstants.ToolCallStatus.FAILED);
-            call.setResultJson(result.payload() == null ? null : AiJson.write(result.payload()));
-            call.setErrorMessage(result.isOk() ? null : result.summary());
-            call.setFinishedAt(LocalDateTime.now());
-            toolCallMapper.updateById(call);
-            status = call.getStatus();
-            summary = result.summary();
-        }
-
-        resume(aiRequest.getId());
-        return Result.success(
-                approved ? "已执行" : "已拒绝",
-                Map.of("toolCallId", id, "status", status, "summary", summary == null ? "" : summary));
-    }
-
-    // ==================== 内部 ====================
-
-    private AiToolService.EffectiveTool resolve(Long versionId, String clientType, String toolCode) {
-        for (AiToolService.EffectiveTool effective : toolService.resolveEffective(versionId, clientType)) {
-            if (effective.tool().getToolCode().equals(toolCode)) {
-                return effective;
-            }
-        }
-        return null;
-    }
-
-    private void resume(Long requestId) {
-        AiMessageEntity assistant = null;
-        for (AiMessageEntity message : conversationService.byRequest(requestId)) {
-            if (AiConstants.MessageRole.ASSISTANT.equals(message.getRole())) {
-                assistant = message;
-            }
-        }
-        if (assistant == null) {
-            throw new BusinessException("AI007", "找不到待恢复的助手消息");
-        }
-        orchestrator.resume(requestId, assistant.getId());
+        return Result.success(orchestrator.approve(
+                id, AiCaller.requireUserId(request), Boolean.TRUE.equals(req.approved()), req.comment(), true));
     }
 
     private AiAdminDtos.ToolVo toVo(AiToolEntity entity) {
@@ -295,5 +225,14 @@ public class AiAdminToolController {
                 toolService.handlerAvailable(entity),
                 entity.getCreateTime(),
                 entity.getUpdateTime());
+    }
+
+    @PostMapping("/tool-calls/{id}/reconcile")
+    @RequiresPermission(value = "admin:ai:tool:reconcile", name = "AI 工具结果核对", description = "记录未知操作的实际执行结果")
+    @OperateLog(value = "核对 AI 工具结果", recordPayloads = false)
+    public Result<Map<String, Object>> reconcile(
+            @PathVariable Long id, @Valid @RequestBody AiAdminDtos.ToolReconcileReq body, HttpServletRequest request) {
+        return Result.success(
+                orchestrator.reconcileTool(id, AiCaller.requireUserId(request), body.outcome(), body.note()));
     }
 }

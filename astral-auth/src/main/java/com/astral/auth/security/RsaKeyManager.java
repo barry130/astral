@@ -5,7 +5,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.*;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -44,7 +49,7 @@ public class RsaKeyManager {
         if (Files.exists(path)) {
             // 从文件加载密钥对
             byte[] encoded = Files.readAllBytes(path);
-            String parts[] = new String(encoded, "UTF-8").split("\\|");
+            String[] parts = new String(encoded, "UTF-8").split("\\|");
             if (parts.length == 2) {
                 KeyFactory kf = KeyFactory.getInstance("RSA");
                 this.publicKey = kf.generatePublic(
@@ -70,7 +75,10 @@ public class RsaKeyManager {
 
         // 持久化到文件
         try {
-            Files.createDirectories(path.getParent());
+            Path parent = path.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
             String encoded = Base64.getEncoder().encodeToString(publicKey.getEncoded()) + "|"
                     + Base64.getEncoder().encodeToString(privateKey.getEncoded());
             Files.writeString(path, encoded);

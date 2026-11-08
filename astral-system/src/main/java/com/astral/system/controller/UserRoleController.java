@@ -90,8 +90,7 @@ public class UserRoleController {
     @Operation(summary = "更新")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody UserRole entity) {
-        entity.setId(id);
-        userRoleService.updateById(entity);
+        userRoleService.updateAssignment(id, entity.getUserId(), entity.getRoleId());
         // 用户→角色映射已变更，递增权限版本
         permissionCache.bumpVersion();
         return Result.success();

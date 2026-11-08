@@ -3,6 +3,7 @@ package com.astral.ai.mapper;
 import com.astral.ai.entity.AiUserQuotaEntity;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
@@ -21,6 +22,7 @@ public interface AiUserQuotaMapper extends BaseMapper<AiUserQuotaEntity> {
      * @return 占位结果
      */
     @Select("SELECT pg_advisory_xact_lock(hashtextextended(#{key}, 0))")
+    @Options(flushCache = Options.FlushCachePolicy.TRUE, useCache = false)
     String lockQuotaKey(@Param("key") String key);
 
     /**
@@ -41,8 +43,7 @@ public interface AiUserQuotaMapper extends BaseMapper<AiUserQuotaEntity> {
      * @param outLimit    输出 Token 上限（null 表示不限）
      * @return 受影响行数（0 表示超限）
      */
-    @Update(
-            """
+    @Update("""
             UPDATE ai_user_quota
                SET request_count = request_count + #{requests},
                    input_tokens  = input_tokens + #{inTokens},

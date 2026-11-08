@@ -6,6 +6,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.astral.auth.dto.LoginRequest;
 import com.astral.auth.dto.LoginResponse;
+import com.astral.auth.dto.SessionInfoResponse;
 import com.astral.auth.security.AuthCookieWriter;
 import com.astral.auth.security.LoginDevice;
 import com.astral.auth.security.LoginUserTypeResolver;
@@ -196,7 +197,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public LoginResponse getLoginInfo() {
+    public SessionInfoResponse getLoginInfo() {
         if (!StpUtil.isLogin()) {
             throw new BusinessException("AUTH001");
         }
@@ -208,43 +209,30 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("SYS001");
         }
 
-        // 刷新会话中的用户信息
+        // 刷新会话中的用户信息；SaSession.set 不接受 null 昵称。
         StpUtil.getSession().set("username", user.getUsername());
-        // 同上：nickname 为 null 会让 SaSession.set 抛 NPE，必须兜底
         StpUtil.getSession().set("nickname", user.getNickname() == null ? "" : user.getNickname());
         loginUserTypeResolver.cacheCurrentUserType(user.getUserType());
 
         List<String> roles = stpInterface.getRoleList(userId, null);
         List<String> permissions = stpInterface.getPermissionList(userId, null);
 
-        LoginResponse response = new LoginResponse();
-        response.setId(user.getId());
-        response.setUsername(user.getUsername());
-        response.setNickname(user.getNickname());
-        response.setToken(StpUtil.getTokenValue());
-        response.setRoles(roles != null ? roles : Collections.emptyList());
-        response.setPermissions(permissions != null ? permissions : Collections.emptyList());
-        response.setUserType(user.getUserType());
-
-        // 把 CSRF 令牌随响应体再交一次。
-        //
-        // 令牌本来只写在 astral_csrf Cookie 里，而「前端能否读到该 Cookie」取决于部署形态：
-        // 前后端同源（Next.js rewrites 代理）时读得到；跨域直连（web.canace.cn → astral.canace.cn）
-        // 时 Cookie 属于 API 域，页面所在域的 document.cookie 看不到它 —— 前端拿不到值就回填不了
-        // X-CSRF-Token，所有写请求被双提交校验拦成 403（AUTH013），只读请求却正常，表现为
-        // 「能看不能改」。前端在挂载时会调本接口恢复登录态，因此这里补上就实现了「刷新页面即自愈」。
-        //
-        // 判据是「凭据是否来自 Cookie」而不是「是不是管理员」：AuthInterceptor 只对
-        // 非安全方法 + 未带 satoken 请求头的请求做双提交校验，与 user_type 无关。网页端
-        // 里普通用户（userType=APP）同样能用 Cookie 登录（/imgbed 的删除、改可见性都是写操作，
-        // 且不经过 /api/v1/admin/** 的管理员门禁），所以这里按管理员过滤会让这批用户刷新后
-        // 必然撞 403。轻听 App 走 satoken 请求头，后端对其豁免校验，多拿一个值也无副作用。
+        // 跨域直连的页面读不到 API 域的 astral_csrf Cookie，仍随信息响应返回双提交值。
+        // 判据是 Cookie 凭据而非用户类型，网页 APP 用户的写操作也需要；不是认证 token。
+        String csrfToken = null;
         HttpServletResponse httpResponse = AuthCookieWriter.currentResponse();
         HttpServletRequest httpRequest = AuthCookieWriter.currentRequest();
         if (httpResponse != null && httpRequest != null) {
-            response.setCsrfToken(
-                    authCookieWriter.ensureCsrfToken(httpRequest, httpResponse, StpUtil.getTokenTimeout()));
+            csrfToken = authCookieWriter.ensureCsrfToken(httpRequest, httpResponse, StpUtil.getTokenTimeout());
         }
-        return response;
+        return new SessionInfoResponse(
+                user.getId(),
+                user.getUsername(),
+                user.getNickname(),
+                roles,
+                permissions,
+                user.getUserType(),
+                user.getMustChangePassword(),
+                csrfToken);
     }
 }

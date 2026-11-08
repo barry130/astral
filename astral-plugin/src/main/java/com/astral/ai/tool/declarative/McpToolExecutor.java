@@ -5,11 +5,20 @@ import com.astral.ai.common.AiJson;
 import com.astral.ai.config.AiProperties;
 import com.astral.ai.entity.AiMcpServerEntity;
 import com.astral.ai.entity.AiToolEntity;
+import com.astral.ai.security.AiMcpHeaderSecurity;
 import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -24,6 +33,7 @@ import tools.jackson.databind.node.ObjectNode;
  *   <li>非只读服务器发现的工具在发现阶段就被写成 HIGH + ADMIN_CONFIRM，运行期同样按
  *       {@link com.astral.ai.service.AiToolService} 的既有规则再拦截一次；</li>
  *   <li>每次调用独立会话（握手 → 调用 → 关闭），不在进程内缓存长连接。</li>
+ *   <li>headers 里的 {@code v1:} 密文只在调用瞬间解密（R9），解不开的敏感头按「凭证缺失」省略。</li>
  * </ul>
  */
 @Slf4j
@@ -38,12 +48,53 @@ public class McpToolExecutor implements AiToolHandler {
     private final AiMcpServerEntity server;
     private final AiProperties properties;
     private final String toolName;
+    private final String planFingerprint;
+    private final Map<String, String> renderedHeaders;
 
     private McpToolExecutor(AiToolEntity tool, AiMcpServerEntity server, AiProperties properties, String toolName) {
-        this.tool = tool;
-        this.server = server;
-        this.properties = properties;
+        this.tool = new AiToolEntity();
+        BeanUtils.copyProperties(tool, this.tool);
+        this.server = new AiMcpServerEntity();
+        BeanUtils.copyProperties(server, this.server);
+        this.properties = new AiProperties();
+        if (properties != null) {
+            this.properties.setSecretKey(properties.getSecretKey());
+            if (properties.getHttpTool() != null) {
+                this.properties
+                        .getHttpTool()
+                        .setAllowedHosts(
+                                new ArrayList<>(properties.getHttpTool().getAllowedHosts()));
+                this.properties
+                        .getHttpTool()
+                        .setSecrets(new LinkedHashMap<>(properties.getHttpTool().getSecrets()));
+                this.properties
+                        .getHttpTool()
+                        .setMcpTimeoutSeconds(properties.getHttpTool().getMcpTimeoutSeconds());
+            }
+        }
         this.toolName = toolName;
+        this.renderedHeaders = Map.copyOf(McpClient.renderHeaders(
+                AiMcpHeaderSecurity.revealForCall(this.properties.getSecretKey(), this.server.getHeadersJson()),
+                this.properties.getHttpTool().getSecrets()));
+        var snapshot = AiJson.mapper().createObjectNode();
+        snapshot.put("serverId", server.getId());
+        snapshot.put("url", server.getUrl());
+        snapshot.put("headers", server.getHeadersJson());
+        snapshot.set("effectiveHeaders", AiJson.mapper().valueToTree(new java.util.TreeMap<>(renderedHeaders)));
+        snapshot.put("readOnly", server.getReadOnly());
+        snapshot.put("status", server.getStatus());
+        try {
+            this.planFingerprint = HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("SHA-256")
+                            .digest(AiJson.write(snapshot).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable");
+        }
+    }
+
+    /** Digest only: endpoint and credential material never leave the executor snapshot. */
+    public String planFingerprint() {
+        return planFingerprint;
     }
 
     /**
@@ -69,7 +120,12 @@ public class McpToolExecutor implements AiToolHandler {
             log.warn("[AI] 声明式 MCP 工具 {} 的 executor_config 缺少 toolName", tool.getToolCode());
             return null;
         }
-        return new McpToolExecutor(tool, server, properties, toolName);
+        try {
+            return new McpToolExecutor(tool, server, properties, toolName);
+        } catch (com.astral.ai.common.AiException e) {
+            log.warn("[AI] MCP 工具 {} 凭据配置不可用", tool.getId());
+            return null;
+        }
     }
 
     /** 取 executor_config 里的 serverId（缺失或非法返回 null） */
@@ -85,6 +141,9 @@ public class McpToolExecutor implements AiToolHandler {
 
     public static Long serverIdOf(AiToolEntity tool) {
         ObjectNode config = AiJson.readObject(tool.getExecutorConfig());
+        if (config == null) {
+            return null;
+        }
         var node = config.get("serverId");
         if (node == null || !node.isNumber()) {
             return null;
@@ -99,8 +158,8 @@ public class McpToolExecutor implements AiToolHandler {
                 tool.getName(),
                 tool.getDescription(),
                 HANDLER_KEY,
-                tool.getRiskLevel(),
-                tool.getApprovalPolicy(),
+                riskLevelOf(Boolean.TRUE.equals(server.getReadOnly()), readOnlyHintOf(tool)),
+                approvalOf(Boolean.TRUE.equals(server.getReadOnly()), readOnlyHintOf(tool)),
                 AiJson.splitCsv(tool.getClientTypes()),
                 AiJson.splitCsv(tool.getPermissionCodes()),
                 tool.getArgumentsSchema(),
@@ -112,12 +171,8 @@ public class McpToolExecutor implements AiToolHandler {
     public AiToolResult execute(AiToolContext context) {
         AiProperties.HttpTool config = properties == null ? null : properties.getHttpTool();
         int timeoutSeconds = config == null ? 20 : config.getMcpTimeoutSeconds();
-        try (McpClient client = McpClient.connect(
-                server.getUrl(),
-                server.getHeadersJson(),
-                config == null ? null : config.getAllowedHosts(),
-                config == null ? null : config.getSecrets(),
-                timeoutSeconds)) {
+        try (McpClient client = McpClient.connectWithHeaders(
+                server.getUrl(), renderedHeaders, config == null ? null : config.getAllowedHosts(), timeoutSeconds)) {
             ObjectNode arguments =
                     context.arguments() == null ? AiJson.mapper().createObjectNode() : context.arguments();
             McpClient.McpCallResult result = client.callTool(toolName, arguments);
@@ -134,9 +189,8 @@ public class McpToolExecutor implements AiToolHandler {
             log.warn("[AI] MCP 工具 {} 执行失败: {}", tool.getToolCode(), e.getMessage());
             return AiToolResult.failed(e.getMessage());
         } catch (Exception e) {
-            log.warn("[AI] MCP 工具 {} 执行异常: {}", tool.getToolCode(), e.getMessage());
-            return AiToolResult.failed(
-                    "MCP 工具执行失败：" + (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));
+            log.warn("[AI] MCP 工具 {} 执行异常: {}", tool.getToolCode(), e.getClass().getSimpleName());
+            return AiToolResult.failed("MCP 工具执行失败，请检查服务配置与网络");
         }
     }
 

@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestController;
@@ -139,22 +139,27 @@ public class PermissionRegistry {
                     applicationContext.getBeansWithAnnotation(annotationType).entrySet()) {
                 Object bean = entry.getValue();
                 Class<?> targetClass = AopUtils.getTargetClass(bean);
-                RequiresPermission typeLevel = AnnotationUtils.findAnnotation(targetClass, RequiresPermission.class);
+                Set<RequiresPermission> typeLevel =
+                        AnnotatedElementUtils.findMergedRepeatableAnnotations(targetClass, RequiresPermission.class);
                 for (Method method : targetClass.getMethods()) {
-                    RequiresPermission annotation = AnnotationUtils.findAnnotation(method, RequiresPermission.class);
-                    if (annotation == null) {
-                        annotation = typeLevel;
+                    Set<RequiresPermission> annotations =
+                            AnnotatedElementUtils.getMergedRepeatableAnnotations(method, RequiresPermission.class);
+                    if (annotations.isEmpty()) {
+                        annotations =
+                                AnnotatedElementUtils.findMergedRepeatableAnnotations(method, RequiresPermission.class);
                     }
-                    if (annotation == null) {
-                        continue;
+                    if (annotations.isEmpty()) {
+                        annotations = typeLevel;
                     }
                     String source = "@RequiresPermission@" + targetClass.getSimpleName() + "#" + method.getName();
-                    for (String code : annotation.value()) {
-                        if (code == null || code.isBlank()) {
-                            continue;
+                    for (RequiresPermission annotation : annotations) {
+                        for (String code : annotation.value()) {
+                            if (code == null || code.isBlank()) {
+                                continue;
+                            }
+                            declarations.putIfAbsent(
+                                    code.trim(), PermissionDeclaration.fromAnnotation(annotation, source, code.trim()));
                         }
-                        declarations.putIfAbsent(
-                                code.trim(), PermissionDeclaration.fromAnnotation(annotation, source, code.trim()));
                     }
                 }
             }

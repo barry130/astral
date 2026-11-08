@@ -80,6 +80,8 @@ public final class AiProviderDtos {
 
     /** 流式回调 */
     public interface StreamListener {
+        /** Authoritative usage may arrive before completion or a later stream error. */
+        default void onUsage(int inputTokens, int outputTokens) {}
 
         /** 收到增量文本 */
         void onDelta(String text);

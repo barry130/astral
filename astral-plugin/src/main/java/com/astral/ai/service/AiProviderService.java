@@ -15,6 +15,7 @@ import com.astral.ai.provider.MockAiProvider;
 import com.astral.ai.security.AiSecretCipher;
 import com.astral.ai.security.AiUrlGuard;
 import com.astral.common.exception.BusinessException;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -97,8 +98,9 @@ public class AiProviderService {
         entity.setProviderType(providerType.toUpperCase(java.util.Locale.ROOT));
         entity.setBaseUrl(normalizeBaseUrl(entity.getProviderType(), baseUrl));
         entity.setEnabled(enabled == null || enabled);
-        entity.setSecretRef(blankToNull(secretRef));
-        entity.setEncryptedApiKey(apiKey == null || apiKey.isBlank() ? null : cipher.encrypt(apiKey.trim()));
+        boolean hasKey = apiKey != null && !apiKey.isBlank();
+        entity.setSecretRef(hasKey ? null : blankToNull(secretRef));
+        entity.setEncryptedApiKey(hasKey ? cipher.encrypt(apiKey.trim()) : null);
         entity.setConnectTimeoutMs(connectTimeoutMs == null ? 15000 : connectTimeoutMs);
         entity.setReadTimeoutMs(readTimeoutMs == null ? 120000 : readTimeoutMs);
         entity.setMaxRetries(maxRetries == null ? 1 : maxRetries);
@@ -128,46 +130,53 @@ public class AiProviderService {
             String remark,
             Long operatorId) {
         AiProviderEntity entity = require(id);
+        LambdaUpdateWrapper<AiProviderEntity> update = new LambdaUpdateWrapper<AiProviderEntity>()
+                .eq(AiProviderEntity::getId, id)
+                .set(AiProviderEntity::getUpdatedBy, operatorId)
+                .set(AiProviderEntity::getUpdateTime, LocalDateTime.now());
         if (name != null) {
-            entity.setName(name);
+            update.set(AiProviderEntity::getName, name);
         }
         if (providerType != null && !providerType.isBlank()) {
             registry.require(providerType);
             entity.setProviderType(providerType.toUpperCase(java.util.Locale.ROOT));
+            update.set(AiProviderEntity::getProviderType, entity.getProviderType());
         }
         if (baseUrl != null && !baseUrl.isBlank()) {
-            entity.setBaseUrl(normalizeBaseUrl(entity.getProviderType(), baseUrl));
+            update.set(AiProviderEntity::getBaseUrl, normalizeBaseUrl(entity.getProviderType(), baseUrl));
         }
         if (apiKey != null && !apiKey.isBlank()) {
-            entity.setEncryptedApiKey(cipher.encrypt(apiKey.trim()));
-            entity.setSecretRef(null);
+            update.set(AiProviderEntity::getEncryptedApiKey, cipher.encrypt(apiKey.trim()))
+                    .set(AiProviderEntity::getSecretRef, null);
         } else if (secretRef != null) {
-            entity.setSecretRef(blankToNull(secretRef));
-            if (entity.getSecretRef() != null) {
-                entity.setEncryptedApiKey(null);
+            String reference = blankToNull(secretRef);
+            update.set(AiProviderEntity::getSecretRef, reference);
+            if (reference != null) {
+                update.set(AiProviderEntity::getEncryptedApiKey, null);
             }
         }
         if (enabled != null) {
-            entity.setEnabled(enabled);
+            update.set(AiProviderEntity::getEnabled, enabled);
         }
         if (connectTimeoutMs != null) {
-            entity.setConnectTimeoutMs(connectTimeoutMs);
+            update.set(AiProviderEntity::getConnectTimeoutMs, connectTimeoutMs);
         }
         if (readTimeoutMs != null) {
-            entity.setReadTimeoutMs(readTimeoutMs);
+            update.set(AiProviderEntity::getReadTimeoutMs, readTimeoutMs);
         }
         if (maxRetries != null) {
-            entity.setMaxRetries(maxRetries);
+            update.set(AiProviderEntity::getMaxRetries, maxRetries);
         }
         if (weight != null) {
-            entity.setWeight(weight);
+            update.set(AiProviderEntity::getWeight, weight);
         }
         if (remark != null) {
-            entity.setRemark(remark);
+            update.set(AiProviderEntity::getRemark, remark);
         }
-        entity.setUpdatedBy(operatorId);
-        providerMapper.updateById(entity);
-        return entity;
+        if (providerMapper.update(null, update) != 1) {
+            throw new BusinessException("AI006", "提供方已被删除，请刷新后重试");
+        }
+        return require(id);
     }
 
     /** 删除提供方（有模型或路由引用时拒绝） */
@@ -212,6 +221,12 @@ public class AiProviderService {
             code = models.get(0).getModelCode();
         }
         HealthResult result;
+        // 审计要求：测试只作用于已存配置，目标 host 落日志留痕（R8）。
+        log.info(
+                "[AI] 提供方连通性测试 provider={} model={} targetHost={}",
+                entity.getProviderCode(),
+                code,
+                targetHost(entity.getBaseUrl()));
         try {
             ChatRequest request = new ChatRequest(
                     entity.getBaseUrl(),
@@ -230,8 +245,11 @@ public class AiProviderService {
                     "health-" + id);
             result = registry.require(entity.getProviderType()).testConnection(request);
         } catch (Exception e) {
-            log.warn("[AI] 提供方连通性测试失败 provider={} reason={}", entity.getProviderCode(), e.getMessage());
-            result = HealthResult.fail(safeMessage(e));
+            log.warn(
+                    "[AI] 提供方连通性测试失败 provider={} type={}",
+                    entity.getProviderCode(),
+                    e.getClass().getSimpleName());
+            result = HealthResult.fail("连接测试失败，请检查提供方配置与凭据");
         }
         markHealth(entity, result);
         return result;
@@ -261,6 +279,7 @@ public class AiProviderService {
                                 + "与保存该密钥时所用的主密钥不一致（或密文已损坏）。"
                                 + "请改回原主密钥，或在本提供方上重新保存 API Key 以重新加密");
             }
+            log.debug("[AI] 提供方 {} 解析加密密钥成功", entity.getProviderCode());
             return plain;
         }
         String ref = entity.getSecretRef();
@@ -269,6 +288,7 @@ public class AiProviderService {
             if (plain == null || plain.isBlank()) {
                 throw new BusinessException("AI006", "环境变量未配置: " + ref);
             }
+            log.debug("[AI] 提供方 {} 解析环境变量引用成功", entity.getProviderCode());
             return plain;
         }
         return null;
@@ -293,13 +313,22 @@ public class AiProviderService {
         providerMapper.updateById(patch);
     }
 
-    private static String safeMessage(Exception e) {
-        String message = e.getMessage();
-        return AiJson.truncate(message == null ? e.getClass().getSimpleName() : message, 400);
-    }
-
     private static String blankToNull(String text) {
         return text == null || text.isBlank() ? null : text.trim();
+    }
+
+    /** 审计只记录可解析的主机，不回显路径、查询或无效原值。 */
+    private static String targetHost(String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return null;
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(baseUrl.trim());
+            String host = uri.getHost();
+            return host == null ? "未配置有效主机" : host;
+        } catch (RuntimeException e) {
+            return "未配置有效主机";
+        }
     }
 
     /**

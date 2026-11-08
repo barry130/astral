@@ -78,5 +78,20 @@
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-crypto</artifactId>
         </dependency>
+
+        <!-- 纯单元测试（会话指纹等无容器依赖的安全逻辑）。版本由 spring-boot-dependencies 统一管理，
+             不引 Spring 容器，避免为几个纯函数拉起上下文。 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 账号状态兜底门禁的单测需要替身 UserMapper（只验证「查不到=不可用」等判定，不起 DB） -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

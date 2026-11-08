@@ -8,6 +8,7 @@ import com.astral.qt.dto.QtSourceReportDto;
 import com.astral.qt.dto.vo.QtSourceArtifactVo;
 import com.astral.qt.dto.vo.QtSourceManifestVo;
 import com.astral.qt.dto.vo.QtSourceReleaseVo;
+import com.astral.qt.entity.QtAppUpdate;
 import com.astral.qt.entity.QtSourceRelease;
 import com.astral.qt.entity.QtSourceReport;
 import com.astral.qt.mapper.QtSourceReleaseMapper;
@@ -63,6 +64,9 @@ public class QtSourceService {
 
     /** 产物 path 白名单字典（启用的出现在前端下拉，停用的不再被继承） */
     private static final String DICT_ARTIFACT_PATH = "qt_source_artifact_path";
+
+    /** 匿名上报 detail 落库上限：防止免认证接口写入超长文本（D-QT-06） */
+    private static final int MAX_REPORT_DETAIL = 500;
 
     /** 版本号生成串行锁：单实例内保证「拿号」互斥，(code, channel) 唯一索引是最后一道防线 */
     private static final Object VERSION_LOCK = new Object();
@@ -161,7 +165,12 @@ public class QtSourceService {
             throw new QtException("sourceVersionCode 不能为空");
         }
         QtSourceReport report = new QtSourceReport();
-        report.setPlatform(dto.getPlatform() == null ? 0L : dto.getPlatform());
+        // 平台号只接受已知平台或 0（未上报）；垃圾值直接拒绝，避免污染装机分布统计（D-QT-06）。
+        Long platform = dto.getPlatform();
+        if (platform != null && platform != 0L && !QtAppUpdate.isSupportedPlatform(platform)) {
+            throw new QtException("platform 不合法");
+        }
+        report.setPlatform(platform == null ? 0L : platform);
         report.setAppVersionCode(dto.getAppVersionCode() == null ? 0L : dto.getAppVersionCode());
         report.setSourceVersionCode(dto.getSourceVersionCode());
         // 严格校验：未知 result 不能静默归为 smoke_failed（会虚增坏包信号污染统计），空值按 ok 兜底
@@ -172,7 +181,12 @@ public class QtSourceService {
             throw new QtException("result 只支持 ok / smoke_failed");
         }
         report.setResult(result);
-        report.setDetail(dto.getDetail());
+        // detail 是免认证客户端可控制的自由文本，截断到上限后再落库（D-QT-06）。
+        String detail = dto.getDetail();
+        report.setDetail(
+                detail == null || detail.length() <= MAX_REPORT_DETAIL
+                        ? detail
+                        : detail.substring(0, MAX_REPORT_DETAIL));
         reportMapper.insert(report);
     }
 

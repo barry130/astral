@@ -8,7 +8,13 @@ import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -60,6 +66,8 @@ public class SchemaRegistry {
      */
     public static void init() {
         try {
+            // 允许同一 JVM 内重复初始化（测试/热重启）：旧缓存不能与新扫描结果叠加。
+            SCHEMA_CACHE.clear();
             externalSchemaDir = Paths.get("data", "schemas");
             Files.createDirectories(externalSchemaDir);
 
@@ -170,7 +178,14 @@ public class SchemaRegistry {
                 log.info("Skip schema file without tableName: {}", filename);
                 return;
             }
-            SCHEMA_CACHE.putIfAbsent(schema.getTableName(), schema);
+            TableSchema previous = SCHEMA_CACHE.putIfAbsent(schema.getTableName(), schema);
+            if (previous != null) {
+                // 同名 schema 来自不同模块时，classpath 顺序会随机决定谁生效；必须留下可排查的日志。
+                log.warn(
+                        "Duplicate table schema '{}' in {}; keeping the first loaded definition",
+                        schema.getTableName(),
+                        filename);
+            }
         } catch (JacksonException e) {
             log.warn("Cannot parse schema file: {}", filename, e);
         }
@@ -184,19 +199,25 @@ public class SchemaRegistry {
      * </p>
      */
     private static void loadExternalSchemas() {
-        try {
-            Files.list(externalSchemaDir)
-                    .filter(p -> p.toString().endsWith(".json"))
-                    .forEach(p -> {
-                        try {
-                            TableSchema schema = MAPPER.readValue(p.toFile(), TableSchema.class);
-                            SCHEMA_CACHE.put(schema.getTableName(), schema);
-                        } catch (JacksonException e) {
-                            // Skip invalid files
-                        }
-                    });
+        try (Stream<Path> paths = Files.list(externalSchemaDir)) {
+            paths.filter(p -> p.toString().endsWith(".json")).forEach(p -> {
+                try {
+                    TableSchema schema = MAPPER.readValue(p.toFile(), TableSchema.class);
+                    if (schema.getTableName() == null || schema.getTableName().isBlank()) {
+                        log.warn("Skip external schema file without tableName: {}", p);
+                        return;
+                    }
+                    TableSchema previous = SCHEMA_CACHE.put(schema.getTableName(), schema);
+                    if (previous != null) {
+                        log.info("External schema {} overrides table '{}'", p.getFileName(), schema.getTableName());
+                    }
+                } catch (Exception e) {
+                    // 单个外部文件损坏不应阻止其余 schema 加载；运行时目录属可写边界，必须逐个隔离失败。
+                    log.warn("Cannot parse external schema file: {}", p, e);
+                }
+            });
         } catch (IOException e) {
-            // Directory might not exist
+            log.warn("Cannot scan external schema directory: {}", externalSchemaDir, e);
         }
     }
 
@@ -262,6 +283,10 @@ public class SchemaRegistry {
      * @throws IOException 表不存在时抛出
      */
     public static TableSchema updateSchema(String tableName, TableSchema newSchema) throws IOException {
+        SqlIdentifiers.requireValid(tableName, "表名");
+        if (newSchema == null) {
+            throw new IllegalArgumentException("schema不能为空");
+        }
         if (!SCHEMA_CACHE.containsKey(tableName)) {
             throw new IOException("Table schema not found: " + tableName);
         }
@@ -286,6 +311,10 @@ public class SchemaRegistry {
      * @throws IOException 表已存在时抛出
      */
     public static void addSchema(TableSchema schema) throws IOException {
+        if (schema == null) {
+            throw new IllegalArgumentException("schema不能为空");
+        }
+        SqlIdentifiers.requireValid(schema.getTableName(), "表名");
         if (SCHEMA_CACHE.containsKey(schema.getTableName())) {
             throw new IOException("Table schema already exists: " + schema.getTableName());
         }

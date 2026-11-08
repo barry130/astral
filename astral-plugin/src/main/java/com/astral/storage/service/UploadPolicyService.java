@@ -4,9 +4,7 @@ import com.astral.common.exception.BusinessException;
 import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.entity.StorageFolderEntity;
 import com.astral.storage.mapper.StorageFileMapper;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -39,6 +37,7 @@ public class UploadPolicyService {
 
     private final StorageFileMapper fileMapper;
     private final ObjectMapper objectMapper;
+    private final UploadQuotaService quotaService;
 
     /**
      * 解析后的策略视图：字段全部带缺省值，调用方无需判空。
@@ -202,22 +201,21 @@ public class UploadPolicyService {
     }
 
     /**
-     * 每日上传计数（UPDATE_DESIGN.md §5.4）：该文件夹 + 该上传者当日已成功上传次数。
-     * <p>计数口径：全部行中排除 FAILED（内容验证拒绝，未成功）；含 DELETED/DELETING ——
-     * storage 删除为软删、行永不物理删除，替换回收旧文件后当日计数依然准确。
-     * 自然日按服务器时区。</p>
+     * 统一每日消费与预占数；消费归属固定，不因文件删除或移动变化。自然日按服务器时区。
      */
     public long countTodayUploads(Long folderId, String uploaderId) {
         if (folderId == null || uploaderId == null || uploaderId.isBlank()) {
             return 0;
         }
-        LocalDateTime dayStart = LocalDate.now().atStartOfDay();
-        Long count = fileMapper.selectCount(new LambdaQueryWrapper<StorageFileEntity>()
-                .eq(StorageFileEntity::getFolderId, folderId)
-                .eq(StorageFileEntity::getUploaderId, uploaderId)
-                .ge(StorageFileEntity::getCreateTime, dayStart)
-                .ne(StorageFileEntity::getStatus, StorageFileEntity.STATUS_FAILED));
-        return count == null ? 0 : count;
+        return quotaService.usage(folderId, uploaderId, LocalDate.now());
+    }
+
+    public void recordLegacy(StorageFileEntity file, boolean exempt) {
+        quotaService.recordLegacy(file, exempt);
+    }
+
+    public boolean rejectLegacyFile(Long fileId) {
+        return quotaService.rejectLegacyFile(fileId);
     }
 
     /** 配额检查：超出抛 STORAGE032（每日上传次数用尽）。管理端豁免由调用方判断后跳过本方法。 */

@@ -95,17 +95,16 @@ public final class LogSanitizer {
             return text;
         }
         String masked = JSON_PAIR.matcher(text).replaceAll(match -> {
-            // 已打码的值直接跳过，保证 mask 幂等（便于在多层链路上重复调用）。
-            // 这里必须比 startsWith 更宽：打码后是 `"******""accessToken"...`，
-            // 下一个成员会被并进同一个值里，只判前缀等会让幂等性失效。
-            if (!isSensitiveKey(match.group(2)) || match.group(3).contains(MASK)) {
+            // 敏感值始终整段替换，部分打码标记不能证明其余内容已脱敏。
+            // 替换输出固定，多层链路重复调用仍保持幂等。
+            if (!isSensitiveKey(match.group(2))) {
                 return Matcher.quoteReplacement(match.group(0));
             }
             // 统一替换为带引号的字面量：目标是「不可读」，不追求打码后仍是合法 JSON。
             return Matcher.quoteReplacement(match.group(1) + ": \"" + MASK + "\"");
         });
         return FORM_PAIR.matcher(masked).replaceAll(match -> {
-            if (!isSensitiveKey(match.group(2)) || match.group(3).startsWith(MASK)) {
+            if (!isSensitiveKey(match.group(2))) {
                 return Matcher.quoteReplacement(match.group(0));
             }
             return Matcher.quoteReplacement(match.group(1) + MASK);

@@ -97,11 +97,12 @@ public class OssApiService {
             Map<String, String> ossHeaders,
             String canonicalizedResource) {
         StringBuilder ossHeaderStr = new StringBuilder();
-        new TreeMap<>(ossHeaders).forEach((k, v) -> ossHeaderStr
-                .append(k.toLowerCase(Locale.ROOT))
-                .append(':')
-                .append(v)
-                .append('\n'));
+        new TreeMap<>(ossHeaders)
+                .forEach((k, v) -> ossHeaderStr
+                        .append(k.toLowerCase(Locale.ROOT))
+                        .append(':')
+                        .append(v)
+                        .append('\n'));
         return String.join(
                         "\n",
                         method,

@@ -1,6 +1,7 @@
 package com.astral.system.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.crypto.digest.BCrypt;
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.annotation.RequiresSuper;
@@ -185,17 +186,30 @@ public class UserController {
     @RequiresPermission("admin:system:user:edit")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody User entity) {
-        entity.setId(id);
-        // 防止 mass assignment：请求体是实体，客户端可以直接塞入敏感字段。
-        // 置 null 后 MyBatis-Plus 默认策略（NOT_NULL）会跳过这些列，不会被覆盖。
-        entity.setUserType(null); // 用户类型只能走 /{id}/type
-        entity.setPassword(null); // 密码只能走 /{id}/password（含 BCrypt 处理）
-        entity.setDeleted(null); // 逻辑删除标记不可由客户端改写
-        entity.setPwdUpdateTime(null);
-        entity.setLoginTime(null);
-        entity.setLoginIp(null);
-        entity.setCreateTime(null);
-        userService.updateById(entity);
+        // 白名单更新：id 由路径决定，只写「资料类」业务列。
+        // 不能用 updateById(客户端实体)——MP 3.5.17 默认 updateStrategy=NOT_NULL，
+        // 会把实体上所有非 null 字段一并写进 SET（mass assignment），客户端可直接改写
+        // password/pwd_update_time（口令轮换时间）、totp_secret/totp_enabled（二次因子）、
+        // user_type/deleted（提权与逻辑删除）、status/status_reason（封禁状态）、
+        // must_change_password/device_id/login_ip/login_time/create_time（内部记录列）。
+        // 「置 null 剥离」也不成立：null 会被 NOT_NULL 策略跳过，挡不住也无法清空。
+        var update = userService.lambdaUpdate().eq(User::getId, id);
+        if (entity.getUsername() != null) {
+            update.set(User::getUsername, entity.getUsername());
+        }
+        if (entity.getNickname() != null) {
+            update.set(User::getNickname, entity.getNickname());
+        }
+        if (entity.getEmail() != null) {
+            update.set(User::getEmail, entity.getEmail());
+        }
+        if (entity.getPhone() != null) {
+            update.set(User::getPhone, entity.getPhone());
+        }
+        if (entity.getAvatar() != null) {
+            update.set(User::getAvatar, entity.getAvatar());
+        }
+        update.update();
         // 更新用户可能伴随角色调整（sys_user_role），递增权限版本
         permissionCache.bumpVersion();
         return Result.success();
@@ -212,6 +226,11 @@ public class UserController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         userService.removeById(id);
+        // 删除必须先踢掉存量会话：removeById 是逻辑删除，只改 sys_user.deleted，
+        // Sa-Token 里该用户的 token 依然有效；而本系统 token 每请求滑动续期、
+        // active-timeout=-1 关闭闲置过期 ⇒ 被删账号的会话不会自然过期，可继续调用管理端接口。
+        // 拦截器里另有「账号状态」兜底门禁（≤30 秒），这里是即时生效路径。
+        StpUtil.kickout(id);
         // 用户（及其角色关联）变更后，权限缓存立即失效
         permissionCache.bumpVersion();
         return Result.success();
@@ -316,16 +335,18 @@ public class UserController {
         if (user == null) {
             throw BusinessException.of("用户不存在");
         }
-        // 密码强度策略（失败抛 IllegalArgumentException -> 400 文案）；
-        // 传明文交给 UserServiceImpl.updateById 统一 BCrypt 一次：这里再 hashpw 会被
-        // updateById 对非空 password 再哈希，落库成 BCrypt(BCrypt(明文))，登录 checkpw 必败
+        // Explicit credential-only update; do not write back unrelated account state loaded above.
         PasswordPolicy.validateOrThrow(password, user.getUsername());
-        user.setPassword(password);
-        user.setPwdUpdateTime(LocalDateTime.now());
-        // 管理员重置的密码视为临时口令：目标用户下次管理端登录必须自行修改
-        user.setMustChangePassword(1);
-        user.setUpdateTime(LocalDateTime.now());
-        userService.updateById(user);
+        boolean changed = userService.update(
+                null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<User>()
+                        .eq(User::getId, id)
+                        .eq(User::getPassword, user.getPassword())
+                        .set(User::getPassword, BCrypt.hashpw(password))
+                        .set(User::getPwdUpdateTime, LocalDateTime.now())
+                        .set(User::getMustChangePassword, 1)
+                        .set(User::getUpdateTime, LocalDateTime.now()));
+        if (!changed) throw BusinessException.of("账号凭据已变更，请刷新后重试");
         // 重置密码后踢下线，强制重新登录
         StpUtil.kickout(id);
         return Result.success();

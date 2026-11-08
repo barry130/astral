@@ -31,6 +31,12 @@ public class StorageTicketTargetService {
      * qt 媒体编排用它判断「直传 or 代传」，比捕获 STORAGE039 异常控制流更直白。
      */
     public StorageConfigEntity resolveUploadConfig(StorageFolderEntity folder, String userId) {
+        if (folder == null) {
+            throw new BusinessException("STORAGE025", "目录不存在或已停用");
+        }
+        if (!StorageFolderEntity.STATUS_ENABLED.equals(folder.getStatus())) {
+            throw new BusinessException("STORAGE025", "目录已停用");
+        }
         StorageTargetResolver.Candidate candidate =
                 targetResolver.resolveForUpload(folder, userId).firstCandidate();
         StorageConfigEntity config = configMapper.selectById(candidate.configId());

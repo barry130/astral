@@ -13,7 +13,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.time.LocalDateTime;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
@@ -23,7 +22,6 @@ import org.springframework.stereotype.Service;
  * 服务端已读（read_time）——广播行不在此列（已读仍由客户端缓存判定）。
  * 模板渲染收口在 {@link #render}（HTML 转义，收件人是普通用户）。
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InappServiceImpl implements InappService {
@@ -132,11 +130,9 @@ public class InappServiceImpl implements InappService {
         row.setIsShow(1L);
         row.setIsTop(0L);
         row.setAudience("ALL");
-        try {
-            noticeMapper.insert(row);
-        } catch (Exception e) {
-            // 投递失败不阻断主流程（站内信是通知性质），记错误日志由运维兜底
-            log.error("[Inapp] 站内信写入失败 user={}: {}", userId, e.getMessage());
+        // PublishResult 在发布器统一记录失败；此处不能把未写入的消息报告为成功。
+        if (noticeMapper.insert(row) != 1) {
+            throw new IllegalStateException("站内信写入失败");
         }
     }
 

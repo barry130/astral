@@ -194,7 +194,7 @@ public class TableSchemaController {
 
     /**
      * 创建默认通用字段列表
-     * <p>包含：id（主键自增）、create_time（插入时自动填充）、update_time（更新时自动填充）、deleted（逻辑删除）</p>
+     * <p>包含：id（全局序列填充）、create_time（插入时自动填充）、update_time（更新时自动填充）、deleted（逻辑删除）</p>
      *
      * @return 默认字段列表
      */
@@ -210,9 +210,9 @@ public class TableSchemaController {
         id.setComment("主键ID");
         id.setLength(20);
         id.setIsPrimaryKey(true);
-        id.setIsAutoIncrement(true);
+        id.setIsAutoIncrement(false);
         id.setIsRequired(true);
-        id.setMybatisPlusIdType("AUTO");
+        id.setMybatisPlusIdType("INPUT");
         fields.add(id);
 
         // 创建时间字段（INSERT时自动填充）

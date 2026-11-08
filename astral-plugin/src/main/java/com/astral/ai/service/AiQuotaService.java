@@ -13,20 +13,13 @@ import com.astral.ai.mapper.AiUserQuotaMapper;
 import com.astral.dao.entity.UserRole;
 import com.astral.system.service.UserRoleService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import jakarta.annotation.PreDestroy;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -44,52 +37,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AiQuotaService {
 
-    /** 并发计数清理的间隔（秒） */
-    private static final long CONCURRENCY_SWEEP_SECONDS = 300;
-
     private final AiQuotaPolicyMapper policyMapper;
     private final AiUserQuotaMapper quotaMapper;
     private final UserRoleService userRoleService;
     private final AiProperties properties;
-
-    /** 运行中请求数（单实例内存计数；多实例部署时应替换为 Redis 原子计数） */
-    private final Map<String, Integer> running = new ConcurrentHashMap<>();
-
-    /** 运行中请求的最后活跃时间（用于兜底清理泄漏计数） */
-    private final Map<String, Long> runningTouched = new ConcurrentHashMap<>();
-
-    private final ScheduledExecutorService sweeper = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread thread = new Thread(r, "ai-quota-sweeper");
-        thread.setDaemon(true);
-        return thread;
-    });
-
-    {
-        sweeper.scheduleWithFixedDelay(
-                this::sweep, CONCURRENCY_SWEEP_SECONDS, CONCURRENCY_SWEEP_SECONDS, TimeUnit.SECONDS);
-    }
-
-    @PreDestroy
-    void shutdown() {
-        sweeper.shutdownNow();
-    }
-
-    /** 清理超过 1 小时未释放的并发计数，避免进程内计数泄漏 */
-    private void sweep() {
-        try {
-            long deadline = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
-            runningTouched.entrySet().removeIf(entry -> {
-                Long touched = entry.getValue();
-                if (touched != null && touched < deadline) {
-                    running.remove(entry.getKey());
-                    return true;
-                }
-                return false;
-            });
-        } catch (Exception e) {
-            log.warn("[AI] 并发额度清理失败: {}", e.getMessage());
-        }
-    }
 
     /**
      * 生效额度。
@@ -232,6 +183,19 @@ public class AiQuotaService {
                 maxContext = shrink(maxContext, AiJson.intValue(node, "maxContextTokens", 0));
                 maxOutput = shrink(maxOutput, AiJson.intValue(node, "maxOutputTokens", 0));
                 maxConcurrent = shrink(maxConcurrent, AiJson.intValue(node, "maxConcurrent", 0));
+                var versionCost = node.get("monthlyCostLimit");
+                if (versionCost != null && !versionCost.isNull()) {
+                    BigDecimal candidate;
+                    try {
+                        candidate = new BigDecimal(versionCost.asText());
+                    } catch (NumberFormatException invalid) {
+                        throw new AiException("AI005", "版本费用限额格式无效");
+                    }
+                    if (candidate.signum() < 0) {
+                        throw new AiException("AI005", "版本费用限额不能为负数");
+                    }
+                    costLimit = costLimit == null ? candidate : costLimit.min(candidate);
+                }
                 sources.add("version-override");
             }
         }
@@ -265,104 +229,6 @@ public class AiQuotaService {
                 maxConcurrent,
                 costLimit,
                 sources);
-    }
-
-    /**
-     * 预占额度：校验输入长度、并发、日/月请求数，并原子累加计数。
-     *
-     * @param userId    用户
-     * @param agent     智能体
-     * @param version   版本
-     * @param inputChars 输入字符数
-     * @param limits    生效额度
-     * @return 预占凭据
-     */
-    @Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
-    public Reservation reserve(
-            Long userId, AiAgentEntity agent, AiAgentVersionEntity version, int inputChars, Limits limits) {
-        if (inputChars > limits.maxInputChars()) {
-            throw new AiException("AI005", "输入过长：" + inputChars + " 字符，上限 " + limits.maxInputChars());
-        }
-        String concurrencyKey = userId + ":" + (agent == null ? 0 : agent.getId());
-        int current = running.merge(concurrencyKey, 1, Integer::sum);
-        if (current > limits.maxConcurrent()) {
-            running.merge(concurrencyKey, -1, Integer::sum);
-            throw new AiException("AI005", "并发请求过多（上限 " + limits.maxConcurrent() + "），请稍后再试");
-        }
-        runningTouched.put(concurrencyKey, System.currentTimeMillis());
-        try {
-            Long agentId = agent == null ? 0L : agent.getId();
-            AiUserQuotaEntity day = ensureRow(userId, agentId, "DAY", LocalDate.now());
-            AiUserQuotaEntity month =
-                    ensureRow(userId, agentId, "MONTH", LocalDate.now().withDayOfMonth(1));
-            int dayRows = quotaMapper.addWithinLimits(
-                    day.getId(),
-                    1,
-                    inputChars,
-                    0,
-                    limits.dailyRequests(),
-                    limits.dailyInputTokens(),
-                    limits.dailyOutputTokens());
-            if (dayRows == 0) {
-                releaseConcurrency(concurrencyKey);
-                throw new AiException("AI005", "今日额度已用尽");
-            }
-            int monthRows = quotaMapper.addWithinLimits(
-                    month.getId(),
-                    1,
-                    inputChars,
-                    0,
-                    limits.monthlyRequests(),
-                    limits.monthlyInputTokens(),
-                    limits.monthlyOutputTokens());
-            if (monthRows == 0) {
-                quotaMapper.addWithinLimits(day.getId(), -1, -inputChars, 0, null, null, null);
-                releaseConcurrency(concurrencyKey);
-                throw new AiException("AI005", "本月额度已用尽");
-            }
-            return new Reservation(userId, agentId, day.getId(), month.getId(), inputChars, concurrencyKey, limits);
-        } catch (AiException e) {
-            throw e;
-        } catch (RuntimeException e) {
-            releaseConcurrency(concurrencyKey);
-            throw e;
-        }
-    }
-
-    /**
-     * 结算：补齐真实 Token 与费用。
-     *
-     * @param reservation 预占凭据
-     * @param outputChars 输出字符数（按 4 字符 ≈ 1 token 粗估，真实值由上游返回）
-     */
-    public void settle(Reservation reservation, int outputChars) {
-        try {
-            releaseConcurrency(reservation.concurrencyKey());
-            long outTokens = Math.max(1, outputChars / 2L);
-            quotaMapper.addWithinLimits(reservation.dayRowId(), 0, 0, outTokens, null, null, null);
-            quotaMapper.addWithinLimits(reservation.monthRowId(), 0, 0, outTokens, null, null, null);
-        } catch (Exception e) {
-            log.warn("[AI] 额度结算失败 user={} reason={}", reservation.userId(), e.getMessage());
-        }
-    }
-
-    /** 释放：上游失败或取消时归还请求数，避免白扣 */
-    public void release(Reservation reservation) {
-        try {
-            releaseConcurrency(reservation.concurrencyKey());
-            quotaMapper.addWithinLimits(reservation.dayRowId(), -1, -reservation.inputChars(), 0, null, null, null);
-            quotaMapper.addWithinLimits(reservation.monthRowId(), -1, -reservation.inputChars(), 0, null, null, null);
-        } catch (Exception e) {
-            log.warn("[AI] 额度释放失败 user={} reason={}", reservation.userId(), e.getMessage());
-        }
-    }
-
-    private void releaseConcurrency(String key) {
-        if (key == null) {
-            return;
-        }
-        running.compute(key, (k, v) -> v == null || v <= 1 ? null : v - 1);
-        runningTouched.remove(key);
     }
 
     /** 取或创建周期额度行（唯一索引 + 咨询锁保证并发安全） */
@@ -402,6 +268,73 @@ public class AiQuotaService {
         return row;
     }
 
+    /** Lock DAY then MONTH consistently; all model-stage reservations share these rows. */
+    public List<AiUserQuotaEntity> lockPeriods(Long userId, Long agentId) {
+        LocalDate today = LocalDate.now();
+        AiUserQuotaEntity day = ensureRow(userId, agentId, "DAY", today);
+        day = quotaMapper.selectOne(new LambdaQueryWrapper<AiUserQuotaEntity>()
+                .eq(AiUserQuotaEntity::getId, day.getId())
+                .last("FOR UPDATE"));
+        AiUserQuotaEntity month = ensureRow(userId, agentId, "MONTH", today.withDayOfMonth(1));
+        month = quotaMapper.selectOne(new LambdaQueryWrapper<AiUserQuotaEntity>()
+                .eq(AiUserQuotaEntity::getId, month.getId())
+                .last("FOR UPDATE"));
+        return List.of(day, month);
+    }
+
+    public void reserveStage(
+            List<AiUserQuotaEntity> periods, int requests, int input, int output, BigDecimal cost, Limits limits) {
+        for (AiUserQuotaEntity row : periods) {
+            boolean day = "DAY".equals(row.getPeriodType());
+            if (!day
+                    && limits.monthlyCostLimit() != null
+                    && row.getSettledCost().add(row.getReservedCost()).add(cost).compareTo(limits.monthlyCostLimit())
+                            > 0) {
+                throw new AiException("AI005", "本月费用额度不足");
+            }
+            int updated = quotaMapper.addWithinLimits(
+                    row.getId(),
+                    requests,
+                    input,
+                    output,
+                    day ? limits.dailyRequests() : limits.monthlyRequests(),
+                    day ? limits.dailyInputTokens() : limits.monthlyInputTokens(),
+                    day ? limits.dailyOutputTokens() : limits.monthlyOutputTokens());
+            if (updated != 1) {
+                throw new AiException("AI005", day ? "今日额度不足" : "本月额度不足");
+            }
+            quotaMapper.update(
+                    null,
+                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<AiUserQuotaEntity>()
+                            .eq(AiUserQuotaEntity::getId, row.getId())
+                            .setSql("reserved_cost = reserved_cost + {0}", cost));
+        }
+    }
+
+    public void settleStage(
+            Long dayId, Long monthId, int inputDelta, int outputDelta, BigDecimal reserved, BigDecimal actual) {
+        for (Long id : List.of(dayId, monthId)) {
+            if (quotaMapper.addWithinLimits(id, 0, inputDelta, outputDelta, null, null, null) != 1) {
+                throw new AiException("AI005", "额度结算记录不存在");
+            }
+            quotaMapper.update(
+                    null,
+                    new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<AiUserQuotaEntity>()
+                            .eq(AiUserQuotaEntity::getId, id)
+                            .setSql(
+                                    "reserved_cost = reserved_cost - {0}, settled_cost = settled_cost + {1}",
+                                    reserved, actual));
+        }
+    }
+
+    public void releaseRequestCount(Long dayId, Long monthId) {
+        for (Long id : List.of(dayId, monthId)) {
+            if (quotaMapper.addWithinLimits(id, -1, 0, 0, null, null, null) != 1) {
+                throw new AiException("AI005", "额度结算记录不存在");
+            }
+        }
+    }
+
     /** 取用户角色 ID */
     private List<Long> roleIdsOf(Long userId) {
         if (userId == null) {
@@ -414,30 +347,10 @@ public class AiQuotaService {
                     .distinct()
                     .toList();
         } catch (Exception e) {
-            log.debug("[AI] 读取用户角色失败 user={} reason={}", userId, e.getMessage());
-            return List.of();
+            log.warn("[AI] 无法确认用户角色额度 user={}", userId);
+            throw new AiException("AI005", "无法确认角色额度，请稍后重试");
         }
     }
-
-    /**
-     * 预占凭据。
-     *
-     * @param userId         用户
-     * @param agentId        智能体（0 表示不限）
-     * @param dayRowId       当日额度行
-     * @param monthRowId     当月额度行
-     * @param inputChars     预占的输入字符数
-     * @param concurrencyKey 并发计数键
-     * @param limits         生效额度
-     */
-    public record Reservation(
-            Long userId,
-            Long agentId,
-            Long dayRowId,
-            Long monthRowId,
-            int inputChars,
-            String concurrencyKey,
-            Limits limits) {}
 
     // ==================== 策略维护 ====================
 

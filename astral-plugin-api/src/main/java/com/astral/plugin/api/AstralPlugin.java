@@ -17,7 +17,7 @@ public interface AstralPlugin {
      * 插件对外暴露的 API 路径前缀列表
      * <p>
      * 插件被禁用后，匹配这些前缀的请求将被拦截并返回 PLUGIN001 错误。
-     * 例如序列插件返回 ["/api/v1/sequence"]。
+     * 例如序列插件返回 ["/api/v1/all/sequence"]。
      * </p>
      *
      * @return API 路径前缀列表，空列表表示插件不暴露 REST API

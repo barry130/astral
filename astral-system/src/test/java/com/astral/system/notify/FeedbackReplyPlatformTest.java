@@ -1,8 +1,11 @@
 package com.astral.system.notify;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.astral.dao.entity.SysMailTemplate;
 import com.astral.dao.entity.SysNotice;
@@ -50,6 +53,9 @@ class FeedbackReplyPlatformTest {
         when(templates.selectById(1L)).thenReturn(template);
         SysNotifyRuleChannelMapper channelMapper = mock(SysNotifyRuleChannelMapper.class);
         SysNotifyRuleRecipientMapper recipientMapper = mock(SysNotifyRuleRecipientMapper.class);
+        when(channelMapper.insert(any(SysNotifyRuleChannel.class))).thenReturn(1);
+        when(recipientMapper.insert(any(com.astral.dao.entity.SysNotifyRuleRecipient.class)))
+                .thenReturn(1);
         NotifyRuleController controller = new NotifyRuleController(
                 rules,
                 channelMapper,
@@ -120,6 +126,7 @@ class FeedbackReplyPlatformTest {
 
     private SysNotice deliver(String scene, String platform) {
         SysNoticeMapper notices = mock(SysNoticeMapper.class);
+        when(notices.insert(any(SysNotice.class))).thenReturn(1);
         SysMailTemplateMapper templates = mock(SysMailTemplateMapper.class);
         SysMailTemplate template = new SysMailTemplate();
         template.setChannel("INAPP");

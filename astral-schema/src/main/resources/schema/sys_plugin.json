@@ -11,7 +11,7 @@
       "jdbcType": "BIGINT",
       "comment": "主键ID",
       "isPrimaryKey": true,
-      "isAutoIncrement": true,
+      "isAutoIncrement": false,
       "mybatisPlusIdType": "INPUT"
     },
     {

@@ -516,8 +516,7 @@ public class AiSeedInitializer implements ApplicationRunner {
     }
 
     /** 音乐助手输出结构：answer + 结构化卡片 + 白名单动作 */
-    private static final String MUSIC_SCHEMA =
-            """
+    private static final String MUSIC_SCHEMA = """
             {"type":"object","required":["answer"],"properties":{
               "answer":{"type":"string"},
               "blocks":{"type":"array","items":{"type":"object","properties":{
@@ -527,8 +526,7 @@ public class AiSeedInitializer implements ApplicationRunner {
             }}""";
 
     /** 管理助手输出结构：answer + 草稿/计划卡片 + 待确认动作 */
-    private static final String ADMIN_SCHEMA =
-            """
+    private static final String ADMIN_SCHEMA = """
             {"type":"object","required":["answer"],"properties":{
               "answer":{"type":"string"},
               "blocks":{"type":"array","items":{"type":"object","properties":{
@@ -537,8 +535,7 @@ public class AiSeedInitializer implements ApplicationRunner {
             }}""";
 
     /** 答疑助手输出结构：answer + 引用卡片 */
-    private static final String QA_SCHEMA =
-            """
+    private static final String QA_SCHEMA = """
             {"type":"object","required":["answer"],"properties":{
               "answer":{"type":"string"},
               "blocks":{"type":"array","items":{"type":"object","properties":{

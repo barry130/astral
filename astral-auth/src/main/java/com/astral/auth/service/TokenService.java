@@ -20,11 +20,22 @@ public interface TokenService {
     Page<TokenInfo> pageFromSaToken(int pageNum, int pageSize, Long userId);
 
     /**
-     * 吊销指定Token
+     * 吊销指定会话。
      *
-     * @param tokenId Token标识
+     * @param sessionId 会话标识（{@code TokenInfo#id} 给出的 token 指纹），不是明文 token
      */
-    void revokeToken(String tokenId);
+    void revokeToken(String sessionId);
+
+    /**
+     * 把会话标识（token 指纹）反查为明文 token。
+     *
+     * <p>只给服务端内部使用：吊销与「我的会话」归属校验都需要真实 token 才能操作 Sa-Token，
+     * 但对内反查不在任何接口出参上暴露它。</p>
+     *
+     * @param sessionId token 指纹；形态不合法或会话已失效返回 {@code null}
+     * @return 明文 token 或 {@code null}
+     */
+    String resolveTokenBySessionId(String sessionId);
 
     /**
      * 踢出指定用户（使其所有Token失效）

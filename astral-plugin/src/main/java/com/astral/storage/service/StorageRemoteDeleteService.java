@@ -66,7 +66,10 @@ public class StorageRemoteDeleteService {
             ossApiService.deleteObject(config, key);
         } else if (StorageConfigEntity.PROVIDER_UPYUN.equals(providerType)) {
             upyunApiService.deleteObject(config, key);
+        } else {
+            // TELEGRAM 走任务表由 Worker 删除、CUSTOM_HTTP 无远端删除接口，都不应进入本方法；
+            // 未知渠道必须失败留痕，不能静默返回后记一条「删除成功」审计。
+            throw new IllegalStateException("provider does not support direct remote delete: " + providerType);
         }
-        // 其余渠道不在本方法处理：TELEGRAM 走任务表由 Worker 删除，CUSTOM_HTTP 无远端删除接口
     }
 }

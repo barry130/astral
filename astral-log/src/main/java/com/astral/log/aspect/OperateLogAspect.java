@@ -12,7 +12,9 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -73,11 +75,14 @@ public class OperateLogAspect {
     public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
         HttpServletRequest request = getRequest();
+        Long userId = getUserId(request);
         String username = getUsername(request);
         String ip = getIp(request);
-        String methodName = joinPoint.getSignature().getName();
-        String className = joinPoint.getTarget().getClass().getSimpleName();
-        String operateType = getOperateType(joinPoint);
+        com.astral.log.annotation.OperateLog operation = getOperateLog(joinPoint);
+        boolean recordPayloads = operation == null || operation.recordPayloads();
+        String operateType = operation != null && StrUtil.isNotEmpty(operation.value())
+                ? operation.value()
+                : joinPoint.getSignature().getName();
         String requestUrl = request != null ? request.getRequestURI() : "";
         String requestMethod = request != null ? request.getMethod() : "";
 
@@ -88,11 +93,12 @@ public class OperateLogAspect {
         String responseResult = "";
 
         try {
-            requestParams = getRequestParams(joinPoint);
+            requestParams = recordPayloads ? getRequestParams(joinPoint) : "";
             result = joinPoint.proceed();
-            responseResult = getResponseResult(result);
+            responseResult = recordPayloads ? getResponseResult(result) : "";
             long executeTime = System.currentTimeMillis() - startTime;
-            operateLogWriter.saveAsync(
+            safeSave(
+                    userId,
                     username,
                     operateType,
                     requestUrl,
@@ -106,9 +112,12 @@ public class OperateLogAspect {
             return result;
         } catch (Exception e) {
             status = 0;
-            errorMsg = e.getMessage();
+            errorMsg = recordPayloads
+                    ? truncate(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage())
+                    : e.getClass().getSimpleName();
             long executeTime = System.currentTimeMillis() - startTime;
-            operateLogWriter.saveAsync(
+            safeSave(
+                    userId,
                     username,
                     operateType,
                     requestUrl,
@@ -120,6 +129,40 @@ public class OperateLogAspect {
                     errorMsg,
                     executeTime);
             throw e;
+        }
+    }
+
+    /**
+     * 日志提交失败绝不能覆盖/放大业务异常：异步线程池拒绝任务时，代理会在调用点直接抛出
+     * {@code TaskRejectedException}。此处兜底记录后吞掉，保证日志始终是旁路。
+     */
+    private void safeSave(
+            Long userId,
+            String username,
+            String operateType,
+            String requestUrl,
+            String requestMethod,
+            String requestParams,
+            String responseResult,
+            String ip,
+            Integer status,
+            String errorMsg,
+            long executeTime) {
+        try {
+            operateLogWriter.saveAsync(
+                    userId,
+                    username,
+                    operateType,
+                    requestUrl,
+                    requestMethod,
+                    requestParams,
+                    responseResult,
+                    ip,
+                    status,
+                    errorMsg,
+                    executeTime);
+        } catch (Exception e) {
+            log.error("提交操作日志异步任务失败: operateType={}", operateType, e);
         }
     }
 
@@ -149,6 +192,27 @@ public class OperateLogAspect {
     }
 
     /**
+     * 从请求属性中获取当前用户ID。
+     *
+     * <p>管理端拦截器写入的是字符串，App 插件拦截器写入的是 Long；统一在此归一。
+     * 未登录、匿名请求或属性非法时返回 {@code null}，由日志表保留空用户ID。</p>
+     *
+     * @param request HTTP请求对象
+     * @return 当前用户ID，无法解析时为 null
+     */
+    private Long getUserId(HttpServletRequest request) {
+        if (request == null) return null;
+        Object user = request.getAttribute("userId");
+        if (user == null) return null;
+        if (user instanceof Number number) return number.longValue();
+        try {
+            return Long.parseLong(user.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
      * 获取客户端真实IP地址
      * <p>
      * 按优先级尝试获取IP：
@@ -170,24 +234,12 @@ public class OperateLogAspect {
                 trustedProxies);
     }
 
-    /**
-     * 从 @OperateLog 注解中获取操作类型描述
-     * <p>
-     * 优先使用注解的 value 值，如果未指定则使用方法名作为操作类型。
-     * </p>
-     *
-     * @param joinPoint 连接点
-     * @return 操作类型描述
-     */
-    private String getOperateType(ProceedingJoinPoint joinPoint) {
+    /** Resolve the target declaration once for both its audit label and payload policy. */
+    private com.astral.log.annotation.OperateLog getOperateLog(ProceedingJoinPoint joinPoint) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
-        com.astral.log.annotation.OperateLog annotation =
-                method.getAnnotation(com.astral.log.annotation.OperateLog.class);
-        if (annotation != null && StrUtil.isNotEmpty(annotation.value())) {
-            return annotation.value();
-        }
-        return signature.getName();
+        Method method = AopUtils.getMostSpecificMethod(
+                signature.getMethod(), joinPoint.getTarget().getClass());
+        return AnnotationUtils.findAnnotation(method, com.astral.log.annotation.OperateLog.class);
     }
 
     /**

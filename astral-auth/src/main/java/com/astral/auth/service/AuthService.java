@@ -2,6 +2,7 @@ package com.astral.auth.service;
 
 import com.astral.auth.dto.LoginRequest;
 import com.astral.auth.dto.LoginResponse;
+import com.astral.auth.dto.SessionInfoResponse;
 
 /**
  * 认证服务接口
@@ -39,5 +40,5 @@ public interface AuthService {
      * @return 登录用户信息
      * @throws com.astral.common.exception.BusinessException 未登录或用户不存在时抛出
      */
-    LoginResponse getLoginInfo();
+    SessionInfoResponse getLoginInfo();
 }

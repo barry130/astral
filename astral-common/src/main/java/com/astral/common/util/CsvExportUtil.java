@@ -13,8 +13,8 @@ import java.util.function.Function;
  * <ul>
  *   <li>输出带 UTF-8 BOM，Excel 直接打开不乱码</li>
  *   <li>值内引号/逗号/换行按 RFC 4180 转义</li>
- *   <li>公式注入防护：以 = + - @ 开头的单元格前置单引号（Excel 会把这类值当公式执行，
- *       是 CSV 导出的经典注入面）</li>
+ *   <li>公式注入防护：首个非空白字符为 = + - @ 的单元格前置单引号（Excel 会把这类值当公式执行，
+ *       是 CSV 导出的经典注入面；前导 tab/NBSP/BOM 等同样会被表格软件忽略，必须一并防御）</li>
  * </ul>
  */
 public final class CsvExportUtil {
@@ -76,13 +76,31 @@ public final class CsvExportUtil {
             return "";
         }
         String v = value;
-        // 公式注入防护：Excel/WPS 会把 = + - @ 开头的单元格当公式
-        if (!v.isEmpty() && (v.charAt(0) == '=' || v.charAt(0) == '+' || v.charAt(0) == '-' || v.charAt(0) == '@')) {
-            v = "'" + v;
+        // 公式注入防护：Excel/WPS 会跳过前导空白/控制字符后再把 = + - @ 开头的单元格当公式，
+        // 因此必须检查第一个非空白字符，而不是仅检查 charAt(0)（"\t=cmd" 可绕过）。
+        // 注意不能只认 Character.isWhitespace：NBSP、BOM、零宽空格在表格软件里同样会被忽略。
+        int firstNonWhitespace = 0;
+        while (firstNonWhitespace < v.length() && isIgnorableLeadingCellChar(v.charAt(firstNonWhitespace))) {
+            firstNonWhitespace++;
+        }
+        if (firstNonWhitespace < v.length()) {
+            char first = v.charAt(firstNonWhitespace);
+            if (first == '=' || first == '+' || first == '-' || first == '@') {
+                v = "'" + v;
+            }
         }
         if (v.contains(",") || v.contains("\"") || v.contains("\n") || v.contains("\r")) {
             v = "\"" + v.replace("\"", "\"\"") + "\"";
         }
         return v;
+    }
+
+    /** 表格软件在识别公式前会忽略的单元格前导字符。 */
+    private static boolean isIgnorableLeadingCellChar(char c) {
+        return Character.isWhitespace(c)
+                || Character.isSpaceChar(c)
+                || Character.isISOControl(c)
+                || c == '\uFEFF'
+                || c == '\u200B';
     }
 }

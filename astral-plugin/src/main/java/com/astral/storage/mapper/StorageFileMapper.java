@@ -3,6 +3,7 @@ package com.astral.storage.mapper;
 import com.astral.storage.entity.StorageFileEntity;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
@@ -22,5 +23,6 @@ public interface StorageFileMapper extends BaseMapper<StorageFileEntity> {
      * 冲突只导致无关上传串行，不影响正确性。</p>
      */
     @Select("SELECT pg_advisory_xact_lock(hashtextextended(#{key}, 0))")
+    @Options(flushCache = Options.FlushCachePolicy.TRUE, useCache = false)
     String lockUploadKey(@Param("key") String key);
 }

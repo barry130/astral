@@ -235,7 +235,7 @@ CREATE TABLE IF NOT EXISTS ai_knowledge_index_job (
     id BIGINT PRIMARY KEY,
     source_id BIGINT NOT NULL,
     job_type VARCHAR(32) DEFAULT 'FULL',
-    status VARCHAR(32) DEFAULT 'QUEUED',
+    status VARCHAR(32) DEFAULT 'PENDING',
     total_count INTEGER DEFAULT 0,
     processed_count INTEGER DEFAULT 0,
     failed_count INTEGER DEFAULT 0,
@@ -246,6 +246,26 @@ CREATE TABLE IF NOT EXISTS ai_knowledge_index_job (
     create_time TIMESTAMP,
     update_time TIMESTAMP
 );
+-- A single transaction makes legacy conversion and cursor installation atomic.
+-- Single quoting also lets Spring's SQL script parser preserve the block's semicolons.
+DO 'BEGIN
+    LOCK TABLE ai_knowledge_index_job IN ACCESS EXCLUSIVE MODE;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema=current_schema() AND table_name=''ai_knowledge_index_job''
+                     AND column_name=''end_document_id'') THEN
+        UPDATE ai_knowledge_index_job
+        SET status=''FAILED'', finished_at=CURRENT_TIMESTAMP,
+            error_summary=''升级前的索引任务未完成，请重试''
+        WHERE status IN (''QUEUED'',''PENDING'',''RUNNING'');
+    END IF;
+    ALTER TABLE ai_knowledge_index_job ADD COLUMN IF NOT EXISTS last_document_id BIGINT DEFAULT 0;
+    ALTER TABLE ai_knowledge_index_job ADD COLUMN IF NOT EXISTS end_document_id BIGINT DEFAULT 0;
+END';
+ALTER TABLE ai_knowledge_index_job ALTER COLUMN status SET DEFAULT 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_ai_index_job_pending ON ai_knowledge_index_job(id)
+    WHERE status IN ('PENDING','RUNNING');
+CREATE UNIQUE INDEX IF NOT EXISTS uk_ai_index_job_active_source ON ai_knowledge_index_job(source_id)
+    WHERE status IN ('PENDING','RUNNING');
 CREATE INDEX IF NOT EXISTS idx_ai_knowledge_index_job_source ON ai_knowledge_index_job (source_id,status);
 
 -- AI 智能体知识绑定
@@ -332,7 +352,7 @@ CREATE TABLE IF NOT EXISTS ai_message (
     role VARCHAR(16) NOT NULL,
     content TEXT,
     content_type VARCHAR(24) DEFAULT 'TEXT',
-    status VARCHAR(16) DEFAULT 'SUCCEEDED',
+    status VARCHAR(16) DEFAULT 'COMPLETED',
     blocks_json TEXT,
     citations_json TEXT,
     model_name VARCHAR(128),
@@ -392,10 +412,10 @@ CREATE TABLE IF NOT EXISTS ai_request_event (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uk_ai_request_event_seq ON ai_request_event (request_id,sequence_no);
 
--- AI 工具调用
+-- AI 工具调用（source：chat=会话编排调用；test-run=后台试跑，不归属任何 ai_request）
 CREATE TABLE IF NOT EXISTS ai_tool_call (
     id BIGINT PRIMARY KEY,
-    request_id BIGINT NOT NULL,
+    request_id BIGINT,
     tool_code VARCHAR(64) NOT NULL,
     tool_name VARCHAR(128),
     risk_level VARCHAR(16),
@@ -409,7 +429,9 @@ CREATE TABLE IF NOT EXISTS ai_tool_call (
     started_at TIMESTAMP,
     finished_at TIMESTAMP,
     create_time TIMESTAMP,
-    update_time TIMESTAMP
+    update_time TIMESTAMP,
+    source VARCHAR(16) NOT NULL DEFAULT 'chat',
+    plan_hash VARCHAR(64) NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_ai_tool_call_request ON ai_tool_call (request_id);
 
@@ -526,3 +548,60 @@ VALUES
     ('ai_user_quota_id', 1, 1000, 1000, 1000),
     ('ai_feedback_id', 1, 1000, 1000, 1000)
 ON CONFLICT (biz_key) DO NOTHING;
+
+-- Durable request ownership, tool-result identity and per-provider-stage accounting.
+ALTER TABLE ai_request ADD COLUMN IF NOT EXISTS worker_token VARCHAR(64);
+ALTER TABLE ai_request ADD COLUMN IF NOT EXISTS lease_until TIMESTAMP;
+ALTER TABLE ai_request ADD COLUMN IF NOT EXISTS quota_counted BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE ai_request ADD COLUMN IF NOT EXISTS quota_active BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE ai_tool_call ADD COLUMN IF NOT EXISTS provider_tool_call_id VARCHAR(255);
+ALTER TABLE ai_tool_call ADD COLUMN IF NOT EXISTS assistant_message_id BIGINT;
+ALTER TABLE ai_tool_call ADD COLUMN IF NOT EXISTS tool_message_id BIGINT;
+ALTER TABLE ai_tool_call ADD COLUMN IF NOT EXISTS execution_token VARCHAR(64);
+ALTER TABLE ai_tool_call ADD COLUMN IF NOT EXISTS reconciled_by BIGINT;
+ALTER TABLE ai_tool_call ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMP;
+ALTER TABLE ai_tool_call ADD COLUMN IF NOT EXISTS reconciliation_note VARCHAR(1000);
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS stage_key VARCHAR(96);
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS day_row_id BIGINT;
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS month_row_id BIGINT;
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS reserved_input_tokens INTEGER;
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS reserved_output_tokens INTEGER;
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS input_price DECIMAL(18,6);
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS output_price DECIMAL(18,6);
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS reconciled_by BIGINT;
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMP;
+ALTER TABLE ai_usage ADD COLUMN IF NOT EXISTS reconciliation_note VARCHAR(1000);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_created ON ai_usage(create_time);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_agent_created ON ai_usage(agent_id,create_time);
+-- Preserve legacy usage rows verbatim; only new stages have an idempotency key.
+CREATE UNIQUE INDEX IF NOT EXISTS uk_ai_usage_stage ON ai_usage(request_id, stage_key) WHERE stage_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ai_request_active_quota ON ai_request(user_id, agent_id, quota_active);
+ALTER TABLE ai_message ALTER COLUMN status SET DEFAULT 'COMPLETED';
+UPDATE ai_message SET status='COMPLETED' WHERE status='SUCCEEDED';
+
+
+-- 1/2/3-grams preserve substring matching (including single CJK and bigrams) without pg_trgm privileges.
+-- Query terms use a necessary gram as an indexed candidate, then verify the whole term before ranking.
+CREATE OR REPLACE FUNCTION astral_knowledge_grams(body TEXT) RETURNS TEXT[]
+LANGUAGE sql IMMUTABLE PARALLEL SAFE STRICT AS $$
+    SELECT COALESCE(array_agg(DISTINCT SUBSTRING(LOWER(body) FROM pos FOR width)), ARRAY[]::text[])
+    FROM generate_series(1,3) width
+    CROSS JOIN LATERAL generate_series(1,LENGTH(body)-width+1) pos
+$$;
+CREATE INDEX IF NOT EXISTS idx_ai_chunk_grams ON ai_knowledge_chunk USING gin(astral_knowledge_grams(content));
+CREATE INDEX IF NOT EXISTS idx_ai_document_source_id ON ai_knowledge_document(source_id,id);
+
+-- Explicit score version: normalized V1 = old weighted score / 143. The shipped 0.2
+-- database/UI default and other already-normalized 0..1 values retain their value.
+-- Legacy weighted configurations (>1, including the former Java default 30) are converted once.
+ALTER TABLE ai_agent_knowledge ADD COLUMN IF NOT EXISTS score_scale VARCHAR(24);
+UPDATE ai_agent_knowledge SET min_score = CASE
+    WHEN min_score IS NULL THEN 0.2
+    WHEN min_score > 1 THEN LEAST(min_score / 143.0, 1)
+    WHEN min_score < 0 THEN 0
+    ELSE min_score END,
+    score_scale = 'NORMALIZED_V1'
+WHERE score_scale IS NULL;
+ALTER TABLE ai_agent_knowledge ALTER COLUMN score_scale SET DEFAULT 'NORMALIZED_V1';
+ALTER TABLE ai_agent_knowledge ALTER COLUMN score_scale SET NOT NULL;
+ALTER TABLE ai_agent_knowledge ALTER COLUMN min_score SET DEFAULT 0.2;

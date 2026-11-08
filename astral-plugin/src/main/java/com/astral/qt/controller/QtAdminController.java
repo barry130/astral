@@ -120,9 +120,20 @@ public class QtAdminController {
         if (user == null) {
             throw BusinessException.of("用户不存在");
         }
-        user.setStatus(state == null ? 1 : state);
-        user.setUpdateTime(LocalDateTime.now());
-        userMapper.updateById(user);
+        // 仅允许操作 App 用户：本接口挂在轻听插件下，不应能改管理端/其它类型账号状态（D-QT-05）。
+        if (!"APP".equals(user.getUserType())) {
+            throw BusinessException.of("用户不存在");
+        }
+        if (state == null || (state != 0 && state != 1)) throw BusinessException.of("状态须为 0 或 1");
+        int changed = userMapper.update(
+                null,
+                new LambdaUpdateWrapper<User>()
+                        .eq(User::getId, id)
+                        .eq(User::getUserType, "APP")
+                        .set(User::getStatus, state)
+                        .set(User::getUpdateTime, LocalDateTime.now()));
+        if (changed != 1) throw BusinessException.of("用户不存在或已变更");
+        if (state == 0) cn.dev33.satoken.stp.StpUtil.kickout(id);
         return Result.success();
     }
 
@@ -385,9 +396,15 @@ public class QtAdminController {
 
     @Operation(summary = "删除版本信息")
     @DeleteMapping("/updates/{id}")
+    @Transactional(rollbackFor = Exception.class)
     public Result<Void> deleteUpdate(@PathVariable Long id) {
+        if (qtUpdateMapper.selectById(id) == null) {
+            throw BusinessException.of("版本信息不存在");
+        }
+        // 先清该版本的产物明细，再删主表：否则留下 update_id 指向已删版本的孤儿产物行（D-QT-04）。
+        artifactService.replaceAll(id, List.of());
         qtUpdateMapper.deleteById(id);
-        appService.evictUpdateCache();
+        evictUpdateCacheAfterCommit();
         return Result.success();
     }
 

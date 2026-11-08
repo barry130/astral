@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 /**
@@ -75,7 +76,9 @@ public class QtAppService {
         for (String channel : visibleChannels) {
             picked = pickHigher(picked, findLatest(type, versionCode, channel));
         }
-        return picked;
+        // 缓存里是共享实体，返回前必须拷贝：下游 attachArtifacts 会按架构覆盖 downloadUrl 等字段，
+        // 直接返回缓存对象会把「某次请求的架构选包结果」写回共享缓存，污染其它请求（D-QT-01）。
+        return copyOf(picked);
     }
 
     /**
@@ -109,7 +112,8 @@ public class QtAppService {
                         && versionName.equals(u.getVersionName()))
                 .findFirst()
                 .orElse(null);
-        return official;
+        // 命中项来自共享缓存，同样必须先拷贝，避免下游按架构覆盖字段时污染缓存（D-QT-01）。
+        return copyOf(official);
     }
 
     /** 查询指定平台、指定渠道、高于当前版本、<b>已发布(is_published=1)</b> 的最新一条（进程内缓存 + 内存过滤） */
@@ -149,7 +153,27 @@ public class QtAppService {
     private QtAppUpdate pickHigher(QtAppUpdate a, QtAppUpdate b) {
         if (a == null) return b;
         if (b == null) return a;
-        return a.getVersionCode() >= b.getVersionCode() ? a : b;
+        long codeA = a.getVersionCode() == null ? 0L : a.getVersionCode();
+        long codeB = b.getVersionCode() == null ? 0L : b.getVersionCode();
+        if (codeA != codeB) {
+            return codeA > codeB ? a : b;
+        }
+        // 版本号相同：按注释语义优先 beta（测试渠道），避免 Set 迭代顺序决定结果（D-QT-10）。
+        boolean betaA = "beta".equalsIgnoreCase(a.getChannel());
+        boolean betaB = "beta".equalsIgnoreCase(b.getChannel());
+        if (betaA && !betaB) return a;
+        if (betaB && !betaA) return b;
+        return a;
+    }
+
+    /** 共享缓存实体的防御性浅拷贝：只复制标量/引用字段，产物清单由下游重新填。 */
+    private static QtAppUpdate copyOf(QtAppUpdate src) {
+        if (src == null) {
+            return null;
+        }
+        QtAppUpdate copy = new QtAppUpdate();
+        BeanUtils.copyProperties(src, copy);
+        return copy;
     }
 
     // ==================== 一版本多产物（UPDATE_ARTIFACT_DESIGN） ====================

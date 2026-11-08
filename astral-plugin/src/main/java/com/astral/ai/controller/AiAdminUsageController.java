@@ -1,5 +1,6 @@
 package com.astral.ai.controller;
 
+import com.astral.ai.common.AiCaller;
 import com.astral.ai.dto.AiAdminDtos;
 import com.astral.ai.entity.AiAgentEntity;
 import com.astral.ai.entity.AiModelEntity;
@@ -103,6 +104,17 @@ public class AiAdminUsageController {
 
     // ==================== 用量 ====================
 
+    @PostMapping("/usage/{id}/reconcile")
+    @RequiresPermission(value = "admin:ai:usage:reconcile", name = "AI 用量核对", description = "核对未知模型用量")
+    @OperateLog(value = "核对 AI 未知用量", recordPayloads = false)
+    public Result<AiAdminDtos.UsageVo> reconcile(
+            @PathVariable Long id,
+            @jakarta.validation.Valid @RequestBody AiAdminDtos.UsageReconcileReq body,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return Result.success(toVo(usageService.reconcile(
+                id, body.inputTokens(), body.outputTokens(), AiCaller.requireUserId(request), body.note())));
+    }
+
     @GetMapping("/usage")
     @RequiresPermission(value = "admin:ai:usage:view", name = "AI 用量查看", description = "查看 AI 用量明细")
     public Result<List<AiAdminDtos.UsageVo>> usage(
@@ -145,6 +157,7 @@ public class AiAdminUsageController {
                 summary.outputTokens(),
                 summary.estimatedCost(),
                 summary.currency(),
+                summary.costs(),
                 trend));
     }
 
@@ -231,6 +244,10 @@ public class AiAdminUsageController {
                 entity.getEstimatedCost(),
                 entity.getCurrency(),
                 entity.getStatus(),
+                entity.getReservationAmount(),
+                entity.getReconciledBy(),
+                entity.getReconciledAt(),
+                entity.getReconciliationNote(),
                 entity.getCreateTime());
     }
 

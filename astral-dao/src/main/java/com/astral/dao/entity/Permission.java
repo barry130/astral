@@ -1,14 +1,15 @@
 package com.astral.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.Size;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
-
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
-
 import java.util.List;
+import lombok.Data;
 
 @Data
 @TableName("sys_permission")
@@ -56,5 +57,4 @@ public class Permission {
 
     @TableField(exist = false)
     private List<Permission> children;
-
 }

@@ -31,5 +31,6 @@ public class SequenceRequest {
      * 如果为空，则使用配置文件中设置的默认类型。
      * </p>
      */
+    @Size(max = 32, message = "type must be at most 32 characters")
     private String type;
 }

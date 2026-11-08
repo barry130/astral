@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -59,25 +60,50 @@ public class SchemaEntitySync {
             Files.createDirectories(entityDir);
 
             Set<String> expectedEntities = new HashSet<>();
+            // 任一 Schema 解析/生成失败时不得进入删除阶段：否则解析失败的 Schema
+            // 不会加入 expectedEntities，其现有实体反而会被当成「无对应 Schema」删除。
+            boolean allSchemasProcessed = true;
+            int totalSchemas = 0;
 
             try (Stream<Path> schemaPaths = Files.list(schemaDir)) {
-                schemaPaths.filter(p -> p.toString().endsWith(".json")).forEach(schemaPath -> {
+                List<Path> schemaFiles = schemaPaths
+                        .filter(p -> p.toString().endsWith(".json"))
+                        .sorted()
+                        .toList();
+                totalSchemas = schemaFiles.size();
+                for (Path schemaPath : schemaFiles) {
                     try {
                         TableSchema schema = MAPPER.readValue(schemaPath.toFile(), TableSchema.class);
+                        String className = schema.getClassName();
+                        if (className == null || className.isBlank()) {
+                            throw new IllegalArgumentException("Schema 缺少 className: " + schemaPath.getFileName());
+                        }
+                        String entityFileName = className + ".java";
+                        if (!expectedEntities.add(entityFileName)) {
+                            throw new IllegalStateException("重复的实体类名: " + className);
+                        }
                         String entityCode = SchemaCodeGenerator.generateEntity(schema);
-                        String entityFileName = schema.getClassName() + ".java";
                         Path entityPath = entityDir.resolve(entityFileName);
-                        expectedEntities.add(entityFileName);
 
                         if (!Files.exists(entityPath)
                                 || !Files.readString(entityPath).equals(entityCode)) {
                             Files.writeString(entityPath, entityCode);
                             log.info("Entity updated/created: {}", entityFileName);
                         }
-                    } catch (IOException e) {
+                    } catch (Exception e) {
+                        allSchemasProcessed = false;
                         log.error("Failed to process schema: {}", schemaPath, e);
                     }
-                });
+                }
+            }
+
+            if (!allSchemasProcessed || expectedEntities.isEmpty()) {
+                log.error(
+                        "Entity sync incomplete ({} of {} schemas processed); skip deletion to protect existing"
+                                + " entities",
+                        expectedEntities.size(),
+                        totalSchemas);
+                return;
             }
 
             try (Stream<Path> entityPaths = Files.list(entityDir)) {

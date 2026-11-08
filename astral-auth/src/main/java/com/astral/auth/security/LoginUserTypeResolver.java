@@ -80,7 +80,11 @@ public class LoginUserTypeResolver {
             return null;
         }
 
-        User user = userMapper.selectById(userId);
+        // 只取 id/userType 两列：本方法在缓存缺失时按请求触发，没必要把整行（含 password 哈希）
+        // 读进内存；逻辑删除插件会自动追加 deleted = 0
+        User user = userMapper.selectOne(com.baomidou.mybatisplus.core.toolkit.Wrappers.<User>lambdaQuery()
+                .select(User::getId, User::getUserType)
+                .eq(User::getId, userId));
         if (user == null) {
             return null;
         }

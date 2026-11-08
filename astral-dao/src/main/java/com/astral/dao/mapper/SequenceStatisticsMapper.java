@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import java.time.LocalDateTime;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
@@ -44,10 +45,13 @@ public interface SequenceStatisticsMapper extends BaseMapper<SequenceStatistics>
      * @param step   步长
      * @return 自增后的新值；业务键不存在（0 行受影响）时返回 null
      */
-    @Update("UPDATE sequence_statistics SET current_value = current_value + #{step}, "
-            + "update_time = CURRENT_TIMESTAMP "
-            + "WHERE biz_key = #{bizKey} AND deleted = 0 "
-            + "RETURNING current_value")
+    @Select(
+            value = "UPDATE sequence_statistics SET current_value = current_value + #{step}, "
+                    + "update_time = CURRENT_TIMESTAMP "
+                    + "WHERE biz_key = #{bizKey} AND deleted = 0 "
+                    + "RETURNING current_value",
+            affectData = true)
+    @Options(flushCache = Options.FlushCachePolicy.TRUE, useCache = false)
     Long incrementAndGet(@Param("bizKey") String bizKey, @Param("step") long step);
 
     /**
@@ -74,14 +78,17 @@ public interface SequenceStatisticsMapper extends BaseMapper<SequenceStatistics>
      *
      * @param bizKey       业务键
      * @param currentValue 当前序列号值
+     * @param generated    本次生成的数量（批量取号时大于 1）
      * @param updateTime   更新时间（由调用方显式传入，避免依赖数据库时区）
      * @return 更新行数
      */
-    @Update("UPDATE sequence_statistics SET current_value = #{currentValue}, "
+    @Update("UPDATE sequence_statistics SET current_value = GREATEST(current_value, #{currentValue}), "
+            + "total_generate = COALESCE(total_generate, 0) + #{generated}, "
             + "last_generate_time = #{updateTime}, update_time = #{updateTime} "
             + "WHERE biz_key = #{bizKey} AND deleted = 0")
     int updateCurrentValueByBizKey(
             @Param("bizKey") String bizKey,
             @Param("currentValue") long currentValue,
+            @Param("generated") long generated,
             @Param("updateTime") LocalDateTime updateTime);
 }

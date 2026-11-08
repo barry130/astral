@@ -9,6 +9,7 @@ import com.astral.dao.mapper.SysMailLogMapper;
 import com.astral.dao.mapper.SysMailTemplateMapper;
 import com.astral.system.notify.NotifyChannel;
 import com.astral.system.notify.NotifyEventRegistry;
+import com.astral.system.notify.WeightedCandidates;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -16,8 +17,6 @@ import jakarta.annotation.Resource;
 import jakarta.mail.internet.MimeMessage;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -98,8 +97,9 @@ public class MailServiceImpl implements MailService {
         if (!byScene.isEmpty()) {
             return byScene.get(0);
         }
-        return templateMapper.selectOne(
-                new LambdaQueryWrapper<SysMailTemplate>().eq(SysMailTemplate::getTemplateCode, sceneOrCode));
+        return templateMapper.selectOne(new LambdaQueryWrapper<SysMailTemplate>()
+                .eq(SysMailTemplate::getTemplateCode, sceneOrCode)
+                .eq(SysMailTemplate::getChannel, NotifyChannel.EMAIL));
     }
 
     /** 失效启用账户缓存：MailAccountController 的 create/update/delete/toggle 后调用 */
@@ -171,19 +171,10 @@ public class MailServiceImpl implements MailService {
         if (enabled == null || enabled.isEmpty()) {
             throw new BusinessException("MAIL001");
         }
-        // 按权重展开后乱序去重，保证权重高的账户更可能被选中，且失败时不重复同一账户
-        List<SysMailAccount> pool = new ArrayList<>();
-        for (SysMailAccount acc : enabled) {
-            int w = acc.getWeight() != null && acc.getWeight() > 0 ? acc.getWeight() : 1;
-            for (int i = 0; i < w; i++) {
-                pool.add(acc);
-            }
-        }
-        java.util.Collections.shuffle(pool);
-        List<SysMailAccount> ordered = new ArrayList<>(new LinkedHashSet<>(pool));
-
+        var candidates = new WeightedCandidates<>(enabled, SysMailAccount::getWeight);
         Exception lastError = null;
-        for (SysMailAccount acc : ordered) {
+        while (candidates.hasNext()) {
+            SysMailAccount acc = candidates.next();
             try {
                 doSend(acc, toEmail, subject, content);
                 saveLog(acc.getId(), pluginId, scene, toEmail, subject, content, 1, null);

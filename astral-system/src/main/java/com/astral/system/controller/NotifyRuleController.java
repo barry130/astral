@@ -21,6 +21,7 @@ import com.astral.system.notify.NotifyEventRegistry;
 import com.astral.system.notify.NotifyPublisher;
 import com.astral.system.notify.SysNotifyRuleService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -173,7 +174,7 @@ public class NotifyRuleController {
     @Operation(summary = "新增")
     @RequiresPermission(value = PERM_EDIT, name = "订阅规则维护", description = "维护事件订阅规则与发布测试")
     @PostMapping("/rule")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result<Long> create(@RequestBody NotifyRuleSaveDto dto) {
         NotifyEventDef event = validate(dto, null);
         SysNotifyRule rule = new SysNotifyRule();
@@ -181,7 +182,7 @@ public class NotifyRuleController {
         rule.setEventCode(dto.getEventCode().trim());
         rule.setRemark(dto.getRemark());
         rule.setEnabled(dto.getEnabled() == null ? 1 : dto.getEnabled());
-        ruleService.save(rule);
+        if (!ruleService.save(rule)) throw BusinessException.of("通知规则保存失败");
         persistChannels(rule.getId(), dto, event);
         return Result.success(rule.getId());
     }
@@ -189,19 +190,20 @@ public class NotifyRuleController {
     @Operation(summary = "更新")
     @RequiresPermission(PERM_EDIT)
     @PutMapping("/rule/{id}")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result<Void> update(@PathVariable Long id, @RequestBody NotifyRuleSaveDto dto) {
         if (ruleService.getById(id) == null) {
             throw new BusinessException("NOTIFY002", id);
         }
         NotifyEventDef event = validate(dto, id);
-        SysNotifyRule rule = new SysNotifyRule();
-        rule.setId(id);
-        rule.setRuleName(dto.getRuleName().trim());
-        rule.setEventCode(dto.getEventCode().trim());
-        rule.setRemark(dto.getRemark());
-        rule.setEnabled(dto.getEnabled() == null ? 1 : dto.getEnabled());
-        ruleService.updateById(rule);
+        boolean saved = ruleService.update(new LambdaUpdateWrapper<SysNotifyRule>()
+                .eq(SysNotifyRule::getId, id)
+                .set(SysNotifyRule::getRuleName, dto.getRuleName().trim())
+                .set(SysNotifyRule::getEventCode, dto.getEventCode().trim())
+                .set(SysNotifyRule::getRemark, dto.getRemark())
+                .set(SysNotifyRule::getEnabled, dto.getEnabled() == null ? 1 : dto.getEnabled())
+                .set(SysNotifyRule::getUpdateTime, java.time.LocalDateTime.now()));
+        if (!saved) throw new BusinessException("NOTIFY002", id);
         persistChannels(id, dto, event);
         return Result.success();
     }
@@ -209,7 +211,7 @@ public class NotifyRuleController {
     @Operation(summary = "删除")
     @RequiresPermission(PERM_EDIT)
     @DeleteMapping("/rule/{id}")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Result<Void> delete(@PathVariable Long id) {
         List<SysNotifyRuleChannel> channels = ruleChannelMapper.selectList(
                 new LambdaQueryWrapper<SysNotifyRuleChannel>().eq(SysNotifyRuleChannel::getRuleId, id));
@@ -367,9 +369,20 @@ public class NotifyRuleController {
             row.setDailyLimitScope(normalizeScope(channel.getLimitScope()));
             row.setPlatform(normalizePlatform(event, code, channel.getPlatform()));
             if (isNew) {
-                ruleChannelMapper.insert(row);
+                if (ruleChannelMapper.insert(row) != 1) throw BusinessException.of("通知渠道保存失败");
             } else {
-                ruleChannelMapper.updateById(row);
+                int changed = ruleChannelMapper.update(
+                        null,
+                        new LambdaUpdateWrapper<SysNotifyRuleChannel>()
+                                .eq(SysNotifyRuleChannel::getId, row.getId())
+                                .eq(SysNotifyRuleChannel::getRuleId, ruleId)
+                                .set(SysNotifyRuleChannel::getTemplateId, row.getTemplateId())
+                                .set(SysNotifyRuleChannel::getEnabled, row.getEnabled())
+                                .set(SysNotifyRuleChannel::getDailyLimit, row.getDailyLimit())
+                                .set(SysNotifyRuleChannel::getDailyLimitScope, row.getDailyLimitScope())
+                                .set(SysNotifyRuleChannel::getPlatform, row.getPlatform())
+                                .set(SysNotifyRuleChannel::getUpdateTime, java.time.LocalDateTime.now()));
+                if (changed != 1) throw BusinessException.of("通知渠道已变更，请刷新后重试");
             }
             // 收件人整体重建（数量少、语义简单：提交什么就是什么）
             ruleRecipientMapper.delete(new LambdaQueryWrapper<SysNotifyRuleRecipient>()
@@ -379,7 +392,7 @@ public class NotifyRuleController {
                 line.setChannelId(row.getId());
                 line.setRecipientType(recipient.getType().trim().toUpperCase(Locale.ROOT));
                 line.setRecipientValue(recipient.getValue().trim());
-                ruleRecipientMapper.insert(line);
+                if (ruleRecipientMapper.insert(line) != 1) throw BusinessException.of("通知收件人保存失败");
             }
         }
         existing.stream()

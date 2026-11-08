@@ -129,6 +129,9 @@ public class StorageConfigService {
             throw new BusinessException("COMMON002", "配置名称已存在");
         }
         String optionsJson = validateAndNormalizeOptions(providerType, req.providerOptions(), null);
+        if (StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)) {
+            validateTelegram(req.chatId(), req.workerBaseUrl());
+        }
         StorageConfigEntity config = new StorageConfigEntity();
         config.setName(req.name().trim());
         config.setProviderType(providerType);
@@ -378,6 +381,18 @@ public class StorageConfigService {
                 }
             });
         }
+        // 出参统一把敏感扩展键打码为 ******；编辑回传打码值时沿用存量值，不能把打码串当真实凭据落库。
+        for (String maskedField : merged.entrySet().stream()
+                .filter(e -> "******".equals(e.getValue()))
+                .map(java.util.Map.Entry::getKey)
+                .toList()) {
+            String oldValue = oldOption(existing, maskedField);
+            if (oldValue != null && !oldValue.isBlank()) {
+                merged.put(maskedField, oldValue);
+            } else {
+                merged.remove(maskedField);
+            }
+        }
         // 各 Provider 的密钥字段：空/打码时沿用已存值（新建时必须提供）
         String secretField = secretFieldOf(providerType);
         String secret = secretField == null ? "" : merged.get(secretField);
@@ -460,22 +475,62 @@ public class StorageConfigService {
         if (config.getProviderOptions() != null && !config.getProviderOptions().isBlank()) {
             try {
                 JsonNode node = objectMapper.readTree(config.getProviderOptions());
-                boolean changed = false;
-                for (String field :
-                        new String[] {"secretAccessKey", "secretKey", "accessKeySecret", "password", "tokenKey"}) {
-                    if (node.hasNonNull(field)) {
-                        ((tools.jackson.databind.node.ObjectNode) node).put(field, "******");
-                        changed = true;
-                    }
-                }
-                if (changed) {
+                // 不只按已知字段名打码：provider_options 允许扩展键，任何名称含 secret/credential、
+                // 以 password/token 结尾或等于 tokenKey 的键都必须视为凭据；对象/数组嵌套同样递归，
+                // 避免新增 Provider 或分组扩展时漏脱敏。
+                if (redactSensitiveNodes(node)) {
                     config.setProviderOptions(objectMapper.writeValueAsString(node));
                 }
-            } catch (Exception ignored) {
-                // 故意忽略：解析/回写失败时放弃打码原样返回，避免整个配置列表接口报错
+            } catch (Exception e) {
+                // 凭据边界必须 fail-closed：provider_options 损坏时无法可靠打码，
+                // 宁可让前端看到空配置并提示重新保存，也不能把可能含密钥的原始 JSON 返回。
+                log.warn("[Storage] 配置 provider_options 无法解析，已隐藏出参: configId={}", config.getId());
+                config.setProviderOptions(null);
             }
         }
         return config;
+    }
+
+    private boolean redactSensitiveNodes(JsonNode node) {
+        boolean changed = false;
+        if (node instanceof tools.jackson.databind.node.ObjectNode objectNode) {
+            var names = objectNode.propertyNames().iterator();
+            while (names.hasNext()) {
+                String field = names.next();
+                JsonNode value = objectNode.get(field);
+                if (isSensitiveOption(field) && value != null && !value.isNull()) {
+                    objectNode.put(field, "******");
+                    changed = true;
+                } else if (value != null && redactSensitiveNodes(value)) {
+                    changed = true;
+                }
+            }
+        } else if (node instanceof tools.jackson.databind.node.ArrayNode arrayNode) {
+            for (JsonNode child : arrayNode) {
+                if (redactSensitiveNodes(child)) {
+                    changed = true;
+                }
+            }
+        }
+        return changed;
+    }
+
+    static boolean isSensitiveOption(String field) {
+        if (field == null) {
+            return false;
+        }
+        String normalized = field.toLowerCase(java.util.Locale.ROOT);
+        // secretId 等以 id 结尾的是公开凭据标识，不是密钥；保留可见性供后台编辑/更新。
+        if (normalized.endsWith("id")) {
+            return false;
+        }
+        return normalized.contains("secret")
+                || normalized.contains("credential")
+                || normalized.contains("privatekey")
+                || normalized.endsWith("apikey")
+                || normalized.endsWith("password")
+                || normalized.endsWith("token")
+                || normalized.equals("tokenkey");
     }
 
     /**

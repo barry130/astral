@@ -13,8 +13,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -114,18 +112,10 @@ public class SmsServiceImpl implements SmsService {
         if (enabled == null || enabled.isEmpty()) {
             throw new BusinessException("SMS001");
         }
-        List<SysSmsProvider> pool = new ArrayList<>();
-        for (SysSmsProvider p : enabled) {
-            int w = p.getWeight() != null && p.getWeight() > 0 ? p.getWeight() : 1;
-            for (int i = 0; i < w; i++) {
-                pool.add(p);
-            }
-        }
-        java.util.Collections.shuffle(pool);
-        List<SysSmsProvider> ordered = new ArrayList<>(new LinkedHashSet<>(pool));
-
+        var candidates = new WeightedCandidates<>(enabled, SysSmsProvider::getWeight);
         Exception lastError = null;
-        for (SysSmsProvider provider : ordered) {
+        while (candidates.hasNext()) {
+            SysSmsProvider provider = candidates.next();
             try {
                 doSend(provider, phone, tpl, variables);
                 saveLog(provider.getId(), pluginId, eventCode, phone, variables, 1, null);

@@ -3,15 +3,16 @@ package com.astral.auth.security;
 import cn.dev33.satoken.stp.StpUtil;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.exception.BusinessException;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.aop.support.AopUtils;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.stereotype.Component;
 
 /**
@@ -32,19 +33,21 @@ public class PermissionAspect {
 
     private final PermissionChecker permissionChecker;
 
-    /** 方法级权限校验 */
-    @Around("@annotation(com.astral.common.annotation.RequiresPermission)")
-    public Object aroundMethodPermission(ProceedingJoinPoint joinPoint) throws Throwable {
-        checkPermission(joinPoint, findAnnotation(joinPoint, RequiresPermission.class));
-        return joinPoint.proceed();
-    }
-
-    /** 类级权限校验（方法自身带注解时跳过，避免与方法级切面重复校验） */
-    @Around("@within(com.astral.common.annotation.RequiresPermission)")
-    public Object aroundTypePermission(ProceedingJoinPoint joinPoint) throws Throwable {
-        Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
-        if (AnnotationUtils.findAnnotation(method, RequiresPermission.class) == null) {
-            checkPermission(joinPoint, findAnnotation(joinPoint, RequiresPermission.class));
+    /**
+     * 所有声明组分别校验；方法完整声明优先于类声明，只执行一次权限 advice。
+     * 控制器接口上的注解不属于实现方法的 execution annotation，必须先匹配控制器，再解析其接口声明。
+     * 未声明权限的控制器仍直接放行，不把全部业务 bean 纳入代理范围。
+     */
+    @Around("@annotation(com.astral.common.annotation.RequiresPermission) "
+            + "|| @annotation(com.astral.common.annotation.RequiresPermissions) "
+            + "|| @within(com.astral.common.annotation.RequiresPermission) "
+            + "|| @within(com.astral.common.annotation.RequiresPermissions) "
+            + "|| (within(com.astral..*) "
+            + "&& (@within(org.springframework.web.bind.annotation.RestController) "
+            + "|| @within(org.springframework.stereotype.Controller)))")
+    public Object aroundPermission(ProceedingJoinPoint joinPoint) throws Throwable {
+        for (RequiresPermission annotation : findPermissions(joinPoint)) {
+            checkPermission(joinPoint, annotation);
         }
         return joinPoint.proceed();
     }
@@ -93,13 +96,19 @@ public class PermissionAspect {
         return true;
     }
 
-    /** 先取方法注解，再回退类注解 */
-    private <A extends Annotation> A findAnnotation(ProceedingJoinPoint joinPoint, Class<A> type) {
-        Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
-        A annotation = AnnotationUtils.findAnnotation(method, type);
-        if (annotation != null) {
-            return annotation;
+    /** 最具体实现方法优先；没有本地声明才查接口/继承方法，最后回退到类。 */
+    private Set<RequiresPermission> findPermissions(ProceedingJoinPoint joinPoint) {
+        Class<?> targetClass = AopUtils.getTargetClass(joinPoint.getTarget());
+        Method method =
+                AopUtils.getMostSpecificMethod(((MethodSignature) joinPoint.getSignature()).getMethod(), targetClass);
+        Set<RequiresPermission> annotations =
+                AnnotatedElementUtils.getMergedRepeatableAnnotations(method, RequiresPermission.class);
+        if (annotations.isEmpty()) {
+            annotations = AnnotatedElementUtils.findMergedRepeatableAnnotations(method, RequiresPermission.class);
         }
-        return AnnotationUtils.findAnnotation(joinPoint.getTarget().getClass(), type);
+        if (!annotations.isEmpty()) {
+            return annotations;
+        }
+        return AnnotatedElementUtils.findMergedRepeatableAnnotations(targetClass, RequiresPermission.class);
     }
 }

@@ -2,9 +2,8 @@ package com.astral.ai.tool.declarative;
 
 import com.astral.ai.common.AiException;
 import com.astral.ai.common.AiJson;
+import com.astral.common.http.BoundedHttpTransport;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -46,22 +45,24 @@ public class McpClient implements AutoCloseable {
 
     private static final int DEFAULT_TIMEOUT_SECONDS = 20;
     private static final int MAX_TOOLS = 500;
+    private static final int MAX_RESPONSE_BYTES = 1048576;
 
     private final URI endpoint;
     private final Map<String, String> headers;
-    private final HttpClient http;
+    private final BoundedHttpTransport.TargetPolicy targetPolicy;
     private final Duration timeout;
     private final AtomicLong nextId = new AtomicLong(1);
     private String sessionId;
 
-    private McpClient(URI endpoint, Map<String, String> headers, Duration timeout) {
+    private McpClient(
+            URI endpoint,
+            Map<String, String> headers,
+            Duration timeout,
+            BoundedHttpTransport.TargetPolicy targetPolicy) {
         this.endpoint = endpoint;
         this.headers = headers;
         this.timeout = timeout;
-        this.http = HttpClient.newBuilder()
-                .connectTimeout(timeout)
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .build();
+        this.targetPolicy = targetPolicy;
     }
 
     /**
@@ -80,11 +81,33 @@ public class McpClient implements AutoCloseable {
             List<String> allowedHosts,
             Map<String, String> secrets,
             Integer timeoutSeconds) {
-        URI endpoint = requireEndpoint(url, allowedHosts);
+        return connectWithHeaders(url, renderHeaders(headersJson, secrets), allowedHosts, timeoutSeconds);
+    }
+
+    public static McpClient connectWithHeaders(
+            String url, Map<String, String> headers, List<String> allowedHosts, Integer timeoutSeconds) {
+        URI endpoint = parseEndpoint(url);
         int seconds = timeoutSeconds == null ? DEFAULT_TIMEOUT_SECONDS : Math.max(3, Math.min(60, timeoutSeconds));
-        McpClient client = new McpClient(endpoint, renderHeaders(headersJson, secrets), Duration.ofSeconds(seconds));
-        client.initialize();
-        return client;
+        return connectApproved(
+                endpoint,
+                Map.copyOf(headers),
+                Duration.ofSeconds(seconds),
+                target -> HttpToolExecutor.approveTarget(target, allowedHosts));
+    }
+
+    static McpClient connectApproved(
+            URI endpoint,
+            Map<String, String> headers,
+            Duration timeout,
+            BoundedHttpTransport.TargetPolicy targetPolicy) {
+        McpClient client = new McpClient(endpoint, headers, timeout, targetPolicy);
+        try {
+            client.initialize();
+            return client;
+        } catch (RuntimeException e) {
+            client.close();
+            throw e;
+        }
     }
 
     // ==================== 对外方法 ====================
@@ -110,6 +133,9 @@ public class McpClient implements AutoCloseable {
                     McpToolInfo info = toolInfo(item);
                     if (info != null) {
                         tools.add(info);
+                        if (tools.size() >= MAX_TOOLS) {
+                            break;
+                        }
                     }
                 }
             }
@@ -132,6 +158,12 @@ public class McpClient implements AutoCloseable {
         params.set("arguments", arguments == null ? AiJson.mapper().createObjectNode() : arguments);
         JsonNode result = request("tools/call", params);
         boolean error = AiJson.bool(result, "isError", false);
+        if (error) {
+            return new McpCallResult(
+                    true,
+                    "MCP 工具返回错误，请检查远端服务配置",
+                    AiJson.mapper().createObjectNode().put("isError", true));
+        }
         StringBuilder text = new StringBuilder();
         JsonNode content = result == null ? null : result.get("content");
         if (content instanceof ArrayNode array) {
@@ -167,11 +199,14 @@ public class McpClient implements AutoCloseable {
             return;
         }
         try {
-            HttpRequest request =
-                    baseRequest().header("Mcp-Session-Id", sessionId).DELETE().build();
-            http.send(request, HttpResponse.BodyHandlers.discarding());
+            Map<String, String> requestHeaders = new LinkedHashMap<>(headers);
+            requestHeaders.put("Mcp-Session-Id", sessionId);
+            BoundedHttpTransport.send(
+                    endpoint, "DELETE", requestHeaders, null, timeout, MAX_RESPONSE_BYTES, targetPolicy);
         } catch (Exception e) {
-            log.debug("[AI] 关闭 MCP 会话失败（忽略）: {}", e.getMessage());
+            log.debug("[AI] 关闭 MCP 会话失败（忽略）: {}", e.getClass().getSimpleName());
+        } finally {
+            sessionId = null;
         }
     }
 
@@ -197,11 +232,11 @@ public class McpClient implements AutoCloseable {
         body.put("id", id);
         body.put("method", method);
         body.set("params", params == null ? AiJson.mapper().createObjectNode() : params);
-        HttpResponse<String> response = send(AiJson.write(body), false);
-        JsonNode envelope = parseEnvelope(response, id);
+        BoundedHttpTransport.Response response = send(AiJson.write(body), false);
+        JsonNode envelope = parseEnvelope(response.header("Content-Type"), response.text(), id);
         JsonNode error = envelope.get("error");
         if (error != null && !error.isNull()) {
-            throw new AiException("AI008", "MCP " + method + " 失败: " + AiJson.text(error, "message", "远端返回未知错误"));
+            throw new AiException("AI008", "MCP " + method + " 失败：远端返回协议错误，请检查服务配置");
         }
         return envelope.get("result");
     }
@@ -217,56 +252,50 @@ public class McpClient implements AutoCloseable {
         }
     }
 
-    private HttpResponse<String> send(String body, boolean notification) {
-        HttpRequest.Builder builder = baseRequest()
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json, text/event-stream");
+    private BoundedHttpTransport.Response send(String body, boolean notification) {
+        Map<String, String> requestHeaders = new LinkedHashMap<>(headers);
+        requestHeaders.put("Content-Type", "application/json");
+        requestHeaders.put("Accept", "application/json, text/event-stream");
         if (sessionId != null) {
-            builder.header("Mcp-Session-Id", sessionId);
+            requestHeaders.put("Mcp-Session-Id", sessionId);
         }
-        HttpRequest request = builder.POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
-                .build();
-        HttpResponse<String> response;
+        BoundedHttpTransport.Response response;
         try {
-            response = http.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-        } catch (java.net.http.HttpConnectTimeoutException e) {
-            throw new AiException("AI008", "连接 MCP 服务器超时: " + endpoint.getHost());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new AiException("AI008", "调用 MCP 服务器被中断");
+            response = BoundedHttpTransport.send(
+                    endpoint,
+                    "POST",
+                    requestHeaders,
+                    body.getBytes(StandardCharsets.UTF_8),
+                    timeout,
+                    MAX_RESPONSE_BYTES,
+                    targetPolicy);
         } catch (Exception e) {
-            throw new AiException("AI008", "调用 MCP 服务器失败: " + describe(e));
+            throw new AiException("AI008", "调用 MCP 服务器失败，请检查网络、响应大小与请求头配置");
         }
-        String newSession = response.headers().firstValue("Mcp-Session-Id").orElse(null);
+        String newSession = response.header("Mcp-Session-Id");
         if (newSession != null && !newSession.isBlank()) {
+            if (newSession.length() > 256) {
+                throw new AiException("AI008", "MCP 会话标识超过长度上限");
+            }
             sessionId = newSession;
         }
-        int status = response.statusCode();
+        int status = response.status();
         if (status == 401 || status == 403) {
             throw new AiException("AI008", "MCP 服务器拒绝访问（HTTP " + status + "），请检查请求头里的凭据");
         }
         if (status == 404) {
-            throw new AiException("AI008", "MCP 端点不存在（HTTP 404）: " + endpoint);
+            throw new AiException("AI008", "MCP 端点不存在（HTTP 404）");
         }
         if (status == 405) {
             throw new AiException("AI008", "该地址不支持 Streamable HTTP（HTTP 405），请确认是 MCP 端点");
         }
-        if (status >= 400) {
-            String hint = AiJson.truncate(response.body(), 200);
-            throw new AiException("AI008", "MCP 服务器返回 HTTP " + status + (hint == null ? "" : "：" + hint));
+        if (status < 200 || status >= 300) {
+            throw new AiException("AI008", "MCP 服务器返回 HTTP " + status);
         }
         if (notification) {
             return response;
         }
         return response;
-    }
-
-    private HttpRequest.Builder baseRequest() {
-        HttpRequest.Builder builder = HttpRequest.newBuilder(endpoint).timeout(timeout);
-        for (Map.Entry<String, String> entry : headers.entrySet()) {
-            builder.header(entry.getKey(), entry.getValue());
-        }
-        return builder;
     }
 
     /** 解析响应体：普通 JSON 或 SSE 帧，取 id 匹配的那条 JSON-RPC 报文 */
@@ -293,7 +322,7 @@ public class McpClient implements AutoCloseable {
         }
         JsonNode node = AiJson.read(body);
         if (node == null || !node.isObject()) {
-            throw new AiException("AI008", "MCP 响应不是合法 JSON: " + AiJson.truncate(body, 200));
+            throw new AiException("AI008", "MCP 响应不是合法 JSON");
         }
         JsonNode nodeId = node.get("id");
         if (nodeId == null || nodeId.asLong() != id) {
@@ -353,6 +382,19 @@ public class McpClient implements AutoCloseable {
 
     /** 校验端点地址：必须是 http(s) 字面量、host 不能是模板、必须通过 SSRF 护栏 */
     public static URI requireEndpoint(String url, List<String> allowedHosts) {
+        URI uri = parseEndpoint(url);
+        try {
+            BoundedHttpTransport.approve(
+                    uri,
+                    Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS),
+                    target -> HttpToolExecutor.approveTarget(target, allowedHosts));
+        } catch (java.io.IOException e) {
+            throw new AiException("AI008", "MCP 地址未获批准、无法解析或解析超时");
+        }
+        return uri;
+    }
+
+    private static URI parseEndpoint(String url) {
         if (url == null || url.isBlank()) {
             throw new AiException("AI008", "MCP 地址不能为空");
         }
@@ -367,13 +409,15 @@ public class McpClient implements AutoCloseable {
         try {
             uri = URI.create(trimmed);
         } catch (IllegalArgumentException e) {
-            throw new AiException("AI008", "MCP 地址格式非法: " + trimmed);
+            throw new AiException("AI008", "MCP 地址格式非法");
         }
         String host = uri.getHost();
         if (host == null || host.isBlank()) {
-            throw new AiException("AI008", "MCP 地址缺少主机名: " + trimmed);
+            throw new AiException("AI008", "MCP 地址缺少主机名");
         }
-        HttpToolExecutor.guardHost(host, allowedHosts);
+        if (uri.getUserInfo() != null || uri.getFragment() != null) {
+            throw new AiException("AI008", "MCP 地址不允许用户信息或 fragment");
+        }
         return uri;
     }
 
@@ -397,6 +441,11 @@ public class McpClient implements AutoCloseable {
             }
             String rendered = HttpToolExecutor.render(
                     value.asString(), args, name -> HttpToolExecutor.lookupSecret(name, configured), false);
+            try {
+                BoundedHttpTransport.validateHeader(key, rendered);
+            } catch (IllegalArgumentException e) {
+                throw new AiException("AI008", "MCP 请求头含有非法名称或字符");
+            }
             result.put(key, rendered);
         }
         return result;
@@ -418,10 +467,5 @@ public class McpClient implements AutoCloseable {
             readOnlyHint = annotations.get("readOnlyHint").asBoolean();
         }
         return new McpToolInfo(name, title, description, schema, readOnlyHint);
-    }
-
-    private static String describe(Exception e) {
-        String message = e.getMessage();
-        return message == null || message.isBlank() ? e.getClass().getSimpleName() : message;
     }
 }

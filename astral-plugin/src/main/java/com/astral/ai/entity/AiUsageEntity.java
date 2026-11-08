@@ -9,61 +9,83 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 
-/**
- * AI 用量
- */
 @Data
 @TableName("ai_usage")
 public class AiUsageEntity {
 
-    /** 主键 */
-    @TableId(value = "id", type = IdType.INPUT)
+    @TableField("reconciled_by")
+    private Long reconciledBy;
+
+    @TableField("reconciled_at")
+    private LocalDateTime reconciledAt;
+
+    @TableField("reconciliation_note")
+    private String reconciliationNote;
+
+    @TableField("stage_key")
+    private String stageKey;
+
+    @TableField("day_row_id")
+    private Long dayRowId;
+
+    @TableField("month_row_id")
+    private Long monthRowId;
+
+    @TableField("reserved_input_tokens")
+    private Integer reservedInputTokens;
+
+    @TableField("reserved_output_tokens")
+    private Integer reservedOutputTokens;
+
+    @TableField("input_price")
+    private BigDecimal inputPrice;
+
+    @TableField("output_price")
+    private BigDecimal outputPrice;
+
+    @TableId(type = IdType.INPUT)
     private Long id;
 
-    /** 请求 ID */
+    @TableField("request_id")
     private Long requestId;
 
-    /** 用户 ID */
+    @TableField("user_id")
     private Long userId;
 
-    /** 智能体 ID */
+    @TableField("agent_id")
     private Long agentId;
 
-    /** 智能体版本 ID */
+    @TableField("agent_version_id")
     private Long agentVersionId;
 
-    /** 提供方 ID */
+    @TableField("provider_id")
     private Long providerId;
 
-    /** 模型 ID */
+    @TableField("model_id")
     private Long modelId;
 
-    /** 输入 Token */
+    @TableField("input_tokens")
     private Integer inputTokens;
 
-    /** 输出 Token */
+    @TableField("output_tokens")
     private Integer outputTokens;
 
-    /** 预估费用 */
+    @TableField("estimated_cost")
     private BigDecimal estimatedCost;
 
-    /** 币种 */
     private String currency;
 
-    /** 预占金额 */
+    @TableField("reservation_amount")
     private BigDecimal reservationAmount;
 
-    /** 结算金额 */
+    @TableField("settled_amount")
     private BigDecimal settledAmount;
 
-    /** 结算状态 */
     private String status;
 
-    /** 创建时间 */
-    @TableField(fill = FieldFill.INSERT)
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /** 更新时间 */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }

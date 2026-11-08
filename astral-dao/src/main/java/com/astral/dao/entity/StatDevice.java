@@ -1,14 +1,14 @@
 package com.astral.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
-import java.util.List;
+import lombok.Data;
 
 @Data
 @TableName("stat_device")
@@ -52,5 +52,4 @@ public class StatDevice {
 
     @TableField(value = "update_time", fill = FieldFill.UPDATE)
     private LocalDateTime updateTime;
-
 }

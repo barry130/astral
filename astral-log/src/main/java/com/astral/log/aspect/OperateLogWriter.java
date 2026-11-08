@@ -32,6 +32,7 @@ public class OperateLogWriter {
     /**
      * 异步保存操作日志。
      *
+     * @param userId         操作用户ID（匿名/系统任务可为 null）
      * @param username       操作用户名
      * @param operateType    操作类型
      * @param requestUrl     请求URL
@@ -46,6 +47,7 @@ public class OperateLogWriter {
      */
     @Async("sequenceAsyncExecutor")
     public java.util.concurrent.CompletableFuture<Void> saveAsync(
+            Long userId,
             String username,
             String operateType,
             String requestUrl,
@@ -58,6 +60,7 @@ public class OperateLogWriter {
             long executeTime) {
         try {
             save(
+                    userId,
                     username,
                     operateType,
                     requestUrl,
@@ -79,6 +82,7 @@ public class OperateLogWriter {
     }
 
     private void save(
+            Long userId,
             String username,
             String operateType,
             String requestUrl,
@@ -91,6 +95,7 @@ public class OperateLogWriter {
             long executeTime) {
         log.debug("保存操作日志: operateType={}, status={}", operateType, status);
         OperateLog operateLog = new OperateLog();
+        operateLog.setUserId(userId);
         operateLog.setUsername(username);
         operateLog.setModule("API");
         operateLog.setOperateType(operateType);

@@ -8,15 +8,17 @@ import com.astral.ai.entity.AiAgentVersionEntity;
 import com.astral.ai.entity.AiRequestEntity;
 import com.astral.ai.mapper.AiRequestMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import java.lang.management.ManagementFactory;
-import java.time.Instant;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
+import java.util.UUID;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * AI 请求生命周期服务。
@@ -39,6 +41,114 @@ public class AiRequestService {
 
     private final AiRequestMapper requestMapper;
     private final com.astral.ai.mapper.AiMessageMapper messageMapper;
+    private final PlatformTransactionManager transactionManager;
+
+    /** Group request/message/event mutations on the same database transaction. */
+    public <T> T transaction(Supplier<T> action) {
+        return new TransactionTemplate(transactionManager).execute(status -> action.get());
+    }
+
+    public <T> T independentTransaction(Supplier<T> action) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        transaction.setPropagationBehavior(
+                org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return transaction.execute(status -> action.get());
+    }
+
+    public <T> T withoutTransaction(Supplier<T> action) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        transaction.setPropagationBehavior(
+                org.springframework.transaction.TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
+        return transaction.execute(status -> action.get());
+    }
+
+    public AiRequestEntity lock(Long id) {
+        AiRequestEntity row = requestMapper.selectOne(new LambdaQueryWrapper<AiRequestEntity>()
+                .eq(AiRequestEntity::getId, id)
+                .last("FOR UPDATE"));
+        if (row == null) {
+            throw new AiException("AI014");
+        }
+        return row;
+    }
+
+    /** Exactly one worker may own a queued request. Expired ownership is never silently replayed. */
+    public String claim(Long requestId, int timeoutSeconds) {
+        String token = UUID.randomUUID().toString();
+        int claimed = requestMapper.update(
+                null,
+                new LambdaUpdateWrapper<AiRequestEntity>()
+                        .eq(AiRequestEntity::getId, requestId)
+                        .eq(AiRequestEntity::getStatus, AiConstants.RequestStatus.QUEUED)
+                        .isNull(AiRequestEntity::getWorkerToken)
+                        .set(AiRequestEntity::getStatus, AiConstants.RequestStatus.RUNNING)
+                        .set(AiRequestEntity::getWorkerToken, token)
+                        .set(
+                                AiRequestEntity::getLeaseUntil,
+                                LocalDateTime.now().plusSeconds(Math.max(1, timeoutSeconds)))
+                        .set(AiRequestEntity::getStartedAt, LocalDateTime.now()));
+        return claimed == 1 ? token : null;
+    }
+
+    public boolean queueResume(Long requestId) {
+        return requestMapper.update(
+                        null,
+                        new LambdaUpdateWrapper<AiRequestEntity>()
+                                .eq(AiRequestEntity::getId, requestId)
+                                .eq(AiRequestEntity::getStatus, AiConstants.RequestStatus.WAITING_APPROVAL)
+                                .isNull(AiRequestEntity::getWorkerToken)
+                                .notExists(
+                                        "SELECT 1 FROM ai_tool_call WHERE request_id = {0} AND status IN ('WAITING_APPROVAL','RUNNING','UNKNOWN')",
+                                        requestId)
+                                .set(AiRequestEntity::getStatus, AiConstants.RequestStatus.QUEUED))
+                == 1;
+    }
+
+    public boolean owns(Long requestId, String token) {
+        AiRequestEntity row = find(requestId);
+        return row != null
+                && token != null
+                && token.equals(row.getWorkerToken())
+                && AiConstants.RequestStatus.RUNNING.equals(row.getStatus())
+                && row.getLeaseUntil() != null
+                && row.getLeaseUntil().isAfter(LocalDateTime.now());
+    }
+
+    public int remainingBudgetMillis(Long requestId, String token) {
+        AiRequestEntity row = require(requestId);
+        if (token == null
+                || !token.equals(row.getWorkerToken())
+                || !AiConstants.RequestStatus.RUNNING.equals(row.getStatus())
+                || row.getLeaseUntil() == null) {
+            throw new AiException("AI007", "请求执行权已失效");
+        }
+        long remaining = java.time.Duration.between(LocalDateTime.now(), row.getLeaseUntil())
+                .toMillis();
+        if (remaining <= 0) throw new AiException("AI012", "请求已超时");
+        return (int) Math.min(300000, remaining);
+    }
+
+    /** An uncertain external effect must be reconciled instead of being replayed by a new model round. */
+    @Transactional(rollbackFor = Exception.class)
+    public void markUncertain(Long requestId) {
+        int changed = requestMapper.update(
+                null,
+                new LambdaUpdateWrapper<AiRequestEntity>()
+                        .eq(AiRequestEntity::getId, requestId)
+                        .in(
+                                AiRequestEntity::getStatus,
+                                AiConstants.RequestStatus.RUNNING,
+                                AiConstants.RequestStatus.WAITING_APPROVAL,
+                                AiConstants.RequestStatus.WAITING_TOOL)
+                        .set(AiRequestEntity::getStatus, AiConstants.RequestStatus.FAILED)
+                        .set(AiRequestEntity::getErrorCode, "AI008")
+                        .set(AiRequestEntity::getErrorSummary, "操作可能已执行，结果待管理员核实。请勿重复操作。")
+                        .set(AiRequestEntity::getFinishedAt, LocalDateTime.now())
+                        .set(AiRequestEntity::getQuotaActive, false)
+                        .set(AiRequestEntity::getWorkerToken, null)
+                        .set(AiRequestEntity::getLeaseUntil, null));
+        if (changed == 1) closePendingMessages(requestId, AiConstants.MessageStatus.FAILED, "AI008");
+    }
 
     // ==================== 创建 ====================
 
@@ -72,7 +182,9 @@ public class AiRequestService {
         entity.setUserId(userId);
         entity.setClientType(clientType);
         entity.setStatus(AiConstants.RequestStatus.QUEUED);
-        entity.setIdempotencyKey(idempotencyKey);
+        entity.setIdempotencyKey(idempotencyKey == null || idempotencyKey.isBlank() ? null : idempotencyKey.trim());
+        entity.setQuotaCounted(false);
+        entity.setQuotaActive(false);
         entity.setProviderId(null);
         entity.setModelId(null);
         entity.setPromptVersionId(version.getSystemPromptVersionId());
@@ -112,7 +224,7 @@ public class AiRequestService {
     /** 取请求并校验归属；不存在或不属于该用户抛 AI014 */
     public AiRequestEntity requireOwned(Long id, Long userId) {
         AiRequestEntity entity = find(id);
-        if (entity == null || (userId != null && !userId.equals(entity.getUserId()))) {
+        if (entity == null || userId == null || !userId.equals(entity.getUserId())) {
             throw new AiException("AI014");
         }
         return entity;
@@ -188,64 +300,83 @@ public class AiRequestService {
     // ==================== 状态流转 ====================
 
     /** 置为运行中并记录开始时间与最终选定的提供方/模型 */
-    public void markRunning(Long requestId, Long providerId, Long modelId) {
-        AiRequestEntity entity = require(requestId);
-        entity.setStatus(AiConstants.RequestStatus.RUNNING);
-        entity.setProviderId(providerId);
-        entity.setModelId(modelId);
-        if (entity.getStartedAt() == null) {
-            entity.setStartedAt(LocalDateTime.now());
-        }
-        requestMapper.updateById(entity);
+    public void markRunning(Long requestId, Long providerId, Long modelId, String token) {
+        requestMapper.update(
+                null,
+                ownedUpdate(requestId, token)
+                        .set(AiRequestEntity::getProviderId, providerId)
+                        .set(AiRequestEntity::getModelId, modelId));
     }
 
     /** 置为等待工具/等待确认 */
-    public void markWaiting(Long requestId, boolean approval) {
-        AiRequestEntity entity = require(requestId);
-        entity.setStatus(
-                approval ? AiConstants.RequestStatus.WAITING_APPROVAL : AiConstants.RequestStatus.WAITING_TOOL);
-        requestMapper.updateById(entity);
+    public boolean markWaiting(Long requestId, boolean approval, String token) {
+        return requestMapper.update(
+                        null,
+                        ownedUpdate(requestId, token)
+                                .gt(AiRequestEntity::getLeaseUntil, LocalDateTime.now())
+                                .set(
+                                        AiRequestEntity::getStatus,
+                                        approval
+                                                ? AiConstants.RequestStatus.WAITING_APPROVAL
+                                                : AiConstants.RequestStatus.WAITING_TOOL)
+                                .set(AiRequestEntity::getWorkerToken, null)
+                                .set(AiRequestEntity::getLeaseUntil, null)
+                                .set(AiRequestEntity::getQuotaActive, false))
+                == 1;
     }
 
     /** 记录首个 token 到达时间（用于计算首字延迟） */
     public void markFirstToken(Long requestId) {
-        AiRequestEntity entity = find(requestId);
-        if (entity == null || entity.getFirstTokenAt() != null) {
-            return;
-        }
-        entity.setFirstTokenAt(LocalDateTime.now());
-        requestMapper.updateById(entity);
+        requestMapper.update(
+                null,
+                new LambdaUpdateWrapper<AiRequestEntity>()
+                        .eq(AiRequestEntity::getId, requestId)
+                        .eq(AiRequestEntity::getStatus, AiConstants.RequestStatus.RUNNING)
+                        .isNull(AiRequestEntity::getFirstTokenAt)
+                        .set(AiRequestEntity::getFirstTokenAt, LocalDateTime.now()));
     }
 
     /** 成功结束 */
-    public void markSucceeded(Long requestId, int tokenIn, int tokenOut) {
-        AiRequestEntity entity = require(requestId);
-        entity.setStatus(AiConstants.RequestStatus.SUCCEEDED);
-        entity.setTokenIn(tokenIn);
-        entity.setTokenOut(tokenOut);
-        entity.setFinishedAt(LocalDateTime.now());
-        entity.setErrorCode(null);
-        entity.setErrorSummary(null);
-        requestMapper.updateById(entity);
+    public boolean markSucceeded(Long requestId, int tokenIn, int tokenOut, String token) {
+        return requestMapper.update(
+                        null,
+                        ownedUpdate(requestId, token)
+                                .gt(AiRequestEntity::getLeaseUntil, LocalDateTime.now())
+                                .set(AiRequestEntity::getStatus, AiConstants.RequestStatus.SUCCEEDED)
+                                .set(AiRequestEntity::getTokenIn, tokenIn)
+                                .set(AiRequestEntity::getTokenOut, tokenOut)
+                                .set(AiRequestEntity::getFinishedAt, LocalDateTime.now())
+                                .set(AiRequestEntity::getErrorCode, null)
+                                .set(AiRequestEntity::getErrorSummary, null)
+                                .set(AiRequestEntity::getWorkerToken, null)
+                                .set(AiRequestEntity::getLeaseUntil, null)
+                                .set(AiRequestEntity::getQuotaActive, false))
+                == 1;
     }
 
     /** 失败结束 */
-    public void markFailed(Long requestId, String errorCode, String errorSummary, int tokenIn, int tokenOut) {
-        AiRequestEntity entity = find(requestId);
-        if (entity == null) {
-            return;
+    public boolean markFailed(Long requestId, String errorCode, String errorSummary, String token) {
+        return requestMapper.update(
+                        null,
+                        ownedUpdate(requestId, token)
+                                .set(AiRequestEntity::getStatus, AiConstants.RequestStatus.FAILED)
+                                .set(AiRequestEntity::getErrorCode, errorCode)
+                                .set(AiRequestEntity::getErrorSummary, AiJson.truncate(errorSummary, 2000))
+                                .set(AiRequestEntity::getFinishedAt, LocalDateTime.now())
+                                .set(AiRequestEntity::getWorkerToken, null)
+                                .set(AiRequestEntity::getLeaseUntil, null)
+                                .set(AiRequestEntity::getQuotaActive, false))
+                == 1;
+    }
+
+    private LambdaUpdateWrapper<AiRequestEntity> ownedUpdate(Long requestId, String token) {
+        if (token == null) {
+            throw new AiException("AI007", "请求执行权已失效");
         }
-        if (AiConstants.RequestStatus.CANCELLED.equals(entity.getStatus())) {
-            // 已取消的请求不再被失败覆盖，保证取消语义
-            return;
-        }
-        entity.setStatus(AiConstants.RequestStatus.FAILED);
-        entity.setErrorCode(errorCode);
-        entity.setErrorSummary(AiJson.truncate(errorSummary, 2000));
-        entity.setTokenIn(tokenIn);
-        entity.setTokenOut(tokenOut);
-        entity.setFinishedAt(LocalDateTime.now());
-        requestMapper.updateById(entity);
+        return new LambdaUpdateWrapper<AiRequestEntity>()
+                .eq(AiRequestEntity::getId, requestId)
+                .eq(AiRequestEntity::getWorkerToken, token)
+                .eq(AiRequestEntity::getStatus, AiConstants.RequestStatus.RUNNING);
     }
 
     /** 取消（仅非终态可取消） */
@@ -256,11 +387,38 @@ public class AiRequestService {
             // 已结束：不报错，直接返回当前状态，保证客户端重试幂等
             return entity;
         }
-        entity.setStatus(AiConstants.RequestStatus.CANCELLED);
-        entity.setCancelReason(AiJson.truncate(reason, 500));
-        entity.setFinishedAt(LocalDateTime.now());
-        requestMapper.updateById(entity);
-        return entity;
+        int changed = requestMapper.update(
+                null,
+                new LambdaUpdateWrapper<AiRequestEntity>()
+                        .eq(AiRequestEntity::getId, requestId)
+                        .in(
+                                AiRequestEntity::getStatus,
+                                AiConstants.RequestStatus.QUEUED,
+                                AiConstants.RequestStatus.RUNNING,
+                                AiConstants.RequestStatus.WAITING_APPROVAL,
+                                AiConstants.RequestStatus.WAITING_TOOL)
+                        .set(AiRequestEntity::getStatus, AiConstants.RequestStatus.CANCELLED)
+                        .set(AiRequestEntity::getCancelReason, AiJson.truncate(reason, 500))
+                        .set(AiRequestEntity::getFinishedAt, LocalDateTime.now())
+                        .set(AiRequestEntity::getWorkerToken, null)
+                        .set(AiRequestEntity::getLeaseUntil, null)
+                        .set(AiRequestEntity::getQuotaActive, false));
+        if (changed == 1) closePendingMessages(requestId, AiConstants.MessageStatus.CANCELLED, "CANCELLED");
+        return require(requestId);
+    }
+
+    private void closePendingMessages(Long requestId, String status, String finishReason) {
+        messageMapper.update(
+                null,
+                new LambdaUpdateWrapper<com.astral.ai.entity.AiMessageEntity>()
+                        .eq(com.astral.ai.entity.AiMessageEntity::getRequestId, requestId)
+                        .eq(com.astral.ai.entity.AiMessageEntity::getRole, AiConstants.MessageRole.ASSISTANT)
+                        .in(
+                                com.astral.ai.entity.AiMessageEntity::getStatus,
+                                AiConstants.MessageStatus.PENDING,
+                                AiConstants.MessageStatus.STREAMING)
+                        .set(com.astral.ai.entity.AiMessageEntity::getStatus, status)
+                        .set(com.astral.ai.entity.AiMessageEntity::getFinishReason, finishReason));
     }
 
     /** 是否为可取消状态 */
@@ -292,79 +450,61 @@ public class AiRequestService {
         return value == null || value.isBlank() ? null : value;
     }
 
-    /**
-     * 收尾上个进程遗留的未完成请求。
-     *
-     * <p>编排线程是进程内的内存线程，进程一停这些请求就再也不会推进，
-     * 但数据库里仍留着 RUNNING / WAITING_* 状态：界面上它们会永远显示「生成中」，
-     * 客户端轮询也永远等不到终态。启动时统一标记为失败，让用户能重新发起。</p>
-     *
-     * @return 被收尾的请求数
-     */
+    /** Expire only abandoned execution leases. Pending approval and queued work remain recoverable. */
+    @Transactional(rollbackFor = Exception.class)
     public int failStaleRequests(String errorCode, String errorSummary) {
         LocalDateTime now = LocalDateTime.now();
-        // 只收尾 JVM 启动前创建的请求。清扫在 ApplicationReady 时机才跑，而这时端口已放开、
-        // 新请求已经开始流入：不带时间下限会把刚建好的活请求误标成「重启中断」，编排线程
-        // 随后又会把状态盖回 SUCCEEDED，留下永远清不掉的脏 error_code（实测 req 15032）。
-        LocalDateTime bootTime = LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(ManagementFactory.getRuntimeMXBean().getStartTime()), ZoneId.systemDefault());
         List<AiRequestEntity> stale = requestMapper.selectList(new LambdaQueryWrapper<AiRequestEntity>()
-                .lt(AiRequestEntity::getCreateTime, bootTime)
                 .in(
                         AiRequestEntity::getStatus,
-                        AiConstants.RequestStatus.QUEUED,
                         AiConstants.RequestStatus.RUNNING,
-                        AiConstants.RequestStatus.WAITING_TOOL,
-                        AiConstants.RequestStatus.WAITING_APPROVAL));
+                        AiConstants.RequestStatus.WAITING_TOOL)
+                .and(w -> w.le(AiRequestEntity::getLeaseUntil, now).or().isNull(AiRequestEntity::getLeaseUntil))
+                .orderByAsc(AiRequestEntity::getId)
+                .last("limit 100"));
         int fixed = 0;
         for (AiRequestEntity entity : stale) {
-            entity.setStatus(AiConstants.RequestStatus.FAILED);
-            entity.setErrorCode(errorCode);
-            entity.setErrorSummary(AiJson.truncate(errorSummary, 500));
-            entity.setFinishedAt(now);
-            requestMapper.updateById(entity);
-            // 该请求下还挂着的助手空壳消息也要收尾，否则会话里会留下永远转圈的空气泡
-            List<com.astral.ai.entity.AiMessageEntity> pending =
-                    messageMapper.selectList(new LambdaQueryWrapper<com.astral.ai.entity.AiMessageEntity>()
-                            .eq(com.astral.ai.entity.AiMessageEntity::getRequestId, entity.getId())
-                            .eq(com.astral.ai.entity.AiMessageEntity::getRole, AiConstants.MessageRole.ASSISTANT)
+            int changed = requestMapper.update(
+                    null,
+                    new LambdaUpdateWrapper<AiRequestEntity>()
+                            .eq(AiRequestEntity::getId, entity.getId())
                             .in(
-                                    com.astral.ai.entity.AiMessageEntity::getStatus,
-                                    AiConstants.MessageStatus.PENDING,
-                                    AiConstants.MessageStatus.STREAMING));
-            for (com.astral.ai.entity.AiMessageEntity message : pending) {
-                message.setStatus(AiConstants.MessageStatus.FAILED);
-                message.setFinishReason(errorCode);
-                if (message.getContent() == null || message.getContent().isBlank()) {
-                    message.setContent(errorSummary);
-                }
-                messageMapper.updateById(message);
+                                    AiRequestEntity::getStatus,
+                                    AiConstants.RequestStatus.RUNNING,
+                                    AiConstants.RequestStatus.WAITING_TOOL)
+                            .and(w -> w.le(AiRequestEntity::getLeaseUntil, now)
+                                    .or()
+                                    .isNull(AiRequestEntity::getLeaseUntil))
+                            .set(AiRequestEntity::getStatus, AiConstants.RequestStatus.FAILED)
+                            .set(AiRequestEntity::getErrorCode, errorCode)
+                            .set(AiRequestEntity::getErrorSummary, AiJson.truncate(errorSummary, 500))
+                            .set(AiRequestEntity::getFinishedAt, now)
+                            .set(AiRequestEntity::getQuotaActive, false)
+                            .set(AiRequestEntity::getWorkerToken, null)
+                            .set(AiRequestEntity::getLeaseUntil, null));
+            if (changed == 1) {
+                messageMapper.update(
+                        null,
+                        new LambdaUpdateWrapper<com.astral.ai.entity.AiMessageEntity>()
+                                .eq(com.astral.ai.entity.AiMessageEntity::getRequestId, entity.getId())
+                                .eq(com.astral.ai.entity.AiMessageEntity::getRole, AiConstants.MessageRole.ASSISTANT)
+                                .in(
+                                        com.astral.ai.entity.AiMessageEntity::getStatus,
+                                        AiConstants.MessageStatus.PENDING,
+                                        AiConstants.MessageStatus.STREAMING)
+                                .set(com.astral.ai.entity.AiMessageEntity::getStatus, AiConstants.MessageStatus.FAILED)
+                                .set(com.astral.ai.entity.AiMessageEntity::getFinishReason, errorCode));
+                fixed++;
             }
-            fixed++;
-        }
-        // 上一版遗留的孤儿消息：请求已是终态（此前被收尾过），但消息还停在 PENDING/STREAMING。
-        // 只按 requestId 反查 request 状态，不依赖本次 stale 列表，保证重复启动也能补齐。
-        List<com.astral.ai.entity.AiMessageEntity> orphans =
-                messageMapper.selectList(new LambdaQueryWrapper<com.astral.ai.entity.AiMessageEntity>()
-                        .eq(com.astral.ai.entity.AiMessageEntity::getRole, AiConstants.MessageRole.ASSISTANT)
-                        .in(
-                                com.astral.ai.entity.AiMessageEntity::getStatus,
-                                AiConstants.MessageStatus.PENDING,
-                                AiConstants.MessageStatus.STREAMING)
-                        .isNotNull(com.astral.ai.entity.AiMessageEntity::getRequestId));
-        for (com.astral.ai.entity.AiMessageEntity message : orphans) {
-            AiRequestEntity owner = requestMapper.selectById(message.getRequestId());
-            if (owner == null || !AiConstants.RequestStatus.isTerminal(owner.getStatus())) {
-                continue;
-            }
-            message.setStatus(AiConstants.MessageStatus.FAILED);
-            message.setFinishReason(errorCode);
-            if (message.getContent() == null || message.getContent().isBlank()) {
-                message.setContent(errorSummary);
-            }
-            messageMapper.updateById(message);
-            fixed++;
         }
         return fixed;
+    }
+
+    public List<AiRequestEntity> queued() {
+        return requestMapper.selectList(new LambdaQueryWrapper<AiRequestEntity>()
+                .eq(AiRequestEntity::getStatus, AiConstants.RequestStatus.QUEUED)
+                .isNull(AiRequestEntity::getWorkerToken)
+                .orderByAsc(AiRequestEntity::getId)
+                .last("limit 32"));
     }
 }

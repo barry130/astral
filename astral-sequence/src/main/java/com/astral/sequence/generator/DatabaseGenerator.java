@@ -98,13 +98,13 @@ public class DatabaseGenerator implements SequenceGenerator {
             throw new BusinessException("SEQ004");
         }
 
-        long start = max - count + 1;
+        long start = Math.subtractExact(max, (long) count - 1);
         StringBuilder sb = new StringBuilder();
-        for (long v = start; v <= max; v++) {
-            if (v > start) {
+        for (int offset = 0; offset < count; offset++) {
+            if (offset > 0) {
                 sb.append(",");
             }
-            sb.append(v);
+            sb.append(start + offset);
         }
         return sb.toString();
     }

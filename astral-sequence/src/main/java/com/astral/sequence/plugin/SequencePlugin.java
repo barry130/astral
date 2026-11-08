@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -68,7 +69,7 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
 
     @Override
     public List<String> getApiPrefixes() {
-        return List.of("/api/v1/sequence");
+        return List.of("/api/v1/all/sequence");
     }
 
     @Override
@@ -146,17 +147,22 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
      * 为单张表初始化序列：预留号段 + 系统内置配置
      */
     private void initTableSequence(String bizKey, String tableName, long reserve) {
-        // 若号段不存在则初始化预留段
-        if (segmentMapper.selectByBizKey(bizKey) == null) {
-            try {
-                segmentMapper.insertSegment(bizKey, 1, reserve, 1000);
-                log.info("[SequencePlugin] 初始化序列：{} (表={}), 预留段=[1, {}]", bizKey, tableName, reserve);
-            } catch (Exception e) {
-                log.warn("[SequencePlugin] 初始化序列冲突（可能并发/已存在）：{} - {}", bizKey, e.getMessage());
-            }
+        // 插件表的建表由各插件自己的 SchemaInitializer 负责，可能晚于本插件 onEnable；
+        // 表还不存在时跳过预置，等首次真正插入时由 SegmentGenerator 按配置初始化，
+        // 避免一次性把「表不存在」当成冲突吞掉、留下没有配置的序列。
+        if (!tableName.matches("[A-Za-z0-9_]+") || segmentMapper.countTableInCurrentSchema(tableName) == 0) {
+            log.debug("[SequencePlugin] 表尚未创建，跳过序列预置：{}", tableName);
+            return;
         }
 
-        // 登记系统内置序列配置（锁定）
+        // 若号段不存在则初始化预留段（insertSegment 用 ON CONFLICT DO NOTHING，并发安全）
+        if (segmentMapper.selectByBizKey(bizKey) == null) {
+            segmentMapper.insertSegment(bizKey, 1, reserve, 1000);
+            log.info("[SequencePlugin] 初始化序列：{} (表={}), 预留段=[1, {}]", bizKey, tableName, reserve);
+        }
+
+        // 登记系统内置序列配置（锁定）。只有唯一键并发冲突才允许吞掉并重读；
+        // 其他数据库错误必须暴露出来，不能被一行 warn 掩盖。
         if (configMapper.selectByBizKey(bizKey) == null) {
             try {
                 SequenceConfig config = new SequenceConfig();
@@ -169,8 +175,11 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
                 config.setUpdateTime(LocalDateTime.now());
                 configMapper.insert(config);
                 log.info("[SequencePlugin] 登记序列配置：{}", bizKey);
-            } catch (Exception e) {
-                log.warn("[SequencePlugin] 登记序列配置冲突：{} - {}", bizKey, e.getMessage());
+            } catch (DuplicateKeyException e) {
+                if (configMapper.selectByBizKey(bizKey) == null) {
+                    throw e;
+                }
+                log.debug("[SequencePlugin] 序列配置已被并发创建：{}", bizKey);
             }
         }
 
@@ -198,13 +207,19 @@ public class SequencePlugin implements AstralPlugin, PluginFrontendExtension {
                 return;
             }
             long tableMax = segmentMapper.selectMaxId(tableName);
-            long aligned = tableMax + segment.getStep();
-            if (segment.getMaxValue() < aligned && segmentMapper.raiseMaxValue(bizKey, aligned) > 0) {
+            int step = segment.getStep() != null && segment.getStep() > 0 ? segment.getStep() : 1000;
+            long currentMax = segment.getMaxValue() != null ? segment.getMaxValue() : 0L;
+            if (tableMax > Long.MAX_VALUE - step) {
+                log.warn("[SequencePlugin] 高水位对齐跳过：{} 表 MAX(id)={} 已接近 long 上限", bizKey, tableMax);
+                return;
+            }
+            long aligned = tableMax + step;
+            if (currentMax < aligned && segmentMapper.raiseMaxValue(bizKey, aligned) > 0) {
                 log.warn(
                         "[SequencePlugin] 高水位对齐：{} (表={}) max_value {} -> {}（表 MAX(id)={} 已越过号段，" + "多为迁移显式插入主键所致）",
                         bizKey,
                         tableName,
-                        segment.getMaxValue(),
+                        currentMax,
                         aligned,
                         tableMax);
             }

@@ -915,8 +915,8 @@ send_email
 
 ```json
 {
-  "sql": "select id, name, status from astral.sys_user where status = #{status} limit 50",
-  "columns": ["id", "name", "status"],
+  "sql": "select id, username, status from astral.sys_user where status = #{status} limit 50",
+  "columns": ["id", "username", "status"],
   "maxRows": 50,
   "timeoutSeconds": 5
 }
@@ -924,8 +924,8 @@ send_email
 
 只读护栏：
 
-- 先剥离字符串字面量与注释，再去掉尾分号，**只允许单条** `SELECT` / `WITH … SELECT`；再含分号、或以其他关键字开头一律拒绝。
-- 关键字黑名单覆盖 `INSERT / UPDATE / DELETE / MERGE / INTO / RETURNING / CREATE / ALTER / DROP / TRUNCATE / GRANT / CALL / EXECUTE / DO / COPY / LOCK / VACUUM / SET / LISTEN / NOTIFY / PREPARE / ANALYZE` 等，因此 `WITH x AS (INSERT …)` 与 `SELECT … INTO` 同样被拒。
+- 使用 SQL AST 解析单条 `SELECT` / `WITH … SELECT`；递归检查 CTE、子查询、JOIN、函数和表达式，拒绝写操作、锁及未支持的语法，不依赖关键字黑名单证明只读。
+- 来源表与来源列受服务端白名单约束，默认只开放 `astral.sys_user/sys_role/sys_dict_type/sys_dict_data` 的有限非敏感列；密码、密钥、系统目录和未知函数不能通过结果别名或 CTE 绕过。自定义库 schema 须在 `astral.plugins.ai.sql-tool.allowed-columns` 显式配置来源表及列。
 - 参数只能写成 `#{name}`（PreparedStatement 绑定），禁止字符串拼接；名字必须在 `arguments_schema` 里声明。
 - 执行时连接 `setReadOnly(true)` + 手动事务，结束后回落滚，构成第二道保险。
 - `columns` 必须显式声明（列名白名单），只有这些列会回传给模型；`maxRows` 1–200（默认 50），`timeoutSeconds` 1–15（默认 5）。
@@ -2224,6 +2224,17 @@ PC：
 10. 后端测试、管理端类型检查/构建、App 编译和 PC Rust 测试均通过。
 11. 管理端答疑页面独立使用 `admin_qa` 或已授权的答疑类自定义智能体；其知识引用可核验，且不能调用管理助手的写工具。
 12. 发布版本的模型、Prompt、工具、知识源、入口、权限和额度快照不可变，回滚、禁用、请求取消和用量结算均可审计。
+
+## 2026-11-08 实现与运维口径
+
+- **发布一致性**：公开发布入口在同一事务内按 agent、version 顺序加锁，再读取当前配置、校验并发布。草稿字段和工具/知识绑定更新共用版本行锁，获锁后再次确认 DRAFT；局部更新只 SET 提供的字段。模型、路由有引用时不能删除。
+- **计费与未知结果**：每次 Provider 阶段以 request/stage 幂等键保存预占和价格快照。金额汇总按币种分组，不跨币种相加；费用上限当前以 CNY 为单位，启用费用上限时要求完整的 CNY 模型价格。未发送的阶段释放预占；已经发送而无可靠用量的阶段保留 UNKNOWN，不能因超时、取消或恢复而记作零费用。
+- **人工核对**：管理端用量列表与汇总使用相同日期区间，默认最近30天，单次最多366天，可查询更早期间。用量核对需要独立 `admin:ai:usage:reconcile` 权限、实际 input/output token 和依据，操作者从登录上下文获取；终态请求的 UNKNOWN 阶段仅可核对一次。缺少历史价格或额度行快照的记录会明确拒绝自动核对，不能按当前价格猜测。工具 UNKNOWN 核对同样记录真实结果、操作者和依据，不重新执行工具。
+- **知识内容与检索**：单文档正文最多400,000字符，超限拒绝且保留原文。列表分页不加载正文；编辑时单独读取完整正文。PostgreSQL GIN 的1/2/3-gram候选支持单字、双字和子串，再校验实际词项、按知识源阈值过滤并稳定排序；阈值归一为0至1，旧加权值通过08004迁移一次转换。
+- **知识重建任务**：提交立即返回持久 PENDING 任务，同源重复提交返回当前活动任务。worker每轮最多20篇，每篇一个最长30秒事务；chunks、文档状态和游标一起提交。取消在当前文档事务结束后生效，已提交进度保留；失败/取消后重试创建新任务并保留旧审计记录。进程再次运行时从持久游标继续。提交后新增文档不纳入旧任务上界，文档保存仍同步建立该文档的索引。
+- **存量任务升级**：首次引入 durable cursor 时，旧 QUEUED/PENDING/RUNNING 转为 FAILED 并提示重试，不伪报完成。Flyway08008与插件auto-schema兜底均支持此转换，再次启动不会重置新任务。消息默认状态统一为 COMPLETED；任务默认状态为 PENDING。
+
+上述口径经隔离数据库、真实事务/权限代理及合成DOM回归验证；完整证据与未执行的浏览器、真实Provider/生产环境边界见 `docs/audit/2026-11-08/TAKEOVER.md`。
 13. 创建一个新的自定义智能体只需后台配置、校验和发布，不需要修改客户端或业务主流程代码。
 
 后续实现应以本文为基线。若开发过程中需要改变 API 路径、事件字段、权限编码、数据库关系或客户端职责，应先更新本文对应章节，再实现代码和迁移。

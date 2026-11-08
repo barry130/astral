@@ -1,6 +1,7 @@
 package com.astral.feedback.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.astral.common.annotation.RateLimit;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.common.util.ClientHeaders;
@@ -59,6 +60,7 @@ public class AppFeedbackController {
 
     @Operation(summary = "提交反馈")
     @RequiresPermission(value = "user:feedback:submit", name = "反馈提交", description = "App 端提交反馈与追加回复")
+    @RateLimit(key = "ip", limit = 10, duration = 60, message = "提交过于频繁，请稍后再试")
     @PostMapping("/submit")
     public Result<Feedback> submit(@Valid @RequestBody SubmitFeedbackDto dto, HttpServletRequest request) {
         Long userId = currentUserId();
@@ -103,6 +105,7 @@ public class AppFeedbackController {
 
     @Operation(summary = "用户回复（同时通知管理员）")
     @RequiresPermission(value = "user:feedback:submit", name = "反馈提交", description = "App 端提交反馈与追加回复")
+    @RateLimit(key = "ip", limit = 20, duration = 60, message = "回复过于频繁，请稍后再试")
     @PostMapping("/reply")
     public Result<FeedbackReply> reply(@Valid @RequestBody ReplyDto dto) {
         return Result.success(feedbackService.userReply(currentUserId(), dto));

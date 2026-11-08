@@ -13,10 +13,10 @@ import java.util.List;
  *
  * <p><b>权限码规范</b>（宿主强制，见 AGENTS.md「权限码规范」）：</p>
  * <pre>
- * 域:资源:操作[:范围]
+ * 端:域:资源:操作[:范围]
  * </pre>
  * <ul>
- *   <li>全小写，段间用冒号分隔；域取插件/模块名（qt、storage、feedback、system…）；</li>
+ *   <li>全小写，段间用冒号分隔；端取 admin / user / all，域取插件/模块名（qt、storage、feedback、system…）；</li>
  *   <li>操作段用动词或语义名（view/edit/publish）；</li>
  *   <li><b>范围段</b>（可选）用于「结果级权限」：同一接口对不同人群返回不同结果，
  *       例如 {@code user:qt:update:channel:beta} 表示「有资格接收 beta 渠道的版本更新」。
@@ -24,7 +24,7 @@ import java.util.List;
  *       再在集合内按业务规则选取（正式版版本号更高时，持有该权限的用户依然收到正式版）。</li>
  * </ul>
  *
- * <p>插件声明的权限会自动获得 {@code domain}（取权限码首段），管理端按域分组展示。</p>
+ * <p>插件声明的权限会自动获得 {@code domain}（跳过端段后的第 2 段），管理端按域分组展示。</p>
  *
  * @see PermissionDef
  */

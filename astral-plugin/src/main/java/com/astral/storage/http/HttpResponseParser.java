@@ -166,8 +166,8 @@ public class HttpResponseParser {
         return switch (condition.type()) {
             case HttpUploadProfile.TYPE_STRING -> value instanceof String text && text.equals(condition.value());
             case HttpUploadProfile.TYPE_NUMBER -> matchesNumber(value, condition.value());
-            case HttpUploadProfile.TYPE_BOOLEAN -> value instanceof Boolean flag
-                    && flag == Boolean.parseBoolean(condition.value());
+            case HttpUploadProfile.TYPE_BOOLEAN ->
+                value instanceof Boolean flag && flag == Boolean.parseBoolean(condition.value());
             default -> false;
         };
     }
@@ -301,12 +301,11 @@ public class HttpResponseParser {
         if (raw == null || raw.signum() < 0) {
             return null;
         }
-        BigDecimal factor =
-                switch (unit) {
-                    case HttpUploadProfile.SIZE_UNIT_KB -> BigDecimal.valueOf(1000L);
-                    case HttpUploadProfile.SIZE_UNIT_KIB -> BigDecimal.valueOf(1024L);
-                    default -> BigDecimal.ONE;
-                };
+        BigDecimal factor = switch (unit) {
+            case HttpUploadProfile.SIZE_UNIT_KB -> BigDecimal.valueOf(1000L);
+            case HttpUploadProfile.SIZE_UNIT_KIB -> BigDecimal.valueOf(1024L);
+            default -> BigDecimal.ONE;
+        };
         BigDecimal bytes = raw.multiply(factor);
         BigInteger exact;
         try {

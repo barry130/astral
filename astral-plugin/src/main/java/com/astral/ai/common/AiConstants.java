@@ -156,6 +156,17 @@ public final class AiConstants {
         public static List<String> all() {
             return List.of(NONE, USER_CONFIRM, ADMIN_CONFIRM);
         }
+
+        /** 确认策略用于「只能提高不能降低」的比较，值越大确认越强；非法值 0 */
+        public static int order(String policy) {
+            if (ADMIN_CONFIRM.equals(policy)) {
+                return 3;
+            }
+            if (USER_CONFIRM.equals(policy)) {
+                return 2;
+            }
+            return NONE.equals(policy) ? 1 : 0;
+        }
     }
 
     /** 工具状态（ai_tool.status：代码在册=ENABLED，代码下线=DISABLED） */
@@ -190,6 +201,7 @@ public final class AiConstants {
 
     /** 工具调用状态 */
     public static final class ToolCallStatus {
+        public static final String UNKNOWN = "UNKNOWN";
         public static final String PLANNED = "PLANNED";
         public static final String WAITING_APPROVAL = "WAITING_APPROVAL";
         public static final String RUNNING = "RUNNING";
@@ -199,6 +211,14 @@ public final class AiConstants {
         public static final String CANCELLED = "CANCELLED";
 
         private ToolCallStatus() {}
+    }
+
+    /** 工具调用来源（ai_tool_call.source：chat=会话编排调用，test-run=后台试跑） */
+    public static final class ToolCallSource {
+        public static final String CHAT = "chat";
+        public static final String TEST_RUN = "test-run";
+
+        private ToolCallSource() {}
     }
 
     /** 知识源状态 */
@@ -343,6 +363,7 @@ public final class AiConstants {
 
     /** 用量结算状态 */
     public static final class UsageStatus {
+        public static final String UNKNOWN = "UNKNOWN";
         public static final String RESERVED = "RESERVED";
         public static final String SETTLED = "SETTLED";
         public static final String RELEASED = "RELEASED";

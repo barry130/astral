@@ -50,7 +50,13 @@ public class QtPlugin implements AstralPlugin, PluginFrontendExtension, Permissi
 
     @Override
     public List<String> getApiPrefixes() {
-        return List.of("/api/v1/app/user", "/api/v1/app", "/api/v1/admin/qt");
+        return List.of(
+                "/api/v1/app/user",
+                "/api/v1/app/update",
+                "/api/v1/app/github",
+                "/api/v1/app/version",
+                "/api/v1/app/source",
+                "/api/v1/admin/qt");
     }
 
     @Override

@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -109,6 +108,7 @@ public class UploadOperationService {
             UploadPolicyService.PolicySpec policy,
             String leaseToken,
             long maxBytes,
+            boolean folderAclExempt,
             UploadAdmissionControl.Permit permit)
             implements AutoCloseable {
 
@@ -124,10 +124,25 @@ public class UploadOperationService {
 
     public UploadOperationDtos.UploadCreateResp create(
             UploadOperationDtos.UploadCreateReq req, String userId, String idempotencyKey, boolean folderAclExempt) {
+        return transactionTemplate.execute(status -> {
+            validateCreateRequest(req);
+            fileMapper.lockUploadKey(StorageFolderService.securityLockKey(req.folderId()));
+            return createLocked(req, userId, idempotencyKey, folderAclExempt);
+        });
+    }
+
+    private UploadOperationDtos.UploadCreateResp createLocked(
+            UploadOperationDtos.UploadCreateReq req, String userId, String idempotencyKey, boolean folderAclExempt) {
         requireLogin(userId);
         String keyHash = hashIdempotencyKey(idempotencyKey);
         validateCreateRequest(req);
         StorageFolderEntity folder = folderService.getById(req.folderId());
+        if (folder == null) {
+            throw new BusinessException("STORAGE016");
+        }
+        if (!StorageFolderEntity.STATUS_ENABLED.equals(folder.getStatus())) {
+            throw new BusinessException("STORAGE025");
+        }
         if (!folderAclExempt) {
             folderService.requirePermission(userId, folder.getId(), "UPLOAD");
         }
@@ -154,8 +169,6 @@ public class UploadOperationService {
             }
             return toCreateResp(existing, maxBytes);
         }
-        enforceIntentBudget(userId);
-
         StorageTargetResolver.Resolution resolution = targetResolver.resolveForUpload(folder, userId);
         StorageTargetResolver.Candidate candidate = resolution.firstCandidate();
         LocalDateTime now = LocalDateTime.now();
@@ -171,7 +184,7 @@ public class UploadOperationService {
         operation.setExpectedSize(size);
         operation.setExpectedSha256(sha256);
         operation.setFolderId(folder.getId());
-        operation.setFolderVersion(folder.getTargetVersion());
+        operation.setFolderVersion(resolution.folderVersion());
         operation.setRouteSnapshotJson(resolution.routeSnapshotJson());
         operation.setChosenConfigId(candidate.configId());
         operation.setChosenConfigVersion(candidate.configVersion());
@@ -186,18 +199,15 @@ public class UploadOperationService {
         operation.setSendDeadline(now.plusSeconds(deadlineSeconds()));
         operation.setCreateTime(now);
         operation.setUpdateTime(now);
-        try {
-            operationMapper.insert(operation);
-        } catch (DuplicateKeyException ex) {
-            StorageUploadOperationEntity raced = findByKey(userId, keyHash);
-            if (raced == null) {
-                throw ex;
-            }
-            if (!fingerprint.equals(raced.getIntentFingerprint())) {
-                throw new BusinessException("STORAGE043");
-            }
+        // Resolve the route before the shared intent lock; count + insert is the short serialized section.
+        fileMapper.lockUploadKey("storage-intent-budget");
+        StorageUploadOperationEntity raced = findByKey(userId, keyHash);
+        if (raced != null) {
+            if (!fingerprint.equals(raced.getIntentFingerprint())) throw new BusinessException("STORAGE043");
             return toCreateResp(raced, maxBytes);
         }
+        enforceIntentBudget(userId);
+        operationMapper.insert(operation);
         log.info("上传意图已创建: uploadId={}, folderId={}, actorId={}", operation.getUploadId(), folder.getId(), userId);
         return toCreateResp(operation, maxBytes);
     }
@@ -243,13 +253,15 @@ public class UploadOperationService {
             boolean skipOwnerCheck,
             UploadAdmissionControl.Permit permit) {
         StorageUploadOperationEntity operation = requireOwned(uploadId, userId, skipOwnerCheck);
+        fileMapper.lockUploadKey(StorageFolderService.securityLockKey(operation.getFolderId()));
+        operation = requireOwned(uploadId, userId, skipOwnerCheck);
         LocalDateTime now = LocalDateTime.now();
         if (StorageUploadOperationEntity.STATE_EXPIRED.equals(operation.getState())
                 || operation.getIntentExpiresAt() == null
                 || !operation.getIntentExpiresAt().isAfter(now)) {
             throw new BusinessException("STORAGE044");
         }
-        if (now.isAfter(operation.getSendDeadline())) {
+        if (operation.getSendDeadline() != null && now.isAfter(operation.getSendDeadline())) {
             throw new BusinessException("STORAGE056");
         }
         if (!StorageUploadOperationEntity.STATE_CREATED.equals(operation.getState())) {
@@ -269,6 +281,12 @@ public class UploadOperationService {
             throw new BusinessException("STORAGE045", "Content-Type 与声明 MIME 不一致");
         }
         StorageFolderEntity folder = folderService.getById(operation.getFolderId());
+        if (folder == null) {
+            throw new BusinessException("STORAGE016");
+        }
+        if (!StorageFolderEntity.STATUS_ENABLED.equals(folder.getStatus())) {
+            throw new BusinessException("STORAGE025");
+        }
         if (!folderAclExempt) {
             folderService.requirePermission(userId, folder.getId(), "UPLOAD");
         }
@@ -304,7 +322,7 @@ public class UploadOperationService {
         operation.setLeaseToken(leaseToken);
         operation.setLeaseUntil(leaseUntil);
         operation.setVersion(operation.getVersion() + 1);
-        return new PreparedContent(operation, policy, leaseToken, maxContentBytes(policy), permit);
+        return new PreparedContent(operation, policy, leaseToken, maxContentBytes(policy), folderAclExempt, permit);
     }
 
     // ==================== 发送并落库 ====================
@@ -314,12 +332,26 @@ public class UploadOperationService {
         try {
             StorageUploadOperationEntity operation = holder.operation;
             validateContent(operation, prepared.policy(), content);
-            HttpUploadGateway.Channel channel = gateway.loadChannel(operation.getChosenConfigId());
-            long expectedVersion = operation.getChosenConfigVersion() == null ? 0L : operation.getChosenConfigVersion();
-            if (channel.configVersion() != expectedVersion) {
-                throw new BusinessException("STORAGE047");
-            }
-            StorageUploadOperationEntity sending = markSending(operation.getId(), prepared.leaseToken());
+            AuthorizedSend authorized = transactionTemplate.execute(status -> {
+                // Folder mutations and configuration updates must linearize before or after SENDING.
+                fileMapper.lockUploadKey(StorageFolderService.securityLockKey(operation.getFolderId()));
+                HttpUploadGateway.Channel channel = gateway.loadChannelForSend(operation.getChosenConfigId());
+                StorageFolderEntity folder = folderService.getById(operation.getFolderId());
+                targetResolver.requireCurrentCandidate(
+                        folder,
+                        operation.getActorId(),
+                        prepared.folderAclExempt(),
+                        operation.getFolderId(),
+                        operation.getFolderVersion() == null ? 1L : operation.getFolderVersion(),
+                        operation.getChosenConfigId(),
+                        operation.getChosenConfigVersion());
+                long expectedVersion =
+                        operation.getChosenConfigVersion() == null ? 0L : operation.getChosenConfigVersion();
+                if (channel.configVersion() != expectedVersion) throw new BusinessException("STORAGE047");
+                return new AuthorizedSend(markSending(operation.getId(), prepared.leaseToken()), channel);
+            });
+            if (authorized == null) throw new BusinessException("STORAGE055");
+            StorageUploadOperationEntity sending = authorized.operation();
             String sha256 = sha256Hex(content);
             HttpUploadGateway.Attempt attempt = new HttpUploadGateway.Attempt(
                     sending.getUploadId(),
@@ -329,8 +361,8 @@ public class UploadOperationService {
                     content.length,
                     content,
                     sha256);
-            HttpUploadGateway.Result result = gateway.send(channel, attempt);
-            return applyResult(sending, result, content, sha256);
+            HttpUploadGateway.Result result = gateway.send(authorized.channel(), attempt);
+            return applyResult(sending, result, content, sha256, prepared.folderAclExempt());
         } catch (RuntimeException ex) {
             revertToCreatedQuietly(holder.operation, prepared.leaseToken());
             throw ex;
@@ -338,6 +370,8 @@ public class UploadOperationService {
             prepared.close();
         }
     }
+
+    private record AuthorizedSend(StorageUploadOperationEntity operation, HttpUploadGateway.Channel channel) {}
 
     /** 仅供 orElse 场景持有可变引用 */
     private static final class UploadOperationEntityHolder {
@@ -358,8 +392,34 @@ public class UploadOperationService {
                 && !operation.getExpectedSha256().equals(actualSha)) {
             throw new BusinessException("STORAGE045", "正文摘要与声明不一致");
         }
-        if (operation.getExpectedMime() != null && operation.getExpectedMime().startsWith("image/")) {
-            imageValidator.validate(content, operation.getExpectedMime());
+        String declared = operation.getExpectedMime() == null
+                ? ""
+                : operation.getExpectedMime().toLowerCase(java.util.Locale.ROOT);
+        String verifyLevel = policy == null ? UploadPolicyService.VERIFY_NONE : policy.verifyContent();
+        boolean full = UploadPolicyService.VERIFY_FULL.equals(verifyLevel);
+        boolean magic = full || UploadPolicyService.VERIFY_MAGIC.equals(verifyLevel);
+        if (magic) {
+            // 两步上传在网关发送前完成与注册后校验同级的 magic 门槛：SVG 可内联脚本，即便声明为
+            // image/svg 也不放行；声明为图片但实际不是 JPEG/PNG 时拒绝，避免把任意文本推给上游图床。
+            if (declared.startsWith("image/svg") || StorageFileService.looksLikeSvg(content)) {
+                throw new BusinessException("STORAGE045", "不支持 SVG 类型的图片");
+            }
+            String actual = imageValidator.detectFormat(content);
+            if (actual == null) {
+                if (declared.startsWith("image/")) {
+                    throw new BusinessException("STORAGE045", "内容与图片类型不符");
+                }
+            } else {
+                String actualMime = "JPEG".equals(actual) ? "image/jpeg" : "image/png";
+                if (!declared.isEmpty() && !actualMime.equals(declared)) {
+                    throw new BusinessException("STORAGE045", "实际内容 " + actualMime + " 与声明类型 " + declared + " 不符");
+                }
+            }
+        }
+        if (declared.startsWith("image/")) {
+            // 图片始终走尺寸/像素硬上限；verifyContent=full 时再叠加目录策略上限（只收紧不放宽）。
+            Long policyMaxPixels = full && policy != null ? policy.maxPixels() : null;
+            imageValidator.validate(content, operation.getExpectedMime(), policyMaxPixels);
         }
     }
 
@@ -390,7 +450,17 @@ public class UploadOperationService {
     }
 
     private UploadOperationDtos.UploadContentResp applyResult(
-            StorageUploadOperationEntity sending, HttpUploadGateway.Result result, byte[] content, String sha256) {
+            StorageUploadOperationEntity sending,
+            HttpUploadGateway.Result result,
+            byte[] content,
+            String sha256,
+            boolean folderAclExempt) {
+        if (HttpUploadGateway.Kind.REMOTE_CREATED.equals(result.kind())) {
+            // 真实状态机：先把「上游已创建」单独提交为 REMOTE_SUCCEEDED，再在另一个事务里登记本地文件。
+            // 若进程在两步之间崩溃，恢复任务能从 REMOTE_SUCCEEDED 幂等补登记，而不是永久停在 SENDING/丢文件。
+            persistRemoteSucceeded(sending, result, content, sha256);
+            return commitRemoteSucceeded(sending, result, content, sha256);
+        }
         UploadOperationDtos.UploadContentResp response = transactionTemplate.execute(status -> {
             StorageUploadOperationEntity current = operationMapper.selectById(sending.getId());
             if (current == null) {
@@ -401,19 +471,6 @@ public class UploadOperationService {
             }
             LocalDateTime now = LocalDateTime.now();
             switch (result.kind()) {
-                case REMOTE_CREATED -> {
-                    StorageFileEntity file = registerCommittedFile(current, result, content, sha256, now);
-                    current.setState(StorageUploadOperationEntity.STATE_COMMITTED);
-                    current.setQuotaCharge(StorageUploadOperationEntity.CHARGE_CONSUMED);
-                    current.setFileId(file.getId());
-                    current.setSafeResultJson(writeJson(
-                            result.url(), result.thumbUrl(), result.remoteId(), result.width(), result.height()));
-                    current.setActualSize((long) content.length);
-                    current.setActualSha256(sha256);
-                    current.setCompletedAt(now);
-                    persistResult(current, now);
-                    log.info("上传已完成: uploadId={}, fileId={}", current.getUploadId(), file.getId());
-                }
                 case DEFINITE_REJECTED -> {
                     current.setState(StorageUploadOperationEntity.STATE_FAILED);
                     current.setFailureCode(result.safeCode());
@@ -430,7 +487,7 @@ public class UploadOperationService {
                     current.setActualSha256(sha256);
                     persistResult(current, now);
                 }
-                case NOT_SENT -> switchToNextTarget(current, result.safeCode(), now);
+                case NOT_SENT -> switchToNextTarget(current, result.safeCode(), now, folderAclExempt);
             }
             return new UploadOperationDtos.UploadContentResp(
                     true, toView(current), result.httpStatus(), result.safeCode());
@@ -473,9 +530,14 @@ public class UploadOperationService {
     }
 
     private void persistResult(StorageUploadOperationEntity operation, LocalDateTime now) {
+        persistResult(operation, now, StorageUploadOperationEntity.STATE_SENDING);
+    }
+
+    /** CAS 从 expectedState 迁移到 operation.state；调用方负责填好所有目标字段与 version 递增基数 */
+    private void persistResult(StorageUploadOperationEntity operation, LocalDateTime now, String expectedState) {
         LambdaUpdateWrapper<StorageUploadOperationEntity> update = Wrappers.<StorageUploadOperationEntity>lambdaUpdate()
                 .eq(StorageUploadOperationEntity::getId, operation.getId())
-                .eq(StorageUploadOperationEntity::getState, StorageUploadOperationEntity.STATE_SENDING)
+                .eq(StorageUploadOperationEntity::getState, expectedState)
                 .set(StorageUploadOperationEntity::getState, operation.getState())
                 .set(StorageUploadOperationEntity::getFileId, operation.getFileId())
                 .set(StorageUploadOperationEntity::getSafeResultJson, operation.getSafeResultJson())
@@ -494,12 +556,76 @@ public class UploadOperationService {
         operation.setVersion(operation.getVersion() + 1);
     }
 
+    /** 第一步：把上游已创建的事实与安全结果单独落库为 REMOTE_SUCCEEDED（保留 HELD 额度）。 */
+    private void persistRemoteSucceeded(
+            StorageUploadOperationEntity sending, HttpUploadGateway.Result result, byte[] content, String sha256) {
+        transactionTemplate.executeWithoutResult(status -> {
+            StorageUploadOperationEntity current = operationMapper.selectById(sending.getId());
+            if (current == null) {
+                throw new BusinessException("STORAGE054");
+            }
+            if (!StorageUploadOperationEntity.STATE_SENDING.equals(current.getState())) {
+                throw new BusinessException("STORAGE055");
+            }
+            LocalDateTime now = LocalDateTime.now();
+            current.setState(StorageUploadOperationEntity.STATE_REMOTE_SUCCEEDED);
+            current.setSafeResultJson(
+                    writeJson(result.url(), result.thumbUrl(), result.remoteId(), result.width(), result.height()));
+            current.setActualSize((long) content.length);
+            current.setActualSha256(sha256);
+            current.setCompletedAt(null);
+            persistResult(current, now, StorageUploadOperationEntity.STATE_SENDING);
+            log.info("上游已创建，等待本地登记: uploadId={}", current.getUploadId());
+        });
+    }
+
+    /** 第二步：由 REMOTE_SUCCEEDED 登记文件并提交。任何失败都留给恢复任务从同一状态重试。 */
+    private UploadOperationDtos.UploadContentResp commitRemoteSucceeded(
+            StorageUploadOperationEntity sending, HttpUploadGateway.Result result, byte[] content, String sha256) {
+        UploadOperationDtos.UploadContentResp response = transactionTemplate.execute(status -> {
+            fileMapper.lockUploadKey(StorageFolderService.securityLockKey(sending.getFolderId()));
+            StorageUploadOperationEntity current = operationMapper.selectById(sending.getId());
+            if (current == null) {
+                throw new BusinessException("STORAGE054");
+            }
+            if (StorageUploadOperationEntity.STATE_COMMITTED.equals(current.getState())) {
+                // A recovery worker may have won the registration race. Never resurrect a deleted file.
+                return new UploadOperationDtos.UploadContentResp(
+                        true, toView(current), result.httpStatus(), result.safeCode());
+            }
+            if (!StorageUploadOperationEntity.STATE_REMOTE_SUCCEEDED.equals(current.getState())) {
+                throw new BusinessException("STORAGE055");
+            }
+            folderService.getById(sending.getFolderId());
+            LocalDateTime now = LocalDateTime.now();
+            // 幂等：同一操作可能已被恢复任务登记过文件（理论上主路径先到，防御重复回调/重试）
+            StorageFileEntity existing = fileMapper.selectOne(new LambdaQueryWrapper<StorageFileEntity>()
+                    .eq(StorageFileEntity::getUploadOperationId, current.getId())
+                    .last("LIMIT 1"));
+            StorageFileEntity file =
+                    existing != null ? existing : registerCommittedFile(current, result, content, sha256, now);
+            current.setState(StorageUploadOperationEntity.STATE_COMMITTED);
+            current.setQuotaCharge(StorageUploadOperationEntity.CHARGE_CONSUMED);
+            current.setFileId(file.getId());
+            current.setCompletedAt(now);
+            persistResult(current, now, StorageUploadOperationEntity.STATE_REMOTE_SUCCEEDED);
+            log.info("上传已完成: uploadId={}, fileId={}", current.getUploadId(), file.getId());
+            return new UploadOperationDtos.UploadContentResp(
+                    true, toView(current), result.httpStatus(), result.safeCode());
+        });
+        if (response == null) {
+            throw new BusinessException("STORAGE055");
+        }
+        return response;
+    }
+
     /**
      * 确定未发出（连接被拒/TLS/DNS 失败）：若还有下一个候选则退回 CREATED 换目标，否则判定失败并退回额度。
      * 其他任何失败（超时、5xx、无法解析）都不会走到这里——它们可能是「已创建」，只记录不重试。
      */
-    private void switchToNextTarget(StorageUploadOperationEntity operation, String safeCode, LocalDateTime now) {
-        StorageUploadOperationEntity next = resolveNextCandidate(operation);
+    private void switchToNextTarget(
+            StorageUploadOperationEntity operation, String safeCode, LocalDateTime now, boolean folderAclExempt) {
+        StorageUploadOperationEntity next = resolveNextCandidate(operation, folderAclExempt);
         if (next == null) {
             operation.setState(StorageUploadOperationEntity.STATE_FAILED);
             operation.setFailureCode(safeCode);
@@ -531,14 +657,17 @@ public class UploadOperationService {
         log.info("上传目标不可达，已切换候选: uploadId={}, code={}", operation.getUploadId(), safeCode);
     }
 
-    private StorageUploadOperationEntity resolveNextCandidate(StorageUploadOperationEntity operation) {
+    StorageUploadOperationEntity resolveNextCandidate(StorageUploadOperationEntity operation, boolean folderAclExempt) {
         try {
             StorageFolderEntity folder = folderService.getById(operation.getFolderId());
-            StorageTargetResolver.Resolution resolution =
-                    targetResolver.resolveForUpload(folder, operation.getActorId());
-            List<StorageTargetResolver.Candidate> candidates = resolution.flatCandidates();
+            long folderVersion = operation.getFolderVersion() == null ? 1L : operation.getFolderVersion();
+            // 候选顺序/priority/configVersion 只来自创建意图的 v2 快照；绝不实时 resolve 追加新候选。
+            StorageTargetResolver.Resolution resolution = targetResolver.parseSnapshot(
+                    operation.getRouteSnapshotJson(), operation.getFolderId(), folderVersion);
             int attempts = countAttempts(operation.getAttemptsJson());
-            if (attempts >= MAX_ATTEMPTS) {
+            // attemptsJson 记录的是“已经失败并写回”的渠道，当前渠道尚未计入；总尝试数 = attempts + 1。
+            // MAX_ATTEMPTS 是总发送次数（含首次），不是额外重试次数，否则会多打一个渠道。
+            if (attempts + 1 >= MAX_ATTEMPTS) {
                 return null;
             }
             // §10.2「最多尝试 MAX_ATTEMPTS 个不同渠道」：排除当前失败渠道与 attemptsJson 里已试过的
@@ -547,14 +676,32 @@ public class UploadOperationService {
                     .map(String::valueOf)
                     .collect(java.util.stream.Collectors.toSet());
             attempted.add(String.valueOf(operation.getChosenConfigId()));
-            for (StorageTargetResolver.Candidate candidate : candidates) {
-                if (!attempted.contains(String.valueOf(candidate.configId()))) {
-                    StorageUploadOperationEntity next = new StorageUploadOperationEntity();
-                    next.setChosenConfigId(candidate.configId());
-                    next.setChosenConfigVersion(candidate.configVersion());
-                    next.setAttemptsJson(appendAttempt(operation.getAttemptsJson(), operation.getChosenConfigId()));
-                    return next;
+            for (StorageTargetResolver.Candidate candidate : resolution.flatCandidates()) {
+                if (attempted.contains(String.valueOf(candidate.configId()))) {
+                    continue;
                 }
+                try {
+                    targetResolver.requireCurrentCandidate(
+                            folder,
+                            operation.getActorId(),
+                            folderAclExempt,
+                            operation.getFolderId(),
+                            folderVersion,
+                            candidate.configId(),
+                            candidate.configVersion());
+                } catch (BusinessException ex) {
+                    log.info(
+                            "备用候选当前不可用: uploadId={}, configId={}, code={}",
+                            operation.getUploadId(),
+                            candidate.configId(),
+                            ex.getMessage());
+                    continue;
+                }
+                StorageUploadOperationEntity next = new StorageUploadOperationEntity();
+                next.setChosenConfigId(candidate.configId());
+                next.setChosenConfigVersion(candidate.configVersion());
+                next.setAttemptsJson(appendAttempt(operation.getAttemptsJson(), operation.getChosenConfigId()));
+                return next;
             }
             return null;
         } catch (RuntimeException ex) {
@@ -611,7 +758,8 @@ public class UploadOperationService {
                         StorageUploadOperationEntity::getState,
                         List.of(
                                 StorageUploadOperationEntity.STATE_CREATED,
-                                StorageUploadOperationEntity.STATE_RECEIVING)));
+                                StorageUploadOperationEntity.STATE_RECEIVING,
+                                StorageUploadOperationEntity.STATE_SENDING)));
         if (perUser != null && perUser >= MAX_CONCURRENT_INTENTS_PER_USER) {
             throw new BusinessException("STORAGE042");
         }
@@ -620,7 +768,8 @@ public class UploadOperationService {
                         StorageUploadOperationEntity::getState,
                         List.of(
                                 StorageUploadOperationEntity.STATE_CREATED,
-                                StorageUploadOperationEntity.STATE_RECEIVING)));
+                                StorageUploadOperationEntity.STATE_RECEIVING,
+                                StorageUploadOperationEntity.STATE_SENDING)));
         if (global != null && global >= MAX_CONCURRENT_INTENTS) {
             throw new BusinessException("STORAGE042");
         }
@@ -663,6 +812,9 @@ public class UploadOperationService {
     }
 
     private void requirePublicFolder(StorageFolderEntity folder) {
+        if (folder == null) {
+            throw new BusinessException("STORAGE016");
+        }
         if (!StorageFolderEntity.VISIBILITY_PUBLIC.equals(folder.getVisibility())) {
             throw new BusinessException("STORAGE059", "仅公开目录可使用服务端代传");
         }
@@ -760,7 +912,13 @@ public class UploadOperationService {
         }
         int semicolon = contentType.indexOf(';');
         String mime = semicolon < 0 ? contentType : contentType.substring(0, semicolon);
-        return mime.trim().toLowerCase(java.util.Locale.ROOT);
+        mime = mime.trim().toLowerCase(java.util.Locale.ROOT);
+        // 该值会进入上游 multipart 的 Content-Type 头：只接受 RFC 9110 token/token，
+        // 阻断 CR/LF/引号等可注入头部或破坏 multipart 的字符。
+        if (mime.length() > 255 || !mime.matches("[!#$%&'*+.^_`|~0-9a-z-]+/[!#$%&'*+.^_`|~0-9a-z-]+")) {
+            throw new BusinessException("COMMON002", "非法的 MIME 类型");
+        }
+        return mime;
     }
 
     private String normalizeSha256(String sha256) {

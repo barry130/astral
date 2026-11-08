@@ -26,8 +26,7 @@ class McpClientTest {
     @Test
     @DisplayName("SSE 响应按空行拆帧，只取 data 负载")
     void splitsSseFrames() {
-        String body =
-                """
+        String body = """
                 event: message
                 data: {"jsonrpc":"2.0","id":1,"result":{"ok":true}}
 
@@ -46,8 +45,7 @@ class McpClientTest {
     @Test
     @DisplayName("多行 data 合并成一帧（规范行为）")
     void joinsMultilineData() {
-        String body =
-                """
+        String body = """
                 data: {"jsonrpc":"2.0",
                 data: "id":7,"result":{}}
 
@@ -95,8 +93,7 @@ class McpClientTest {
     @Test
     @DisplayName("SSE 响应里挑 id 匹配的帧")
     void picksMatchingSseFrame() {
-        String body =
-                """
+        String body = """
                 data: {"jsonrpc":"2.0","id":1,"result":{"stage":"init"}}
 
                 data: {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"search"}]}}
@@ -189,8 +186,7 @@ class McpClientTest {
     @Test
     @DisplayName("工具定义解析：名称/标题/参数结构/只读标注")
     void parsesToolInfo() {
-        JsonNode item = com.astral.ai.common.AiJson.read(
-                """
+        JsonNode item = com.astral.ai.common.AiJson.read("""
                 {"name":"search","title":"搜索","description":"搜一搜",
                  "inputSchema":{"type":"object","properties":{"q":{"type":"string"}}},
                  "annotations":{"readOnlyHint":false}}

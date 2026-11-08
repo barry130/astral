@@ -89,8 +89,26 @@ public class SysConfigController {
     @PutMapping("/{id}")
     @CacheEvict(value = "sysConfig", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody SysConfig entity) {
-        entity.setId(id);
-        sysConfigService.updateById(entity);
+        // 白名单更新：id 由路径决定，只允许改「名称/键/值/类型/说明」这几个可编辑列。
+        // 不能用 updateById(客户端实体)：MP 会把实体上所有非 null 字段一并写进 SET
+        // （mass assignment），客户端可借此改写任意列——包括以后新增的敏感列。
+        var update = sysConfigService.lambdaUpdate().eq(SysConfig::getId, id);
+        if (entity.getConfigName() != null) {
+            update.set(SysConfig::getConfigName, entity.getConfigName());
+        }
+        if (entity.getConfigKey() != null) {
+            update.set(SysConfig::getConfigKey, entity.getConfigKey());
+        }
+        if (entity.getConfigValue() != null) {
+            update.set(SysConfig::getConfigValue, entity.getConfigValue());
+        }
+        if (entity.getConfigType() != null) {
+            update.set(SysConfig::getConfigType, entity.getConfigType());
+        }
+        if (entity.getDescription() != null) {
+            update.set(SysConfig::getDescription, entity.getDescription());
+        }
+        update.update();
         sysConfigService.evictCache();
         return Result.success();
     }

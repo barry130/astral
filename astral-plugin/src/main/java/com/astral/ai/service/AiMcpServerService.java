@@ -9,9 +9,11 @@ import com.astral.ai.entity.AiMcpServerEntity;
 import com.astral.ai.entity.AiToolEntity;
 import com.astral.ai.mapper.AiMcpServerMapper;
 import com.astral.ai.mapper.AiToolMapper;
+import com.astral.ai.security.AiMcpHeaderSecurity;
 import com.astral.ai.tool.declarative.McpClient;
 import com.astral.ai.tool.declarative.McpToolExecutor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,7 +84,8 @@ public class AiMcpServerService {
         entity.setServerCode(code);
         entity.setName(req.name());
         entity.setUrl(req.url().trim());
-        entity.setHeadersJson(blankToNull(req.headers()));
+        entity.setHeadersJson(
+                AiMcpHeaderSecurity.protectAtRest(properties.getSecretKey(), blankToNull(req.headers()), null));
         entity.setReadOnly(req.readOnly() == null || req.readOnly());
         entity.setStatus("ENABLED");
         entity.setToolCount(0);
@@ -97,6 +100,7 @@ public class AiMcpServerService {
     @Transactional(rollbackFor = Exception.class)
     public AiMcpServerEntity update(Long id, AiAdminDtos.McpServerSaveReq req, Long operatorId) {
         AiMcpServerEntity entity = require(id);
+        String previousHeaders = entity.getHeadersJson();
         if (req.url() != null && !req.url().isBlank()) {
             McpClient.requireEndpoint(req.url(), allowedHosts());
             entity.setUrl(req.url().trim());
@@ -105,7 +109,8 @@ public class AiMcpServerService {
             entity.setName(req.name());
         }
         if (req.headers() != null) {
-            entity.setHeadersJson(blankToNull(req.headers()));
+            entity.setHeadersJson(AiMcpHeaderSecurity.protectAtRest(
+                    properties.getSecretKey(), blankToNull(req.headers()), previousHeaders));
         }
         if (req.readOnly() != null) {
             entity.setReadOnly(req.readOnly());
@@ -118,7 +123,20 @@ public class AiMcpServerService {
             entity.setStatus(status);
         }
         entity.setUpdatedBy(operatorId);
-        serverMapper.updateById(entity);
+        serverMapper.update(
+                null,
+                Wrappers.<AiMcpServerEntity>lambdaUpdate()
+                        .eq(AiMcpServerEntity::getId, id)
+                        .set(req.url() != null && !req.url().isBlank(), AiMcpServerEntity::getUrl, entity.getUrl())
+                        .set(req.name() != null && !req.name().isBlank(), AiMcpServerEntity::getName, entity.getName())
+                        .set(req.headers() != null, AiMcpServerEntity::getHeadersJson, entity.getHeadersJson())
+                        .set(req.readOnly() != null, AiMcpServerEntity::getReadOnly, entity.getReadOnly())
+                        .set(
+                                req.status() != null && !req.status().isBlank(),
+                                AiMcpServerEntity::getStatus,
+                                entity.getStatus())
+                        .set(AiMcpServerEntity::getUpdatedBy, operatorId)
+                        .set(AiMcpServerEntity::getUpdateTime, LocalDateTime.now()));
         log.info("[AI] 修改 MCP 服务器 {}", entity.getServerCode());
         return entity;
     }
@@ -155,7 +173,7 @@ public class AiMcpServerService {
         int discovered;
         try (McpClient client = McpClient.connect(
                 server.getUrl(),
-                server.getHeadersJson(),
+                AiMcpHeaderSecurity.revealForCall(properties.getSecretKey(), server.getHeadersJson()),
                 config.getAllowedHosts(),
                 config.getSecrets(),
                 config.getMcpTimeoutSeconds())) {

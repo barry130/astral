@@ -1,6 +1,7 @@
 package com.astral.storage.controller;
 
 import com.astral.auth.security.PermissionChecker;
+import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.astral.common.util.ClientIp;
 import com.astral.storage.dto.StorageDtos;
@@ -158,6 +159,10 @@ public class StorageUserController {
     public Result<StorageFileEntity> file(
             @PathVariable String publicId, jakarta.servlet.http.HttpServletRequest request) {
         StorageFileEntity file = fileService.getByPublicId(publicId);
+        // 已删除文件不可再通过详情接口预览元数据（getByPublicId 是内部低层查询，删除流程需要见到 DELETED 行）
+        if (StorageFileEntity.STATUS_DELETED.equals(file.getStatus())) {
+            throw new BusinessException("STORAGE021");
+        }
         String userId = userId(request);
         boolean uploader = userId != null && userId.equals(file.getUploaderId());
         if (!uploader && !isAdmin()) {

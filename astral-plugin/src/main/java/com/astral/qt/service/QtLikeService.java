@@ -240,8 +240,8 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
     /** 段内去重的自然键（同键保留最后一条，其 seq 最大=最终态） */
     private String batchOpKey(BatchRunKind kind, QtLikeBatchOpDto op) {
         return switch (kind) {
-            case SONG_UPSERT, SONG_RM_PID -> "s@" + op.getSid() + "@" + op.getPlatform() + "@"
-                    + normalizePid(op.getPid());
+            case SONG_UPSERT, SONG_RM_PID ->
+                "s@" + op.getSid() + "@" + op.getPlatform() + "@" + normalizePid(op.getPid());
             case SONG_RM_ALL -> "a@" + op.getSid() + "@" + op.getPlatform();
             case PLAYLIST_UPSERT, PLAYLIST_RM -> "p@" + op.getPid() + "@" + op.getPlatform();
         };
@@ -262,8 +262,8 @@ public class QtLikeService extends ServiceImpl<QtLikePlaylistMapper, QtLikePlayl
                 }
                 songMapper.upsertActiveBatch(rows);
             }
-            case SONG_RM_PID -> songMapper.softRemoveByPlaylistBatch(
-                    buildBatchSongRows(uid, items), uid, LocalDateTime.now());
+            case SONG_RM_PID ->
+                songMapper.softRemoveByPlaylistBatch(buildBatchSongRows(uid, items), uid, LocalDateTime.now());
             case SONG_RM_ALL -> songMapper.softRemoveAllBatch(buildBatchSongRows(uid, items), uid, LocalDateTime.now());
             case PLAYLIST_UPSERT -> {
                 List<QtLikePlaylist> rows = new ArrayList<>(items.size());

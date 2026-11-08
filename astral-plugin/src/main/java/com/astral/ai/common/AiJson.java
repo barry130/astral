@@ -142,6 +142,29 @@ public final class AiJson {
         return result;
     }
 
+    /**
+     * 权限码使用小写；不得复用会大写客户端类型的 splitCsv。
+     *
+     * <p>接受 {@code 端:域:资源:操作[:范围]} 全家族真实编码：端段 {@code admin|user|all|*}，
+     * 其余每段 {@code [a-z0-9_-]+} 或 {@code *}（层级通配 {@code admin:system:user:*}、
+     * 超管码 {@code *:*:*}、2-3 段短码 {@code admin:qt:admin}、范围段
+     * {@code user:qt:update:channel:beta}）；至少 2 段。非法仍 fail-closed 抛 AI008。</p>
+     */
+    public static List<String> splitPermissionCsv(String csv) {
+        List<String> result = new ArrayList<>();
+        if (csv == null || csv.isBlank()) {
+            return result;
+        }
+        for (String item : csv.split(",", -1)) {
+            String code = item.trim().toLowerCase(java.util.Locale.ROOT);
+            if (!code.matches("(?:admin|user|all|\\*)(?::(?:[a-z0-9_-]+|\\*))+")) {
+                throw new AiException("AI008", "工具权限码格式错误");
+            }
+            result.add(code);
+        }
+        return result;
+    }
+
     /** 列表转逗号分隔字符串 */
     public static String joinCsv(List<String> values) {
         if (values == null || values.isEmpty()) {

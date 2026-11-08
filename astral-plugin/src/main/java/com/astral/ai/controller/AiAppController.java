@@ -55,6 +55,15 @@ public class AiAppController {
     private final AiKnowledgeService knowledgeService;
     private final AiChatOrchestrator orchestrator;
 
+    @PostMapping("/tool-calls/{id}/approve")
+    public Result<Map<String, Object>> approve(
+            @PathVariable Long id,
+            @Valid @RequestBody com.astral.ai.dto.AiAdminDtos.ToolApproveReq req,
+            HttpServletRequest request) {
+        return Result.success(orchestrator.approve(
+                id, AiCaller.requireUserId(request), Boolean.TRUE.equals(req.approved()), req.comment(), false));
+    }
+
     // ==================== 智能体 ====================
 
     @GetMapping("/agents")
@@ -150,16 +159,16 @@ public class AiAppController {
         conversationService.requireOwned(id, userId);
         int size = limit == null
                 ? AiConversationService.DEFAULT_PAGE_SIZE
-                : Math.max(1, Math.min(AiConversationService.MAX_PAGE_SIZE, limit));
+                : Math.max(1, Math.min(AiConversationService.MAX_PAGE_SIZE - 1, limit));
         // 多取一条用于判断 hasMore
         List<AiMessageEntity> rows = conversationService.messages(id, beforeId, size + 1);
         boolean hasMore = rows.size() > size;
-        List<AiMessageEntity> page = hasMore ? rows.subList(0, size) : rows;
+        List<AiMessageEntity> page = hasMore ? rows.subList(rows.size() - size, rows.size()) : rows;
         List<AiAppDtos.MessageVo> items = new ArrayList<>();
         for (AiMessageEntity row : page) {
             items.add(toVo(row));
         }
-        Long nextCursor = page.isEmpty() ? null : page.get(page.size() - 1).getId();
+        Long nextCursor = page.isEmpty() ? null : page.getFirst().getId();
         return Result.success(new AiAppDtos.MessagePage(items, nextCursor, hasMore));
     }
 

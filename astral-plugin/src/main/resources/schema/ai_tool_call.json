@@ -4,6 +4,13 @@
     "moduleName":  "ai",
     "className":  "AiToolCallEntity",
     "fields":  [
+                   {"columnName":"reconciled_by","fieldName":"reconciledBy","fieldType":"Long","jdbcType":"BIGINT","comment":"人工核对人"},
+                   {"columnName":"reconciled_at","fieldName":"reconciledAt","fieldType":"LocalDateTime","jdbcType":"TIMESTAMP","comment":"人工核对时间"},
+                   {"columnName":"reconciliation_note","fieldName":"reconciliationNote","fieldType":"String","jdbcType":"VARCHAR(1000)","comment":"人工核对依据"},
+                   {"columnName":"execution_token","fieldName":"executionToken","fieldType":"String","jdbcType":"VARCHAR(64)","comment":"工具执行认领标识，未知结果不自动重放"},
+                   {"columnName":"provider_tool_call_id","fieldName":"providerToolCallId","fieldType":"String","jdbcType":"VARCHAR(255)","comment":"模型返回的工具调用标识"},
+                   {"columnName":"assistant_message_id","fieldName":"assistantMessageId","fieldType":"Long","jdbcType":"BIGINT","comment":"所属工具轮助手消息"},
+                   {"columnName":"tool_message_id","fieldName":"toolMessageId","fieldType":"Long","jdbcType":"BIGINT","comment":"一一对应的工具结果消息"},
                    {
                        "columnName":  "id",
                        "fieldName":  "id",
@@ -19,8 +26,7 @@
                        "fieldName":  "requestId",
                        "fieldType":  "Long",
                        "jdbcType":  "BIGINT",
-                       "comment":  "请求 ID",
-                       "isRequired":  true
+                       "comment":  "请求 ID（后台试跑不归属任何请求，为空）"
                    },
                    {
                        "columnName":  "tool_code",
@@ -131,8 +137,40 @@
                        "jdbcType":  "TIMESTAMP",
                        "comment":  "更新时间",
                        "isAutoFill":  "INSERT_UPDATE"
-                   }
-               ],
+                   },
+                   {
+                       "columnName":  "source",
+                       "fieldName":  "source",
+                       "fieldType":  "String",
+                       "jdbcType":  "VARCHAR(16)",
+                       "comment":  "来源（chat=会话调用，test-run=后台试跑）",
+                       "length":  16,
+                       "defaultValue":  "chat",
+                       "isRequired":  true
+
+},
+
+{
+
+"columnName":  "plan_hash",
+
+"fieldName":  "planHash",
+
+"fieldType":  "String",
+
+"jdbcType":  "VARCHAR(64)",
+
+"comment":  "计划期配置快照哈希（executor_config|risk|approval 的 SHA-256，审批时比对防 TOCTOU）",
+
+"length":  64,
+
+"defaultValue":  "",
+
+"isRequired":  true
+
+}
+
+],
     "indexes":  [
                     {
                         "indexName":  "idx_ai_tool_call_request",

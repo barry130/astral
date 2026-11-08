@@ -2,9 +2,12 @@ package com.astral.storage.security;
 
 import com.astral.common.exception.BusinessException;
 import com.astral.storage.config.StorageProperties;
+import com.astral.storage.dto.StorageDtos;
 import com.astral.storage.entity.StorageConfigEntity;
+import com.astral.storage.entity.StorageFileEntity;
 import com.astral.storage.entity.StorageFolderEntity;
 import com.astral.storage.service.CosApiService;
+import com.astral.storage.service.LegacyUploadReceiptService;
 import com.astral.storage.service.OssApiService;
 import com.astral.storage.service.ProviderSupport;
 import com.astral.storage.service.S3ObjectService;
@@ -51,6 +54,7 @@ public class UploadTicketService {
     private final OssApiService ossApiService;
     private final UpyunApiService upyunApiService;
     private final UploadPolicyService policyService;
+    private final LegacyUploadReceiptService receiptService;
 
     public UploadTicketService(
             StorageProperties properties,
@@ -60,7 +64,8 @@ public class UploadTicketService {
             CosApiService cosApiService,
             OssApiService ossApiService,
             UpyunApiService upyunApiService,
-            UploadPolicyService policyService) {
+            UploadPolicyService policyService,
+            LegacyUploadReceiptService receiptService) {
         this.properties = properties;
         this.stringRedisTemplate = stringRedisTemplate;
         this.objectMapper = objectMapper;
@@ -69,6 +74,7 @@ public class UploadTicketService {
         this.ossApiService = ossApiService;
         this.upyunApiService = upyunApiService;
         this.policyService = policyService;
+        this.receiptService = receiptService;
     }
 
     /** 上传凭证签发结果（formFields 仅 UPYUN 表单直传非空） */
@@ -130,14 +136,20 @@ public class UploadTicketService {
         if (sizeBytes <= 0) {
             throw new BusinessException("STORAGE006");
         }
-        long maxSize = effectiveMaxSize(config, policy);
+        if (contentType == null || contentType.isBlank()) {
+            throw new BusinessException("STORAGE005");
+        }
+        // 全权管理员只保留插件全局上限/全局 MIME 白名单，文件夹策略不应反向限制管理员；
+        // 之前把 policy 也带进 effectiveMaxSize，导致 adminExempt 仍被文件夹 maxSize 拒绝。
+        UploadPolicyService.PolicySpec limitPolicy = adminExempt ? null : policy;
+        long maxSize = effectiveMaxSize(config, limitPolicy);
         if (sizeBytes > maxSize) {
             throw adminExempt ? new BusinessException("STORAGE006") : new BusinessException("STORAGE030");
         }
         if (policy.minSizeBytes() > 0 && sizeBytes < policy.minSizeBytes() && !adminExempt) {
             throw new BusinessException("STORAGE006");
         }
-        if (!isMimeAllowedForFolder(contentType, policy)) {
+        if (!isMimeAllowedForFolder(contentType, limitPolicy)) {
             throw adminExempt
                     ? new BusinessException("STORAGE005", contentType)
                     : new BusinessException("STORAGE031", contentType);
@@ -226,6 +238,10 @@ public class UploadTicketService {
                 maxSize,
                 adminExempt);
         String payloadB64 = StorageHmac.b64UrlEncode(payload.getBytes(StandardCharsets.UTF_8));
+        receiptService.reserve(
+                payload,
+                folder.getTargetVersion() == null ? 1L : folder.getTargetVersion(),
+                config.getConfigVersion() == null ? 1L : config.getConfigVersion());
         String signature = StorageHmac.sign(ticketKey.getBytes(StandardCharsets.UTF_8), payloadB64);
         ticket = payloadB64 + "." + signature;
         if (StorageConfigEntity.PROVIDER_TELEGRAM.equals(providerType)) {
@@ -245,7 +261,8 @@ public class UploadTicketService {
 
     /** 读取凭证上下文（浏览器回执登记用）；缺失或过期抛 STORAGE008 */
     public JsonNode getPayload(String uploadId) {
-        String payload = stringRedisTemplate.opsForValue().get(TICKET_KEY_PREFIX + uploadId);
+        String payload = receiptService.payload(uploadId);
+        if (payload == null) payload = stringRedisTemplate.opsForValue().get(TICKET_KEY_PREFIX + uploadId);
         if (payload == null) {
             throw new BusinessException("STORAGE008");
         }
@@ -261,19 +278,26 @@ public class UploadTicketService {
      * 返回凭证上下文供登记文件元数据使用。
      */
     public JsonNode validateCallback(String uploadId, long sizeBytes, String contentType) {
-        String payload = stringRedisTemplate.opsForValue().get(TICKET_KEY_PREFIX + uploadId);
-        if (payload == null) {
-            throw new BusinessException("STORAGE008");
-        }
         try {
-            JsonNode node = objectMapper.readTree(payload);
+            JsonNode node = getPayload(uploadId);
+            if (sizeBytes <= 0) {
+                throw new BusinessException("STORAGE006");
+            }
             long maxSize = node.path("maxSize").asLong(properties.getMaxFileSizeBytes());
             if (sizeBytes > maxSize) {
                 throw new BusinessException("STORAGE006");
             }
             // MIME 以票据签发时校验过的值为准（票据 payload 由服务端写入、HMAC+Redis 保护）：
             // 签发时已按「文件夹策略优先、回落全局」判定，这里不再用全局白名单复查，
-            // 避免文件夹允许但全局未配置的类型被误拒（UPDATE_DESIGN.md §3.3）
+            // 避免文件夹允许但全局未配置的类型被误拒（UPDATE_DESIGN.md §3.3）。
+            // 但回调声明的类型必须与签发时绑定值一致，否则可借合法 ticket 伪造 contentType。
+            String expectedMime = node.path("mime").asText("");
+            if (!sameMime(expectedMime, contentType)) {
+                throw new BusinessException("STORAGE005", contentType);
+            }
+            if (!uploadId.equals(node.path("uploadId").asText(""))) {
+                throw new BusinessException("STORAGE008");
+            }
             return node;
         } catch (BusinessException e) {
             throw e;
@@ -281,6 +305,41 @@ public class UploadTicketService {
             log.error("[Storage] 上传凭证上下文解析失败: uploadId={}", uploadId, e);
             throw new BusinessException("STORAGE008");
         }
+    }
+
+    public LegacyUploadReceiptService.Receipt receiveCallback(JsonNode context, StorageDtos.WorkerCallbackReq receipt) {
+        validateLocator(receipt);
+        return receiptService.receive(context, receipt);
+    }
+
+    public void receiveReplay(StorageFileEntity file, StorageDtos.WorkerCallbackReq receipt) {
+        validateLocator(receipt);
+        receiptService.receiveReplay(file, receipt);
+    }
+
+    private void validateLocator(StorageDtos.WorkerCallbackReq receipt) {
+        if (receipt.telegramFileId() == null
+                || receipt.telegramFileId().isBlank()
+                || receipt.messageId() == null
+                || receipt.messageId().isBlank()) {
+            throw new BusinessException("STORAGE011", "缺少 Telegram 定位信息");
+        }
+    }
+
+    public void committed(StorageFileEntity file) {
+        receiptService.committed(file);
+    }
+
+    public boolean wasCommitted(String uploadId) {
+        return receiptService.wasCommitted(uploadId);
+    }
+
+    public void cleanupAcknowledged(String payload, boolean success) {
+        receiptService.cleanupAcknowledged(payload, success);
+    }
+
+    public void rejectReceipt(JsonNode context, StorageDtos.WorkerCallbackReq receipt) {
+        receiptService.reject(context, receipt);
     }
 
     /** 凭证授权的文件夹 ID */
@@ -312,6 +371,23 @@ public class UploadTicketService {
 
     public boolean isMimeAllowed(String contentType) {
         return isMimeAllowedForFolder(contentType, null);
+    }
+
+    /** 比较大小写/参数无关的基础 MIME；空值一律视为不匹配。 */
+    static boolean sameMime(String expected, String actual) {
+        return normalizeMime(expected).equals(normalizeMime(actual));
+    }
+
+    private static String normalizeMime(String contentType) {
+        if (contentType == null || contentType.isBlank()) {
+            return "";
+        }
+        String mime = contentType.trim().toLowerCase(java.util.Locale.ROOT);
+        int semicolon = mime.indexOf(';');
+        if (semicolon >= 0) {
+            mime = mime.substring(0, semicolon).trim();
+        }
+        return MIME_ALIASES.getOrDefault(mime, mime);
     }
 
     /** SVG 系列 MIME 判定（image/svg+xml 及其常见变体） */

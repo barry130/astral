@@ -4,7 +4,9 @@ import cn.dev33.satoken.dao.SaTokenDao;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
 import com.astral.auth.dto.TokenInfo;
+import com.astral.auth.security.TokenFingerprint;
 import com.astral.auth.service.TokenService;
+import com.astral.common.exception.BusinessException;
 import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.User;
 import com.astral.dao.mapper.UserMapper;
@@ -57,11 +59,20 @@ public class TokenServiceImpl implements TokenService {
      */
     private List<String> scanTokenKeys(SaTokenDao dao, String tokenPrefix) {
         try {
-            List<String> keys = dao.searchData(tokenPrefix, "", 0, MAX_SCANNED_TOKENS, true);
-            return keys == null ? List.of() : keys;
+            List<String> keys = dao.searchData(tokenPrefix, "", 0, MAX_SCANNED_TOKENS + 1, true);
+            if (keys == null) {
+                throw new IllegalStateException("Missing session lookup result");
+            }
+            return keys;
         } catch (Exception e) {
-            log.warn("[token] 会话键检索失败，本次按空处理: {}", e.getMessage());
-            return List.of();
+            log.warn("[token] 会话键检索失败: {}", e.getClass().getSimpleName());
+            throw new BusinessException("COMMON002", "会话存储暂时不可用，无法确认操作结果，请稍后重试");
+        }
+    }
+
+    private void requireCompleteScan(List<String> keys) {
+        if (keys.size() > MAX_SCANNED_TOKENS) {
+            throw new BusinessException("COMMON002", "会话数量超过本次扫描上限，无法确认全部状态；请按用户执行会话管理");
         }
     }
 
@@ -84,7 +95,9 @@ public class TokenServiceImpl implements TokenService {
         Set<Long> userIds = new HashSet<>();
 
         // 遍历所有键，筛选出登录Token
-        for (String key : scanTokenKeys(dao, tokenPrefix)) {
+        List<String> keys = scanTokenKeys(dao, tokenPrefix);
+        requireCompleteScan(keys);
+        for (String key : keys) {
             if (!key.startsWith(tokenPrefix)) {
                 continue;
             }
@@ -132,18 +145,15 @@ public class TokenServiceImpl implements TokenService {
                     createTime = parseLoginTime(session.getCreateTime());
                 }
 
-                allTokens.add(TokenInfo.builder()
-                        .id(tokenValue)
-                        .userId(sid)
-                        .token(tokenValue)
-                        .expireTime(expireTime)
-                        .loginIp(loginIp)
+                allTokens.add(toSessionInfo(
+                        tokenValue,
+                        sid,
+                        expireTime,
+                        loginIp,
                         // is-share=false 后同账号每端/每设备一个 token，device 由登录时写入；
                         // 改前发行的旧 token 无 device 记录，返回 null 由前端兜底展示
-                        .device(StpUtil.getLoginDeviceByToken(tokenValue))
-                        .status(1)
-                        .createTime(createTime)
-                        .build());
+                        StpUtil.getLoginDeviceByToken(tokenValue),
+                        createTime));
             } catch (Exception e) {
                 // Token可能在遍历和获取会话之间过期，忽略异常
             }
@@ -179,14 +189,85 @@ public class TokenServiceImpl implements TokenService {
     }
 
     /**
-     * 吊销指定Token
-     * <p>调用Sa-Token的logoutByToken方法使Token失效</p>
+     * 组装会话出参 DTO。
      *
-     * @param tokenId Token标识
+     * <p><b>出参里永远没有明文 token</b>：{@code id} 与 {@code token} 都只放指纹
+     * （见 {@code TokenFingerprint}）。这是「只读查看权限不得退化成账号接管」的落点，
+     * 单独抽成方法是为了让单测能直接断言「任何入参形态下出参都不含凭据」。</p>
+     */
+    static TokenInfo toSessionInfo(
+            String tokenValue,
+            Long userId,
+            LocalDateTime expireTime,
+            String loginIp,
+            String device,
+            LocalDateTime createTime) {
+        String fingerprint = TokenFingerprint.of(tokenValue);
+        return TokenInfo.builder()
+                .id(fingerprint)
+                .userId(userId)
+                .token(fingerprint)
+                .expireTime(expireTime)
+                .loginIp(loginIp)
+                .device(device)
+                .status(1)
+                .createTime(createTime)
+                .build();
+    }
+
+    /**
+     * 吊销指定会话。
+     *
+     * <p>入参是 token 指纹而不是明文 token（见 {@code TokenFingerprint}）。指纹反查不到
+     * 在线会话时按「已失效」处理并直接返回成功——吊销语义是幂等的，前端在列表过期后
+     * 重复点吊销不该看到报错。</p>
+     *
+     * @param sessionId 会话标识（token 指纹）
      */
     @Override
-    public void revokeToken(String tokenId) {
-        StpUtil.logoutByTokenValue(tokenId);
+    public void revokeToken(String sessionId) {
+        String tokenValue = resolveTokenBySessionId(sessionId);
+        if (tokenValue == null) {
+            log.info("[token] 吊销未命中在线会话（可能已自然失效）: sessionId={}", sessionId);
+            return;
+        }
+        logoutSafely(tokenValue);
+    }
+
+    /**
+     * 把会话标识（token 指纹）反查为明文 token。
+     *
+     * <p>入参必须是 32 位十六进制指纹：明文 token 形态直接判为不命中，避免
+     * 「吊销接口顺便接受凭据」这种把 token 写进 URL/日志的用法重新长回来。</p>
+     */
+    @Override
+    public String resolveTokenBySessionId(String sessionId) {
+        if (!TokenFingerprint.looksLikeFingerprint(sessionId)) {
+            return null;
+        }
+        SaTokenDao dao = StpUtil.getStpLogic().getSaTokenDao();
+        String tokenPrefix = StpUtil.getStpLogic().getTokenName() + ":login:token:";
+        List<String> keys = scanTokenKeys(dao, tokenPrefix);
+        for (String key : keys) {
+            if (!key.startsWith(tokenPrefix)) {
+                continue;
+            }
+            String tokenValue = key.substring(tokenPrefix.length());
+            if (sessionId.equals(TokenFingerprint.of(tokenValue))) {
+                return tokenValue;
+            }
+        }
+        requireCompleteScan(keys);
+        return null;
+    }
+
+    private void logoutSafely(String tokenValue) {
+        try {
+            StpUtil.logoutByTokenValue(tokenValue);
+        } catch (RuntimeException e) {
+            log.warn("[token] 会话撤销失败: {}", e.getClass().getSimpleName());
+            throw new BusinessException("COMMON002", "会话撤销未完成，请稍后重试");
+        }
     }
 
     /**
@@ -202,14 +283,14 @@ public class TokenServiceImpl implements TokenService {
 
     /**
      * 清理所有过期的Token
-     * <p>遍历Sa-Token中所有登录Token，检查超时时间，将已过期或无超时时间的Token登出</p>
+     * <p>有界检索登录Token，保留永久会话（NEVER_EXPIRE），只清理实际过期状态。</p>
      */
     @Override
     public void cleanExpiredTokens() {
         SaTokenDao dao = StpUtil.getStpLogic().getSaTokenDao();
-        List<String> allKeys = dao.searchData("", "", 0, -1, true);
-
         String tokenPrefix = StpUtil.getStpLogic().getTokenName() + ":login:token:";
+        List<String> allKeys = scanTokenKeys(dao, tokenPrefix);
+        requireCompleteScan(allKeys);
         for (String key : allKeys) {
             if (!key.startsWith(tokenPrefix)) {
                 continue;
@@ -217,12 +298,11 @@ public class TokenServiceImpl implements TokenService {
             String tokenValue = key.substring(tokenPrefix.length());
             try {
                 long timeout = StpUtil.getTokenTimeout(tokenValue);
-                // timeout <= 0 表示Token已过期或没有设置超时
-                if (timeout <= 0) {
-                    StpUtil.logoutByTokenValue(tokenValue);
+                if (timeout == SaTokenDao.NOT_VALUE_EXPIRE || timeout == 0) {
+                    logoutSafely(tokenValue);
                 }
-            } catch (Exception ignored) {
-                // Token可能已经被清理，忽略异常
+            } catch (RuntimeException e) {
+                throw new BusinessException("COMMON002", "会话清理未完成，请稍后重试");
             }
         }
     }
@@ -235,18 +315,14 @@ public class TokenServiceImpl implements TokenService {
     @Override
     public void revokeAllTokens() {
         SaTokenDao dao = StpUtil.getStpLogic().getSaTokenDao();
-        List<String> allKeys = dao.searchData("", "", 0, -1, true);
-
         String tokenPrefix = StpUtil.getStpLogic().getTokenName() + ":login:token:";
+        List<String> allKeys = scanTokenKeys(dao, tokenPrefix);
+        requireCompleteScan(allKeys);
         for (String key : allKeys) {
             if (!key.startsWith(tokenPrefix)) {
                 continue;
             }
-            try {
-                StpUtil.logoutByTokenValue(key.substring(tokenPrefix.length()));
-            } catch (Exception ignored) {
-                // Token可能已经被并发清理，忽略异常
-            }
+            logoutSafely(key.substring(tokenPrefix.length()));
         }
     }
 

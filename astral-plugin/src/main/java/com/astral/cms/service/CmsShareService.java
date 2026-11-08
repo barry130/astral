@@ -185,20 +185,22 @@ public class CmsShareService {
             }
             s.setExpired(s.getExpireAt() != null && s.getExpireAt().isBefore(LocalDateTime.now()));
         }
-        Map<Long, String> titles = new HashMap<>();
+        Map<Long, String> postTitles = new HashMap<>();
+        Map<Long, String> pageTitles = new HashMap<>();
         if (!postIds.isEmpty()) {
             postMapper
                     .selectBatchIds(postIds.stream().distinct().toList())
-                    .forEach(p -> titles.put(p.getId(), p.getTitle()));
+                    .forEach(p -> postTitles.put(p.getId(), p.getTitle()));
         }
         if (!pageIds.isEmpty()) {
             pageMapper
                     .selectBatchIds(pageIds.stream().distinct().toList())
-                    .forEach(p -> titles.put(p.getId(), p.getTitle()));
+                    .forEach(p -> pageTitles.put(p.getId(), p.getTitle()));
         }
         String base = shareBaseUrl();
         shares.forEach(s -> {
-            s.setTargetTitle(titles.get(s.getTargetId()));
+            s.setTargetTitle(
+                    (CmsShare.TARGET_POST.equals(s.getTargetType()) ? postTitles : pageTitles).get(s.getTargetId()));
             s.setUrl(base.isEmpty() ? null : base + "/share/" + s.getToken());
         });
     }

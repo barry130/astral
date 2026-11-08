@@ -55,26 +55,28 @@ public class FileManagerService {
         if (category != null && !category.isBlank()) {
             switch (category) {
                 case "image", "audio", "video" -> wrapper.likeRight(StorageFileEntity::getContentType, category + "/");
-                case "document" -> wrapper.and(w -> w.likeRight(StorageFileEntity::getContentType, "text/")
-                        .or()
-                        .eq(StorageFileEntity::getContentType, "application/pdf")
-                        .or()
-                        .like(StorageFileEntity::getContentType, "officedocument")
-                        .or()
-                        .like(StorageFileEntity::getContentType, "msword")
-                        .or()
-                        .like(StorageFileEntity::getContentType, "ms-excel")
-                        .or()
-                        .like(StorageFileEntity::getContentType, "ms-powerpoint")
-                        .or()
-                        .like(StorageFileEntity::getContentType, "opendocument"));
-                case "archive" -> wrapper.and(w -> w.like(StorageFileEntity::getContentType, "zip")
-                        .or()
-                        .like(StorageFileEntity::getContentType, "compressed")
-                        .or()
-                        .like(StorageFileEntity::getContentType, "rar")
-                        .or()
-                        .eq(StorageFileEntity::getContentType, "application/x-tar"));
+                case "document" ->
+                    wrapper.and(w -> w.likeRight(StorageFileEntity::getContentType, "text/")
+                            .or()
+                            .eq(StorageFileEntity::getContentType, "application/pdf")
+                            .or()
+                            .like(StorageFileEntity::getContentType, "officedocument")
+                            .or()
+                            .like(StorageFileEntity::getContentType, "msword")
+                            .or()
+                            .like(StorageFileEntity::getContentType, "ms-excel")
+                            .or()
+                            .like(StorageFileEntity::getContentType, "ms-powerpoint")
+                            .or()
+                            .like(StorageFileEntity::getContentType, "opendocument"));
+                case "archive" ->
+                    wrapper.and(w -> w.like(StorageFileEntity::getContentType, "zip")
+                            .or()
+                            .like(StorageFileEntity::getContentType, "compressed")
+                            .or()
+                            .like(StorageFileEntity::getContentType, "rar")
+                            .or()
+                            .eq(StorageFileEntity::getContentType, "application/x-tar"));
                 default -> throw new BusinessException("COMMON002", "未知文件类型");
             }
         }

@@ -86,9 +86,33 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
     public boolean updateById(UserRole entity) {
         UserRole before = getById(entity.getId());
         boolean updated = super.updateById(entity);
+        notifyUpdated(before, entity.getId(), updated);
+        return updated;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateAssignment(Long id, Long userId, Long roleId) {
+        UserRole before = getById(id);
+        if (before == null || (userId == null && roleId == null)) {
+            return false;
+        }
+        boolean updated = lambdaUpdate()
+                .eq(UserRole::getId, id)
+                .set(userId != null, UserRole::getUserId, userId)
+                .set(roleId != null, UserRole::getRoleId, roleId)
+                .update();
+        notifyUpdated(before, id, updated);
+        return updated;
+    }
+
+    private void notifyUpdated(UserRole before, Long id, boolean updated) {
         if (updated && before != null) {
             // 重新读取以兼容局部更新：未传字段由 MyBatis-Plus 保留原值。
-            UserRole after = getById(entity.getId());
+            UserRole after = getById(id);
+            if (after == null) {
+                return;
+            }
             if (Objects.equals(before.getUserId(), after.getUserId())) {
                 roleChangeNotifier.notifyChange(
                         after.getUserId(), List.of(before.getRoleId()), List.of(after.getRoleId()));
@@ -97,7 +121,6 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
                 roleChangeNotifier.notifyChange(after.getUserId(), List.of(), List.of(after.getRoleId()));
             }
         }
-        return updated;
     }
 
     @Override

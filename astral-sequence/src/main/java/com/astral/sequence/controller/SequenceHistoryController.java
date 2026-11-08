@@ -2,7 +2,8 @@ package com.astral.sequence.controller;
 
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
-import com.astral.dao.entity.SequenceHistory;
+import com.astral.common.util.PageQuery;
+import com.astral.sequence.controller.dto.SequenceHistoryResponse;
 import com.astral.sequence.service.SequenceHistoryService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,11 +42,13 @@ public class SequenceHistoryController {
      */
     @Operation(summary = "分页查询")
     @GetMapping("/page")
-    public Result<IPage<SequenceHistory>> page(
+    public Result<IPage<SequenceHistoryResponse>> page(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String bizKey) {
-        return Result.success(sequenceHistoryService.getPage(pageNum, pageSize, bizKey));
+        return Result.success(sequenceHistoryService
+                .getPage(PageQuery.pageNum(pageNum), PageQuery.pageSize(pageSize), bizKey)
+                .convert(SequenceHistoryResponse::from));
     }
 
     /**
@@ -60,8 +63,10 @@ public class SequenceHistoryController {
      */
     @Operation(summary = "最近记录")
     @GetMapping("/recent")
-    public Result<List<SequenceHistory>> recent(
+    public Result<List<SequenceHistoryResponse>> recent(
             @RequestParam(required = false) String bizKey, @RequestParam(defaultValue = "100") Integer limit) {
-        return Result.success(sequenceHistoryService.getRecent(bizKey, limit));
+        return Result.success(sequenceHistoryService.getRecent(bizKey, limit).stream()
+                .map(SequenceHistoryResponse::from)
+                .toList());
     }
 }

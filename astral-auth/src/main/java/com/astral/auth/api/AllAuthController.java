@@ -2,6 +2,7 @@ package com.astral.auth.api;
 
 import com.astral.auth.dto.LoginRequest;
 import com.astral.auth.dto.LoginResponse;
+import com.astral.auth.dto.SessionInfoResponse;
 import com.astral.auth.security.RsaKeyManager;
 import com.astral.auth.service.AuthService;
 import com.astral.common.annotation.RateLimit;
@@ -62,7 +63,7 @@ public class AllAuthController {
      * <p>返回当前已登录用户的详细信息，包括角色和权限列表。</p>
      */
     @GetMapping("/info")
-    public Result<LoginResponse> getUserInfo() {
+    public Result<SessionInfoResponse> getUserInfo() {
         return Result.success(authService.getLoginInfo());
     }
 }

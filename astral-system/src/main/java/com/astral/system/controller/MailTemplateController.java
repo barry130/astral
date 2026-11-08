@@ -74,7 +74,35 @@ public class MailTemplateController {
     public Result<Void> update(@PathVariable Long id, @RequestBody SysMailTemplate entity) {
         entity.setId(id);
         validateTemplate(entity, false, id);
-        templateService.updateById(entity);
+        // 白名单更新：id 由路径决定，只写模板可编辑列。
+        // 不能用 updateById(客户端实体)——MP 会把实体上所有非 null 字段写进 SET
+        // （mass assignment），客户端可借未知列改写库内任意字段。
+        var update = templateService.lambdaUpdate().eq(SysMailTemplate::getId, id);
+        if (entity.getTemplateCode() != null) {
+            update.set(SysMailTemplate::getTemplateCode, entity.getTemplateCode());
+        }
+        if (entity.getTemplateName() != null) {
+            update.set(SysMailTemplate::getTemplateName, entity.getTemplateName());
+        }
+        if (entity.getSubject() != null) {
+            update.set(SysMailTemplate::getSubject, entity.getSubject());
+        }
+        if (entity.getContent() != null) {
+            update.set(SysMailTemplate::getContent, entity.getContent());
+        }
+        if (entity.getVariables() != null) {
+            update.set(SysMailTemplate::getVariables, entity.getVariables());
+        }
+        if (entity.getScene() != null) {
+            update.set(SysMailTemplate::getScene, entity.getScene());
+        }
+        if (entity.getChannel() != null) {
+            update.set(SysMailTemplate::getChannel, entity.getChannel());
+        }
+        if (entity.getRemark() != null) {
+            update.set(SysMailTemplate::getRemark, entity.getRemark());
+        }
+        update.update();
         mailService.evictTemplateCache();
         return Result.success();
     }

@@ -1,11 +1,16 @@
 package com.astral.sequence.generator;
 
 import com.astral.common.exception.BusinessException;
+import com.astral.dao.entity.SequenceConfig;
 import com.astral.dao.entity.SequenceSegment;
+import com.astral.dao.mapper.SequenceConfigMapper;
 import com.astral.dao.mapper.SequenceSegmentMapper;
+import com.astral.sequence.config.EntityIdSequenceProvider;
+import jakarta.annotation.PreDestroy;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -38,6 +43,10 @@ public class SegmentGenerator implements SequenceGenerator {
 
     /** 号段数据访问接口 */
     private final SequenceSegmentMapper segmentMapper;
+    /** 序列配置访问接口：首次初始化号段时读取管理端配置的步长 */
+    private final SequenceConfigMapper configMapper;
+    /** 实体 ID 序列判定：首次初始化时必须预留种子数据区，避免与初始化脚本的显式主键冲突 */
+    private final EntityIdSequenceProvider entityIdSequenceProvider;
 
     /**
      * 异步预加载执行器
@@ -61,6 +70,12 @@ public class SegmentGenerator implements SequenceGenerator {
     @Override
     public String getType() {
         return "SEGMENT";
+    }
+
+    /** 应用关闭时停止预加载执行器，避免虚拟线程执行器随上下文重启累积。 */
+    @PreDestroy
+    public void shutdownPreloadExecutor() {
+        preloadExecutor.shutdown();
     }
 
     /**
@@ -162,16 +177,32 @@ public class SegmentGenerator implements SequenceGenerator {
             // 尝试获取预加载的下一个号段，获取成功后将 next 置为 null
             Segment nextSeg = next.getAndSet(null);
             if (nextSeg != null && !nextSeg.isExhausted()) {
+                // 并发初始化时，另一个线程可能已经先申请到更大的号段并成为 current；
+                // 这时 next 里若是较旧的、max 更小的号段，绝不能再装回缓冲区：
+                // 否则 current 耗尽后会从更小的号段继续发号，与早已发出的 ID 重复。
+                Segment currentSeg = current.get();
+                if (currentSeg != null && nextSeg.max <= currentSeg.max) {
+                    log.debug(
+                            "丢弃回退号段：bizKey={}, next=[{}, {}], current=[{}, {}]",
+                            bizKey,
+                            nextSeg.min,
+                            nextSeg.max,
+                            currentSeg.min,
+                            currentSeg.max);
+                    return currentSeg;
+                }
                 // 用 CAS 而不是直接 set：并发下两个线程可能同时走到这里，
                 // 直接 set 会让后写覆盖先写，先写入的那个号段被整体丢弃 → 整段跳号。
                 if (current.compareAndSet(expected, nextSeg)) {
                     return nextSeg;
                 }
-                // CAS 失败说明已有其它线程完成了切换：把号段还回去，避免浪费一整段
-                if (nextSeg != null) {
+                // CAS 失败说明已有其它线程完成了切换：仅当它比当前号段更大时才还回去，
+                // 否则会把旧号段留到 current 耗尽后使用，造成 ID 回退/重复。
+                Segment switched = current.get();
+                if (switched == null || nextSeg.max > switched.max) {
                     next.compareAndSet(null, nextSeg);
                 }
-                return current.get();
+                return switched;
             }
 
             // 预加载的号段不可用，从数据库获取新号段（同样用 CAS 落位）
@@ -179,9 +210,10 @@ public class SegmentGenerator implements SequenceGenerator {
             if (current.compareAndSet(expected, newSeg)) {
                 return newSeg;
             }
-            // 切换失败：别人已经放了新段，直接用它的，本次申请的段被跳过（可接受）
+            // 切换失败：别人已经放了新段，直接用它的。只有本次申请的段严格大于新段时
+            // 才能作为 next 保留；否则会在新段耗尽后回退发号（与已发出的 ID 重复）。
             Segment currentSeg = current.get();
-            if (currentSeg != null) {
+            if (currentSeg != null && newSeg.max > currentSeg.max) {
                 next.compareAndSet(null, newSeg);
             }
             return currentSeg;
@@ -221,6 +253,11 @@ public class SegmentGenerator implements SequenceGenerator {
                 Long maxValueObj = dbSeg.getMaxValue();
                 long baseMax = maxValueObj != null ? maxValueObj : 0L;
 
+                // 先做上界校验，避免 baseMax 接近 Long.MAX_VALUE 时加法溢出成负数。
+                if (baseMax > Long.MAX_VALUE - step) {
+                    throw new BusinessException("SEQ004");
+                }
+
                 // 使用乐观锁更新：只有 version 匹配时才会更新成功
                 int updated = segmentMapper.allocateNextSegment(bizKey, version, step);
 
@@ -235,7 +272,8 @@ public class SegmentGenerator implements SequenceGenerator {
                 // 更新失败，说明有其他线程/节点已经更新了该号段，需要重试
                 log.debug("Segment allocation conflict, retrying: bizKey={}, attempt={}", bizKey, i + 1);
             }
-            throw new RuntimeException("Failed to allocate segment after " + maxRetries + " retries: " + bizKey);
+            log.warn("Failed to allocate segment after {} retries: bizKey={}", maxRetries, bizKey);
+            throw new BusinessException("SEQ005");
         }
 
         /**
@@ -248,9 +286,28 @@ public class SegmentGenerator implements SequenceGenerator {
          * @param bizKey 业务键
          */
         private void initializeSegment(String bizKey) {
-            long max = DEFAULT_STEP;
-            segmentMapper.insertSegment(bizKey, 1, max, DEFAULT_STEP);
-            log.info("Initialized segment for bizKey: {}, range=[1, {}]", bizKey, max);
+            int step = DEFAULT_STEP;
+            SequenceConfig config = configMapper.selectByBizKey(bizKey);
+            if (config != null && config.getStep() != null && config.getStep() > 0) {
+                step = config.getStep();
+            }
+            long min = 1L;
+            long max;
+            if (entityIdSequenceProvider.isEntityIdBizKey(bizKey)) {
+                // 实体 ID 首段必须覆盖 [1, RESERVE]，否则插件表晚于 SequencePlugin 建表时，
+                // 首次插入会从 1 开始发号，与迁移脚本的种子主键撞车（V20261001005 同类事故）。
+                max = EntityIdSequenceProvider.RESERVE;
+            } else {
+                if (config != null && config.getMinValue() != null && config.getMinValue() > 0) {
+                    min = config.getMinValue();
+                }
+                if (min > Long.MAX_VALUE - step + 1) {
+                    throw new BusinessException("SEQ004");
+                }
+                max = min + step - 1;
+            }
+            segmentMapper.insertSegment(bizKey, min, max, step);
+            log.info("Initialized segment for bizKey: {}, range=[{}, {}], step={}", bizKey, min, max, step);
         }
 
         /**
@@ -293,27 +350,33 @@ public class SegmentGenerator implements SequenceGenerator {
             } finally {
                 preloadLock.unlock();
             }
-            // 提交异步预加载任务
-            preloadExecutor.submit(() -> {
-                try {
-                    Segment seg = current.get();
-                    if (seg != null) {
-                        Segment preloaded = fetchSegmentFromDb(bizKey, seg);
-                        // 写入前核对 current 仍是预加载开始时读到的那个段：
-                        // 若期间已被切换，preloaded 是基于过期基线申请的，写回去会造成号段回退/重复。
-                        if (current.get() == seg) {
-                            next.compareAndSet(null, preloaded);
-                        } else {
-                            log.debug("跳过预加载结果：号段已被切换, bizKey={}", bizKey);
+            // 提交异步预加载任务。线程池已在关闭或队列拒绝时必须复位 loadingNext，
+            // 否则该业务键会永久停在「预加载中」，此后每次换段都要同步查库。
+            try {
+                preloadExecutor.submit(() -> {
+                    try {
+                        Segment seg = current.get();
+                        if (seg != null) {
+                            Segment preloaded = fetchSegmentFromDb(bizKey, seg);
+                            // 写入前核对 current 仍是预加载开始时读到的那个段：
+                            // 若期间已被切换，preloaded 是基于过期基线申请的，写回去会造成号段回退/重复。
+                            if (current.get() == seg) {
+                                next.compareAndSet(null, preloaded);
+                            } else {
+                                log.debug("跳过预加载结果：号段已被切换, bizKey={}", bizKey);
+                            }
                         }
+                    } catch (Exception e) {
+                        log.warn("Failed to preload next segment for bizKey: {}", bizKey, e);
+                    } finally {
+                        // 无论成功还是失败，都要重置加载标志
+                        loadingNext = false;
                     }
-                } catch (Exception e) {
-                    log.warn("Failed to preload next segment for bizKey: {}", bizKey, e);
-                } finally {
-                    // 无论成功还是失败，都要重置加载标志
-                    loadingNext = false;
-                }
-            });
+                });
+            } catch (RejectedExecutionException e) {
+                loadingNext = false;
+                log.warn("预加载任务被拒绝，将在下次取号时重试, bizKey={}", bizKey, e);
+            }
         }
     }
 

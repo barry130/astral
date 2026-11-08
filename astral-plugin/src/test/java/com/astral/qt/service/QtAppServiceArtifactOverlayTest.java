@@ -103,6 +103,20 @@ class QtAppServiceArtifactOverlayTest {
         assertEquals(0L, response.getIsGithub());
     }
 
+    @Test
+    void artifactOverlayDoesNotMutateSharedCachedEntity() {
+        QtAppUpdateArtifact harmony = new QtAppUpdateArtifact();
+        harmony.setPlatform(1106L);
+        harmony.setBrowserUrl("https://example.test/harmony");
+        setArtifacts(harmony);
+        QtAppUpdate response = service.getUpdate(1106L, "1", Set.of("stable"), null);
+        assertNotNull(response);
+        assertNotSame(update, response, "返回对象必须是缓存的拷贝");
+        assertEquals("https://example.test/old-android.apk", update.getDownloadUrl(), "缓存实体不应被产物覆盖污染");
+        assertEquals("old-md5", update.getMd5());
+        assertNull(update.getArtifacts(), "缓存实体不应被写入某次请求的产物清单");
+    }
+
     private void setArtifacts(QtAppUpdateArtifact... items) {
         doReturn(List.of(items)).when(artifacts).listByUpdateId(42L);
     }

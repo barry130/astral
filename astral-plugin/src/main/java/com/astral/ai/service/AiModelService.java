@@ -1,9 +1,11 @@
 package com.astral.ai.service;
 
+import com.astral.ai.common.AiPricing;
 import com.astral.ai.entity.AiModelEntity;
 import com.astral.ai.mapper.AiModelMapper;
 import com.astral.common.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -74,8 +76,12 @@ public class AiModelService {
     /** 更新模型 */
     @Transactional(rollbackFor = Exception.class)
     public AiModelEntity update(Long id, AiModelEntity input) {
-        AiModelEntity entity = require(id);
+        AiModelEntity entity = modelMapper.selectOne(new LambdaQueryWrapper<AiModelEntity>()
+                .eq(AiModelEntity::getId, id)
+                .last("FOR UPDATE"));
+        if (entity == null) throw new BusinessException("AI006", "模型不存在");
         if (input.getProviderId() != null && !input.getProviderId().equals(entity.getProviderId())) {
+            if (modelMapper.countRouteReferences(id) > 0) throw new BusinessException("AI006", "模型仍被路由引用，不能更换提供方");
             providerService.require(input.getProviderId());
             entity.setProviderId(input.getProviderId());
         }
@@ -103,22 +109,47 @@ public class AiModelService {
         entity.setEnabled(input.getEnabled() == null ? entity.getEnabled() : input.getEnabled());
         entity.setRemark(input.getRemark() == null ? entity.getRemark() : input.getRemark());
         normalize(entity);
-        modelMapper.updateById(entity);
-        return entity;
+        var patch = new LambdaUpdateWrapper<AiModelEntity>().eq(AiModelEntity::getId, id);
+        if (input.getProviderId() != null) patch.set(AiModelEntity::getProviderId, entity.getProviderId());
+        if (input.getModelCode() != null && !input.getModelCode().isBlank())
+            patch.set(AiModelEntity::getModelCode, entity.getModelCode());
+        if (input.getModelName() != null && !input.getModelName().isBlank())
+            patch.set(AiModelEntity::getModelName, entity.getModelName());
+        if (input.getModelKind() != null) patch.set(AiModelEntity::getModelKind, entity.getModelKind());
+        if (input.getSupportsStream() != null) patch.set(AiModelEntity::getSupportsStream, entity.getSupportsStream());
+        if (input.getSupportsTools() != null) patch.set(AiModelEntity::getSupportsTools, entity.getSupportsTools());
+        if (input.getSupportsJson() != null) patch.set(AiModelEntity::getSupportsJson, entity.getSupportsJson());
+        if (input.getSupportsVision() != null) patch.set(AiModelEntity::getSupportsVision, entity.getSupportsVision());
+        if (input.getMaxContextTokens() != null)
+            patch.set(AiModelEntity::getMaxContextTokens, entity.getMaxContextTokens());
+        if (input.getMaxOutputTokens() != null)
+            patch.set(AiModelEntity::getMaxOutputTokens, entity.getMaxOutputTokens());
+        if (input.getInputPrice() != null) patch.set(AiModelEntity::getInputPrice, entity.getInputPrice());
+        if (input.getOutputPrice() != null) patch.set(AiModelEntity::getOutputPrice, entity.getOutputPrice());
+        if (input.getCurrency() != null) patch.set(AiModelEntity::getCurrency, entity.getCurrency());
+        if (input.getEnabled() != null) patch.set(AiModelEntity::getEnabled, entity.getEnabled());
+        if (input.getRemark() != null) patch.set(AiModelEntity::getRemark, entity.getRemark());
+        patch.set(AiModelEntity::getUpdateTime, java.time.LocalDateTime.now());
+        modelMapper.update(null, patch);
+        return require(id);
     }
 
     /** 删除模型（被路由引用时拒绝） */
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
-        require(id);
-        Long used = modelMapper.selectCount(null);
-        modelMapper.deleteById(id);
-        if (used != null) {
-            log.info("[AI] 已删除模型 id={}", id);
+        var model = modelMapper.selectOne(new LambdaQueryWrapper<AiModelEntity>()
+                .eq(AiModelEntity::getId, id)
+                .last("FOR UPDATE"));
+        if (model == null) throw new BusinessException("AI006", "模型不存在");
+        if (modelMapper.countRouteReferences(id) > 0) {
+            throw new BusinessException("AI006", "模型仍被路由引用，请先调整路由");
         }
+        modelMapper.deleteById(id);
+        log.info("[AI] 已删除模型 id={}", id);
     }
 
     private void normalize(AiModelEntity entity) {
+        entity.setCurrency(AiPricing.validate(entity.getInputPrice(), entity.getOutputPrice(), entity.getCurrency()));
         if (entity.getModelKind() == null || entity.getModelKind().isBlank()) {
             entity.setModelKind("CHAT");
         }

@@ -4,6 +4,10 @@
     "moduleName":  "ai",
     "className":  "AiRequestEntity",
     "fields":  [
+                   {"columnName":"worker_token","fieldName":"workerToken","fieldType":"String","jdbcType":"VARCHAR(64)","comment":"当前执行租约标识"},
+                   {"columnName":"lease_until","fieldName":"leaseUntil","fieldType":"LocalDateTime","jdbcType":"TIMESTAMP","comment":"执行租约截止"},
+                   {"columnName":"quota_counted","fieldName":"quotaCounted","fieldType":"Boolean","jdbcType":"BOOLEAN","defaultValue":"false","comment":"逻辑请求已计入额度"},
+                   {"columnName":"quota_active","fieldName":"quotaActive","fieldType":"Boolean","jdbcType":"BOOLEAN","defaultValue":"false","comment":"执行中并发额度占用"},
                    {
                        "columnName":  "id",
                        "fieldName":  "id",

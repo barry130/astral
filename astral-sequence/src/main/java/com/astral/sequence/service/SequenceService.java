@@ -29,12 +29,12 @@ public class SequenceService {
      *
      * @param bizKey 业务键，用于区分不同业务的序列号空间
      * @param type   可选的生成器类型，如果为 null 或空字符串则使用默认类型
-     * @return 生成的序列号
+     * @return 生成的序列号及实际使用的类型
      */
-    public long next(String bizKey, String type) {
+    public SequenceResult next(String bizKey, String type) {
         // 将空字符串统一处理为 null，由 GeneratorFactory 决定使用默认类型
         String effectiveType = type != null && !type.isEmpty() ? type : null;
-        return generatorFactory.next(bizKey, effectiveType);
+        return generatorFactory.nextResult(bizKey, effectiveType);
     }
 
     /**
@@ -43,10 +43,10 @@ public class SequenceService {
      * @param bizKey 业务键
      * @param count  生成数量
      * @param type   可选的生成器类型
-     * @return 逗号分隔的序列号字符串
+     * @return 批量结果及实际使用的类型
      */
-    public String batch(String bizKey, int count, String type) {
+    public SequenceResult batch(String bizKey, int count, String type) {
         String effectiveType = type != null && !type.isEmpty() ? type : null;
-        return generatorFactory.batch(bizKey, count, effectiveType);
+        return generatorFactory.batchResult(bizKey, count, effectiveType);
     }
 }

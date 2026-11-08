@@ -1,6 +1,7 @@
 package com.astral.ai.security;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.astral.ai.common.AiException;
 import org.junit.jupiter.api.Test;
@@ -85,9 +86,11 @@ class AiUrlGuardTest {
     }
 
     @Test
-    void wildcardWhitelistDisablesTheGuard() {
+    void wildcardWhitelistPermitsPrivateTargetsButNeverMetadata() {
         assertEquals("http://127.0.0.1:8080", AiUrlGuard.validateBaseUrl("http://127.0.0.1:8080", "*"));
-        assertEquals("http://169.254.169.254", AiUrlGuard.validateBaseUrl("http://169.254.169.254", "*"));
+        assertAi006("http://169.254.169.254", "*");
+        assertAi006("http://[fd00:ec2::254]", "*");
+        assertAi006("http://metadata.google.internal", "metadata.google.internal");
     }
 
     @Test

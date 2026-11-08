@@ -16,7 +16,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TokenInfo {
 
-    /** Token唯一标识 */
+    /**
+     * 会话标识 = token 的 SHA-256 指纹（32 位小写十六进制）。
+     * <p>不是明文 token：指纹单向不可反推、不能当凭据使用，但同一 token 恒定，
+     * 因此可以直接回传给吊销接口当键（见 {@code TokenService#revokeToken}）。</p>
+     */
     private String id;
 
     /** 关联的用户ID */
@@ -25,7 +29,12 @@ public class TokenInfo {
     /** 用户名 */
     private String username;
 
-    /** Token值 */
+    /**
+     * 会话标识（与 {@link #id} 同值，即 token 指纹），保留该字段名是为了兼容既有前端契约。
+     * <p><b>永远不回传明文 token</b>：在线会话列表只要下发凭据本身，
+     * 任何只持「查看」权限的角色都能抄走超管令牌直接接管账号
+     * （详见 {@code TokenFingerprint} 类注释）。</p>
+     */
     private String token;
 
     /** Token过期时间 */

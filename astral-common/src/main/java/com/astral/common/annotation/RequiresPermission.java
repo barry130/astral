@@ -1,7 +1,13 @@
 package com.astral.common.annotation;
 
 import com.astral.common.constant.PermissionType;
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * 声明式权限校验：标注的方法（或整个控制器）要求当前登录用户具备指定权限。
@@ -29,6 +35,8 @@ import java.lang.annotation.*;
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@Inherited
+@Repeatable(RequiresPermissions.class)
 public @interface RequiresPermission {
 
     /** 权限码列表（按 {@link #mode()} 组合判定） */

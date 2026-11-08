@@ -3,6 +3,7 @@ package com.astral.sequence.controller.dto;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -33,6 +34,7 @@ public class SequenceBatchRequest {
      * 指定使用哪种生成器。如果为空，则使用默认类型。
      * </p>
      */
+    @Size(max = 32, message = "type must be at most 32 characters")
     private String type;
 
     /**
@@ -41,6 +43,7 @@ public class SequenceBatchRequest {
      * 范围限制在 1-1000 之间，防止一次性生成过多序列号导致性能问题。
      * </p>
      */
+    @NotNull(message = "count cannot be null")
     @Min(value = 1, message = "count must be at least 1")
     @Max(value = 1000, message = "count must be at most 1000")
     private Integer count;

@@ -9,6 +9,7 @@ import com.astral.ai.service.AiProviderService;
 import com.astral.ai.service.AiRouteService;
 import com.astral.ai.service.AiToolService;
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.annotation.RequiresSuper;
 import com.astral.common.result.Result;
 import com.astral.log.annotation.OperateLog;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +32,12 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>密钥永不出现在任何响应里，只回报 {@code credentialSource}（ENCRYPTED / SECRET_REF / NONE）。
  * 编辑时 {@code apiKey} 传空表示「保持不变」，因此前端可以安全地把表单回填成空。</p>
+ *
+ * <p>安全边界（R8）：提供方「新增/修改」仅超管可执行（{@code @RequiresSuper}）——
+ * 编辑入口能改 baseUrl 与 secretRef，一旦下放即等价于「编辑供应商 = 读取环境密钥」
+ * （把已存凭据重定向到任意公网端点）。连通性测试保留给已下放的
+ * {@code admin:ai:provider:edit}，且只作用于已存配置（入参仅 id 与可选 modelCode，
+ * 不接受目标地址），目标 host 记录进服务日志。</p>
  */
 @RestController
 @RequestMapping("/api/v1/admin/ai")
@@ -68,6 +75,7 @@ public class AiAdminProviderController {
     }
 
     @PostMapping("/providers")
+    @RequiresSuper
     @RequiresPermission(value = "admin:ai:provider:edit", name = "AI 提供方编辑", description = "新增提供方")
     @OperateLog("新增 AI 提供方")
     public Result<AiAdminDtos.ProviderVo> createProvider(
@@ -90,6 +98,7 @@ public class AiAdminProviderController {
     }
 
     @PutMapping("/providers/{id}")
+    @RequiresSuper
     @RequiresPermission(value = "admin:ai:provider:edit", name = "AI 提供方编辑", description = "修改提供方")
     @OperateLog("修改 AI 提供方")
     public Result<AiAdminDtos.ProviderVo> updateProvider(

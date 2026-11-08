@@ -17,8 +17,10 @@ import com.astral.ai.service.AiAgentService;
 import com.astral.ai.service.AiEventService;
 import com.astral.ai.service.AiRequestService;
 import com.astral.common.annotation.RequiresPermission;
+import com.astral.common.constant.PermissionType;
 import com.astral.common.result.Result;
 import com.astral.common.util.PageQuery;
+import com.astral.log.annotation.OperateLog;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -105,12 +107,38 @@ public class AiAdminRequestController {
     @GetMapping("/requests/{id}")
     public Result<AiAdminDtos.RequestDetailVo> request(
             @PathVariable Long id, @RequestParam(required = false) Boolean content) {
+        // A query parameter cannot upgrade the metadata endpoint's permission scope.
+        return requestDetail(id, false);
+    }
+
+    @GetMapping("/requests/{id}/content")
+    @RequiresPermission(
+            value = "admin:ai:request:view",
+            mode = RequiresPermission.Mode.ALL,
+            name = "AI 请求查看",
+            description = "查看 AI 请求记录")
+    @RequiresPermission(
+            value = "admin:ai:conversation:content:view",
+            mode = RequiresPermission.Mode.ALL,
+            type = PermissionType.DATA,
+            name = "AI 会话正文查看",
+            description = "查看 AI 请求正文（敏感操作，需审计）")
+    @OperateLog(value = "AI 请求正文查阅", recordPayloads = false)
+    public Result<AiAdminDtos.RequestDetailVo> requestContent(@PathVariable Long id) {
+        return requestDetail(id, true);
+    }
+
+    private Result<AiAdminDtos.RequestDetailVo> requestDetail(Long id, boolean includeContent) {
         AiRequestEntity entity = requestService.require(id);
         AiAgentEntity agent = null;
         try {
             agent = agentService.require(entity.getAgentId());
         } catch (RuntimeException ignored) {
             agent = null;
+        }
+        if (!includeContent) {
+            return Result.success(new AiAdminDtos.RequestDetailVo(
+                    toVo(entity, agent), null, null, null, null, null, null, List.of(), List.of(), List.of()));
         }
         List<AiAdminDtos.ToolCallVo> toolCalls = new ArrayList<>();
         for (AiToolCallEntity call : toolCallMapper.selectList(new LambdaQueryWrapper<AiToolCallEntity>()
@@ -130,7 +158,10 @@ public class AiAdminRequestController {
                     call.getApprovedBy(),
                     call.getApprovedAt(),
                     call.getStartedAt(),
-                    call.getFinishedAt()));
+                    call.getFinishedAt(),
+                    call.getReconciledBy(),
+                    call.getReconciledAt(),
+                    call.getReconciliationNote()));
         }
         List<AiAdminDtos.EventVo> events = new ArrayList<>();
         for (AiRequestEventEntity row : eventService.readAll(id, AiEventService.MAX_BATCH)) {
@@ -157,7 +188,7 @@ public class AiAdminRequestController {
                     row.getCreateTime()));
         }
         return Result.success(new AiAdminDtos.RequestDetailVo(
-                toVo(entity, agent),
+                toVo(entity, agent, true),
                 entity.getInputSnapshot(),
                 entity.getContextSnapshot(),
                 entity.getConfigurationSnapshot(),
@@ -236,10 +267,13 @@ public class AiAdminRequestController {
     }
 
     @GetMapping("/conversation-audits/{id}/messages")
+    @RequiresPermission(value = "admin:ai:conversation:view", name = "AI 会话查看", description = "查看 AI 会话列表")
     @RequiresPermission(
             value = "admin:ai:conversation:content:view",
+            type = PermissionType.DATA,
             name = "AI 会话正文查看",
             description = "查看 AI 会话完整内容（敏感操作，需审计）")
+    @OperateLog(value = "会话正文查阅", recordPayloads = false)
     public Result<List<AiAdminDtos.MessageVo>> conversationMessages(
             @PathVariable Long id,
             @RequestParam(required = false) Long beforeId,
@@ -280,6 +314,10 @@ public class AiAdminRequestController {
     // ==================== 内部 ====================
 
     private AiAdminDtos.RequestVo toVo(AiRequestEntity entity, AiAgentEntity agent) {
+        return toVo(entity, agent, false);
+    }
+
+    private AiAdminDtos.RequestVo toVo(AiRequestEntity entity, AiAgentEntity agent, boolean includeContent) {
         Integer versionNo = null;
         if (entity.getAgentVersionId() != null) {
             try {
@@ -300,7 +338,7 @@ public class AiAdminRequestController {
                 entity.getClientType(),
                 entity.getStatus(),
                 entity.getErrorCode(),
-                entity.getErrorSummary(),
+                includeContent ? entity.getErrorSummary() : null,
                 entity.getTokenIn(),
                 entity.getTokenOut(),
                 durationMs(entity),

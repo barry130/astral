@@ -147,6 +147,43 @@ class StorageConfigServiceRedactionTest {
     }
 
     @Test
+    void redactsUnknownSensitiveOptionsButKeepsCredentialIdentifiers() {
+        StorageConfigEntity config = r2();
+        config.setProviderOptions("{\"endpoint\":\"https://acc.r2.cloudflarestorage.com\","
+                + "\"bucket\":\"b\",\"accessKeyId\":\"AK-1\",\"secretId\":\"SID-1\","
+                + "\"clientSecret\":\"unknown-secret\",\"apiToken\":\"unknown-token\","
+                + "\"secretAccessKey\":\"sk-live-1\"}");
+        when(configMapper.selectById(2002L)).thenReturn(config);
+
+        StorageConfigEntity safe = service.getById(2002L);
+
+        assertTrue(safe.getProviderOptions().contains("AK-1"));
+        assertTrue(safe.getProviderOptions().contains("SID-1"));
+        assertTrue(!safe.getProviderOptions().contains("unknown-secret"));
+        assertTrue(!safe.getProviderOptions().contains("unknown-token"));
+        assertTrue(!safe.getProviderOptions().contains("sk-live-1"));
+        assertTrue(safe.getProviderOptions().contains("******"));
+    }
+
+    @Test
+    void redactsSensitiveKeysInsideNestedObjectsAndArrays() {
+        StorageConfigEntity config = r2();
+        config.setProviderOptions("{\"endpoint\":\"https://acc.r2.cloudflarestorage.com\","
+                + "\"bucket\":\"b\",\"accessKeyId\":\"AK-1\",\"secretAccessKey\":\"top-secret\","
+                + "\"nested\":{\"clientSecret\":\"nested-secret\",\"privateKey\":\"private-key\",\"keep\":\"visible\"},"
+                + "\"items\":[{\"apiToken\":\"array-token\",\"apiKey\":\"api-key\"}]}");
+        when(configMapper.selectById(2002L)).thenReturn(config);
+
+        StorageConfigEntity safe = service.getById(2002L);
+
+        assertTrue(safe.getProviderOptions().contains("AK-1"));
+        assertTrue(safe.getProviderOptions().contains("visible"));
+        assertTrue(!safe.getProviderOptions().contains("nested-secret"));
+        assertTrue(!safe.getProviderOptions().contains("array-token"));
+        assertTrue(safe.getProviderOptions().contains("******"));
+    }
+
+    @Test
     void setDefaultRejectsCustomHttp() {
         when(configMapper.selectById(2001L)).thenReturn(customHttp());
 

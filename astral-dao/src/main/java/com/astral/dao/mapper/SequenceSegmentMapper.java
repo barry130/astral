@@ -34,8 +34,9 @@ public interface SequenceSegmentMapper extends BaseMapper<SequenceSegment> {
      * @param step    步长
      * @return 影响行数（0表示并发冲突）
      */
-    @Update("UPDATE sequence_segment SET max_value = max_value + #{step}, version = version + 1 "
-            + "WHERE biz_key = #{bizKey} AND version = #{version}")
+    @Update("UPDATE sequence_segment SET max_value = max_value + #{step}, "
+            + "version = COALESCE(version, 0) + 1 "
+            + "WHERE biz_key = #{bizKey} AND COALESCE(version, 0) = #{version}")
     int allocateNextSegment(@Param("bizKey") String bizKey, @Param("version") int version, @Param("step") int step);
 
     /**
@@ -47,15 +48,30 @@ public interface SequenceSegmentMapper extends BaseMapper<SequenceSegment> {
      * @param step     步长
      * @return 影响行数（0 = 已存在，由其它并发线程插入；依赖 uk_segment_biz_key 唯一索引）
      */
-    @Insert(
-            "INSERT INTO sequence_segment (biz_key, min_value, max_value, current_max_value, step, version, create_time, update_time) "
-                    + "VALUES (#{bizKey}, #{minValue}, #{maxValue}, #{maxValue}, #{step}, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) "
-                    + "ON CONFLICT (biz_key) DO NOTHING")
+    @Insert("INSERT INTO sequence_segment (biz_key, min_value, max_value, current_max_value, step, version,"
+            + " create_time, update_time) VALUES (#{bizKey}, #{minValue}, #{maxValue}, #{maxValue}, #{step}, 1,"
+            + " CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT (biz_key) DO NOTHING")
     int insertSegment(
             @Param("bizKey") String bizKey,
             @Param("minValue") long minValue,
             @Param("maxValue") long maxValue,
             @Param("step") int step);
+
+    /**
+     * 同步号段步长（管理端修改 sequence_config.step 时调用）。
+     * <p>
+     * 步长实际由 sequence_segment.step 决定；version+1 使正在进行中的分段申请失败并重读新值。
+     * 已发放到内存的号段范围不变，后续分段从既有 max_value 继续累加，因此调小步长不会重复或越界。
+     * </p>
+     *
+     * @param bizKey 业务键
+     * @param step   新步长（调用方已校验 1-1000000）
+     * @return 影响行数（0 = 号段尚未初始化，首次取号会按默认步长创建）
+     */
+    @Update("UPDATE sequence_segment SET step = #{step}, "
+            + "version = COALESCE(version, 0) + 1, update_time = CURRENT_TIMESTAMP "
+            + "WHERE biz_key = #{bizKey}")
+    int updateStepByBizKey(@Param("bizKey") String bizKey, @Param("step") int step);
 
     /**
      * 查询业务表当前最大主键值（启动时高水位对齐用）。
@@ -72,8 +88,8 @@ public interface SequenceSegmentMapper extends BaseMapper<SequenceSegment> {
      * 判断表是否存在于当前 schema。高水位对齐前的探测：
      * 避免对「已登记 schema JSON 但物理表尚未建」的表每次启动报 missing relation 刷屏。
      */
-    @Select(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name = #{tableName}")
+    @Select("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = current_schema() AND table_name ="
+            + " #{tableName}")
     int countTableInCurrentSchema(@Param("tableName") String tableName);
 
     /**

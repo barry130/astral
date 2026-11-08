@@ -29,6 +29,7 @@ import com.astral.storage.service.StorageTicketTargetService;
 import com.astral.storage.service.UploadOperationService;
 import com.astral.storage.service.UploadPolicyService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -219,15 +220,8 @@ public class QtMediaService {
         StorageFolderEntity folder = ensureMediaTree(FOLDER_AVATAR);
         StorageFileEntity file = committedFile(uid, uploadId, folder);
         String url = permanentUrlOf(file, uid);
-        User user = userMapper.selectById(uid);
-        if (user == null) {
-            throw new QtException(401, "登录状态已失效");
-        }
-        String oldAvatar = user.getAvatar();
-        user.setAvatar(url);
-        user.setUpdateTime(LocalDateTime.now());
-        userMapper.updateById(user);
-        recycleOldFile(oldAvatar, uid);
+        String oldAvatar = updateAvatar(uid, url);
+        recycleOldFile(oldAvatar, file.getPublicId(), uid);
         log.info("[QtPlugin] 头像更新（代传）: uid={}, url={}", uid, url);
         return new QtUploadCompleteVo(url);
     }
@@ -237,22 +231,12 @@ public class QtMediaService {
      * 推进同步 seq 直写 pic_url → 删旧文件（事务边界与 coverComplete 一致）。
      */
     public QtUploadCompleteVo coverProxyApply(Long uid, String pid, String platform, String uploadId) {
-        QtLikePlaylist owned = requireOwnPlaylist(uid, pid, platform);
+        requireOwnPlaylist(uid, pid, platform);
         StorageFolderEntity folder = ensureMediaTree(FOLDER_COVER);
         StorageFileEntity file = committedFile(uid, uploadId, folder);
         String url = permanentUrlOf(file, uid);
-        String oldCover = owned.getPicUrl();
-        transactionTemplate.executeWithoutResult(status -> {
-            likeSyncMapper.lockUser(uid);
-            long seq = likeSyncMapper.selectUserMaxSeq(uid) + 1;
-            LocalDateTime now = LocalDateTime.now();
-            owned.setPicUrl(url);
-            owned.setUpdatedSeq(seq);
-            owned.setUpdatedAt(now);
-            owned.setUpdateTime(now);
-            playlistMapper.updateById(owned);
-        });
-        recycleOldFile(oldCover, uid);
+        String oldCover = updateCover(uid, pid, platform, url);
+        recycleOldFile(oldCover, file.getPublicId(), uid);
         log.info("[QtPlugin] 歌单封面更新（代传）: uid={}, pid={}, platform={}, url={}", uid, pid, platform, url);
         return new QtUploadCompleteVo(url);
     }
@@ -268,6 +252,7 @@ public class QtMediaService {
         }
         StorageFileEntity file = storageFileMapper.selectById(Long.valueOf(view.fileId()));
         if (file == null
+                || !StorageFileEntity.STATUS_AVAILABLE.equals(file.getStatus())
                 || !folder.getId().equals(file.getFolderId())
                 || !uid.toString().equals(file.getUploaderId())) {
             throw new QtException(403, "上传归属校验失败");
@@ -283,15 +268,8 @@ public class QtMediaService {
         StorageFolderEntity folder = ensureMediaTree(FOLDER_AVATAR);
         StorageFileEntity file = registerAndGet(uploadId, uid.toString(), request, folder);
         String url = permanentUrlOf(file, uid);
-        User user = userMapper.selectById(uid);
-        if (user == null) {
-            throw new QtException(401, "登录状态已失效");
-        }
-        String oldAvatar = user.getAvatar();
-        user.setAvatar(url);
-        user.setUpdateTime(LocalDateTime.now());
-        userMapper.updateById(user);
-        recycleOldFile(oldAvatar, uid);
+        String oldAvatar = updateAvatar(uid, url);
+        recycleOldFile(oldAvatar, file.getPublicId(), uid);
         log.info("[QtPlugin] 头像更新: uid={}, url={}", uid, url);
         return new QtUploadCompleteVo(url);
     }
@@ -317,19 +295,8 @@ public class QtMediaService {
         StorageFolderEntity folder = ensureMediaTree(FOLDER_COVER);
         StorageFileEntity file = registerAndGet(uploadId, uid.toString(), request, folder);
         String url = permanentUrlOf(file, uid);
-        QtLikePlaylist row = requireOwnPlaylist(uid, pid, platform);
-        String oldCover = row.getPicUrl();
-        transactionTemplate.executeWithoutResult(status -> {
-            likeSyncMapper.lockUser(uid);
-            long seq = likeSyncMapper.selectUserMaxSeq(uid) + 1;
-            LocalDateTime now = LocalDateTime.now();
-            row.setPicUrl(url);
-            row.setUpdatedSeq(seq);
-            row.setUpdatedAt(now);
-            row.setUpdateTime(now);
-            playlistMapper.updateById(row);
-        });
-        recycleOldFile(oldCover, uid);
+        String oldCover = updateCover(uid, pid, platform, url);
+        recycleOldFile(oldCover, file.getPublicId(), uid);
         log.info("[QtPlugin] 歌单封面更新: uid={}, pid={}, platform={}, url={}", uid, pid, platform, url);
         return new QtUploadCompleteVo(url);
     }
@@ -337,19 +304,54 @@ public class QtMediaService {
     /** 取消自定义封面（恢复默认）：pic_url 置空，客户端渲染本地默认资源；不消耗配额 */
     @Transactional(rollbackFor = Exception.class)
     public void coverClear(Long uid, String pid, String platform) {
-        likeSyncMapper.lockUser(uid);
-        long seq = likeSyncMapper.selectUserMaxSeq(uid) + 1;
-        LocalDateTime now = LocalDateTime.now();
-        QtLikePlaylist row = requireOwnPlaylist(uid, pid, platform);
-        row.setPicUrl(null);
-        row.setUpdatedSeq(seq);
-        row.setUpdatedAt(now);
-        row.setUpdateTime(now);
-        playlistMapper.updateById(row);
+        updateCover(uid, pid, platform, null);
         log.info("[QtPlugin] 歌单封面清除: uid={}, pid={}, platform={}", uid, pid, platform);
     }
 
     // ==================== 内部编排 ====================
+
+    private String updateAvatar(Long uid, String url) {
+        return transactionTemplate.execute(status -> {
+            User user = userMapper.selectOne(
+                    new LambdaQueryWrapper<User>().eq(User::getId, uid).last("FOR UPDATE"));
+            if (user == null) throw new QtException(401, "登录状态已失效");
+            if (!java.util.Objects.equals(user.getAvatar(), url)
+                    && userMapper.update(
+                                    null,
+                                    new LambdaUpdateWrapper<User>()
+                                            .eq(User::getId, uid)
+                                            .set(User::getAvatar, url)
+                                            .set(User::getUpdateTime, LocalDateTime.now()))
+                            != 1) {
+                throw new QtException("头像更新冲突，请重试");
+            }
+            return user.getAvatar();
+        });
+    }
+
+    private String updateCover(Long uid, String pid, String platform, String url) {
+        return transactionTemplate.execute(status -> {
+            likeSyncMapper.lockUser(uid);
+            QtLikePlaylist row = requireOwnPlaylist(uid, pid, platform);
+            if (java.util.Objects.equals(row.getPicUrl(), url)) return row.getPicUrl();
+            long seq = Math.addExact(likeSyncMapper.selectUserMaxSeq(uid), 1);
+            LocalDateTime now = LocalDateTime.now();
+            if (playlistMapper.update(
+                            null,
+                            new LambdaUpdateWrapper<QtLikePlaylist>()
+                                    .eq(QtLikePlaylist::getId, row.getId())
+                                    .eq(QtLikePlaylist::getUid, uid)
+                                    .isNull(QtLikePlaylist::getDeletedAt)
+                                    .set(QtLikePlaylist::getPicUrl, url)
+                                    .set(QtLikePlaylist::getUpdatedSeq, seq)
+                                    .set(QtLikePlaylist::getUpdatedAt, now)
+                                    .set(QtLikePlaylist::getUpdateTime, now))
+                    != 1) {
+                throw new QtException("封面更新冲突，请重试");
+            }
+            return row.getPicUrl();
+        });
+    }
 
     /** 签发直传凭证（管理员豁免判定在此处，策略校验在插件 UploadTicketService） */
     private QtUploadTicketVo issueTicket(
@@ -514,7 +516,7 @@ public class QtMediaService {
      * 仅识别 TELEGRAM 永久链形态（可提取 publicId）；对象存储公开 URL 不在此回收
      * （公开 URL 无 publicId 可查）。
      */
-    private void recycleOldFile(String oldUrl, Long uid) {
+    private void recycleOldFile(String oldUrl, String currentPublicId, Long uid) {
         if (oldUrl == null || oldUrl.isBlank()) {
             return;
         }
@@ -523,6 +525,7 @@ public class QtMediaService {
             return;
         }
         String publicId = matcher.group(1);
+        if (publicId.equalsIgnoreCase(currentPublicId)) return;
         try {
             storageFileService.requestDelete(publicId, uid.toString());
             log.info("[QtPlugin] 旧媒体文件已回收: {}", publicId);

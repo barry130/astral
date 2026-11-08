@@ -83,7 +83,38 @@ public class SmsTemplateController {
     public Result<Void> update(@PathVariable Long id, @RequestBody SysSmsTemplate entity) {
         entity.setId(id);
         validateTemplate(entity, false, id);
-        templateService.updateById(entity);
+        // 白名单更新：id 由路径决定，只写短信模板可编辑列。
+        // 不能用 updateById(客户端实体)——MP 只跳过 null 字段，非 null 列全进 SET
+        // （mass assignment），客户端可借未知列改写库内任意字段。
+        var update = templateService.lambdaUpdate().eq(SysSmsTemplate::getId, id);
+        if (entity.getTemplateCode() != null) {
+            update.set(SysSmsTemplate::getTemplateCode, entity.getTemplateCode());
+        }
+        if (entity.getTemplateName() != null) {
+            update.set(SysSmsTemplate::getTemplateName, entity.getTemplateName());
+        }
+        if (entity.getEventCode() != null) {
+            update.set(SysSmsTemplate::getEventCode, entity.getEventCode());
+        }
+        if (entity.getProviderTemplateCode() != null) {
+            update.set(SysSmsTemplate::getProviderTemplateCode, entity.getProviderTemplateCode());
+        }
+        if (entity.getSignName() != null) {
+            update.set(SysSmsTemplate::getSignName, entity.getSignName());
+        }
+        if (entity.getContentSample() != null) {
+            update.set(SysSmsTemplate::getContentSample, entity.getContentSample());
+        }
+        if (entity.getAuditStatus() != null) {
+            update.set(SysSmsTemplate::getAuditStatus, entity.getAuditStatus());
+        }
+        if (entity.getAuditRemark() != null) {
+            update.set(SysSmsTemplate::getAuditRemark, entity.getAuditRemark());
+        }
+        if (entity.getRemark() != null) {
+            update.set(SysSmsTemplate::getRemark, entity.getRemark());
+        }
+        update.update();
         smsService.evictTemplateCache();
         return Result.success();
     }

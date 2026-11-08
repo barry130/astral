@@ -5,64 +5,85 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import lombok.Data;
 
-/**
- * AI 工具调用
- */
 @Data
 @TableName("ai_tool_call")
 public class AiToolCallEntity {
 
-    /** 主键 */
-    @TableId(value = "id", type = IdType.INPUT)
+    @TableField("reconciled_by")
+    private Long reconciledBy;
+
+    @TableField("reconciled_at")
+    private LocalDateTime reconciledAt;
+
+    @TableField("reconciliation_note")
+    private String reconciliationNote;
+
+    @TableField("execution_token")
+    private String executionToken;
+
+    @TableField("provider_tool_call_id")
+    private String providerToolCallId;
+
+    @TableField("assistant_message_id")
+    private Long assistantMessageId;
+
+    @TableField("tool_message_id")
+    private Long toolMessageId;
+
+    @TableId(type = IdType.INPUT)
     private Long id;
 
-    /** 请求 ID */
+    @TableField("request_id")
     private Long requestId;
 
-    /** 工具编码 */
+    @TableField("tool_code")
+    @NotNull
     private String toolCode;
 
-    /** 工具名称 */
+    @TableField("tool_name")
     private String toolName;
 
-    /** 风险等级 */
+    @TableField("risk_level")
     private String riskLevel;
 
-    /** 状态 */
     private String status;
 
-    /** 参数 */
+    @TableField("arguments_json")
     private String argumentsJson;
 
-    /** 结果 */
+    @TableField("result_json")
     private String resultJson;
 
-    /** 错误信息 */
+    @TableField("error_message")
     private String errorMessage;
 
-    /** 确认状态 */
+    @TableField("approval_status")
     private String approvalStatus;
 
-    /** 确认人 */
+    @TableField("approved_by")
     private Long approvedBy;
 
-    /** 确认时间 */
+    @TableField("approved_at")
     private LocalDateTime approvedAt;
 
-    /** 开始时间 */
+    @TableField("started_at")
     private LocalDateTime startedAt;
 
-    /** 结束时间 */
+    @TableField("finished_at")
     private LocalDateTime finishedAt;
 
-    /** 创建时间 */
-    @TableField(fill = FieldFill.INSERT)
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /** 更新时间 */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+    private String source;
+
+    @TableField("plan_hash")
+    private String planHash;
 }

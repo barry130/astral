@@ -38,7 +38,6 @@ public class JvmMonitorServiceImpl implements JvmMonitorService {
     @Override
     public JvmMonitorDTO getJvmInfo() {
         var heapMem = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-        var nonHeapMem = ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage();
 
         List<GarbageCollectorMXBean> gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
         long totalGcCount = gcBeans.stream()

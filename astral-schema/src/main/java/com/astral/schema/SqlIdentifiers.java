@@ -60,6 +60,9 @@ public final class SqlIdentifiers {
      * @return 带双引号的标识符
      */
     public static String quote(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("标识符不能为空");
+        }
         return "\"" + name.replace("\"", "\"\"") + "\"";
     }
 }

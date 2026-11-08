@@ -15,7 +15,10 @@ import com.astral.ai.entity.AiMcpServerEntity;
 import com.astral.ai.entity.AiToolEntity;
 import com.astral.ai.mapper.AiAgentToolMapper;
 import com.astral.ai.mapper.AiMcpServerMapper;
+import com.astral.ai.mapper.AiToolCallMapper;
 import com.astral.ai.mapper.AiToolMapper;
+import com.astral.ai.security.AiToolPermissionGate;
+import com.astral.auth.security.PermissionChecker;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,7 +48,9 @@ class AiToolServiceRiskFloorTest {
                 List.of(),
                 new AiProperties(),
                 mock(JdbcTemplate.class),
-                mcpServerMapper);
+                mcpServerMapper,
+                new AiToolPermissionGate(mock(PermissionChecker.class)),
+                mock(AiToolCallMapper.class));
         service.init();
         when(toolMapper.updateById(any(AiToolEntity.class))).thenReturn(1);
     }
@@ -92,6 +97,16 @@ class AiToolServiceRiskFloorTest {
                 AiException.class,
                 () -> service.update(1L, null, null, null, AiConstants.ApprovalPolicy.NONE, null, 1L));
         assertTrue(error.getMessage().contains("必须保留人工确认"), error.getMessage());
+        assertEquals(AiConstants.ApprovalPolicy.ADMIN_CONFIRM, tool.getApprovalPolicy());
+    }
+
+    @Test
+    void httpWriteToolCannotDowngradeAdminConfirmationToUserConfirmation() {
+        AiToolEntity tool = givenTool(
+                AiConstants.ExecutorType.HTTP, "{\"method\":\"POST\",\"url\":\"https://api.example.com/orders\"}");
+        assertThrows(
+                AiException.class,
+                () -> service.update(1L, null, null, null, AiConstants.ApprovalPolicy.USER_CONFIRM, null, 1L));
         assertEquals(AiConstants.ApprovalPolicy.ADMIN_CONFIRM, tool.getApprovalPolicy());
     }
 

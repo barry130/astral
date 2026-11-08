@@ -3,6 +3,7 @@ package com.astral.qt.mapper;
 import com.astral.qt.dto.vo.QtLikeChangeVo;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
@@ -18,11 +19,11 @@ public interface QtLikeSyncMapper {
      * <p>注意：PG 对 void 函数的 SELECT 会返回函数名字符串，故声明为 String 接收。</p>
      */
     @Select("SELECT pg_advisory_xact_lock(#{key})")
+    @Options(flushCache = Options.FlushCachePolicy.TRUE, useCache = false)
     String lockUser(@Param("key") long key);
 
     /** 用户跨两表的最大变更序号（无记录返回 0） */
-    @Select(
-            """
+    @Select("""
             SELECT GREATEST(
                 COALESCE((SELECT MAX(updated_seq) FROM qt_like_song WHERE uid = #{uid}), 0),
                 COALESCE((SELECT MAX(updated_seq) FROM qt_like_playlist WHERE uid = #{uid}), 0)
@@ -35,8 +36,7 @@ public interface QtLikeSyncMapper {
      * pg_advisory_xact_lock 是易变函数，CTE 引用一次、物化执行，主查询在其上取两表最大 seq。
      * 事务提交/回滚自动释放锁，与 {@link #lockUser} 同一把用户级锁。
      */
-    @Select(
-            """
+    @Select("""
             WITH locked AS (SELECT pg_advisory_xact_lock(#{uid}))
             SELECT GREATEST(
                 COALESCE((SELECT MAX(updated_seq) FROM qt_like_song WHERE uid = #{uid}), 0),
@@ -51,8 +51,7 @@ public interface QtLikeSyncMapper {
      * song 行同时返回 pid（歌曲所属歌单，收藏时上送）与 pic_url（封面快照，可空），
      * playlist 行 pid 即歌单ID、pic_url 为歌单封面。</p>
      */
-    @Select(
-            """
+    @Select("""
             <script>
             SELECT 'song' AS type, sid AS id, sid, pid, platform, name, singer, album, hash,
                    pic_url, (deleted_at IS NOT NULL) AS deleted, updated_seq

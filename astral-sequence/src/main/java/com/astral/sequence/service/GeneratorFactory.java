@@ -18,12 +18,17 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * 生成器工厂
@@ -45,6 +50,9 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class GeneratorFactory {
+
+    /** 受支持的生成器类型；自动创建配置前校验，避免把拼写错误的类型落库后永久锁死业务键。 */
+    private static final Set<String> SUPPORTED_TYPES = Set.of("SEGMENT", "SNOWFLAKE", "REDIS", "DATABASE", "SIMPLE");
 
     /** Snowflake 算法生成器 */
     private final SnowflakeGenerator snowflakeGenerator;
@@ -97,6 +105,10 @@ public class GeneratorFactory {
     @Value("${astral.sequence.default-type:SEGMENT}")
     private String defaultType;
 
+    /** 自动创建配置时使用的默认步长；与 application.yml 的 astral.sequence.default-step 对齐。 */
+    @Value("${astral.sequence.default-step:1000}")
+    private int defaultStep = 1000;
+
     /**
      * 获取下一个序列号
      * <p>
@@ -117,6 +129,17 @@ public class GeneratorFactory {
      * @return 生成的序列号
      */
     public long next(String bizKey, String type) {
+        return nextResult(bizKey, type).value();
+    }
+
+    /**
+     * 获取下一个序列号并返回实际使用的类型。
+     *
+     * @param bizKey 业务键
+     * @param type   可选的生成器类型
+     * @return 序列号与实际类型
+     */
+    public SequenceResult nextResult(String bizKey, String type) {
         // 获取或自动创建业务键的配置（读路径走 60s 进程内缓存；不存在时首次会自动建行并回填缓存）
         SequenceConfig config = getOrCreateConfig(bizKey, type);
         // 确定实际使用的类型：优先使用配置中的类型，否则使用默认类型
@@ -130,7 +153,7 @@ public class GeneratorFactory {
         sequenceAsyncWriter.saveHistoryAsync(bizKey, actualType, value);
         // 异步更新统计数据
         sequenceAsyncWriter.updateStatisticsAsync(bizKey, value);
-        return value;
+        return SequenceResult.single(value, actualType);
     }
 
     /**
@@ -146,6 +169,21 @@ public class GeneratorFactory {
      * @return 逗号分隔的序列号字符串
      */
     public String batch(String bizKey, int count, String type) {
+        return batchResult(bizKey, count, type).values();
+    }
+
+    /**
+     * 批量获取序列号并返回实际使用的类型。
+     *
+     * @param bizKey 业务键
+     * @param count  生成数量
+     * @param type   可选的生成器类型
+     * @return 批量结果与实际类型
+     */
+    public SequenceResult batchResult(String bizKey, int count, String type) {
+        if (count < 1) {
+            throw new BusinessException("SEQ004");
+        }
         SequenceConfig config = getOrCreateConfig(bizKey, type);
         String actualType = normalizeType(config.getSequenceType() != null ? config.getSequenceType() : defaultType);
 
@@ -175,28 +213,18 @@ public class GeneratorFactory {
         }
 
         // 如果有有效的历史记录，异步批量保存
+        long lastValue = parseLastValue(values);
         if (!batchHistory.isEmpty()) {
             sequenceAsyncWriter.saveHistoryBatchAsync(batchHistory);
-            // 使用最后一个序列号更新统计数据
+            // 使用最后一个序列号更新统计数据，并一次性累计本批生成数量。
             // 原实现直接 parse 最后一个值：批量结果里混入非数字（如生成器返回空串）会抛 NumberFormatException，
             // 而这段在异步写入之前执行，异常会直接打断批量取号接口。这里改为容错解析。
-            long lastValue = parseLastValue(values);
-            sequenceAsyncWriter.updateStatisticsAsync(bizKey, lastValue);
+            sequenceAsyncWriter.updateStatisticsAsync(bizKey, lastValue, batchHistory.size());
         }
 
-        return result;
+        return SequenceResult.batch(lastValue, actualType, result);
     }
 
-    /**
-     * 规范化类型名称
-     * <p>
-     * 将所有类型名称统一转换为大写，确保配置中可以存储小写值，
-     * 但在比较和使用时统一使用大写，避免大小写不一致导致的问题。
-     * </p>
-     *
-     * @param type 原始类型名称
-     * @return 大写形式的类型名称
-     */
     /**
      * 从批量结果中取最后一个有效的序列号值
      *
@@ -215,8 +243,25 @@ public class GeneratorFactory {
     }
 
     private String normalizeType(String type) {
-        if (type == null) return defaultType.toUpperCase();
-        return type.toUpperCase();
+        if (type == null) return defaultType.toUpperCase(Locale.ROOT);
+        return type.toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * 规范化并校验调用方请求的生成器类型。
+     *
+     * @param type 请求类型，null 表示使用默认类型
+     * @return 大写类型名
+     * @throws BusinessException 类型为空或不在支持列表时抛出 SEQ002
+     */
+    private String normalizeRequestedType(String type) {
+        String normalized = type == null || type.isBlank()
+                ? defaultType.trim().toUpperCase(Locale.ROOT)
+                : type.trim().toUpperCase(Locale.ROOT);
+        if (!SUPPORTED_TYPES.contains(normalized)) {
+            throw new BusinessException("SEQ002");
+        }
+        return normalized;
     }
 
     /**
@@ -239,32 +284,53 @@ public class GeneratorFactory {
      * @throws BusinessException 当尝试切换已绑定类型的业务键时抛出
      */
     private SequenceConfig getOrCreateConfig(String bizKey, String type) {
+        // 只校验显式传入的类型；null/空表示沿用已绑定配置的类型（首次创建时才回退默认类型）。
+        // 必须在落库前校验，否则一个拼写错误会留下无法自动修复的错误配置。
+        String requestedType = type == null || type.isBlank() ? null : normalizeRequestedType(type);
         // 所有实体 ID 序列（业务键以 _id 结尾）只允许号段模式，任何路径都不能切换类型
         if (entityIdSequenceProvider.isEntityIdBizKey(bizKey)) {
-            String requestedType = type != null ? type.toUpperCase() : defaultType.toUpperCase();
-            if (!"SEGMENT".equals(requestedType)) {
+            if (requestedType != null && !"SEGMENT".equals(requestedType)) {
                 throw new BusinessException("SEQ006", bizKey, "SEGMENT", requestedType);
             }
+            requestedType = "SEGMENT";
         }
         SequenceConfig config = configCache.get(bizKey, k -> configMapper.selectByBizKey(k));
         if (config == null) {
             // 配置不存在，自动创建
             config = new SequenceConfig();
             config.setBizKey(bizKey);
-            config.setSequenceType(type != null ? type.toUpperCase() : defaultType.toUpperCase());
+            config.setSequenceType(requestedType != null ? requestedType : normalizeRequestedType(null));
+            config.setStep(defaultStep);
             config.setEnabled(true);
             config.setCreateTime(LocalDateTime.now());
             config.setUpdateTime(LocalDateTime.now());
-            configMapper.insert(config);
-            configCache.put(bizKey, config);
-            log.info("Auto created config for bizKey: {}, type: {}", bizKey, config.getSequenceType());
-        } else {
-            // 配置已存在，校验类型是否一致
-            String requestedType = type != null ? type.toUpperCase() : defaultType.toUpperCase();
-            String existingType = config.getSequenceType().toUpperCase();
-            if (!existingType.equals(requestedType)) {
-                throw new BusinessException("SEQ006", bizKey, existingType, requestedType);
+            try {
+                configMapper.insert(config);
+                configCache.put(bizKey, config);
+                log.info("Auto created config for bizKey: {}, type: {}", bizKey, config.getSequenceType());
+            } catch (DuplicateKeyException e) {
+                // 首次并发使用同一 bizKey 时两个请求都可能查到 null 并同时插入，
+                // 唯一索引 uk_sequence_config_biz_key 会让其中一个失败。这里只处理真实唯一冲突：
+                // 重新读取获胜方写入的配置并继续，其他数据库异常必须照常抛出（不能吞掉）。
+                log.info("Concurrent auto-create detected for bizKey: {}, re-reading config", bizKey);
+                config = configMapper.selectByBizKey(bizKey);
+                if (config == null) {
+                    throw e;
+                }
+                configCache.put(bizKey, config);
             }
+        }
+        // 首次创建竞争的获胜配置与缓存命中的配置遵守同一类型锁定契约。
+        String existingType = config.getSequenceType() == null
+                ? defaultType.toUpperCase(Locale.ROOT)
+                : config.getSequenceType().toUpperCase(Locale.ROOT);
+        if (requestedType != null && !existingType.equals(requestedType)) {
+            throw new BusinessException("SEQ006", bizKey, existingType, requestedType);
+        }
+        // 停用的配置不得继续发号：管理端 toggle 的语义是立即停止该业务键取号。
+        // 放在分支之后统一判断，覆盖「并发自动创建时读到/重读到已停用配置」的路径。
+        if (Boolean.FALSE.equals(config.getEnabled())) {
+            throw new BusinessException("SEQ009", bizKey);
         }
         return config;
     }
@@ -275,7 +341,16 @@ public class GeneratorFactory {
      * 直接改 sequence_config 的写操作完成后必须调用，否则新配置最长延迟 60s 生效。</p>
      */
     public void evictConfigCache() {
-        configCache.invalidateAll();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    configCache.invalidateAll();
+                }
+            });
+        } else {
+            configCache.invalidateAll();
+        }
     }
 
     /**
@@ -304,7 +379,9 @@ public class GeneratorFactory {
             }
             case "DATABASE" -> databaseGenerator;
             case "SIMPLE" -> simpleGenerator;
-            default -> snowflakeGenerator; // 未知类型默认使用 Snowflake
+            // 未知类型不能静默降级为 Snowflake：雪花 ID 与连续序列语义完全不同，
+            // 一旦配置拼写错误（如 SEGMNET），调用方会拿到无法排查的巨值。
+            default -> throw new BusinessException("SEQ002");
         };
     }
 }

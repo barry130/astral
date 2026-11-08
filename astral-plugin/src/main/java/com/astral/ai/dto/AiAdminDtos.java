@@ -40,7 +40,9 @@ public final class AiAdminDtos {
      * @param remark           备注
      */
     public record ProviderSaveReq(
-            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$") String providerCode,
+            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$")
+            String providerCode,
+
             @NotBlank @Size(max = 128) String name,
             @NotBlank @Size(max = 32) String providerType,
             @NotBlank @Size(max = 512) String baseUrl,
@@ -156,7 +158,9 @@ public final class AiAdminDtos {
      * @param remark             备注
      */
     public record RouteSaveReq(
-            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$") String routeCode,
+            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$")
+            String routeCode,
+
             @NotBlank @Size(max = 128) String name,
             @NotNull Long providerId,
             @NotNull Long modelId,
@@ -210,7 +214,9 @@ public final class AiAdminDtos {
      * @param sort                排序
      */
     public record AgentSaveReq(
-            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$") String agentCode,
+            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$")
+            String agentCode,
+
             @NotBlank @Size(max = 128) String name,
             @NotBlank @Size(max = 32) String agentType,
             @Size(max = 512) String description,
@@ -327,7 +333,9 @@ public final class AiAdminDtos {
      * @param description 描述
      */
     public record PromptTemplateSaveReq(
-            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$") String promptCode,
+            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$")
+            String promptCode,
+
             @NotBlank @Size(max = 128) String name,
             @Size(max = 64) String scene,
             @Size(max = 512) String description) {}
@@ -341,7 +349,10 @@ public final class AiAdminDtos {
      * @param changelog          变更说明
      */
     public record PromptVersionSaveReq(
-            String systemPrompt, String userPromptTemplate, String variablesJson, @Size(max = 512) String changelog) {}
+            String systemPrompt,
+            String userPromptTemplate,
+            String variablesJson,
+            @Size(max = 512) String changelog) {}
 
     /** 提示词模板视图 */
     public record PromptTemplateVo(
@@ -386,7 +397,9 @@ public final class AiAdminDtos {
      * @param syncMode     同步方式（MANUAL/AUTO）
      */
     public record KnowledgeSourceSaveReq(
-            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$") String sourceCode,
+            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$")
+            String sourceCode,
+
             @NotBlank @Size(max = 128) String name,
             @NotBlank @Size(max = 48) String sourceType,
             @Size(max = 512) String description,
@@ -410,7 +423,9 @@ public final class AiAdminDtos {
             @Size(max = 512) String path,
             @Size(max = 256) String section,
             @Size(max = 64) String version,
-            @NotBlank String content) {}
+
+            @NotBlank @Size(max = 400000, message = "文档最多 400000 个字符，请拆分后保存")
+            String content) {}
 
     /** 知识源视图 */
     public record KnowledgeSourceVo(
@@ -473,7 +488,10 @@ public final class AiAdminDtos {
             Boolean enabled,
             Integer priority,
             @Min(1) @Max(50) Integer retrievalTopK,
+
+            @jakarta.validation.constraints.DecimalMin("0") @jakarta.validation.constraints.DecimalMax("1")
             BigDecimal minScore,
+
             @Size(max = 32) String citationPolicy) {}
 
     /** 智能体知识绑定视图 */
@@ -546,7 +564,8 @@ public final class AiAdminDtos {
      */
     public record DeclarativeToolSaveReq(
             @NotBlank @Size(max = 64) @Pattern(regexp = "[a-z][a-z0-9_]{2,63}", message = "工具编码只能是小写字母开头的 snake_case")
-                    String toolCode,
+            String toolCode,
+
             @NotBlank @Size(max = 128) String name,
             @Size(max = 512) String description,
             List<String> clientTypes,
@@ -579,7 +598,8 @@ public final class AiAdminDtos {
      * @param serverCode 服务器编码（小写 snake_case，作为工具编码前缀；修改时不生效）
      * @param name       展示名称
      * @param url        MCP 端点地址（http(s) 字面量，不支持占位符）
-     * @param headers    附加请求头 JSON，值可写 ${secret:key}
+     * @param headers    附加请求头 JSON，值可写 ${secret:key}；敏感键（authorization/api-key/token/secret）
+     *                   的明文值将以 AES-GCM 加密落库（R9），回显时脱敏为 ******
      * @param readOnly   是否只读服务器（true 时发现的工具默认 READ + NONE）
      * @param status     状态（仅修改时有意义：ENABLED / DISABLED）
      */
@@ -598,7 +618,7 @@ public final class AiAdminDtos {
      * @param serverCode      编码
      * @param name            名称
      * @param url             端点
-     * @param headers         附加请求头（回显时把 ${secret:key} 原样保留，不还原明文）
+     * @param headers         附加请求头（敏感键值一律脱敏为 ******，不回明文/密文；非敏感值原样回显）
      * @param readOnly        是否只读
      * @param status          状态
      * @param toolCount       最近一次发现的工具数
@@ -657,7 +677,8 @@ public final class AiAdminDtos {
      * @param approved 是否通过
      * @param comment  审批意见
      */
-    public record ToolApproveReq(@NotNull Boolean approved, @Size(max = 512) String comment) {}
+    public record ToolApproveReq(
+            @NotNull Boolean approved, @Size(max = 512) String comment) {}
 
     // ==================== 额度 ====================
 
@@ -685,7 +706,9 @@ public final class AiAdminDtos {
      * @param remark              备注
      */
     public record QuotaPolicySaveReq(
-            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$") String policyCode,
+            @NotBlank @Size(max = 64) @Pattern(regexp = "^[a-zA-Z0-9_-]+$")
+            String policyCode,
+
             @NotBlank @Size(max = 128) String name,
             @NotBlank @Size(max = 16) String scopeType,
             Long agentId,
@@ -732,6 +755,12 @@ public final class AiAdminDtos {
 
     // ==================== 用量 / 请求 / 审计 ====================
 
+    /** 未知用量人工核对 */
+    public record UsageReconcileReq(
+            @NotNull @Min(0) Integer inputTokens,
+            @NotNull @Min(0) Integer outputTokens,
+            @NotBlank @Size(max = 1000) String note) {}
+
     /** 用量视图 */
     public record UsageVo(
             Long id,
@@ -747,6 +776,10 @@ public final class AiAdminDtos {
             BigDecimal estimatedCost,
             String currency,
             String status,
+            BigDecimal reservedAmount,
+            Long reconciledBy,
+            LocalDateTime reconciledAt,
+            String reconciliationNote,
             LocalDateTime createTime) {}
 
     /** 用量汇总 */
@@ -756,6 +789,7 @@ public final class AiAdminDtos {
             long outputTokens,
             BigDecimal estimatedCost,
             String currency,
+            List<com.astral.ai.service.AiUsageService.CurrencyCost> costs,
             List<UsageTrendPoint> trend) {}
 
     /** 用量趋势点 */
@@ -795,6 +829,11 @@ public final class AiAdminDtos {
             List<MessageVo> messages) {}
 
     /** 工具调用视图 */
+    public record ToolReconcileReq(
+            @NotBlank @Pattern(regexp = "SUCCEEDED|FAILED") String outcome,
+            @NotBlank @Size(max = 1000) String note) {}
+
+    /** 工具调用视图 */
     public record ToolCallVo(
             Long id,
             Long requestId,
@@ -809,7 +848,10 @@ public final class AiAdminDtos {
             Long approvedBy,
             LocalDateTime approvedAt,
             LocalDateTime startedAt,
-            LocalDateTime finishedAt) {}
+            LocalDateTime finishedAt,
+            Long reconciledBy,
+            LocalDateTime reconciledAt,
+            String reconciliationNote) {}
 
     /** 请求事件视图 */
     public record EventVo(Long sequence, String type, String dataJson, LocalDateTime createdAt) {}

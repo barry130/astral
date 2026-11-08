@@ -61,7 +61,7 @@ public class AppNoticeController {
         return Result.success(noticeService.listForChannel(targets, versionCode, userId != null, userId));
     }
 
-    @Operation(summary = "消息中心（公告+通知，带 noticeType 标签；已读由前端缓存判断；" + "平台取 X-App-Ut，兼容遗留 channel=app|pc|web|all，缺省 app）")
+    @Operation(summary = "消息中心（点对点消息返回 readTime，广播已读由客户端缓存判断；" + "平台取 X-App-Ut，兼容遗留 channel=app|pc|web|all，缺省 app）")
     @RequiresPermission(value = "user:message:view", name = "消息查看", description = "App 端查看消息中心与未读数")
     @GetMapping("/center")
     public Result<List<SysNotice>> center(
@@ -72,7 +72,7 @@ public class AppNoticeController {
         return Result.success(noticeService.listMessageCenter(currentUserId(), targets));
     }
 
-    @Operation(summary = "未读数（候选总数，已读判定在前端；平台取 X-App-Ut，兼容遗留 channel=app|pc|web|all，缺省 app）")
+    @Operation(summary = "未读数（点对点未读数 + 广播候选数；广播已读由客户端扣除）")
     @RequiresPermission(value = "user:message:view", name = "消息查看", description = "App 端查看消息中心与未读数")
     @GetMapping("/unread-count")
     public Result<Long> unreadCount(
@@ -83,7 +83,7 @@ public class AppNoticeController {
         return Result.success(noticeService.countUnread(currentUserId(), targets));
     }
 
-    @Operation(summary = "已读回执（本期仅记日志）")
+    @Operation(summary = "已读回执（仅持久化本人的点对点消息，广播保持客户端已读）")
     @RequiresPermission(value = "user:message:read", name = "消息已读", description = "App 端提交消息已读回执")
     @PostMapping("/read-ack")
     public Result<Void> readAck(@RequestBody ReadAckDto dto) {

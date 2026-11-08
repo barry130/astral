@@ -129,15 +129,28 @@ public class NoticeServiceImpl implements NoticeService {
 
     @Override
     public long countUnread(Long userId, List<String> targets) {
-        return listMessageCenter(userId, targets).size();
+        return listMessageCenter(userId, targets).stream()
+                .filter(notice -> notice.getUserId() == null || notice.getReadTime() == null)
+                .count();
     }
 
     @Override
     public void readAck(Long userId, List<Long> ids) {
-        if (ids == null || ids.isEmpty()) {
+        if (userId == null || ids == null || ids.isEmpty()) {
             return;
         }
-        log.info("[Notice] 用户 {} 已读回执 {} 条: {}", userId, ids.size(), ids);
+        List<Long> selected =
+                ids.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        if (selected.size() > 1000) throw com.astral.common.exception.BusinessException.of("每次最多确认 1000 条消息");
+        if (selected.isEmpty()) return;
+        sysNoticeMapper.update(
+                null,
+                new LambdaUpdateWrapper<SysNotice>()
+                        .eq(SysNotice::getUserId, userId)
+                        .in(SysNotice::getId, selected)
+                        .isNull(SysNotice::getReadTime)
+                        .set(SysNotice::getReadTime, LocalDateTime.now()));
+        evictNoticeCache();
     }
 
     // ==================== 管理端 ====================

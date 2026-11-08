@@ -105,11 +105,15 @@ public class ProfileController {
         // 强度策略（失败抛 IllegalArgumentException -> HTTP 200 + 业务码 320 参数错误）
         PasswordPolicy.validateOrThrow(newPlain, user.getUsername());
 
-        user.setPassword(BCrypt.hashpw(newPlain));
-        user.setPwdUpdateTime(LocalDateTime.now());
-        user.setMustChangePassword(0);
-        user.setUpdateTime(LocalDateTime.now());
-        userMapper.updateById(user);
+        requireChanged(userMapper.update(
+                null,
+                Wrappers.<User>lambdaUpdate()
+                        .eq(User::getId, userId)
+                        .eq(User::getPassword, user.getPassword())
+                        .set(User::getPassword, BCrypt.hashpw(newPlain))
+                        .set(User::getPwdUpdateTime, LocalDateTime.now())
+                        .set(User::getMustChangePassword, 0)
+                        .set(User::getUpdateTime, LocalDateTime.now())));
         // 改密后全端踢下线（含当前会话），前端收到成功后跳登录页重新认证
         StpUtil.kickout(userId);
         log.info("[profile] 用户 {} 修改密码成功，全部会话已失效", user.getUsername());
@@ -128,10 +132,21 @@ public class ProfileController {
         return Result.success(tokenService.pageFromSaToken(pageNum, pageSize, userId));
     }
 
-    @Operation(summary = "下线我的指定会话（仅限本人 token，先校验归属）")
-    @DeleteMapping("/sessions/{token}")
-    public Result<Void> revokeMySession(@PathVariable String token) {
+    /**
+     * 下线我的指定会话。
+     *
+     * <p>路径参数是<b>会话标识（token 指纹）</b>，不是明文 token：路径会进 access log /
+     * 反向代理日志 / 浏览器历史，把凭据放进去等于写日志即泄漏。指纹由
+     * {@code GET /sessions} 的 {@code id}/{@code token} 字段给出，同一 token 恒定。</p>
+     */
+    @Operation(summary = "下线我的指定会话（仅限本人会话，先校验归属）")
+    @DeleteMapping("/sessions/{sessionId}")
+    public Result<Void> revokeMySession(@PathVariable String sessionId) {
         long userId = StpUtil.getLoginIdAsLong();
+        String token = tokenService.resolveTokenBySessionId(sessionId);
+        if (token == null) {
+            throw BusinessException.of("会话不存在或已失效");
+        }
         Object owner = StpUtil.getLoginIdByToken(token);
         if (owner == null) {
             throw BusinessException.of("会话不存在或已失效");
@@ -157,10 +172,12 @@ public class ProfileController {
             throw BusinessException.of("TOTP 已启用，请先关闭再重新绑定");
         }
         String secret = TotpUtil.generateSecret();
-        user.setTotpSecret(secret);
-        user.setTotpEnabled(0);
-        user.setUpdateTime(LocalDateTime.now());
-        userMapper.updateById(user);
+        requireChanged(userMapper.update(
+                null,
+                credentialState(user)
+                        .set(User::getTotpSecret, secret)
+                        .set(User::getTotpEnabled, 0)
+                        .set(User::getUpdateTime, LocalDateTime.now())));
         Map<String, String> data = new HashMap<>();
         data.put("secret", secret);
         data.put("otpauthUri", TotpUtil.buildOtpAuthUri(secret, user.getUsername(), "Astral"));
@@ -184,16 +201,29 @@ public class ProfileController {
         if (!TotpUtil.verify(body.getCode(), user.getTotpSecret())) {
             throw new BusinessException("AUTH011");
         }
-        user.setTotpEnabled(1);
-        user.setUpdateTime(LocalDateTime.now());
-        userMapper.updateById(user);
+        requireChanged(userMapper.update(
+                null,
+                credentialState(user).set(User::getTotpEnabled, 1).set(User::getUpdateTime, LocalDateTime.now())));
         log.info("[profile] 用户 {} 已启用 TOTP 二次验证", user.getUsername());
         return Result.success();
     }
 
+    /**
+     * 关闭 TOTP 的请求体。
+     *
+     * <p>不复用 {@link ChangePasswordRequest}：那个 DTO 的 {@code newPassword} 也带
+     * {@code @NotBlank}，复用时关闭 TOTP 必须凭空传一个「新密码」而服务端根本不读它，
+     * 客户端只能塞垃圾值（或被自己的强度校验拦住），契约与实现不一致。</p>
+     */
+    @Data
+    public static class TotpDisableRequest {
+        @NotBlank(message = "登录密码不能为空")
+        private String oldPassword;
+    }
+
     @Operation(summary = "关闭 TOTP（需校验登录密码）")
     @PostMapping("/totp/disable")
-    public Result<Void> totpDisable(@Valid @RequestBody ChangePasswordRequest body) {
+    public Result<Void> totpDisable(@Valid @RequestBody TotpDisableRequest body) {
         long userId = StpUtil.getLoginIdAsLong();
         User user = requireUser(userId);
         String plain = decrypt(body.getOldPassword());
@@ -201,13 +231,12 @@ public class ProfileController {
             throw new BusinessException("AUTH002");
         }
         // MP 默认 NOT_NULL 策略下 updateById 跳过 null 字段，清空 secret 必须走 lambdaUpdate 显式 set
-        userMapper.update(
+        requireChanged(userMapper.update(
                 null,
-                Wrappers.<User>lambdaUpdate()
-                        .eq(User::getId, userId)
+                credentialState(user)
                         .set(User::getTotpEnabled, 0)
                         .set(User::getTotpSecret, null)
-                        .set(User::getUpdateTime, LocalDateTime.now()));
+                        .set(User::getUpdateTime, LocalDateTime.now())));
         log.info("[profile] 用户 {} 已关闭 TOTP 二次验证", user.getUsername());
         return Result.success();
     }
@@ -222,6 +251,21 @@ public class ProfileController {
             throw new BusinessException("SYS001");
         }
         return user;
+    }
+
+    private static com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<User> credentialState(
+            User user) {
+        return Wrappers.<User>lambdaUpdate()
+                .eq(User::getId, user.getId())
+                .eq(User::getPassword, user.getPassword())
+                .eq(user.getTotpSecret() != null, User::getTotpSecret, user.getTotpSecret())
+                .isNull(user.getTotpSecret() == null, User::getTotpSecret)
+                .eq(user.getTotpEnabled() != null, User::getTotpEnabled, user.getTotpEnabled())
+                .isNull(user.getTotpEnabled() == null, User::getTotpEnabled);
+    }
+
+    private static void requireChanged(int affected) {
+        if (affected != 1) throw BusinessException.of("账号凭据已变更，请刷新后重新验证");
     }
 
     /**

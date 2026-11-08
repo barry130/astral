@@ -5,6 +5,21 @@
     "className":  "AiToolEntity",
     "fields":  [
                    {
+                       "columnName": "executor_type",
+                       "fieldName": "executorType",
+                       "fieldType": "String",
+                       "jdbcType": "VARCHAR(16)",
+                       "comment": "执行器类型 CODE / HTTP / SQL / MCP",
+                       "defaultValue": "CODE"
+                   },
+                   {
+                       "columnName": "executor_config",
+                       "fieldName": "executorConfig",
+                       "fieldType": "String",
+                       "jdbcType": "TEXT",
+                       "comment": "声明式执行配置"
+                   },
+                   {
                        "columnName":  "id",
                        "fieldName":  "id",
                        "fieldType":  "Long",

@@ -8,13 +8,12 @@ import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
+import com.astral.common.http.BoundedHttpTransport;
+import com.astral.common.http.NetworkAddresses;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -45,8 +44,7 @@ import tools.jackson.databind.node.ObjectNode;
  *       运行时才从 {@code astral.plugins.ai.http-tool.secrets} 或同名环境变量取值。</li>
  * </ul>
  *
- * <p>残余风险（文档已注明）：私网拦截按「解析到的每个地址」执行，域名型地址存在 DNS
- * rebinding 的理论绕过面——对安全性要求高的部署应显式配置 allow-hosts 白名单。</p>
+ * <p>执行时将本次校验的 DNS 地址固定到实际连接；原 hostname/SNI/证书校验保持。</p>
  */
 @Slf4j
 public class HttpToolExecutor implements AiToolHandler {
@@ -82,13 +80,17 @@ public class HttpToolExecutor implements AiToolHandler {
     private final AiToolEntity tool;
     private final ObjectNode config;
     private final AiProperties.HttpTool guard;
-    private final HttpClient httpClient;
+    private final BoundedHttpTransport.TargetPolicy targetPolicy;
 
-    private HttpToolExecutor(AiToolEntity tool, ObjectNode config, AiProperties.HttpTool guard, HttpClient httpClient) {
+    HttpToolExecutor(
+            AiToolEntity tool,
+            ObjectNode config,
+            AiProperties.HttpTool guard,
+            BoundedHttpTransport.TargetPolicy targetPolicy) {
         this.tool = tool;
         this.config = config;
         this.guard = guard;
-        this.httpClient = httpClient;
+        this.targetPolicy = targetPolicy;
     }
 
     /**
@@ -109,14 +111,11 @@ public class HttpToolExecutor implements AiToolHandler {
             log.warn("[AI] 声明式 HTTP 工具 {} 配置非法，已跳过: {}", tool.getToolCode(), e.getMessage());
             return null;
         }
-        return new HttpToolExecutor(tool, config, properties.getHttpTool(), defaultClient());
-    }
-
-    private static HttpClient defaultClient() {
-        return HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+        return new HttpToolExecutor(
+                tool,
+                config,
+                properties.getHttpTool(),
+                uri -> approveTarget(uri, properties.getHttpTool().getAllowedHosts()));
     }
 
     // ==================== 保存期校验 ====================
@@ -266,6 +265,28 @@ public class HttpToolExecutor implements AiToolHandler {
 
     /** 主机护栏：白名单（可选）+ 禁私网/环回/链路本地/组播/全零，执行时按最新 DNS 重新解析 */
     static void guardHost(String host, List<String> allowedHosts) {
+        resolvePublicHost(host, allowedHosts);
+    }
+
+    static InetAddress[] approveTarget(URI uri, List<String> allowedHosts) {
+        if (uri.getUserInfo() != null || uri.getFragment() != null) {
+            throw new AiException("AI008", "目标地址不允许用户信息或 fragment");
+        }
+        int port = uri.getPort() < 0 ? ("https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80) : uri.getPort();
+        String host = uri.getHost();
+        if (allowedHosts != null && !allowedHosts.isEmpty()) {
+            boolean matches = allowedHosts.stream()
+                    .filter(java.util.Objects::nonNull)
+                    .map(String::trim)
+                    .anyMatch(entry -> entry.equalsIgnoreCase(host) || entry.equalsIgnoreCase(host + ":" + port));
+            if (!matches) {
+                throw new AiException("AI008", "目标主机或端口不在白名单内");
+            }
+        }
+        return resolvePublicHost(host, List.of());
+    }
+
+    private static InetAddress[] resolvePublicHost(String host, List<String> allowedHosts) {
         String normalized = host == null ? "" : host.trim().toLowerCase(Locale.ROOT);
         if (normalized.isBlank()) {
             throw new AiException("AI008", "URL 缺少主机名");
@@ -288,24 +309,21 @@ public class HttpToolExecutor implements AiToolHandler {
             }
         }
         try {
-            for (InetAddress address : InetAddress.getAllByName(normalized)) {
+            InetAddress[] addresses = InetAddress.getAllByName(normalized);
+            if (addresses.length == 0) {
+                throw new UnknownHostException();
+            }
+            for (InetAddress address : addresses) {
                 requirePublicAddress(address);
             }
+            return addresses;
         } catch (UnknownHostException e) {
             throw new AiException("AI008", "无法解析主机: " + normalized);
         }
     }
 
     private static void requirePublicAddress(InetAddress address) {
-        byte[] bytes = address.getAddress();
-        boolean uniqueLocalIpv6 =
-                bytes != null && bytes.length == 16 && (bytes[0] == (byte) 0xfc || bytes[0] == (byte) 0xfd);
-        if (address.isLoopbackAddress()
-                || address.isLinkLocalAddress()
-                || address.isSiteLocalAddress()
-                || address.isAnyLocalAddress()
-                || address.isMulticastAddress()
-                || uniqueLocalIpv6) {
+        if (!NetworkAddresses.isPublic(address)) {
             throw new AiException("AI008", "禁止调用私网/环回/链路本地地址: " + address.getHostAddress());
         }
     }
@@ -350,8 +368,9 @@ public class HttpToolExecutor implements AiToolHandler {
         } catch (AiException e) {
             return AiToolResult.failed(e.getMessage());
         } catch (Exception e) {
-            log.warn("[AI] HTTP 工具 {} 执行失败: {}", tool.getToolCode(), e.getMessage());
-            return AiToolResult.failed(e.getMessage() == null ? "HTTP 工具执行失败" : e.getMessage());
+            log.warn(
+                    "[AI] HTTP 工具 {} 执行失败: {}", tool.getToolCode(), e.getClass().getSimpleName());
+            return AiToolResult.failed("HTTP 调用失败，请检查目标配置与网络");
         }
     }
 
@@ -374,12 +393,8 @@ public class HttpToolExecutor implements AiToolHandler {
         String renderedQuery = renderQuery(queryPart, args, secrets);
         URI uri = URI.create(base + renderedPath + (renderedQuery.isBlank() ? "" : "?" + renderedQuery));
 
-        // 每次执行都重新过 SSRF 护栏（DNS 可能变化，不能只信保存时的校验）
-        guardHost(hostOf(config), guard.getAllowedHosts());
-
-        HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
-                .timeout(Duration.ofMillis(clamp(config, "timeoutMs", DEFAULT_TIMEOUT_MS)))
-                .header("User-Agent", "astral-ai-http-tool/1.0");
+        Map<String, String> requestHeaders = new java.util.LinkedHashMap<>();
+        requestHeaders.put("User-Agent", "astral-ai-http-tool/1.0");
         boolean hasContentType = false;
         JsonNode headersNode = config.get("headers");
         if (headersNode instanceof ObjectNode headers) {
@@ -388,7 +403,8 @@ public class HttpToolExecutor implements AiToolHandler {
                 if (value.contains("\n") || value.contains("\r")) {
                     throw new AiException("AI008", "请求头包含换行符: " + entry.getKey());
                 }
-                builder.header(entry.getKey(), value);
+                BoundedHttpTransport.validateHeader(entry.getKey(), value);
+                requestHeaders.put(entry.getKey(), value);
                 if ("content-type".equalsIgnoreCase(entry.getKey())) {
                     hasContentType = true;
                 }
@@ -400,25 +416,23 @@ public class HttpToolExecutor implements AiToolHandler {
             if (bodyNode != null && bodyNode.isString() && !bodyNode.asString().isBlank()) {
                 body = renderJson(bodyNode.asString(), args, secrets);
                 if (!hasContentType) {
-                    builder.header("Content-Type", "application/json; charset=utf-8");
+                    requestHeaders.put("Content-Type", "application/json; charset=utf-8");
                 }
             }
         }
-        HttpRequest request = (body == null
-                        ? builder.method(method, HttpRequest.BodyPublishers.noBody())
-                        : builder.method(method, HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8)))
-                .build();
         int maxBytes = clamp(config, "maxResponseBytes", DEFAULT_MAX_RESPONSE_BYTES);
-        HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-        byte[] bytes = response.body();
-        if (bytes != null && bytes.length > maxBytes) {
-            throw new AiException("AI008", "响应超过体积上限 " + maxBytes + " 字节");
+        var response = BoundedHttpTransport.send(
+                uri,
+                method,
+                requestHeaders,
+                body == null ? null : body.getBytes(StandardCharsets.UTF_8),
+                Duration.ofMillis(clamp(config, "timeoutMs", DEFAULT_TIMEOUT_MS)),
+                maxBytes,
+                targetPolicy);
+        if (response.status() < 200 || response.status() >= 300) {
+            return AiToolResult.failed("HTTP " + response.status());
         }
-        String text = bytes == null ? "" : new String(bytes, StandardCharsets.UTF_8);
-        if (response.statusCode() >= 400) {
-            return AiToolResult.failed("HTTP " + response.statusCode() + ": " + AiJson.truncate(text, 300));
-        }
-        return buildSuccess(text, response.headers().firstValue("content-type").orElse(""));
+        return buildSuccess(response.text(), response.header("content-type"));
     }
 
     /** 组装成功结果：payload 取 payloadPath 或整个响应；summary 取 summaryPath 或截断后的响应文本 */

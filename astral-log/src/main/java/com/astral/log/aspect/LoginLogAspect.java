@@ -13,7 +13,9 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -217,8 +219,10 @@ public class LoginLogAspect {
      */
     private String getLoginType(ProceedingJoinPoint joinPoint) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        Method method = signature.getMethod();
-        com.astral.log.annotation.LoginLog annotation = method.getAnnotation(com.astral.log.annotation.LoginLog.class);
+        Method method = AopUtils.getMostSpecificMethod(
+                signature.getMethod(), joinPoint.getTarget().getClass());
+        com.astral.log.annotation.LoginLog annotation =
+                AnnotationUtils.findAnnotation(method, com.astral.log.annotation.LoginLog.class);
         if (annotation != null && StrUtil.isNotEmpty(annotation.value())) {
             return annotation.value();
         }

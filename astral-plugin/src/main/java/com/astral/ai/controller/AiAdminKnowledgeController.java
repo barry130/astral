@@ -9,10 +9,12 @@ import com.astral.ai.service.AiKnowledgeService;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.log.annotation.OperateLog;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -55,8 +58,9 @@ public class AiAdminKnowledgeController {
     @RequiresPermission(value = "admin:ai:knowledge:view", name = "AI 知识库查看", description = "查看知识源")
     public Result<List<AiAdminDtos.KnowledgeSourceVo>> sources() {
         List<AiAdminDtos.KnowledgeSourceVo> list = new ArrayList<>();
+        Map<Long, Long> counts = knowledgeService.chunkCounts();
         for (AiKnowledgeSourceEntity entity : knowledgeService.listSources()) {
-            list.add(toVo(entity));
+            list.add(toVo(entity, counts));
         }
         return Result.success(list);
     }
@@ -107,13 +111,21 @@ public class AiAdminKnowledgeController {
 
     @GetMapping("/knowledge/sources/{id}/documents")
     @RequiresPermission(value = "admin:ai:knowledge:view", name = "AI 知识库查看", description = "查看知识文档")
-    public Result<List<AiAdminDtos.KnowledgeDocumentVo>> documents(@PathVariable Long id) {
+    public Result<Page<AiAdminDtos.KnowledgeDocumentVo>> documents(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "20") int pageSize) {
         knowledgeService.requireSource(id);
-        List<AiAdminDtos.KnowledgeDocumentVo> list = new ArrayList<>();
-        for (AiKnowledgeDocumentEntity entity : knowledgeService.listDocuments(id)) {
-            list.add(toVo(entity));
-        }
-        return Result.success(list);
+        var source = knowledgeService.listDocuments(id, pageNum, pageSize);
+        var page = new Page<AiAdminDtos.KnowledgeDocumentVo>(source.getCurrent(), source.getSize(), source.getTotal());
+        page.setRecords(source.getRecords().stream().map(this::toVo).toList());
+        return Result.success(page);
+    }
+
+    @GetMapping("/knowledge/documents/{id}")
+    @RequiresPermission(value = "admin:ai:knowledge:view", name = "AI 知识库查看", description = "查看知识文档")
+    public Result<AiKnowledgeDocumentEntity> document(@PathVariable Long id) {
+        return Result.success(knowledgeService.requireDocument(id));
     }
 
     @PostMapping("/knowledge/sources/{id}/documents")
@@ -156,13 +168,35 @@ public class AiAdminKnowledgeController {
         return Result.success(toVo(knowledgeService.requireJob(jobId)));
     }
 
+    @GetMapping("/knowledge/sources/{id}/index-job")
+    @RequiresPermission("admin:ai:knowledge:view")
+    public Result<AiAdminDtos.IndexJobVo> latestJob(@PathVariable Long id) {
+        var job = knowledgeService.latestJob(id);
+        return Result.success(job == null ? null : toVo(job));
+    }
+
+    @PostMapping("/knowledge/index-jobs/{jobId}/cancel")
+    @RequiresPermission("admin:ai:knowledge:sync")
+    @OperateLog("取消 AI 知识源索引")
+    public Result<AiAdminDtos.IndexJobVo> cancel(@PathVariable Long jobId) {
+        return Result.success("已取消", toVo(knowledgeService.cancelJob(jobId)));
+    }
+
+    @PostMapping("/knowledge/index-jobs/{jobId}/retry")
+    @RequiresPermission("admin:ai:knowledge:sync")
+    @OperateLog("重试 AI 知识源索引")
+    public Result<AiAdminDtos.IndexJobVo> retry(@PathVariable Long jobId, HttpServletRequest request) {
+        return Result.success("已提交重试", toVo(knowledgeService.retryJob(jobId, operatorId(request))));
+    }
+
     // ==================== 转换 ====================
 
     private AiAdminDtos.KnowledgeSourceVo toVo(AiKnowledgeSourceEntity entity) {
-        int chunks = 0;
-        for (AiKnowledgeDocumentEntity document : knowledgeService.listDocuments(entity.getId())) {
-            chunks += document.getChunkCount() == null ? 0 : document.getChunkCount();
-        }
+        return toVo(entity, knowledgeService.chunkCounts());
+    }
+
+    private AiAdminDtos.KnowledgeSourceVo toVo(AiKnowledgeSourceEntity entity, Map<Long, Long> counts) {
+        int chunks = Math.toIntExact(counts.getOrDefault(entity.getId(), 0L));
         return new AiAdminDtos.KnowledgeSourceVo(
                 entity.getId(),
                 entity.getSourceCode(),

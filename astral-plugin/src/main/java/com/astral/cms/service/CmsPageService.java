@@ -5,11 +5,13 @@ import com.astral.cms.common.CmsVisibility;
 import com.astral.cms.dto.PageSaveDto;
 import com.astral.cms.entity.CmsPage;
 import com.astral.cms.mapper.CmsPageMapper;
+import com.astral.cms.mapper.CmsTreeMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,9 @@ public class CmsPageService {
 
     @Resource
     private CmsPageMapper pageMapper;
+
+    @Resource
+    private CmsTreeMapper treeMapper;
 
     // ==================== 管理端 ====================
 
@@ -46,6 +51,7 @@ public class CmsPageService {
 
     @Transactional(rollbackFor = Exception.class)
     public Long create(PageSaveDto dto, Long authorId) {
+        treeMapper.lockPages();
         String status = validateStatus(dto.getStatus());
         checkSlugUnique(dto.getSlug(), null);
         checkParent(dto.getParentId(), null);
@@ -68,6 +74,7 @@ public class CmsPageService {
 
     @Transactional(rollbackFor = Exception.class)
     public void update(Long id, PageSaveDto dto) {
+        treeMapper.lockPages();
         CmsPage exist = getByIdNotNull(id);
         String status = validateStatus(dto.getStatus());
         checkSlugUnique(dto.getSlug(), id);
@@ -99,7 +106,9 @@ public class CmsPageService {
         pageMapper.update(null, uw);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
+        treeMapper.lockPages();
         getByIdNotNull(id);
         Long childCount = pageMapper.selectCount(
                 new LambdaQueryWrapper<CmsPage>().eq(CmsPage::getParentId, id).isNull(CmsPage::getDeleteTime));
@@ -171,10 +180,11 @@ public class CmsPageService {
     private List<CmsPage.Crumb> buildBreadcrumb(CmsPage current) {
         List<CmsPage.Crumb> crumbs = new ArrayList<>();
         Long parentId = current.getParentId();
-        int guard = 0;
-        while (parentId != null && guard++ < 20) {
+        Set<Long> visited = new HashSet<>();
+        visited.add(current.getId());
+        while (parentId != null && parentId != 0L && visited.add(parentId)) {
             CmsPage parent = pageMapper.selectById(parentId);
-            if (parent == null || parent.getDeleteTime() != null) {
+            if (parent == null || parent.getDeleteTime() != null || !CmsVisibility.isVisible(parent.getStatus())) {
                 break;
             }
             CmsPage.Crumb crumb = new CmsPage.Crumb();
@@ -199,16 +209,8 @@ public class CmsPageService {
                 byParent.computeIfAbsent(pid, k -> new ArrayList<>()).add(p);
             }
         }
-        attachChildren(roots, byParent);
+        for (CmsPage page : all) page.setChildren(byParent.getOrDefault(page.getId(), List.of()));
         return roots;
-    }
-
-    private void attachChildren(List<CmsPage> nodes, Map<Long, List<CmsPage>> byParent) {
-        for (CmsPage node : nodes) {
-            List<CmsPage> children = byParent.getOrDefault(node.getId(), List.of());
-            node.setChildren(children);
-            attachChildren(children, byParent);
-        }
     }
 
     private CmsPage getByIdNotNull(Long id) {
@@ -249,9 +251,9 @@ public class CmsPageService {
             return;
         }
         Long cur = parentId;
-        int guard = 0;
-        while (cur != null && guard++ < 50) {
-            if (cur.equals(selfId)) {
+        Set<Long> visited = new HashSet<>();
+        while (cur != null && cur != 0L) {
+            if (cur.equals(selfId) || !visited.add(cur)) {
                 throw new CmsException("父页面不能选择自身或自身的子孙页面");
             }
             CmsPage parent = pageMapper.selectById(cur);

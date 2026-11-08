@@ -1,10 +1,13 @@
 package com.astral.monitor.service;
 
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
 /**
  * 并发请求计数器
@@ -20,26 +23,63 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * 不随容器实现或线程模型变化而失效。
  * </p>
  * <p>
- * 计数成对性由 Spring MVC 保证：{@code preHandle} 返回 true 后，无论请求正常结束还是抛异常，
- * {@code afterCompletion} 都会被调用；异步请求亦在其完成后调用。
+ * 一个请求的异步重派发复用计数令牌；Servlet 完成回调与 MVC afterCompletion 共用一次性释放。
  * </p>
  */
 @Component
-public class RequestConcurrencyCounter implements HandlerInterceptor {
+public class RequestConcurrencyCounter implements AsyncHandlerInterceptor {
+
+    private static final String TOKEN = RequestConcurrencyCounter.class.getName() + ".token";
 
     /** 当前处理中的请求数 */
     private final AtomicInteger activeRequests = new AtomicInteger();
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        activeRequests.incrementAndGet();
+        if (request.getAttribute(TOKEN) == null) {
+            request.setAttribute(TOKEN, new AtomicBoolean());
+            activeRequests.incrementAndGet();
+        }
         return true;
     }
 
     @Override
     public void afterCompletion(
             HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
-        activeRequests.decrementAndGet();
+        release(request);
+    }
+
+    @Override
+    public void afterConcurrentHandlingStarted(
+            HttpServletRequest request, HttpServletResponse response, Object handler) {
+        request.getAsyncContext().addListener(new AsyncListener() {
+            @Override
+            public void onComplete(AsyncEvent event) {
+                release(request);
+            }
+
+            @Override
+            public void onTimeout(AsyncEvent event) {
+                /* Completion or error dispatch releases the token. */
+            }
+
+            @Override
+            public void onError(AsyncEvent event) {
+                /* Completion or error dispatch releases the token. */
+            }
+
+            @Override
+            public void onStartAsync(AsyncEvent event) {
+                event.getAsyncContext().addListener(this);
+            }
+        });
+    }
+
+    private void release(HttpServletRequest request) {
+        Object token = request.getAttribute(TOKEN);
+        if (token instanceof AtomicBoolean released && released.compareAndSet(false, true)) {
+            activeRequests.decrementAndGet();
+        }
     }
 
     /**

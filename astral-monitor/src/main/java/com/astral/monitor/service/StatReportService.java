@@ -1,5 +1,6 @@
 package com.astral.monitor.service;
 
+import com.astral.common.util.PageQuery;
 import com.astral.dao.entity.StatDevice;
 import com.astral.dao.entity.StatErrorLog;
 import com.astral.dao.entity.StatMetricHourly;
@@ -53,6 +54,14 @@ public class StatReportService {
             "launches", "launches",
             "errorCount", "error_count");
 
+    /**
+     * 非分页错误汇总最多返回的分组数。
+     * <p>无 LIMIT 的 GROUP BY 会把当日所有 fingerprint 读进堆内存，恶意/异常客户端可用
+     * 海量错误指纹放大内存；非分页接口只用于概览，取 count 最高的前 500 组足够，
+     * 完整数据走 {@link #getErrorSummaryPage} 的数据库分页。</p>
+     */
+    private static final int MAX_ERROR_SUMMARY_GROUPS = 500;
+
     private final StatDeviceMapper statDeviceMapper;
     private final StatMetricHourlyMapper statMetricHourlyMapper;
     private final StatErrorLogMapper statErrorLogMapper;
@@ -87,8 +96,11 @@ public class StatReportService {
      * 设备统计概览（今日 vs 昨日）
      */
     public Map<String, DeviceOverviewDTO> getOverview(LocalDate date, String ut, String version) {
+        String platform = normalize(ut);
+        String clientVersion = normalize(version);
         return cached(
-                "ov:" + date + ":" + keyPart(ut) + ":" + keyPart(version), () -> getOverviewDirect(date, ut, version));
+                "ov:" + date + ":" + keyPart(platform) + ":" + keyPart(clientVersion),
+                () -> getOverviewDirect(date, platform, clientVersion));
     }
 
     private Map<String, DeviceOverviewDTO> getOverviewDirect(LocalDate date, String ut, String version) {
@@ -149,9 +161,11 @@ public class StatReportService {
         if (column == null) {
             throw new IllegalArgumentException("不支持的指标: " + metric);
         }
+        String platform = normalize(ut);
+        String clientVersion = normalize(version);
         return cached(
-                "tr:" + metric + ":" + date + ":" + keyPart(ut) + ":" + keyPart(version),
-                () -> getTrendDirect(metric, date, ut, version));
+                "tr:" + metric + ":" + date + ":" + keyPart(platform) + ":" + keyPart(clientVersion),
+                () -> getTrendDirect(metric, date, platform, clientVersion));
     }
 
     private TrendDTO getTrendDirect(String metric, LocalDate date, String ut, String version) {
@@ -339,8 +353,12 @@ public class StatReportService {
     private List<ErrorSummaryDTO> getErrorSummaryDirect(LocalDate date, String source, String ut, String version) {
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.plusDays(1).atStartOfDay();
-        List<Map<String, Object>> rows =
-                statErrorLogMapper.selectErrorSummary(start, end, normalize(source), normalize(ut), normalize(version));
+        List<Map<String, Object>> rows = statErrorLogMapper.selectErrorSummary(
+                start, end, normalize(source), normalize(ut), normalize(version), MAX_ERROR_SUMMARY_GROUPS, 0L);
+        return mapErrorSummaryRows(rows);
+    }
+
+    private List<ErrorSummaryDTO> mapErrorSummaryRows(List<Map<String, Object>> rows) {
         List<ErrorSummaryDTO> list = new ArrayList<>(rows.size());
         for (Map<String, Object> row : rows) {
             ErrorSummaryDTO dto = new ErrorSummaryDTO();
@@ -360,21 +378,35 @@ public class StatReportService {
     /**
      * 错误分组汇总分页（按 fingerprint，页面直接可用）
      * <p>
-     * 复用 {@link #getErrorSummary} 的全量缓存：Redis 缓存的是当日全部分组，
-     * 这里只做内存切片，避免为每个页码重跑带相关子查询的 GROUP BY，
-     * 也无需在 SQL 里重复一遍 sampleMessage/topAppVersion 的过滤条件。
-     * 全量列表本身按 count 降序，切片即第 pageNum 页。
+     * 不再先取全量分组再内存切片：total 由同条件 COUNT 子查询得出，记录由数据库
+     * LIMIT/OFFSET 分页返回，避免大分组量下把整日 fingerprint 全部读进堆内存。
+     * 结果与计数均按参数缓存 60 秒；全量缓存仅用于非分页概览，最多 500 组。
      * </p>
      */
     public Page<ErrorSummaryDTO> getErrorSummaryPage(
             LocalDate date, String source, String ut, String version, long pageNum, long pageSize) {
-        List<ErrorSummaryDTO> all = getErrorSummary(date, source, ut, version);
-        long safePage = Math.max(pageNum, 1);
-        long safeSize = Math.max(pageSize, 1);
-        int from = (int) Math.min((safePage - 1) * safeSize, all.size());
-        int to = (int) Math.min(from + safeSize, all.size());
-        Page<ErrorSummaryDTO> page = new Page<>(safePage, safeSize, all.size());
-        page.setRecords(new ArrayList<>(all.subList(from, to)));
+        long safePage = Math.min(Math.max(pageNum, 1), PageQuery.MAX_PAGE_NUM);
+        long safeSize = Math.min(Math.max(pageSize, 1), PageQuery.MAX_PAGE_SIZE);
+        String key = "errpage:" + date + ":" + keyPart(source) + ":" + keyPart(ut) + ":" + keyPart(version) + ":"
+                + safePage + ":" + safeSize;
+        return cached(key, () -> getErrorSummaryPageDirect(date, source, ut, version, safePage, safeSize));
+    }
+
+    private Page<ErrorSummaryDTO> getErrorSummaryPageDirect(
+            LocalDate date, String source, String ut, String version, long safePage, long safeSize) {
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.plusDays(1).atStartOfDay();
+        String sourceFilter = normalize(source);
+        String utFilter = normalize(ut);
+        String versionFilter = normalize(version);
+        long total = statErrorLogMapper.countErrorSummary(start, end, sourceFilter, utFilter, versionFilter);
+        long offset = (safePage - 1) * safeSize;
+        List<Map<String, Object>> rows = total == 0 || offset >= total
+                ? List.of()
+                : statErrorLogMapper.selectErrorSummary(
+                        start, end, sourceFilter, utFilter, versionFilter, Math.toIntExact(safeSize), offset);
+        Page<ErrorSummaryDTO> page = new Page<>(safePage, safeSize, total);
+        page.setRecords(mapErrorSummaryRows(rows));
         return page;
     }
 
@@ -413,7 +445,7 @@ public class StatReportService {
     }
 
     private static boolean isAll(String value) {
-        return value == null || value.isBlank() || "all".equalsIgnoreCase(value);
+        return value == null || value.isBlank() || "all".equalsIgnoreCase(value.trim());
     }
 
     /**

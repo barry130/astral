@@ -7,6 +7,7 @@ import com.astral.ai.mapper.AiModelMapper;
 import com.astral.ai.mapper.AiProviderRouteMapper;
 import com.astral.common.exception.BusinessException;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -84,7 +85,10 @@ public class AiRouteService {
     /** 更新路由 */
     @Transactional(rollbackFor = Exception.class)
     public AiProviderRouteEntity update(Long id, AiProviderRouteEntity input) {
-        AiProviderRouteEntity entity = require(id);
+        AiProviderRouteEntity entity = routeMapper.selectOne(new LambdaQueryWrapper<AiProviderRouteEntity>()
+                .eq(AiProviderRouteEntity::getId, id)
+                .last("FOR UPDATE"));
+        if (entity == null) throw new BusinessException("AI007", "模型路由不存在");
         if (input.getName() != null && !input.getName().isBlank()) {
             entity.setName(input.getName().trim());
         }
@@ -106,25 +110,64 @@ public class AiRouteService {
         entity.setEnabled(input.getEnabled() == null ? entity.getEnabled() : input.getEnabled());
         entity.setRemark(input.getRemark() == null ? entity.getRemark() : input.getRemark());
         validate(entity);
-        routeMapper.updateById(entity);
-        return entity;
+        var patch = new LambdaUpdateWrapper<AiProviderRouteEntity>().eq(AiProviderRouteEntity::getId, id);
+        if (input.getName() != null && !input.getName().isBlank())
+            patch.set(AiProviderRouteEntity::getName, entity.getName());
+        if (input.getProviderId() != null) patch.set(AiProviderRouteEntity::getProviderId, entity.getProviderId());
+        if (input.getModelId() != null) patch.set(AiProviderRouteEntity::getModelId, entity.getModelId());
+        if (input.getFallbackModelId() != null)
+            patch.set(AiProviderRouteEntity::getFallbackModelId, entity.getFallbackModelId());
+        if (input.getTemperature() != null) patch.set(AiProviderRouteEntity::getTemperature, entity.getTemperature());
+        if (input.getTopP() != null) patch.set(AiProviderRouteEntity::getTopP, entity.getTopP());
+        if (input.getMaxTokens() != null) patch.set(AiProviderRouteEntity::getMaxTokens, entity.getMaxTokens());
+        if (input.getExtraParametersJson() != null)
+            patch.set(AiProviderRouteEntity::getExtraParametersJson, entity.getExtraParametersJson());
+        if (input.getEnabled() != null) patch.set(AiProviderRouteEntity::getEnabled, entity.getEnabled());
+        if (input.getRemark() != null) patch.set(AiProviderRouteEntity::getRemark, entity.getRemark());
+        patch.set(AiProviderRouteEntity::getUpdateTime, java.time.LocalDateTime.now());
+        routeMapper.update(null, patch);
+        return require(id);
     }
 
     /** 删除路由（被智能体版本引用时拒绝） */
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
-        require(id);
+        var route = routeMapper.selectOne(new LambdaQueryWrapper<AiProviderRouteEntity>()
+                .eq(AiProviderRouteEntity::getId, id)
+                .last("FOR UPDATE"));
+        if (route == null) throw new BusinessException("AI007", "模型路由不存在");
+        if (routeMapper.countVersionReferences(id) > 0) {
+            throw new BusinessException("AI007", "路由仍被智能体版本引用，无法删除");
+        }
         routeMapper.deleteById(id);
     }
 
     private void validate(AiProviderRouteEntity entity) {
         AiProviderEntity provider = providerService.require(entity.getProviderId());
-        AiModelEntity model = modelMapper.selectById(entity.getModelId());
+        var ids = new java.util.TreeSet<Long>();
+        if (entity.getModelId() != null) ids.add(entity.getModelId());
+        if (entity.getFallbackModelId() != null) ids.add(entity.getFallbackModelId());
+        var models = ids.isEmpty()
+                ? List.<AiModelEntity>of()
+                : modelMapper.selectList(new LambdaQueryWrapper<AiModelEntity>()
+                        .in(AiModelEntity::getId, ids)
+                        .orderByAsc(AiModelEntity::getId)
+                        .last("FOR UPDATE"));
+        AiModelEntity model = models.stream()
+                .filter(item -> item.getId().equals(entity.getModelId()))
+                .findFirst()
+                .orElse(null);
         if (model == null) {
             throw new BusinessException("AI007", "模型不存在: " + entity.getModelId());
         }
         if (!provider.getId().equals(model.getProviderId())) {
             throw new BusinessException("AI007", "模型不属于所选提供方");
+        }
+        if (entity.getFallbackModelId() != null
+                && models.stream()
+                        .noneMatch(item -> item.getId().equals(entity.getFallbackModelId())
+                                && provider.getId().equals(item.getProviderId()))) {
+            throw new BusinessException("AI007", "备用模型不存在或不属于所选提供方");
         }
         if (entity.getTemperature() != null
                 && (entity.getTemperature().compareTo(BigDecimal.ZERO) < 0

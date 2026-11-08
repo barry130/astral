@@ -12,6 +12,7 @@ import com.astral.storage.mapper.StorageTaskMapper;
 import com.astral.storage.security.StorageUrlSigner;
 import com.astral.storage.security.UploadTicketService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -90,7 +91,9 @@ public class StorageFileService {
      */
     private static final java.net.http.HttpClient VERIFY_HTTP_CLIENT = java.net.http.HttpClient.newBuilder()
             .connectTimeout(java.time.Duration.ofSeconds(VERIFY_CONNECT_TIMEOUT_SECONDS))
-            .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+            // 预签名 URL 指向的对象读取只允许直连 200/206：跟随 3xx 会把带签名的请求（部分
+            // Provider 把签名放在 query）转发到任意 Location，也会让 302 落地页正文冒充文件内容。
+            .followRedirects(java.net.http.HttpClient.Redirect.NEVER)
             .build();
 
     // ==================== 查询 ====================
@@ -111,17 +114,23 @@ public class StorageFileService {
             wrapper.like(StorageFileEntity::getOriginalName, keyword.trim());
         }
         wrapper.orderByDesc(StorageFileEntity::getCreateTime);
-        return fileMapper.selectPage(new Page<>(current, size), wrapper);
+        Page<StorageFileEntity> page = fileMapper.selectPage(new Page<>(current, size), wrapper);
+        // 内部 provider locator（Telegram file_id / 对象键等）不属于管理端文件列表契约
+        page.getRecords().forEach(f -> f.setProviderLocatorJson(null));
+        return page;
     }
 
     public Page<StorageFileEntity> pageFolderFiles(Long folderId, String userId, long current, long size) {
         folderService.requirePermission(userId, folderId, "READ");
-        return fileMapper.selectPage(
+        Page<StorageFileEntity> page = fileMapper.selectPage(
                 new Page<>(current, size),
                 new LambdaQueryWrapper<StorageFileEntity>()
                         .eq(StorageFileEntity::getFolderId, folderId)
                         .ne(StorageFileEntity::getStatus, StorageFileEntity.STATUS_DELETED)
                         .orderByDesc(StorageFileEntity::getCreateTime));
+        // 与 pageForAdmin 同边界：内部 provider locator 永不进入任何列表响应。
+        page.getRecords().forEach(f -> f.setProviderLocatorJson(null));
+        return page;
     }
 
     public StorageFileEntity getByPublicId(String publicId) {
@@ -163,6 +172,33 @@ public class StorageFileService {
         if (req.uploadId() == null || req.uploadId().isBlank()) {
             throw new BusinessException("STORAGE008");
         }
+        // 快速幂等读取不要求仍有效的 Redis 票据；未登记时先取得目录与配额锁，再锁 uploadId。
+        StorageFileEntity replay = fileMapper.selectOne(new LambdaQueryWrapper<StorageFileEntity>()
+                .eq(StorageFileEntity::getUploadId, req.uploadId())
+                .last("LIMIT 1"));
+        if (replay != null) {
+            ticketService.receiveReplay(replay, req);
+            fileMapper.lockUploadKey("storage-upload:" + req.uploadId());
+            return getByUploadId(req.uploadId(), replay.getUploaderId());
+        }
+        JsonNode ticket = ticketService.getPayload(req.uploadId());
+        // Store the remote fact in a separate transaction before any registration lock or local rejection.
+        var receipt = ticketService.receiveCallback(ticket, req);
+        if (receipt.committed()) {
+            fileMapper.lockUploadKey("storage-upload:" + req.uploadId());
+            return getByUploadId(req.uploadId(), ticket.path("uploaderId").asText(null));
+        }
+        req = receipt.request();
+        try {
+            ticketService.validateCallback(req.uploadId(), req.sizeBytes(), req.contentType());
+        } catch (BusinessException e) {
+            ticketService.rejectReceipt(ticket, req);
+            throw e;
+        }
+        long folderId = ticketService.folderIdOf(ticket);
+        fileMapper.lockUploadKey(StorageFolderService.securityLockKey(folderId));
+        fileMapper.lockUploadKey(
+                "storage-quota:" + folderId + ":" + ticket.path("uploaderId").asText(null));
         // 先取事务级咨询锁：幂等判断（查→插）必须在锁内，否则并发重复回调两个事务
         // 都会读到「不存在」而各插一行。表上 uq_storage_file_upload 唯一索引是最后一道防线。
         fileMapper.lockUploadKey("storage-upload:" + req.uploadId());
@@ -174,7 +210,6 @@ public class StorageFileService {
             return existing;
         }
 
-        JsonNode ticket = ticketService.validateCallback(req.uploadId(), req.sizeBytes(), req.contentType());
         if (req.telegramFileId() == null
                 || req.telegramFileId().isBlank()
                 || req.messageId() == null
@@ -182,8 +217,7 @@ public class StorageFileService {
             throw new BusinessException("STORAGE011", "缺少 Telegram 定位信息");
         }
 
-        long folderId = ticketService.folderIdOf(ticket);
-        StorageFolderEntity folder = folderService.getById(folderId);
+        StorageFolderEntity folder = requireEnabledFolder(folderId);
         UploadPolicyService.PolicySpec policy = policyService.resolve(folder);
         boolean adminExempt = ticket.path("adminExempt").asBoolean(false);
         if (!adminExempt) {
@@ -208,6 +242,8 @@ public class StorageFileService {
         file.setUploaderType("WORKER");
         file.setUploaderId(ticket.path("uploaderId").asText(null));
         fileMapper.insert(file);
+        policyService.recordLegacy(file, adminExempt);
+        ticketService.committed(file);
         auditService.record(
                 "FILE_UPLOAD",
                 "WORKER",
@@ -231,6 +267,20 @@ public class StorageFileService {
         if (uploadId == null || uploadId.isBlank()) {
             throw new BusinessException("STORAGE008");
         }
+        StorageFileEntity replay = fileMapper.selectOne(new LambdaQueryWrapper<StorageFileEntity>()
+                .eq(StorageFileEntity::getUploadId, uploadId)
+                .last("LIMIT 1"));
+        if (replay != null) {
+            fileMapper.lockUploadKey("storage-upload:" + uploadId);
+            if (userId == null || !userId.equals(replay.getUploaderId())) throw new BusinessException("STORAGE013");
+            return getByUploadId(uploadId, userId);
+        }
+        JsonNode ticket = ticketService.getPayload(uploadId);
+        String ticketUploader = ticket.path("uploaderId").asText(null);
+        if (userId == null || !userId.equals(ticketUploader)) throw new BusinessException("STORAGE013");
+        long folderId = ticketService.folderIdOf(ticket);
+        fileMapper.lockUploadKey(StorageFolderService.securityLockKey(folderId));
+        fileMapper.lockUploadKey("storage-quota:" + folderId + ":" + ticketUploader);
         // 同 registerFromCallback：幂等判断在事务级咨询锁内执行，消除「先查后插」竞态
         fileMapper.lockUploadKey("storage-upload:" + uploadId);
         // 幂等：同一 uploadId 重复回执返回已有记录
@@ -238,19 +288,21 @@ public class StorageFileService {
                 .eq(StorageFileEntity::getUploadId, uploadId)
                 .last("LIMIT 1"));
         if (existing != null) {
+            // 幂等返回也必须是上传者本人：否则知道 uploadId 的他人可读到文件元数据/归属。
+            if (userId == null || !userId.equals(existing.getUploaderId())) {
+                throw new BusinessException("STORAGE013");
+            }
             return existing;
         }
-        JsonNode ticket = ticketService.getPayload(uploadId);
-        String ticketUploader = ticket.path("uploaderId").asText(null);
         if (userId == null || !userId.equals(ticketUploader)) {
             throw new BusinessException("STORAGE013");
         }
+        if (ticketService.wasCommitted(uploadId)) throw new BusinessException("STORAGE016");
         String providerType = ticket.path("providerType").asText("");
         if (!ProviderSupport.isRegisterFamily(providerType)) {
             throw new BusinessException("STORAGE019", "TELEGRAM 上传由 Worker 回调登记，无需浏览器回执");
         }
-        long folderId = ticketService.folderIdOf(ticket);
-        StorageFolderEntity folder = folderService.getById(folderId);
+        StorageFolderEntity folder = requireEnabledFolder(folderId);
         UploadPolicyService.PolicySpec policy = policyService.resolve(folder);
         boolean adminExempt = ticket.path("adminExempt").asBoolean(false);
         if (!adminExempt) {
@@ -295,6 +347,8 @@ public class StorageFileService {
         file.setUploaderId(ticketUploader);
         file.setUploaderIp(clientIp);
         fileMapper.insert(file);
+        policyService.recordLegacy(file, adminExempt);
+        ticketService.committed(file);
         auditService.record(
                 "FILE_UPLOAD",
                 "BROWSER",
@@ -375,6 +429,10 @@ public class StorageFileService {
 
     /** 验证失败处置：删远端对象（TELEGRAM 转删除任务）+ 登记行置 FAILED */
     private void markVerificationFailed(StorageFileEntity file) {
+        if (!policyService.rejectLegacyFile(file.getId())) {
+            log.info("[Storage] 内容验证失败时文件状态已变化，跳过回写: publicId={}", file.getPublicId());
+            return;
+        }
         try {
             String providerType = providerTypeOf(file);
             if (ProviderSupport.isServerManagedFamily(providerType)) {
@@ -395,9 +453,6 @@ public class StorageFileService {
         } catch (Exception e) {
             log.warn("[Storage] 验证失败后的远端对象清理异常: publicId={}, {}", file.getPublicId(), e.getMessage());
         }
-        file.setStatus(StorageFileEntity.STATUS_FAILED);
-        file.setUpdateTime(LocalDateTime.now());
-        fileMapper.updateById(file);
     }
 
     /** 拉取文件内容（limit>0 时按 Range 只取前缀；-1 全量，大小已被登记 HEAD 收口） */
@@ -438,6 +493,12 @@ public class StorageFileService {
         var response =
                 VERIFY_HTTP_CLIENT.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());
         try (var in = response.body()) {
+            // 只接受 200/206：错误页、登录页或 3xx 响应体都不是文件内容。先判状态再读正文，
+            // 避免把 4xx/5xx 的 HTML 当图片头做 magic 判定而误放行（或误判为内容不匹配）。
+            int status = response.statusCode();
+            if (status != 200 && status != 206) {
+                throw new BusinessException("STORAGE033", "内容下载失败: HTTP " + status);
+            }
             // limit <= 0 时也必须有上限，不能让校验把任意大小的对象读进堆
             return in.readNBytes(limit > 0 ? limit : MAX_VERIFY_BYTES);
         }
@@ -676,12 +737,30 @@ public class StorageFileService {
         if (visibility.equals(file.getVisibility())) {
             return file;
         }
+        Long currentVersion = file.getContentVersion();
+        if (currentVersion == null || currentVersion < 1 || currentVersion == Long.MAX_VALUE) {
+            throw BusinessException.of("文件内容版本无效或已达到上限，不能修改可见性");
+        }
+        long oldVersion = currentVersion;
+        long nextVersion = oldVersion + 1;
+        LocalDateTime updateTime = LocalDateTime.now();
+        int changed = fileMapper.update(
+                null,
+                new LambdaUpdateWrapper<StorageFileEntity>()
+                        .eq(StorageFileEntity::getId, file.getId())
+                        .eq(StorageFileEntity::getStatus, StorageFileEntity.STATUS_AVAILABLE)
+                        .eq(StorageFileEntity::getVisibility, file.getVisibility())
+                        .eq(StorageFileEntity::getContentVersion, oldVersion)
+                        .set(StorageFileEntity::getVisibility, visibility)
+                        .set(StorageFileEntity::getContentVersion, nextVersion)
+                        .set(StorageFileEntity::getUpdateTime, updateTime));
+        if (changed != 1) {
+            throw BusinessException.of("文件状态已变化，请刷新后重试");
+        }
+        // 仅成功的白名单 CAS 更新才能发布新快照、撤销旧缓存并记录成功。
         file.setVisibility(visibility);
-        // 内容版本递增：Worker 缓存键随版本变化，旧缓存自然过期（撤销窗口 = URL TTL）
-        long oldVersion = file.getContentVersion();
-        file.setContentVersion(oldVersion + 1);
-        file.setUpdateTime(LocalDateTime.now());
-        fileMapper.updateById(file);
+        file.setContentVersion(nextVersion);
+        file.setUpdateTime(updateTime);
         // 旧版本缓存键不再对应任何合法可见性（PUBLIC↔PRIVATE 都可能回退），主动失效立即撤销；
         // 必须清「旧版本」键——新版本键还没有任何 URL 指向它
         purgeWorkerCacheQuietly(file, oldVersion);
@@ -719,7 +798,7 @@ public class StorageFileService {
             taskMapper.insert(task);
             // 边缘缓存立即可失效：不等 Worker ack，删除后旧 URL 出图窗口 = URL TTL
             purgeWorkerCacheQuietly(file);
-            fileMapper.deleteById(file.getId());
+            deleteRowOrConflict(file);
             auditService.record(
                     "FILE_DELETE",
                     "USER",
@@ -734,14 +813,22 @@ public class StorageFileService {
         if (ProviderSupport.isServerManagedFamily(providerType)) {
             StorageConfigEntity config = configCache.getById(file.getStorageConfigId());
             String key = safeLocatorKey(file);
-            fileMapper.deleteById(file.getId());
+            deleteRowOrConflict(file);
             auditService.record("FILE_DELETE", "USER", userId, "FILE", publicId, "provider=" + providerType, "OK");
             afterCommit(() -> remoteDeleteService.deleteQuietly(publicId, providerType, config, key, userId));
             return;
         }
         // CUSTOM_HTTP 等无远端删除能力的渠道：仅删库行
-        fileMapper.deleteById(file.getId());
+        deleteRowOrConflict(file);
         auditService.record("FILE_DELETE", "USER", userId, "FILE", publicId, "provider=" + providerType, "OK");
+    }
+
+    /** 删除行并按影响行数判定并发冲突，避免两个并发删除都记成功、远端被重复清理。 */
+    private void deleteRowOrConflict(StorageFileEntity file) {
+        int deleted = fileMapper.deleteById(file.getId());
+        if (deleted != 1) {
+            throw new BusinessException("STORAGE021");
+        }
     }
 
     /** 事务提交后调度远端清理（回滚时不清理，避免远端已删而库行还在）；无事务上下文（单测/工具）时直接调度 */
@@ -837,6 +924,7 @@ public class StorageFileService {
         if (success) {
             task.setStatus(StorageTaskEntity.STATUS_SUCCESS);
             taskMapper.updateById(task);
+            ticketService.cleanupAcknowledged(task.getPayloadJson(), true);
             if (task.getFileId() != null) {
                 StorageFileEntity file = fileMapper.selectById(task.getFileId());
                 if (file != null) {
@@ -865,6 +953,7 @@ public class StorageFileService {
         if (retry >= MAX_DELETE_RETRY) {
             task.setStatus(StorageTaskEntity.STATUS_DEAD);
             taskMapper.updateById(task);
+            ticketService.cleanupAcknowledged(task.getPayloadJson(), false);
             if (task.getFileId() != null) {
                 StorageFileEntity file = fileMapper.selectById(task.getFileId());
                 if (file != null) {
@@ -1078,10 +1167,30 @@ public class StorageFileService {
         return cleaned.length() > 255 ? cleaned.substring(cleaned.length() - 255) : cleaned;
     }
 
+    /** 回执登记只能落在仍存在且启用的目录：票据有效期内目录可能被删除/停用。 */
+    private StorageFolderEntity requireEnabledFolder(Long folderId) {
+        StorageFolderEntity folder = folderService.getById(folderId);
+        if (folder == null) {
+            throw new BusinessException("STORAGE016");
+        }
+        if (!StorageFolderEntity.STATUS_ENABLED.equals(folder.getStatus())) {
+            throw new BusinessException("STORAGE025");
+        }
+        return folder;
+    }
+
     private String normalizeMime(String mime) {
         String m = mime == null ? "application/octet-stream" : mime.trim().toLowerCase();
         int semicolon = m.indexOf(';');
-        return semicolon > 0 ? m.substring(0, semicolon).trim() : m;
+        if (semicolon > 0) {
+            m = m.substring(0, semicolon).trim();
+        }
+        // 文件 MIME 会进入下载响应头/上游 multipart Content-Type：仅接受 RFC 9110 token/token，
+        // 拒绝 CR/LF/引号等可构造响应头或表单头注入的字符。
+        if (m.isEmpty() || m.length() > 255 || !m.matches("[!#$%&'*+.^_`|~0-9a-z-]+/[!#$%&'*+.^_`|~0-9a-z-]+")) {
+            throw new BusinessException("COMMON002", "非法的 MIME 类型");
+        }
+        return m;
     }
 
     @Transactional(rollbackFor = Exception.class)

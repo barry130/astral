@@ -6,13 +6,14 @@ import com.astral.qt.dto.vo.QtDakaDaysAndCodeVo;
 import com.astral.qt.entity.QtUserDaka;
 import com.astral.qt.mapper.QtUserDakaMapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
-import jakarta.annotation.Resource;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,7 @@ import org.springframework.stereotype.Service;
 /**
  * 轻听签到服务
  * <ul>
- *   <li>签到积分规则：连续 0-6 天 +1，7-29 天 +3，30-364 天 +5，365+ 天 +10</li>
+ *   <li>签到积分规则（含本次完成的当天）：连续 1-6 天 +1，7-29 天 +3，30-364 天 +5，365+ 天 +10</li>
  *   <li>补签开关 qt.user.is-re-daka-enable（默认 false：仅可签当天）</li>
  *   <li>使用积分签到 type=1：需 ≥10 有效积分，当次积分照常发放，但从有效积分中扣除 10</li>
  * </ul>
@@ -34,8 +35,19 @@ public class QtDakaService extends ServiceImpl<QtUserDakaMapper, QtUserDaka> {
     @Value("${qt.user.is-re-daka-enable:false}")
     private String isReDakaEnable;
 
-    @Resource
-    private QtUserDakaMapper dakaMapper;
+    private final QtUserDakaMapper dakaMapper;
+    private final Clock clock;
+
+    @Autowired
+    public QtDakaService(QtUserDakaMapper dakaMapper) {
+        this(dakaMapper, Clock.systemDefaultZone());
+    }
+
+    QtDakaService(QtUserDakaMapper dakaMapper, Clock clock) {
+        this.dakaMapper = dakaMapper;
+        this.baseMapper = dakaMapper;
+        this.clock = clock;
+    }
 
     /** 连续签到天数 */
     public int getRunningDayCount(Long uid, LocalDate anchor) {
@@ -53,12 +65,13 @@ public class QtDakaService extends ServiceImpl<QtUserDakaMapper, QtUserDaka> {
 
     public void daka(Long uid, QtUserDakaDto dto) {
         LocalDate date = LocalDate.parse(dto.getTime(), DAY_FMT);
+        LocalDate today = LocalDate.now(clock);
         // 日期不能是未来
-        if (LocalDate.now().isBefore(date)) {
+        if (today.isBefore(date)) {
             throw new QtException("还没到该日期哦，无法签到~");
         }
         // 不支持补签时，仅允许当天
-        if (!"true".equalsIgnoreCase(isReDakaEnable) && !LocalDate.now().isEqual(date)) {
+        if (!"true".equalsIgnoreCase(isReDakaEnable) && !today.isEqual(date)) {
             throw new QtException("不支持签到非今日的日期哦~");
         }
 
@@ -69,8 +82,8 @@ public class QtDakaService extends ServiceImpl<QtUserDakaMapper, QtUserDaka> {
         }
 
         int code = 0;
-        if (LocalDate.now().isEqual(date)) {
-            int runningDays = getRunningDayCount(uid, date);
+        if (today.isEqual(date)) {
+            int runningDays = getRunningDayCount(uid, date.minusDays(1)) + 1;
             if (runningDays >= 0 && runningDays < 7) code = 1;
             else if (runningDays < 30) code = 3;
             else if (runningDays < 365) code = 5;
@@ -90,8 +103,8 @@ public class QtDakaService extends ServiceImpl<QtUserDakaMapper, QtUserDaka> {
         daka.setData(date);
         daka.setIntegral((long) code);
         daka.setIsUseCode(Long.valueOf(dto.getType()));
-        daka.setCreateTime(java.time.LocalDateTime.now());
-        daka.setUpdateTime(java.time.LocalDateTime.now());
+        daka.setCreateTime(java.time.LocalDateTime.now(clock));
+        daka.setUpdateTime(java.time.LocalDateTime.now(clock));
         try {
             this.save(daka);
         } catch (DuplicateKeyException e) {
@@ -103,7 +116,7 @@ public class QtDakaService extends ServiceImpl<QtUserDakaMapper, QtUserDaka> {
     }
 
     public QtDakaDaysAndCodeVo getDakaDaysAndCode(Long uid) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         // 连续签到以「今天」为锚点；如果今天还没签，则以昨天为锚点统计历史连续天数
         int streak;
         List<LocalDate> month = dakaMapper.getDayByMonth(uid, today.getYear(), today.getMonthValue());
@@ -112,7 +125,7 @@ public class QtDakaService extends ServiceImpl<QtUserDakaMapper, QtUserDaka> {
             streak = getRunningDayCount(uid, today);
         } else {
             LocalDate yesterday = today.minusDays(1);
-            streak = month.contains(yesterday) ? getRunningDayCount(uid, yesterday) : 0;
+            streak = getRunningDayCount(uid, yesterday);
         }
         QtDakaDaysAndCodeVo vo = new QtDakaDaysAndCodeVo();
         vo.setDays(streak);

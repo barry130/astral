@@ -32,9 +32,20 @@ public class UploadImageValidator {
 
     /** 校验 JPEG/PNG 内容；任何不符合都抛 STORAGE045 */
     public void validate(byte[] content, String declaredMime) {
+        validate(content, declaredMime, null);
+    }
+
+    /**
+     * 校验 JPEG/PNG 内容，并允许目录策略收紧像素上限。
+     *
+     * @param maxPixels 目录策略的单图像素上限；null/非正表示只应用全局 {@link #MAX_PIXELS}。
+     *                  策略只能收紧不能放宽全局上限。
+     */
+    public void validate(byte[] content, String declaredMime, Long maxPixels) {
         if (content == null || content.length == 0) {
             throw invalid("正文为空");
         }
+        long pixelLimit = maxPixels == null || maxPixels <= 0 ? MAX_PIXELS : Math.min(maxPixels, MAX_PIXELS);
         String format = detectFormat(content);
         if (format == null) {
             throw invalid("不是 JPEG/PNG 内容");
@@ -59,7 +70,7 @@ public class UploadImageValidator {
                 if (width <= 0 || height <= 0) {
                     throw invalid("图片尺寸非法");
                 }
-                if (width > MAX_SIDE || height > MAX_SIDE || (long) width * height > MAX_PIXELS) {
+                if (width > MAX_SIDE || height > MAX_SIDE || (long) width * height > pixelLimit) {
                     throw invalid("图片尺寸超出上限");
                 }
             } finally {

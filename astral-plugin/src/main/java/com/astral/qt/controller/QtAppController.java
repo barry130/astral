@@ -3,6 +3,7 @@ package com.astral.qt.controller;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.astral.auth.security.DataScopeResolver;
 import com.astral.auth.security.PermissionChecker;
+import com.astral.common.annotation.RateLimit;
 import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.astral.qt.dto.QtSourceReportDto;
@@ -97,12 +98,42 @@ public class QtAppController {
             @RequestParam("type") Long type,
             @RequestParam("version") String version,
             @RequestParam("versionName") String versionName,
-            @RequestParam(value = "arch", required = false) String arch) {
+            @RequestParam(value = "arch", required = false) String arch,
+            @RequestHeader(value = "satoken", required = false) String satoken) {
         QtAppUpdate official = appService.getOfficialVersion(type, version, versionName, arch);
         if (official == null) {
             throw BusinessException.of(321, "非官方版本");
         }
+        // 结果级权限（D-QT-02）：未发布（含仅本地测试）或不在调用者可见渠道内的版本，只确认「是否官方」，
+        // 抹除下载指针，避免匿名/无测试权限者借此拿到测试包或未发布包的下载地址。正式语义不变。
+        Set<String> channels =
+                dataScopeResolver.resolveChannelsByToken(satoken, PermissionChecker.QT_UPDATE_CHANNEL_SCOPE);
+        if (!isVersionVisible(official, channels)) {
+            stripDownloadPointers(official);
+        }
         return Result.success(official);
+    }
+
+    /** 版本是否对调用者可见：已发布，且渠道为正式（stable/空）或已被授予该测试渠道。 */
+    private static boolean isVersionVisible(QtAppUpdate update, Set<String> channels) {
+        if (!Integer.valueOf(1).equals(update.getIsPublished())) {
+            return false;
+        }
+        String channel = update.getChannel() == null ? "" : update.getChannel().trim();
+        if (channel.isEmpty() || "stable".equalsIgnoreCase(channel)) {
+            return true;
+        }
+        return channels != null && channels.contains(channel);
+    }
+
+    /** 抹除下载指针（直链/浏览器地址/大小/哈希/产物清单），保留版本元信息供「是否官方」判定。 */
+    private static void stripDownloadPointers(QtAppUpdate update) {
+        update.setDownloadUrl(null);
+        update.setBrowserUrl(null);
+        update.setFileSize(null);
+        update.setMd5(null);
+        update.setIsGithub(0L);
+        update.setArtifacts(null);
     }
 
     // ==================== 音源包热更新（SOURCE_UPDATE_DESIGN §五） ====================
@@ -154,6 +185,7 @@ public class QtAppController {
 
     /** 装载结果上报（免认证）：装机分布统计与坏包发现 */
     @Operation(summary = "音源包装载结果上报（免认证）")
+    @RateLimit(key = "ip", limit = 30, duration = 60, message = "上报过于频繁，请稍后再试")
     @PostMapping("/source/report")
     public Result<Void> reportSource(@RequestBody QtSourceReportDto dto) {
         sourceService.recordReport(dto);

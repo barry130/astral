@@ -3,10 +3,10 @@ package com.astral.sequence.controller;
 import com.astral.common.annotation.RateLimit;
 import com.astral.common.constant.SequenceType;
 import com.astral.common.result.Result;
-import com.astral.log.annotation.OperateLog;
 import com.astral.sequence.controller.dto.SequenceBatchRequest;
 import com.astral.sequence.controller.dto.SequenceRequest;
 import com.astral.sequence.controller.dto.SequenceResponse;
+import com.astral.sequence.service.SequenceResult;
 import com.astral.sequence.service.SequenceService;
 import jakarta.validation.Valid;
 import java.util.Arrays;
@@ -27,25 +27,24 @@ public class SequenceController {
     private final SequenceService sequenceService;
 
     @RateLimit(key = "user", limit = 100, duration = 60, message = "序列生成请求过于频繁，请稍后再试")
-    @OperateLog("获取序列号")
     @PostMapping("/next")
     public Result<SequenceResponse> next(@Valid @RequestBody SequenceRequest request) {
-        String type = request.getType() != null ? request.getType() : null;
-        long seq = sequenceService.next(request.getBizKey(), type);
-        SequenceResponse response = new SequenceResponse(request.getBizKey(), type, seq, System.currentTimeMillis());
+        SequenceResult result = sequenceService.next(request.getBizKey(), request.getType());
+        SequenceResponse response = new SequenceResponse(
+                request.getBizKey(), result.type(), Long.toString(result.value()), null, System.currentTimeMillis());
         return Result.success(response);
     }
 
     @RateLimit(key = "user", limit = 50, duration = 60, message = "批量生成请求过于频繁，请稍后再试")
-    @OperateLog("批量获取序列号")
     @PostMapping("/batch")
     public Result<SequenceResponse> batch(@Valid @RequestBody SequenceBatchRequest request) {
-        String type = request.getType() != null ? request.getType() : null;
-        String seqStr = sequenceService.batch(request.getBizKey(), request.getCount(), type);
-        String[] parts = seqStr.split(",");
-        long lastSeq = Long.parseLong(parts[parts.length - 1]);
-        SequenceResponse response =
-                new SequenceResponse(request.getBizKey(), type, lastSeq, System.currentTimeMillis());
+        SequenceResult result = sequenceService.batch(request.getBizKey(), request.getCount(), request.getType());
+        SequenceResponse response = new SequenceResponse(
+                request.getBizKey(),
+                result.type(),
+                Long.toString(result.value()),
+                result.values(),
+                System.currentTimeMillis());
         return Result.success(response);
     }
 

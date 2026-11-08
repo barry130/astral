@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.util.ServletRequestPathUtils;
 
 /**
  * 插件 API 拦截器
@@ -21,15 +23,17 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @RequiredArgsConstructor
 public class PluginApiInterceptor implements HandlerInterceptor {
 
-    private static final List<String> MANAGED_SUFFIXES = List.of("/enable", "/disable", "/toggle");
-
     private final PluginRegistry pluginRegistry;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        String path = request.getRequestURI();
+        String path = ServletRequestPathUtils.hasCachedPath(request)
+                ? ServletRequestPathUtils.getCachedPathValue(request)
+                : request.getRequestURI().substring(request.getContextPath().length());
+        Object mapping = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        String pattern = mapping == null ? null : mapping.toString();
         // 插件启停管理路径不拦截，允许已禁用的插件重新启用
-        if (isManagedEndpoint(path)) {
+        if ("POST".equals(request.getMethod()) && isManagedEndpoint(path)) {
             return true;
         }
         List<AstralPlugin> plugins = pluginRegistry.getAllPlugins();
@@ -38,7 +42,7 @@ public class PluginApiInterceptor implements HandlerInterceptor {
                 continue;
             }
             for (String prefix : plugin.getApiPrefixes()) {
-                if (prefix != null && !prefix.isEmpty() && path.startsWith(prefix)) {
+                if (under(path, prefix) || under(pattern, prefix)) {
                     throw new BusinessException("PLUGIN001", plugin.getPluginName());
                 }
             }
@@ -46,16 +50,16 @@ public class PluginApiInterceptor implements HandlerInterceptor {
         return true;
     }
 
+    private static boolean under(String path, String prefix) {
+        if (path == null || prefix == null || prefix.isEmpty()) return false;
+        String boundary = prefix.endsWith("/") ? prefix.substring(0, prefix.length() - 1) : prefix;
+        return path.equals(boundary) || path.startsWith(boundary + "/");
+    }
+
     /**
      * 判断是否为插件启停管理端点
      */
     private boolean isManagedEndpoint(String path) {
-        // 匹配 /api/v1/admin/plugin/{pluginId}/{action}
-        for (String suffix : MANAGED_SUFFIXES) {
-            if (path.endsWith(suffix)) {
-                return true;
-            }
-        }
-        return false;
+        return path.matches("/api/v1/admin/plugin/[^/]+/(enable|disable)");
     }
 }

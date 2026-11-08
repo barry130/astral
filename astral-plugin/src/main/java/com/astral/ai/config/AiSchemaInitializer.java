@@ -37,7 +37,7 @@ public class AiSchemaInitializer {
         }
         try {
             ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
-            populator.setContinueOnError(true);
+            populator.setContinueOnError(false);
             populator.setIgnoreFailedDrops(true);
             populator.addScript(new ClassPathResource("sql/ai-schema.sql"));
             populator.execute(dataSource);

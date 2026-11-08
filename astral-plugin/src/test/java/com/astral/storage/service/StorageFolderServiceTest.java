@@ -38,6 +38,9 @@ class StorageFolderServiceTest {
     @BeforeEach
     void setUp() {
         TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), "test"),
+                com.astral.storage.entity.StorageUploadOperationEntity.class);
+        TableInfoHelper.initTableInfo(
                 new MapperBuilderAssistant(new MybatisConfiguration(), "test"), StorageFolderEntity.class);
         TableInfoHelper.initTableInfo(
                 new MapperBuilderAssistant(new MybatisConfiguration(), "test"), StorageFolderConfigEntity.class);
@@ -59,7 +62,9 @@ class StorageFolderServiceTest {
                 files,
                 mock(StorageAuditService.class),
                 mock(UploadPolicyService.class),
-                mock(StorageTargetResolver.class));
+                mock(StorageTargetResolver.class),
+                mock(com.astral.storage.mapper.StorageUploadOperationMapper.class),
+                mock(LegacyUploadReceiptService.class));
     }
 
     @Test
@@ -234,6 +239,22 @@ class StorageFolderServiceTest {
 
         service.update(1L, new StorageDtos.FolderUpdateReq(null, "PUBLIC", null, null, null, null), "u1");
         assertEquals(4L, folder.getTargetVersion());
+    }
+
+    @Test
+    void deleteTakesTreeAndSecurityLocksInOrderBeforeReadingFolder() {
+        StorageFolderEntity folder = folder(1L, null, "docs", "/docs");
+        when(folders.selectById(1L)).thenReturn(folder);
+        when(folders.selectCount(any(Wrapper.class))).thenReturn(0L);
+        when(files.selectCount(any(Wrapper.class))).thenReturn(0L);
+
+        service.delete(1L, "admin");
+
+        InOrder order = inOrder(files, folders);
+        order.verify(files).lockUploadKey("storage-folder-tree");
+        order.verify(files).lockUploadKey("storage-folder-security:1");
+        order.verify(folders).selectById(1L);
+        verify(folders).deleteById(1L);
     }
 
     @Test
