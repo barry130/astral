@@ -2,7 +2,7 @@
   "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
   "scope": "authored tracked files and non-ignored additions, excluding audit reports from self-reference",
   "method": "git inventory + current content fingerprints; not a claim of line-by-line rereview",
-  "total": 1420,
+  "total": 1421,
   "counts": {
     "root-config-docs": 20,
     ".cnb": 1,
@@ -16,7 +16,7 @@
     "astral-monitor": 47,
     "astral-plugin-api": 6,
     "astral-plugin": 33,
-    "ai": 180,
+    "ai": 181,
     "cms": 62,
     "feedback": 21,
     "qt": 89,
@@ -1549,8 +1549,8 @@
       "domain": "astral-common",
       "status": "modified",
       "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
-      "bytes": 2507,
-      "sha256": "f4469301640d9fe72927b2588caa4fc23b555b68b4bd4c6ad992e019f7fcb517"
+      "bytes": 2485,
+      "sha256": "651ca93e7b71be8e50de77160a2a12bb8177e5491990e932ea3cdc7ef7efe03b"
     },
     {
       "path": "astral-common/src/main/java/com/astral/common/http/BoundedHttpTransport.java",
@@ -5461,8 +5461,8 @@
       "domain": "ai",
       "status": "modified",
       "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
-      "bytes": 58143,
-      "sha256": "7c5c0433c0e600a5dfaad2477a4c453f9c3f0112720528aa52c04502fdf93832"
+      "bytes": 57662,
+      "sha256": "422b1f5dc16f38902b44ff916f7ad8917593f62f6f57e534f039d6ffb6ca3a8e"
     },
     {
       "path": "astral-plugin/src/main/java/com/astral/ai/tool/AiToolTypes.java",
@@ -8077,8 +8077,8 @@
       "domain": "ai",
       "status": "added",
       "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
-      "bytes": 7987,
-      "sha256": "6a7ca0232c52613c66089537e3130248217a1d87bf1801ebfbc495d1df3c9aa6"
+      "bytes": 12945,
+      "sha256": "30f07c89388db66153b930dfb903b37420b418b43e744a9d4526a1ceee9219c2"
     },
     {
       "path": "astral-plugin/src/test/java/com/astral/ai/tool/AdminToolProviderPermissionCodeTest.java",
@@ -8087,6 +8087,14 @@
       "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
       "bytes": 8241,
       "sha256": "aaf9900db9aa5e09b5b388f44e208537f22f7f14a9077d82489c6795adf80394"
+    },
+    {
+      "path": "astral-plugin/src/test/java/com/astral/ai/tool/AdminToolUserStatusConcurrencyTest.java",
+      "domain": "ai",
+      "status": "added",
+      "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
+      "bytes": 11767,
+      "sha256": "86e16ab87bd84493c58bcac62f1f5ec461136768393bb3dd73bd517c242b4a92"
     },
     {
       "path": "astral-plugin/src/test/java/com/astral/ai/tool/AdminToolWritePersistenceTest.java",
@@ -10189,8 +10197,8 @@
       "domain": "astral-system",
       "status": "modified",
       "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
-      "bytes": 17602,
-      "sha256": "19a6c0b077b7d4cda043291ff1b8fd1edfd04c15d89bc8c7f566e9624ef60796"
+      "bytes": 16673,
+      "sha256": "4899ed535b5a3ca496f8238857b4214cb46b69d854cbc0c82c15f56a7119f07f"
     },
     {
       "path": "astral-system/src/main/java/com/astral/system/controller/UserRoleController.java",
@@ -10485,8 +10493,8 @@
       "domain": "astral-system",
       "status": "modified",
       "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
-      "bytes": 19272,
-      "sha256": "60d4b3993d9549c45da6f9b709fe86d1ff717c72eeadc5a1d1b8d61ab491a8f7"
+      "bytes": 19963,
+      "sha256": "6758c9336113c29c83cbccf19233d82a7d6b3239c6e9bdd6c6a90025d7c27669"
     },
     {
       "path": "astral-system/src/main/java/com/astral/system/notify/SmsService.java",
@@ -10677,8 +10685,8 @@
       "domain": "astral-system",
       "status": "modified",
       "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
-      "bytes": 294,
-      "sha256": "86e2c42c1709298cf670f3c834eb7b4d2fb4696b70b641aef650401c3c34d1d3"
+      "bytes": 457,
+      "sha256": "330effcd5f78c1a78e30d5cff8367acf18c78bec60b3c23e3c05c0970b111122"
     },
     {
       "path": "astral-system/src/main/java/com/astral/system/service/impl/DictDataServiceImpl.java",
@@ -10749,8 +10757,8 @@
       "domain": "astral-system",
       "status": "modified",
       "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
-      "bytes": 1961,
-      "sha256": "f61dd580bb1bffa56124b23df6fcca1c65bab93967deef99672d3e250a38ff54"
+      "bytes": 4206,
+      "sha256": "cc2a82338aaa9d57a97c828a7772bc48062c1a8afc4a52687b76519a7cdbf7c7"
     },
     {
       "path": "astral-system/src/test/java/com/astral/system/controller/AccountCredentialPersistenceTest.java",
@@ -11028,8 +11036,8 @@
       "domain": "docs",
       "status": "modified",
       "evidence": "metadata only; semantic coverage attributed to linked domain reports and final reviews",
-      "bytes": 25900,
-      "sha256": "6415ace4d18c20e3e8e0a76291f26c96596bf124e3ad0d0e91715668481e55d1"
+      "bytes": 25951,
+      "sha256": "9e2b42c10ddcaf87a36c0d03a9c7d82d1ef382855b59378dd134b1f23153968e"
     },
     {
       "path": "docs/CODE_QUALITY_REVIEW_2026-10-29.md",
@@ -11391,5 +11399,6 @@
       "bytes": 19174,
       "sha256": "3c803b0e843f3b3e294ff75a7d5a048ca4ba3a39f28ed5736f090e73e6feee0e"
     }
-  ]
+  ],
+  "reviewedHead": "a9f044067fcf05c5cd914b9202c784a7eb67d587"
 }

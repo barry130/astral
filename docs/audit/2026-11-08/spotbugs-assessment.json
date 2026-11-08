@@ -4,11 +4,10 @@
   "threshold": "Medium",
   "excludeFileUnchanged": true,
   "initialFindings": 265,
-  "remainingFindings": 250,
+  "remainingFindings": 248,
   "byType": {
-    "BX_UNBOXING_IMMEDIATELY_REBOXED": 29,
+    "BX_UNBOXING_IMMEDIATELY_REBOXED": 28,
     "VO_VOLATILE_INCREMENT": 1,
-    "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE": 1,
     "REC_CATCH_EXCEPTION": 1,
     "EI_EXPOSE_REP2": 118,
     "MS_EXPOSE_REP": 1,
@@ -23,47 +22,47 @@
   "reports": [
     {
       "path": "astral-auth/target/spotbugsXml.xml",
-      "sha256": "46a2811b38fb7676292c51262b5e550b3e39c97fe9a00766f329c8c778216a77"
+      "sha256": "dc80434d2c86b61dfb4a25ed32b194b33f133b422f88e6cc3f3e61bff001ce0f"
     },
     {
       "path": "astral-common/target/spotbugsXml.xml",
-      "sha256": "d645bea6f12e9305573014b01fa985f78e17086f4f065a5158a7637f97db8acb"
+      "sha256": "c20d7223d43189f2a408139e564e1ef12bbdf0be22af6226b6d465c32753335c"
     },
     {
       "path": "astral-dao/target/spotbugsXml.xml",
-      "sha256": "da73841511499b89dc37780a15447dbbdd08f6fac6a63c34c12a41dd9076ffa4"
+      "sha256": "a4f8566b8d20ce6cde98239e065a692f305108616441e9001c12db02191d686a"
     },
     {
       "path": "astral-log/target/spotbugsXml.xml",
-      "sha256": "87abf789f29da6dd4c46692d9aaa4f484c388abba8656a4ddc2d660623b8a5b2"
+      "sha256": "8ad2c576e1777c174c80be1b56c60d7fc9ac8660e914e20ae6a9a090dce35d06"
     },
     {
       "path": "astral-monitor/target/spotbugsXml.xml",
-      "sha256": "aaba1265b62c653c4b7140bdc44ff3abfa56da58e14abd7a09e7e58260cb2469"
+      "sha256": "65d2fe1604dd166233252b9364939650125e08017c84814da02d7e763a5376a4"
     },
     {
       "path": "astral-plugin/target/spotbugsXml.xml",
-      "sha256": "9915f314eb8dd184aac6976814d73b4d6a6fc22e252c98941fe7b0cf46697b40"
+      "sha256": "edf63f16e8bc05c2db7c22327a2f20139a2f02a77ee00fd44f8d092fdbd411e4"
     },
     {
       "path": "astral-plugin-api/target/spotbugsXml.xml",
-      "sha256": "e23f0cb2e8daae0727b8b52440e6ac013e34fbae2589959a655e9d6a663cf39e"
+      "sha256": "6be156c29854dbf31590f8f94bf469185adf588f961e45b571c2600e587d9d41"
     },
     {
       "path": "astral-schema/target/spotbugsXml.xml",
-      "sha256": "281042ca7510efa936370075cf66a27a4b1f6850cf74bfe089113d00d736a052"
+      "sha256": "78c6738f517f25f5814f86f3207ee3afb1513c7c93d5c2a7d311424ae6295ecd"
     },
     {
       "path": "astral-sequence/target/spotbugsXml.xml",
-      "sha256": "e5752bdae4ea086ec5f6cc85045f96f703bcdb1d7b878e78535cdef9dbbab45c"
+      "sha256": "2183d3a1fb7a320367a6680a8c197b99b3fc92aabf9f5c17078bd4adae15788a"
     },
     {
       "path": "astral-server/target/spotbugsXml.xml",
-      "sha256": "a7cb18a7c203deb52ee50b07586465a07821e0a38075a08a2828168d5d01e54e"
+      "sha256": "72667e9e844350331f77c919939f47ef34af6d70cb67d94cfaa759059f3e8c82"
     },
     {
       "path": "astral-system/target/spotbugsXml.xml",
-      "sha256": "6bfc197aad1162df35c7196cf3f9cb9959728ae74046cb5021a0654fb22270c2"
+      "sha256": "16926e8410ff9639c44d45b07265c473bcb3d9c4a7d7b1ec4dde3bd42a517672"
     }
   ],
   "findings": [
@@ -90,18 +89,6 @@
       "message": "Increment of volatile field com.astral.auth.security.LoginFailureStore$FailureRecord.count in com.astral.auth.security.LoginFailureStore.lambda$recordInMemory$0(String, LoginFailureStore$FailureRecord)",
       "disposition": "false-positive-context",
       "reason": "写入位于ConcurrentHashMap.compute内，同key串行；volatile用于未加锁读侧可见性。"
-    },
-    {
-      "id": "SB-003",
-      "type": "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE",
-      "priority": 1,
-      "path": "astral-common/src/main/java/com/astral/common/exception/BusinessException.java",
-      "line": "32",
-      "class": "com.astral.common.exception.BusinessException",
-      "field": null,
-      "message": "Nullcheck of args at line 34 of value previously dereferenced in new com.astral.common.exception.BusinessException(String, Object[])",
-      "disposition": "accepted-maintainability",
-      "reason": "BusinessException的非空varargs契约已由前置args.length使用；复制参数的判空可读性冗余，不新增异常路径。"
     },
     {
       "id": "SB-004",
@@ -1373,7 +1360,7 @@
       "field": null,
       "message": "com.astral.ai.tool.declarative.McpToolExecutor.readOnlyHintOf(AiToolEntity) has Boolean return type and returns explicit null",
       "disposition": "intentional-tristate",
-      "reason": "远端readOnlyHint未知为null；readOnlyOf通过Boolean.TRUE.equals保守归高风险，无直接拆箱。"
+      "reason": "远端readOnlyHint未知为null；readOnlyOf通过serverReadOnly && !Boolean.FALSE.equals(hint)按服务器只读配置及远端未否定判定，无拆箱，符合AI_MODULE_DESIGN现契约。"
     },
     {
       "id": "SB-110",
@@ -2960,18 +2947,6 @@
       "reason": "已检查操作数：判空默认值/排序数值或持久主键，装箱性能提示，没有未保护的null拆箱。"
     },
     {
-      "id": "SB-242",
-      "type": "BX_UNBOXING_IMMEDIATELY_REBOXED",
-      "priority": 2,
-      "path": "astral-system/src/main/java/com/astral/system/controller/UserController.java",
-      "line": "310",
-      "class": "com.astral.system.controller.UserController",
-      "field": null,
-      "message": "Boxed value is unboxed and then immediately reboxed in com.astral.system.controller.UserController.changeStatus(Long, Integer, String)",
-      "disposition": "accepted-maintainability",
-      "reason": "已检查操作数：判空默认值/排序数值或持久主键，装箱性能提示，没有未保护的null拆箱。"
-    },
-    {
       "id": "SB-243",
       "type": "BX_UNBOXING_IMMEDIATELY_REBOXED",
       "priority": 2,
@@ -3067,5 +3042,9 @@
       "disposition": "accepted-maintainability",
       "reason": "已检查操作数：判空默认值/排序数值或持久主键，装箱性能提示，没有未保护的null拆箱。"
     }
-  ]
+  ],
+  "byPriority": {
+    "2": 248
+  },
+  "reviewedHead": "a9f044067fcf05c5cd914b9202c784a7eb67d587"
 }

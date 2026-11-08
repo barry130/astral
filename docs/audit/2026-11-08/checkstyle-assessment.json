@@ -1,11 +1,11 @@
 {
-  "warnings": 375,
+  "warnings": 377,
   "errors": 0,
   "byRule": {
     "CyclomaticComplexityCheck": 19,
     "BooleanExpressionComplexityCheck": 15,
     "EqualsAvoidNullCheck": 12,
-    "NPathComplexityCheck": 156,
+    "NPathComplexityCheck": 158,
     "DeclarationOrderCheck": 114,
     "ConstantNameCheck": 4,
     "ExplicitInitializationCheck": 7,
@@ -17,7 +17,7 @@
     "MethodNameCheck": 2,
     "MethodLengthCheck": 1
   },
-  "reportSha256": "e25204cc02c23124f2cdd2629e17b69794584129312fb2b28725c9df8db20fb4",
+  "reportSha256": "86583744ad41a6adb76d60d6184917eeba39b8b8e0154cb6c11ab342301a4c59",
   "findings": [
     {
       "path": "astral-common/src/main/java/com/astral/common/http/BoundedHttpTransport.java",
@@ -858,7 +858,16 @@
     },
     {
       "path": "astral-system/src/main/java/com/astral/system/notify/NotifyPublisher.java",
-      "line": "177",
+      "line": "109",
+      "column": "5",
+      "severity": "warning",
+      "message": "方法分支复杂度： 266 （最多： 200 ）。",
+      "source": "com.puppycrawl.tools.checkstyle.checks.metrics.NPathComplexityCheck",
+      "disposition": "maintenance-warning; see quality-review.md; no newly confirmed behavior defect"
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/NotifyPublisher.java",
+      "line": "190",
       "column": "5",
       "severity": "warning",
       "message": "方法分支复杂度： 243 （最多： 200 ）。",
@@ -898,6 +907,15 @@
       "column": "5",
       "severity": "warning",
       "message": "方法分支复杂度： 294 （最多： 200 ）。",
+      "source": "com.puppycrawl.tools.checkstyle.checks.metrics.NPathComplexityCheck",
+      "disposition": "maintenance-warning; see quality-review.md; no newly confirmed behavior defect"
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/UserServiceImpl.java",
+      "line": "25",
+      "column": "5",
+      "severity": "warning",
+      "message": "方法分支复杂度： 1,080 （最多： 200 ）。",
       "source": "com.puppycrawl.tools.checkstyle.checks.metrics.NPathComplexityCheck",
       "disposition": "maintenance-warning; see quality-review.md; no newly confirmed behavior defect"
     },
@@ -1766,7 +1784,7 @@
     },
     {
       "path": "astral-plugin/src/main/java/com/astral/ai/tool/AdminToolProvider.java",
-      "line": "71",
+      "line": "72",
       "column": "1",
       "severity": "warning",
       "message": "类数据的抽象耦合： 23 （最多： 20），引用类： [ChangeRolePermissionTool, ChangeUserStatusTool, ConfigCompletenessTool, DeleteFileTool, DisableProviderTool, DraftConfigChangeTool, DraftEmailTool, DraftFeedbackReplyTool, DraftNoticeTool, DraftPluginOperationTool, LambdaQueryWrapper, PermissionSummaryTool, PluginStatusTool, PublishNoticeTool, SearchFeedbackTool, SearchLoginLogsTool, SearchOperateLogsTool, SendEmailTool, StorageSummaryTool, SystemHealthTool, UpdateConfigTool, UsageStatisticsTool, UserSummaryTool]。",
@@ -1775,7 +1793,7 @@
     },
     {
       "path": "astral-plugin/src/main/java/com/astral/ai/tool/AdminToolProvider.java",
-      "line": "512",
+      "line": "513",
       "column": "9",
       "severity": "warning",
       "message": "方法分支复杂度： 1,024 （最多： 200 ）。",
@@ -1784,16 +1802,16 @@
     },
     {
       "path": "astral-plugin/src/main/java/com/astral/ai/tool/AdminToolProvider.java",
-      "line": "924",
+      "line": "925",
       "column": "9",
       "severity": "warning",
-      "message": "方法分支复杂度： 31,104 （最多： 200 ）。",
+      "message": "方法分支复杂度： 5,838 （最多： 200 ）。",
       "source": "com.puppycrawl.tools.checkstyle.checks.metrics.NPathComplexityCheck",
       "disposition": "maintenance-warning; see quality-review.md; no newly confirmed behavior defect"
     },
     {
       "path": "astral-plugin/src/main/java/com/astral/ai/tool/AdminToolProvider.java",
-      "line": "1105",
+      "line": "1097",
       "column": "9",
       "severity": "warning",
       "message": "方法分支复杂度： 240 （最多： 200 ）。",
@@ -3393,5 +3411,6 @@
       "source": "com.puppycrawl.tools.checkstyle.checks.metrics.NPathComplexityCheck",
       "disposition": "maintenance-warning; see quality-review.md; no newly confirmed behavior defect"
     }
-  ]
+  ],
+  "reviewedHead": "a9f044067fcf05c5cd914b9202c784a7eb67d587"
 }

@@ -1,7 +1,7 @@
 {
   "createdAt": "2026-11-09T00:32:53.873413+08:00",
   "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
-  "status": "functional and static gates passed; commit reviews pending",
+  "status": "completed: functional/static gates and both committed-diff reviews passed; local commits only",
   "runtime": {
     "java": "Temurin25.0.4.1",
     "maven": "3.9.6",
@@ -11,22 +11,27 @@
   },
   "java": {
     "command": "mvn install -Daudit.postgres.port=9684 -Daudit.redis.port=8549",
-    "tests": 824,
+    "tests": 828,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
-    "suites": 132,
+    "suites": 133,
     "actualCodegen": true,
     "skipCodeGen": false,
-    "finishedAt": "2026-11-09T00:27:01+08:00"
+    "finishedAt": "2026-11-09T01:11:43+08:00",
+    "log": "target/takeover-final-reactor.log"
   },
   "quality": {
     "command": "mvn spotless:check checkstyle:checkstyle-aggregate spotbugs:spotbugs",
     "spotless": "passed",
-    "checkstyleWarnings": 375,
-    "spotbugsMediumFindings": 250,
-    "spotbugsHighFindings": 1,
-    "assessment": "quality-review.md + per-finding JSON"
+    "checkstyleWarnings": 377,
+    "spotbugsMediumFindings": 248,
+    "spotbugsHighFindings": 0,
+    "assessment": "quality-review.md + per-finding JSON",
+    "checkstyleErrors": 0,
+    "finishedAt": "2026-11-09T01:13:03+08:00",
+    "log": "target/takeover-final-quality.log",
+    "historicalCorrection": "Earlier 250 findings were 249 Medium + 1 High, not 250 Medium/0 High. The redundant-nullcheck High was fixed in 7be9a82; one boxing warning disappeared after a9f0440."
   },
   "frontend": {
     "nodeReactDomTests": 123,
@@ -49,16 +54,107 @@
   "nginxLayoutsChecked": 2,
   "contentCheck": {
     "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
-    "pathsInspected": 1161,
+    "reviewedHead": "a9f044067fcf05c5cd914b9202c784a7eb67d587",
+    "pathsInspected": 1069,
     "placeholderLosses": [],
-    "credentialShapePaths": [],
+    "newCredentialShapePaths": [],
     "binaryPaths": [],
-    "note": "shape scan only; deploy/prod.env content never read; no assurance against every secret form"
+    "scope": "committed changed source/config/docs paths excluding audit reports and deploy/prod.env; placeholder/credential shape scan, not universal secret assurance",
+    "prodEnvChanged": false
   },
   "browser": "not executed: extension unavailable and fallback automation forbidden by original SPEC",
   "externalEffects": "no production DB/cloud/SMTP/model calls; no remote push/PR/release",
-  "ownedServiceCleanup": "pending final independent review",
+  "ownedServiceCleanup": {
+    "completedAt": "2026-11-09T01:19:57.9734073+08:00",
+    "postgresPid": 22308,
+    "redisPid": 31896,
+    "ownershipVerified": true,
+    "postgresPort": 9684,
+    "redisPort": 8549,
+    "loopbackPortsClosed": true,
+    "processesStopped": true,
+    "retainedPostgresFixture": "C:\\Users\\canace\\AppData\\Local\\Temp\\astral-audit-pg-c6a3db9b135140e3a8952e040591c826",
+    "fixtureDirectoryRemoved": false,
+    "retentionReason": "Initial combined stop/delete command rejected by execution policy. Services stopped with a reduced command; fixture directory retained without a deletion retry.",
+    "productionOrUnrelatedServicesTouched": false,
+    "method": "pg_ctl fast stop; redis-cli shutdown nosave; verified process identity and closed loopback ports"
+  },
   "receipts": [
+    {
+      "path": "target/takeover-final-reactor.log",
+      "sha256": "c039404ee9326bfbf9fb94768de30fba39c4066a284a8ab59be33a31b9ee02b5",
+      "bytes": 763287
+    },
+    {
+      "path": "target/takeover-final-quality.log",
+      "sha256": "9b5ae17763683590fb914500f00f88507884c842e919568ea51d676b40d7f3ce",
+      "bytes": 84848
+    },
+    {
+      "path": "target/takeover-final-boundaries-green.log",
+      "sha256": "15ef2a1e1608ef86455f13497a9a05b61852094cd9e9fa8d868afa310eea736a",
+      "bytes": 43391
+    },
+    {
+      "path": "target/takeover-last-admin-red.log",
+      "sha256": "e7076e897d2701875ee3aa05ff2d36a4a9ffbf1c6073080175547ac2d62b1ccf",
+      "bytes": 19235
+    },
+    {
+      "path": "target/takeover-email-channel-red.log",
+      "sha256": "9177fdd4b285429b5a4973e80b7c9bbe7a886c87b3a9c7329f14a509a528cf24",
+      "bytes": 6653
+    },
+    {
+      "path": "target/takeover-final-content-check.json",
+      "sha256": "bfc3a518237e85facb0674b5fa28707d6053eb3912de9ab1df90bd7aac586357",
+      "bytes": 435
+    },
+    {
+      "path": "target/takeover-service-cleanup.json",
+      "sha256": "5611e30e545450fa4f4d5f25117c932abb2ccdd76e89d7a11b7b612a4488a64c",
+      "bytes": 754
+    },
+    {
+      "path": "target/takeover-service-cleanup.log",
+      "sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb",
+      "bytes": 58
+    },
+    {
+      "path": "docs/audit/2026-11-08/spec-review.md",
+      "sha256": "2490702ebec7507dcda040c1e25931af2796e8a554f8e8acfdf7e03553da8e10",
+      "bytes": 193612
+    },
+    {
+      "path": "docs/audit/2026-11-08/standards-review.md",
+      "sha256": "caf6ac738803f166d99cf0b8ca64ed5166b044286d88afc08f35dc5c8ad919a3",
+      "bytes": 160100
+    },
+    {
+      "path": "docs/audit/2026-11-08/quality-review.md",
+      "sha256": "8f1fed93c087ba7955a78fa9fbfc8cde19baf136f690131ecdeac3a5db5aa4c6",
+      "bytes": 6883
+    },
+    {
+      "path": "docs/audit/2026-11-08/checkstyle-assessment.json",
+      "sha256": "52f3007a6f4459e738ce25fd2ff4b2f9f25da4e0b509e9f6d7d1f8286f1b42cc",
+      "bytes": 169748
+    },
+    {
+      "path": "docs/audit/2026-11-08/spotbugs-assessment.json",
+      "sha256": "85c5fa46aeae8c28c7e3a0891cf88f4500ff4f8fb204fc444ed3411225850a97",
+      "bytes": 174725
+    },
+    {
+      "path": "docs/audit/2026-11-08/inventory.json",
+      "sha256": "ce5d9c0e8085e0152f6fa016bf0c60f7e1857f4f4637a82deff803396ffa3d71",
+      "bytes": 528236
+    },
+    {
+      "path": "docs/audit/2026-11-08/TAKEOVER.md",
+      "sha256": "6cd904bbf9961ee34e1d4653002d24555db5d8131b2da4bc6b839e955fcaa61e",
+      "bytes": 13632
+    },
     {
       "path": "target/takeover-release-verified-reactor.log",
       "sha256": "a0b01302df2fd7af5c8f59c21e5ab1c4d404ed05d10ada415f570655a431a405",
@@ -134,5 +230,53 @@
       "sha256": "a2a064d2293a452df14dc0d288c07f05deccc1ad27c868077b8e4548fb6d20d6",
       "bytes": 486
     }
-  ]
+  ],
+  "completedAt": "2026-11-09T01:22:38.574486+08:00",
+  "reviewedProductHead": "a9f044067fcf05c5cd914b9202c784a7eb67d587",
+  "reviews": {
+    "standards": {
+      "verdict": "passed for confirmed standards violations",
+      "openConfirmedViolations": 0,
+      "maintenanceJudgments": 2,
+      "maintenancePriority": "P3 possible Duplicated Code",
+      "report": "docs/audit/2026-11-08/standards-review.md"
+    },
+    "spec": {
+      "verdict": "PASS",
+      "openConfirmedDefects": 0,
+      "report": "docs/audit/2026-11-08/spec-review.md"
+    },
+    "scope": "inherited domain coverage + fixed baseline committed diff + focused final 8-file rereview; not a claim of fresh independent line-by-line review of every file"
+  },
+  "localCommits": [
+    {
+      "sha": "e57bb0228cecd36594d789cd5f0a5e7c6de5e2b0",
+      "subject": "fix: harden backend state transitions, authorization and recovery"
+    },
+    {
+      "sha": "07a48e83f23f495530d36b209e4b7c30462d4930",
+      "subject": "fix: improve admin and blog workflows, feedback and session handling"
+    },
+    {
+      "sha": "ccae720fec37afe64f67b2a3430888b1c948d95a",
+      "subject": "fix: make packaging, release tags and worker delivery consistent"
+    },
+    {
+      "sha": "07c3e409db37475e95d7f89b4ea22b15c7de8fe3",
+      "subject": "docs: record audit coverage, regression evidence and quality assessments"
+    },
+    {
+      "sha": "7be9a824ea4f3dd1af83b83374235a23e44a5072",
+      "subject": "fix: clarify exception argument contract and document shared UI behavior"
+    },
+    {
+      "sha": "a9f044067fcf05c5cd914b9202c784a7eb67d587",
+      "subject": "fix: serialize administrator bans and constrain assistant email delivery"
+    }
+  ],
+  "finalReportCommit": "This receipt is committed in a documentation-only follow-up to reviewedProductHead; its own commit is intentionally not self-referenced.",
+  "unchangedGateScope": {
+    "frontendAndBlog": "git diff 07a48e8 HEAD -- astral-front astral-blog: empty",
+    "workerAndPackaging": "git diff ccae720 HEAD -- cloudflare telegram-server scripts deploy .cnb.yml: empty"
+  }
 }

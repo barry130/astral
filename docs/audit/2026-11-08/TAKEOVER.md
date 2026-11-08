@@ -4,13 +4,13 @@
 
 ## 当前交付状态
 
-产品修复与最终门禁已通过：824项Java、123项管理前端、84项博客、15项Worker/Telegram、2项打包发布测试；生产构建与质量报告完成。实际提交后的双轴复核在收口，最终结果见本节后续更新。旧领域报告保留其记录时点，正文中的“待修/未执行”不能作为当前状态；本文件、最终两轴结论和验证收据共同给出当前交付判断。
+本次授权范围内的审阅、修复、本地提交及双轴复核已完成。最终产品提交为 `a9f044067fcf05c5cd914b9202c784a7eb67d587`：828项Java、123项管理前端、84项博客、15项Worker/Telegram、2项打包发布测试通过；生产构建与质量报告完成。Standards 已确认规范问题无未关闭项，保留两项P3重复代码维护判断；Spec 已确认实现问题无未关闭项。旧领域报告保留其记录时点，正文中的“待修/未执行”不能作为当前状态；本文件、两轴顶部最终结论和验证收据共同给出当前交付判断。
 
 工程判断：主要风险集中在权限与敏感信息边界、整行旧值回写、跨请求状态机、失败后恢复和构建/数据库启动一致性。本轮为这些路径加入显式写入范围、持久账本、数据库锁与可恢复的界面状态。前端沿用现有设计令牌和组件，改进表单、错误、加载、弹窗与编辑器行为，没有以重新换 UI 库代替业务修复。大型服务仍有继续拆分的维护空间；没有把审美偏好或未证明的候选风险包装成已发生漏洞。
 
 ## 领域覆盖与归因
 
-[当前文件清单](inventory.json)包含1420个源码、配置、文档与测试路径的身份/指纹（不含审阅报告自身）；这是盘点，不是1418份逐行重读声明。真实运行配置只记路径，不读取内容。继承的完整阅读、补读和本次定向因果链复核分开归因：
+[当前文件清单](inventory.json)包含1421个源码、配置、文档与测试路径的身份/指纹（不含审阅报告自身）；这是盘点，不是逐文件独立重读声明。真实运行配置只记路径，不读取内容。继承的完整阅读、补读和本次定向因果链复核分开归因：
 
 | 领域 | 原始与补充审阅记录 | 本次收口证据 |
 |---|---|---|
@@ -45,22 +45,42 @@
 | 历史迁移 / 最终baseline竞态 | 历史校验和保留，精确callback补前置表/条件种子；按schema加锁覆盖空库与baseline决策 | Fresh6、NoticeCompatibility7、真实Boot启动1 |
 | 发布/归档/博客 E-D | 排除真实凭据；三镜像完整不可变版本后提升latest；nginx片段正确作用域；构建时校验SITE/ADMIN URL | 临时Git/fake Docker2、nginx -t、生产HTTP URL |
 | schema格式输出 | 生成实体主键/填充/枚举与metadata一致；去掉末尾额外空行使生成后Spotless稳定 | 当前codegen实际生成34实体、Spotless |
-| 最终静态复核 / 管理助手写入口 | 发信按投递结果报告，无规则拒绝、失败或部分成功为UNKNOWN并提示人工核对；同名无ID模型流调用生成独立身份；用户状态不二次哈希密码，配置值/提供方启停仅写指定字段 | AdminToolEmailOutcome4、OpenAiCompatibleProviderTransport5、AdminToolWritePersistence2、AiProviderPersistence7，含公开入口RED→GREEN |
+| 最终静态复核 / 管理助手写入口 | 发信按投递结果报告，无规则拒绝、失败或部分成功为UNKNOWN并提示人工核对；同名无ID模型流调用生成独立身份；用户状态不二次哈希密码，配置值/提供方启停仅写指定字段 | AdminToolEmailOutcome6、OpenAiCompatibleProviderTransport5、AdminToolWritePersistence2、AiProviderPersistence7，含公开入口RED→GREEN |
+| 最终已提交复审 I-N1 / I-N2 | 助手和后台状态入口在同一事务内锁定共同管理员集合、重读可用人数再白名单写入；邮件专用动作在解析收件人/预占额度/投递前仅允许EMAIL，普通事件仍支持多渠道 | AdminToolUserStatusConcurrency2（工具vs工具/工具vsController真实PG）；混合三渠道及仅非邮件公开工具回归，24项专项通过 |
 
 各项日志中的测试有重叠，不能逐行相加为总测试数。最初夹具初始化失败、旧mock返回0和中间构建失败保留在target日志，不算业务RED或最终成功；最终门禁须使用最新完整命令结果。
 
 ## 验证与运行边界
 
 - JDK25、Maven3.9.6、Node24。Java最终命令执行当前schema generator、完整reactor测试和install；未使用skipCodeGen。PostgreSQL16.4和Redis均为本任务独占loopback实例，真实生产库未接触。
-- `target/takeover-release-verified-reactor.log`：824项、132套件，零失败/错误/跳过，2026-11-09 00:27完成；替代较早的816项日志。`takeover-release-quality.log`中Spotless通过；Checkstyle375条维护告警、SpotBugs250条Medium/0条High均有[评估账本](quality-review.md)，不宣称零告警。最终质量结果与日志指纹写入[验证收据](verification.json)。
+- `target/takeover-final-reactor.log`：828项、133套件，零失败/错误/跳过，2026-11-09 01:11:43完成；替代较早816/824项日志。`takeover-final-quality.log`于01:13:03成功，Spotless通过；Checkstyle377条维护告警/0错误、SpotBugs248条Medium/0条High均有[评估账本](quality-review.md)，不宣称零告警。原250项实为249 Medium+1 High，冗余判空修复后消除High，再由共享状态服务消除1条装箱提示；最终数量以实际XML为准。质量结果与日志指纹写入[验证收据](verification.json)。
 - `target/takeover-front-complete-tests.log`：123；`takeover-blog-final-tests.log`：84；`takeover-workers-final.log`：15；`takeover-pack-release-final.log`：2。前端/博客生产构建、博客canonical/sitemap/robots与编译后admin链接检查、两种nginx布局语法检查分别记录。
 - 回归使用的公开接口、事务/权限边界与外部替身详见[TEST-SEAMS](../2026-11-07/TEST-SEAMS.md)。知识worker恢复是重建worker对象并继续数据库游标，未运行进程kill；失败夹具在读取文档后抛出，未声称已测试删chunks后失败。DOM任务用例没有等定时轮询。迁移启动是实际关键组件图，未把它称完整生产部署。
 - 浏览器扩展未就绪且原会话禁止后备CDP/Playwright，因此没有本轮真实浏览器验收。真实滚轮/IME、物理布局、cookie顺序、下载、跨tab和生产网络仍未核验。合成DOM和loopbackHTTP不替代这些项目。
 - 未发送邮件/短信、未调用真实模型或云存储、未推送代码/镜像/PR、未发布或修改生产数据。Worker权限撤销存在文档明确的最多300秒缓存窗口，不能宣称跨PoP秒撤销。
+- 本次独占 PostgreSQL PID22308/端口9684 与 Redis PID31896/端口8549 已核实归属并关闭，端口不再监听。包含临时目录删除的组合命令被执行策略拒绝；随后仅停止服务成功，未重试删除。临时PG目录 `C:/Users/canace/AppData/Local/Temp/astral-audit-pg-c6a3db9b135140e3a8952e040591c826` 保留；仓库target内的日志和运行时保留供追溯。未关闭无关服务或浏览器。
 - UNKNOWN历史用量缺价格/额度快照时拒绝自动核对。没有编造历史换汇或补写已产生费用；基线成本列仅初始化零，非CNY污染是中间未提交实现问题，不据此伪造生产数据迁移。
 
 ## 候选与非阻断维护建议
 
 历史报告中的QT换邮箱二次验证策略、CMS浏览量写放大、异步统计投递语义、Snowflake节点配置/状态保留等依赖产品或部署契约，未确认为本轮可复现缺陷。原“存储完全无超时”等已被实际代码反证，不能继续计入待修。Blog两项P3 possible duplication是维护判断，当前行为一致，不强行抽象。它们和明确环境限制均不冒充已修或已验证。
 
-实际本地提交及两轴最终结论将在门禁完成后记入；历史报告保留原时间与证据归因。
+## 本地提交与双轴最终结论
+
+| 本地提交 | 内容 |
+|---|---|
+| `e57bb02` | 后端状态、授权、事务与恢复修复，回归及Java规范化 |
+| `07a48e8` | 管理前端/博客交互、反馈、会话与编辑器修复 |
+| `ccae720` | 打包发布、标签、Worker/Telegram及部署配置 |
+| `07c3e40` | 领域审阅记录、覆盖与验证证据归档 |
+| `7be9a82` | 异常参数冗余判空清理、CMS/UI文档整理 |
+| `a9f0440` | 最后管理员并发状态保护、助手邮件渠道边界及回归 |
+
+以上均只在本地。最终报告/指纹另作docs提交，产品版本固定于a9f0440；报告体积与Java格式化占本轮大量diff，不将所有行变更算作行为修复。
+
+| 复核轴 | 最终判定 | 范围 |
+|---|---|---|
+| [Standards](standards-review.md) | 已确认规范问题未关闭0；保留2项P3 possible Duplicated Code维护判断 | 既有领域覆盖+固定提交差量+最后8文件窄复核，未宣称本次独立全文重读全仓 |
+| [Spec](spec-review.md) | PASS；已确认实现问题未关闭0 | 原范围内缺陷闭环；I-N1/I-N2补充修复及a9f0440完整门禁已独立核验 |
+
+标准与需求两轴独立保留，不以一轴结果掩盖另一轴。真实浏览器及生产外部系统边界如上，不将本地通过扩大成生产验收结论。

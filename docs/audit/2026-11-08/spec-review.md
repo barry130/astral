@@ -1,3 +1,19 @@
+# Astral Spec 复审：最新固定提交结论（2026-11-09）
+
+**最终结论：Spec 轴通过（固定产品提交 `a9f044067fcf05c5cd914b9202c784a7eb67d587`，保留以下验证边界）。** I-N1 / I-N2 两项已关闭，已确认的需求缺失、错误实现与范围外行为均有关闭依据；未发现本轴范围内尚未闭环的确认缺陷。最终门禁与证据指纹见 J.5。下方 S–I 节及 J.1–J.4 的“待修/待门禁/失败”保留为历史记录，不覆盖本结论。
+
+- **实际对象**：基线 `a39a3f3039ce7deafc3f547a25cc0dc4635c111a` → 初审 `7be9a824ea4f3dd1af83b83374235a23e44a5072` → 补充审核 `a9f044067fcf05c5cd914b9202c784a7eb67d587`。已读取后两者之间全部8文件差量；整体沿用非空三点差量及原领域阅读归因，不是重新独立逐文件审阅全仓的声明。
+- **已关闭**：H-N1 旧索引任务的 fallback 升级、H-N2 任务刷新抢占忙状态、G-N4 发布/校验/绑定并发原触发链；新 PostgreSQL 启动锁覆盖进入 Flyway 之前的验证/空库 baseline 决策，真实并发回归已核对。A–G 既有确认项的关闭依据继续有效，候选项不转成虚构缺陷。
+- **I-N1 已关闭**：助手与管理状态入口均委托事务方法，按id锁相同的未删ADMIN集合（包括disabled）后重新读取、计数和白名单更新；两种真实PG并发公开入口回归由RED转GREEN，不能再同时禁用最后两人。没有扩大为角色/删用户/类型变更的全局新策略。
+- **I-N2 已关闭**：`publishEmail` 在收件人解析、额度和投递之前限定EMAIL，普通publish保留多渠道合同；混合EMAIL/INAPP/SMS只发已批准邮件，只有非邮件规则时拒绝且零投递，真实服务/边界替身回归通过。
+- **最终门禁**：已独立重算 `takeover-final-reactor.log` 的**828项/133套件、零失败/错误/跳过**，01:11:43完整install成功并实际生成34实体。`takeover-final-quality.log` 01:13:03成功；原始XML重算SpotBugs **248 Medium/0 High**、Checkstyle **377 warnings/0 errors**，与当前评估JSON及SHA256一致，Spotless通过。工具执行成功不等于零维护告警。前端123、Blog84、Worker/Telegram15、打包2与构建证据沿用已核收据，未重复计数。
+
+需求依据为 [原 SPEC](../2026-11-07/SPEC.md) 的范围/缺陷闭环/双轴复审要求及下文具体行为契约。本结论继承逐领域阅读与定向补审归因，不声称本reviewer本次逐文件全文重读全仓；Standards仍由独立轴判定。仅修改本报告，没有执行构建、测试、服务、DB、网络或Git提交。真实浏览器受原授权/扩展条件限制未验收，生产SMTP/短信/模型/云服务、进程kill等边界未执行；按SPEC明确披露，不包装为browser/production GREEN。
+
+---
+
+## 历史审阅正文（S–I，保留原记录时点与证据归因）
+
 # Astral Spec 复审：2026-11-08 接手检查
 
 基线：`a39a3f3039ce7deafc3f547a25cc0dc4635c111a`，检查开始时等于 HEAD；本次检查对象是 `git diff <base> --` 与未跟踪的新文件。`git log <base>..HEAD` 为空不能证明工作区无改动。需求依据为 `docs/audit/2026-11-07/SPEC.md`，附加具体行为契约来自 `AI_MODULE_DESIGN.md`、`AGENTS.md` 和公开接口说明。
@@ -846,3 +862,84 @@ E-D01故意仅记录凭据文件路径模式，未验证工作区真实部署文
 
 Lead随后通知：`release-reactor`于23:12:56实际BUILD FAILURE，`NoticeMigrationCompatibilityTest.concurrentStartup`暴露Flyway空history自动baseline竞态。该通知在H.4专项GREEN之后到达，本reviewer本轮没有重新阅读该失败日志或扩大追根范围，按Lead已确认结果记录；**专项publication GREEN不能替代这一失败的统一门禁**。Lead将顺序修H-N1、H-N2和baseline并发后重跑总门禁，本reviewer不运行构建、不修改产品，等待最终本地提交hash的实际差量复核。
 记录时点：2026-11-08 23:18:41 Asia/Shanghai。
+
+## I：固定已提交差量 Spec 收口（2026-11-09；当前结论见报告顶部）
+
+### I.1：对象、需求、覆盖归因与当前残余
+
+- 审核基线 `a39a3f3039ce7deafc3f547a25cc0dc4635c111a`，固定 HEAD `7be9a824ea4f3dd1af83b83374235a23e44a5072`；实际执行 `git diff BASE...7be9a82` 的清单/范围核对，三点差量非空。提交依次为 `e57bb02` 后端状态/权限/恢复、`07a48e8` 管理前端/博客、`ccae720` 打包/发布/worker、`07c3e40` 审阅证据文档、`7be9a82` 异常参数契约与UI/CMS文档。固定差量共1163文件（含文档与格式变化），**不是1163文件本轮独立全文阅读**。
+- 规范：[SPEC.md](../2026-11-07/SPEC.md):11–13、20–21、26–39、43–47。继承覆盖沿用TAKEOVER领域矩阵及本报告G.3/G.4/G.7的明确归因；本轮有界重读H两项、G-N4当前锁链、PostgresMigrationStrategy与并发测试，以及Lead指定晚期工具/白名单/Provider调用身份/7be9a82差量。没有扩大到新的独立全仓审阅。
+- **分类结论**：已报告的需求缺失G-N3已实施，H-N1/H-N2和G-N4原因果链关闭；当前固定提交另确认**错误实现 I-N1**与**范围外投递/错误结果 I-N2**。Lead已接手，两项都不能以既有824测试成功抵消。除此之外不新增未证明候选；性能维护建议和环境限制不是功能缺陷伪关闭。
+
+### I.2：H-N1、H-N2、G-N4及启动baseline锁的关闭依据
+
+| 项 | 当前源码、有效回归及边界 |
+| --- | --- |
+| H-N1 / G-N3 | `ai-schema.sql:249–268`和新`08008:3–20`在同一DO事务内ACCESS EXCLUSIVE锁job表，以end_document_id是否存在区分旧任务，先终结历史QUEUED/PENDING/RUNNING再装cursor；后续启动/08008不会破坏已经durable的新任务。`AiKnowledgePersistenceTest:131–181`真实PG删除cursor模拟旧表，actual initializer把旧RUNNING/QUEUED置FAILED，公开retry/cancel后处理一篇，再次initializer+08008保留RUNNING、cursor、processed=1，最终完成两篇；验证默认与两个活动索引。`takeover-fallback-red.log:249`实际FAILED≠RUNNING业务RED；green:392十一项通过。标准历史已发布迁移未改checksum，08008属于本次新增迁移。 |
+| H-N2 | `KnowledgePanel.tsx:379,418–431,473–513,661`增加jobWritePending同步ref、读取guard和刷新禁用，mutation finally独立清除busy，不再由read generation决定释放。`ai-knowledge-editor.test.cjs:100–142`真实DOM先取消失败，下一取消延迟、点击刷新、返回结果，断言latestReads仍1、retry与cancel恢复可用。`takeover-job-refresh-red.log`2pass/1fail（busy不能释放），green为3/3。仅DOM合成adapter，不是浏览器轮询/网络验收。 |
+| G-N4 | 固定提交保留H.3已经完整读取的agent→version锁、草稿白名单、controller外层事务锁内校验/发布，工具与知识绑定在同version锁下重新requireDraft。`AiAgentConcurrencyTest`7项真实PG公开入口竞争仍在已提交源码及完整reactor内；本轮未把外围Provider动态状态扩成全局不可变新需求。 |
+| baseline并发 | `PostgresMigrationStrategy:13–39`在调用flyway.migrate之前，从有效defaultSchema（或schemas[0]/connection.schema）和history表名生成锁key，专用连接事务持有pg_advisory_xact_lock跨Flyway自身连接/commit，finally rollback释放；lock_timeout=5min，有异常不伪报成功。`NoticeMigrationCompatibilityTest:152–217`在BEFORE_VALIDATE暂停第一启动，第二启动必须尚未进入Flyway；无外锁RED:594–610实际进入断言失败，有锁green通过。`:222–252`两个真实并发migrate断言没有错误BASELINE、初始SQL执行一次、各version不重复。`PluginStartupContextTest:73,122`导入实际strategy并由Boot执行，原空库/旧库/公有schema/失败重试范围保留。`takeover-startup-lock-green.log:4302,4320`14项与BUILD SUCCESS。不是完整生产部署，也不声称第三方直接绕过Spring调用Flyway受此入口保护。 |
+
+### I.3：指定晚期修复已满足的部分
+
+1. **邮件结果原误报关闭范围**：`AdminToolProvider.SendEmailTool:1121–1146`无结果REJECTED、EMAIL确认数与失败数独立、无确认/部分失败UNKNOWN且提示核对、不反射provider原错。`AdminToolEmailOutcomeTest:43–99`四项使用公开handler→真实Publisher/MailService，只有DB/SMTP边界替身；证明无规则、SMTP不确定、部分成功、全部确认的EMAIL-only行为。混合渠道遗漏单列I-N2，不能用这四例宣布全部send_email闭环。
+2. **白名单原旧状态回放关闭范围**：`ChangeUserStatusTool:952–958`新User只填id/status/reason/updateTime，不再把旧password交UserService再次哈希；`UpdateConfigTool:894–902`仅SET value/time并要求id+key、检查结果、清缓存；`DisableProviderTool:844–857`只传enabled=false，`AiProviderService.update:132–179`只SET输入非null字段及显式凭据清空，检查影响一行。`AdminToolWritePersistenceTest:101–137`公开handler+真实MyBatis/H2安排密码/昵称、描述另写后再执行；`AiProviderPersistenceTest:173–201`实际工具停用时并发改名/旋转凭据仍保留。`tool-user-red`密码断言、`tool-config-red-2`描述Old≠Concurrent、`tool-provider-red`名称Fixture≠Concurrent均为有效RED；`takeover-tools-final-green.log:62,75,82`provider7及write2等22项成功。H2夹具不称PG锁测试，StpUtil为边界mock不称真实会话撤销回归。管理员集合约束另见I-N1。
+3. **缺失模型调用ID**：`OpenAiCompatibleProvider.ToolCallAccumulator.build:413–418`缺失/空ID生成独立UUID、保留显式provider ID，流结束每accumulator构造一次。`OpenAiCompatibleProviderTransportTest:25–56`公开stream/本地HTTP发送同名index0/1无ID及index2 upstream-id，断言3个唯一且显式ID保留；`tool-identity-red:44`预期3实际2、`tool-outcomes-green:47`传输5项通过。解决已确认同名hash碰撞，不声称所有异常provider格式兼容。
+4. **7be9a82本身**：只删`BusinessException`在super(args.length)之后的冗余判空，保留既有非null-varargs契约与clone防御，不把null参数原有NPE包装成新行为修复；CMS限流和共享UI文档补充与已审实现一致。旧收据“250Medium+0High”等不准确，Lead已明确原实际250总计=249Medium+1High，新质量数应以本轮新产物/评估账本为准；不从BUILD SUCCESS推断零告警。
+
+### I.4：确认残余 I-N1（P2，错误实现：最后管理员保护不是原子操作）
+
+- **行为契约**：`AdminToolProvider.java:914,946–950`对公开`change_user_status`明确承诺“不允许禁用最后一个超级管理员”并以active ADMIN计数实现；`SPEC.md:27–28,35`要求确认业务错误修复，不能只在单线程演示下成立。
+- **真实可触发顺序**：仅有active ADMIN A/B，两个已批准、独立tool call分别禁用A和B。两者均可在`:948`读到count=2，随后`:952–961`各自update其status=0并kickout。COUNT与update没有共同事务/管理员集合锁；`UserServiceImpl.updateById:45–51`也未提供此原子边界。编排器`:375–390`持久认领的call行只防同call重放，不串行两个独立请求，invoke在claim提交之后执行。因此可以成功禁用全部可用管理员。
+- **原白名单修复有效但不充分**：密码/昵称不回放已被H2回归证明，不应撤销；需在共同的管理员状态变更事务边界内锁定一致集合并重读当前状态/active count后写入，保持其他管理写入口的一致策略，成功提交后撤销会话。
+- **最小关闭证据**：实际公开tool handler两线程，在安全边界安排仅剩两管理员相反目标禁用，断言最多一项成功、至少1 active ADMIN。另保留单人最后管理员拒绝和原密码/并发资料不回放。没有运行本回归；已交Lead实施有效RED→GREEN。
+
+### I.5：确认残余 I-N2（P2，范围外投递并污染邮件结果）
+
+- **行为契约**：`AI_MODULE_DESIGN.md:803–815`将send_email作为独立高风险确认工具；`AdminToolProvider.java:1093–1102`说明“发送通知邮件/模板邮件”，参数只有toEmail、sceneCode、variables，副作用是邮件发出不可撤回。用户确认这个计划不包含其他渠道投递。`SPEC.md:20–21,35`要求安全与真实结果合同保持。
+- **当前因果链**：tool`:1122`调用通用`NotifyPublisher.publish(scene,variables,[email])`；Publisher`:98,124–147`遍历全部启用channel，`:183–184`把override邮箱用于每条渠道，没有EMAIL过滤。合法EMAIL+INAPP规则下EMAIL返回ok后，INAPP`:282–287`把邮箱parseLong必失败；tool`:1129,1141–1144`又把这个非邮件失败计入总failed，返回UNKNOWN，尽管其邮件已确认提交。SMS规则也会进入对应service投递边界；不声称真实短信已送达。只有非EMAIL规则时仍尝试无关渠道，也不应把没有邮件渠道称已执行邮件。
+- **最小关闭方案/证据**：添加限定EMAIL的publisher入口或显式channel过滤，在读取收件人、预占与外部投递之前生效，普通事件publish保留原多渠道合同。公开handler→真实publisher混合EMAIL+INAPP/SMS夹具，断言EMAIL一次且SUCCEEDED、非EMAIL service零调用；只有INAPP/SMS规则时REJECTED且零副作用。已有四项邮件回归均只配置EMAIL，不能关闭本交错；已交Lead修复。
+
+### I.6：门禁、限制与接续条件
+
+已读取`target/takeover-committed-reactor.log`完成尾部，并按逐suite结果行重新汇总：**824 tests / 132 suites / failures0 / errors0 / skipped0**，00:46:33 BUILD SUCCESS；`:144–179`实际运行schema generator生成34实体，非skipCodeGen。`takeover-committed-quality.log`00:47:52 BUILD SUCCESS，包含Spotless、Checkstyle aggregate与实际Done SpotBugs Analysis（后续“Skipping report goal”不是没执行分析）。本轮质量告警总数不自行猜测，交Standards/Lead新账本核对。前端123、Blog84、Worker/Telegram15、pack/release2与构建的证据沿用最终收据及G节具体证明边界，不把专项数重复相加。
+
+Lead确认已接手I-N1/I-N2，修复后将提供补充SHA并重新运行门禁；**当前固定7be9a82不能签发Spec PASS**。本reviewer自此不再扩展独立审阅范围，后续仅复核这两项修复、必需接口边界及对应新SHA/日志。真实浏览器、生产SMTP/模型/云存储、跨PoP瞬时撤销、进程kill、删除chunks后故障注入等未执行边界仍按G/H/TAKEOVER明示；其中授权禁止的浏览器后备路径不构成擅自执行许可。
+## J：I-N1 / I-N2 补充提交限定复核（2026-11-09）
+
+### J.1：固定差量与结论
+
+本轮对象为 `7be9a824ea4f3dd1af83b83374235a23e44a5072..a9f044067fcf05c5cd914b9202c784a7eb67d587`，整体基线仍为 `a39a3f3039ce7deafc3f547a25cc0dc4635c111a`。已读取该窄提交全部8文件diff、并发测试224行和邮件新fixture；没有重新开展全仓范围。**I-N1、I-N2原因果链已关闭，窄差量未确认新增实现遗漏；等待a9f0440完整reactor/质量后给最终Spec轴判定。** I.4/I.5保留为已修历史问题，不再作为当前残余。
+
+### J.2：I-N1关闭——两个公开状态入口共享事务锁
+
+- `UserServiceImpl.java:25–62`新增代理可调用的`@Transactional(rollbackFor=Exception.class) changeStatus`。禁用路径先按id排序FOR UPDATE锁所有未删ADMIN行，**包括disabled**，并非只锁本次目标或仅active子集；后续重新读取目标、检查active ADMIN count、SET status/reason/time且检查更新结果在同一事务完成。两个事务取相同顺序的集合，第二事务等第一提交后才COUNT，不能重现两个count=2均成功的旧链。
+- `AdminToolProvider.ChangeUserStatusTool:947–955`和`UserController.changeStatus:294–301`均委托同一service方法，当前调用方没有将外部kickout包入该service事务，代理成功返回（已提交）之后才撤销会话；业务拒绝不kickout。原助手白名单不回写password/昵称的保护仍然保留。
+- `AdminToolUserStatusConcurrencyTest:117–150`以公开handler/Controller和真实MyBatis、Spring事务、独占PG schema参数化两种交错：工具vs工具、工具vsController。JDBC包装只在第一COUNT真实执行后暂停，通过另连接`pg_stat_activity.wait_event_type='Lock'`确认第二调用确已等待，或允许旧代码先完成；再释放第一，断言第一SUCCEEDED、第二REJECTED、两用户最终0/1。它没有mock SQL计数或锁结果。`takeover-last-admin-red.log:252–278`旧码两例均为预期REJECTED实际SUCCEEDED，属于有效业务RED。
+- 合同口径仍为原SQL实际含义“最后一个可用管理员”（active且未删user_type=ADMIN），工具说明同步纠正。此修复限定两个状态操作入口；没有要求或承诺全局修改角色、删除用户、变更类型的新增策略，不把这些范围外策略隐含进关闭结论。Sa-Token撤销在测试中被替换，不称真实会话集成验证。
+
+### J.3：I-N2关闭——在投递前限定EMAIL
+
+- `NotifyPublisher.publishEmail`把限定渠道传入私有实现；`for(channel)`开头在读取recipient之前用equalsIgnoreCase过滤，故INAPP/SMS不会进入收件人解析、额度预占或deliver。原公开`publish`传null过滤条件，保留全部启用渠道及原错误隔离/额度合同，`publishAsync`继续使用原入口。`SendEmailTool`只改为调用邮件专用入口，原确认数与UNKNOWN逻辑保持。
+- `AdminToolEmailOutcomeTest:56–85`新增两例真实tool→Publisher/Mail/Sms/Inapp服务链，Mapper/SMTP与短信SPI为外部替身。混合EMAIL/INAPP/SMS规则断言SMTP恰1、SUCCEEDED及submittedCount=1、smsAttempts/notices均0；仅非邮件规则断言REJECTED、SMTP未构造、其余计数0。原4项无规则/失败/部分/成功仍保留。`takeover-email-channel-red.log:50–65`旧码预期SUCCEEDED、实际UNKNOWN，属于有效业务RED，非夹具初始化失败。
+- Inapp零落库断言本身不能证明旧代码没有尝试parseLong；当前**过滤位置源码**明确证明解析前跳过，回归则证明最终外部效果/结果合同。没有运行真实SMTP/短信服务或发送邮件。
+
+### J.4：已核专项与待补最终门禁
+
+`target/takeover-final-boundaries-green.log`于01:06:08 BUILD SUCCESS：AccountCredentialPersistence2、NotifyPublisherDelivery8、AdminToolEmailOutcome6、AdminToolProviderPermissionCode4、AdminToolUserStatusConcurrency2、AdminToolWritePersistence2，共**24项/6套件/0失败/0错误/0跳过**。普通通知多渠道原回归与先前白名单回归均通过；不将测试重叠重复加到完整reactor总数。
+
+Lead正在重跑`a9f0440`完整reactor/质量，当前只确认专项。等待最终日志再更新报告顶部和J节结论；不拿7be9a82的824门禁替代，不把历史baseline失败重列为当前阻断。后续仍仅补这一提交的门禁与最终Spec判定，不扩大审阅或修改产品。
+### J.5：最终门禁与 Spec 轴判定（2026-11-09）
+
+**最终 Spec：PASS，固定产品提交 `a9f044067fcf05c5cd914b9202c784a7eb67d587`，基线 `a39a3f3039ce7deafc3f547a25cc0dc4635c111a`。** I-N1/I-N2与既有确认项完成实现/回归闭环；最终核验时HEAD仍为a9f0440，工作树差量仅审阅/质量账本等docs，没有门禁后产品源码变更。J.1–J.4的等待表述为收到最终证据前的记录，现由本节取代。后续报告汇总/服务清理/文档本地提交由Lead负责，不混称本reviewer已操作。
+
+| 已读取原始证据 | 独立核对结果 |
+| --- | --- |
+| `target/takeover-final-reactor.log` | 逐suite行重新汇总**828 tests / 133 suites / failures0 / errors0 / skipped0**。`:142–177`实际生成34实体，`:6297–6302`Boot repackage及本地install，`:6319–6322`01:11:43 BUILD SUCCESS。未使用skipCodeGen。SHA256=`c039404ee9326bfbf9fb94768de30fba39c4066a284a8ab59be33a31b9ee02b5`。 |
+| `target/takeover-final-quality.log` | Spotless各模块check、Checkstyle aggregate、11个实际Done SpotBugs Analysis；`:646–649`01:13:03 BUILD SUCCESS。SHA256=`9b5ae17763683590fb914500f00f88507884c842e919568ea51d676b40d7f3ce`。 |
+| SpotBugs原始XML与`spotbugs-assessment.json` | 按报告清单逐XML重算**248项，全部priority2（Medium），0 High**；所有XML SHA256与收据一致，reviewedHead为a9f0440。这取代旧250/249计数，不称零告警；意义判断沿用独立Standards/quality-review逐项评估，本轮没有声称重新逐项语义评审248项。 |
+| `target/checkstyle-result.xml`与`checkstyle-assessment.json` | 实际severity重算**377 warnings / 0 errors**，XML SHA256与账本一致，reviewedHead为a9f0440。维护复杂度告警与错误实现区分；不以静态命令成功掩盖未处理行为缺陷。 |
+
+最终范围依据SPEC:11–13、26–39，覆盖归因维持G.7/I.1/TAKEOVER。全部领域有继承审阅与接手补审记录；本轮仅对指定晚期差量及两窄修复独立深读，未把文件扫描/指纹/测试数量当作逐文件全文阅读。I-N1只关闭明确状态操作的管理员保留契约；I-N2只限制已批准邮件动作，不改变普通通知多渠道行为；无新增需求删减或放宽权限替代修复。
+
+真实浏览器扩展未就绪，SPEC:46–47禁止后备CDP/Playwright，因此DOM/loopback不计browser GREEN。真实SMTP/短信/模型/云存储、生产环境、跨PoP即时撤销、进程kill、删除chunks后故障等已明示边界保持；它们不是伪造已验或无条件生产保证。当前没有确认的Spec实现残余，不因这些已允许披露的环境边界重新列旧问题为待修。Standards轴结论保持独立，本结论不替代其质量判定。

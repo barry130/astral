@@ -1,6 +1,26 @@
-# Standards 独立复审（2026-11-08）
+# Standards 独立复审（2026-11-08 至 2026-11-09）
 
-## 核心结论
+<a id="latest-standards-conclusion"></a>
+
+## 最新结论：固定提交 a9f0440（Standards收口，最终门禁已核实）
+
+**本轴此前已确认的规范违例无未关闭项；新增窄复核未发现独立Standards缺陷。Spec轴最后管理员并发禁用、邮件工具误投非EMAIL两项的原触发路径已关闭。** S1–S6、R9、SYS/SEQ、Provider/Alert、SQL-AST、HTTP-TR、R3、LIFE-STD-F1–F8、ST-REV-F1–F11、AI-REF、QT-USER、MON-STD及CFG的关闭状态按后文证据保留。旧记录“待修”均是历史状态。
+
+最新审核SHA为 `a9f044067fcf05c5cd914b9202c784a7eb67d587`，整体基线仍为 `a39a3f3039ce7deafc3f547a25cc0dc4635c111a`。本轮只审 `7be9a82..a9f0440` 的8个变化文件，继承此前固定提交及领域覆盖；**不宣称此次独立逐行重读全仓差异**。详见[本轮窄修复证据](#fixed-commit-evidence-a9f0440)及[前轮固定提交证据](#fixed-commit-evidence-7be9a82)。
+
+规范违反与启发式分列：本轴新增规范违例0项；保留Blog两项P3 **possible Duplicated Code**，只是维护判断，当前行为一致，无立即重构要求。仓库Service/DTO/shadcn分层与字典约定优先于Fowler启发式，工具已强制项不重复计数。
+
+**本轮定向证据已核实：** `takeover-final-boundaries-green.log` 为24项/6套，失败错误跳过均0，01:06:08 BUILD SUCCESS；管理员真实PG两并发及邮件混合渠道均有此前行为RED。源码确认两公开状态入口共用有序数据库锁及白名单更新，邮件筛选在收件人解析、额度与投递之前。
+
+**a9f0440最终门禁已独立读取核实：** 完整install实际codegen，828项/133套，0 failure/error/skipped，01:11:43成功；质量命令01:13:03成功，Spotless通过，原始XML为SpotBugs248 Medium/0 High、Checkstyle377 warnings/0 errors。两项新复杂度告警保留为维护记录，没有已确认行为缺陷，不以拆空方法降低指标。前轮824项收据保留历史，不与本轮累加。两项问题保留Spec轴归因；本轴0新增不等于全仓无缺陷。
+
+浏览器扩展限制仍在，合成DOM/loopback不能代替真实浏览器、云服务或生产验收。本reviewer本轮只读源码/已有日志及写本报告，未构建、启动服务、联网、触碰数据库或提交。
+
+---
+
+## 历史快照：首次核心结论（已被顶部最新结论覆盖）
+
+以下历次记录保留当时源码与验证状态；其中“待修”“待运行”“最新”“本节优先”等措辞均以记录时点为限，当前状态只读本报告顶部及最终固定提交证据。
 
 **R3-F1已关闭：最终渲染请求头同时用于摘要和发送；实际secret引用值A→B会改变新计划hash，旧快照保持。** 最新日志为5项生命周期与1项MCP快照共6项GREEN。固定基线 `a39a3f3039ce7deafc3f547a25cc0dc4635c111a`，审查对象为WIP；历史发现按时间保留，以下为最新状态。
 
@@ -932,3 +952,95 @@ LIFE-STD-F8 已关闭：Provider 调用前取消释放阶段 token、金额及�
 | **CFG-STD-F2 关闭** | `astral-server/src/main/resources/application-database-examples.yml:1–27` 明确当前PG运行时与 `spring.datasource.*`，删除旧namespace覆盖优先级/MySQL生产推荐；驱动、Flyway schema和基线版本与现配置一致。 | 符合优先规则 `AGENTS.md:88,241`；仅关闭文档违例，不据此声称已迁移真实存量库或验证其他数据库生产兼容。 |
 
 此前已关闭历史项保持原证据归因。`takeover-final-races-green.log:404` 的 PluginIsolationTest3 再次通过，但本次没有扩展为新的插件全量审阅；真实全局ID/启动/Flyway证据仍以本报告前节所列独立用例为准。最终提交后须按实际hash核对本轮hunk与后续AI7运行结果。
+
+<a id="fixed-commit-evidence-7be9a82"></a>
+
+## 固定提交 Standards 收口证据：7be9a82（2026-11-09）
+
+### 固定差异、规范与归因
+
+本轮捕获命令为 `git diff a39a3f3039ce7deafc3f547a25cc0dc4635c111a...7be9a824ea4f3dd1af83b83374235a23e44a5072`。HEAD实际解析到该审核SHA，merge-base实际返回给定基线；差异1163文件，非空。初读时工作树无未提交产品变更，后续Lead写入inventory/修复不纳入此固定结论。本reviewer只修改本报告。
+
+`git log BASE..审核SHA --oneline` 实际五条：
+
+```text
+7be9a82 fix: clarify exception argument contract and document shared UI behavior
+07c3e40 docs: record audit coverage, regression evidence and quality assessments
+ccae720 fix: make packaging, release tags and worker delivery consistent
+07a48e8 fix: improve admin and blog workflows, feedback and session handling
+e57bb02 fix: harden backend state transitions, authorization and recovery
+```
+
+规范来源沿用 `AGENTS.md`（冲突优先）、`docs/CODING_GUIDE.md`、`docs/UI_GUIDE.md`、`COMPONENTS_GUIDE.md`、`PLUGIN_GUIDE.md`、`INTEGRATION_GUIDE.md`、`DEPLOY_GUIDE.md`、`AI_MODULE_DESIGN.md` 及既有模块指南；原任务为 `docs/audit/2026-11-07/SPEC.md`。本次针对既有闭项、最终一行Java与晚期增量做实质hunk复核；继承的全文件阅读、前轮定向阅读与这次阅读各按原记录归因。文件盘点/模式搜索/测试通过不算逐行语义覆盖；截断输出未返回的部分也不计完整阅读。
+
+Blog原冻结账本118源本轮再算SHA256仍115相同，变化仍为Dockerfile、browser-gate、build-isolated，与前轮补读范围相同；沿用原118源/174hunk归因，不宣称本轮独立全读。两项possible判断的当前代码片段本轮重新核过。
+
+### 原项关闭与晚期增量
+
+| 范围 | 当前提交源码与关闭证据 | 规则与验证边界 |
+| --- | --- | --- |
+| **原Standards发现保留关闭** | MCP `AiAdminMcpController:73,83` 禁止采集payload；`AiMcpHeaderSecurity:64–122` 保留null、字符串形状、完整引用、密文验证及大小写掩码规则。`McpToolExecutor:54–89,174–175` 固定实际渲染headers及摘要/发送；`AiToolService:761–768` 将其纳入计划。生命周期 `AiChatOrchestrator:694–698,764–814,875–882` 保留锁内下一助手、密钥预解析、未进入Provider退预占；`AiUsageService:188–225` 仍在request→usage→quota顺序内幂等释放唯一未使用请求数。序列RETURNING保留affectData/flushCache/useCache=false，UserRole仍委托updateAssignment。 | 原因果链与各次既有真实Mapper/事务/网络替身证据归因不变；规则见对应历史段。此次未重新独立展开所有已关闭文件。当前完整日志包含Lifecycle30、MCP快照1、QT3、MON4、存储26、插件全局ID与启动上下文。 |
+| **存储F7–F11保留关闭** | `LegacyUploadReceiptService:70–120,123–139,144–167` 保留终态重复对象登记、共享 `storage-upload:` 锁、权威receipt三字段比对后才ack；无退回旧重复副本提前终结路径。 | 符合持久事实、共享幂等锁与恢复语义；当前 `takeover-committed-reactor.log:1954` StoragePersistence26 GREEN，不能把它扩为所有远端真实服务组合验收。 |
+| **AI-REF / QT / MON / CFG保留关闭** | 前节字段白名单、agent→version锁及公开发布类级事务均在提交内；工具/知识绑定在自身事务内锁版本并重验DRAFT。日志根层级、PG示例、locale和SSE一次释放未退回。 | `AGENTS:365–374`、`CODING_GUIDE:63` 等原规则。AiAgentConcurrency当前7项在 `takeover-committed-reactor.log:1005` 全通过，解除前节“源码7/日志3”限制；QT/Monitor原公开交错与MockMvc证据仍适用。 |
+| **启动baseline竞态关闭** | `astral-server/src/main/java/com/astral/server/migration/PostgresMigrationStrategy.java:15–38` 使用独立连接事务，在调用Flyway之前按schema+history表取得PG事务咨询锁，5min锁超时，覆盖validate/baseline/migrate；finally rollback后释放，连接自动关闭。非PG保留直接migrate。 | `CODING_GUIDE:58–71` 数据库边界原子性及启动合同。`NoticeMigrationCompatibilityTest:152–218` 暂停首次BEFORE_VALIDATE，断言第二启动等候；`:222–252` 并发首次启动后无错误BASELINE、第一SQL恰好一次、无重复版本。当前日志`:5593` 7项GREEN；旧release-reactor中间失败不是当前门禁。真实Boot fixture还确认注册该strategy。 |
+| **H-N1旧知识任务转换关闭** | 插件 `sql/ai-schema.sql:249–268` 和 `V20261108008__knowledge_durable_jobs.sql:3–20` 在同一DO事务中锁job表，只有尚无end_document_id才把旧QUEUED/PENDING/RUNNING改FAILED，再安装游标列与索引；重启不重置新任务。 | `CODING_GUIDE:63` 与 `AI_MODULE_DESIGN:2234–2235`。`AiKnowledgePersistenceTest:131–181` 实际调用initializer两次，夹在中间重试并推进一篇，然后执行08008，断言RUNNING、游标/进度保留并最终完成；当前知识11在日志`:1247` GREEN。不是kill进程或生产升级实测。 |
+| **H-N2任务busy关闭** | `KnowledgePanel.tsx:418–432,473–512` 读入口在写pending时退出，写操作独占标记并在finally无条件释放busy；前一个读的版本失效不再阻止写收尾。 | 共享UI任务状态/可恢复失败合同。`ai-knowledge-editor.test.cjs:100–142` 真React+axios adapter固定失败→再次取消等待→刷新→取消完成→重试，断言没有额外refresh、按钮恢复；`takeover-front-complete-tests.log:11` GREEN。合成DOM未等待轮询，不等同真实浏览器事件验收。 |
+| **助手旧值回写关闭** | `AdminToolProvider:843–857` 停用provider仅传enabled；`:894–902` 配置仅SET value/time并检查结果后evict；`:952–961` 新建最小User patch，仅status/reason/time，不带旧password。`UserServiceImpl:44–51` 因无新密码不会再次hash。Provider本身 `:133–179` 保持wrapper显式字段。 | `AGENTS:365–374`。AdminToolWritePersistence真实H2/MyBatis2与Provider7在当前日志`:1319,1271` GREEN，断言并发密码/资料/描述/凭据变化保留。这里只关闭旧字段回填，**不关闭Spec随后发现的last-admin并发业务约束**。 |
+| **邮件确认/流调用ID原修复有效** | `AdminToolProvider:1121–1146` 根据PublishResult报告无规则REJECTED、未全确认UNKNOWN且保留数量；不回显SMTP错误。`OpenAiCompatibleProvider:413–418` 每个无上游ID accumulator生成UUID，有ID原样保留。 | `AGENTS:213–214` 投递结果合同及AI工具身份要求。当前日志邮件4、transport5在`:1315,976` GREEN。此证据仅证明已有四种投递结果与同名ID原问题，**不覆盖Spec后报的EMAIL渠道过滤**。 |
+| **最后提交一行Java与两文档** | `BusinessException:31–35` 将已由super中args.length证明非null的参数直接clone；不改变既有null varargs异常合同，保留防御复制。`docs/CMS_PLUGIN:59` 的实例内滑窗/10k容量/失败不退款说明对应 `CmsCommentService:155–172`；`docs/UI_GUIDE:92` 新共享组件文档与AdminLoadNotice三个实际导出及useAdminLoader/Mutation/Query一致。 | 无新确认规范违例。实际静态XML中该RCN冗余判空已消失；不为了工具提示新增另一种参数语义。CMS配置夹取与实例限流限制已如实公开。 |
+
+### 规范违反与启发式分别记账
+
+- **本轴新增确定规范违反：0；本轴此前已确认产品发现未关闭：0。** 这不是全项目无缺陷声明。Lead在此固定提交之后通知的Spec两项保留Spec归因；Standards未重复排序或另增ID。
+- **possible Duplicated Code / P3（继承判断）**：`astral-blog/src/lib/cms-validation.ts:108–132,153–172` 两树遍历都有 `let count = 0; const seen = new Set<number>(); ... if (++count > 5000 || depth > 32) fail()`；策略调整时可提共用遍历骨架，保留各显式字段投影。当前策略一致，无运行故障证据。
+- **possible Duplicated Code / P3（继承判断）**：`astral-blog/src/components/markdown-editor.tsx:281–289,300–308` 都做 `lastIndexOf('\n', selectionStart - 1) + 1`、`.slice(start,end).split('\n').map(...).join('\n')` 和同样的选区替换；可在下次改缩进策略时提取。Ctrl括号与Tab当前语义一致，不要求为了收口重构。
+- 其余Mysterious Name、Feature Envy、Data Clumps、Primitive Obsession、Repeated Switches、Shotgun Surgery、Divergent Change、Speculative Generality、Message Chains、Middle Man、Refused Bequest均沿既有判断/仓库覆盖规则；不把规定Service接口、DTO、字典字符串、链式Wrapper、shadcn包装机械算作缺陷。复杂服务后续可按业务职责拆分，不新增无法指出具体坏行为的阻断项。
+
+### 固定提交实际运行收据
+
+本reviewer只读取Lead产出的日志，未执行命令。`target/takeover-committed-reactor.log` 按包含 `-- in` 的每套JUnit摘要独立求和为 **824项、132套、0 failure / error / skipped**；`:6342,6345` 为BUILD SUCCESS、2026-11-09 00:46:33。SHA256：`b1a90d3cfca8f33320d4d8c36e75494aa2978cc3ae3a0cd5aa00ee7939fe46c0`。日志记录实际schema codegen，非skipCodeGen；旧00:27日志仅作前序证据，不重复相加。
+
+`target/takeover-committed-quality.log:644,647` 为BUILD SUCCESS、2026-11-09 00:47:52；SHA256：`6403a5e80fabbaf96daccad8d29ffd1ac10bea6bbe8b4ca08755ca6e7b38e9e3`。实际读取10份 `target/spotbugsXml.xml` 后按priority汇总 **249 Medium、0 High**，BusinessException对应RCN条目0；Spotless报告0文件需改。Checkstyle/SpotBugs仍有维护告警，未把命令成功描述成零告警。
+
+旧 `verification.json` 的Medium250+High1与旧250总数有误，旧 `quality-review.md`/SpotBugs账本称MCP未知hint必进HIGH也有误：现 `readOnlyOf:224–225` 为 `serverReadOnly && !Boolean.FALSE.equals(hint)`，符合 `AI_MODULE_DESIGN:948` 的服务器只读且远端未否定合同。Lead已接收这两项证据文案纠偏；此报告按实际代码/日志记账，不将文案失真扩张成产品漏洞。
+
+### 本轮收口与后续窄修复边界
+
+截至本次固定SHA复核，Lead已通知Spec确认两项后续修复：管理员COUNT与单行状态更新未串行，A/B可同时停用；send_email采用全渠道publisher，可能投递非EMAIL并把非邮件失败混入结果。本reviewer保留本轮已读源码和日志的有界结论，不把824项GREEN当作新发现已经关闭。后续须以Lead提供的新SHA与明确覆盖这两条交错/渠道的回归做窄复核；本轮不扩域、不提交。
+
+完整交付判断还须合并Spec轴及总账；真实浏览器、生产数据库、真实模型/SMTP/云存储仍未验收。原扩展不可用与禁止后备自动化的限制继续保留。
+
+<a id="fixed-commit-evidence-a9f0440"></a>
+
+## 固定提交窄修复 Standards 复核：a9f0440（2026-11-09）
+
+### 范围与当前结论
+
+实际HEAD为 `a9f044067fcf05c5cd914b9202c784a7eb67d587`；本轮读取 `git diff 7be9a824ea4f3dd1af83b83374235a23e44a5072..a9f044067fcf05c5cd914b9202c784a7eb67d587`，8文件、405行新增、37行删除。提交为 `fix: serialize administrator bans and constrain assistant email delivery`，整体审阅基线不变。只对两项Spec修复、对应公开调用链和夹具证据做窄复核，不重新展开全仓或新增全局角色、删除用户、变更类型策略。
+
+**两项Spec原因果链已关闭，本轮未确认新增Standards违反，也未新增Fowler判断。** 前轮两项Blog possible Duplicated Code及全部历史关闭归因保持；不能把此结论解释成所有管理员相关写入口、所有通知配置或生产环境已验收。
+
+### 源码、规范与关闭证据
+
+| 原问题（保留Spec归因） | 当前修复与准确边界 | 规范与已有验证 |
+| --- | --- | --- |
+| **最后两个可用管理员同时禁用：关闭** | `astral-system/src/main/java/com/astral/system/service/impl/UserServiceImpl.java:25–61` 将状态动作放入外部可调用的public事务方法；禁用先按ID顺序 `FOR UPDATE` 锁同一未删ADMIN集合，**包括已禁用行**，随后重读目标、COUNT并仅SET status/statusReason/updateTime。第二禁用须等待第一事务结束，不能各锁单个目标后同时依据旧COUNT通过。`UserController.java:290–301` 与 `AdminToolProvider.java:943–957` 均委托该方法，原权限保持；实际公开路径在服务事务返回后kickout，没有宣称服务注册了通用afterCommit回调。工具描述`:915`现为“最后一个可用管理员”，对应现有user_type/status规则。 | `docs/CODING_GUIDE.md:58–71` public Service事务与数据库并发边界，`AGENTS.md:365–374`显式白名单更新、`:351–361`状态变更可委派合同。`AdminToolUserStatusConcurrencyTest.java:119–150` 两项真实PG公开流程分别覆盖工具vs工具、工具vsController；`:179–222` 在真实第一COUNT返回后暂停，观察第二连接锁等待或完成后才释放，最终恰好一个禁用成功。RED为2断言失败而非装置初始化错误；GREEN2。 |
+| **send_email误投非EMAIL并混算结果：关闭** | `astral-system/src/main/java/com/astral/system/notify/NotifyPublisher.java:100–110` 增加邮件专用入口、保留通用publish的null筛选合同；`:134–157` 在查询/解析收件人、额度检查及投递前跳过非EMAIL。`AdminToolProvider.java:1113–1138` 改调publishEmail，沿用无邮件规则REJECTED及未全确认UNKNOWN的结果规则，不将SMS/INAPP失败混入邮件结果。 | `AGENTS.md:213–219`逐渠道投递、隔离结果与额度合同，以及现有send_email批准动作范围。`AdminToolEmailOutcomeTest.java:56–87` 经实际工具→publisher→邮件/短信/站内信服务，混合三渠道只提交邮件且非EMAIL零投递，只有非邮件渠道时REJECTED；原无规则/SMTP失败/部分成功/成功四例保留，共6项GREEN。旧混合渠道RED为SUCCEEDED期望实际UNKNOWN，且新例明确断言非邮件副作用为0。 |
+
+并发夹具使用真实MyBatis、Spring事务代理及独立PG schema，数据库调度不是mock后的业务返回；Sa-Token会话撤销仍是mock边界，不算真实会话系统验收。邮件夹具保留真实Mail/Sms/Inapp服务，替换外部mapper/Redis/SMTP/SMS SPI；其dailyLimit为0，不声称运行验证所有额度组合，筛选先于额度的结论来自源码顺序。此轮未访问数据库、SMTP或其他真实服务。
+
+### 已有定向收据与最终门禁边界
+
+`target/takeover-final-boundaries-green.log:236,437,493,495,497,499` 的每套摘要合计 **24项/6套，0 failure / error / skipped**：账户2、通知8、邮件6、权限4、管理员并发2、白名单写2；`:518,521`为BUILD SUCCESS、2026-11-09 01:06:08。SHA256：`15ef2a1e1608ef86455f13497a9a05b61852094cd9e9fa8d868afa310eea736a`。
+
+`target/takeover-last-admin-red.log:252–274` 明确两项旧行为均让第二请求SUCCEEDED；`target/takeover-email-channel-red.log:50–60` 明确混合渠道旧结果UNKNOWN。两个RED对应实际业务期望，不以编译或环境失败充当RED，也不与GREEN累加测试总数。
+
+### 最终固定提交门禁补证（2026-11-09 01:13后）
+
+**a9f0440最终命令门禁已核实，不再处于等待状态。** HEAD仍解析为该SHA。对 `target/takeover-final-reactor.log` 中带 `-- in` 的每套JUnit摘要独立求和，得到 **828项/133套，0 failure / error / skipped**；`:141–157`有实际schema generate及实体输出，`:1291,1295`为邮件6、管理员真实PG并发2，`:6319,6322`为BUILD SUCCESS、01:11:43。SHA256：`c039404ee9326bfbf9fb94768de30fba39c4066a284a8ab59be33a31b9ee02b5`。未与24项定向回归或前轮824项累加。
+
+`target/takeover-final-quality.log:646,649`为BUILD SUCCESS、01:13:03；SHA256：`9b5ae17763683590fb914500f00f88507884c842e919568ea51d676b40d7f3ce`。各模块Spotless报告0文件需改。读取本次评估列出的11份原始SpotBugs XML，共 **248项，全部Medium、0 High/Low**；BusinessException冗余判空条目仍为0。10个有告警模块与无告警schema报告的指纹均匹配评估JSON，11/11。根 `target/checkstyle-result.xml` 实计 **377 warnings、0 errors**，SHA256 `86583744ad41a6adb76d60d6184917eeba39b8b8e0154cb6c11ab342301a4c59` 与评估一致。两评估JSON均标记本SHA。
+
+新增两条NPath告警明确保留：`NotifyPublisher.java:109` 为266，`UserServiceImpl.java:25` 为1080；前者由渠道筛选增加分支，后者集中输入验证、同一事务约束和状态写入。本次已逐段检查其行为，未确认新的缺陷；依据技能不重复报告工具规则，不为数字拆出空转发方法。复杂度是维护成本，并非零风险证明。MCP三态评估文案现按 `serverReadOnly && !Boolean.FALSE.equals(hint)` 解释，原“null必高风险”误述已纠正；此前计数纠偏仍按各时点收据保留。
+
+本轴结论：既有已确认Standards问题未关闭0项，本轮新确定违反0项；两项Spec晚期触发路径关闭，保留原归因；两项Blog P3 possible Duplicated Code仍为非阻断维护判断。本reviewer仅核源码、测试/日志/原始XML及写本报告，未构建、测试、联网、启动服务、触碰数据库或提交。产品固定于a9f0440，后续文档清理不重算产品覆盖；完整交付需合并Spec及总账，真实浏览器、生产和云服务未验收边界继续保持。
