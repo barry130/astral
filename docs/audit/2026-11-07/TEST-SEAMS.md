@@ -87,3 +87,8 @@
 - 管理助手邮件：公开 `AiToolHandler.execute` → 实际 `NotifyPublisher`、`MailServiceImpl`；替身止于 Mapper/Redis 与 SMTP sender，验证无规则、失败、部分成功与成功的用户可见状态，不发送真实邮件。
 - 模型流工具调用：公开 `AiProvider.stream` + loopback SSE，验证缺失上游ID时多次同名调用的身份不冲突，不调用真实模型。
 - 管理助手写操作：公开 `AiToolHandler.execute` → 实际 User/Config/Provider service + MyBatis + H2；数据库边界插入一次独立提交，随后通过服务公开读取验证密码、资料、配置及提供方未被旧值覆盖。Sa-Token 会话作为外部边界替换。
+
+### 已提交终审补充（2026-11-09）
+
+- `send_email` 公开工具 → 真实 NotifyPublisher/Mail/Sms/Inapp 服务，混合 EMAIL/SMS/INAPP 与仅非邮件规则；只在数据库、SMTP 与短信供应商 SPI 边界隔离，观察批准的邮件结果及非邮件零投递。不使用真实收件人或第三方服务。
+- `change_user_status` 公开工具与管理 Controller → 真实 UserService/MyBatis/Spring 事务、独占 PostgreSQL schema，通过数据库连接边界安排不同账号并发禁用，随后公开读取账号状态；验证至少保留一个可用管理员及业务拒绝。会话撤销边界隔离，真实账号与角色策略不变。用户已授权直接修复，无需新增逐项确认。

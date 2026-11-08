@@ -14,6 +14,7 @@ import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolProvider;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
+import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.LoginLog;
 import com.astral.dao.entity.OperateLog;
 import com.astral.dao.entity.SysConfig;
@@ -911,7 +912,7 @@ public class AdminToolProvider implements AiToolProvider {
             return high(
                     "change_user_status",
                     "修改用户状态",
-                    "启用或禁用某个用户账号。高风险，需确认；不允许禁用最后一个超级管理员。",
+                    "启用或禁用某个用户账号。高风险，需确认；不允许禁用最后一个可用管理员。",
                     "admin.changeUserStatus",
                     List.of("admin:system:user:edit"),
                     AiToolTypes.objectSchema("""
@@ -943,19 +944,10 @@ public class AdminToolProvider implements AiToolProvider {
             if (user == null || Integer.valueOf(1).equals(user.getDeleted())) {
                 return AiToolResult.rejected("用户不存在：" + userId);
             }
-            if (status == 0
-                    && "ADMIN".equals(user.getUserType())
-                    && count("SELECT count(*) FROM sys_user WHERE deleted = 0 AND status = 1 AND user_type = 'ADMIN'")
-                            <= 1) {
-                return AiToolResult.rejected("系统中仅剩一个可用管理员，禁止禁用该账号");
-            }
-            User patch = new User();
-            patch.setId(userId);
-            patch.setStatus(status);
-            patch.setStatusReason(status == 0 ? reason.trim() : "");
-            patch.setUpdateTime(LocalDateTime.now());
-            if (!userService.updateById(patch)) {
-                return AiToolResult.failed("用户状态未更新，请刷新后核对");
+            try {
+                userService.changeStatus(userId, status, reason);
+            } catch (BusinessException rejected) {
+                return AiToolResult.rejected(rejected.getMessage());
             }
             if (status == 0) {
                 StpUtil.kickout(userId);
@@ -1119,7 +1111,7 @@ public class AdminToolProvider implements AiToolProvider {
                 }
             }
             List<NotifyPublisher.PublishResult> results =
-                    notifyPublisher.publish(scene.trim(), variables, List.of(to.trim()));
+                    notifyPublisher.publishEmail(scene.trim(), variables, to.trim());
             if (results.isEmpty()) {
                 return AiToolResult.rejected("没有可用的邮件投递规则，请检查通知订阅配置");
             }

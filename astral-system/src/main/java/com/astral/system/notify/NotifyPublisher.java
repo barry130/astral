@@ -98,6 +98,16 @@ public class NotifyPublisher {
      * @param recipientsOverride 测试用：非空时替代规则收件人（对每条规则每条渠道都用这些收件人试投）
      */
     public List<PublishResult> publish(String eventCode, Map<String, String> payload, List<String> recipientsOverride) {
+        return publish(eventCode, payload, recipientsOverride, null);
+    }
+
+    /** 邮件专用动作：仍遵守订阅模板与额度，仅在 EMAIL 渠道解析收件人并投递。 */
+    public List<PublishResult> publishEmail(String eventCode, Map<String, String> payload, String email) {
+        return publish(eventCode, payload, List.of(email), NotifyChannel.EMAIL);
+    }
+
+    private List<PublishResult> publish(
+            String eventCode, Map<String, String> payload, List<String> recipientsOverride, String channelFilter) {
         List<SysNotifyRule> rules = ruleService.list(new LambdaQueryWrapper<SysNotifyRule>()
                 .eq(SysNotifyRule::getEventCode, eventCode)
                 .eq(SysNotifyRule::getEnabled, 1));
@@ -122,6 +132,9 @@ public class NotifyPublisher {
                 continue;
             }
             for (SysNotifyRuleChannel channel : channels) {
+                if (channelFilter != null && !channelFilter.equalsIgnoreCase(channel.getChannel())) {
+                    continue;
+                }
                 List<String> resolved;
                 try {
                     List<SysNotifyRuleRecipient> recipients =

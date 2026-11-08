@@ -293,24 +293,7 @@ public class UserController {
     @PutMapping("/{id}/status")
     public Result<Void> changeStatus(
             @PathVariable Long id, @RequestParam Integer status, @RequestParam(required = false) String reason) {
-        if (userService.getById(id) == null) {
-            throw BusinessException.of("用户不存在");
-        }
-        // 封禁理由：封禁时必填落库（用户管理页展示），解封时清空
-        if (status != null && status == 0) {
-            if (reason == null || reason.isBlank()) {
-                throw BusinessException.of("封禁时必须填写理由");
-            }
-        }
-        // 只 patch 状态相关列：绝不能把 getById 出来的实体（password 是哈希）整个塞回
-        // updateById —— UserServiceImpl.updateById 会把非空 password 当新明文再哈希一次，
-        // 落库成 BCrypt(BCrypt(明文))，用户从此无法登录（实测踩坑）。
-        User patch = new User();
-        patch.setId(id);
-        patch.setStatus(status == null ? 1 : status);
-        patch.setStatusReason(status != null && status == 0 ? reason.trim() : "");
-        patch.setUpdateTime(LocalDateTime.now());
-        userService.updateById(patch);
+        userService.changeStatus(id, status == null ? 1 : status, reason);
         // 封禁时踢下线
         if (status != null && status == 0) {
             StpUtil.kickout(id);
