@@ -120,6 +120,8 @@ services:
         # 构建期不请求后端（页面全 force-dynamic），这里只为保持一致；
         # 真正生效的是下面 environment 里的运行时值。
         CMS_API_BASE: http://backend:27000
+        NEXT_PUBLIC_SITE_URL: ${BLOG_SITE_URL:?Set BLOG_SITE_URL to the public blog HTTPS origin}
+        NEXT_PUBLIC_ADMIN_URL: ${BLOG_ADMIN_URL:?Set BLOG_ADMIN_URL to the public admin HTTPS origin}
     container_name: astral-blog
     restart: unless-stopped
     ports:

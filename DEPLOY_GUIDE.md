@@ -68,6 +68,7 @@ nginx 终结 TLS 并做网络层限流，三个容器端口只绑 `127.0.0.1`（
 |------|------|
 | `deploy/docker-compose.yml` | 服务编排（backend + frontend + blog） |
 | `deploy/nginx/00-http-level.conf` | nginx **http 级**片段（限流区 `limit_req_zone` + WebSocket `map`）。**仅系统 nginx 用，宝塔不要拷** |
+| `deploy/nginx/security-headers.conf` | 纯安全响应头片段，安装到 snippets；允许 http/server/location 引用 |
 | `deploy/nginx/10-astral-sites.conf` | nginx **server 级**配置（www 博客 + web 管理端 + astral 接口域，含 HTTPS）。**仅系统 nginx 用，宝塔见「2A」** |
 | `astral-server/Dockerfile` | 后端多阶段构建（构建阶段 `maven:3.9-eclipse-temurin-25`；BuildKit 缓存 Maven 仓库） |
 | `astral-front/Dockerfile` | 管理端多阶段构建（Next.js 16 standalone + `node:24-alpine` × 3 阶段；BuildKit 缓存 npm） |
@@ -132,7 +133,7 @@ git clone <你的仓库地址> astral
 
 **方式 B：本机打包上传（无仓库时）**
 
-仓库自带打包脚本，产物仅含源码（自动排除 `node_modules` / `.next` / `target` / `data` / `logs`）：
+仓库自带打包脚本，需要本机安装 Git 与 Python 3。脚本按 Git 文件清单读取工作区当前内容，包含未忽略的新源码；排除 `node_modules` / `.next` / `target` / `data` / `logs`、实际 `.env`、`.dev.vars` 和凭据文件，只保留环境示例模板。输出目录必须在仓库外：
 
 ```bash
 # Linux / macOS：在仓库根执行
@@ -259,7 +260,7 @@ done
 
 ### 2A. 宝塔面板 nginx（本项目线上的实际用法）
 
-`deploy/nginx/` 那两个文件是给「系统 nginx」用的，宝塔用户**不要**拷，改成在面板里配。
+`deploy/nginx/` 的配置是给「系统 nginx」用的，宝塔用户**不要**直接拷，改成在面板里配。
 
 三个站点的目标都是单一回环端口，所以用面板的「反向代理」最省事：
 
@@ -294,6 +295,8 @@ client_max_body_size 20m;
 ```bash
 # http 级片段（limit_req_zone / map）—— 必须在 http{} 里，走 conf.d 的 include
 sudo cp deploy/nginx/00-http-level.conf /etc/nginx/conf.d/00-astral-http.conf
+sudo mkdir -p /etc/nginx/snippets
+sudo cp deploy/nginx/security-headers.conf /etc/nginx/snippets/astral-security-headers.conf
 # server 级配置
 sudo cp deploy/nginx/10-astral-sites.conf /etc/nginx/conf.d/10-astral-sites.conf
 
@@ -393,8 +396,8 @@ docker compose up -d --build
    GitHub 那条照旧需要代理；CNB 走国内直连，不开代理也能推。代理没开时 GitHub 那条会失败，但 CNB 可能已经推上去了，以 git 输出为准。
 4. **开启自动触发**：CNB 仓库「设置」里勾选**允许自动触发（云原生构建）**，否则 push 不会触发构建
 5. **首次推送验证**：`git push`。master 在 CNB 属于新分支，必定触发三条流水线全量构建（后端、前端、博客并行）。成功后在 CNB 仓库「制品」页能看到三个镜像（`astral-backend` / `astral-frontend` / `astral-blog`），各有两个 tag：`latest` 与「日期-短SHA」如 `20261001-1a2b3c4d`（后者用于精确发布/回滚）。制品路径与仓库路径一致（`docker.cnb.cool/canace/astral/astral-backend` 等），首次 push 自动创建，无需手动建仓
-   - 之后每次 push 按**改动路径**过滤：动 `astral-front/**` 只重建前端，动 `astral-blog/**` 只重建博客，动后端模块只重建后端，互不连坐；手动全量构建用 master 分支详情页的「构建并推送镜像」按钮
-   - 博客镜像**不带域名**：它的后端地址在运行期由 `CMS_API_BASE` 决定（compose 固定 `http://backend:27000`），换域名不用重新构建。前端镜像同源化改造后也是这一形态（`/api` 由容器内 `proxy.js` 按 `BACKEND_URL` 转发）
+   - 每次 push 构建后端、管理端和博客三个镜像，共用一个日期 tag；三份不可变镜像全部推送成功后才推进 latest。只有完整流水线成功的 tag 可供部署；手动触发使用同一流程
+   - 博客的 `CMS_API_BASE` 是运行时后端地址；公共博客/管理端链接由构建时 `BLOG_SITE_URL`、`BLOG_ADMIN_URL` 写入镜像。必须在 deploy/.env 与 CNB 项目变量中配置公共 HTTPS origin，改域名需重建博客。管理端的 `/api` 仍由运行时 `BACKEND_URL` 转发
 6. 服务器无需登录：仓库当前为公开仓，`docker pull docker.cnb.cool/canace/astral/astral-backend` 可匿名拉取。（若改回私有仓再执行一次登录：`echo "<CNB访问令牌>" | docker login docker.cnb.cool -u cnb --password-stdin`，令牌需勾选 `registry-package` 读权限）
 
 7. 服务器 `deploy/.env` 补两行：`REGISTRY=docker.cnb.cool/canace/astral`、`TAG=latest`
@@ -497,7 +500,7 @@ docker inspect astral-backend --format '{{json .HostConfig.ExtraHosts}}'
 
 - **镜像已通用化（2026-10 同源化改造）**：`.cnb.yml` 前端流水线不再传 `NEXT_PUBLIC_API_URL`，bundle 固定同源相对路径 `/api`，运行期由容器内 `proxy.js` 按启动时 `BACKEND_URL` 转发到后端；换后端改 compose 的 `BACKEND_URL` 重启即可，不用重新构建
 - **CPU 架构必须匹配**：CNB 构建节点产出 `linux/amd64`。服务器若是 ARM（aarch64），需在 `.cnb.yml` 的 `docker build` 命令加 `--platform linux/arm64`，否则容器报 `exec format error` 起不来
-- **CNB 额度与并发**：免费额度以官方文档为准（构建约 160 核时/月，计费 = 核数 × 耗时；镜像存储走对象存储 100GiB 免费额度）；`.cnb.yml` 流水线已显式降配 4 核 8G（默认 8 核 16G，核时消耗减半），并已用 `lock.cancel-in-progress` 取消同镜像的在途构建（后端/前端互不取消）、用 `ifModify` 按改动路径过滤。构建机与制品库都在国内，推送/拉取不走跨境链路；首次构建要拉基础镜像和依赖会稍慢，Docker 层缓存仅在当前构建节点有效、命中率不稳定，属正常现象
+- **CNB 额度与并发**：免费额度以官方文档为准（构建约 160 核时/月，计费 = 核数 × 耗时；镜像存储走对象存储 100GiB 免费额度）；`.cnb.yml` 流水线已显式降配 4 核 8G（默认 8 核 16G，核时消耗减半），完整发布使用同一个锁串行执行，禁止在推送中途取消，保证日期 tag 的三个镜像齐全。构建机与制品库都在国内，推送/拉取不走跨境链路；首次构建要拉基础镜像和依赖会稍慢，Docker 层缓存仅在当前构建节点有效、命中率不稳定，属正常现象
 - **磁盘回收**：每次 pull 都会留下旧镜像，`update.sh` 已带 7 天回收；手动回收用 `docker image prune -af --filter "until=168h"`
 - **自动更新（仅建议测试环境）**：cron 每 10 分钟执行 `update.sh`；或用 watchtower：
 
@@ -734,4 +737,10 @@ docker version --format '{{.Server.Version}}'
 
 - [组件指南](COMPONENTS_GUIDE.md)
 - [插件开发指南](PLUGIN_GUIDE.md)
+
+# 2026-11 审阅补充配置
+
+轻听产物包头探测默认只访问公开地址，最多读取前8KiB，最多5次重定向，每一跳重新校验目标并沿用总截止时间，不允许HTTPS降级为HTTP。如产物确实部署在受控内网，可设置 `qt.pack-probe.allow-private-hosts` 为逗号分隔的精确主机名或IP（默认空）；不接受通配符，不会自动放行重定向到的其他主机，云元数据地址始终拒绝。不要把普通用户可控制的目标加入此列表。
+
+`STAT_ENABLED=false` 时统计引擎和依赖它的告警管理Controller一并关闭。日志格式使用根级 `logging.pattern.console`，数据库使用 `spring.datasource.*`。AI知识索引为持久后台任务，可在管理界面查看进度、取消或重试；用量费用按币种展示，费用限额仅支持完整CNY价格配置，UNKNOWN需要带依据的独立授权核对。
 

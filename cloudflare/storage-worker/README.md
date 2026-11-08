@@ -38,8 +38,10 @@ Cloudflare Worker 承担所有文件流量：浏览器把文件直传 Worker，W
   否则签名恒定不匹配（STORAGE017 / HTTP 400）。
   任何修改必须同步 `com.astral.storage.security.StorageHmac` 并更新固定测试向量。
 - 上传凭证：`base64url(payload).sig`，payload 含 uploadId/configId/folderId/chatId/maxSize/mime/exp。
-- 缓存：仅 `visibility=PUBLIC` 进共享边缘缓存（s-maxage=300）；私有文件 no-store。
-  删除/转私有后的撤销窗口 = 300 秒（MVP 不做全局 purge）。
+- 缓存：公开正文保留 7 天，私有正文在当前 PoP 保留 900 秒；每次下载都先检查最多 300 秒的授权元数据。
+  浏览器缓存不超过该授权剩余期限（私有文件额外限制 60 秒），删除、转私有或停用后的跨 PoP 撤销窗口不超过 300 秒。
+  主动 purge 只清理接到请求的 PoP，不能视为全局失效。上线前已发出的旧长缓存响应需等待原期限或由 CDN 管理端全局清除。
+- 上传预热只接受后端 `contentMatches=true` 的回执；重复票据若产生不同远端对象，不会覆盖原公开链接的内容。
 - 上传结果未知（Telegram 已接收但回调失败）不自动重传，由管理员核对频道。
 
 ## 本地开发

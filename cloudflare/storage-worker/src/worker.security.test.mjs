@@ -53,7 +53,7 @@ test('缓存写入不阻塞响应', () => {
 test('私有内容进单 PoP 缓存但对外声明 private', () => {
   assert.ok(/const PRIVATE_CACHE_TTL = \d+/.test(source), '私有内容要有自己的短 TTL');
   assert.ok(/X-Astral-Cache-Visibility/.test(source), '缓存副本需要可见性标记，命中后才能改回 private');
-  assert.ok(/private, max-age=\$\{PRIVATE_CLIENT_CACHE_TTL\}/.test(source),
+  assert.ok(/isPublic \? 'public' : 'private'/.test(source),
     '私有内容回给浏览器必须是 private，不得因缓存声明变成 public');
   assert.ok(!/'private, no-store'/.test(source), '私有内容不再是 no-store：那等于每次翻看都四跳回源');
 });

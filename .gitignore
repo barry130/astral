@@ -36,6 +36,9 @@ Thumbs.db
 *.log
 
 # Temp
+__pycache__/
+*.py[cod]
+/docs/audit/2026-11-07/_blog.diff
 *.tmp
 *.bak
 *.swp

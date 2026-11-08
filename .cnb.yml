@@ -3,8 +3,8 @@
 # （docker.cnb.cool，随代码仓库托管，不再单独推腾讯云 TCR）
 #
 # 取代原 GitHub Actions（.github/workflows/docker-publish.yml，已删除）：
-#   - 构建机在国内（腾讯云），push 到 master 自动触发，按改动路径过滤（后端/前端互不连坐）
-#   - 分支详情页按钮手动触发（.cnb/web_trigger.yml）＝ 后端+前端全量重建
+#   - 构建机在国内（腾讯云），push 到 master 自动触发，完整构建三个服务，保证固定 tag 可部署
+#   - 分支详情页按钮手动触发（.cnb/web_trigger.yml）＝ 后端+前端+博客全量重建
 #   - tag 规则不变：latest + 日期-短SHA（如 20261001-1a2b3c4d，后者用于回滚）
 #   - 服务器侧（deploy/update.sh、docker-compose.registry.yml）结构不变，
 #     仅 deploy/.env 的 REGISTRY 换成 docker.cnb.cool/canace/astral
@@ -39,53 +39,21 @@
   env:
     IMAGE_PREFIX: docker.cnb.cool/canace/astral
 
-.backend-stages: &backend-stages
-  - name: 生成发布 tag（日期-短SHA，兼作回滚锚点）
-    script: echo -n "$IMAGE_PREFIX/astral-backend:$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"
-    exports:
-      info: IMAGE_URL
-  - name: docker build（后端，上下文=仓库根）
-    script: docker build -f astral-server/Dockerfile -t "$IMAGE_URL" -t "$IMAGE_PREFIX/astral-backend:latest" .
-  - name: docker push（双 tag；第二个 tag 复用刚上传的层，几乎零开销）
-    script: |
-      docker push "$IMAGE_URL"
-      docker push "$IMAGE_PREFIX/astral-backend:latest"
-
-.frontend-stages: &frontend-stages
-  - name: 生成发布 tag（日期-短SHA，兼作回滚锚点）
-    script: echo -n "$IMAGE_PREFIX/astral-frontend:$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"
-    exports:
-      info: IMAGE_URL
-  - name: docker build（前端，上下文=astral-front）
-    # 不再传 NEXT_PUBLIC_API_URL：同源形态（空串）烤进 bundle，镜像与后端域名解耦，
-    # /api 由容器内 proxy.js 按启动时 BACKEND_URL 转发，换后端不重打包
-    script: >-
-      docker build -f astral-front/Dockerfile
-      -t "$IMAGE_URL" -t "$IMAGE_PREFIX/astral-frontend:latest" astral-front
-  - name: docker push（双 tag；第二个 tag 复用刚上传的层，几乎零开销）
-    script: |
-      docker push "$IMAGE_URL"
-      docker push "$IMAGE_PREFIX/astral-frontend:latest"
-
-# 博客前台（astral-blog）：独立发布站点，构建上下文=astral-blog。
-# 它不需要 NEXT_PUBLIC_API_URL——所有后端请求都在服务端完成，
-# 运行期由 CMS_API_BASE 决定（compose 里固定 http://backend:27000），
-# 所以镜像本身与域名无关，换域名不用重新构建（前端镜像同源化改造后也是这一形态）。
-.blog-stages: &blog-stages
-  - name: 生成发布 tag（日期-短SHA，兼作回滚锚点）
-    script: echo -n "$IMAGE_PREFIX/astral-blog:$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"
-    exports:
-      info: IMAGE_URL
-  - name: docker build（博客，上下文=astral-blog）
-    script: >-
-      docker build -f astral-blog/Dockerfile
-      --build-arg CMS_API_BASE=http://backend:27000
-      -t "$IMAGE_URL" -t "$IMAGE_PREFIX/astral-blog:latest" astral-blog
-  - name: docker push（双 tag；第二个 tag 复用刚上传的层，几乎零开销）
-    script: |
-      docker push "$IMAGE_URL"
-      docker push "$IMAGE_PREFIX/astral-blog:latest"
-
+# All services share the immutable release tag consumed by docker-compose.registry.yml.
+# Configure BLOG_SITE_URL and BLOG_ADMIN_URL in CNB project environment variables.
+.release-pipeline: &release-pipeline
+  <<: *docker-pipeline
+  name: 完整版本镜像
+  lock:
+    key: astral-release
+    cancel-in-progress: false
+  stages:
+    - name: 生成共同发布 tag
+      script: echo -n "$(date -u +%Y%m%d)-$CNB_COMMIT_SHORT"
+      exports:
+        info: RELEASE_TAG
+    - name: 构建并发布后端、前端和博客
+      script: bash scripts/build-release.sh
 # ---- 开源组件漏洞扫描 ----
 # 为什么要它：2026-10 那批 CVE 是拿版本号人工翻漏洞库才发现的。没有扫描，
 # 下一个 CVE 公布还是得靠人想起来。
@@ -118,11 +86,9 @@
         scanMode: full
         publish: true
 
-# ---- 构建配置 ----
+# Every deployable push publishes all three images under one tag.
 master:
   push:
-    # 漏洞扫描排在镜像之前：它不阻塞发布（allowFailure），但能保证「有洞必有记录」。
-    # 顺带一提，它让每次依赖变动都留一份 SCA 报告附件，事后回溯不用再猜。
     - <<: *sca-vuln
       ifModify:
         - pom.xml
@@ -132,75 +98,6 @@ master:
         - astral-blog/package.json
         - astral-blog/pnpm-lock.yaml
         - .cnb.yml
-
-    # ifNewBranch: 首次把 master 推上 CNB 时属于新分支，ifModify 没有比对基准，
-    # 用它保证首次推送必定全量构建；之后每次 push 走 ifModify 路径过滤。
-    - name: backend 镜像
-      <<: *docker-pipeline
-      lock:
-        key: backend-image
-        cancel-in-progress: true
-      ifNewBranch: true
-      ifModify:
-        - pom.xml
-        - .mvn/**
-        - astral-common/**
-        - astral-schema/**
-        - astral-dao/**
-        - astral-log/**
-        - astral-auth/**
-        - astral-system/**
-        - astral-monitor/**
-        - astral-sequence/**
-        - astral-plugin-api/**
-        - astral-plugin/**
-        - astral-server/**
-        - .cnb.yml
-      stages: *backend-stages
-
-    - name: frontend 镜像
-      <<: *docker-pipeline
-      lock:
-        key: frontend-image
-        cancel-in-progress: true
-      ifNewBranch: true
-      ifModify:
-        - astral-front/**
-        - .cnb.yml
-      stages: *frontend-stages
-
-    - name: blog 镜像
-      <<: *docker-pipeline
-      lock:
-        key: blog-image
-        cancel-in-progress: true
-      ifNewBranch: true
-      ifModify:
-        - astral-blog/**
-        - .cnb.yml
-      stages: *blog-stages
-
-  # 手动触发（master 分支详情页按钮，见 .cnb/web_trigger.yml）：
-  # 全量重建，不做路径过滤。web_trigger 事件没有文件变更基准，
-  # ifModify 在该事件下本来就不生效，这里干脆不写。
+    - <<: *release-pipeline
   web_trigger_publish:
-    - name: backend 镜像（手动全量）
-      <<: *docker-pipeline
-      lock:
-        key: backend-image
-        cancel-in-progress: true
-      stages: *backend-stages
-
-    - name: frontend 镜像（手动全量）
-      <<: *docker-pipeline
-      lock:
-        key: frontend-image
-        cancel-in-progress: true
-      stages: *frontend-stages
-
-    - name: blog 镜像（手动全量）
-      <<: *docker-pipeline
-      lock:
-        key: blog-image
-        cancel-in-progress: true
-      stages: *blog-stages
+    - <<: *release-pipeline

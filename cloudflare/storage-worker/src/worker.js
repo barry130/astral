@@ -7,15 +7,15 @@
  *     登记成功后把仍在内存中的字节预热进边缘缓存（prewarmCaches：/_mcache、/_tgcache，
  *     PUBLIC 文件再写 /_pcache、/_cache，PRIVATE 文件写 /_ucache），使永久/签名链接的首次访问即边缘命中。
  *  2. GET  /f/{publicId}/{contentVersion}?e&v&s  校验下载签名（与 Astral 逐字节一致的规范串），
- *     命中边缘缓存直接返回；未命中回源 Astral 取定位元数据后从 Telegram 取流。
+ *     先核对短时授权元数据，再返回缓存正文；未命中时从 Telegram 取流。
  *     公开内容进 /_cache（7 天），私有内容进 /_ucache（15 分钟，单 PoP；对外仍声明 private）。
  *     图片业务上限 5MB，不需要分片/断点续传，因此本路径不实现 Range；速度靠命中率与 PoP 选择。
  *  3. GET  /p/{publicId}/{contentVersion}  永久公开链接：无签名，仅 PUBLIC 可见文件可访问，
- *     边缘长缓存（7 天）；可见性变更时版本递增使旧 URL 失效。
+ *     正文缓存 7 天，授权元数据最多缓存 300 秒。
  *  4. GET  /healthz  执行 Telegram getMe，供 Astral「测试连接」。
  *  5. scheduled（cron）  拉取 Astral 远端删除任务，执行 deleteMessage 并确认。
  *  6. DELETE /cache|/pcache|/mcache/...  边缘缓存主动失效（Astral 删除文件/停用配置时调用，
- *     HMAC 鉴权同服务身份，见 handleCachePurge）；撤销延迟从边缘缓存 TTL 收敛到秒级。
+ *     HMAC 鉴权同服务身份，见 handleCachePurge）；仅加速当前 PoP，跨 PoP 撤销由 300 秒授权期限保证。
  *
  * Secret（wrangler secret put，禁止写入本文件/仓库）：
  *  - TG_BOT_TOKEN                     Telegram Bot Token（仅保存在 Worker）
@@ -34,22 +34,16 @@
 
 const TELEGRAM_API = 'https://api.telegram.org';
 const MAX_STREAM_SIZE = 20 * 1024 * 1024; // 公共 Bot API 下载上限，双保险（业务侧另有 5MB 图片上限）
-// 图片体积只有几十 KB～5MB，没有分片/断点续传的需求，所以下载路径不做 Range 切片；
-// 速度全部押在「命中边缘」和「连对 PoP」两件事上，因此 TTL 比撤销窗口重要得多。
-//
-// 公开内容边缘缓存：撤销不依赖 TTL——可见性/内容变更会递增 contentVersion（StorageFileService.changeVisibility），
-// 旧 URL 连同旧缓存键一起作废；删除/停用另有 DELETE /cache 主动失效兜底。
-// 原来 3600s 意味着每小时都要重走「回源元数据→getFile→拉流」三跳，不变内容没有理由付这个成本。
+// 正文可以长期保留；每次请求仍须通过短时授权元数据，旧 URL 不能只凭正文缓存继续访问。
 const PUBLIC_CACHE_TTL = 7 * 24 * 3600;
-const PERMANENT_CACHE_TTL = 7 * 24 * 3600; // 永久公开链接 /p/ 的边缘缓存（秒）；版本变化即换 URL
+const PERMANENT_CACHE_TTL = 7 * 24 * 3600;
 // 私有内容（反馈截图、私密附件）此前 `no-store` 且从不写 Cache API，等于每次翻看都要四跳回源
 // （签名校验 → 广东元数据 → getFile → 拉流）。Cache API 是「单 PoP」缓存，不会把私有内容扩散到
 // 其它地区，按短 TTL 缓存是安全的；对外仍声明 private，且键前缀 `_ucache` 与公开内容隔离。
 const PRIVATE_CACHE_TTL = 900;
 const PRIVATE_CLIENT_CACHE_TTL = 60;      // 回给浏览器的 private 缓存（签名 URL 本身 300s 过期）
-// 回源元数据缓存：(publicId, contentVersion) 内字段不可变，TTL 只兜「删除/停用但主动失效失败」的窗口。
-// 300s 与签名 TTL 同阶曾让每次翻页都打一跳广东，抬到 1h；撤销仍由 DELETE /mcache 收敛到秒级。
-const META_CACHE_TTL = 3600;
+// Cache API purge 只影响接到该请求的 PoP；所有 PoP 必须在此期限内重新校验当前授权。
+const META_CACHE_TTL = 300;
 // Telegram getFile 结果缓存：官方保证 file 链接在 getFile 后至少 1 小时有效，取 30 分钟留安全边际。
 const TG_PATH_CACHE_TTL = 1800;
 // 缓存副本上的内部标记：公开副本不带，私有副本带；命中时据此把 Cache-Control 改写回 private。
@@ -102,15 +96,21 @@ function cacheableResponse(body, meta, contentType, contentLength, ttl, isPublic
  * 命中边缘缓存时的出站处理：去掉内部标记、把私有副本改回 `private`、按请求 Origin 补 CORS。
  * <p>私有内容命中后浏览器端只缓 60s（签名 URL 自身 300s 过期），不把「长缓存」语义外泄。</p>
  */
-function fromCache(cached, request, env) {
+function fromCache(cached, request, env, meta) {
   const headers = new Headers(cached.headers);
-  const visibility = headers.get(VISIBILITY_HEADER);
   headers.delete(VISIBILITY_HEADER);
-  if (visibility === 'PRIVATE') {
-    headers.set('Cache-Control', `private, max-age=${PRIVATE_CLIENT_CACHE_TTL}`);
-  }
+  headers.set('Cache-Control', clientCacheControl(meta, request));
   for (const [name, value] of Object.entries(downloadCorsHeaders(request, env))) headers.set(name, value);
   return new Response(cached.body, { status: cached.status, headers });
+}
+
+function clientCacheControl(meta, request) {
+  const isPublic = meta.visibility === 'PUBLIC';
+  const signatureExpiry = new URL(request.url).searchParams.get('e');
+  const remaining = Math.max(0, Math.floor((meta.__authorizedUntil - Date.now()) / 1000));
+  const ttl = Math.min(remaining, isPublic ? META_CACHE_TTL : PRIVATE_CLIENT_CACHE_TTL,
+    signatureExpiry ? Math.max(0, Math.floor(Number(signatureExpiry) - Date.now() / 1000)) : META_CACHE_TTL);
+  return `${isPublic ? 'public' : 'private'}, max-age=${ttl}, must-revalidate`;
 }
 
 /** 写入边缘缓存：不阻塞响应（否则 TG→边缘 的耗时会被算进用户 TTFB），失败只记日志 */
@@ -334,7 +334,15 @@ async function handleUpload(request, env, ctx) {
   if (!file || typeof file === 'string') return errorResp('missing file field');
 
   const mime = (file.type || 'application/octet-stream').toLowerCase();
-  if (payload.mime && mime !== payload.mime && !mime.startsWith('image/')) {
+  const maximum = Math.min(MAX_STREAM_SIZE, Number(payload.maxSize));
+  if (!Number.isSafeInteger(maximum) || maximum <= 0 || file.size <= 0 || file.size > maximum) {
+    return errorResp('file size exceeds upload ticket', 413);
+  }
+  const normalizeMime = (value) => {
+    const normalized = String(value || '').toLowerCase().split(';')[0].trim();
+    return ['application/javascript', 'application/x-javascript'].includes(normalized) ? 'text/javascript' : normalized;
+  };
+  if (!payload.mime || normalizeMime(mime) !== normalizeMime(payload.mime)) {
     return errorResp('mime type not allowed', 415);
   }
 
@@ -383,6 +391,8 @@ async function handleUpload(request, env, ctx) {
  */
 async function prewarmCaches(env, origin, uploadFile, callback, registered) {
   try {
+    // Older backends omit this field: skip prewarming until they can prove this receipt owns the bytes.
+    if (registered.contentMatches !== true) return;
     if (registered.status && registered.status !== 'AVAILABLE') return; // 内容验证失败等状态不预热
     const publicId = registered.publicId;
     const contentVersion = String(registered.contentVersion || 1);
@@ -399,6 +409,7 @@ async function prewarmCaches(env, origin, uploadFile, callback, registered) {
       sizeBytes: callback.sizeBytes,
       fileName: callback.fileName,
       telegramFileId: callback.telegramFileId,
+      __authorizedUntil: Date.now() + META_CACHE_TTL * 1000,
     };
     await cache.put(new URL(`/_mcache/${publicId}/${contentVersion}`, origin).toString(), new Response(JSON.stringify(meta), {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${META_CACHE_TTL}` },
@@ -452,19 +463,19 @@ async function getOriginMeta(env, url, publicId, contentVersion) {
   const cached = await cache.match(cacheKey);
   if (cached) {
     const meta = await cached.json();
-    if (meta && !meta.__miss) return meta;
-    return null;
+    if (meta?.__authorizedUntil > Date.now()) return meta.__miss ? null : meta;
   }
   const originResp = await astralFetch(env, `/api/v1/all/storage/origin/files/${publicId}/${contentVersion}`);
   const originJson = await originResp.json().catch(() => ({}));
   if (originResp.status !== 200 || originJson.code !== 200) {
     // 404（删除/版本过期）也缓存一小段，避免有效期内签名 URL 反复穿透回源；命中 __miss 直接判未找到
-    await cache.put(cacheKey, new Response(JSON.stringify({ __miss: true }), {
+    await cache.put(cacheKey, new Response(JSON.stringify({ __miss: true, __authorizedUntil: Date.now() + META_CACHE_TTL * 1000 }), {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${META_CACHE_TTL}` },
     }));
     return null;
   }
-  const meta = originJson.data;
+  const meta = { ...originJson.data, __authorizedUntil: Date.now() + META_CACHE_TTL * 1000 };
+  if (meta.status !== 'AVAILABLE') return null;
   await cache.put(cacheKey, new Response(JSON.stringify(meta), {
     headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${META_CACHE_TTL}` },
   }));
@@ -512,7 +523,7 @@ async function handleDownload(request, env, ctx) {
   const cacheKey = new URL(`/_${isPublic ? 'cache' : 'ucache'}/${publicId}/${contentVersion}`, url.origin).toString();
   const cache = caches.default;
   const cached = await cache.match(cacheKey);
-  if (cached) return fromCache(cached, request, env);
+  if (cached) return fromCache(cached, request, env, meta);
 
   const filePath = await getTelegramFilePath(env, meta.telegramFileId);
   if (!filePath) return errorResp('not found', 404);
@@ -529,9 +540,7 @@ async function handleDownload(request, env, ctx) {
     headers: new Headers({
       ...safeContentHeaders(meta, contentType),
       ...(contentLength ? { 'Content-Length': contentLength } : {}),
-      'Cache-Control': isPublic
-        ? `public, max-age=${PUBLIC_CACHE_TTL}, s-maxage=${PUBLIC_CACHE_TTL}`
-        : `private, max-age=${PRIVATE_CLIENT_CACHE_TTL}`,
+      'Cache-Control': clientCacheControl(meta, request),
       ...downloadCorsHeaders(request, env),
     }),
   });
@@ -543,7 +552,7 @@ async function handleDownload(request, env, ctx) {
 
 // ==================== 永久公开链接：/p/{publicId}/{contentVersion} ====================
 // 仅 PUBLIC 可见文件可访问（回源校验可见性）；内容按 contentVersion 版本化缓存，
-// 可见性/内容变更时 Astral 递增版本，旧 URL 在边缘缓存过期后自然失效。
+// 可见性/内容变更时 Astral 递增版本；300 秒元数据授权到期后拒绝旧 URL。
 
 async function handlePermanentDownload(request, env, ctx) {
   const url = new URL(request.url);
@@ -553,15 +562,14 @@ async function handlePermanentDownload(request, env, ctx) {
 
   const cacheKey = new URL(`/_pcache/${publicId}/${contentVersion}`, url.origin).toString();
   const cache = caches.default;
-  const cached = await cache.match(cacheKey);
-  if (cached) return fromCache(cached, request, env);
-
   const meta = await getOriginMeta(env, url, publicId, contentVersion);
   if (!meta) return errorResp('not found', 404);
   if (meta.visibility !== 'PUBLIC') {
     // 私有内容不通过永久链接暴露：统一 404，不泄露存在性
     return errorResp('not found', 404);
   }
+  const cached = await cache.match(cacheKey);
+  if (cached) return fromCache(cached, request, env, meta);
 
   const filePath = await getTelegramFilePath(env, meta.telegramFileId);
   if (!filePath) return errorResp('not found', 404);
@@ -576,7 +584,7 @@ async function handlePermanentDownload(request, env, ctx) {
     headers: new Headers({
       ...safeContentHeaders(meta, contentType),
       ...(contentLength ? { 'Content-Length': contentLength } : {}),
-      'Cache-Control': `public, max-age=${PERMANENT_CACHE_TTL}, s-maxage=${PERMANENT_CACHE_TTL}`,
+      'Cache-Control': clientCacheControl(meta, request),
       ...downloadCorsHeaders(request, env),
     }),
   });
@@ -586,7 +594,7 @@ async function handlePermanentDownload(request, env, ctx) {
 
 // ==================== 缓存主动失效（Astral 删除/停用配置时调用） ====================
 // Astral 在删除文件或停用配置时逐 Worker 发 DELETE 请求清除对应边缘缓存键，
-// 把撤销延迟从「边缘缓存 TTL」收敛到秒级。鉴权复用 Worker→Astral 同款服务身份
+// 仅加速该 PoP 的撤销；其他 PoP 仍受 300 秒元数据授权期限约束。鉴权复用 Worker→Astral 同款服务身份
 // HMAC（X-Storage-Origin-* 头，STORAGE_ORIGIN_SHARED_SECRET），不新增共享密钥。
 // 支持的键（与 getOriginMeta/getTelegramFilePath/handleDownload/handlePermanentDownload 一致）：
 //   DELETE /cache/{publicId}/{contentVersion}   公开内容缓存（/_cache/...）
