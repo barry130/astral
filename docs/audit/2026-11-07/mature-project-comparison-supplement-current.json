@@ -1,0 +1,4129 @@
+{
+  "schemaVersion":  "2",
+  "status":  "BOUNDED_SUPPLEMENT_COMPLETE_NOT_TASK31_ACCEPTANCE",
+  "scope":  "Independent bounded task31 rev3 supplement; parent remains active",
+  "metadataMethod":  "Raw bytes SHA256 and UTF8 newline-split counters; LastWriteTimeUtc native 100ns as 7 fractional digits, Windows FILETIME and .NET ticks stored as strings. Hash/counters do not imply content coverage.",
+  "scopeDetails":  {
+    "parentSession":  "session-c9c6458f-4334-477e-a37f-4deb65f66d9f",
+    "parentTask":  "task31 rev3; Lead-owned and active, no state edits",
+    "wholeAuditAccepted":  false,
+    "projectDeliverablesWritten":  [
+      "docs/audit/2026-11-07/mature-project-comparison-supplement-current.md",
+      "docs/audit/2026-11-07/mature-project-comparison-supplement-current.json"
+    ],
+    "sourceEdits":  false,
+    "networkBrowserCDPPlaywrightServerMavenGitBuildInstallDependencyConfigEnvironmentCredentialProductionOperations":  false,
+    "mutableLeadFilesExcluded":  [
+      "AiAdminToolController",
+      "current permission test",
+      "ToolPanel"
+    ],
+    "dependencyLicensingOrArchitectureCopying":  false
+  },
+  "metadataLimitations":  [
+    "First successful baseline12:03:02.2473962Z-12:03:02.7528053Z followed some initial semantic reads; not a start-of-session or continuous lock.",
+    "EndpointExact compares SHA256, bytes, rawLines, nonblankLines, UTC7, FILETIME, .NET ticks only; sampledAt intentionally differs. Equality is not continuous immutability or runtime evidence.",
+    "Native bytes/counts/UTC7/FILETIME/ticks are strings, unrounded. LastWriteTime only, not creation/access times.",
+    "Raw HTML hashes in public provenance inherited from actually read Lead receipts, not own raw file content reads/re-hashes. Own hashes apply to fixed text derivatives and listed inputs."
+  ],
+  "coveragePolicy":  {
+    "FULL":  "All lines independently returned in unpruned \u003c=80-line reads to explicit EOF, no unrepaired inline truncation; overlapping repair reads eligible.",
+    "PARTIAL":  "Targeted clean ranges or unrepaired inline truncation; EOF alone insufficient.",
+    "UNREAD":  "No semantic read; fingerprint/native metadata only.",
+    "middlePruning":  "Middle-pruned calls wholly ineligible; repaired oldMD and UI calls retained in ledger. Each requested/returned range is explicit.",
+    "inlineTruncation":  "Line261 is incomplete even after singleton read; excluded as a complete line while other clean returned lines remain eligible.",
+    "grepAndGlob":  "Discovery only, not semantic coverage. Wide public-reference grep194 hits middle-pruned; snapshot glob100/173 pruned; no complete inventory/dependency/config coverage."
+  },
+  "coverageSummary":  {
+    "astralSources":  {
+      "total":  13,
+      "FULL":  8,
+      "PARTIAL":  5,
+      "main":  {
+        "total":  8,
+        "FULL":  5,
+        "PARTIAL":  3
+      },
+      "frozenBlog":  {
+        "total":  5,
+        "FULL":  3,
+        "PARTIAL":  2
+      }
+    },
+    "publicDerivatives":  {
+      "total":  8,
+      "FULL":  4,
+      "PARTIAL":  4,
+      "fullNames":  [
+        "wordpress-rich-text-allowlist",
+        "owasp-csrf",
+        "ghost-docs-index overview only",
+        "vercel-web-interface-guidelines"
+      ],
+      "partialNames":  [
+        "wordpress-permission-callback line261 gap",
+        "spring-method-security",
+        "next-request-authentication",
+        "refine-use-form"
+      ]
+    },
+    "norms":  {
+      "total":  3,
+      "FULL":  2,
+      "PARTIAL":  1
+    },
+    "provenanceReceipts":  {
+      "total":  3,
+      "FULL":  3
+    },
+    "oldReports":  {
+      "markdown":  "FULL deduplication only after repair",
+      "json":  "UNREAD semantic; metadata-only"
+    },
+    "allInputs":  {
+      "fingerprinted":  29,
+      "FULL":  18,
+      "PARTIAL":  10,
+      "UNREAD":  1
+    }
+  },
+  "inheritedCoverage":  {
+    "oldReportInput":  "input-00",
+    "oldClaims":  {
+      "observations":  12,
+      "AstralSourceFiles":  23,
+      "FULL":  14,
+      "PARTIAL":  9,
+      "targetedBlogFiles":  8
+    },
+    "countedAsOwnCurrentCoverage":  false,
+    "oldJsonSemanticRead":  false,
+    "freshTransportIsNotRetroactiveContentCertification":  true,
+    "dedupReferenceLines":  [
+      [
+        3,
+        5
+      ],
+      [
+        12,
+        15
+      ],
+      [
+        20,
+        22
+      ],
+      [
+        26,
+        26
+      ]
+    ],
+    "interpretation":  "Each supplement observation states the new fixed public-content support or changed source boundary. Existing source patterns are not re-counted as new defects."
+  },
+  "findings":  [
+    {
+      "id":  "SUP-01",
+      "classification":  "REPO_MUST",
+      "title":  "Action authorization and independently mandatory permission groups",
+      "canonicalURLs":  [
+        "https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/",
+        "https://docs.spring.io/spring-security/reference/servlet/authorization/method-security.html"
+      ],
+      "publicEvidence":  [
+        {
+          "input":  "input-08",
+          "section":  "Permissions Callback",
+          "lines":  [
+            [
+              176,
+              215
+            ]
+          ],
+          "meaning":  "Permission callback after authentication; login alone not action authority; explicit public callback."
+        },
+        {
+          "input":  "input-11",
+          "section":  "Multiple Annotations; class/interface declarations",
+          "lines":  [
+            [
+              180,
+              188
+            ],
+            [
+              542,
+              557
+            ]
+          ],
+          "meaning":  "Multiple distinct annotations ANDed; method declaration overrides class. Spring identical PreAuthorize repetition prohibition is not imposed on Astral custom repeatable annotations."
+        }
+      ],
+      "sourceEvidence":  [
+        {
+          "input":  "input-16",
+          "lines":  [
+            [
+              48,
+              52
+            ],
+            [
+              71,
+              78
+            ],
+            [
+              90,
+              96
+            ],
+            [
+              99,
+              112
+            ]
+          ],
+          "meaning":  "Checks every resolved group before proceed; ALL versus ANY inside annotation; most-specific method before class."
+        },
+        {
+          "input":  "input-24",
+          "lines":  [
+            [
+              61,
+              75
+            ]
+          ],
+          "meaning":  "Frozen Blog edit requires view+edit, ADMIN and no mustChangePassword."
+        },
+        {
+          "input":  "input-18",
+          "lines":  [
+            [
+              186,
+              200
+            ]
+          ],
+          "meaning":  "Separate login/account gate; aspect alone not authentication."
+        }
+      ],
+      "normEvidence":  [
+        {
+          "input":  "input-02",
+          "lines":  [
+            [
+              326,
+              385
+            ],
+            [
+              350,
+              352
+            ]
+          ],
+          "priority":  "Current declarative norm overrides old imperative CODING_GUIDE77-80."
+        }
+      ],
+      "minimalAction":  "Preserve action authority and independently mandatory groups; no annotation migration, blanket-super business writes or API/DATA conflation.",
+      "dedup":  {
+        "oldInput":  "input-00",
+        "lines":  [
+          [
+            13,
+            13
+          ],
+          [
+            20,
+            20
+          ]
+        ],
+        "delta":  "Official WordPress and targeted Spring content now independently read; existing source patterns not new defects."
+      },
+      "boundary":  "Source/norms only, not proxy/call-path/cache/whole backend authorization certification."
+    },
+    {
+      "id":  "SUP-02",
+      "classification":  "REPO_MUST",
+      "title":  "Attribute/protocol allowlists separate from edit permission",
+      "canonicalURLs":  [
+        "https://developer.wordpress.org/reference/functions/wp_kses/"
+      ],
+      "publicEvidence":  [
+        {
+          "input":  "input-09",
+          "section":  "Definition/Parameters/More Information",
+          "lines":  [
+            [
+              28,
+              61
+            ],
+            [
+              86,
+              88
+            ]
+          ],
+          "meaning":  "Allowlisted HTML elements/attributes/values/entities/protocols; javascript excluded for untrusted users.207 onward is User Contributed Notes, not official normative advice."
+        }
+      ],
+      "sourceEvidence":  [
+        {
+          "input":  "input-26",
+          "lines":  [
+            [
+              12,
+              24
+            ],
+            [
+              24,
+              99
+            ],
+            [
+              114,
+              127
+            ]
+          ],
+          "meaning":  "Restricted attribute-free raw tags and escaping, link renderer calls safeUrl; safeUrl/image/highlight implementation not inspected."
+        },
+        {
+          "input":  "input-27",
+          "lines":  [
+            [
+              6,
+              17
+            ],
+            [
+              36,
+              46
+            ]
+          ],
+          "meaning":  "Contextual slug encoding/decode only, not URL-protocol sanitizer."
+        }
+      ],
+      "normEvidence":  [
+        {
+          "input":  "input-04",
+          "lines":  [
+            [
+              109,
+              110
+            ]
+          ],
+          "priority":  "Main-front protected rich-text reuse; frozen Blog separately preserves its limited output contract."
+        }
+      ],
+      "minimalAction":  "Preserve limited renderer/protocol delegation; do not copy broad contributor data/SVG examples or claim universal sanitizer.",
+      "dedup":  {
+        "oldInput":  "input-00",
+        "lines":  [
+          [
+            14,
+            14
+          ]
+        ],
+        "delta":  "Fresh fixed wp_kses function supplies official allowlist content; different URL from old unavailable WordPress sanitizing target, not a new sanitizer finding."
+      },
+      "boundary":  "Renderer/dependencies partial; no XSS reproduction or rendered DOM/browser proof."
+    },
+    {
+      "id":  "SUP-03",
+      "classification":  "REPO_MUST",
+      "title":  "Strict cookies plus CSRF and origin defenses",
+      "canonicalURLs":  [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
+      ],
+      "publicEvidence":  [
+        {
+          "input":  "input-10",
+          "section":  "SameSite limitations/narrow sufficiency; AJAX integration",
+          "lines":  [
+            [
+              823,
+              920
+            ],
+            [
+              1076,
+              1102
+            ]
+          ],
+          "meaning":  "SameSite defense-in-depth generally; narrow exceptions require every condition. Server validation and trusted resolved destination attachment remain necessary."
+        }
+      ],
+      "sourceEvidence":  [
+        {
+          "input":  "input-17",
+          "lines":  [
+            [
+              49,
+              63
+            ],
+            [
+              79,
+              110
+            ]
+          ],
+          "meaning":  "Strict/auth HttpOnly/readable CSRF; Secure=false code default not deployment setting."
+        },
+        {
+          "input":  "input-18",
+          "lines":  [
+            [
+              149,
+              168
+            ],
+            [
+              263,
+              296
+            ]
+          ],
+          "meaning":  "Public-zone exclusions then unsafe Cookie credentials require equality; explicit satoken header exemption; AUTH013 business403 in HTTP200."
+        },
+        {
+          "input":  "input-21",
+          "lines":  [
+            [
+              174,
+              204
+            ]
+          ],
+          "meaning":  "Shared axios credentials/header integration, not all-destination/caller validation."
+        },
+        {
+          "input":  "input-25",
+          "lines":  [
+            [
+              32,
+              45
+            ],
+            [
+              99,
+              140
+            ]
+          ],
+          "meaning":  "Mandatory exact Origin and strict host-only cookie forwarding; configuration/callers not verified."
+        }
+      ],
+      "normEvidence":  [
+        {
+          "input":  "input-02",
+          "lines":  [
+            [
+              306,
+              308
+            ]
+          ],
+          "priority":  "Shared axios; presigned direct-fetch exception remains custom-header-free."
+        }
+      ],
+      "minimalAction":  "Retain Strict/HttpOnly/backend CSRF/BFF Origin layers; no automatic None or bypass. Explicit cross-site exception needs separate policy.",
+      "dedup":  {
+        "oldInput":  "input-00",
+        "lines":  [
+          [
+            21,
+            21
+          ],
+          [
+            26,
+            26
+          ]
+        ],
+        "delta":  "Fresh OWASP SameSite/AJAX content and current server validation source close an unavailable-reference gap, not production acceptance."
+      },
+      "boundary":  "No CORS/config/env/deployment/real Set-Cookie or browser evidence; client response/replay/download and route registration unreviewed."
+    },
+    {
+      "id":  "SUP-04",
+      "classification":  "CONDITIONAL",
+      "title":  "Naive equality differs from session-bound signed double-submit recommendation",
+      "canonicalURLs":  [
+        "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"
+      ],
+      "publicEvidence":  [
+        {
+          "input":  "input-10",
+          "section":  "Signed Double-Submit recommended; Naive Double-Submit discouraged; Host-prefix",
+          "lines":  [
+            [
+              109,
+              175
+            ],
+            [
+              1002,
+              1047
+            ]
+          ],
+          "meaning":  "HMAC must bind session-specific data, not stable user ID; naive equality vulnerable to cookie injection in relevant threat models. Host prefix restrictions prevent sibling-domain overwrite."
+        }
+      ],
+      "sourceEvidence":  [
+        {
+          "input":  "input-19",
+          "lines":  [
+            [
+              16,
+              24
+            ],
+            [
+              86,
+              103
+            ],
+            [
+              112,
+              128
+            ]
+          ],
+          "meaning":  "Random16 bytes/equality independent of session; cookie helper emits no Domain but no __Host- name/HMAC/session binding."
+        },
+        {
+          "input":  "input-17",
+          "lines":  [
+            [
+              49,
+              63
+            ],
+            [
+              79,
+              110
+            ]
+          ],
+          "meaning":  "CSRF may be reused/renewed; no session-binding construction in writer."
+        },
+        {
+          "input":  "input-18",
+          "lines":  [
+            [
+              263,
+              281
+            ]
+          ],
+          "meaning":  "Unsafe Cookie credentials checked by equality."
+        }
+      ],
+      "normEvidence":  [
+        {
+          "input":  "input-02",
+          "lines":  [
+            [
+              306,
+              308
+            ]
+          ],
+          "priority":  "Preserve shared-client contract; repository norm does not mandate HMAC. External hardening is CONDITIONAL, not new REPO_MUST."
+        }
+      ],
+      "minimalAction":  "Lead may separately assess topology/CORS/subdomain trust and authorize session-bound signed-token migration with compatibility/runtime evidence.",
+      "dedup":  {
+        "oldInput":  "input-00",
+        "lines":  [
+          [
+            21,
+            21
+          ]
+        ],
+        "delta":  "Newly read naive-versus-signed distinction absent from old unavailable-reference row."
+      },
+      "boundary":  "No demonstrated exploit, topology/CORS/header-injection test or production claim. Constant-time/host-only helper not universal proof."
+    },
+    {
+      "id":  "SUP-05",
+      "classification":  "REFERENCE_ONLY",
+      "title":  "Request-local server authority and provider-local browser identity",
+      "canonicalURLs":  [
+        "https://nextjs.org/docs/app/guides/authentication"
+      ],
+      "publicEvidence":  [
+        {
+          "input":  "input-12",
+          "section":  "Creating DAL/cache; Actions/Route Handlers",
+          "lines":  [
+            [
+              1516,
+              1601
+            ],
+            [
+              2053,
+              2058
+            ],
+            [
+              2101,
+              2167
+            ]
+          ],
+          "meaning":  "Verify near data; cache deduplicates render pass only, wrapper does nothing for Actions/Route Handlers. UI hiding not server authorization."
+        }
+      ],
+      "sourceEvidence":  [
+        {
+          "input":  "input-24",
+          "lines":  [
+            [
+              11,
+              49
+            ]
+          ],
+          "meaning":  "Request cookies/credential allowlist/render-pass cache; unavailable distinct from anonymous."
+        },
+        {
+          "input":  "input-22",
+          "lines":  [
+            [
+              30,
+              38
+            ]
+          ],
+          "meaning":  "Per-provider AuthSession with useSyncExternalStore/server snapshot."
+        },
+        {
+          "input":  "input-23",
+          "lines":  [
+            [
+              24,
+              71
+            ],
+            [
+              114,
+              175
+            ]
+          ],
+          "meaning":  "Document-local shared queue and instance identity/generation fences."
+        },
+        {
+          "input":  "input-21",
+          "lines":  [
+            [
+              95,
+              123
+            ],
+            [
+              145,
+              170
+            ]
+          ],
+          "meaning":  "Client module CSRF cache/revision; server import/call paths unreviewed, neither leak nor universal SSR safety asserted."
+        }
+      ],
+      "normEvidence":  [
+        {
+          "input":  "input-02",
+          "lines":  [
+            [
+              306,
+              308
+            ]
+          ],
+          "priority":  "Shared main-front axios not replaced with Blog BFF or mandatory external DAL architecture."
+        }
+      ],
+      "minimalAction":  "Keep request-local authority/provider-local identity; immutable config/properly keyed caches not blanket prohibited.",
+      "dedup":  {
+        "oldInput":  "input-00",
+        "lines":  [
+          [
+            22,
+            22
+          ]
+        ],
+        "delta":  "Official targeted Next content now read; previously cited source pattern not new fix."
+      },
+      "boundary":  "No all-SSR-path/process-isolation/cross-tab/server-browser Cookie ordering proof; queue only document-local."
+    },
+    {
+      "id":  "SUP-06",
+      "classification":  "ALREADY_FIXED",
+      "title":  "Finite Form generic variable boundary",
+      "canonicalURLs":  [
+        "https://refine.dev/core/docs/ui-integrations/ant-design/hooks/use-form/"
+      ],
+      "publicEvidence":  [
+        {
+          "input":  "input-15",
+          "section":  "Type Parameters TVariables; return values",
+          "lines":  [
+            [
+              3499,
+              3501
+            ],
+            [
+              3536,
+              3543
+            ]
+          ],
+          "meaning":  "Typed mutation params/promise concept, no permission for Ant Design/context:any adoption."
+        }
+      ],
+      "sourceEvidence":  [
+        {
+          "input":  "input-20",
+          "lines":  [
+            [
+              68,
+              75
+            ],
+            [
+              291,
+              297
+            ],
+            [
+              596,
+              603
+            ]
+          ],
+          "meaning":  "FormValues Record\u003cstring,unknown\u003e; FormInstance\u003cValues extends object\u003e/Promise\u003cValues\u003e; callback Values and unknown errors."
+        }
+      ],
+      "normEvidence":  [
+        {
+          "input":  "input-02",
+          "lines":  [
+            [
+              295,
+              298
+            ],
+            [
+              511,
+              515
+            ]
+          ]
+        },
+        {
+          "input":  "input-04",
+          "lines":  [
+            [
+              139,
+              143
+            ],
+            [
+              175,
+              175
+            ]
+          ]
+        }
+      ],
+      "minimalAction":  "Retain finite variables/scoped boundaries, no new any/Ant Design/generic widening.",
+      "dedup":  {
+        "oldInput":  "input-00",
+        "lines":  [
+          [
+            12,
+            12
+          ]
+        ],
+        "delta":  "Historical boundary-any finding no longer current at read declarations; b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657 matches Lead baseline. Old reports untouched."
+      },
+      "boundary":  "PARTIAL1154-line Form, not caller/file-wide no-any scan or own tsc/test PASS. Async ownership separate SUP-07."
+    },
+    {
+      "id":  "SUP-07",
+      "classification":  "CONDITIONAL",
+      "title":  "Validation rejection versus asynchronous save ownership",
+      "canonicalURLs":  [
+        "https://refine.dev/core/docs/ui-integrations/ant-design/hooks/use-form/"
+      ],
+      "publicEvidence":  [
+        {
+          "input":  "input-15",
+          "section":  "onFinish; onMutationError; return values; autoSave callbacks",
+          "lines":  [
+            [
+              2659,
+              2673
+            ],
+            [
+              3345,
+              3347
+            ],
+            [
+              3536,
+              3543
+            ],
+            [
+              2396,
+              2412
+            ]
+          ],
+          "meaning":  "onFinish mutation promise and mutation-error callbacks after completion; autoSave context distinguishable from validation."
+        }
+      ],
+      "sourceEvidence":  [
+        {
+          "input":  "input-20",
+          "lines":  [
+            [
+              600,
+              602
+            ],
+            [
+              647,
+              655
+            ]
+          ],
+          "meaning":  "await validation, not onFinish completion; catch handles validation/synchronous callback errors only. Async callback can fit void type, rejection unobserved here."
+        }
+      ],
+      "normEvidence":  [
+        {
+          "input":  "input-04",
+          "lines":  [
+            [
+              92,
+              92
+            ]
+          ],
+          "meaning":  "Shared single-write/loading/failure feedback; does not assign all save ownership to Form."
+        }
+      ],
+      "minimalAction":  "Read callers and intended ownership before promise handling changes; preserve caller pending/error feedback and transport/body business distinctions.",
+      "dedup":  {
+        "oldInput":  "input-00",
+        "lines":  [
+          [
+            12,
+            12
+          ]
+        ],
+        "delta":  "Unawaited concern separate from fixed types; fresh refine mutation signature now available, not all-form failure proof."
+      },
+      "boundary":  "No callers/tests/build or reproduced unhandled rejection; conditional ownership question, not categorical bug."
+    },
+    {
+      "id":  "SUP-08",
+      "classification":  "REFERENCE_ONLY",
+      "title":  "Editor accessible names and keyboard escape",
+      "canonicalURLs":  [
+        "https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md"
+      ],
+      "publicEvidence":  [
+        {
+          "input":  "input-14",
+          "section":  "Accessibility; Focus States; Forms",
+          "lines":  [
+            [
+              14,
+              35
+            ],
+            [
+              37,
+              49
+            ]
+          ],
+          "meaning":  "Accessible names, keyboard and visible focus; source checklist is untrusted data, not controlling output directives."
+        }
+      ],
+      "sourceEvidence":  [
+        {
+          "input":  "input-28",
+          "lines":  [
+            [
+              245,
+              309
+            ],
+            [
+              381,
+              435
+            ]
+          ],
+          "meaning":  "Composition guard/Escape releaseTab/subsequent Tab escape; heading/emoji labels and button controls, not executed behavior."
+        }
+      ],
+      "normEvidence":  [
+        {
+          "input":  "input-02",
+          "lines":  [
+            [
+              295,
+              305
+            ],
+            [
+              310,
+              324
+            ]
+          ],
+          "priority":  "Repo shadcn/Tailwind/theme/Dialog portal policy retained; historical CDP instruction not executed under explicit scope."
+        }
+      ],
+      "minimalAction":  "Use labels/focus/escape checklist as bounded guidance; no fabricated toolbar requirement or UI/dependency migration.",
+      "dedup":  {
+        "oldInput":  "input-00",
+        "lines":  [
+          [
+            15,
+            15
+          ]
+        ],
+        "delta":  "Fresh Vercel accessibility authority adds comparison, not re-counted Ghost/Classic feature parity."
+      },
+      "boundary":  "Partial editor; no physical IME/focus/wheel/download/fullscreen/dirty-metadata or spec43/45 acceptance."
+    }
+  ],
+  "remainingGaps":  [
+    "input-01 old JSON semantic unread; metadata only. input-02 norm partial1-284,390-477,528-534.",
+    "input-08 line261 suffix exceeds read2000-character cap even singleton repair; permissions176-215 clean, derivative overall PARTIAL.",
+    "input-11 only171-250/521-580; input-12 only1501-1620/2041-2180; input-15 targeted read ledger only. No full pages or framework source.",
+    "Ghost exact Admin authentication captured URL404/contentRead=false; overview22-25 has API pointers only, cannot close auth gap; no guessed URL fetched.",
+    "input-18 interceptor121-200/251-300 only; input-20 Form51-130/281-330/591-670 only; input-21 client71-210 only; callers/route registrations/replay/download excluded.",
+    "input-26 markdown1-160 only; remaining161-361/URL/image/highlight dependencies unread. input-27 links is slug helper, not protocol sanitizer. input-28 editor241-320/381-460 only.",
+    "No browser extension bootstrap, browser/IME/focus/wheel/download/fullscreen/Set-Cookie/Cookie ordering, sockets, CORS/config/env/production or actual tests/builds.",
+    "Signed-token and trusted-destination hardening require topology/CORS/compatibility under separately authorized scope; no demonstrated exploit or mandatory redesign.",
+    "Backend-authoritative upload limits/three workers unchanged and unread; npm/main shared axios and presigned fetch exception preserved; frozen Blog is not live Blog.",
+    "WordPress endpoint doc first-published2017-02-06/updated2026-10-14 is document metadata, not framework release. No upstream version inferred.",
+    "Raw HTML and tag-split captures not independently semantically read/rehashed; own FULL applies to derivative text only. Receipts not semantic evidence.",
+    "Parent task31/global audit/final gates/local commits remain Lead-owned; no task/goal/PLAN state change."
+  ],
+  "readGuidanceContext":  {
+    "loadedSkills":  [
+      "code-review",
+      "vercel-react-best-practices",
+      "web-design-guidelines"
+    ],
+    "adaptations":  "Two-axis concept adopted; no Git/diff/subagent/fresh-fetch/browser work because fixed public captures and depth1/max1 scope take precedence.",
+    "localRule":  {
+      "requestedPath":  "C:/Users/canace/.dsh/skills/vercel-react-best-practices/rules/server-no-shared-module-state.md",
+      "resolvedPath":  "C:/Users/canace/.config/magpie/library/skills/vercel-react-best-practices/rules/server-no-shared-module-state.md",
+      "requested":  {
+        "offset":  1,
+        "limit":  80
+      },
+      "returned":  {
+        "start":  1,
+        "end":  50,
+        "eof":  true
+      },
+      "pruned":  false,
+      "publicCapture":  false,
+      "fingerprintedIn29Inputs":  false,
+      "meaning":  "Avoid mutable server request/user data; immutable config/properly keyed caches not blanket violations."
+    }
+  },
+  "executionLedger":  {
+    "backgroundJobsStarted":  [
+
+    ],
+    "backgroundJobsCollected":  [
+
+    ],
+    "backgroundJobsRemaining":  [
+
+    ],
+    "childAgentsStarted":  [
+
+    ],
+    "buildsOrTestsRun":  [
+
+    ],
+    "commitsOrPushes":  [
+
+    ],
+    "failures":  [
+      {
+        "attempt":  "Wrong AuthInterceptor path",
+        "error":  "Get-Item missing astral-auth/src/main/java/com/astral/auth/interceptor/AuthInterceptor.java; exit1 before output JSON write",
+        "resolution":  "glob found actual astral-server/src/main/java/com/astral/server/interceptor/AuthInterceptor.java; metadata retry succeeded"
+      },
+      {
+        "attempt":  "Oversized finalization PowerShell command",
+        "error":  "spawn ENAMETOOLONG before process execution",
+        "resolution":  "Smaller local metadata command plus literal JSON edit; no alternate access, network or temp script files."
+      }
+    ],
+    "readRepairs":  [
+      "OldMD1/80 middle-pruned; repaired1/8,9/4,13/4,17/10.",
+      "UI81/80 middle-pruned; repaired81/20,101/20,121/20,141/20.",
+      "WordPress261 singleton still inline-truncated; remains PARTIAL."
+    ]
+  },
+  "acceptance":  {
+    "boundedDeliverableOnly":  true,
+    "wholeTask31OrAuditAccepted":  false,
+    "sourceOrRuntimeAccepted":  false,
+    "parentTaskGoalPlanEdited":  false,
+    "oldReportsByteNativeExactAtEndpoints":  true,
+    "all29InputsByteNativeExactAtEndpoints":  true,
+    "continuousLockClaimed":  false,
+    "ownTestsOrNetworkGETClaimed":  false,
+    "mdMaxWords":  500,
+    "jsonSelfHashPolicy":  "Final JSON SHA256/bytes supplied externally in parent message/final response, not embedded self-referentially."
+  },
+  "inputs":  [
+    {
+      "path":  "docs/audit/2026-11-07/mature-project-comparison-current.md",
+      "absolutePath":  "F:\\qtMusic\\astral\\docs\\audit\\2026-11-07\\mature-project-comparison-current.md",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.2473962Z",
+        "sha256":  "d2d73bc8358880c3c19717356c3f39b3956234ec2bb91b6dbe4af8fa5d9f1ab3",
+        "bytes":  "12452",
+        "rawLines":  "26",
+        "nonblankLines":  "20",
+        "lastWriteTimeUtc7":  "2026-11-07T10:14:53.0118445Z",
+        "lastWriteFileTimeUtc":  "134385200930118445",
+        "lastWriteDotNetTicks":  "639296432930118445"
+      },
+      "endpointExact":  true,
+      "id":  "input-00",
+      "kind":  "OLD_REPORT_DEDUP_ONLY",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.1384222Z",
+        "sha256":  "d2d73bc8358880c3c19717356c3f39b3956234ec2bb91b6dbe4af8fa5d9f1ab3",
+        "bytes":  "12452",
+        "rawLines":  "26",
+        "nonblankLines":  "20",
+        "lastWriteTimeUtc7":  "2026-11-07T10:14:53.0118445Z",
+        "lastWriteFileTimeUtc":  "134385200930118445",
+        "lastWriteDotNetTicks":  "639296432930118445"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  26,
+            "eof":  true,
+            "fileTotalLines":  26
+          },
+          "middlePruned":  true,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  false
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  8
+          },
+          "returned":  {
+            "start":  1,
+            "end":  8,
+            "eof":  false,
+            "fileTotalLines":  26
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  9,
+            "limit":  4
+          },
+          "returned":  {
+            "start":  9,
+            "end":  12,
+            "eof":  false,
+            "fileTotalLines":  26
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  13,
+            "limit":  4
+          },
+          "returned":  {
+            "start":  13,
+            "end":  16,
+            "eof":  false,
+            "fileTotalLines":  26
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  17,
+            "limit":  10
+          },
+          "returned":  {
+            "start":  17,
+            "end":  26,
+            "eof":  true,
+            "fileTotalLines":  26
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  26,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "docs/audit/2026-11-07/mature-project-comparison-current.json",
+      "absolutePath":  "F:\\qtMusic\\astral\\docs\\audit\\2026-11-07\\mature-project-comparison-current.json",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.4872337Z",
+        "sha256":  "c1a82bb6ed3af13a540dfdfc4bb0f29cd9b364b482e9dcfa30b86c2761d0be65",
+        "bytes":  "43984",
+        "rawLines":  "83",
+        "nonblankLines":  "83",
+        "lastWriteTimeUtc7":  "2026-11-07T10:22:40.3562575Z",
+        "lastWriteFileTimeUtc":  "134385205603562575",
+        "lastWriteDotNetTicks":  "639296437603562575"
+      },
+      "endpointExact":  true,
+      "id":  "input-01",
+      "kind":  "OLD_REPORT_METADATA_ONLY",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.3452808Z",
+        "sha256":  "c1a82bb6ed3af13a540dfdfc4bb0f29cd9b364b482e9dcfa30b86c2761d0be65",
+        "bytes":  "43984",
+        "rawLines":  "83",
+        "nonblankLines":  "83",
+        "lastWriteTimeUtc7":  "2026-11-07T10:22:40.3562575Z",
+        "lastWriteFileTimeUtc":  "134385205603562575",
+        "lastWriteDotNetTicks":  "639296437603562575"
+      },
+      "reads":  [
+
+      ],
+      "ownEligibleCompleteLineCount":  0,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "UNREAD"
+    },
+    {
+      "path":  "AGENTS.md",
+      "absolutePath":  "F:\\qtMusic\\astral\\AGENTS.md",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.4941706Z",
+        "sha256":  "530cc67718822adb099c9c7df4a627cc98f4bb99a01979f9132fd0458c0c5c84",
+        "bytes":  "51066",
+        "rawLines":  "534",
+        "nonblankLines":  "444",
+        "lastWriteTimeUtc7":  "2026-11-06T19:13:28.4899782Z",
+        "lastWriteFileTimeUtc":  "134384660084899782",
+        "lastWriteDotNetTicks":  "639295892084899782"
+      },
+      "endpointExact":  true,
+      "id":  "input-02",
+      "kind":  "NORM",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.3502026Z",
+        "sha256":  "530cc67718822adb099c9c7df4a627cc98f4bb99a01979f9132fd0458c0c5c84",
+        "bytes":  "51066",
+        "rawLines":  "534",
+        "nonblankLines":  "444",
+        "lastWriteTimeUtc7":  "2026-11-06T19:13:28.4899782Z",
+        "lastWriteFileTimeUtc":  "134384660084899782",
+        "lastWriteDotNetTicks":  "639295892084899782"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  310,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  310,
+            "end":  389,
+            "eof":  false,
+            "fileTotalLines":  534
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  285,
+            "limit":  25
+          },
+          "returned":  {
+            "start":  285,
+            "end":  309,
+            "eof":  false,
+            "fileTotalLines":  534
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  478,
+            "limit":  50
+          },
+          "returned":  {
+            "start":  478,
+            "end":  527,
+            "eof":  false,
+            "fileTotalLines":  534
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  155,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    },
+    {
+      "path":  "docs/CODING_GUIDE.md",
+      "absolutePath":  "F:\\qtMusic\\astral\\docs\\CODING_GUIDE.md",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.5034816Z",
+        "sha256":  "3451cdd3c96eceeb1c615e1bedcf14fe0e46695c025e3c1c7f784007633ebb3c",
+        "bytes":  "18543",
+        "rawLines":  "207",
+        "nonblankLines":  "147",
+        "lastWriteTimeUtc7":  "2026-10-30T01:57:14.1211780Z",
+        "lastWriteFileTimeUtc":  "134377990341211780",
+        "lastWriteDotNetTicks":  "639289222341211780"
+      },
+      "endpointExact":  true,
+      "id":  "input-03",
+      "kind":  "NORM",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.3613000Z",
+        "sha256":  "3451cdd3c96eceeb1c615e1bedcf14fe0e46695c025e3c1c7f784007633ebb3c",
+        "bytes":  "18543",
+        "rawLines":  "207",
+        "nonblankLines":  "147",
+        "lastWriteTimeUtc7":  "2026-10-30T01:57:14.1211780Z",
+        "lastWriteFileTimeUtc":  "134377990341211780",
+        "lastWriteDotNetTicks":  "639289222341211780"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  207
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  207
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  161,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  161,
+            "end":  207,
+            "eof":  true,
+            "fileTotalLines":  207
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  207,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "docs/UI_GUIDE.md",
+      "absolutePath":  "F:\\qtMusic\\astral\\docs\\UI_GUIDE.md",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.5110363Z",
+        "sha256":  "a1fd12015f5b6e8e207e0db96106e19927ccca7b36e9a97e5e4feff02aae53aa",
+        "bytes":  "25228",
+        "rawLines":  "249",
+        "nonblankLines":  "194",
+        "lastWriteTimeUtc7":  "2026-11-07T00:47:27.0337847Z",
+        "lastWriteFileTimeUtc":  "134384860470337847",
+        "lastWriteDotNetTicks":  "639296092470337847"
+      },
+      "endpointExact":  true,
+      "id":  "input-04",
+      "kind":  "NORM",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.3663920Z",
+        "sha256":  "a1fd12015f5b6e8e207e0db96106e19927ccca7b36e9a97e5e4feff02aae53aa",
+        "bytes":  "25228",
+        "rawLines":  "249",
+        "nonblankLines":  "194",
+        "lastWriteTimeUtc7":  "2026-11-07T00:47:27.0337847Z",
+        "lastWriteFileTimeUtc":  "134384860470337847",
+        "lastWriteDotNetTicks":  "639296092470337847"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  249
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  249
+          },
+          "middlePruned":  true,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  false
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  161,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  161,
+            "end":  240,
+            "eof":  false,
+            "fileTotalLines":  249
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  241,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  241,
+            "end":  249,
+            "eof":  true,
+            "fileTotalLines":  249
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  20
+          },
+          "returned":  {
+            "start":  81,
+            "end":  100,
+            "eof":  false,
+            "fileTotalLines":  249
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  101,
+            "limit":  20
+          },
+          "returned":  {
+            "start":  101,
+            "end":  120,
+            "eof":  false,
+            "fileTotalLines":  249
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  121,
+            "limit":  20
+          },
+          "returned":  {
+            "start":  121,
+            "end":  140,
+            "eof":  false,
+            "fileTotalLines":  249
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  141,
+            "limit":  20
+          },
+          "returned":  {
+            "start":  141,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  249
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  249,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff/receipt.json",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff\\receipt.json",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.5174767Z",
+        "sha256":  "7dd4fb17fe3208e4ebbe36a3833a4bc822eb47569f5637c90990f9a03487bea6",
+        "bytes":  "20410",
+        "rawLines":  "487",
+        "nonblankLines":  "487",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:22.0213650Z",
+        "lastWriteFileTimeUtc":  "134385250420213650",
+        "lastWriteDotNetTicks":  "639296482420213650"
+      },
+      "endpointExact":  true,
+      "id":  "input-05",
+      "kind":  "PROVENANCE_RECEIPT",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.3734172Z",
+        "sha256":  "7dd4fb17fe3208e4ebbe36a3833a4bc822eb47569f5637c90990f9a03487bea6",
+        "bytes":  "20410",
+        "rawLines":  "487",
+        "nonblankLines":  "487",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:22.0213650Z",
+        "lastWriteFileTimeUtc":  "134385250420213650",
+        "lastWriteDotNetTicks":  "639296482420213650"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  487
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  487
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  161,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  161,
+            "end":  240,
+            "eof":  false,
+            "fileTotalLines":  487
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  241,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  241,
+            "end":  320,
+            "eof":  false,
+            "fileTotalLines":  487
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  321,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  321,
+            "end":  400,
+            "eof":  false,
+            "fileTotalLines":  487
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  401,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  401,
+            "end":  480,
+            "eof":  false,
+            "fileTotalLines":  487
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  481,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  481,
+            "end":  487,
+            "eof":  true,
+            "fileTotalLines":  487
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  487
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  487,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-reference-mature-public-20261107-093f921d-7a21-4fd2-9a61-3ffd41761d04/receipt.json",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-reference-mature-public-20261107-093f921d-7a21-4fd2-9a61-3ffd41761d04\\receipt.json",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.5262600Z",
+        "sha256":  "649456fec23d0b6eb561fc897cbf90db572eab37c79d38a043c075fdcfb7decc",
+        "bytes":  "5828",
+        "rawLines":  "96",
+        "nonblankLines":  "96",
+        "lastWriteTimeUtc7":  "2026-11-07T10:30:54.1387686Z",
+        "lastWriteFileTimeUtc":  "134385210541387686",
+        "lastWriteDotNetTicks":  "639296442541387686"
+      },
+      "endpointExact":  true,
+      "id":  "input-06",
+      "kind":  "PROVENANCE_RECEIPT",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.3848701Z",
+        "sha256":  "649456fec23d0b6eb561fc897cbf90db572eab37c79d38a043c075fdcfb7decc",
+        "bytes":  "5828",
+        "rawLines":  "96",
+        "nonblankLines":  "96",
+        "lastWriteTimeUtc7":  "2026-11-07T10:30:54.1387686Z",
+        "lastWriteFileTimeUtc":  "134385210541387686",
+        "lastWriteDotNetTicks":  "639296442541387686"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  96
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  96,
+            "eof":  true,
+            "fileTotalLines":  96
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  96,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-reference-public-supplement-20261107-756807eb-8663-47ef-9d64-0f7a6412dd57/receipt.json",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-reference-public-supplement-20261107-756807eb-8663-47ef-9d64-0f7a6412dd57\\receipt.json",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.5292509Z",
+        "sha256":  "4fb02635e8cfe84954ffe74b7110999a5372ec48ecc416eb1c712fa7251df3ad",
+        "bytes":  "2221",
+        "rawLines":  "46",
+        "nonblankLines":  "46",
+        "lastWriteTimeUtc7":  "2026-11-07T11:31:53.3612514Z",
+        "lastWriteFileTimeUtc":  "134385247133612514",
+        "lastWriteDotNetTicks":  "639296479133612514"
+      },
+      "endpointExact":  true,
+      "id":  "input-07",
+      "kind":  "PROVENANCE_RECEIPT",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.3886788Z",
+        "sha256":  "4fb02635e8cfe84954ffe74b7110999a5372ec48ecc416eb1c712fa7251df3ad",
+        "bytes":  "2221",
+        "rawLines":  "46",
+        "nonblankLines":  "46",
+        "lastWriteTimeUtc7":  "2026-11-07T11:31:53.3612514Z",
+        "lastWriteFileTimeUtc":  "134385247133612514",
+        "lastWriteDotNetTicks":  "639296479133612514"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  46,
+            "eof":  true,
+            "fileTotalLines":  46
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  46,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff/wordpress-permission-callback.txt",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff\\wordpress-permission-callback.txt",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.5322125Z",
+        "sha256":  "37399c012a08876f60fb7faf3de5023ee2ca2c3bb1de86557f50f493b9fc42f0",
+        "bytes":  "23030",
+        "rawLines":  "277",
+        "nonblankLines":  "277",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9005473Z",
+        "lastWriteFileTimeUtc":  "134385250419005473",
+        "lastWriteDotNetTicks":  "639296482419005473"
+      },
+      "endpointExact":  true,
+      "id":  "input-08",
+      "kind":  "PUBLIC_DERIVATIVE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.3913898Z",
+        "sha256":  "37399c012a08876f60fb7faf3de5023ee2ca2c3bb1de86557f50f493b9fc42f0",
+        "bytes":  "23030",
+        "rawLines":  "277",
+        "nonblankLines":  "277",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9005473Z",
+        "lastWriteFileTimeUtc":  "134385250419005473",
+        "lastWriteDotNetTicks":  "639296482419005473"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  277
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  277
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  161,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  161,
+            "end":  240,
+            "eof":  false,
+            "fileTotalLines":  277
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  241,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  241,
+            "end":  277,
+            "eof":  true,
+            "fileTotalLines":  277
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+            261
+          ],
+          "fullCallCoverageEligible":  false
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  261,
+            "limit":  1
+          },
+          "returned":  {
+            "start":  261,
+            "end":  261,
+            "eof":  false,
+            "fileTotalLines":  277
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+            261
+          ],
+          "fullCallCoverageEligible":  false
+        }
+      ],
+      "ownEligibleCompleteLineCount":  276,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    },
+    {
+      "path":  "target/audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff/wordpress-rich-text-allowlist.txt",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff\\wordpress-rich-text-allowlist.txt",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.5386708Z",
+        "sha256":  "50ee25af97b9d9d4391e461767da7676f5280c0baf2e96b29db24c29c05721e2",
+        "bytes":  "10741",
+        "rawLines":  "294",
+        "nonblankLines":  "294",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9067418Z",
+        "lastWriteFileTimeUtc":  "134385250419067418",
+        "lastWriteDotNetTicks":  "639296482419067418"
+      },
+      "endpointExact":  true,
+      "id":  "input-09",
+      "kind":  "PUBLIC_DERIVATIVE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.3996790Z",
+        "sha256":  "50ee25af97b9d9d4391e461767da7676f5280c0baf2e96b29db24c29c05721e2",
+        "bytes":  "10741",
+        "rawLines":  "294",
+        "nonblankLines":  "294",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9067418Z",
+        "lastWriteFileTimeUtc":  "134385250419067418",
+        "lastWriteDotNetTicks":  "639296482419067418"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  294
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  294
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  161,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  161,
+            "end":  240,
+            "eof":  false,
+            "fileTotalLines":  294
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  241,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  241,
+            "end":  294,
+            "eof":  true,
+            "fileTotalLines":  294
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  294,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff/owasp-csrf.txt",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff\\owasp-csrf.txt",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.5462109Z",
+        "sha256":  "950eddb82ef5b74ce19bf3d8a2fae42ea991212612400576c51a2f55cbb58d0a",
+        "bytes":  "45943",
+        "rawLines":  "1117",
+        "nonblankLines":  "1117",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9156740Z",
+        "lastWriteFileTimeUtc":  "134385250419156740",
+        "lastWriteDotNetTicks":  "639296482419156740"
+      },
+      "endpointExact":  true,
+      "id":  "input-10",
+      "kind":  "PUBLIC_DERIVATIVE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.4078277Z",
+        "sha256":  "950eddb82ef5b74ce19bf3d8a2fae42ea991212612400576c51a2f55cbb58d0a",
+        "bytes":  "45943",
+        "rawLines":  "1117",
+        "nonblankLines":  "1117",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9156740Z",
+        "lastWriteFileTimeUtc":  "134385250419156740",
+        "lastWriteDotNetTicks":  "639296482419156740"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  161,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  161,
+            "end":  240,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  241,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  241,
+            "end":  320,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  321,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  321,
+            "end":  400,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  401,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  401,
+            "end":  480,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  481,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  481,
+            "end":  560,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  561,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  561,
+            "end":  640,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  641,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  641,
+            "end":  720,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  721,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  721,
+            "end":  800,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  801,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  801,
+            "end":  880,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  881,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  881,
+            "end":  960,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  961,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  961,
+            "end":  1040,
+            "eof":  false,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1041,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1041,
+            "end":  1117,
+            "eof":  true,
+            "fileTotalLines":  1117
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  1117,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff/spring-method-security.txt",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff\\spring-method-security.txt",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.5668433Z",
+        "sha256":  "0377af1a8c3e1cbdd254eeb8be5f1e76007de87445ff6be9cdafe5949dc64628",
+        "bytes":  "81405",
+        "rawLines":  "1663",
+        "nonblankLines":  "1663",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9365783Z",
+        "lastWriteFileTimeUtc":  "134385250419365783",
+        "lastWriteDotNetTicks":  "639296482419365783"
+      },
+      "endpointExact":  true,
+      "id":  "input-11",
+      "kind":  "PUBLIC_DERIVATIVE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.4587142Z",
+        "sha256":  "0377af1a8c3e1cbdd254eeb8be5f1e76007de87445ff6be9cdafe5949dc64628",
+        "bytes":  "81405",
+        "rawLines":  "1663",
+        "nonblankLines":  "1663",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9365783Z",
+        "lastWriteFileTimeUtc":  "134385250419365783",
+        "lastWriteDotNetTicks":  "639296482419365783"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  171,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  171,
+            "end":  250,
+            "eof":  false,
+            "fileTotalLines":  1663
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  521,
+            "limit":  60
+          },
+          "returned":  {
+            "start":  521,
+            "end":  580,
+            "eof":  false,
+            "fileTotalLines":  1663
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  140,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    },
+    {
+      "path":  "target/audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff/next-request-authentication.txt",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff\\next-request-authentication.txt",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.6043361Z",
+        "sha256":  "e84e2276d0be7f6e0f2f1676dc71992cde62db7c0cf20430fd86efba6f7ccaec",
+        "bytes":  "31087",
+        "rawLines":  "2197",
+        "nonblankLines":  "2197",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9678586Z",
+        "lastWriteFileTimeUtc":  "134385250419678586",
+        "lastWriteDotNetTicks":  "639296482419678586"
+      },
+      "endpointExact":  true,
+      "id":  "input-12",
+      "kind":  "PUBLIC_DERIVATIVE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.4794231Z",
+        "sha256":  "e84e2276d0be7f6e0f2f1676dc71992cde62db7c0cf20430fd86efba6f7ccaec",
+        "bytes":  "31087",
+        "rawLines":  "2197",
+        "nonblankLines":  "2197",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9678586Z",
+        "lastWriteFileTimeUtc":  "134385250419678586",
+        "lastWriteDotNetTicks":  "639296482419678586"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1501,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1501,
+            "end":  1580,
+            "eof":  false,
+            "fileTotalLines":  2197
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1581,
+            "limit":  40
+          },
+          "returned":  {
+            "start":  1581,
+            "end":  1620,
+            "eof":  false,
+            "fileTotalLines":  2197
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  2041,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  2041,
+            "end":  2120,
+            "eof":  false,
+            "fileTotalLines":  2197
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  2121,
+            "limit":  60
+          },
+          "returned":  {
+            "start":  2121,
+            "end":  2180,
+            "eof":  false,
+            "fileTotalLines":  2197
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  260,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    },
+    {
+      "path":  "target/audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff/ghost-docs-index.txt",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff\\ghost-docs-index.txt",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.6259549Z",
+        "sha256":  "1a54d52a3ac75536bbb1c131bcc49eb6fa4edf07a9849b82cd90008bf02f2d78",
+        "bytes":  "1151",
+        "rawLines":  "40",
+        "nonblankLines":  "40",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9783569Z",
+        "lastWriteFileTimeUtc":  "134385250419783569",
+        "lastWriteDotNetTicks":  "639296482419783569"
+      },
+      "endpointExact":  true,
+      "id":  "input-13",
+      "kind":  "PUBLIC_DERIVATIVE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.5083987Z",
+        "sha256":  "1a54d52a3ac75536bbb1c131bcc49eb6fa4edf07a9849b82cd90008bf02f2d78",
+        "bytes":  "1151",
+        "rawLines":  "40",
+        "nonblankLines":  "40",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9783569Z",
+        "lastWriteFileTimeUtc":  "134385250419783569",
+        "lastWriteDotNetTicks":  "639296482419783569"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  40,
+            "eof":  true,
+            "fileTotalLines":  40
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  40,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff/vercel-web-interface-guidelines.txt",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff\\vercel-web-interface-guidelines.txt",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.6284490Z",
+        "sha256":  "d246b026f4f29b5823a9cc857f9edf3d2507002e055e32040cadeaf3b38e0234",
+        "bytes":  "8055",
+        "rawLines":  "191",
+        "nonblankLines":  "144",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9793415Z",
+        "lastWriteFileTimeUtc":  "134385250419793415",
+        "lastWriteDotNetTicks":  "639296482419793415"
+      },
+      "endpointExact":  true,
+      "id":  "input-14",
+      "kind":  "PUBLIC_DERIVATIVE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.5109219Z",
+        "sha256":  "d246b026f4f29b5823a9cc857f9edf3d2507002e055e32040cadeaf3b38e0234",
+        "bytes":  "8055",
+        "rawLines":  "191",
+        "nonblankLines":  "144",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:21.9793415Z",
+        "lastWriteFileTimeUtc":  "134385250419793415",
+        "lastWriteDotNetTicks":  "639296482419793415"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  191
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  191
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  161,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  161,
+            "end":  191,
+            "eof":  true,
+            "fileTotalLines":  191
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  191,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff/refine-use-form.txt",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-public-reference-text-20261107-d4d3423a-7c0f-401d-b2e2-71d6274f72ff\\refine-use-form.txt",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.6336023Z",
+        "sha256":  "4f7cc3a67b3a505f93ed1264e86db39c945f4a2ab327e714fc4c3f308a5fa785",
+        "bytes":  "40006",
+        "rawLines":  "3690",
+        "nonblankLines":  "3690",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:22.0198151Z",
+        "lastWriteFileTimeUtc":  "134385250420198151",
+        "lastWriteDotNetTicks":  "639296482420198151"
+      },
+      "endpointExact":  true,
+      "id":  "input-15",
+      "kind":  "PUBLIC_DERIVATIVE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.5173933Z",
+        "sha256":  "4f7cc3a67b3a505f93ed1264e86db39c945f4a2ab327e714fc4c3f308a5fa785",
+        "bytes":  "40006",
+        "rawLines":  "3690",
+        "nonblankLines":  "3690",
+        "lastWriteTimeUtc7":  "2026-11-07T11:37:22.0198151Z",
+        "lastWriteFileTimeUtc":  "134385250420198151",
+        "lastWriteDotNetTicks":  "639296482420198151"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  2461,
+            "limit":  60
+          },
+          "returned":  {
+            "start":  2461,
+            "end":  2520,
+            "eof":  false,
+            "fileTotalLines":  3690
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  2651,
+            "limit":  50
+          },
+          "returned":  {
+            "start":  2651,
+            "end":  2700,
+            "eof":  false,
+            "fileTotalLines":  3690
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  3301,
+            "limit":  60
+          },
+          "returned":  {
+            "start":  3301,
+            "end":  3360,
+            "eof":  false,
+            "fileTotalLines":  3690
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  3481,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  3481,
+            "end":  3560,
+            "eof":  false,
+            "fileTotalLines":  3690
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  2381,
+            "limit":  60
+          },
+          "returned":  {
+            "start":  2381,
+            "end":  2440,
+            "eof":  false,
+            "fileTotalLines":  3690
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  310,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    },
+    {
+      "path":  "astral-auth/src/main/java/com/astral/auth/security/PermissionAspect.java",
+      "absolutePath":  "F:\\qtMusic\\astral\\astral-auth\\src\\main\\java\\com\\astral\\auth\\security\\PermissionAspect.java",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.6706560Z",
+        "sha256":  "af7148a4823c53a7b159622dba3dc0e2b1b14b6be0c1db164bb486319e811950",
+        "bytes":  "5238",
+        "rawLines":  "114",
+        "nonblankLines":  "105",
+        "lastWriteTimeUtc7":  "2026-11-07T05:14:05.1020442Z",
+        "lastWriteFileTimeUtc":  "134385020451020442",
+        "lastWriteDotNetTicks":  "639296252451020442"
+      },
+      "endpointExact":  true,
+      "id":  "input-16",
+      "kind":  "ASTRAL_MAIN_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.5604392Z",
+        "sha256":  "af7148a4823c53a7b159622dba3dc0e2b1b14b6be0c1db164bb486319e811950",
+        "bytes":  "5238",
+        "rawLines":  "114",
+        "nonblankLines":  "105",
+        "lastWriteTimeUtc7":  "2026-11-07T05:14:05.1020442Z",
+        "lastWriteFileTimeUtc":  "134385020451020442",
+        "lastWriteDotNetTicks":  "639296252451020442"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  114
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  114,
+            "eof":  true,
+            "fileTotalLines":  114
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  114,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "astral-auth/src/main/java/com/astral/auth/security/AuthCookieWriter.java",
+      "absolutePath":  "F:\\qtMusic\\astral\\astral-auth\\src\\main\\java\\com\\astral\\auth\\security\\AuthCookieWriter.java",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.6736944Z",
+        "sha256":  "8efde5aaf5438868363bb5ff41c8a84c810d82b05210f8bf3880b5a24d7b17d9",
+        "bytes":  "7661",
+        "rawLines":  "145",
+        "nonblankLines":  "129",
+        "lastWriteTimeUtc7":  "2026-11-06T07:05:01.2121869Z",
+        "lastWriteFileTimeUtc":  "134384223012121869",
+        "lastWriteDotNetTicks":  "639295455012121869"
+      },
+      "endpointExact":  true,
+      "id":  "input-17",
+      "kind":  "ASTRAL_MAIN_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.5656187Z",
+        "sha256":  "8efde5aaf5438868363bb5ff41c8a84c810d82b05210f8bf3880b5a24d7b17d9",
+        "bytes":  "7661",
+        "rawLines":  "145",
+        "nonblankLines":  "129",
+        "lastWriteTimeUtc7":  "2026-11-06T07:05:01.2121869Z",
+        "lastWriteFileTimeUtc":  "134384223012121869",
+        "lastWriteDotNetTicks":  "639295455012121869"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  145
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  145,
+            "eof":  true,
+            "fileTotalLines":  145
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  145,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "astral-server/src/main/java/com/astral/server/interceptor/AuthInterceptor.java",
+      "absolutePath":  "F:\\qtMusic\\astral\\astral-server\\src\\main\\java\\com\\astral\\server\\interceptor\\AuthInterceptor.java",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.6812002Z",
+        "sha256":  "0096fac8facd7f2d49334dc2357cd583395f1a4e934c11a3f66aad9c2bc380ef",
+        "bytes":  "28141",
+        "rawLines":  "551",
+        "nonblankLines":  "503",
+        "lastWriteTimeUtc7":  "2026-11-06T22:44:22.2340910Z",
+        "lastWriteFileTimeUtc":  "134384786622340910",
+        "lastWriteDotNetTicks":  "639296018622340910"
+      },
+      "endpointExact":  true,
+      "id":  "input-18",
+      "kind":  "ASTRAL_MAIN_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.5711325Z",
+        "sha256":  "0096fac8facd7f2d49334dc2357cd583395f1a4e934c11a3f66aad9c2bc380ef",
+        "bytes":  "28141",
+        "rawLines":  "551",
+        "nonblankLines":  "503",
+        "lastWriteTimeUtc7":  "2026-11-06T22:44:22.2340910Z",
+        "lastWriteFileTimeUtc":  "134384786622340910",
+        "lastWriteDotNetTicks":  "639296018622340910"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  251,
+            "limit":  50
+          },
+          "returned":  {
+            "start":  251,
+            "end":  300,
+            "eof":  false,
+            "fileTotalLines":  551
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  121,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  121,
+            "end":  200,
+            "eof":  false,
+            "fileTotalLines":  551
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  130,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    },
+    {
+      "path":  "astral-common/src/main/java/com/astral/common/web/CsrfTokenSupport.java",
+      "absolutePath":  "F:\\qtMusic\\astral\\astral-common\\src\\main\\java\\com\\astral\\common\\web\\CsrfTokenSupport.java",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.6882422Z",
+        "sha256":  "28b8fc76a1793635692ed11ba297d5d1825438be3e718be282558c77ad54da3a",
+        "bytes":  "5776",
+        "rawLines":  "130",
+        "nonblankLines":  "117",
+        "lastWriteTimeUtc7":  "2026-11-06T07:04:58.1030391Z",
+        "lastWriteFileTimeUtc":  "134384222981030391",
+        "lastWriteDotNetTicks":  "639295454981030391"
+      },
+      "endpointExact":  true,
+      "id":  "input-19",
+      "kind":  "ASTRAL_MAIN_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.5828545Z",
+        "sha256":  "28b8fc76a1793635692ed11ba297d5d1825438be3e718be282558c77ad54da3a",
+        "bytes":  "5776",
+        "rawLines":  "130",
+        "nonblankLines":  "117",
+        "lastWriteTimeUtc7":  "2026-11-06T07:04:58.1030391Z",
+        "lastWriteFileTimeUtc":  "134384222981030391",
+        "lastWriteDotNetTicks":  "639295454981030391"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  130
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  130,
+            "eof":  true,
+            "fileTotalLines":  130
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  130,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "astral-front/src/components/antd-compat/Form.tsx",
+      "absolutePath":  "F:\\qtMusic\\astral\\astral-front\\src\\components\\antd-compat\\Form.tsx",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.6922020Z",
+        "sha256":  "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+        "bytes":  "38984",
+        "rawLines":  "1154",
+        "nonblankLines":  "1043",
+        "lastWriteTimeUtc7":  "2026-11-07T10:57:21.7339767Z",
+        "lastWriteFileTimeUtc":  "134385226417339767",
+        "lastWriteDotNetTicks":  "639296458417339767"
+      },
+      "endpointExact":  true,
+      "id":  "input-20",
+      "kind":  "ASTRAL_MAIN_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.5893637Z",
+        "sha256":  "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+        "bytes":  "38984",
+        "rawLines":  "1154",
+        "nonblankLines":  "1043",
+        "lastWriteTimeUtc7":  "2026-11-07T10:57:21.7339767Z",
+        "lastWriteFileTimeUtc":  "134385226417339767",
+        "lastWriteDotNetTicks":  "639296458417339767"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  51,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  51,
+            "end":  130,
+            "eof":  false,
+            "fileTotalLines":  1154
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  281,
+            "limit":  50
+          },
+          "returned":  {
+            "start":  281,
+            "end":  330,
+            "eof":  false,
+            "fileTotalLines":  1154
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  591,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  591,
+            "end":  670,
+            "eof":  false,
+            "fileTotalLines":  1154
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  210,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    },
+    {
+      "path":  "astral-front/src/api/client.ts",
+      "absolutePath":  "F:\\qtMusic\\astral\\astral-front\\src\\api\\client.ts",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.7194497Z",
+        "sha256":  "fa4a5272b682b39fa46ab453a3ef9489348e2db2d7f7b0451ab310aa6244cefd",
+        "bytes":  "17853",
+        "rawLines":  "452",
+        "nonblankLines":  "418",
+        "lastWriteTimeUtc7":  "2026-11-07T02:04:17.4147519Z",
+        "lastWriteFileTimeUtc":  "134384906574147519",
+        "lastWriteDotNetTicks":  "639296138574147519"
+      },
+      "endpointExact":  true,
+      "id":  "input-21",
+      "kind":  "ASTRAL_MAIN_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.6075700Z",
+        "sha256":  "fa4a5272b682b39fa46ab453a3ef9489348e2db2d7f7b0451ab310aa6244cefd",
+        "bytes":  "17853",
+        "rawLines":  "452",
+        "nonblankLines":  "418",
+        "lastWriteTimeUtc7":  "2026-11-07T02:04:17.4147519Z",
+        "lastWriteFileTimeUtc":  "134384906574147519",
+        "lastWriteDotNetTicks":  "639296138574147519"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  71,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  71,
+            "end":  150,
+            "eof":  false,
+            "fileTotalLines":  452
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  151,
+            "limit":  60
+          },
+          "returned":  {
+            "start":  151,
+            "end":  210,
+            "eof":  false,
+            "fileTotalLines":  452
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  140,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    },
+    {
+      "path":  "astral-front/src/context/AuthContext.tsx",
+      "absolutePath":  "F:\\qtMusic\\astral\\astral-front\\src\\context\\AuthContext.tsx",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.7271758Z",
+        "sha256":  "59acacb354641068e85227cfcbd374a65654898232aaf4c0e5a01f9f898db2ae",
+        "bytes":  "1901",
+        "rawLines":  "58",
+        "nonblankLines":  "50",
+        "lastWriteTimeUtc7":  "2026-11-06T21:10:47.5868298Z",
+        "lastWriteFileTimeUtc":  "134384730475868298",
+        "lastWriteDotNetTicks":  "639295962475868298"
+      },
+      "endpointExact":  true,
+      "id":  "input-22",
+      "kind":  "ASTRAL_MAIN_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.6204787Z",
+        "sha256":  "59acacb354641068e85227cfcbd374a65654898232aaf4c0e5a01f9f898db2ae",
+        "bytes":  "1901",
+        "rawLines":  "58",
+        "nonblankLines":  "50",
+        "lastWriteTimeUtc7":  "2026-11-06T21:10:47.5868298Z",
+        "lastWriteFileTimeUtc":  "134384730475868298",
+        "lastWriteDotNetTicks":  "639295962475868298"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  58,
+            "eof":  true,
+            "fileTotalLines":  58
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  58,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "astral-front/src/context/auth-session-store.ts",
+      "absolutePath":  "F:\\qtMusic\\astral\\astral-front\\src\\context\\auth-session-store.ts",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.7296753Z",
+        "sha256":  "e3becfc21bd3c5e193fc0196824c91e3c8ca8dffcceaccb5238eb28562b1e7fd",
+        "bytes":  "6143",
+        "rawLines":  "175",
+        "nonblankLines":  "157",
+        "lastWriteTimeUtc7":  "2026-11-06T21:37:00.4380511Z",
+        "lastWriteFileTimeUtc":  "134384746204380511",
+        "lastWriteDotNetTicks":  "639295978204380511"
+      },
+      "endpointExact":  true,
+      "id":  "input-23",
+      "kind":  "ASTRAL_MAIN_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.6233523Z",
+        "sha256":  "e3becfc21bd3c5e193fc0196824c91e3c8ca8dffcceaccb5238eb28562b1e7fd",
+        "bytes":  "6143",
+        "rawLines":  "175",
+        "nonblankLines":  "157",
+        "lastWriteTimeUtc7":  "2026-11-06T21:37:00.4380511Z",
+        "lastWriteFileTimeUtc":  "134384746204380511",
+        "lastWriteDotNetTicks":  "639295978204380511"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  175
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  175
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  161,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  161,
+            "end":  175,
+            "eof":  true,
+            "fileTotalLines":  175
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  175,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364/snapshot/astral-blog/src/lib/auth-server.ts",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364\\snapshot\\astral-blog\\src\\lib\\auth-server.ts",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.7332306Z",
+        "sha256":  "b4e00347c156da3f31db6ceceaac566157f07b1f55363f4f7fe024c6599d9681",
+        "bytes":  "3062",
+        "rawLines":  "77",
+        "nonblankLines":  "70",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3783683Z",
+        "lastWriteFileTimeUtc":  "134385114403783683",
+        "lastWriteDotNetTicks":  "639296346403783683"
+      },
+      "endpointExact":  true,
+      "id":  "input-24",
+      "kind":  "ASTRAL_FROZEN_BLOG_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.6274205Z",
+        "sha256":  "b4e00347c156da3f31db6ceceaac566157f07b1f55363f4f7fe024c6599d9681",
+        "bytes":  "3062",
+        "rawLines":  "77",
+        "nonblankLines":  "70",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3783683Z",
+        "lastWriteFileTimeUtc":  "134385114403783683",
+        "lastWriteDotNetTicks":  "639296346403783683"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  77,
+            "eof":  true,
+            "fileTotalLines":  77
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  77,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364/snapshot/astral-blog/src/lib/bff.ts",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364\\snapshot\\astral-blog\\src\\lib\\bff.ts",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.7363022Z",
+        "sha256":  "7b3f937638ba431006245c3022a26a1a8123a5999357e891dfdb1cc7b6b783e7",
+        "bytes":  "6509",
+        "rawLines":  "175",
+        "nonblankLines":  "164",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3793455Z",
+        "lastWriteFileTimeUtc":  "134385114403793455",
+        "lastWriteDotNetTicks":  "639296346403793455"
+      },
+      "endpointExact":  true,
+      "id":  "input-25",
+      "kind":  "ASTRAL_FROZEN_BLOG_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.6300447Z",
+        "sha256":  "7b3f937638ba431006245c3022a26a1a8123a5999357e891dfdb1cc7b6b783e7",
+        "bytes":  "6509",
+        "rawLines":  "175",
+        "nonblankLines":  "164",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3793455Z",
+        "lastWriteFileTimeUtc":  "134385114403793455",
+        "lastWriteDotNetTicks":  "639296346403793455"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  175
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  175
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  161,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  161,
+            "end":  175,
+            "eof":  true,
+            "fileTotalLines":  175
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  175,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364/snapshot/astral-blog/src/lib/markdown.ts",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364\\snapshot\\astral-blog\\src\\lib\\markdown.ts",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.7402495Z",
+        "sha256":  "fd0d81c23b52928c85da93358e2eceed8f30233c4b111f628699b0352c7bbdde",
+        "bytes":  "12172",
+        "rawLines":  "361",
+        "nonblankLines":  "337",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3892666Z",
+        "lastWriteFileTimeUtc":  "134385114403892666",
+        "lastWriteDotNetTicks":  "639296346403892666"
+      },
+      "endpointExact":  true,
+      "id":  "input-26",
+      "kind":  "ASTRAL_FROZEN_BLOG_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.6361868Z",
+        "sha256":  "fd0d81c23b52928c85da93358e2eceed8f30233c4b111f628699b0352c7bbdde",
+        "bytes":  "12172",
+        "rawLines":  "361",
+        "nonblankLines":  "337",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3892666Z",
+        "lastWriteFileTimeUtc":  "134385114403892666",
+        "lastWriteDotNetTicks":  "639296346403892666"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  80,
+            "eof":  false,
+            "fileTotalLines":  361
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  81,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  81,
+            "end":  160,
+            "eof":  false,
+            "fileTotalLines":  361
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  160,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    },
+    {
+      "path":  "target/audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364/snapshot/astral-blog/src/lib/links.ts",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364\\snapshot\\astral-blog\\src\\lib\\links.ts",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.7486717Z",
+        "sha256":  "81c543f937dd808e94f84dbda62a8fc160e94a3679a42479a401049999fe948e",
+        "bytes":  "1431",
+        "rawLines":  "46",
+        "nonblankLines":  "39",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3871268Z",
+        "lastWriteFileTimeUtc":  "134385114403871268",
+        "lastWriteDotNetTicks":  "639296346403871268"
+      },
+      "endpointExact":  true,
+      "id":  "input-27",
+      "kind":  "ASTRAL_FROZEN_BLOG_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.6660956Z",
+        "sha256":  "81c543f937dd808e94f84dbda62a8fc160e94a3679a42479a401049999fe948e",
+        "bytes":  "1431",
+        "rawLines":  "46",
+        "nonblankLines":  "39",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3871268Z",
+        "lastWriteFileTimeUtc":  "134385114403871268",
+        "lastWriteDotNetTicks":  "639296346403871268"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  1,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  1,
+            "end":  46,
+            "eof":  true,
+            "fileTotalLines":  46
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  46,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "FULL"
+    },
+    {
+      "path":  "target/audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364/snapshot/astral-blog/src/components/markdown-editor.tsx",
+      "absolutePath":  "F:\\qtMusic\\astral\\target\\audit-blog-task23-root-candidate-20261107-1fa5ace8-10fd-4fa7-9841-41ea237d8364\\snapshot\\astral-blog\\src\\components\\markdown-editor.tsx",
+      "before":  {
+        "sampledAtUtc":  "2026-11-07T12:03:02.7528053Z",
+        "sha256":  "07c30d9d3ece8a2b6a377ba6cea7c11468c46c58fd6a92974da9a15d553c09d0",
+        "bytes":  "23062",
+        "rawLines":  "611",
+        "nonblankLines":  "607",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3524164Z",
+        "lastWriteFileTimeUtc":  "134385114403524164",
+        "lastWriteDotNetTicks":  "639296346403524164"
+      },
+      "endpointExact":  true,
+      "id":  "input-28",
+      "kind":  "ASTRAL_FROZEN_BLOG_SOURCE",
+      "changedFields":  [
+
+      ],
+      "after":  {
+        "sampledAtUtc":  "2026-11-07T12:17:49.6711814Z",
+        "sha256":  "07c30d9d3ece8a2b6a377ba6cea7c11468c46c58fd6a92974da9a15d553c09d0",
+        "bytes":  "23062",
+        "rawLines":  "611",
+        "nonblankLines":  "607",
+        "lastWriteTimeUtc7":  "2026-11-07T07:50:40.3524164Z",
+        "lastWriteFileTimeUtc":  "134385114403524164",
+        "lastWriteDotNetTicks":  "639296346403524164"
+      },
+      "reads":  [
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  241,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  241,
+            "end":  320,
+            "eof":  false,
+            "fileTotalLines":  611
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        },
+        {
+          "tool":  "read",
+          "requested":  {
+            "offset":  381,
+            "limit":  80
+          },
+          "returned":  {
+            "start":  381,
+            "end":  460,
+            "eof":  false,
+            "fileTotalLines":  611
+          },
+          "middlePruned":  false,
+          "inlineTruncatedLines":  [
+
+          ],
+          "fullCallCoverageEligible":  true
+        }
+      ],
+      "ownEligibleCompleteLineCount":  160,
+      "comparedFields":  [
+        "sha256",
+        "bytes",
+        "rawLines",
+        "nonblankLines",
+        "lastWriteTimeUtc7",
+        "lastWriteFileTimeUtc",
+        "lastWriteDotNetTicks"
+      ],
+      "ownReadStatus":  "PARTIAL"
+    }
+  ],
+  "publicReferenceProvenance":  [
+    {
+      "name":  "ghost-admin-authentication",
+      "requestedURL":  "https://docs.ghost.org/admin-api/authentication/",
+      "status":  404,
+      "contentRead":  false,
+      "captureReceipt":  "input-06:10-14",
+      "ownSemanticCoverage":  "UNAVAILABLE",
+      "replacementAuthenticationClaimed":  false
+    },
+    {
+      "name":  "wordpress-permission-callback",
+      "requestedURL":  "https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/",
+      "canonicalURL":  "https://developer.wordpress.org/rest-api/extending-the-rest-api/adding-custom-endpoints/",
+      "leadCaptureAtUtc":  "2026-11-07T10:30:54.135Z",
+      "captureReceipt":  "input-06",
+      "transportStatus":  200,
+      "contentType":  "text/html; charset=UTF-8",
+      "redirectChain":  [
+
+      ],
+      "rawPath":  "F:\\qtMusic\\astral\\target\\audit-reference-mature-public-20261107-093f921d-7a21-4fd2-9a61-3ffd41761d04\\wordpress-permission-callback.html",
+      "rawSHA256":  "6ca15eca2a7c5e5b3d902e9aee0fd8b7c141523f28a53d1f31a565b9a332caa6",
+      "rawBytes":  205013,
+      "rawIdentityAttribution":  "Inherited from actually read Lead receipt; raw file not independently read/rehashed",
+      "derivativeInputId":  "input-08",
+      "derivativeTransformation":  "lxml HTMLParser no_network; first article/main/body; remove script/style/nav/aside/footer/header/noscript; normalize fragment whitespace; not rendering or model summary",
+      "derivativeReceiptSHA256":  "37399c012a08876f60fb7faf3de5023ee2ca2c3bb1de86557f50f493b9fc42f0",
+      "derivativeOwnSHA256":  "37399c012a08876f60fb7faf3de5023ee2ca2c3bb1de86557f50f493b9fc42f0",
+      "receiptContentRead":  false,
+      "ownContentCoverage":  "PARTIAL",
+      "fetchedByThisReader":  false,
+      "browserRendered":  false,
+      "oldReportRetroactiveCertification":  false
+    },
+    {
+      "name":  "wordpress-rich-text-allowlist",
+      "requestedURL":  "https://developer.wordpress.org/reference/functions/wp_kses/",
+      "canonicalURL":  "https://developer.wordpress.org/reference/functions/wp_kses/",
+      "leadCaptureAtUtc":  "2026-11-07T10:30:54.135Z",
+      "captureReceipt":  "input-06",
+      "transportStatus":  200,
+      "contentType":  "text/html; charset=UTF-8",
+      "redirectChain":  [
+
+      ],
+      "rawPath":  "F:\\qtMusic\\astral\\target\\audit-reference-mature-public-20261107-093f921d-7a21-4fd2-9a61-3ffd41761d04\\wordpress-rich-text-allowlist.html",
+      "rawSHA256":  "324cd0a1ceb6fc076ce4d0b5aed14bdbbe90a2b134fc7b393f6a7d6e43588541",
+      "rawBytes":  217297,
+      "rawIdentityAttribution":  "Inherited from actually read Lead receipt; raw file not independently read/rehashed",
+      "derivativeInputId":  "input-09",
+      "derivativeTransformation":  "lxml HTMLParser no_network; first article/main/body; remove script/style/nav/aside/footer/header/noscript; normalize fragment whitespace; not rendering or model summary",
+      "derivativeReceiptSHA256":  "50ee25af97b9d9d4391e461767da7676f5280c0baf2e96b29db24c29c05721e2",
+      "derivativeOwnSHA256":  "50ee25af97b9d9d4391e461767da7676f5280c0baf2e96b29db24c29c05721e2",
+      "receiptContentRead":  false,
+      "ownContentCoverage":  "FULL",
+      "fetchedByThisReader":  false,
+      "browserRendered":  false,
+      "oldReportRetroactiveCertification":  false
+    },
+    {
+      "name":  "owasp-csrf",
+      "requestedURL":  "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "canonicalURL":  "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "leadCaptureAtUtc":  "2026-11-07T10:30:54.135Z",
+      "captureReceipt":  "input-06",
+      "transportStatus":  200,
+      "contentType":  "text/html; charset=utf-8",
+      "redirectChain":  [
+
+      ],
+      "rawPath":  "F:\\qtMusic\\astral\\target\\audit-reference-mature-public-20261107-093f921d-7a21-4fd2-9a61-3ffd41761d04\\owasp-csrf.html",
+      "rawSHA256":  "90d37485403b09abf5b90248242cfc4e9aa4734b8918521262e499bdd8985c1d",
+      "rawBytes":  158087,
+      "rawIdentityAttribution":  "Inherited from actually read Lead receipt; raw file not independently read/rehashed",
+      "derivativeInputId":  "input-10",
+      "derivativeTransformation":  "lxml HTMLParser no_network; first article/main/body; remove script/style/nav/aside/footer/header/noscript; normalize fragment whitespace; not rendering or model summary",
+      "derivativeReceiptSHA256":  "950eddb82ef5b74ce19bf3d8a2fae42ea991212612400576c51a2f55cbb58d0a",
+      "derivativeOwnSHA256":  "950eddb82ef5b74ce19bf3d8a2fae42ea991212612400576c51a2f55cbb58d0a",
+      "receiptContentRead":  false,
+      "ownContentCoverage":  "FULL",
+      "fetchedByThisReader":  false,
+      "browserRendered":  false,
+      "oldReportRetroactiveCertification":  false
+    },
+    {
+      "name":  "spring-method-security",
+      "requestedURL":  "https://docs.spring.io/spring-security/reference/servlet/authorization/method-security.html",
+      "canonicalURL":  "https://docs.spring.io/spring-security/reference/servlet/authorization/method-security.html",
+      "leadCaptureAtUtc":  "2026-11-07T10:30:54.135Z",
+      "captureReceipt":  "input-06",
+      "transportStatus":  200,
+      "contentType":  "text/html",
+      "redirectChain":  [
+
+      ],
+      "rawPath":  "F:\\qtMusic\\astral\\target\\audit-reference-mature-public-20261107-093f921d-7a21-4fd2-9a61-3ffd41761d04\\spring-method-security.html",
+      "rawSHA256":  "a26ebe54a2eb42022a5afc66f32288b509dbbd07ad05b77c154ad3ce78aa68eb",
+      "rawBytes":  247676,
+      "rawIdentityAttribution":  "Inherited from actually read Lead receipt; raw file not independently read/rehashed",
+      "derivativeInputId":  "input-11",
+      "derivativeTransformation":  "lxml HTMLParser no_network; first article/main/body; remove script/style/nav/aside/footer/header/noscript; normalize fragment whitespace; not rendering or model summary",
+      "derivativeReceiptSHA256":  "0377af1a8c3e1cbdd254eeb8be5f1e76007de87445ff6be9cdafe5949dc64628",
+      "derivativeOwnSHA256":  "0377af1a8c3e1cbdd254eeb8be5f1e76007de87445ff6be9cdafe5949dc64628",
+      "receiptContentRead":  false,
+      "ownContentCoverage":  "PARTIAL",
+      "fetchedByThisReader":  false,
+      "browserRendered":  false,
+      "oldReportRetroactiveCertification":  false
+    },
+    {
+      "name":  "next-request-authentication",
+      "requestedURL":  "https://nextjs.org/docs/app/guides/authentication",
+      "canonicalURL":  "https://nextjs.org/docs/app/guides/authentication",
+      "leadCaptureAtUtc":  "2026-11-07T10:30:54.135Z",
+      "captureReceipt":  "input-06",
+      "transportStatus":  200,
+      "contentType":  "text/html; charset=utf-8",
+      "redirectChain":  [
+
+      ],
+      "rawPath":  "F:\\qtMusic\\astral\\target\\audit-reference-mature-public-20261107-093f921d-7a21-4fd2-9a61-3ffd41761d04\\next-request-authentication.html",
+      "rawSHA256":  "0ee1c84ef84a54a2daa11d4db5ff93d2e18a36ecadc26710d467f636dc3d03f0",
+      "rawBytes":  1770982,
+      "rawIdentityAttribution":  "Inherited from actually read Lead receipt; raw file not independently read/rehashed",
+      "derivativeInputId":  "input-12",
+      "derivativeTransformation":  "lxml HTMLParser no_network; first article/main/body; remove script/style/nav/aside/footer/header/noscript; normalize fragment whitespace; not rendering or model summary",
+      "derivativeReceiptSHA256":  "e84e2276d0be7f6e0f2f1676dc71992cde62db7c0cf20430fd86efba6f7ccaec",
+      "derivativeOwnSHA256":  "e84e2276d0be7f6e0f2f1676dc71992cde62db7c0cf20430fd86efba6f7ccaec",
+      "receiptContentRead":  false,
+      "ownContentCoverage":  "PARTIAL",
+      "fetchedByThisReader":  false,
+      "browserRendered":  false,
+      "oldReportRetroactiveCertification":  false
+    },
+    {
+      "name":  "ghost-docs-index",
+      "requestedURL":  "https://docs.ghost.org/",
+      "canonicalURL":  "https://docs.ghost.org/",
+      "leadCaptureAtUtc":  "2026-11-07T11:31:53.358Z",
+      "captureReceipt":  "input-07",
+      "transportStatus":  200,
+      "contentType":  "text/html; charset=utf-8",
+      "redirectChain":  [
+
+      ],
+      "rawPath":  "F:\\qtMusic\\astral\\target\\audit-reference-public-supplement-20261107-756807eb-8663-47ef-9d64-0f7a6412dd57\\ghost-docs-index.html",
+      "rawSHA256":  "36c8fab4140351f0e69e5c0a295bb8470808532c71cd42c51c8c0f4c16ac02a7",
+      "rawBytes":  112402,
+      "rawIdentityAttribution":  "Inherited from actually read Lead receipt; raw file not independently read/rehashed",
+      "derivativeInputId":  "input-13",
+      "derivativeTransformation":  "lxml HTMLParser no_network; first article/main/body; remove script/style/nav/aside/footer/header/noscript; normalize fragment whitespace; not rendering or model summary",
+      "derivativeReceiptSHA256":  "1a54d52a3ac75536bbb1c131bcc49eb6fa4edf07a9849b82cd90008bf02f2d78",
+      "derivativeOwnSHA256":  "1a54d52a3ac75536bbb1c131bcc49eb6fa4edf07a9849b82cd90008bf02f2d78",
+      "receiptContentRead":  false,
+      "ownContentCoverage":  "FULL",
+      "fetchedByThisReader":  false,
+      "browserRendered":  false,
+      "oldReportRetroactiveCertification":  false
+    },
+    {
+      "name":  "vercel-web-interface-guidelines",
+      "requestedURL":  "https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md",
+      "canonicalURL":  "https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md",
+      "leadCaptureAtUtc":  "2026-11-07T11:31:53.358Z",
+      "captureReceipt":  "input-07",
+      "transportStatus":  200,
+      "contentType":  "text/plain; charset=utf-8",
+      "redirectChain":  [
+
+      ],
+      "rawPath":  "F:\\qtMusic\\astral\\target\\audit-reference-public-supplement-20261107-756807eb-8663-47ef-9d64-0f7a6412dd57\\vercel-web-interface-guidelines.md",
+      "rawSHA256":  "d246b026f4f29b5823a9cc857f9edf3d2507002e055e32040cadeaf3b38e0234",
+      "rawBytes":  8055,
+      "rawIdentityAttribution":  "Inherited from actually read Lead receipt; raw file not independently read/rehashed",
+      "derivativeInputId":  "input-14",
+      "derivativeTransformation":  "UTF8 decode only, no rendering",
+      "derivativeReceiptSHA256":  "d246b026f4f29b5823a9cc857f9edf3d2507002e055e32040cadeaf3b38e0234",
+      "derivativeOwnSHA256":  "d246b026f4f29b5823a9cc857f9edf3d2507002e055e32040cadeaf3b38e0234",
+      "receiptContentRead":  false,
+      "ownContentCoverage":  "FULL",
+      "fetchedByThisReader":  false,
+      "browserRendered":  false,
+      "oldReportRetroactiveCertification":  false
+    },
+    {
+      "name":  "refine-use-form",
+      "requestedURL":  "https://refine.dev/docs/ui-integrations/ant-design/hooks/use-form/",
+      "canonicalURL":  "https://refine.dev/core/docs/ui-integrations/ant-design/hooks/use-form/",
+      "leadCaptureAtUtc":  "2026-11-07T11:31:53.358Z",
+      "captureReceipt":  "input-07",
+      "transportStatus":  200,
+      "contentType":  "text/html; charset=UTF-8",
+      "redirectChain":  [
+        "https://refine.dev/docs/ui-integrations/ant-design/hooks/use-form/"
+      ],
+      "rawPath":  "F:\\qtMusic\\astral\\target\\audit-reference-public-supplement-20261107-756807eb-8663-47ef-9d64-0f7a6412dd57\\refine-use-form.html",
+      "rawSHA256":  "ab7b68b54ab5994e7d8a357b9eaf0fd93005d4d2e7674bfce6a5f8236b136764",
+      "rawBytes":  921474,
+      "rawIdentityAttribution":  "Inherited from actually read Lead receipt; raw file not independently read/rehashed",
+      "derivativeInputId":  "input-15",
+      "derivativeTransformation":  "lxml HTMLParser no_network; first article/main/body; remove script/style/nav/aside/footer/header/noscript; normalize fragment whitespace; not rendering or model summary",
+      "derivativeReceiptSHA256":  "4f7cc3a67b3a505f93ed1264e86db39c945f4a2ab327e714fc4c3f308a5fa785",
+      "derivativeOwnSHA256":  "4f7cc3a67b3a505f93ed1264e86db39c945f4a2ab327e714fc4c3f308a5fa785",
+      "receiptContentRead":  false,
+      "ownContentCoverage":  "PARTIAL",
+      "fetchedByThisReader":  false,
+      "browserRendered":  false,
+      "oldReportRetroactiveCertification":  false
+    }
+  ],
+  "markdownArtifact":  {
+    "path":  "docs/audit/2026-11-07/mature-project-comparison-supplement-current.md",
+    "sha256":  "256321512c1f0325880e0b285aa45ca86929480e84fad07878f9fd2c5cf91113",
+    "bytes":  "6531",
+    "rawLines":  "21",
+    "nonblankLines":  "11",
+    "lastWriteTimeUtc7":  "2026-11-07T12:16:59.6680203Z",
+    "lastWriteFileTimeUtc":  "134385274196680203",
+    "lastWriteDotNetTicks":  "639296506196680203",
+    "whitespaceWords":  343,
+    "maxWords":  500,
+    "ownFinalReadRanges":  [
+      {
+        "requested":  {
+          "offset":  1,
+          "limit":  8
+        },
+        "returned":  {
+          "start":  1,
+          "end":  8,
+          "eof":  false
+        },
+        "pruned":  false
+      },
+      {
+        "requested":  {
+          "offset":  9,
+          "limit":  20
+        },
+        "returned":  {
+          "start":  9,
+          "end":  21,
+          "eof":  true
+        },
+        "pruned":  false
+      }
+    ]
+  }
+}

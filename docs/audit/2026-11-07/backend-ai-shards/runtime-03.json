@@ -1,0 +1,332 @@
+{
+  "shard": "runtime-03",
+  "auditDate": "2026-11-07",
+  "workspace": "F:\\qtMusic\\astral",
+  "mode": "read-only",
+  "statusDisclaimer": "6-file runtime shard only; not the full AI audit, not task-14, not audit completion.",
+  "writes": [
+    "docs/audit/2026-11-07/backend-ai-shards/runtime-03.md",
+    "docs/audit/2026-11-07/backend-ai-shards/runtime-03.json"
+  ],
+  "operationsPerformed": {
+    "sourceModified": false,
+    "testsRun": false,
+    "mavenRun": false,
+    "databaseTouched": false,
+    "browserUsed": false,
+    "networkUsed": false,
+    "externalReferences": "local mirror only: target/audit-reference-owasp-ssrf-20261107-1045.html (title line 30, canonical link line 13)"
+  },
+  "files": [
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java",
+      "rawLines": 1805,
+      "nonblankLines": 1694,
+      "bytes": 85936,
+      "sha256Before": "D60547FFA6A29453E7DABD10507B7529AA14FCDF8BE1672636DB3F1A4F81D1EA",
+      "sha256After": "D60547FFA6A29453E7DABD10507B7529AA14FCDF8BE1672636DB3F1A4F81D1EA",
+      "versionChanged": false,
+      "visibleRanges": ["1-1805 contiguous, read in <=80-line windows; this session 481-1805, 1-480 read earlier"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiToolService.java",
+      "rawLines": 624,
+      "nonblankLines": 585,
+      "bytes": 28839,
+      "sha256Before": "6BDEB1CBB1A2E5F06C5AFB85DA94F843F5A9466642899BB29133FB00447D2D45",
+      "sha256After": "6BDEB1CBB1A2E5F06C5AFB85DA94F843F5A9466642899BB29133FB00447D2D45",
+      "versionChanged": false,
+      "visibleRanges": ["1-624 contiguous", "re-witnessed this session: 90-159, 165-184, 185-244, 340-399, 505-584, 585-624"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/tool/AiToolTypes.java",
+      "rawLines": 223,
+      "nonblankLines": 195,
+      "bytes": 8499,
+      "sha256Before": "73BFD6ACBAEB9B3D5F1701D3B9A518DAF98CFC469141998820D5937E2D55BDB4",
+      "sha256After": "73BFD6ACBAEB9B3D5F1701D3B9A518DAF98CFC469141998820D5937E2D55BDB4",
+      "versionChanged": false,
+      "visibleRanges": ["1-223 contiguous"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/common/AiJson.java",
+      "rawLines": 188,
+      "nonblankLines": 170,
+      "bytes": 6249,
+      "sha256Before": "C899E1417B05B48C3167C6B59A20016F042AE13DDDCCFDF1025425D7B6825E46",
+      "sha256After": "C899E1417B05B48C3167C6B59A20016F042AE13DDDCCFDF1025425D7B6825E46",
+      "versionChanged": false,
+      "visibleRanges": ["1-188 contiguous", "re-witnessed this session: 24-65"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/test/java/com/astral/ai/service/AiChatOrchestratorPermissionTest.java",
+      "rawLines": 205,
+      "nonblankLines": 178,
+      "bytes": 8498,
+      "sha256Before": "B18C21F21B01728BABFC97E8FC672A44BF9A0FFDC42C522737017116BF6F591B",
+      "sha256After": "B18C21F21B01728BABFC97E8FC672A44BF9A0FFDC42C522737017116BF6F591B",
+      "versionChanged": false,
+      "visibleRanges": ["1-205 contiguous"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/test/java/com/astral/ai/service/AiToolServiceRiskFloorTest.java",
+      "rawLines": 171,
+      "nonblankLines": 154,
+      "bytes": 7965,
+      "sha256Before": "85FA6550A9B7B0D7864D1703CBB12CDC3A9710F04CAA206C5EE395EC878B0D06",
+      "sha256After": "85FA6550A9B7B0D7864D1703CBB12CDC3A9710F04CAA206C5EE395EC878B0D06",
+      "versionChanged": false,
+      "visibleRanges": ["1-171 contiguous"],
+      "coverage": "full"
+    }
+  ],
+  "coverageCounts": {
+    "full": 6,
+    "partial": 0,
+    "versionSplit": 0
+  },
+  "extraSlicesNotCounted": [
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminToolController.java",
+      "visibleRanges": ["160-279", "grep-confirmed 51-55, 178-187, 197-198"],
+      "purpose": "test-run permission annotation, approve endpoint state check, resume call"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/common/AiConstants.java",
+      "visibleRanges": ["120-229"],
+      "purpose": "RiskLevel.order, ApprovalPolicy.all, ToolCallStatus, ExecutorType"
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/PermissionChecker.java",
+      "visibleRanges": ["130-209"],
+      "purpose": "hasAnyPermissionByLoginId null/ANY/wildcard semantics"
+    }
+  ],
+  "issues": [
+    {
+      "id": "R3-01",
+      "severity": "HIGH",
+      "title": "test-run executes HIGH tools under admin:ai:tool:edit, bypassing approval permission and approval record",
+      "evidence": ["AiAdminToolController.java:178-187", "AiToolService.java:358-383", "AiAdminToolController.java:197-198", "AiPlugin.java:139"],
+      "impact": "Holder of tool-edit can execute arbitrary registered HIGH tools (declarative HTTP writes, SQL, MCP writes) with approved=true, userId=null, no ai_tool_call audit row.",
+      "recommendation": "Require admin:ai:tool:approve (at least for HIGH) and write an auditable record with operator and argument digest.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-02",
+      "severity": "MEDIUM",
+      "title": "test-run ignores tool status, clientTypes and permissionCodes floor",
+      "evidence": ["AiToolService.java:169-175", "AiToolService.java:358-383", "AiToolService.java:591-602"],
+      "impact": "DISABLED tools, client-scoped tools and tools declaring permission codes are all executable by test-run; the invoke-time floor is skipped.",
+      "recommendation": "Reuse resolveEffective filters or reject non-ENABLED tools; require the operator to hold declared permission codes.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-03",
+      "severity": "MEDIUM",
+      "title": "approve TOCTOU allows duplicate execution of the same HIGH tool",
+      "evidence": ["AiAdminToolController.java:202-208", "AiAdminToolController.java:235-243"],
+      "impact": "Concurrent approvals both pass the WAITING_APPROVAL check; the side effect runs twice.",
+      "recommendation": "Conditional UPDATE ... WHERE status='WAITING_APPROVAL' and use affected rows as the execution permit, or add a version column.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-04",
+      "severity": "MEDIUM",
+      "title": "approval result is never fed back into the conversation; resume restarts from the model round",
+      "evidence": ["AiAdminToolController.java:237-248", "AiChatOrchestrator.java:211-212", "AiChatOrchestrator.java:505-510", "AiChatOrchestrator.java:555"],
+      "impact": "Model never sees the executed result and may re-request the same tool, looping approvals or answering on a false premise.",
+      "recommendation": "Append a TOOL result message with the toolCallId before resume, or resume with the executed outcome as input.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-05",
+      "severity": "MEDIUM",
+      "title": "USER_CONFIRM has no requester-facing path; it collapses to admin approval",
+      "evidence": ["AiAdminToolController.java:197-198", "AiPlugin.java:139", "AiChatOrchestrator.java:611-616"],
+      "impact": "A tool configured for user confirmation still requires admin:ai:tool:approve; the requester cannot confirm their own action. Three policy values behave as two.",
+      "recommendation": "Add an app-side self-confirm endpoint validating request.getUserId(), or disable USER_CONFIRM in the editor and document the reduced semantics.",
+      "confidence": "medium-high"
+    },
+    {
+      "id": "R3-06",
+      "severity": "MEDIUM",
+      "title": "syncFromCode never re-syncs approvalPolicy for existing code tools",
+      "evidence": ["AiToolService.java:125-132"],
+      "impact": "A code-declared approval strengthening (NONE -> USER_CONFIRM/ADMIN_CONFIRM) is silently dropped for existing rows on non-HIGH tools, leaving auto-execution.",
+      "recommendation": "Merge approval policy upward (NONE < USER_CONFIRM < ADMIN_CONFIRM) for existing rows and add a regression.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-07",
+      "severity": "MEDIUM",
+      "title": "binding approvalPolicy has no enum/floor validation and is applied verbatim",
+      "evidence": ["AiToolService.java:543-560", "AiToolService.java:603-608"],
+      "impact": "A binding can clear ADMIN_CONFIRM on DRAFT/READ tools (HIGH remains forced by the orchestrator); invalid strings silently force approval.",
+      "recommendation": "Validate against ApprovalPolicy.all() plus the HIGH floor, and forbid binding policy weaker than tool policy.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-08",
+      "severity": "MEDIUM",
+      "title": "quota reserve sits outside try/finally; a usage-reserve failure leaks the quota reservation",
+      "evidence": ["AiChatOrchestrator.java:243-250", "AiChatOrchestrator.java:257", "AiChatOrchestrator.java:333"],
+      "impact": "Repeated failures consume user quota with no compensating release.",
+      "recommendation": "Track completed reservation steps and compensate in finally, or make reserve idempotent with a single release.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-09",
+      "severity": "MEDIUM",
+      "title": "fixed pool with unbounded queue and no admission control; quota is charged only when a worker starts",
+      "evidence": ["AiChatOrchestrator.java:115", "AiChatOrchestrator.java:205", "AiChatOrchestrator.java:212", "AiChatOrchestrator.java:249"],
+      "impact": "Unbounded queueing of requests (each with DB rows) without quota or rate limiting; shutdownNow cannot drain queued tasks.",
+      "recommendation": "Bounded queue with an explicit rejection path and pre-enqueue quota/rate checks.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-10",
+      "severity": "LOW",
+      "title": "first approval-required call aborts the whole batch; later tool calls are dropped silently",
+      "evidence": ["AiChatOrchestrator.java:471-512", "AiChatOrchestrator.java:299"],
+      "impact": "Remaining calls get no record, no execution and no tool message; resume may re-generate different arguments.",
+      "recommendation": "Persist the remaining calls as PLANNED/SKIPPED and replay them on resume.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-11",
+      "severity": "LOW",
+      "title": "approvalStatus column mixes policy values with call-status values",
+      "evidence": ["AiAdminToolController.java:217-218", "AiAdminToolController.java:223", "AiConstants.java:149-159", "AiConstants.java:192-202"],
+      "impact": "Queries and UI on approvalStatus conflate confirmation policy with rejection state.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-12",
+      "severity": "LOW",
+      "title": "raw tool exception text reaches user-visible content, events and the model",
+      "evidence": ["AiChatOrchestrator.java:600-607", "AiChatOrchestrator.java:539", "AiChatOrchestrator.java:555", "AiChatOrchestrator.java:744-766"],
+      "impact": "Executor/provider internals (SQL fragments, JDBC/URL, upstream body) can be surfaced to app users and stored; safe() only truncates to 500 chars.",
+      "recommendation": "Return stable error codes/generic text externally; keep detail in logs only.",
+      "confidence": "medium"
+    },
+    {
+      "id": "R3-13",
+      "severity": "LOW",
+      "title": "parseAnswer receives but never uses responseSchemaSnapshot",
+      "evidence": ["AiChatOrchestrator.java:681", "AiChatOrchestrator.java:979-1001"],
+      "impact": "The frozen response schema is decorative; conformance depends only on the prompt.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-14",
+      "severity": "LOW",
+      "title": "public resume has no state/ownership guard; repeat calls re-finalize and re-settle",
+      "evidence": ["AiChatOrchestrator.java:211-212", "AiChatOrchestrator.java:717-728", "AiChatOrchestrator.java:741"],
+      "impact": "Resuming a SUCCEEDED request duplicates model calls, completion events and settlement.",
+      "recommendation": "Require WAITING_APPROVAL (or a pending-call state) inside resume.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-15",
+      "severity": "LOW",
+      "title": "test-run silently downgrades malformed JSON arguments to {}",
+      "evidence": ["AiToolService.java:364-369", "AiJson.java:43-61"],
+      "impact": "A typo executes the tool with default/empty arguments instead of failing.",
+      "recommendation": "Use strict parsing and return a parameter error.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-16",
+      "severity": "LOW",
+      "title": "invoke swallows handler stack traces; AiException branch logs nothing",
+      "evidence": ["AiChatOrchestrator.java:600-607"],
+      "impact": "Tool failures are unactionable in logs.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-17",
+      "severity": "LOW",
+      "title": "declarative save does not validate the permission CSV; tool can be saved permanently unusable",
+      "evidence": ["AiToolService.java:416-417", "AiJson.java:146-161"],
+      "impact": "Malformed codes are accepted at save and fail closed at invoke, with no save-time error.",
+      "recommendation": "Validate with splitPermissionCsv at save time.",
+      "confidence": "high"
+    },
+    {
+      "id": "R3-18",
+      "severity": "LOW",
+      "title": "AiJson.write returns null on serialization failure, silently emptying audit fields",
+      "evidence": ["AiJson.java:27-40"],
+      "impact": "result_json/blocks_json/input_snapshot can be null with no log, leaving audit gaps.",
+      "confidence": "high"
+    }
+  ],
+  "disprovedFindings": [
+    {
+      "claim": "HIGH with approval=NONE auto-executes",
+      "verdict": "disproved",
+      "evidence": ["AiChatOrchestrator.java:611-614", "AiToolService.java:222-225"]
+    },
+    {
+      "claim": "admin update() accepts arbitrary approvalPolicy",
+      "verdict": "disproved",
+      "evidence": ["AiToolService.java:216-227"]
+    },
+    {
+      "claim": "test-run is a public/unauthenticated handler bypass",
+      "verdict": "disproved (downgraded to R3-01)",
+      "evidence": ["AiAdminToolController.java:51-55", "AiAdminToolController.java:178-179"]
+    },
+    {
+      "claim": "binding approvalPolicy=NONE removes confirmation for HIGH tools",
+      "verdict": "disproved",
+      "evidence": ["AiChatOrchestrator.java:611-614"]
+    },
+    {
+      "claim": "public invoke guard can be bypassed by *:*:*, empty CSV fragments or uppercase codes",
+      "verdict": "disproved",
+      "evidence": ["AiJson.java:146-161", "PermissionChecker.java:184-195", "AiChatOrchestratorPermissionTest.java:1-205"]
+    },
+    {
+      "claim": "REQUIRED parser must be relaxed for held wildcards",
+      "verdict": "not applicable; parser untouched",
+      "evidence": ["AiJson.java:146-161"]
+    }
+  ],
+  "invokeGuardChecklist": [
+    {"check": "real PermissionChecker, only StpInterface faked", "holds": true, "evidence": "AiChatOrchestratorPermissionTest.java (MutationPermissionSource + real PermissionChecker)"},
+    {"check": "strictly original request.getUserId()", "holds": true, "evidence": "AiChatOrchestrator.java:579,585,591"},
+    {"check": "ANY per registered and per configured group", "holds": true, "evidence": "AiChatOrchestrator.java:577-587"},
+    {"check": "both independent groups required", "holds": true, "evidence": "AiChatOrchestrator.java:577-587 (second check skipped only when groups are identical)"},
+    {"check": "required CSV lowercase, 4+ segments, empty fragment rejected", "holds": true, "evidence": "AiJson.java:146-161"},
+    {"check": "held *:*:* handled separately", "holds": true, "evidence": "PermissionChecker.java:184-195"}
+  ],
+  "uncertainties": [
+    "Whether ai_tool.risk_level is nullable; a NULL would defeat requiresApproval and the executeTools risk gate (schema not read).",
+    "Whether AiQuotaService.reserve / AiUsageService.reserve are idempotent (services not read); affects R3-08 and resume double-settlement.",
+    "Whether an app-side confirm/resume endpoint exists outside com.astral.ai (only a package-wide grep was done).",
+    "Whether requestService.markWaiting/markRunning enforce a state machine.",
+    "What exact text executors/providers put into exception messages (executors not read).",
+    "Whether declarative HTTP tools validate/allowlist target URLs (SSRF posture undetermined; executors not read).",
+    "No test covers test-run privilege, approve concurrency, approval feedback, syncFromCode drift, binding policy, quota leak or batch drop."
+  ],
+  "externalReferences": [
+    {
+      "title": "OWASP Server-Side Request Forgery Prevention Cheat Sheet",
+      "canonical": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "verification": "local mirror target/audit-reference-owasp-ssrf-20261107-1045.html, title line 30, canonical link line 13",
+      "scope": "comparison baseline only; no SSRF finding asserted"
+    }
+  ],
+  "reportHashes": {
+    "convention": "md digest over text before '## 五、覆盖计数与报告哈希'; json digest over text before '\"reportHashes\"'",
+    "md": "EBD73960C1958F2F79F4B58BD994EB23990CE9CAE03D492814A5996A298CF3B3",
+    "json": "B848249E05B685ACC61C914B2ACE6B11AB721B75CA78700059DBB7C4FC2B1700"
+  }
+}

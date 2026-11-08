@@ -1,0 +1,652 @@
+{
+    "task":  "task-17",
+    "shard":  "transport-04-review",
+    "date":  "2026-11-07",
+    "workspace":  "F:/qtMusic/astral",
+    "mode":  "fresh-read-only-static-report",
+    "sharedTask":  {
+                       "ownerAccordingToDirectAssignment":  "Lead",
+                       "revisionAccordingToDirectAssignment":  2,
+                       "claimedOrChangedByThisReader":  false,
+                       "getStatus":  "Child catalog has no task get tool. First action requested read-only get task-17 from parent; full receipt not received at report generation. Parent session-event search timed out. No successful get is claimed.",
+                       "scopeAuthority":  "Direct current user assignment only; task-board full scope remains unverified."
+                   },
+    "legacy":  {
+                   "inventoryOnly":  "docs/audit/2026-11-07/backend-ai-shards/transport-04.json",
+                   "inventoryActuallyRead":  [
+                                                 "1-80",
+                                                 "81-160",
+                                                 "161-240",
+                                                 "241-320",
+                                                 "321-398"
+                                             ],
+                   "markdownActuallyRead":  [
+                                                "1-80",
+                                                "81-160",
+                                                "161-221"
+                                            ],
+                   "oldFindingsAndReaderClaimsAccepted":  false,
+                   "oldHashesUsedAsFreshProof":  false,
+                   "statement":  "Inventory located the six paths only. All source evidence below is from this recovery\u0027s actual read calls and independent before/after metadata. Original transport-04 reports were not modified."
+               },
+    "method":  {
+                   "before":  "2026-11-07T12:48:01.3188578+08:00",
+                   "after":  "2026-11-07T13:00:37.5822850+08:00",
+                   "actualReadTool":  "functions.read",
+                   "maxRequestedLinesPerCall":  80,
+                   "continuousTransportReadCalls":  28,
+                   "lineConvention":  "rawLines = UTF-8 ReadAllLines physical lines, final newline does not add an extra empty line; nonBlankLines = Trim().Length \u003e 0. Metadata reads are not semantic read proof.",
+                   "stabilityRule":  "Before and final-after SHA256, byte length, raw and nonblank line counts match individually. Matching end snapshots do not prove absence of a hypothetical transient edit-and-revert between samples.",
+                   "staticVsRuntime":  "Confirmed-static means the observed implementation/control-flow or contract fact, NOT exploitability, live advice selection, JDBC behavior, database state, TLS, protocol interoperability or production verification.",
+                   "execution":  "No Java/TS/test/POM/schema/source edits; no Maven/build/backend/DB/network/browser/remote/sibling work; no Git writes; only four assigned report paths and neutral memory_log. No shared PLAN or task mutation.",
+                   "totalTransportActualReadCalls":  34
+               },
+    "coverage":  {
+                     "full":  6,
+                     "partial":  0,
+                     "split":  0,
+                     "rawLines":  1976,
+                     "nonBlankLines":  1835,
+                     "bytes":  89067
+                 },
+    "files":  [
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/service/AiMcpServerService.java",
+                      "before":  {
+                                     "bytes":  12859,
+                                     "rawLines":  285,
+                                     "nonBlankLines":  263,
+                                     "sha256":  "D55CE67F0869F02BEAD68212A23BD59DF13D6CA4AAFA972A6A9221B6336A6655"
+                                 },
+                      "after":  {
+                                    "bytes":  12859,
+                                    "rawLines":  285,
+                                    "nonBlankLines":  263,
+                                    "sha256":  "D55CE67F0869F02BEAD68212A23BD59DF13D6CA4AAFA972A6A9221B6336A6655"
+                                },
+                      "readRanges":  [
+                                         "1-80",
+                                         "81-160",
+                                         "161-240",
+                                         "241-285"
+                                     ],
+                      "coverage":  "full",
+                      "stable":  true,
+                      "supplementalActualReadRanges":  [
+                                                           "145-224"
+                                                       ]
+                  },
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/service/AiMcpServerFailureRecorder.java",
+                      "before":  {
+                                     "bytes":  1759,
+                                     "rawLines":  43,
+                                     "nonBlankLines":  39,
+                                     "sha256":  "4042A24EF0C8BEE4BC3717ECDFC1CEA6EB855173AF24A6E9D384471D71738D7C"
+                                 },
+                      "after":  {
+                                    "bytes":  1759,
+                                    "rawLines":  43,
+                                    "nonBlankLines":  39,
+                                    "sha256":  "4042A24EF0C8BEE4BC3717ECDFC1CEA6EB855173AF24A6E9D384471D71738D7C"
+                                },
+                      "readRanges":  [
+                                         "1-43"
+                                     ],
+                      "coverage":  "full",
+                      "stable":  true
+                  },
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/tool/declarative/McpClient.java",
+                      "before":  {
+                                     "bytes":  18451,
+                                     "rawLines":  427,
+                                     "nonBlankLines":  397,
+                                     "sha256":  "067A86655CCDACCF6DA03EC895B42278B37B59D0F7AEE7FCD1793EBB69E052B7"
+                                 },
+                      "after":  {
+                                    "bytes":  18451,
+                                    "rawLines":  427,
+                                    "nonBlankLines":  397,
+                                    "sha256":  "067A86655CCDACCF6DA03EC895B42278B37B59D0F7AEE7FCD1793EBB69E052B7"
+                                },
+                      "readRanges":  [
+                                         "1-80",
+                                         "81-160",
+                                         "161-240",
+                                         "241-320",
+                                         "321-400",
+                                         "401-427"
+                                     ],
+                      "coverage":  "full",
+                      "stable":  true,
+                      "supplementalActualReadRanges":  [
+                                                           "161-240",
+                                                           "241-320"
+                                                       ]
+                  },
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/tool/declarative/McpToolExecutor.java",
+                      "before":  {
+                                     "bytes":  9135,
+                                     "rawLines":  197,
+                                     "nonBlankLines":  181,
+                                     "sha256":  "2A099C1D2F5A2D035B56116DB94596D5D7F70DB04746CCAA9EBFAEFC510128E7"
+                                 },
+                      "after":  {
+                                    "bytes":  9135,
+                                    "rawLines":  197,
+                                    "nonBlankLines":  181,
+                                    "sha256":  "2A099C1D2F5A2D035B56116DB94596D5D7F70DB04746CCAA9EBFAEFC510128E7"
+                                },
+                      "readRanges":  [
+                                         "1-80",
+                                         "81-160",
+                                         "161-197"
+                                     ],
+                      "coverage":  "full",
+                      "stable":  true,
+                      "supplementalActualReadRanges":  [
+                                                           "96-175"
+                                                       ]
+                  },
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/tool/declarative/SqlToolExecutor.java",
+                      "before":  {
+                                     "bytes":  18893,
+                                     "rawLines":  441,
+                                     "nonBlankLines":  414,
+                                     "sha256":  "14B919C8321A9BB41DE188BA1FD075D1983BBD9107680ED9764E83396646F28F"
+                                 },
+                      "after":  {
+                                    "bytes":  18893,
+                                    "rawLines":  441,
+                                    "nonBlankLines":  414,
+                                    "sha256":  "14B919C8321A9BB41DE188BA1FD075D1983BBD9107680ED9764E83396646F28F"
+                                },
+                      "readRanges":  [
+                                         "1-80",
+                                         "81-160",
+                                         "161-240",
+                                         "241-320",
+                                         "321-400",
+                                         "401-441"
+                                     ],
+                      "coverage":  "full",
+                      "stable":  true,
+                      "supplementalActualReadRanges":  [
+                                                           "281-360"
+                                                       ]
+                  },
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/tool/declarative/HttpToolExecutor.java",
+                      "before":  {
+                                     "bytes":  27970,
+                                     "rawLines":  583,
+                                     "nonBlankLines":  541,
+                                     "sha256":  "85455F40A36E4AD2DAC4E3C81436EAEBE086ABAF29C540D264C258A460D27264"
+                                 },
+                      "after":  {
+                                    "bytes":  27970,
+                                    "rawLines":  583,
+                                    "nonBlankLines":  541,
+                                    "sha256":  "85455F40A36E4AD2DAC4E3C81436EAEBE086ABAF29C540D264C258A460D27264"
+                                },
+                      "readRanges":  [
+                                         "1-80",
+                                         "81-160",
+                                         "161-240",
+                                         "241-320",
+                                         "321-400",
+                                         "401-480",
+                                         "481-560",
+                                         "561-583"
+                                     ],
+                      "coverage":  "full",
+                      "stable":  true,
+                      "supplementalActualReadRanges":  [
+                                                           "161-240"
+                                                       ]
+                  }
+              ],
+    "contextFiles":  [
+                         {
+                             "path":  "astral-plugin/src/main/java/com/astral/ai/config/AiGlobalExceptionHandler.java",
+                             "readRanges":  [
+                                                "1-73"
+                                            ],
+                             "coverage":  "full-context-not-transport",
+                             "before":  {
+                                            "bytes":  3233,
+                                            "rawLines":  73,
+                                            "nonBlankLines":  65,
+                                            "sha256":  "7F342905305F2457A9F2E11E2B82D72B580EE9ACD83767EDBA34C4DC0924A9E0"
+                                        },
+                             "after":  {
+                                           "bytes":  3233,
+                                           "rawLines":  73,
+                                           "nonBlankLines":  65,
+                                           "sha256":  "7F342905305F2457A9F2E11E2B82D72B580EE9ACD83767EDBA34C4DC0924A9E0"
+                                       }
+                         },
+                         {
+                             "path":  "astral-server/src/main/java/com/astral/server/exception/GlobalExceptionHandler.java",
+                             "readRanges":  [
+                                                "1-80",
+                                                "81-160",
+                                                "161-232"
+                                            ],
+                             "coverage":  "full-context-not-transport",
+                             "before":  {
+                                            "bytes":  12140,
+                                            "rawLines":  232,
+                                            "nonBlankLines":  214,
+                                            "sha256":  "FF6C04EBF078CD5F34BD278C865479CCF68472C7915961633190EA202BAC032E"
+                                        },
+                             "after":  {
+                                           "bytes":  12140,
+                                           "rawLines":  232,
+                                           "nonBlankLines":  214,
+                                           "sha256":  "FF6C04EBF078CD5F34BD278C865479CCF68472C7915961633190EA202BAC032E"
+                                       }
+                         },
+                         {
+                             "path":  "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminAgentController.java",
+                             "readRanges":  [
+                                                "225-304",
+                                                "1-80"
+                                            ],
+                             "coverage":  "partial-context-not-transport",
+                             "before":  {
+                                            "bytes":  21374,
+                                            "rawLines":  470,
+                                            "nonBlankLines":  440,
+                                            "sha256":  "A9CCAF27D9D5CD7372AC16069549011D931AFF804505A1C6A3A6FDA6E9DFF6E7"
+                                        },
+                             "after":  {
+                                           "bytes":  21374,
+                                           "rawLines":  470,
+                                           "nonBlankLines":  440,
+                                           "sha256":  "A9CCAF27D9D5CD7372AC16069549011D931AFF804505A1C6A3A6FDA6E9DFF6E7"
+                                       }
+                         },
+                         {
+                             "path":  "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminMcpController.java",
+                             "readRanges":  [
+                                                "1-80",
+                                                "81-125"
+                                            ],
+                             "coverage":  "full-context-not-transport",
+                             "before":  {
+                                            "bytes":  5720,
+                                            "rawLines":  125,
+                                            "nonBlankLines":  115,
+                                            "sha256":  "613CBD1DAD9AF298BE2CAC6EA1DED2C6CB72E979D21B74AB091C2944180CDBD4"
+                                        },
+                             "after":  {
+                                           "bytes":  5720,
+                                           "rawLines":  125,
+                                           "nonBlankLines":  115,
+                                           "sha256":  "613CBD1DAD9AF298BE2CAC6EA1DED2C6CB72E979D21B74AB091C2944180CDBD4"
+                                       }
+                         },
+                         {
+                             "path":  "astral-plugin/src/main/java/com/astral/ai/common/AiJson.java",
+                             "readRanges":  [
+                                                "111-188"
+                                            ],
+                             "coverage":  "partial-context-not-transport",
+                             "before":  {
+                                            "bytes":  6249,
+                                            "rawLines":  188,
+                                            "nonBlankLines":  170,
+                                            "sha256":  "C899E1417B05B48C3167C6B59A20016F042AE13DDDCCFDF1025425D7B6825E46"
+                                        },
+                             "after":  {
+                                           "bytes":  6249,
+                                           "rawLines":  188,
+                                           "nonBlankLines":  170,
+                                           "sha256":  "C899E1417B05B48C3167C6B59A20016F042AE13DDDCCFDF1025425D7B6825E46"
+                                       }
+                         },
+                         {
+                             "path":  "astral-plugin/src/main/java/com/astral/ai/entity/AiMcpServerEntity.java",
+                             "readRanges":  [
+                                                "1-66"
+                                            ],
+                             "coverage":  "full-context-not-transport",
+                             "before":  {
+                                            "bytes":  1904,
+                                            "rawLines":  66,
+                                            "nonBlankLines":  50,
+                                            "sha256":  "CC9E0D9D086A4200305ABB901A86D653353CBBF9C6CB2961D4D7C9CF354A4CA4"
+                                        },
+                             "after":  {
+                                           "bytes":  1904,
+                                           "rawLines":  66,
+                                           "nonBlankLines":  50,
+                                           "sha256":  "CC9E0D9D086A4200305ABB901A86D653353CBBF9C6CB2961D4D7C9CF354A4CA4"
+                                       }
+                         },
+                         {
+                             "path":  "astral-common/src/main/java/com/astral/common/result/Result.java",
+                             "readRanges":  [
+                                                "26-105"
+                                            ],
+                             "coverage":  "partial-context-not-transport",
+                             "beforeSampledAt":  "2026-11-07T12:50:14.0303967+08:00",
+                             "before":  {
+                                            "bytes":  5281,
+                                            "rawLines":  147,
+                                            "nonBlankLines":  123,
+                                            "sha256":  "CCCDE55BD916A2DB52092E39932608AE4EB170C08926BAA6EFF259ECE30537D6"
+                                        },
+                             "after":  {
+                                           "bytes":  5281,
+                                           "rawLines":  147,
+                                           "nonBlankLines":  123,
+                                           "sha256":  "CCCDE55BD916A2DB52092E39932608AE4EB170C08926BAA6EFF259ECE30537D6"
+                                       }
+                         }
+                     ],
+    "findings":  [
+                     {
+                         "id":  "T01",
+                         "severity":  "medium",
+                         "status":  "confirmed-static-implementation-gap",
+                         "title":  "HTTP response bound is checked after full buffering",
+                         "loci":  [
+                                      "tool/declarative/HttpToolExecutor.java:411-419"
+                                  ],
+                         "evidence":  "ofByteArray() completes before bytes.length \u003e maxBytes; the declared 4096..1048576 bound is not a pre-allocation/streaming bound.",
+                         "counterEvidence":  "Oversized completed responses are rejected; request and connect timeouts exist; redirects are NEVER.",
+                         "untested":  "Heap pressure, adversarial infinite/large response, timeout cancellation and actual JDK subscriber behavior were not exercised.",
+                         "recommendation":  "Use a bounded subscriber and cancel on exceeding a byte budget; keep the current post-check as defense in depth."
+                     },
+                     {
+                         "id":  "T02",
+                         "severity":  "medium",
+                         "status":  "confirmed-static-implementation-gap",
+                         "title":  "MCP fully buffers JSON/SSE without a response byte budget",
+                         "loci":  [
+                                      "tool/declarative/McpClient.java:220-231",
+                                      "tool/declarative/McpClient.java:285-349"
+                                  ],
+                         "evidence":  "ofString(UTF_8) is used before envelope parsing; SSE is parsed from a complete body string, not incrementally as an id-matched event arrives.",
+                         "counterEvidence":  "Connection/request timeout is finite; a server that terminates its response is supported; this is not proof every SSE server hangs.",
+                         "untested":  "No live SSE, memory, cancellation or interoperability run.",
+                         "recommendation":  "Bound bytes and process events incrementally so a matching response need not await end-of-stream."
+                     },
+                     {
+                         "id":  "T03",
+                         "severity":  "medium",
+                         "status":  "confirmed-static-control-flow-gap",
+                         "title":  "Discovery limits return an incomplete list as authoritative synchronization input",
+                         "loci":  [
+                                      "tool/declarative/McpClient.java:97-119",
+                                      "service/AiMcpServerService.java:162-164",
+                                      "service/AiMcpServerService.java:221-227"
+                                  ],
+                         "evidence":  "All items in a page are added before the MAX_TOOLS check; one page may exceed 500. A remaining cursor at 20 pages or \u003e=500 items is silently discarded. syncTools then marks all existing-but-untouched rows DISABLED.",
+                         "counterEvidence":  "There is a finite page-count guard; catalogs below both thresholds complete normally; arbitrary malformed servers are not required to be compatible.",
+                         "untested":  "No database rows were changed and no multi-page server was contacted. Whether deployed catalogs reach the threshold is unknown.",
+                         "recommendation":  "Carry completeness/truncation explicitly, fail refresh or avoid absence-based disabling for incomplete catalogs, and bound items while reading the page."
+                     },
+                     {
+                         "id":  "T04",
+                         "severity":  "low",
+                         "status":  "confirmed-static-contract-gap",
+                         "title":  "The separate HTTP query configuration is validated/collected but unused in request construction",
+                         "loci":  [
+                                      "tool/declarative/HttpToolExecutor.java:191-195",
+                                      "tool/declarative/HttpToolExecutor.java:227-233",
+                                      "tool/declarative/HttpToolExecutor.java:358-421"
+                                  ],
+                         "evidence":  "Configuration query entries are validated and their placeholders collected, but doExecute builds only the queryPart extracted from url. It never merges config.query into the outbound URI.",
+                         "counterEvidence":  "URL-embedded query templates are rendered; a configuration relying solely on url works.",
+                         "untested":  "No controller/DTO/UI configuration producer was inspected, no actual request captured.",
+                         "recommendation":  "Implement an explicit collision-safe merge or reject/document unsupported separate query entries."
+                     },
+                     {
+                         "id":  "T05",
+                         "severity":  "low",
+                         "status":  "confirmed-static-contract-gap",
+                         "title":  "SQL payload omits truncation even after consuming an extra result row",
+                         "loci":  [
+                                      "tool/declarative/SqlToolExecutor.java:323-344"
+                                  ],
+                         "evidence":  "setMaxRows(maxRows+1); while(resultSet.next() \u0026\u0026 rows.size()\u003cmaxRows) consumes the next row but outputs only rows and rowCount, with no hasMore/truncated indication.",
+                         "counterEvidence":  "Returned row count is bounded and correct for returned rows; there is no false promise of a SQL COUNT result.",
+                         "untested":  "No driver or query execution. Model misinterpretation is conditional, not demonstrated.",
+                         "recommendation":  "Record whether the extra row exists and report truncation explicitly."
+                     },
+                     {
+                         "id":  "T06",
+                         "severity":  "medium",
+                         "status":  "confirmed-static-implementation-gap",
+                         "title":  "SQL row limits do not bound cell or payload bytes",
+                         "loci":  [
+                                      "tool/declarative/SqlToolExecutor.java:328-344",
+                                      "tool/declarative/SqlToolExecutor.java:409-434"
+                                  ],
+                         "evidence":  "String values are serialized whole and byte[] is fully Base64 encoded; the 1500-character summary bound is applied after building/serializing rows and does not bound payload.",
+                         "counterEvidence":  "At most 200 rows and selected columns are returned; this does not imply every query has large values.",
+                         "untested":  "No large cells, JDBC behavior or downstream payload/audit storage exercised.",
+                         "recommendation":  "Add per-cell and aggregate byte budgets before serialization, with explicit truncation metadata."
+                     },
+                     {
+                         "id":  "T07",
+                         "severity":  "low",
+                         "status":  "confirmed-static-contract-gap",
+                         "title":  "Duplicate SQL labels overwrite a previously returned column",
+                         "loci":  [
+                                      "tool/declarative/SqlToolExecutor.java:380-405"
+                                  ],
+                         "evidence":  "Declared names and result labels are lowercased and row.set(normalized,value) repeats the same key for duplicate labels.",
+                         "counterEvidence":  "Case-insensitive matching is documented and intentional; unique aliases avoid collision. Lowercasing alone is not reported as a defect.",
+                         "untested":  "No duplicate-label query executed.",
+                         "recommendation":  "Require unique output aliases or reject collisions rather than silently overwriting."
+                     },
+                     {
+                         "id":  "T08",
+                         "severity":  "low",
+                         "status":  "confirmed-static-contract-gap",
+                         "title":  "Three executor definitions uppercase required permission codes",
+                         "loci":  [
+                                      "tool/declarative/McpToolExecutor.java:104-105",
+                                      "tool/declarative/SqlToolExecutor.java:287-288",
+                                      "tool/declarative/HttpToolExecutor.java:339-340",
+                                      "common/AiJson.java:130-159"
+                                  ],
+                         "evidence":  "definition uses splitCsv, which uppercases; splitPermissionCsv explicitly lowercases and validates required-code shape.",
+                         "counterEvidence":  "This does not prove a permission bypass. The consuming orchestrator and current auth infrastructure were not read or endorsed in this task.",
+                         "untested":  "No permission checks or downstream VO behavior exercised.",
+                         "recommendation":  "Use the existing strict required-code parser; do not admit HELD wildcards/legacy short codes or relax validation."
+                     },
+                     {
+                         "id":  "T09",
+                         "severity":  "medium",
+                         "status":  "tentative-runtime-risk",
+                         "title":  "Resolved-address validation is not visibly bound to the HTTP connection",
+                         "loci":  [
+                                      "tool/declarative/HttpToolExecutor.java:268-311",
+                                      "tool/declarative/HttpToolExecutor.java:375-412",
+                                      "tool/declarative/McpClient.java:355-377"
+                                  ],
+                         "evidence":  "guardHost resolves all addresses and checks them; JDK HttpClient receives the hostname URI, not the validated address set.",
+                         "counterEvidence":  "Private/loopback/link-local/site-local/any-local/multicast and fc/fd IPv6 are rejected; optional exact-host allowlist and NEVER redirects exist. Allowlisting a name is not itself address pinning.",
+                         "untested":  "No DNS, rebinding, TLS/SNI, proxy, special-range or live exploit tests; exact JDK DNS reuse unknown.",
+                         "recommendation":  "Review address-bound egress or a controlled egress proxy while retaining TLS hostname checks; do not describe successful rebinding as proven."
+                     },
+                     {
+                         "id":  "T10",
+                         "severity":  "medium",
+                         "status":  "tentative-runtime-risk",
+                         "title":  "Success null assignments may preserve last_error or old configured headers under NOT_NULL updates",
+                         "loci":  [
+                                      "service/AiMcpServerService.java:107-121",
+                                      "service/AiMcpServerService.java:165-172",
+                                      "entity/AiMcpServerEntity.java:35-36",
+                                      "entity/AiMcpServerEntity.java:50-51"
+                                  ],
+                         "evidence":  "blank headers and successful lastError are assigned null before updateById; entity declares no per-field updateStrategy override.",
+                         "counterEvidence":  "The source intends clearing. The supplied repository rules describe default NOT_NULL, but actual global mapper configuration/interceptors were not checked; a global ALWAYS policy could change the outcome.",
+                         "untested":  "No SQL generation or write/readback. Persistent stale errors/headers are not treated as runtime-confirmed.",
+                         "recommendation":  "If the actual policy is NOT_NULL, use an explicit intentional null update for these fields; verify without blanket-enabling null updates for all fields."
+                     },
+                     {
+                         "id":  "T11",
+                         "severity":  "low",
+                         "status":  "confirmed-static-control-flow-fact",
+                         "title":  "Request-building errors bypass refresh\u0027s AiException-only failure recorder",
+                         "loci":  [
+                                      "tool/declarative/McpClient.java:220-238",
+                                      "tool/declarative/McpClient.java:264-268",
+                                      "service/AiMcpServerService.java:156-169",
+                                      "config/AiGlobalExceptionHandler.java:61-71"
+                                  ],
+                         "evidence":  "baseRequest/header/build is outside send\u0027s try; refresh records only AiException. An IllegalArgumentException from building would bypass that record branch.",
+                         "counterEvidence":  "Actual HTTP send exceptions are wrapped AI008. AI advice explicitly maps IllegalArgumentException to HTTP200/body320; it is NOT inherently generic500. Restricted-header behavior remains JDK-dependent.",
+                         "untested":  "No JDK request build, controller dispatch, failure-row or log verification.",
+                         "recommendation":  "Validate reserved/restricted headers and normalize expected configuration failures without claiming every runtime exception should become a parameter error."
+                     },
+                     {
+                         "id":  "T12",
+                         "severity":  "medium",
+                         "status":  "confirmed-static-data-flow-fact",
+                         "title":  "MCP configured headers are stored and returned without masking",
+                         "loci":  [
+                                      "service/AiMcpServerService.java:81-91",
+                                      "service/AiMcpServerService.java:107-108",
+                                      "controller/AiAdminMcpController.java:32-59",
+                                      "controller/AiAdminMcpController.java:111-123"
+                                  ],
+                         "evidence":  "headersJson is stored verbatim and passed to the list/detail VO; the list uses the class-level mcp:view declaration.",
+                         "counterEvidence":  "A ${secret:key} reference need not contain a secret value; no real headers were read. Runtime authorization and actual DTO serialization not tested; administrator-configured data is not automatically a host secret.",
+                         "untested":  "No roles, HTTP response, configured credentials or serialization run.",
+                         "recommendation":  "Mask configured values in read-only views and preserve an explicit unchanged/replace/clear edit contract."
+                     },
+                     {
+                         "id":  "T13",
+                         "severity":  "low",
+                         "status":  "confirmed-static-data-flow-fact",
+                         "title":  "Error/result text can carry remote details into logs and failure records",
+                         "loci":  [
+                                      "tool/declarative/McpClient.java:204",
+                                      "tool/declarative/McpClient.java:248-256",
+                                      "tool/declarative/HttpToolExecutor.java:418-419",
+                                      "service/AiMcpServerFailureRecorder.java:35-38",
+                                      "tool/declarative/McpToolExecutor.java:123-139"
+                                  ],
+                         "evidence":  "MCP 404 includes endpoint; HTTP/MCP error bodies are included in failure text; recorder stores up to500 characters; successful MCP content payload is not summary-truncated.",
+                         "counterEvidence":  "Error bodies and summaries are truncated; no actual secrets or downstream ai_tool_call persistence were inspected. Truncation is not redaction, but leakage of a particular secret is not proven.",
+                         "untested":  "No sensitive remote body, configured secret, log sink or downstream model persistence tested.",
+                         "recommendation":  "Use redacted endpoint/status diagnostics and explicit result-retention rules."
+                     },
+                     {
+                         "id":  "T14",
+                         "severity":  "low",
+                         "status":  "tentative-design-risk",
+                         "title":  "Remote tool code normalization is not injective; disabled status conflates absence and operator choice",
+                         "loci":  [
+                                      "tool/declarative/McpToolExecutor.java:174-195",
+                                      "service/AiMcpServerService.java:184-214",
+                                      "service/AiMcpServerService.java:221-227"
+                                  ],
+                         "evidence":  "Case/punctuation folding and64-character truncation can produce equal codes for distinct names. Existing DISABLED records stay disabled when rediscovered.",
+                         "counterEvidence":  "Preserving an operator\u0027s manual disable is a sensible policy. Actual database uniqueness constraints were not read; collision rollback behavior is not claimed.",
+                         "untested":  "No conflicting catalog, schema, uniqueness or re-enable workflow tested.",
+                         "recommendation":  "Define collision-safe stable identifiers and distinguish operator-disable from remote absence before changing re-enable behavior."
+                     },
+                     {
+                         "id":  "T15",
+                         "severity":  "medium",
+                         "status":  "tentative-runtime-risk",
+                         "title":  "SELECT keyword filtering alone does not establish side-effect-free SQL semantics",
+                         "loci":  [
+                                      "tool/declarative/SqlToolExecutor.java:60-92",
+                                      "tool/declarative/SqlToolExecutor.java:162-200",
+                                      "tool/declarative/SqlToolExecutor.java:255-263",
+                                      "tool/declarative/SqlToolExecutor.java:319-336"
+                                  ],
+                         "evidence":  "The token allow/deny check does not recognize arbitrary function semantics; NEXTVAL or SET_CONFIG is not the forbidden standalone word SET. Connection uses setReadOnly(true), then a manual transaction and rollback.",
+                         "counterEvidence":  "Real PostgreSQL read-only transactions may reject sequence/writing functions, grants may deny others, and local config may roll back. The old blanket claim that nextval/pg_terminate_backend/dblink are actually reachable is not accepted.",
+                         "untested":  "No database/driver/grants/function/extension checks. Application datasource identity is only a comment/parameter contract here; service wiring not reread.",
+                         "recommendation":  "Verify actual JDBC/DB read-only semantics and least-privilege credentials/functions; do not weaken prepared binding or remove rollback."
+                     },
+                     {
+                         "id":  "T16",
+                         "severity":  "low",
+                         "status":  "confirmed-static-contract-gap",
+                         "title":  "Missing HTTP payloadPath falls back to the whole response; selected string summary bypasses summary limit",
+                         "loci":  [
+                                      "tool/declarative/HttpToolExecutor.java:424-455"
+                                  ],
+                         "evidence":  "If extraction returns null, an object response becomes the entire payload. A selected string summaryNode uses asString() without SUMMARY_LIMIT.",
+                         "counterEvidence":  "Default whole-response output is supported by design; HTTP maxResponseBytes bounds completed accepted responses. Conditional exposure requires a mistaken path or unusually large selected string.",
+                         "untested":  "No producer contract, payload or downstream display/model test.",
+                         "recommendation":  "Differentiate omitted vs invalid projection paths, and truncate string summaries consistently."
+                     }
+                 ],
+    "positiveControls":  [
+                             {
+                                 "id":  "P01",
+                                 "status":  "positive-static",
+                                 "evidence":  "HTTP and MCP clients use NEVER redirects; host validation rejects the enumerated local/private categories and supports optional exact-host allowlists.",
+                                 "loci":  [
+                                              "tool/declarative/HttpToolExecutor.java:115-119",
+                                              "tool/declarative/HttpToolExecutor.java:268-311",
+                                              "tool/declarative/McpClient.java:61-64"
+                                          ],
+                                 "counterEvidence":  "Address validation is not a runtime proof of destination pinning (T09).",
+                                 "untested":  "No network/TLS/DNS verification."
+                             },
+                             {
+                                 "id":  "P02",
+                                 "status":  "positive-static-with-policy-limit",
+                                 "evidence":  "MCP readOnlyOf is serverReadOnly \u0026\u0026 !Boolean.FALSE.equals(readOnlyHint); explicit false or non-readonly server maps to HIGH/ADMIN_CONFIRM. Missing hint is deliberately accepted when the server is readonly.",
+                                 "loci":  [
+                                              "tool/declarative/McpToolExecutor.java:150-171"
+                                          ],
+                                 "counterEvidence":  "Remote readOnlyHint is not proof of remote behavior; unknown != true. Orchestrator approval enforcement is outside fresh evidence.",
+                                 "untested":  "No remote side effects or approval execution."
+                             },
+                             {
+                                 "id":  "P03",
+                                 "status":  "positive-static",
+                                 "evidence":  "SQL uses PreparedStatement scalar binding, declared output columns, bounded row/query-time settings, and finally rollback.",
+                                 "loci":  [
+                                              "tool/declarative/SqlToolExecutor.java:183-199",
+                                              "tool/declarative/SqlToolExecutor.java:319-364"
+                                          ],
+                                 "counterEvidence":  "Does not establish payload bytes, least-privilege credentials or all function behavior (T06/T15).",
+                                 "untested":  "No JDBC execution."
+                             },
+                             {
+                                 "id":  "P04",
+                                 "status":  "positive-static",
+                                 "evidence":  "Failure recording is in a separate REQUIRES_NEW component, bounds error text to500 and warns for zero updated rows; cannot guarantee successful persistence if recorder itself fails.",
+                                 "loci":  [
+                                              "service/AiMcpServerFailureRecorder.java:27-41"
+                                          ],
+                                 "counterEvidence":  "Connection contention/recorder failures remain possible; refresh includes network I/O within its transactional method but exact connection counts/time totals were not measured.",
+                                 "untested":  "No transaction/connection pool/failure persistence run."
+                             }
+                         ],
+    "legacyConclusionsNotInherited":  [
+                                          "No assertion of 20 confirmed defects or a global absence of High vulnerabilities.",
+                                          "No asserted hard500 discovery item limit: post-page guard is not a hard item budget (T03).",
+                                          "No claim both server readonly and a true remote hint are mandatory: absent hint is accepted (P02).",
+                                          "No inherited HIGH-always-approval, risk-floor update, permission dual-group, testRun or approval snapshot proof; those consumers were not freshly read.",
+                                          "No claim all secret values cannot land in storage: literal headers are stored; only late-bound references avoid storing the resolved value on that code path.",
+                                          "No schema collision, nextval bypass, two-connection count or exact refresh60-second-total runtime assertion."
+                                      ],
+    "limits":  [
+                   "Full shared task get receipt missing; Lead ownership/revision only supplied by direct assignment; child made no shared mutation.",
+                   "Current auth infrastructure and RequestController/tests are Lead-owned and were not inspected or edited.",
+                   "Only six transport sources are counted full; context reads are separately classified and do not extend to the full AI domain.",
+                   "No Maven/build/runtime/backend/DB/network/browser/remote/sibling activity; no tests were executed or inherited as proof.",
+                   "No external references were fetched and old external-reference quotations were not adopted.",
+                   "Artifact hashes are computed on final bytes and delivered outside the artifact; self-hashes are not embedded."
+               ]
+}

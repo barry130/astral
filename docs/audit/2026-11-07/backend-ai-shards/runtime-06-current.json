@@ -1,0 +1,234 @@
+{
+  "task": "task-19",
+  "subject": "AI runtime三文件当前整读回收（失败四文件成员不继承）",
+  "owner": "backend-chain",
+  "generatedAt": "2026-11-07T14:12:25+08:00",
+  "mode": "read-only-static",
+  "scope": {
+    "files": [
+      "astral-plugin/src/main/java/com/astral/ai/tool/AiToolTypes.java",
+      "astral-plugin/src/main/java/com/astral/ai/common/AiJson.java",
+      "astral-plugin/src/main/java/com/astral/ai/service/AiToolService.java"
+    ],
+    "excluded": [
+      "AiChatOrchestrator（另分独立任务）",
+      "controller / DTO / entity / mapper / constants / properties / executor 实现 / tests / schema"
+    ],
+    "statement": "仅 3 源独立当前整读；不继承 failed reader 418fdc60 的 hash/full/readclaims；不是全 AI、不是原四源、不是 task-14 完成"
+  },
+  "method": {
+    "readPattern": "每个文件 offset=1 连续 read，单次 limit<=80 行至 EOF；ranges 逐段记录",
+    "hashing": "开始读取前与全部读取完成后各采样一次 SHA256/bytes/raw/nonblank，两次一致",
+    "verificationLevel": "静态源码阅读；未跑 Maven/测试/服务/API/DB/网络；无 background job",
+    "deletionNote": "前序 plain reader 418fdc60 failed-before-finish、无 closing、无产物，其前置 hash 与三源 full 声明不作为本任务覆盖"
+  },
+  "files": [
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/tool/AiToolTypes.java",
+      "bytes": 8499,
+      "rawLines": 223,
+      "nonBlankLines": 195,
+      "sha256Before": "73BFD6ACBAEB9B3D5F1701D3B9A518DAF98CFC469141998820D5937E2D55BDB4",
+      "sha256After": "73BFD6ACBAEB9B3D5F1701D3B9A518DAF98CFC469141998820D5937E2D55BDB4",
+      "stableDuringTask": true,
+      "readRanges": ["1-80", "81-160", "161-223"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/common/AiJson.java",
+      "bytes": 6249,
+      "rawLines": 188,
+      "nonBlankLines": 170,
+      "sha256Before": "C899E1417B05B48C3167C6B59A20016F042AE13DDDCCFDF1025425D7B6825E46",
+      "sha256After": "C899E1417B05B48C3167C6B59A20016F042AE13DDDCCFDF1025425D7B6825E46",
+      "stableDuringTask": true,
+      "readRanges": ["1-80", "81-160", "161-188"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiToolService.java",
+      "bytes": 28839,
+      "rawLines": 624,
+      "nonBlankLines": 585,
+      "sha256Before": "6BDEB1CBB1A2E5F06C5AFB85DA94F843F5A9466642899BB29133FB00447D2D45",
+      "sha256After": "6BDEB1CBB1A2E5F06C5AFB85DA94F843F5A9466642899BB29133FB00447D2D45",
+      "stableDuringTask": true,
+      "readRanges": ["1-80", "81-160", "161-240", "241-320", "321-400", "401-480", "481-560", "561-624"],
+      "coverage": "full"
+    }
+  ],
+  "observations": [
+    {
+      "id": "O1",
+      "category": "static-fact-positive",
+      "title": "权限码解析方向严格 REQUIRED：拒绝通配与 3 段码",
+      "positions": [
+        {"file": "AiJson.java", "lines": "145-159", "fact": "splitPermissionCsv 先 trim+toLowerCase，再逐项匹配 (?:admin|user|all):3-4+ 段正则，不匹配抛 AI008；split(\",\",-1) 使尾部空项也失败"}
+      ],
+      "impact": "解析侧 fail-closed；`*:*:*`、`admin:system:user:*`、3 段码均被拒；本 3 源不含 HELD 通配结构",
+      "counterEvidence": "仅解析方向；消费方（Orchestrator/controller）未读",
+      "untested": ["未运行解析函数验证异常路径"]
+    },
+    {
+      "id": "O2",
+      "category": "candidate",
+      "title": "写入方向未执行同一格式校验，DB 可存通配/3 段/大写权限码",
+      "positions": [
+        {"file": "AiToolService.java", "lines": "120-121", "fact": "syncFromCode 用 AiJson.joinCsv 落 permissionCodes"},
+        {"file": "AiToolService.java", "lines": "416-417", "fact": "applyDeclarative 用 AiJson.joinCsv 落 permissionCodes"},
+        {"file": "AiJson.java", "lines": "161-173", "fact": "joinCsv 只 trim/丢弃空项/逗号拼接，不校验正则、不拒 *、不小写化"}
+      ],
+      "impact": "列内可出现任意权限码字符串；若消费方用 splitPermissionCsv 会抛 AI008（工具不可用，fail-closed），其他解析路径行为未知",
+      "counterEvidence": "createDeclarative 只校验 toolCode 唯一（:301-303）；DTO 是否 @Pattern 未读",
+      "untested": ["未读 controller/DTO 校验", "未验证运行期读取路径"]
+    },
+    {
+      "id": "O3",
+      "category": "candidate",
+      "title": "joinCsv 将空列表写成 NULL，无法区分“无 REQUIRED”与“未知/HELD”",
+      "positions": [
+        {"file": "AiJson.java", "lines": "162-165,172", "fact": "空/null/全空白 → 返回 null"}
+      ],
+      "impact": "permission_codes 的“未设置/空要求/未知”同形为 NULL；本 3 文件无 HELD 标记位",
+      "counterEvidence": "消费方是否依赖 NULL 二分未读",
+      "untested": ["未验证读取侧语义"]
+    },
+    {
+      "id": "O4",
+      "category": "candidate",
+      "title": "绑定级 approval 覆盖无枚举/下限校验，读取侧只对 risk 提升",
+      "positions": [
+        {"file": "AiToolService.java", "lines": "543-547", "fact": "addBinding 只比较 riskOverride 与工具风险，不校验枚举成员"},
+        {"file": "AiToolService.java", "lines": "557-560", "fact": "approvalPolicy 仅 toUpperCase 落库，无枚举/floor 校验"},
+        {"file": "AiToolService.java", "lines": "603-607", "fact": "读取时 risk=strongerRisk；approval 原样取 binding 值，未对齐 riskFloor"}
+      ],
+      "impact": "HIGH 工具可绑定出 approval=NONE 记录（静态事实）；审批实际效果取决于未读编排代码",
+      "counterEvidence": "risk 读取侧不能降低；HIGH+NONE 自动 bypass 是已撤回错误，本报告不重述、不推断审批结果",
+      "untested": ["未读 orchestrator/controller 审批决策"]
+    },
+    {
+      "id": "O5",
+      "category": "static-fact-candidate",
+      "title": "testRun 无 actor、approved=true、非法参数 JSON 静默为空对象",
+      "positions": [
+        {"file": "AiToolService.java", "lines": "348-383", "fact": "签名单无操作人；context 的 requestId/conversationId/userId/agentId 全 null，approvedBy=null，agentCode=test-run，agentType=CUSTOM，clientType=ASTRAL_FRONT，approved=true；直接 handler.execute"},
+        {"file": "AiJson.java", "lines": "55-60", "fact": "readObject 对非法 JSON 返回空对象而非报错"}
+      ],
+      "impact": "javadoc 声明不写 ai_tool_call、留痕交后台操作日志、手动触发等同人工确认故 HIGH 直接执行；审计归属与权限门禁依赖未读 controller",
+      "counterEvidence": "controller 是否 @OperateLog/限超管/传 actor 未知",
+      "untested": ["未读 AiAdminToolController", "未运行 testRun"]
+    },
+    {
+      "id": "O6",
+      "category": "candidate",
+      "title": "服务层不拦截空 toolCode",
+      "positions": [
+        {"file": "AiToolService.java", "lines": "298-305", "fact": "null→\"\"；findByCode 对 blank 返回 null，重复校验不触发，随后 insert"},
+        {"file": "AiToolService.java", "lines": "178-181", "fact": "findByCode 对 null/blank 返回 null"}
+      ],
+      "impact": "上游若无 @NotBlank，会落空 toolCode 工具（模型函数名为空）",
+      "counterEvidence": "validateDeclarative 不校验 toolCode；DTO 校验未读",
+      "untested": ["未读 DeclarativeToolSaveReq"]
+    },
+    {
+      "id": "O7",
+      "category": "static-fact-positive",
+      "title": "执行器写操作下限服务层写死，后台不可放开",
+      "positions": [
+        {"file": "AiToolService.java", "lines": "427-432", "fact": "HTTP 非 GET 强制 HIGH+ADMIN_CONFIRM；SQL 固定只读副作用"},
+        {"file": "AiToolService.java", "lines": "441-468", "fact": "riskFloor：HTTP 非 GET HIGH；MCP 仅 server.readOnly 且只读 hint 才 READ/NONE；SQL READ/NONE；CODE 取 handler 定义"},
+        {"file": "AiToolService.java", "lines": "204-227", "fact": "update 拒绝低于 floor 的风险；floor=HIGH 时只允许 ADMIN_CONFIRM"},
+        {"file": "AiToolService.java", "lines": "402-410", "fact": "validateDeclarative 保存期校验 executorConfig/argumentsSchema/allowedHosts 或 SQL 配置"},
+        {"file": "AiToolService.java", "lines": "603-605", "fact": "绑定 riskOverride 读取时 strongerRisk"}
+      ],
+      "impact": "后台只能抬高风险/确认，不能降低到执行器要求之下",
+      "counterEvidence": "HttpToolExecutor/McpToolExecutor.validate/create 与 readOnlyOf 未读；method 缺省语义、allowedHosts=null 行为未知",
+      "untested": ["未运行 executor 校验路径"]
+    },
+    {
+      "id": "O8",
+      "category": "candidate",
+      "title": "syncFromCode 覆盖后台元数据，且重新上线的代码工具不自动启用",
+      "positions": [
+        {"file": "AiToolService.java", "lines": "101-154", "fact": "已存在行：代码覆盖 name/description/handlerKey/clientTypes/permissionCodes/schemas/sideEffects；risk 只升不降；approval/status 只在 isNew 写入"},
+        {"file": "AiToolService.java", "lines": "125-132", "fact": "isNew 才 setApprovalPolicy/ENABLED；existing 只合并 risk"}
+      ],
+      "impact": "后台改 name/description/permissionCodes 下次启动被覆盖；曾 DISABLED 的同 code 工具重新加回代码后仍 DISABLED，需手工启用",
+      "counterEvidence": "javadoc 只承诺后台可调风险/确认/启停，属设计取舍；未测启动行为",
+      "untested": ["未运行启动 sync"]
+    },
+    {
+      "id": "O9",
+      "category": "candidate",
+      "title": "syncFromCode 仅按 toolCode 匹配，可能改写声明式工具行",
+      "positions": [
+        {"file": "AiToolService.java", "lines": "106-108", "fact": "selectOne(eq(toolCode))，无 executor_type 过滤"},
+        {"file": "AiToolService.java", "lines": "267-278", "fact": "resolveHandler 按 executor_type 分派；CODE 才查 handlers"},
+        {"file": "AiToolService.java", "lines": "301-303", "fact": "createDeclarative 阻止先建代码工具再建同名声明式，故碰撞路径是“先声明式、代码后加同名”或改库"}
+      ],
+      "impact": "声明式行被改写为代码元数据但 executor_type 不变 → 代码 handler 不可达、声明式配置损坏（fail-closed）",
+      "counterEvidence": "未读 DB 唯一约束；未测启动顺序",
+      "untested": ["未构造碰撞运行"]
+    },
+    {
+      "id": "O10",
+      "category": "candidate",
+      "title": "resolveEffective 客户端过滤在 clientType=null 时跳过且大小写敏感",
+      "positions": [
+        {"file": "AiToolService.java", "lines": "599-602", "fact": "条件含 clientType != null，null 时不限制；clients 由 splitCsv 大写，传入值未归一化"}
+      ],
+      "impact": "null 客户端绕过 clientTypes 限制；小写值会被过滤（fail-closed）",
+      "counterEvidence": "调用方是否传 null 未读",
+      "untested": ["未读 orchestrator 调用点"]
+    },
+    {
+      "id": "O11",
+      "category": "candidate",
+      "title": "处理器注册重复裁决依赖 Bean 顺序",
+      "positions": [
+        {"file": "AiToolService.java", "lines": "69-91", "fact": "遍历 List<AiToolProvider>，重复 handlerKey 或 toolCode 时首个生效并 continue，仅 warn；无 @Order 约定"}
+      ],
+      "impact": "重复定义时生效实现取决于注入顺序；第二个 handler 的 handlerKey 一并丢失",
+      "counterEvidence": "仅代码重复时触发；未测 Spring 顺序",
+      "untested": ["未运行容器启动"]
+    },
+    {
+      "id": "O12",
+      "category": "static-fact-info",
+      "title": "AiJson 帮助方法刻意静默失败；AiToolResult payload 可为 null",
+      "positions": [
+        {"file": "AiJson.java", "lines": "27-40", "fact": "write(String) 原样返回；异常吞掉→null"},
+        {"file": "AiJson.java", "lines": "42-52", "fact": "read 非法/空→null"},
+        {"file": "AiJson.java", "lines": "175-181", "fact": "truncate 对 max<0 抛 StringIndexOutOfBounds；按 UTF-16 截断可能切代理对"},
+        {"file": "AiToolTypes.java", "lines": "116-154", "fact": "ok/approval/needClient payload 可为 null；rejected/failed 构造空对象"},
+        {"file": "AiToolTypes.java", "lines": "188-212", "fact": "objectSchema/stringParam 等字符串拼接不转义 description；仅代码 handler 使用，声明式走 DTO schema"}
+      ],
+      "impact": "属“不中断主流程”的既定设计；消费方必须判 null；未发现后台输入注入路径",
+      "counterEvidence": "类注释明确该设计；callers 未读",
+      "untested": ["未运行异常路径"]
+    }
+  ],
+  "nonClaims": [
+    "HIGH + binding approval=NONE 自动绕过审批为已撤回的错误主张，本报告不重述；O4 仅记录 override 无 enum/floor 校验与读取侧 approval 未对齐 floor 的源码事实，不推断审批效果",
+    "strict REQUIRED vs HELD wildcard：本 3 源只有解析侧严格格式（O1），写侧不校验（O2），本 3 源不存在 HELD 通配结构；不能把 DB 中的通配/3 段值视为被接受的 REQUIRED",
+    "testRun 的 actor/manual approval/floor/super/status/schema 最终判定在未读 controller 与编排层，本报告不结论",
+    "binding risk/approval 准入：risk 有 floor 保护（O7），approval 绑定覆盖无 floor（O4）",
+    "code/declarative code collision 仅静态路径（O9），未读 DB 约束、未测启动顺序",
+    "saveCSV/client filters：joinCsv 空→NULL（O3）、写侧不校验（O2）、client null/大小写（O10），均无运行期证据",
+    "未跑 Maven/测试/服务/API/DB/网络；无 background job；未执行任何工具"
+  ],
+  "notCovered": [
+    "AiChatOrchestrator（独立任务）",
+    "AiAdminToolController 与 AiAdminAgentController 调用点",
+    "DeclarativeToolSaveReq 等 DTO 校验注解",
+    "AiConstants（RiskLevel/ApprovalPolicy/ExecutorType 的 all()/order()）",
+    "AiProperties.HttpTool.allowedHosts 默认值",
+    "HttpToolExecutor / SqlToolExecutor / McpToolExecutor 实现",
+    "entity/mapper/schema/tests"
+  ],
+  "limits": [
+    "仅为 3 源独立当前整读，不覆盖原四源目标的 Orchestrator，也不是全 AI 或 task-14 完成",
+    "跨文件因果依赖未读文件，标注为 candidate/unknown",
+    "产物自身 SHA256 见 closing，不能内嵌"
+  ]
+}

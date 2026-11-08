@@ -1,0 +1,138 @@
+{
+  "createdAt": "2026-11-09T00:32:53.873413+08:00",
+  "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+  "status": "functional and static gates passed; commit reviews pending",
+  "runtime": {
+    "java": "Temurin25.0.4.1",
+    "maven": "3.9.6",
+    "node": "24.21.0",
+    "postgres": "16.4 loopback9684",
+    "redis": "loopback8549"
+  },
+  "java": {
+    "command": "mvn install -Daudit.postgres.port=9684 -Daudit.redis.port=8549",
+    "tests": 824,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 132,
+    "actualCodegen": true,
+    "skipCodeGen": false,
+    "finishedAt": "2026-11-09T00:27:01+08:00"
+  },
+  "quality": {
+    "command": "mvn spotless:check checkstyle:checkstyle-aggregate spotbugs:spotbugs",
+    "spotless": "passed",
+    "checkstyleWarnings": 375,
+    "spotbugsMediumFindings": 250,
+    "spotbugsHighFindings": 1,
+    "assessment": "quality-review.md + per-finding JSON"
+  },
+  "frontend": {
+    "nodeReactDomTests": 123,
+    "eslint": "passed",
+    "prettier": "passed",
+    "typescript": "passed",
+    "productionBuild": "passed"
+  },
+  "blog": {
+    "tests": 84,
+    "serverTests": 48,
+    "reactDomTests": 36,
+    "typescript": "passed",
+    "isolatedProductionBuild": "passed",
+    "publicUrlValidation": "passed",
+    "buildReceiptSha256": "ce13626c654a3b2a8c42be60a23bc79cd429519f42291e9d829510dd668c295e"
+  },
+  "workerTelegramTests": 15,
+  "packReleaseTests": 2,
+  "nginxLayoutsChecked": 2,
+  "contentCheck": {
+    "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+    "pathsInspected": 1161,
+    "placeholderLosses": [],
+    "credentialShapePaths": [],
+    "binaryPaths": [],
+    "note": "shape scan only; deploy/prod.env content never read; no assurance against every secret form"
+  },
+  "browser": "not executed: extension unavailable and fallback automation forbidden by original SPEC",
+  "externalEffects": "no production DB/cloud/SMTP/model calls; no remote push/PR/release",
+  "ownedServiceCleanup": "pending final independent review",
+  "receipts": [
+    {
+      "path": "target/takeover-release-verified-reactor.log",
+      "sha256": "a0b01302df2fd7af5c8f59c21e5ab1c4d404ed05d10ada415f570655a431a405",
+      "bytes": 762493
+    },
+    {
+      "path": "target/takeover-release-quality.log",
+      "sha256": "85a1175da68994dc91c8b1de10e88ffc9aa46416b2c71762af2d183ac7306ad7",
+      "bytes": 84810
+    },
+    {
+      "path": "target/takeover-tools-final-green.log",
+      "sha256": "d5c30f95f8cd6ae25393dc6e4c1987c027e9e96056d8013a6d810872344fb67e",
+      "bytes": 8133
+    },
+    {
+      "path": "target/takeover-front-complete-tests.log",
+      "sha256": "0337fb95c94b3e47f3251f2eaa66faec8101f87d02a2120a668b32766e49bf3f",
+      "bytes": 12401
+    },
+    {
+      "path": "target/takeover-front-complete-build.log",
+      "sha256": "8ff1bc1ab2459f0af2d22d4292e70234fc32d50f8fa1a30c4adb5dd5ec2192bc",
+      "bytes": 2330
+    },
+    {
+      "path": "target/takeover-front-eslint-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/takeover-front-types-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/takeover-front-prettier-final.log",
+      "sha256": "f20510a9da4717c51c4cffee6d0dd88d6c9a723d0a83711d01216f5b48961283",
+      "bytes": 68
+    },
+    {
+      "path": "target/takeover-blog-final-tests.log",
+      "sha256": "e0f7f8250f808551f833e4bd48d5d81a9672aabea525bdc3d558da9d6eb5ae5b",
+      "bytes": 8635
+    },
+    {
+      "path": "target/takeover-blog-final-build.log",
+      "sha256": "e47c0c6c73e2feb4dc63870617346b143731f7395833d0af2ec15e66796b5f45",
+      "bytes": 1865
+    },
+    {
+      "path": "target/takeover-blog-final-public-urls.log",
+      "sha256": "120294913a636c630804a4ee65f4f2cd8082a12d3590a04625da5310b62f1b63",
+      "bytes": 91
+    },
+    {
+      "path": "target/takeover-blog-typecheck-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/takeover-workers-final.log",
+      "sha256": "dc1c07dfb6ab3bf05193adb88e39a0a97288bf6efbeb297063ee10c9a007e722",
+      "bytes": 1096
+    },
+    {
+      "path": "target/takeover-pack-release-final.log",
+      "sha256": "4f0ad187b25b44c2e0592c8c53f3e2553a91ed5b6302c630f30d0bf50c72b2dd",
+      "bytes": 433
+    },
+    {
+      "path": "target/takeover-nginx-final.log",
+      "sha256": "a2a064d2293a452df14dc0d288c07f05deccc1ad27c868077b8e4548fb6d20d6",
+      "bytes": 486
+    }
+  ]
+}

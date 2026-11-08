@@ -1,0 +1,5548 @@
+{
+  "ownerSession": "session-8b6dffb64ad0",
+  "task": "26 independent current auth/system read-only audit",
+  "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+  "startedUtc": "2026-11-07T07:35:12.338Z",
+  "initialHead": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+  "initialStatus": "M astral-auth/pom.xml\n M astral-auth/src/main/java/com/astral/auth/api/AllAuthController.java\n M astral-auth/src/main/java/com/astral/auth/controller/ProfileController.java\n M astral-auth/src/main/java/com/astral/auth/dto/TokenInfo.java\n M astral-auth/src/main/java/com/astral/auth/registry/PermissionRegistry.java\n M astral-auth/src/main/java/com/astral/auth/security/LoginUserTypeResolver.java\n M astral-auth/src/main/java/com/astral/auth/security/PermissionAspect.java\n M astral-auth/src/main/java/com/astral/auth/service/AuthService.java\n M astral-auth/src/main/java/com/astral/auth/service/TokenService.java\n M astral-auth/src/main/java/com/astral/auth/service/impl/AuthServiceImpl.java\n M astral-auth/src/main/java/com/astral/auth/service/impl/TokenServiceImpl.java\n M astral-system/src/main/java/com/astral/system/controller/DictController.java\n M astral-system/src/main/java/com/astral/system/controller/MailTemplateController.java\n M astral-system/src/main/java/com/astral/system/controller/RolePermissionController.java\n M astral-system/src/main/java/com/astral/system/controller/SmsTemplateController.java\n M astral-system/src/main/java/com/astral/system/controller/SysConfigController.java\n M astral-system/src/main/java/com/astral/system/controller/UserController.java\n M astral-system/src/main/java/com/astral/system/controller/UserRoleController.java\n?? astral-auth/src/main/java/com/astral/auth/dto/SessionInfoResponse.java\n?? astral-auth/src/main/java/com/astral/auth/security/LoginUserStateResolver.java\n?? astral-auth/src/main/java/com/astral/auth/security/TokenFingerprint.java\n?? astral-auth/src/test/java/com/astral/auth/controller/ProfileControllerRevokeTest.java\n?? astral-auth/src/test/java/com/astral/auth/security/LoginUserStateResolverTest.java\n?? astral-auth/src/test/java/com/astral/auth/security/PermissionAspectContractTest.java\n?? astral-auth/src/test/java/com/astral/auth/security/TokenFingerprintTest.java\n?? astral-auth/src/test/java/com/astral/auth/service/impl/AuthServiceImplSessionInfoTest.java\n?? astral-auth/src/test/java/com/astral/auth/service/impl/TokenServiceImplSessionInfoTest.java",
+  "initialDiffNameStatus": "M\tastral-auth/pom.xml\nM\tastral-auth/src/main/java/com/astral/auth/api/AllAuthController.java\nM\tastral-auth/src/main/java/com/astral/auth/controller/ProfileController.java\nM\tastral-auth/src/main/java/com/astral/auth/dto/TokenInfo.java\nM\tastral-auth/src/main/java/com/astral/auth/registry/PermissionRegistry.java\nM\tastral-auth/src/main/java/com/astral/auth/security/LoginUserTypeResolver.java\nM\tastral-auth/src/main/java/com/astral/auth/security/PermissionAspect.java\nM\tastral-auth/src/main/java/com/astral/auth/service/AuthService.java\nM\tastral-auth/src/main/java/com/astral/auth/service/TokenService.java\nM\tastral-auth/src/main/java/com/astral/auth/service/impl/AuthServiceImpl.java\nM\tastral-auth/src/main/java/com/astral/auth/service/impl/TokenServiceImpl.java\nM\tastral-system/src/main/java/com/astral/system/controller/DictController.java\nM\tastral-system/src/main/java/com/astral/system/controller/MailTemplateController.java\nM\tastral-system/src/main/java/com/astral/system/controller/RolePermissionController.java\nM\tastral-system/src/main/java/com/astral/system/controller/SmsTemplateController.java\nM\tastral-system/src/main/java/com/astral/system/controller/SysConfigController.java\nM\tastral-system/src/main/java/com/astral/system/controller/UserController.java\nM\tastral-system/src/main/java/com/astral/system/controller/UserRoleController.java",
+  "ownershipSnapshot": {
+    "markdownExists": false,
+    "jsonExists": false
+  },
+  "inventoryMethod": "Independent glob of current module Java and resource/POM extensions; explicitly supplied glob-discovered paths only; target/generated/data/.env/secrets excluded. Hash metadata is NOT semantic FULL.",
+  "ledger": [
+    {
+      "path": "AGENTS.md",
+      "module": "guides",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 320
+        },
+        {
+          "offset": 321,
+          "requestedLimit": 80,
+          "from": 321,
+          "to": 400
+        },
+        {
+          "offset": 401,
+          "requestedLimit": 80,
+          "from": 401,
+          "to": 480
+        },
+        {
+          "offset": 481,
+          "requestedLimit": 80,
+          "from": 481,
+          "to": 534
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 51066,
+        "rawLines": 534,
+        "nonblankLines": 444,
+        "sha256": "530cc67718822adb099c9c7df4a627cc98f4bb99a01979f9132fd0458c0c5c84",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T19:13:28.490Z"
+      },
+      "post": {
+        "bytes": 51066,
+        "rawLines": 534,
+        "nonblankLines": 444,
+        "sha256": "530cc67718822adb099c9c7df4a627cc98f4bb99a01979f9132fd0458c0c5c84",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T19:13:28.490Z"
+      },
+      "observedEnd": 534,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "COMPONENTS_GUIDE.md",
+      "module": "guides",
+      "coverage": "PARTIAL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        }
+      ],
+      "eof": false,
+      "pre": {
+        "bytes": 22369,
+        "rawLines": 496,
+        "nonblankLines": 378,
+        "sha256": "f601298cf087999b188956f897660a91fb4e26d05c96a9e0c3e98c907db2fcef",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-31T08:19:50.361Z"
+      },
+      "post": {
+        "bytes": 22369,
+        "rawLines": 496,
+        "nonblankLines": 378,
+        "sha256": "f601298cf087999b188956f897660a91fb4e26d05c96a9e0c3e98c907db2fcef",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-31T08:19:50.361Z"
+      },
+      "observedEnd": 160,
+      "stable": true,
+      "boundary": "Consecutive reading stopped before EOF; next offset 161"
+    },
+    {
+      "path": "INTEGRATION_GUIDE.md",
+      "module": "guides",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 11977,
+        "rawLines": 301,
+        "nonblankLines": 208,
+        "sha256": "952f755e23ad4706e311ff32f1a991dcd44aff9a6ad4b8c82e14cdf5424f300c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-30T01:55:11.911Z"
+      },
+      "post": {
+        "bytes": 11977,
+        "rawLines": 301,
+        "nonblankLines": 208,
+        "sha256": "952f755e23ad4706e311ff32f1a991dcd44aff9a6ad4b8c82e14cdf5424f300c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-30T01:55:11.911Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "PLUGIN_GUIDE.md",
+      "module": "guides",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 9934,
+        "rawLines": 237,
+        "nonblankLines": 180,
+        "sha256": "17047bd3bfb5babda1a8e567abaddd8205704ac09030a260f05e522d09042873",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T02:08:08.330Z"
+      },
+      "post": {
+        "bytes": 9934,
+        "rawLines": 237,
+        "nonblankLines": 180,
+        "sha256": "17047bd3bfb5babda1a8e567abaddd8205704ac09030a260f05e522d09042873",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T02:08:08.330Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-auth/pom.xml",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 97
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4037,
+        "rawLines": 97,
+        "nonblankLines": 83,
+        "sha256": "19f41d9aa1e2de20e746bc0ed03ee92b5d14e83938a041dd77eea1d5051e54ec",
+        "lastByte": 62,
+        "mtimeUtc": "2026-11-06T16:57:40.569Z"
+      },
+      "post": {
+        "bytes": 4037,
+        "rawLines": 97,
+        "nonblankLines": 83,
+        "sha256": "19f41d9aa1e2de20e746bc0ed03ee92b5d14e83938a041dd77eea1d5051e54ec",
+        "lastByte": 62,
+        "mtimeUtc": "2026-11-06T16:57:40.569Z"
+      },
+      "observedEnd": 97,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/api/AllAuthController.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 69
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 2534,
+        "rawLines": 69,
+        "nonblankLines": 62,
+        "sha256": "3a63fd351ca1b2a5a470d46c4aa28829699e0683c89502abdd1da0ece3832d2e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:31:43.710Z"
+      },
+      "post": {
+        "bytes": 2534,
+        "rawLines": 69,
+        "nonblankLines": 62,
+        "sha256": "3a63fd351ca1b2a5a470d46c4aa28829699e0683c89502abdd1da0ece3832d2e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:31:43.710Z"
+      },
+      "observedEnd": 69,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/config/SaTokenJsonConfig.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 32
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1339,
+        "rawLines": 32,
+        "nonblankLines": 29,
+        "sha256": "058384f96db42e72e5f64003577e08775b25a84e663c7456d7d590898b0f65aa",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.793Z"
+      },
+      "post": {
+        "bytes": 1339,
+        "rawLines": 32,
+        "nonblankLines": 29,
+        "sha256": "058384f96db42e72e5f64003577e08775b25a84e663c7456d7d590898b0f65aa",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.793Z"
+      },
+      "observedEnd": 32,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/config/StpInterfaceImpl.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 136
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 5343,
+        "rawLines": 136,
+        "nonblankLines": 124,
+        "sha256": "511e24cfec03dc272e24ed932950f0d6ac842d61c750198531b957fd8fa21b2b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.839Z"
+      },
+      "post": {
+        "bytes": 5343,
+        "rawLines": 136,
+        "nonblankLines": 124,
+        "sha256": "511e24cfec03dc272e24ed932950f0d6ac842d61c750198531b957fd8fa21b2b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.839Z"
+      },
+      "observedEnd": 136,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/config/TolerantSaJsonTemplate.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 179
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 7929,
+        "rawLines": 179,
+        "nonblankLines": 164,
+        "sha256": "d6d2e82791006d61d2d3590843afca66363b864f985ba832906231180705240e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.881Z"
+      },
+      "post": {
+        "bytes": 7929,
+        "rawLines": 179,
+        "nonblankLines": 164,
+        "sha256": "d6d2e82791006d61d2d3590843afca66363b864f985ba832906231180705240e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.881Z"
+      },
+      "observedEnd": 179,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/controller/ProfileController.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 264
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 11819,
+        "rawLines": 264,
+        "nonblankLines": 241,
+        "sha256": "c85ce0cef26a6bfa67bf31199d438e8f9efa2dcb8481c4c9598541a55ff5624c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:51:05.042Z"
+      },
+      "post": {
+        "bytes": 11819,
+        "rawLines": 264,
+        "nonblankLines": 241,
+        "sha256": "c85ce0cef26a6bfa67bf31199d438e8f9efa2dcb8481c4c9598541a55ff5624c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:51:05.042Z"
+      },
+      "observedEnd": 264,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/controller/TokenController.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 117
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4388,
+        "rawLines": 117,
+        "nonblankLines": 109,
+        "sha256": "21275de0175e1584e70c891f08b90efc54abce78d62216f641445f12b58946e1",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.976Z"
+      },
+      "post": {
+        "bytes": 4388,
+        "rawLines": 117,
+        "nonblankLines": 109,
+        "sha256": "21275de0175e1584e70c891f08b90efc54abce78d62216f641445f12b58946e1",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.976Z"
+      },
+      "observedEnd": 117,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/dto/LoginRequest.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 17
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 462,
+        "rawLines": 17,
+        "nonblankLines": 12,
+        "sha256": "cedada7aac25252404411617d3066f080863880ca113dc84f282aea0b8b5d661",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.988Z"
+      },
+      "post": {
+        "bytes": 462,
+        "rawLines": 17,
+        "nonblankLines": 12,
+        "sha256": "cedada7aac25252404411617d3066f080863880ca113dc84f282aea0b8b5d661",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:00.988Z"
+      },
+      "observedEnd": 17,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/dto/LoginResponse.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 46
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 2277,
+        "rawLines": 46,
+        "nonblankLines": 44,
+        "sha256": "2a006367e6e2e17c15b316e76127f019eb37a4eb380dceadce061aa8a2da4492",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.002Z"
+      },
+      "post": {
+        "bytes": 2277,
+        "rawLines": 46,
+        "nonblankLines": 44,
+        "sha256": "2a006367e6e2e17c15b316e76127f019eb37a4eb380dceadce061aa8a2da4492",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.002Z"
+      },
+      "observedEnd": 46,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/dto/SessionInfoResponse.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 20
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 689,
+        "rawLines": 20,
+        "nonblankLines": 18,
+        "sha256": "a86c5d3f5309d618325f9a187d0aece58022381a573764944bcc4754c88dc08a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:30:57.864Z"
+      },
+      "post": {
+        "bytes": 689,
+        "rawLines": 20,
+        "nonblankLines": 18,
+        "sha256": "a86c5d3f5309d618325f9a187d0aece58022381a573764944bcc4754c88dc08a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:30:57.864Z"
+      },
+      "observedEnd": 20,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/dto/TokenInfo.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 57
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1772,
+        "rawLines": 57,
+        "nonblankLines": 46,
+        "sha256": "ed78c7f81a632fddcc5e1a5f04f8bd5fb772a667dc18b73889948d68614097a7",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:50:34.681Z"
+      },
+      "post": {
+        "bytes": 1772,
+        "rawLines": 57,
+        "nonblankLines": 46,
+        "sha256": "ed78c7f81a632fddcc5e1a5f04f8bd5fb772a667dc18b73889948d68614097a7",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:50:34.681Z"
+      },
+      "observedEnd": 57,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/registry/AppUserRoleInitializer.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 61
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3255,
+        "rawLines": 61,
+        "nonblankLines": 57,
+        "sha256": "556fdb2ff30101070a699bed1febd94bccf758d25ff69b8370af811974755865",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.034Z"
+      },
+      "post": {
+        "bytes": 3255,
+        "rawLines": 61,
+        "nonblankLines": 57,
+        "sha256": "556fdb2ff30101070a699bed1febd94bccf758d25ff69b8370af811974755865",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.034Z"
+      },
+      "observedEnd": 61,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/registry/AppUserRoleService.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 164
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 9078,
+        "rawLines": 164,
+        "nonblankLines": 157,
+        "sha256": "48f4adaa702014efa7e7e0634ba96309a08160f84f46a00cd08f4c518f3437f2",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.075Z"
+      },
+      "post": {
+        "bytes": 9078,
+        "rawLines": 164,
+        "nonblankLines": 157,
+        "sha256": "48f4adaa702014efa7e7e0634ba96309a08160f84f46a00cd08f4c518f3437f2",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.075Z"
+      },
+      "observedEnd": 164,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/registry/PermissionAutoRegistrar.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 39
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1500,
+        "rawLines": 39,
+        "nonblankLines": 35,
+        "sha256": "3cecd6d1a1e343edb4913d7254a8f6dda04d9d11225e15bdbe394bc8c67fb52e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.091Z"
+      },
+      "post": {
+        "bytes": 1500,
+        "rawLines": 39,
+        "nonblankLines": 35,
+        "sha256": "3cecd6d1a1e343edb4913d7254a8f6dda04d9d11225e15bdbe394bc8c67fb52e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.091Z"
+      },
+      "observedEnd": 39,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/registry/PermissionDeclaration.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 92
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3330,
+        "rawLines": 92,
+        "nonblankLines": 77,
+        "sha256": "4a25ca792552b3d12bc45101f0a8baeb5a91f5eeeb046679d86d1da9bf1f6d35",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.114Z"
+      },
+      "post": {
+        "bytes": 3330,
+        "rawLines": 92,
+        "nonblankLines": 77,
+        "sha256": "4a25ca792552b3d12bc45101f0a8baeb5a91f5eeeb046679d86d1da9bf1f6d35",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.114Z"
+      },
+      "observedEnd": 92,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/registry/PermissionRegistry.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 197
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 8979,
+        "rawLines": 197,
+        "nonblankLines": 184,
+        "sha256": "40c60f2f4443e7e73c7e9cd110587a8c5752e2c6899378b7478d0f2ea8a0d7f0",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-07T05:14:08.453Z"
+      },
+      "post": {
+        "bytes": 8979,
+        "rawLines": 197,
+        "nonblankLines": 184,
+        "sha256": "40c60f2f4443e7e73c7e9cd110587a8c5752e2c6899378b7478d0f2ea8a0d7f0",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-07T05:14:08.453Z"
+      },
+      "observedEnd": 197,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/AuthCookieWriter.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 145
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 7661,
+        "rawLines": 145,
+        "nonblankLines": 129,
+        "sha256": "8efde5aaf5438868363bb5ff41c8a84c810d82b05210f8bf3880b5a24d7b17d9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.212Z"
+      },
+      "post": {
+        "bytes": 7661,
+        "rawLines": 145,
+        "nonblankLines": 129,
+        "sha256": "8efde5aaf5438868363bb5ff41c8a84c810d82b05210f8bf3880b5a24d7b17d9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.212Z"
+      },
+      "observedEnd": 145,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/DataScopeResolver.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 145
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 6108,
+        "rawLines": 145,
+        "nonblankLines": 137,
+        "sha256": "e63930bd28cfda2fd632a8f31016c4a4bd045ec5f15f2d9c877a06c81594269e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.388Z"
+      },
+      "post": {
+        "bytes": 6108,
+        "rawLines": 145,
+        "nonblankLines": 137,
+        "sha256": "e63930bd28cfda2fd632a8f31016c4a4bd045ec5f15f2d9c877a06c81594269e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.388Z"
+      },
+      "observedEnd": 145,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/LoginDevice.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 25
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1030,
+        "rawLines": 25,
+        "nonblankLines": 21,
+        "sha256": "69ec53faa0c94e46d8fc665ccdeb1eb0c20f0994c93393e57fb4cc9804ea8553",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.445Z"
+      },
+      "post": {
+        "bytes": 1030,
+        "rawLines": 25,
+        "nonblankLines": 21,
+        "sha256": "69ec53faa0c94e46d8fc665ccdeb1eb0c20f0994c93393e57fb4cc9804ea8553",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.445Z"
+      },
+      "observedEnd": 25,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/LoginFailureStore.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 168
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 7146,
+        "rawLines": 168,
+        "nonblankLines": 152,
+        "sha256": "a30681919f716c0a516d90b3a54106e6479478e2cdd7ceac3a1f4caeb9a32d7a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.521Z"
+      },
+      "post": {
+        "bytes": 7146,
+        "rawLines": 168,
+        "nonblankLines": 152,
+        "sha256": "a30681919f716c0a516d90b3a54106e6479478e2cdd7ceac3a1f4caeb9a32d7a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.521Z"
+      },
+      "observedEnd": 168,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/LoginUserStateResolver.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 134
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 6646,
+        "rawLines": 134,
+        "nonblankLines": 122,
+        "sha256": "f66fc903191446c6dd6bf101492d657fcba8b9128c8dcec45e35b82d85fb3049",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T17:58:28.541Z"
+      },
+      "post": {
+        "bytes": 6646,
+        "rawLines": 134,
+        "nonblankLines": 122,
+        "sha256": "f66fc903191446c6dd6bf101492d657fcba8b9128c8dcec45e35b82d85fb3049",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T17:58:28.541Z"
+      },
+      "observedEnd": 134,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/LoginUserTypeResolver.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 127
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4735,
+        "rawLines": 127,
+        "nonblankLines": 113,
+        "sha256": "a79580785e862b10ebc123173311ab56c8d29e8e55dd70db20698f18f4f6bbde",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:52:31.006Z"
+      },
+      "post": {
+        "bytes": 4735,
+        "rawLines": 127,
+        "nonblankLines": 113,
+        "sha256": "a79580785e862b10ebc123173311ab56c8d29e8e55dd70db20698f18f4f6bbde",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:52:31.006Z"
+      },
+      "observedEnd": 127,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/PermissionAspect.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 114
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 5238,
+        "rawLines": 114,
+        "nonblankLines": 105,
+        "sha256": "af7148a4823c53a7b159622dba3dc0e2b1b14b6be0c1db164bb486319e811950",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-07T05:14:05.102Z"
+      },
+      "post": {
+        "bytes": 5238,
+        "rawLines": 114,
+        "nonblankLines": 105,
+        "sha256": "af7148a4823c53a7b159622dba3dc0e2b1b14b6be0c1db164bb486319e811950",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-07T05:14:05.102Z"
+      },
+      "observedEnd": 114,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/PermissionCache.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 142
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 6167,
+        "rawLines": 142,
+        "nonblankLines": 127,
+        "sha256": "bd430f669e4e70fbc951d5d3a095656b8d0952ad966080297e5073d6594aca96",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.761Z"
+      },
+      "post": {
+        "bytes": 6167,
+        "rawLines": 142,
+        "nonblankLines": 127,
+        "sha256": "bd430f669e4e70fbc951d5d3a095656b8d0952ad966080297e5073d6594aca96",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.761Z"
+      },
+      "observedEnd": 142,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/PermissionCatalog.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 122
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4635,
+        "rawLines": 122,
+        "nonblankLines": 110,
+        "sha256": "46a2989b81db5fcfcc02e85e736314ad8c28341dfa9cb8ebfee1fc5df4079d4c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.859Z"
+      },
+      "post": {
+        "bytes": 4635,
+        "rawLines": 122,
+        "nonblankLines": 110,
+        "sha256": "46a2989b81db5fcfcc02e85e736314ad8c28341dfa9cb8ebfee1fc5df4079d4c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.859Z"
+      },
+      "observedEnd": 122,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/PermissionChecker.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 320
+        },
+        {
+          "offset": 321,
+          "requestedLimit": 80,
+          "from": 321,
+          "to": 376
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 15217,
+        "rawLines": 376,
+        "nonblankLines": 340,
+        "sha256": "34d944459c129f3f7ccb5d444534d8690e08db2306f15eaa12875352a146a11e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.956Z"
+      },
+      "post": {
+        "bytes": 15217,
+        "rawLines": 376,
+        "nonblankLines": 340,
+        "sha256": "34d944459c129f3f7ccb5d444534d8690e08db2306f15eaa12875352a146a11e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:01.956Z"
+      },
+      "observedEnd": 376,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/RsaKeyManager.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 171
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 7852,
+        "rawLines": 171,
+        "nonblankLines": 153,
+        "sha256": "66cea01fb7d17663b08e14ad099aa4751bd24cd09fb9c4335b0a8e881e93530d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.036Z"
+      },
+      "post": {
+        "bytes": 7852,
+        "rawLines": 171,
+        "nonblankLines": 153,
+        "sha256": "66cea01fb7d17663b08e14ad099aa4751bd24cd09fb9c4335b0a8e881e93530d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.036Z"
+      },
+      "observedEnd": 171,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/TokenFingerprint.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 83
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3771,
+        "rawLines": 83,
+        "nonblankLines": 76,
+        "sha256": "5aa0b9350ab394854f3264883f78008f911ab302a959156947ef93b771033703",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:50:26.115Z"
+      },
+      "post": {
+        "bytes": 3771,
+        "rawLines": 83,
+        "nonblankLines": 76,
+        "sha256": "5aa0b9350ab394854f3264883f78008f911ab302a959156947ef93b771033703",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:50:26.115Z"
+      },
+      "observedEnd": 83,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/security/TotpUtil.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 157
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 5776,
+        "rawLines": 157,
+        "nonblankLines": 143,
+        "sha256": "6512901fa481edd029b1be58dcc91c0e8ec9350bd92f5c879f1eb130100c6289",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.101Z"
+      },
+      "post": {
+        "bytes": 5776,
+        "rawLines": 157,
+        "nonblankLines": 143,
+        "sha256": "6512901fa481edd029b1be58dcc91c0e8ec9350bd92f5c879f1eb130100c6289",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.101Z"
+      },
+      "observedEnd": 157,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/service/AuthService.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 44
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1273,
+        "rawLines": 44,
+        "nonblankLines": 40,
+        "sha256": "e03b579764e784900fe3e55eb8f207409174fb2d685b5bd93fc18a99428c7266",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:31:43.676Z"
+      },
+      "post": {
+        "bytes": 1273,
+        "rawLines": 44,
+        "nonblankLines": 40,
+        "sha256": "e03b579764e784900fe3e55eb8f207409174fb2d685b5bd93fc18a99428c7266",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:31:43.676Z"
+      },
+      "observedEnd": 44,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/service/TokenService.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 57
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1847,
+        "rawLines": 57,
+        "nonblankLines": 49,
+        "sha256": "477769f9c10d0a3986c5db8a7bb5c567b9705bd72994f36ccaff95c43f580cc8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:50:34.715Z"
+      },
+      "post": {
+        "bytes": 1847,
+        "rawLines": 57,
+        "nonblankLines": 49,
+        "sha256": "477769f9c10d0a3986c5db8a7bb5c567b9705bd72994f36ccaff95c43f580cc8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T16:50:34.715Z"
+      },
+      "observedEnd": 57,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/service/UserLoginMarker.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 141
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 6995,
+        "rawLines": 141,
+        "nonblankLines": 129,
+        "sha256": "703309f6603c9ce00065972bf9b49c52779d08cf385a593158021e900558cc98",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.308Z"
+      },
+      "post": {
+        "bytes": 6995,
+        "rawLines": 141,
+        "nonblankLines": 129,
+        "sha256": "703309f6603c9ce00065972bf9b49c52779d08cf385a593158021e900558cc98",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.308Z"
+      },
+      "observedEnd": 141,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/service/impl/AuthServiceImpl.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 238
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 11805,
+        "rawLines": 238,
+        "nonblankLines": 210,
+        "sha256": "e55331f63567129ab2c07e5c31043685fb8874ac58069c12c48b4d66b9cf7dcc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:31:43.725Z"
+      },
+      "post": {
+        "bytes": 11805,
+        "rawLines": 238,
+        "nonblankLines": 210,
+        "sha256": "e55331f63567129ab2c07e5c31043685fb8874ac58069c12c48b4d66b9cf7dcc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:31:43.725Z"
+      },
+      "observedEnd": 238,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/main/java/com/astral/auth/service/impl/TokenServiceImpl.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 320
+        },
+        {
+          "offset": 321,
+          "requestedLimit": 80,
+          "from": 321,
+          "to": 364
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 15439,
+        "rawLines": 364,
+        "nonblankLines": 332,
+        "sha256": "4c7f0182b32f1efb487a7feb9e142dada6a524c367febfa30cc0fb0f311b2b54",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:00:04.331Z"
+      },
+      "post": {
+        "bytes": 15439,
+        "rawLines": 364,
+        "nonblankLines": 332,
+        "sha256": "4c7f0182b32f1efb487a7feb9e142dada6a524c367febfa30cc0fb0f311b2b54",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:00:04.331Z"
+      },
+      "observedEnd": 364,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/test/java/com/astral/auth/controller/ProfileControllerRevokeTest.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 104
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4583,
+        "rawLines": 104,
+        "nonblankLines": 85,
+        "sha256": "4305fc3d16728d671b44621e1e3c96b0becdc071eb019149973b861bba903c77",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:34:45.675Z"
+      },
+      "post": {
+        "bytes": 4583,
+        "rawLines": 104,
+        "nonblankLines": 85,
+        "sha256": "4305fc3d16728d671b44621e1e3c96b0becdc071eb019149973b861bba903c77",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:34:45.675Z"
+      },
+      "observedEnd": 104,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/test/java/com/astral/auth/security/LoginUserStateResolverTest.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 115
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4779,
+        "rawLines": 115,
+        "nonblankLines": 99,
+        "sha256": "42cd02b6ed85cfcfaf8e134ef1a3c28e959d4f270ca03a4eb2be95a98e3841fd",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:39:36.926Z"
+      },
+      "post": {
+        "bytes": 4779,
+        "rawLines": 115,
+        "nonblankLines": 99,
+        "sha256": "42cd02b6ed85cfcfaf8e134ef1a3c28e959d4f270ca03a4eb2be95a98e3841fd",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:39:36.926Z"
+      },
+      "observedEnd": 115,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/test/java/com/astral/auth/security/PermissionAspectContractTest.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 253
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 12697,
+        "rawLines": 253,
+        "nonblankLines": 240,
+        "sha256": "686ab5853626d153ddbb5e8a9ad5f3f98e8813f2480eb07d6717476c61b84d47",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-07T05:14:05.328Z"
+      },
+      "post": {
+        "bytes": 12697,
+        "rawLines": 253,
+        "nonblankLines": 240,
+        "sha256": "686ab5853626d153ddbb5e8a9ad5f3f98e8813f2480eb07d6717476c61b84d47",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-07T05:14:05.328Z"
+      },
+      "observedEnd": 253,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/test/java/com/astral/auth/security/TokenFingerprintTest.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 71
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3329,
+        "rawLines": 71,
+        "nonblankLines": 62,
+        "sha256": "60babd93787b21613297570d55054880fc85a57e68353899f0dad24fc0b08089",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:38:08.876Z"
+      },
+      "post": {
+        "bytes": 3329,
+        "rawLines": 71,
+        "nonblankLines": 62,
+        "sha256": "60babd93787b21613297570d55054880fc85a57e68353899f0dad24fc0b08089",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:38:08.876Z"
+      },
+      "observedEnd": 71,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/test/java/com/astral/auth/service/impl/AuthServiceImplSessionInfoTest.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 110
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4144,
+        "rawLines": 110,
+        "nonblankLines": 95,
+        "sha256": "cbaab883543dd5eedcdf7c89b983a80af7cc21d9b026dbd4dfa39eade1dfdf59",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:23:43.476Z"
+      },
+      "post": {
+        "bytes": 4144,
+        "rawLines": 110,
+        "nonblankLines": 95,
+        "sha256": "cbaab883543dd5eedcdf7c89b983a80af7cc21d9b026dbd4dfa39eade1dfdf59",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T20:23:43.476Z"
+      },
+      "observedEnd": 110,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-auth/src/test/java/com/astral/auth/service/impl/TokenServiceImplSessionInfoTest.java",
+      "module": "astral-auth",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 70
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3505,
+        "rawLines": 70,
+        "nonblankLines": 60,
+        "sha256": "ad97bd232d2805c6674ce5203fe9edafc516db950b1cbfe5090b831ce9dbc803",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:00:04.365Z"
+      },
+      "post": {
+        "bytes": 3505,
+        "rawLines": 70,
+        "nonblankLines": 60,
+        "sha256": "ad97bd232d2805c6674ce5203fe9edafc516db950b1cbfe5090b831ce9dbc803",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:00:04.365Z"
+      },
+      "observedEnd": 70,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_config.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2120,
+        "rawLines": 87,
+        "nonblankLines": 87,
+        "sha256": "49639f93c0d6cc4f1d6059b8de50868d47699c84bca68f75369740a13a6fbdeb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.033Z"
+      },
+      "post": {
+        "bytes": 2120,
+        "rawLines": 87,
+        "nonblankLines": 87,
+        "sha256": "49639f93c0d6cc4f1d6059b8de50868d47699c84bca68f75369740a13a6fbdeb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.033Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_dict_data.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2945,
+        "rawLines": 122,
+        "nonblankLines": 122,
+        "sha256": "9f8f3b804e024a91c8215cf227bfc721af29347c47f82d35ed9da4320137aec4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.034Z"
+      },
+      "post": {
+        "bytes": 2945,
+        "rawLines": 122,
+        "nonblankLines": 122,
+        "sha256": "9f8f3b804e024a91c8215cf227bfc721af29347c47f82d35ed9da4320137aec4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.034Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_dict_type.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2583,
+        "rawLines": 101,
+        "nonblankLines": 101,
+        "sha256": "6b91378fccf337e2ea9c4f605cddfcfd713f9f59b743ed74c07193f77d9454af",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.034Z"
+      },
+      "post": {
+        "bytes": 2583,
+        "rawLines": 101,
+        "nonblankLines": 101,
+        "sha256": "6b91378fccf337e2ea9c4f605cddfcfd713f9f59b743ed74c07193f77d9454af",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.034Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_mail_account.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 3076,
+        "rawLines": 125,
+        "nonblankLines": 125,
+        "sha256": "8dbe4c8d870e98fbe18b4b94bc4f6d1de3ba97b998faf91c631502d81b50c7bd",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-29T14:05:09.456Z"
+      },
+      "post": {
+        "bytes": 3076,
+        "rawLines": 125,
+        "nonblankLines": 125,
+        "sha256": "8dbe4c8d870e98fbe18b4b94bc4f6d1de3ba97b998faf91c631502d81b50c7bd",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-29T14:05:09.456Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_mail_log.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2631,
+        "rawLines": 112,
+        "nonblankLines": 112,
+        "sha256": "7d6506511e4de9f5ad4c268985b13f56c3393aaf481da4072c6606be52c8c026",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-29T14:05:37.208Z"
+      },
+      "post": {
+        "bytes": 2631,
+        "rawLines": 112,
+        "nonblankLines": 112,
+        "sha256": "7d6506511e4de9f5ad4c268985b13f56c3393aaf481da4072c6606be52c8c026",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-29T14:05:37.208Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_mail_template.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 97
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 2384,
+        "rawLines": 97,
+        "nonblankLines": 97,
+        "sha256": "f0063d171dd79e4781c5b0a8d16e1a9599a5fedede8ea6d151d1bfd589ec721a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-02T13:34:50.353Z"
+      },
+      "post": {
+        "bytes": 2384,
+        "rawLines": 97,
+        "nonblankLines": 97,
+        "sha256": "f0063d171dd79e4781c5b0a8d16e1a9599a5fedede8ea6d151d1bfd589ec721a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-02T13:34:50.353Z"
+      },
+      "observedEnd": 97,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_menu.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2686,
+        "rawLines": 113,
+        "nonblankLines": 113,
+        "sha256": "76113ea1e74fdc7a9e3b51de464cfc5161975de2ce55113520ba9ba1b33b3f8e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.036Z"
+      },
+      "post": {
+        "bytes": 2686,
+        "rawLines": 113,
+        "nonblankLines": 113,
+        "sha256": "76113ea1e74fdc7a9e3b51de464cfc5161975de2ce55113520ba9ba1b33b3f8e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.036Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_notice.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 274
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 7207,
+        "rawLines": 274,
+        "nonblankLines": 274,
+        "sha256": "480c220daae633a2249e5f7a4fe84c99bdaced4bef3483149c794b7d462c7d59",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T06:47:34.085Z"
+      },
+      "post": {
+        "bytes": 7207,
+        "rawLines": 274,
+        "nonblankLines": 274,
+        "sha256": "480c220daae633a2249e5f7a4fe84c99bdaced4bef3483149c794b7d462c7d59",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T06:47:34.085Z"
+      },
+      "observedEnd": 274,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_notify_rule.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2100,
+        "rawLines": 84,
+        "nonblankLines": 84,
+        "sha256": "35fcac9d52ce7d1e6d937e54713b0ecfc748ac21b29a99a4551c88b2800a135c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T06:06:01.088Z"
+      },
+      "post": {
+        "bytes": 2100,
+        "rawLines": 84,
+        "nonblankLines": 84,
+        "sha256": "35fcac9d52ce7d1e6d937e54713b0ecfc748ac21b29a99a4551c88b2800a135c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T06:06:01.088Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_notify_rule_channel.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2689,
+        "rawLines": 101,
+        "nonblankLines": 101,
+        "sha256": "0b51b2993585a471079eda7440c9cd5bf5c8f1202d7b25d03e951de2b30b61c9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T06:06:10.519Z"
+      },
+      "post": {
+        "bytes": 2689,
+        "rawLines": 101,
+        "nonblankLines": 101,
+        "sha256": "0b51b2993585a471079eda7440c9cd5bf5c8f1202d7b25d03e951de2b30b61c9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T06:06:10.519Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_notify_rule_recipient.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1639,
+        "rawLines": 63,
+        "nonblankLines": 63,
+        "sha256": "c6efa467179cb6b0086a57f20053cb84b897c41a08bc0ddf6fc98a4e9f64d3f8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T06:06:15.686Z"
+      },
+      "post": {
+        "bytes": 1639,
+        "rawLines": 63,
+        "nonblankLines": 63,
+        "sha256": "c6efa467179cb6b0086a57f20053cb84b897c41a08bc0ddf6fc98a4e9f64d3f8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-28T06:06:15.686Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_permission.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 3399,
+        "rawLines": 140,
+        "nonblankLines": 140,
+        "sha256": "9d0793cd9c0585c04b0b019852eb52dda106e6a99dfd8370394c3d054a06b6db",
+        "lastByte": 10,
+        "mtimeUtc": "2026-09-29T11:53:39.666Z"
+      },
+      "post": {
+        "bytes": 3399,
+        "rawLines": 140,
+        "nonblankLines": 140,
+        "sha256": "9d0793cd9c0585c04b0b019852eb52dda106e6a99dfd8370394c3d054a06b6db",
+        "lastByte": 10,
+        "mtimeUtc": "2026-09-29T11:53:39.666Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_role.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2300,
+        "rawLines": 94,
+        "nonblankLines": 94,
+        "sha256": "536b648dc6df6cbf7600953f5582b05d1db334c7ce5dce0ba6f1af36150afb03",
+        "lastByte": 10,
+        "mtimeUtc": "2026-09-29T11:53:39.708Z"
+      },
+      "post": {
+        "bytes": 2300,
+        "rawLines": 94,
+        "nonblankLines": 94,
+        "sha256": "536b648dc6df6cbf7600953f5582b05d1db334c7ce5dce0ba6f1af36150afb03",
+        "lastByte": 10,
+        "mtimeUtc": "2026-09-29T11:53:39.708Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_role_permission.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1442,
+        "rawLines": 64,
+        "nonblankLines": 64,
+        "sha256": "e789b79f596cb794418b07d92f6bd36259dd06deca9729cfe8962d01220e523f",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.039Z"
+      },
+      "post": {
+        "bytes": 1442,
+        "rawLines": 64,
+        "nonblankLines": 64,
+        "sha256": "e789b79f596cb794418b07d92f6bd36259dd06deca9729cfe8962d01220e523f",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.039Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_sms_log.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2222,
+        "rawLines": 94,
+        "nonblankLines": 94,
+        "sha256": "e817421442914d47ef9406436ec08f385763d1b8e891b7d4d43ba84486bdb9b7",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-02T13:58:22.574Z"
+      },
+      "post": {
+        "bytes": 2222,
+        "rawLines": 94,
+        "nonblankLines": 94,
+        "sha256": "e817421442914d47ef9406436ec08f385763d1b8e891b7d4d43ba84486bdb9b7",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-02T13:58:22.574Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_sms_provider.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2702,
+        "rawLines": 112,
+        "nonblankLines": 112,
+        "sha256": "8b45ec175627d30441a80728de98d8fd736975084e1fac769eac790413f730d8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-02T13:58:01.291Z"
+      },
+      "post": {
+        "bytes": 2702,
+        "rawLines": 112,
+        "nonblankLines": 112,
+        "sha256": "8b45ec175627d30441a80728de98d8fd736975084e1fac769eac790413f730d8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-02T13:58:01.291Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_sms_template.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 104
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 2664,
+        "rawLines": 104,
+        "nonblankLines": 104,
+        "sha256": "27a896a1b434109bec3509527ddbf3b5e02bd0ebc12e7a8564c6ea255c6c06f9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-02T13:58:22.574Z"
+      },
+      "post": {
+        "bytes": 2664,
+        "rawLines": 104,
+        "nonblankLines": 104,
+        "sha256": "27a896a1b434109bec3509527ddbf3b5e02bd0ebc12e7a8564c6ea255c6c06f9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-02T13:58:22.574Z"
+      },
+      "observedEnd": 104,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_user.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 4726,
+        "rawLines": 184,
+        "nonblankLines": 184,
+        "sha256": "c9c3c221c1d4c1418566175c52cabbf684bde05e8d46f821e0af246148c234b8",
+        "lastByte": 125,
+        "mtimeUtc": "2026-10-01T08:46:24.607Z"
+      },
+      "post": {
+        "bytes": 4726,
+        "rawLines": 184,
+        "nonblankLines": 184,
+        "sha256": "c9c3c221c1d4c1418566175c52cabbf684bde05e8d46f821e0af246148c234b8",
+        "lastByte": 125,
+        "mtimeUtc": "2026-10-01T08:46:24.607Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-schema/src/main/resources/schema/sys_user_role.json",
+      "module": "auth-system-owned-schema",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 64
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1382,
+        "rawLines": 64,
+        "nonblankLines": 64,
+        "sha256": "ecd256643a5b211f6a344ca4b0f84d2f4de27054cda042d5e5eb5b2bb4fda5c9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.040Z"
+      },
+      "post": {
+        "bytes": 1382,
+        "rawLines": 64,
+        "nonblankLines": 64,
+        "sha256": "ecd256643a5b211f6a344ca4b0f84d2f4de27054cda042d5e5eb5b2bb4fda5c9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-08-25T08:38:00.040Z"
+      },
+      "observedEnd": 64,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/pom.xml",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 93
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3243,
+        "rawLines": 93,
+        "nonblankLines": 79,
+        "sha256": "2d2380c008d48c65f40b07f378d8b6c2c1e3055450ebdb8bdc399bd3da8f0ee1",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-17T09:11:58.617Z"
+      },
+      "post": {
+        "bytes": 3243,
+        "rawLines": 93,
+        "nonblankLines": 79,
+        "sha256": "2d2380c008d48c65f40b07f378d8b6c2c1e3055450ebdb8bdc399bd3da8f0ee1",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-17T09:11:58.617Z"
+      },
+      "observedEnd": 93,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/config/NoticeAppExceptionHandler.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 4816,
+        "rawLines": 92,
+        "nonblankLines": 84,
+        "sha256": "0533657c793e921795462a10864f8b40ebac0a2c0010e34757ae17bdcc3cf989",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.512Z"
+      },
+      "post": {
+        "bytes": 4816,
+        "rawLines": 92,
+        "nonblankLines": 84,
+        "sha256": "0533657c793e921795462a10864f8b40ebac0a2c0010e34757ae17bdcc3cf989",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.512Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/config/NoticeWebConfig.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 43
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 2058,
+        "rawLines": 43,
+        "nonblankLines": 39,
+        "sha256": "19f365db28d96733294a36eac656a16bec2492a769c3dad13e75bc4dd75bca84",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.532Z"
+      },
+      "post": {
+        "bytes": 2058,
+        "rawLines": 43,
+        "nonblankLines": 39,
+        "sha256": "19f365db28d96733294a36eac656a16bec2492a769c3dad13e75bc4dd75bca84",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.532Z"
+      },
+      "observedEnd": 43,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/DictController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 5266,
+        "rawLines": 139,
+        "nonblankLines": 131,
+        "sha256": "f25260bb1634543df4ffe641011b85dcafce70497bc51283c45dd62dfcf28bdb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:04:27.274Z"
+      },
+      "post": {
+        "bytes": 5266,
+        "rawLines": 139,
+        "nonblankLines": 131,
+        "sha256": "f25260bb1634543df4ffe641011b85dcafce70497bc51283c45dd62dfcf28bdb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:04:27.274Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/DictDataController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 7289,
+        "rawLines": 163,
+        "nonblankLines": 154,
+        "sha256": "fb83553ecf24427a622ab12b065e792a66d5359e7c586ed32ac69ef12181a908",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.589Z"
+      },
+      "post": {
+        "bytes": 7289,
+        "rawLines": 163,
+        "nonblankLines": 154,
+        "sha256": "fb83553ecf24427a622ab12b065e792a66d5359e7c586ed32ac69ef12181a908",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.589Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/DictTypeController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 5427,
+        "rawLines": 141,
+        "nonblankLines": 132,
+        "sha256": "b823cf30b871deca07d0806e942de4b54c1b4ccc0cad16804814699365cf78bb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.622Z"
+      },
+      "post": {
+        "bytes": 5427,
+        "rawLines": 141,
+        "nonblankLines": 132,
+        "sha256": "b823cf30b871deca07d0806e942de4b54c1b4ccc0cad16804814699365cf78bb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.622Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/InappPortalController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 67
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 2723,
+        "rawLines": 67,
+        "nonblankLines": 59,
+        "sha256": "b50866ab2844bf5b27e73cc0a74ff41ade1ce1c419d28986a1720bb1dc0eb665",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.650Z"
+      },
+      "post": {
+        "bytes": 2723,
+        "rawLines": 67,
+        "nonblankLines": 59,
+        "sha256": "b50866ab2844bf5b27e73cc0a74ff41ade1ce1c419d28986a1720bb1dc0eb665",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.650Z"
+      },
+      "observedEnd": 67,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/MailAccountController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 165
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 7533,
+        "rawLines": 165,
+        "nonblankLines": 153,
+        "sha256": "681a639ed10b4d8936945b4f5583f0c9db353c67f4de79c51055d347e812f453",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.728Z"
+      },
+      "post": {
+        "bytes": 7533,
+        "rawLines": 165,
+        "nonblankLines": 153,
+        "sha256": "681a639ed10b4d8936945b4f5583f0c9db353c67f4de79c51055d347e812f453",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.728Z"
+      },
+      "observedEnd": 165,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/MailLogController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2294,
+        "rawLines": 51,
+        "nonblankLines": 45,
+        "sha256": "aa85ff440ffbd7bce2b29fc784d30a9f78805110a7cd89bd530bf5b3a01c2072",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.787Z"
+      },
+      "post": {
+        "bytes": 2294,
+        "rawLines": 51,
+        "nonblankLines": 45,
+        "sha256": "aa85ff440ffbd7bce2b29fc784d30a9f78805110a7cd89bd530bf5b3a01c2072",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.787Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/MailPreviewDto.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 202,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "f5741bcb275dd94cec31ddad58993f7fece1eb875a0158888fa80e14160cf1d3",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.805Z"
+      },
+      "post": {
+        "bytes": 202,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "f5741bcb275dd94cec31ddad58993f7fece1eb875a0158888fa80e14160cf1d3",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.805Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/MailTemplateController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 10994,
+        "rawLines": 231,
+        "nonblankLines": 216,
+        "sha256": "f2c8f4914f07c920314dea37bff7f585694e4061d079da40462243b2e06e63c4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:04:45.640Z"
+      },
+      "post": {
+        "bytes": 10994,
+        "rawLines": 231,
+        "nonblankLines": 216,
+        "sha256": "f2c8f4914f07c920314dea37bff7f585694e4061d079da40462243b2e06e63c4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:04:45.640Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/MailTestSendDto.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 463,
+        "rawLines": 20,
+        "nonblankLines": 15,
+        "sha256": "47b6445959b017cae0a24e15eb50bfee61bfa74a0143acae5af9ca983905d83a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.874Z"
+      },
+      "post": {
+        "bytes": 463,
+        "rawLines": 20,
+        "nonblankLines": 15,
+        "sha256": "47b6445959b017cae0a24e15eb50bfee61bfa74a0143acae5af9ca983905d83a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.874Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/MessageStatisticsController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2962,
+        "rawLines": 62,
+        "nonblankLines": 55,
+        "sha256": "2a47a9e3c09f3a2e7a29920ae60f9b6238aba6309524f228fab83e318220457d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.903Z"
+      },
+      "post": {
+        "bytes": 2962,
+        "rawLines": 62,
+        "nonblankLines": 55,
+        "sha256": "2a47a9e3c09f3a2e7a29920ae60f9b6238aba6309524f228fab83e318220457d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.903Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/MessageTemplateController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 86
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3637,
+        "rawLines": 86,
+        "nonblankLines": 76,
+        "sha256": "4a0c62096e7197767ae2a070367bfe73389c6808814484cd2ac9c10300ff0707",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.935Z"
+      },
+      "post": {
+        "bytes": 3637,
+        "rawLines": 86,
+        "nonblankLines": 76,
+        "sha256": "4a0c62096e7197767ae2a070367bfe73389c6808814484cd2ac9c10300ff0707",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.935Z"
+      },
+      "observedEnd": 86,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/NotifyEventController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1820,
+        "rawLines": 40,
+        "nonblankLines": 35,
+        "sha256": "f3f344fd6212e945ac6ff3d54bab5280b767ea6916f25cb6cce7ff582e2fc4a5",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.950Z"
+      },
+      "post": {
+        "bytes": 1820,
+        "rawLines": 40,
+        "nonblankLines": 35,
+        "sha256": "f3f344fd6212e945ac6ff3d54bab5280b767ea6916f25cb6cce7ff582e2fc4a5",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:02.950Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/NotifyRuleController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 320
+        },
+        {
+          "offset": 321,
+          "requestedLimit": 80,
+          "from": 321,
+          "to": 400
+        },
+        {
+          "offset": 401,
+          "requestedLimit": 80,
+          "from": 401,
+          "to": 480
+        },
+        {
+          "offset": 481,
+          "requestedLimit": 80,
+          "from": 481,
+          "to": 518
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 25671,
+        "rawLines": 518,
+        "nonblankLines": 490,
+        "sha256": "a940eb4156cbbd5dc5c8c94b58815ee9b8020d4287aad1349ab60e1de3702c80",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.126Z"
+      },
+      "post": {
+        "bytes": 25671,
+        "rawLines": 518,
+        "nonblankLines": 490,
+        "sha256": "a940eb4156cbbd5dc5c8c94b58815ee9b8020d4287aad1349ab60e1de3702c80",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.126Z"
+      },
+      "observedEnd": 518,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/PermissionController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 233
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 11631,
+        "rawLines": 233,
+        "nonblankLines": 219,
+        "sha256": "16caa75b3271acd8e86b264b7d6fc66161db28dfb96117bd2306f84833e5495a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.216Z"
+      },
+      "post": {
+        "bytes": 11631,
+        "rawLines": 233,
+        "nonblankLines": 219,
+        "sha256": "16caa75b3271acd8e86b264b7d6fc66161db28dfb96117bd2306f84833e5495a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.216Z"
+      },
+      "observedEnd": 233,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/RoleController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 231
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 10109,
+        "rawLines": 231,
+        "nonblankLines": 220,
+        "sha256": "77c57afec3cc0d029e35c38fa766cbb7e0204e29540cacd4b9cdb870cd0f84b8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.255Z"
+      },
+      "post": {
+        "bytes": 10109,
+        "rawLines": 231,
+        "nonblankLines": 220,
+        "sha256": "77c57afec3cc0d029e35c38fa766cbb7e0204e29540cacd4b9cdb870cd0f84b8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.255Z"
+      },
+      "observedEnd": 231,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/RolePermissionController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 123
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4927,
+        "rawLines": 123,
+        "nonblankLines": 115,
+        "sha256": "fb8b58299af234465ece80543e970220277620a9f95ffdc69a4df5b0ce0a3585",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:16:16.569Z"
+      },
+      "post": {
+        "bytes": 4927,
+        "rawLines": 123,
+        "nonblankLines": 115,
+        "sha256": "fb8b58299af234465ece80543e970220277620a9f95ffdc69a4df5b0ce0a3585",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:16:16.569Z"
+      },
+      "observedEnd": 123,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/SmsLogController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2147,
+        "rawLines": 46,
+        "nonblankLines": 41,
+        "sha256": "04c733a352631f98f411d05c1bb57f7505c35b683e161eab4f5e44734b8d30b5",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.359Z"
+      },
+      "post": {
+        "bytes": 2147,
+        "rawLines": 46,
+        "nonblankLines": 41,
+        "sha256": "04c733a352631f98f411d05c1bb57f7505c35b683e161eab4f5e44734b8d30b5",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.359Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/SmsProviderController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 171
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 7913,
+        "rawLines": 171,
+        "nonblankLines": 158,
+        "sha256": "e08c7ecafedd87648745a74d22cc10c01ddaf3c720ed3b2e6142ea4998aeb66c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.410Z"
+      },
+      "post": {
+        "bytes": 7913,
+        "rawLines": 171,
+        "nonblankLines": 158,
+        "sha256": "e08c7ecafedd87648745a74d22cc10c01ddaf3c720ed3b2e6142ea4998aeb66c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.410Z"
+      },
+      "observedEnd": 171,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/SmsTemplateController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 8663,
+        "rawLines": 191,
+        "nonblankLines": 179,
+        "sha256": "25f5023689218cefd46e00e8c729897a3ab92f455a6ac76df665b64a82e9fc73",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:04:45.674Z"
+      },
+      "post": {
+        "bytes": 8663,
+        "rawLines": 191,
+        "nonblankLines": 179,
+        "sha256": "25f5023689218cefd46e00e8c729897a3ab92f455a6ac76df665b64a82e9fc73",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:04:45.674Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/SysConfigController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 5013,
+        "rawLines": 131,
+        "nonblankLines": 123,
+        "sha256": "2b010db7078dfb01fe175741e6f6f53bd2ca4eeb4a2c5f72060ce52a9c4ee58d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:04:27.239Z"
+      },
+      "post": {
+        "bytes": 5013,
+        "rawLines": 131,
+        "nonblankLines": 123,
+        "sha256": "2b010db7078dfb01fe175741e6f6f53bd2ca4eeb4a2c5f72060ce52a9c4ee58d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:04:27.239Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/SysMenuController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 4407,
+        "rawLines": 106,
+        "nonblankLines": 95,
+        "sha256": "43424779fda659abb69fd489b91d27bf0f305fa052fc752291c84564dcd566af",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.536Z"
+      },
+      "post": {
+        "bytes": 4407,
+        "rawLines": 106,
+        "nonblankLines": 95,
+        "sha256": "43424779fda659abb69fd489b91d27bf0f305fa052fc752291c84564dcd566af",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.536Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/TableSchemaController.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 18549,
+        "rawLines": 477,
+        "nonblankLines": 444,
+        "sha256": "5b402c37df2c7520cebe08a2866245c59e8663c95fca41bc897e3f4e3a054f52",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.653Z"
+      },
+      "post": {
+        "bytes": 18549,
+        "rawLines": 477,
+        "nonblankLines": 444,
+        "sha256": "5b402c37df2c7520cebe08a2866245c59e8663c95fca41bc897e3f4e3a054f52",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.653Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/UserController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 320
+        },
+        {
+          "offset": 321,
+          "requestedLimit": 80,
+          "from": 321,
+          "to": 400
+        },
+        {
+          "offset": 401,
+          "requestedLimit": 80,
+          "from": 401,
+          "to": 401
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 17831,
+        "rawLines": 401,
+        "nonblankLines": 386,
+        "sha256": "53232d0a693f82f5f43446ae3a3bf8956ac30c61e9ea2ea916eff95848cc1dcb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:16:16.536Z"
+      },
+      "post": {
+        "bytes": 17831,
+        "rawLines": 401,
+        "nonblankLines": 386,
+        "sha256": "53232d0a693f82f5f43446ae3a3bf8956ac30c61e9ea2ea916eff95848cc1dcb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:16:16.536Z"
+      },
+      "observedEnd": 401,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/controller/UserRoleController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 123
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4789,
+        "rawLines": 123,
+        "nonblankLines": 115,
+        "sha256": "72756601f13164c2bfd2a4e6e95181e5ee23def7592132ec85fcfe68357ccb09",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:16:16.624Z"
+      },
+      "post": {
+        "bytes": 4789,
+        "rawLines": 123,
+        "nonblankLines": 115,
+        "sha256": "72756601f13164c2bfd2a4e6e95181e5ee23def7592132ec85fcfe68357ccb09",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T18:16:16.624Z"
+      },
+      "observedEnd": 123,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/dto/CreateTableRequest.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 567,
+        "rawLines": 19,
+        "nonblankLines": 17,
+        "sha256": "275ca63e3b9d84dd071c4c5a6070dc0272c046e5c45762b22209fc254e327f44",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.872Z"
+      },
+      "post": {
+        "bytes": 567,
+        "rawLines": 19,
+        "nonblankLines": 17,
+        "sha256": "275ca63e3b9d84dd071c4c5a6070dc0272c046e5c45762b22209fc254e327f44",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.872Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/dto/MessageDeliveryVo.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1849,
+        "rawLines": 53,
+        "nonblankLines": 41,
+        "sha256": "351883d5e49f79eeda4ac3b5fbe13a156614e17f89df6ad81d824b729f27a9fe",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.887Z"
+      },
+      "post": {
+        "bytes": 1849,
+        "rawLines": 53,
+        "nonblankLines": 41,
+        "sha256": "351883d5e49f79eeda4ac3b5fbe13a156614e17f89df6ad81d824b729f27a9fe",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.887Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/dto/MessageStatisticsVo.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2819,
+        "rawLines": 92,
+        "nonblankLines": 65,
+        "sha256": "dfcdbd71fe50b3871971987d889faaa4e91f1843587a4087d6a0782d839ebb91",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.934Z"
+      },
+      "post": {
+        "bytes": 2819,
+        "rawLines": 92,
+        "nonblankLines": 65,
+        "sha256": "dfcdbd71fe50b3871971987d889faaa4e91f1843587a4087d6a0782d839ebb91",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.934Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/dto/MessageTemplateSaveDto.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 60
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1868,
+        "rawLines": 60,
+        "nonblankLines": 43,
+        "sha256": "83ff2ab6742c38a2d122b162afc2b613e8e546b3f6ca972dda0bdded3b23c385",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.965Z"
+      },
+      "post": {
+        "bytes": 1868,
+        "rawLines": 60,
+        "nonblankLines": 43,
+        "sha256": "83ff2ab6742c38a2d122b162afc2b613e8e546b3f6ca972dda0bdded3b23c385",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.965Z"
+      },
+      "observedEnd": 60,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/dto/MessageTemplateVo.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1950,
+        "rawLines": 62,
+        "nonblankLines": 45,
+        "sha256": "50b13f240c0dd5f7af61dfd88f1680a2b8ee3f7a68e8b1473f991e7512b8a1cb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.992Z"
+      },
+      "post": {
+        "bytes": 1950,
+        "rawLines": 62,
+        "nonblankLines": 45,
+        "sha256": "50b13f240c0dd5f7af61dfd88f1680a2b8ee3f7a68e8b1473f991e7512b8a1cb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:03.992Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/dto/NotifyEventVo.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 931,
+        "rawLines": 37,
+        "nonblankLines": 25,
+        "sha256": "5a89f26e1fcf44f13f91e4aacb918645f8f525a0ffae998134cae3bda44cf155",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.012Z"
+      },
+      "post": {
+        "bytes": 931,
+        "rawLines": 37,
+        "nonblankLines": 25,
+        "sha256": "5a89f26e1fcf44f13f91e4aacb918645f8f525a0ffae998134cae3bda44cf155",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.012Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/dto/NotifyRuleSaveDto.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 66
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1974,
+        "rawLines": 66,
+        "nonblankLines": 48,
+        "sha256": "01cc19b381a65885b87dc43d8fb966474bd10f6f7085821655d5973b0cd0650d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.054Z"
+      },
+      "post": {
+        "bytes": 1974,
+        "rawLines": 66,
+        "nonblankLines": 48,
+        "sha256": "01cc19b381a65885b87dc43d8fb966474bd10f6f7085821655d5973b0cd0650d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.054Z"
+      },
+      "observedEnd": 66,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/dto/NotifyRuleVo.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2292,
+        "rawLines": 81,
+        "nonblankLines": 57,
+        "sha256": "c34431af80ee7c756069b4923553d8c82c5fc44fadc10dae3d41dd802d281fc4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.092Z"
+      },
+      "post": {
+        "bytes": 2292,
+        "rawLines": 81,
+        "nonblankLines": 57,
+        "sha256": "c34431af80ee7c756069b4923553d8c82c5fc44fadc10dae3d41dd802d281fc4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.092Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/mail/MailService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2744,
+        "rawLines": 53,
+        "nonblankLines": 45,
+        "sha256": "c87820bb80c1d239b24d297948adcda4959bae7dbf6da119c35e661cf54ae05b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.127Z"
+      },
+      "post": {
+        "bytes": 2744,
+        "rawLines": 53,
+        "nonblankLines": 45,
+        "sha256": "c87820bb80c1d239b24d297948adcda4959bae7dbf6da119c35e661cf54ae05b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.127Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/mail/MailServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 320
+        },
+        {
+          "offset": 321,
+          "requestedLimit": 80,
+          "from": 321,
+          "to": 334
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 14908,
+        "rawLines": 334,
+        "nonblankLines": 310,
+        "sha256": "5ed8e7dc711bfd95b4138de8a63d2d6be979adbce8cfde670899ddc5aee16809",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.246Z"
+      },
+      "post": {
+        "bytes": 14908,
+        "rawLines": 334,
+        "nonblankLines": 310,
+        "sha256": "5ed8e7dc711bfd95b4138de8a63d2d6be979adbce8cfde670899ddc5aee16809",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.246Z"
+      },
+      "observedEnd": 334,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/mail/SysMailAccountService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 217,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "1ba9480558f878024e2f9649f0e49326e0766aecad6eceeedee394fde21c153a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.257Z"
+      },
+      "post": {
+        "bytes": 217,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "1ba9480558f878024e2f9649f0e49326e0766aecad6eceeedee394fde21c153a",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.257Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/mail/SysMailAccountServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 402,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "1175c1ec1e578d9b04342bd65d813ffe3b2a9a786fa8ee9a886d5e5500984d8c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.266Z"
+      },
+      "post": {
+        "bytes": 402,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "1175c1ec1e578d9b04342bd65d813ffe3b2a9a786fa8ee9a886d5e5500984d8c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.266Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/mail/SysMailLogService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 782,
+        "rawLines": 23,
+        "nonblankLines": 19,
+        "sha256": "c1a2b68137ca92f708ddb545827a90e5d444deb1497bada2cdf912776b8b711b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.281Z"
+      },
+      "post": {
+        "bytes": 782,
+        "rawLines": 23,
+        "nonblankLines": 19,
+        "sha256": "c1a2b68137ca92f708ddb545827a90e5d444deb1497bada2cdf912776b8b711b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.281Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/mail/SysMailLogServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2812,
+        "rawLines": 70,
+        "nonblankLines": 66,
+        "sha256": "68a7fa888b15e9d4190c1d8aca77b76ce0074cf59a8c86811b1c243ec51ec8c4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.305Z"
+      },
+      "post": {
+        "bytes": 2812,
+        "rawLines": 70,
+        "nonblankLines": 66,
+        "sha256": "68a7fa888b15e9d4190c1d8aca77b76ce0074cf59a8c86811b1c243ec51ec8c4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.305Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/mail/SysMailTemplateService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 220,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "da23279cb533f089c6d5807c5b4243cd42bff136072cca33373a17a0c3c423d5",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.313Z"
+      },
+      "post": {
+        "bytes": 220,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "da23279cb533f089c6d5807c5b4243cd42bff136072cca33373a17a0c3c423d5",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.313Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/mail/SysMailTemplateServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 10
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 408,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "dd088bcc93da908bbcfb7105ab9fdb03138cf0a889641a5a60d5f559763bfe50",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.323Z"
+      },
+      "post": {
+        "bytes": 408,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "dd088bcc93da908bbcfb7105ab9fdb03138cf0a889641a5a60d5f559763bfe50",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.323Z"
+      },
+      "observedEnd": 10,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/message/MessageStatisticsQuery.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1779,
+        "rawLines": 48,
+        "nonblankLines": 36,
+        "sha256": "9d10c91e41ec66ba025c6d9f096b56b995bf02647f168de1e7eb6d675b56ba7c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.342Z"
+      },
+      "post": {
+        "bytes": 1779,
+        "rawLines": 48,
+        "nonblankLines": 36,
+        "sha256": "9d10c91e41ec66ba025c6d9f096b56b995bf02647f168de1e7eb6d675b56ba7c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.342Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/message/MessageStatisticsService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1214,
+        "rawLines": 29,
+        "nonblankLines": 24,
+        "sha256": "794c11b6c079a54d904a659fe4c9ebc995fcd1d0330eb4cf7ee21eecb428133e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.353Z"
+      },
+      "post": {
+        "bytes": 1214,
+        "rawLines": 29,
+        "nonblankLines": 24,
+        "sha256": "794c11b6c079a54d904a659fe4c9ebc995fcd1d0330eb4cf7ee21eecb428133e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.353Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/message/MessageStatisticsServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 20369,
+        "rawLines": 452,
+        "nonblankLines": 408,
+        "sha256": "26808ab4fdefd302a71adf633395b7849575b5f3975861ddd8299d80860b9275",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.452Z"
+      },
+      "post": {
+        "bytes": 20369,
+        "rawLines": 452,
+        "nonblankLines": 408,
+        "sha256": "26808ab4fdefd302a71adf633395b7849575b5f3975861ddd8299d80860b9275",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.452Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/message/TrendPointVo.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 671,
+        "rawLines": 26,
+        "nonblankLines": 19,
+        "sha256": "a97a50f0730f5a58356d15e6c34be33f16755b9e5aa03c5f74c540bffdb94716",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.463Z"
+      },
+      "post": {
+        "bytes": 671,
+        "rawLines": 26,
+        "nonblankLines": 19,
+        "sha256": "a97a50f0730f5a58356d15e6c34be33f16755b9e5aa03c5f74c540bffdb94716",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.463Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notice/AppNoticeAuthInterceptor.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 56
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 2428,
+        "rawLines": 56,
+        "nonblankLines": 50,
+        "sha256": "84a4e2c2a0d300417f25dbe57a3d68961759be5df371ce7fbe0f7828743c5e89",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.479Z"
+      },
+      "post": {
+        "bytes": 2428,
+        "rawLines": 56,
+        "nonblankLines": 50,
+        "sha256": "84a4e2c2a0d300417f25dbe57a3d68961759be5df371ce7fbe0f7828743c5e89",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.479Z"
+      },
+      "observedEnd": 56,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notice/NoticeDisplay.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1051,
+        "rawLines": 28,
+        "nonblankLines": 22,
+        "sha256": "997b9da7bde21fac6840dc0d61d99db40f88052558d99d820580930581e3f561",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.550Z"
+      },
+      "post": {
+        "bytes": 1051,
+        "rawLines": 28,
+        "nonblankLines": 22,
+        "sha256": "997b9da7bde21fac6840dc0d61d99db40f88052558d99d820580930581e3f561",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.550Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notice/NoticeService.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 117
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 5117,
+        "rawLines": 117,
+        "nonblankLines": 99,
+        "sha256": "5af3208f7f495883240e9ef195c0cccb274614906d032be9ee233da8a1eb0f6d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.565Z"
+      },
+      "post": {
+        "bytes": 5117,
+        "rawLines": 117,
+        "nonblankLines": 99,
+        "sha256": "5af3208f7f495883240e9ef195c0cccb274614906d032be9ee233da8a1eb0f6d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.565Z"
+      },
+      "observedEnd": 117,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notice/NoticeServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 320
+        },
+        {
+          "offset": 321,
+          "requestedLimit": 80,
+          "from": 321,
+          "to": 400
+        },
+        {
+          "offset": 401,
+          "requestedLimit": 80,
+          "from": 401,
+          "to": 411
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 20743,
+        "rawLines": 411,
+        "nonblankLines": 377,
+        "sha256": "815074d46f8b59a27eec20435ec2411fb72975c9dbd9bf2c7a61cdd5b67e845b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.634Z"
+      },
+      "post": {
+        "bytes": 20743,
+        "rawLines": 411,
+        "nonblankLines": 377,
+        "sha256": "815074d46f8b59a27eec20435ec2411fb72975c9dbd9bf2c7a61cdd5b67e845b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.634Z"
+      },
+      "observedEnd": 411,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notice/NoticeTargets.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 13233,
+        "rawLines": 290,
+        "nonblankLines": 270,
+        "sha256": "2b6116fee8c5893e29f712a5b6355aa668b704e920f055cd6b8c70291ac4f3da",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.673Z"
+      },
+      "post": {
+        "bytes": 13233,
+        "rawLines": 290,
+        "nonblankLines": 270,
+        "sha256": "2b6116fee8c5893e29f712a5b6355aa668b704e920f055cd6b8c70291ac4f3da",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.673Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notice/controller/AdminNoticeController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 98
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4863,
+        "rawLines": 98,
+        "nonblankLines": 89,
+        "sha256": "67ee57bad70665ddb5c05795c634b38a9f997113b3770e2d668da72527e4a9f9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.503Z"
+      },
+      "post": {
+        "bytes": 4863,
+        "rawLines": 98,
+        "nonblankLines": 89,
+        "sha256": "67ee57bad70665ddb5c05795c634b38a9f997113b3770e2d668da72527e4a9f9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.503Z"
+      },
+      "observedEnd": 98,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notice/controller/AppNoticeController.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 127
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 7185,
+        "rawLines": 127,
+        "nonblankLines": 118,
+        "sha256": "379bc760564ee6b8ebb45aacb5ff4fda8f9b13fbd35add90414a11dfde5225bb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.530Z"
+      },
+      "post": {
+        "bytes": 7185,
+        "rawLines": 127,
+        "nonblankLines": 118,
+        "sha256": "379bc760564ee6b8ebb45aacb5ff4fda8f9b13fbd35add90414a11dfde5225bb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.530Z"
+      },
+      "observedEnd": 127,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notice/dto/ReadAckDto.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 15
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 384,
+        "rawLines": 15,
+        "nonblankLines": 12,
+        "sha256": "148bca43430751c29b3f5d2a9c8d6c8a8a844b4f36dad181e3a6de4eb768d30d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.540Z"
+      },
+      "post": {
+        "bytes": 384,
+        "rawLines": 15,
+        "nonblankLines": 12,
+        "sha256": "148bca43430751c29b3f5d2a9c8d6c8a8a844b4f36dad181e3a6de4eb768d30d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.540Z"
+      },
+      "observedEnd": 15,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/InappService.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 44
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 2169,
+        "rawLines": 44,
+        "nonblankLines": 36,
+        "sha256": "4962859049103920f0532aa0613e6a40f0f56901e188496d82ae6a0c56a8acb5",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.684Z"
+      },
+      "post": {
+        "bytes": 2169,
+        "rawLines": 44,
+        "nonblankLines": 36,
+        "sha256": "4962859049103920f0532aa0613e6a40f0f56901e188496d82ae6a0c56a8acb5",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.684Z"
+      },
+      "observedEnd": 44,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/InappServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 232
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 9906,
+        "rawLines": 232,
+        "nonblankLines": 217,
+        "sha256": "d3ca75e692a5955216349d3e08d1fa07c2614ac8c87ef96da6f811d241577f6b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.726Z"
+      },
+      "post": {
+        "bytes": 9906,
+        "rawLines": 232,
+        "nonblankLines": 217,
+        "sha256": "d3ca75e692a5955216349d3e08d1fa07c2614ac8c87ef96da6f811d241577f6b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.726Z"
+      },
+      "observedEnd": 232,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/MessageTemplateService.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 320
+        },
+        {
+          "offset": 321,
+          "requestedLimit": 80,
+          "from": 321,
+          "to": 378
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 17224,
+        "rawLines": 378,
+        "nonblankLines": 352,
+        "sha256": "ff620d8d8c199e6fc8304638dd220c997c9ec836c38a9ed0ba49dd70e510b695",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.784Z"
+      },
+      "post": {
+        "bytes": 17224,
+        "rawLines": 378,
+        "nonblankLines": 352,
+        "sha256": "ff620d8d8c199e6fc8304638dd220c997c9ec836c38a9ed0ba49dd70e510b695",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.784Z"
+      },
+      "observedEnd": 378,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/NotifyChannel.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 42
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 1805,
+        "rawLines": 42,
+        "nonblankLines": 34,
+        "sha256": "8bd20b111589b03ce0f55febd3adf1c2339d3b4d121e301974643f743daa6130",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.792Z"
+      },
+      "post": {
+        "bytes": 1805,
+        "rawLines": 42,
+        "nonblankLines": 34,
+        "sha256": "8bd20b111589b03ce0f55febd3adf1c2339d3b4d121e301974643f743daa6130",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.792Z"
+      },
+      "observedEnd": 42,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/NotifyEventDef.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 72
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3779,
+        "rawLines": 72,
+        "nonblankLines": 66,
+        "sha256": "61f2cf113601a4cbefc95bedc0120b95c6ad70ad92369f1d7b8c37ff222821c9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.808Z"
+      },
+      "post": {
+        "bytes": 3779,
+        "rawLines": 72,
+        "nonblankLines": 66,
+        "sha256": "61f2cf113601a4cbefc95bedc0120b95c6ad70ad92369f1d7b8c37ff222821c9",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.808Z"
+      },
+      "observedEnd": 72,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/NotifyEventField.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 712,
+        "rawLines": 14,
+        "nonblankLines": 13,
+        "sha256": "f2c38c8494cb54656b162925ac10ad78e38cd0c517a607139941097f3fc98ee6",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.816Z"
+      },
+      "post": {
+        "bytes": 712,
+        "rawLines": 14,
+        "nonblankLines": 13,
+        "sha256": "f2c38c8494cb54656b162925ac10ad78e38cd0c517a607139941097f3fc98ee6",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.816Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/NotifyEventRegistry.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 234
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 13021,
+        "rawLines": 234,
+        "nonblankLines": 216,
+        "sha256": "ce1091cdcbb15e48c7a95a990ada2a1077097db272637b52a64f761253ab3bbc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.852Z"
+      },
+      "post": {
+        "bytes": 13021,
+        "rawLines": 234,
+        "nonblankLines": 216,
+        "sha256": "ce1091cdcbb15e48c7a95a990ada2a1077097db272637b52a64f761253ab3bbc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.852Z"
+      },
+      "observedEnd": 234,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/NotifyPublisher.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 320
+        },
+        {
+          "offset": 321,
+          "requestedLimit": 80,
+          "from": 321,
+          "to": 358
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 18360,
+        "rawLines": 358,
+        "nonblankLines": 343,
+        "sha256": "73abecd524b122095c0b71d6aa2301754512e815b1c0abe8814ad9251babda5d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.930Z"
+      },
+      "post": {
+        "bytes": 18360,
+        "rawLines": 358,
+        "nonblankLines": 343,
+        "sha256": "73abecd524b122095c0b71d6aa2301754512e815b1c0abe8814ad9251babda5d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.930Z"
+      },
+      "observedEnd": 358,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SmsService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1292,
+        "rawLines": 29,
+        "nonblankLines": 23,
+        "sha256": "9f4db5a573f0757c32556e6fbdc6c0d51adaa80e2e286f0727deec565caf8c90",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.999Z"
+      },
+      "post": {
+        "bytes": 1292,
+        "rawLines": 29,
+        "nonblankLines": 23,
+        "sha256": "9f4db5a573f0757c32556e6fbdc6c0d51adaa80e2e286f0727deec565caf8c90",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.999Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SmsServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 190
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 8219,
+        "rawLines": 190,
+        "nonblankLines": 175,
+        "sha256": "70a9e92a34fadb3341a014f53141c9e27b423d3518c259b267ddfaa05bd2b0cf",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.040Z"
+      },
+      "post": {
+        "bytes": 8219,
+        "rawLines": 190,
+        "nonblankLines": 175,
+        "sha256": "70a9e92a34fadb3341a014f53141c9e27b423d3518c259b267ddfaa05bd2b0cf",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.040Z"
+      },
+      "observedEnd": 190,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SysNotifyRuleService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 216,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "f7bd872105cf9945867517e7f3fc8dd0d30b830ca2b0387a1c65a2ac37350ccc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.049Z"
+      },
+      "post": {
+        "bytes": 216,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "f7bd872105cf9945867517e7f3fc8dd0d30b830ca2b0387a1c65a2ac37350ccc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.049Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SysNotifyRuleServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 10
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 398,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "ebce1e739736d386497f0f52dbe39645b14b23ac013f9edc2e63b0f433bd5b2b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.057Z"
+      },
+      "post": {
+        "bytes": 398,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "ebce1e739736d386497f0f52dbe39645b14b23ac013f9edc2e63b0f433bd5b2b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.057Z"
+      },
+      "observedEnd": 10,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SysSmsLogService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 204,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "8dd0a19dc0cbfad831609c28d740cc70fa39be4529d6b03d9d38a701b1443e53",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.064Z"
+      },
+      "post": {
+        "bytes": 204,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "8dd0a19dc0cbfad831609c28d740cc70fa39be4529d6b03d9d38a701b1443e53",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.064Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SysSmsLogServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 365,
+        "rawLines": 9,
+        "nonblankLines": 7,
+        "sha256": "ddce92afb99a3c10b8c61395131844a3bc6bb9c828edb96cce48a3b216d1f0b3",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.073Z"
+      },
+      "post": {
+        "bytes": 365,
+        "rawLines": 9,
+        "nonblankLines": 7,
+        "sha256": "ddce92afb99a3c10b8c61395131844a3bc6bb9c828edb96cce48a3b216d1f0b3",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.073Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SysSmsProviderService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 219,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "b7da2b8870b27593c2a3a78f2ace244b8204ed190d5516fba40bf206927ea9ec",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.081Z"
+      },
+      "post": {
+        "bytes": 219,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "b7da2b8870b27593c2a3a78f2ace244b8204ed190d5516fba40bf206927ea9ec",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.081Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SysSmsProviderServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 404,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "eaa2db1a98e09a3db167e8ef4beab8e788c3c40b7d49fb53d3cb900fdf6cc831",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.093Z"
+      },
+      "post": {
+        "bytes": 404,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "eaa2db1a98e09a3db167e8ef4beab8e788c3c40b7d49fb53d3cb900fdf6cc831",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.093Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SysSmsTemplateService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 219,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "36aca9319fd44ff5500f13a7c0e2ae05d384951e8aa69b451ca12bf9ed712738",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.102Z"
+      },
+      "post": {
+        "bytes": 219,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "36aca9319fd44ff5500f13a7c0e2ae05d384951e8aa69b451ca12bf9ed712738",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.102Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/SysSmsTemplateServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 10
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 404,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "3fa865c29b9bd9e994cdcb8963ef9d8d5e583a1dba4247374289cd1c7907a4ea",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.111Z"
+      },
+      "post": {
+        "bytes": 404,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "3fa865c29b9bd9e994cdcb8963ef9d8d5e583a1dba4247374289cd1c7907a4ea",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.111Z"
+      },
+      "observedEnd": 10,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/UserRoleChangeNotifier.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 89
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3825,
+        "rawLines": 89,
+        "nonblankLines": 83,
+        "sha256": "334b7e6524609bff10ac86e9c81e81c2068b2a00e024a25545dc01b8c43d68e8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.133Z"
+      },
+      "post": {
+        "bytes": 3825,
+        "rawLines": 89,
+        "nonblankLines": 83,
+        "sha256": "334b7e6524609bff10ac86e9c81e81c2068b2a00e024a25545dc01b8c43d68e8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.133Z"
+      },
+      "observedEnd": 89,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/sms/AliyunSmsProvider.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 5474,
+        "rawLines": 121,
+        "nonblankLines": 108,
+        "sha256": "8bc4bc651c3fd3a1eb60d85ffafac667dbf931eea158f9441e3ce87783cc3c4b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.966Z"
+      },
+      "post": {
+        "bytes": 5474,
+        "rawLines": 121,
+        "nonblankLines": 108,
+        "sha256": "8bc4bc651c3fd3a1eb60d85ffafac667dbf931eea158f9441e3ce87783cc3c4b",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.966Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/sms/MockSmsProvider.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 964,
+        "rawLines": 32,
+        "nonblankLines": 28,
+        "sha256": "8e183e739aa93aa8a30275d4f7ad8d92b4cf2d540b540325f2ff99006fb307cc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.976Z"
+      },
+      "post": {
+        "bytes": 964,
+        "rawLines": 32,
+        "nonblankLines": 28,
+        "sha256": "8e183e739aa93aa8a30275d4f7ad8d92b4cf2d540b540325f2ff99006fb307cc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.976Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/notify/sms/SmsProvider.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1371,
+        "rawLines": 30,
+        "nonblankLines": 26,
+        "sha256": "4bc331c3367644ab29905dffd6cefa6b2aba4df3ac6968cf14dab9cbd7b4293e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.987Z"
+      },
+      "post": {
+        "bytes": 1371,
+        "rawLines": 30,
+        "nonblankLines": 26,
+        "sha256": "4bc331c3367644ab29905dffd6cefa6b2aba4df3ac6968cf14dab9cbd7b4293e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:04.987Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/DictDataService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1146,
+        "rawLines": 30,
+        "nonblankLines": 26,
+        "sha256": "9f051500fb394437233c7a05c836ea311cec84c684877ce84cbddcbc80960d93",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.141Z"
+      },
+      "post": {
+        "bytes": 1146,
+        "rawLines": 30,
+        "nonblankLines": 26,
+        "sha256": "9f051500fb394437233c7a05c836ea311cec84c684877ce84cbddcbc80960d93",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.141Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/DictTypeService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 202,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "796afcb21e8687b1823fee6cc0d68dfe130feebc8fd68aaa08f3dd0dda8331d2",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.148Z"
+      },
+      "post": {
+        "bytes": 202,
+        "rawLines": 6,
+        "nonblankLines": 4,
+        "sha256": "796afcb21e8687b1823fee6cc0d68dfe130feebc8fd68aaa08f3dd0dda8331d2",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.148Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/PermissionService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 322,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "98807db53f6f030674a5e198664da448362c156301747894a9e71b6a1a540954",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.285Z"
+      },
+      "post": {
+        "bytes": 322,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "98807db53f6f030674a5e198664da448362c156301747894a9e71b6a1a540954",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.285Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/RolePermissionService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 971,
+        "rawLines": 24,
+        "nonblankLines": 21,
+        "sha256": "7895f760c24d6d16f9205b0f217b4084a47e4a323e31b5799ac1c168e0d68131",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.295Z"
+      },
+      "post": {
+        "bytes": 971,
+        "rawLines": 24,
+        "nonblankLines": 21,
+        "sha256": "7895f760c24d6d16f9205b0f217b4084a47e4a323e31b5799ac1c168e0d68131",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.295Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/RoleService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 966,
+        "rawLines": 24,
+        "nonblankLines": 21,
+        "sha256": "ab59e428d92bc2fd4af87b1f0b4e1d7d3536fa81b5d0259ebbf3e60987d29f5d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.303Z"
+      },
+      "post": {
+        "bytes": 966,
+        "rawLines": 24,
+        "nonblankLines": 21,
+        "sha256": "ab59e428d92bc2fd4af87b1f0b4e1d7d3536fa81b5d0259ebbf3e60987d29f5d",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.303Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/SysConfigService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 281,
+        "rawLines": 11,
+        "nonblankLines": 7,
+        "sha256": "551997f686f613c6192c8dcdea28d3dbf91bceb4adc73f59c1d0a27afc7a605c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.311Z"
+      },
+      "post": {
+        "bytes": 281,
+        "rawLines": 11,
+        "nonblankLines": 7,
+        "sha256": "551997f686f613c6192c8dcdea28d3dbf91bceb4adc73f59c1d0a27afc7a605c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.311Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/SysMenuService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1368,
+        "rawLines": 47,
+        "nonblankLines": 41,
+        "sha256": "955ebcb7e1d60cce4c7f0c8794b9cdf191ba843ac338e8fc2749cc194d4c7300",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.321Z"
+      },
+      "post": {
+        "bytes": 1368,
+        "rawLines": 47,
+        "nonblankLines": 41,
+        "sha256": "955ebcb7e1d60cce4c7f0c8794b9cdf191ba843ac338e8fc2749cc194d4c7300",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.321Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/UserRoleService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1050,
+        "rawLines": 25,
+        "nonblankLines": 22,
+        "sha256": "04be01edf33c80322b07b58f52af66f2a99d1aff30596d6fef81fe9c7c1fe623",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.330Z"
+      },
+      "post": {
+        "bytes": 1050,
+        "rawLines": 25,
+        "nonblankLines": 22,
+        "sha256": "04be01edf33c80322b07b58f52af66f2a99d1aff30596d6fef81fe9c7c1fe623",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.330Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/UserService.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 304,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "64404f81e98048a5ad500d17bcd0e7888dec6a4a4cc7e709ff257956c15e852e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.338Z"
+      },
+      "post": {
+        "bytes": 304,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "64404f81e98048a5ad500d17bcd0e7888dec6a4a4cc7e709ff257956c15e852e",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.338Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/DictDataServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 846,
+        "rawLines": 26,
+        "nonblankLines": 22,
+        "sha256": "48a30dead3092cd935bf77acc4d9c3f69016f18e73f3514ce099e46e7d0adb68",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.158Z"
+      },
+      "post": {
+        "bytes": 846,
+        "rawLines": 26,
+        "nonblankLines": 22,
+        "sha256": "48a30dead3092cd935bf77acc4d9c3f69016f18e73f3514ce099e46e7d0adb68",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.158Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/DictTypeServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 416,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "5a24a4ac268b5f9ade0b75b811ef7d440404243c1e37f9750074d0954ccf7bd8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.165Z"
+      },
+      "post": {
+        "bytes": 416,
+        "rawLines": 10,
+        "nonblankLines": 8,
+        "sha256": "5a24a4ac268b5f9ade0b75b811ef7d440404243c1e37f9750074d0954ccf7bd8",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.165Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/PermissionServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 550,
+        "rawLines": 14,
+        "nonblankLines": 12,
+        "sha256": "8613207694bc53b760b10b3f5c04d909bebf1ff1f3b8fef46b89a793c00781b4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.173Z"
+      },
+      "post": {
+        "bytes": 550,
+        "rawLines": 14,
+        "nonblankLines": 12,
+        "sha256": "8613207694bc53b760b10b3f5c04d909bebf1ff1f3b8fef46b89a793c00781b4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.173Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/RolePermissionServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 59
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 2453,
+        "rawLines": 59,
+        "nonblankLines": 52,
+        "sha256": "8abae71c18f0e8cb36d7fbff35ce3b61571144a6f5926c2b38b69f2bc4e74d3c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.189Z"
+      },
+      "post": {
+        "bytes": 2453,
+        "rawLines": 59,
+        "nonblankLines": 52,
+        "sha256": "8abae71c18f0e8cb36d7fbff35ce3b61571144a6f5926c2b38b69f2bc4e74d3c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.189Z"
+      },
+      "observedEnd": 59,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/RoleServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2022,
+        "rawLines": 46,
+        "nonblankLines": 42,
+        "sha256": "6ec951e35bae7c386547e1e824b5bd49418face0a558dbe18696948a545768ca",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.202Z"
+      },
+      "post": {
+        "bytes": 2022,
+        "rawLines": 46,
+        "nonblankLines": 42,
+        "sha256": "6ec951e35bae7c386547e1e824b5bd49418face0a558dbe18696948a545768ca",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.202Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/SysConfigServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 1369,
+        "rawLines": 39,
+        "nonblankLines": 33,
+        "sha256": "575a58db4cb8751a7d16ed62ae42acc4f75954d90ed84655bc00c586206523e4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.217Z"
+      },
+      "post": {
+        "bytes": 1369,
+        "rawLines": 39,
+        "nonblankLines": 33,
+        "sha256": "575a58db4cb8751a7d16ed62ae42acc4f75954d90ed84655bc00c586206523e4",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.217Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/SysMenuServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 6467,
+        "rawLines": 144,
+        "nonblankLines": 135,
+        "sha256": "1246f83e9734b157618466610df5cdbe5e83edbe3fae6317b2f1d5ed67689792",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.245Z"
+      },
+      "post": {
+        "bytes": 6467,
+        "rawLines": 144,
+        "nonblankLines": 135,
+        "sha256": "1246f83e9734b157618466610df5cdbe5e83edbe3fae6317b2f1d5ed67689792",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.245Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/UserRoleServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 113
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 4937,
+        "rawLines": 113,
+        "nonblankLines": 102,
+        "sha256": "be661b903b48849794d1418118c559edd42214364f12d26d30baf80abaa048c1",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.266Z"
+      },
+      "post": {
+        "bytes": 4937,
+        "rawLines": 113,
+        "nonblankLines": 102,
+        "sha256": "be661b903b48849794d1418118c559edd42214364f12d26d30baf80abaa048c1",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.266Z"
+      },
+      "observedEnd": 113,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/main/java/com/astral/system/service/impl/UserServiceImpl.java",
+      "module": "astral-system",
+      "coverage": "NOTREAD",
+      "actualReads": [],
+      "eof": false,
+      "pre": {
+        "bytes": 2014,
+        "rawLines": 53,
+        "nonblankLines": 49,
+        "sha256": "bbf432138399ad173747b525a5cde42c152856f181c0083e4fa05a7ac0e2ade0",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.277Z"
+      },
+      "post": {
+        "bytes": 2014,
+        "rawLines": 53,
+        "nonblankLines": 49,
+        "sha256": "bbf432138399ad173747b525a5cde42c152856f181c0083e4fa05a7ac0e2ade0",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.277Z"
+      },
+      "stable": true,
+      "boundary": "Inventoried hash is NOT semantic FULL."
+    },
+    {
+      "path": "astral-system/src/test/java/com/astral/system/notice/NoticeDisclaimerFieldsTest.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 240
+        },
+        {
+          "offset": 241,
+          "requestedLimit": 80,
+          "from": 241,
+          "to": 270
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 12392,
+        "rawLines": 270,
+        "nonblankLines": 226,
+        "sha256": "b911a9a3b592b02c5a32aed6183e251235647331b8b18a2459c9ae15efc9c4a0",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.373Z"
+      },
+      "post": {
+        "bytes": 12392,
+        "rawLines": 270,
+        "nonblankLines": 226,
+        "sha256": "b911a9a3b592b02c5a32aed6183e251235647331b8b18a2459c9ae15efc9c4a0",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.373Z"
+      },
+      "observedEnd": 270,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/test/java/com/astral/system/notice/NoticePlatformTest.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 69
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 3488,
+        "rawLines": 69,
+        "nonblankLines": 64,
+        "sha256": "eb6c83bd18359dc267e26ab1edb732bb1f87f278fd3e324e22fd0de7716b37cc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.392Z"
+      },
+      "post": {
+        "bytes": 3488,
+        "rawLines": 69,
+        "nonblankLines": 64,
+        "sha256": "eb6c83bd18359dc267e26ab1edb732bb1f87f278fd3e324e22fd0de7716b37cc",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.392Z"
+      },
+      "observedEnd": 69,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/test/java/com/astral/system/notify/FeedbackReplyPlatformTest.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 136
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 6601,
+        "rawLines": 136,
+        "nonblankLines": 124,
+        "sha256": "0e533cb1fefaa5380caea0c5bcbc50cc8017d8d28bc498d6e6d49a9da9b8c0c7",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.422Z"
+      },
+      "post": {
+        "bytes": 6601,
+        "rawLines": 136,
+        "nonblankLines": 124,
+        "sha256": "0e533cb1fefaa5380caea0c5bcbc50cc8017d8d28bc498d6e6d49a9da9b8c0c7",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.422Z"
+      },
+      "observedEnd": 136,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/test/java/com/astral/system/notify/MessageTemplateVariableTest.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 129
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 6582,
+        "rawLines": 129,
+        "nonblankLines": 114,
+        "sha256": "aa47c6430b9a8adc29f6045d09b763632ad457ebc39e24503b25bb1b9b5d34d2",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.450Z"
+      },
+      "post": {
+        "bytes": 6582,
+        "rawLines": 129,
+        "nonblankLines": 114,
+        "sha256": "aa47c6430b9a8adc29f6045d09b763632ad457ebc39e24503b25bb1b9b5d34d2",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.450Z"
+      },
+      "observedEnd": 129,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "astral-system/src/test/java/com/astral/system/service/impl/UserRoleNotificationTest.java",
+      "module": "astral-system",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 229
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 10733,
+        "rawLines": 229,
+        "nonblankLines": 213,
+        "sha256": "a0a603d5bab77ef691a629d537a85b4e07a1520b9e37213507d1bfcffc96c3fb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.498Z"
+      },
+      "post": {
+        "bytes": 10733,
+        "rawLines": 229,
+        "nonblankLines": 213,
+        "sha256": "a0a603d5bab77ef691a629d537a85b4e07a1520b9e37213507d1bfcffc96c3fb",
+        "lastByte": 10,
+        "mtimeUtc": "2026-11-06T07:05:05.498Z"
+      },
+      "observedEnd": 229,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    },
+    {
+      "path": "docs/CODING_GUIDE.md",
+      "module": "guides",
+      "coverage": "FULL",
+      "actualReads": [
+        {
+          "offset": 1,
+          "requestedLimit": 80,
+          "from": 1,
+          "to": 80
+        },
+        {
+          "offset": 81,
+          "requestedLimit": 80,
+          "from": 81,
+          "to": 160
+        },
+        {
+          "offset": 161,
+          "requestedLimit": 80,
+          "from": 161,
+          "to": 207
+        }
+      ],
+      "eof": true,
+      "pre": {
+        "bytes": 18543,
+        "rawLines": 207,
+        "nonblankLines": 147,
+        "sha256": "3451cdd3c96eceeb1c615e1bedcf14fe0e46695c025e3c1c7f784007633ebb3c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-30T01:57:14.121Z"
+      },
+      "post": {
+        "bytes": 18543,
+        "rawLines": 207,
+        "nonblankLines": 147,
+        "sha256": "3451cdd3c96eceeb1c615e1bedcf14fe0e46695c025e3c1c7f784007633ebb3c",
+        "lastByte": 10,
+        "mtimeUtc": "2026-10-30T01:57:14.121Z"
+      },
+      "observedEnd": 207,
+      "stable": true,
+      "boundary": "Consecutive 1-to-EOF read and pre/post byte/line/hash equality."
+    }
+  ],
+  "restrictions": {
+    "sourceWrites": false,
+    "testRuns": false,
+    "buildRuns": false,
+    "applicationStarted": false,
+    "httpOrBrowserRequests": false,
+    "databaseAccess": false,
+    "networkRequests": false,
+    "gitWrites": false,
+    "children": false,
+    "secretOrDataFilesOpened": false,
+    "sharedMemoryOrPlanWrites": false,
+    "allowedWrites": "Two owned audit reports plus neutral daily memory_log only"
+  },
+  "finalHead": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+  "baselineCommits": "",
+  "finalStatus": "M astral-auth/pom.xml\n M astral-auth/src/main/java/com/astral/auth/api/AllAuthController.java\n M astral-auth/src/main/java/com/astral/auth/controller/ProfileController.java\n M astral-auth/src/main/java/com/astral/auth/dto/TokenInfo.java\n M astral-auth/src/main/java/com/astral/auth/registry/PermissionRegistry.java\n M astral-auth/src/main/java/com/astral/auth/security/LoginUserTypeResolver.java\n M astral-auth/src/main/java/com/astral/auth/security/PermissionAspect.java\n M astral-auth/src/main/java/com/astral/auth/service/AuthService.java\n M astral-auth/src/main/java/com/astral/auth/service/TokenService.java\n M astral-auth/src/main/java/com/astral/auth/service/impl/AuthServiceImpl.java\n M astral-auth/src/main/java/com/astral/auth/service/impl/TokenServiceImpl.java\n M astral-system/src/main/java/com/astral/system/controller/DictController.java\n M astral-system/src/main/java/com/astral/system/controller/MailTemplateController.java\n M astral-system/src/main/java/com/astral/system/controller/RolePermissionController.java\n M astral-system/src/main/java/com/astral/system/controller/SmsTemplateController.java\n M astral-system/src/main/java/com/astral/system/controller/SysConfigController.java\n M astral-system/src/main/java/com/astral/system/controller/UserController.java\n M astral-system/src/main/java/com/astral/system/controller/UserRoleController.java\n?? astral-auth/src/main/java/com/astral/auth/dto/SessionInfoResponse.java\n?? astral-auth/src/main/java/com/astral/auth/security/LoginUserStateResolver.java\n?? astral-auth/src/main/java/com/astral/auth/security/TokenFingerprint.java\n?? astral-auth/src/test/",
+  "finalDiffNameStatus": "M\tastral-auth/pom.xml\nM\tastral-auth/src/main/java/com/astral/auth/api/AllAuthController.java\nM\tastral-auth/src/main/java/com/astral/auth/controller/ProfileController.java\nM\tastral-auth/src/main/java/com/astral/auth/dto/TokenInfo.java\nM\tastral-auth/src/main/java/com/astral/auth/registry/PermissionRegistry.java\nM\tastral-auth/src/main/java/com/astral/auth/security/LoginUserTypeResolver.java\nM\tastral-auth/src/main/java/com/astral/auth/security/PermissionAspect.java\nM\tastral-auth/src/main/java/com/astral/auth/service/AuthService.java\nM\tastral-auth/src/main/java/com/astral/auth/service/TokenService.java\nM\tastral-auth/src/main/java/com/astral/auth/service/impl/AuthServiceImpl.java\nM\tastral-auth/src/main/java/com/astral/auth/service/impl/TokenServiceImpl.java\nM\tastral-system/src/main/java/com/astral/system/controller/DictController.java\nM\tastral-system/src/main/java/com/astral/system/controller/MailTemplateController.java\nM\tastral-system/src/main/java/com/astral/system/controller/RolePermissionController.java\nM\tastral-system/src/main/java/com/astral/system/controller/SmsTemplateController.java\nM\tastral-system/src/main/java/com/astral/system/controller/SysConfigController.java\nM\tastral-system/src/main/java/com/astral/system/controller/UserController.java\nM\tastral-system/src/main/java/com/astral/system/controller/UserRoleController.java",
+  "finalMetadataUtc": "2026-11-07T07:52:20.347Z",
+  "coverageSummary": {
+    "guides": {
+      "inventoried": 5,
+      "FULL": 2,
+      "PARTIAL": 1,
+      "NOTREAD": 2
+    },
+    "astral-auth": {
+      "inventoried": 40,
+      "FULL": 40,
+      "PARTIAL": 0,
+      "NOTREAD": 0
+    },
+    "auth-system-owned-schema": {
+      "inventoried": 19,
+      "FULL": 4,
+      "PARTIAL": 0,
+      "NOTREAD": 15
+    },
+    "astral-system": {
+      "inventoried": 100,
+      "FULL": 40,
+      "PARTIAL": 0,
+      "NOTREAD": 60
+    }
+  },
+  "auditState": "coverage captured; narrative pending"
+}

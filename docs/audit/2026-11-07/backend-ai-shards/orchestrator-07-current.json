@@ -1,0 +1,181 @@
+{
+  "task": "task-20",
+  "title": "AiChatOrchestrator.java 单文件当前完整阅读与局部问题证据",
+  "reviewer": "api-probe",
+  "producedAt": "2026-11-07T14:16:00+08:00",
+  "mode": "static-single-file-review",
+  "source": {
+    "path": "F:/qtMusic/astral/astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java",
+    "bytes": 85936,
+    "bytesAfter": 85936,
+    "rawLines": 1805,
+    "rawLinesAfter": 1805,
+    "nonBlankLines": 1693,
+    "nonBlankLinesAfter": 1693,
+    "sha256Before": "d60547ffa6a29453e7dabd10507b7529aa14fcdf8be1672636db3f1a4f81d1ea",
+    "sha256After": "d60547ffa6a29453e7dabd10507b7529aa14fcdf8be1672636db3f1a4f81d1ea",
+    "mtime": "2026-11-07T09:39:11.0732652+08:00",
+    "readCalls": 23,
+    "maxLinesPerCall": 80,
+    "readRanges": ["1-80", "81-160", "161-240", "241-320", "321-400", "401-480", "481-560", "561-640", "641-720", "721-800", "801-880", "881-960", "961-1040", "1041-1120", "1121-1200", "1201-1280", "1281-1360", "1361-1440", "1441-1520", "1521-1600", "1601-1680", "1681-1760", "1761-1805"],
+    "readToEof": true,
+    "continuousNoGap": true,
+    "unmodifiedDuringRead": true
+  },
+  "inheritance": {
+    "reusedFailed417fdc60": false,
+    "note": "未继承 failed 418fdc60 的任何 hash/区间/结论；本清单所有数值为本次独立测量（read 工具 total 与逐字节 \\n 切分双路对齐）。"
+  },
+  "observations": [
+    {
+      "id": "O01",
+      "category": "approval",
+      "position": "AiChatOrchestrator.java:471-477, 611-616",
+      "fact": "requiresApproval 对 risk=HIGH 无条件 true（612-614），门在 471 处先于 538 的 invoke，故 HIGH+NONE 不会被自动执行；但需审批分支的 approvalStatus 只由 approvalPolicy 决定：仅 ADMIN_CONFIRM 记 ADMIN_CONFIRM，其余一律 USER_CONFIRM（474-477），因此 HIGH + approvalPolicy!=ADMIN_CONFIRM 会以 USER_CONFIRM 挂起。",
+      "counterEvidence": "614-615 的 approval 条件与 risk 判断是或关系，613 的 return true 在 615 之前，不存在 policy=NONE 就不问的分支。",
+      "untested": "WAITING_APPROVAL 由谁消费、approved=true 由哪条路径传入、是否按 approvalStatus 区分审批人角色——均在本文件外。",
+      "nextSeam": "审批入口是否联合校验 record.getApprovalStatus() 与 risk。"
+    },
+    {
+      "id": "O02",
+      "category": "permission",
+      "position": "AiChatOrchestrator.java:568-587",
+      "fact": "两处权限判定都用 request.getUserId()（579/585），approvedBy 不参与；注册组与配置组是独立 if（577/582），任一组不过即 rejected；配置组仅在 !permissions.equals(registeredPermissions) 时执行（583），比较的是规范化文本列表而非语义集合；两处均为组内 ANY。",
+      "counterEvidence": "两组相同则第二道跳过，但第一道已在 577 先执行；空列表有 isEmpty 守卫，不会因空组误拒。",
+      "untested": "PermissionChecker.hasAnyPermissionByLoginId 对 userId=null 的语义（本文件不判 null）；权限展开规则不在本文件。",
+      "nextSeam": "调用方是否保证 request.getUserId() 非空。"
+    },
+    {
+      "id": "O03",
+      "category": "model-protocol",
+      "position": "AiChatOrchestrator.java:1247-1254",
+      "fact": "format.putObject(\"json_schema\") 得到 wrapper，name/strict 写在 wrapper（1250-1252），但 schema 用 format.set(\"schema\", schema) 写到父节点（1253）→ 本方法产出的对象里 json_schema 内缺 schema，父级多出 schema。属本方法内的局部包装错误。",
+      "counterEvidence": "1242-1246 对已是协议格式的输入原样返回；1235 对空 schema 返回 null；1250-1252 的写法表明意图是包装，唯独 1253 落错节点。",
+      "untested": "各 provider 实现如何处理该对象（忽略/报错/自行纠正）未验证；不据此断言 provider 必然失败或模型必然不输出 JSON。",
+      "nextSeam": "responseFormat 为包内 static，可由同包测试直接观察返回值（本轮未运行测试）。"
+    },
+    {
+      "id": "O04",
+      "category": "quota-usage",
+      "position": "AiChatOrchestrator.java:247-250, 257, 333-341",
+      "fact": "quotaService.reserve（248-249）与 usageService.reserve（250）都在 try 之外，try 从 257 开始；若 250 抛异常，248 的 reservation 不进 finally，不会被 release。注释 246 称已预占则跳过/resume 复用，但 248 无条件调用，每次 run 都会再预占。",
+      "counterEvidence": "252-256 的局部变量初始化同样在 try 外，说明 try 范围刻意从模型调用开始，覆盖不到预占阶段；341 之后无补偿路径。",
+      "untested": "AiQuotaService/AiUsageService 的 reserve/release 是否幂等或自带回收（别源，未读）。",
+      "nextSeam": "为 248-250 单独加 try 或补偿；需覆盖 usage 预占失败分支（本轮未执行）。"
+    },
+    {
+      "id": "O05",
+      "category": "cancel-resume",
+      "position": "AiChatOrchestrator.java:211-213, 233-235, 274-276, 300, 328-330, 333-341, 744-752",
+      "fact": "三处 CANCELLED 判断只 return；进入 finally 时 succeeded=false ⇒ release（338-339）。274-276 与 328-330 的返回不改助手消息状态，消息停留在 STREAMING（300 亦先置 STREAMING 再 return）。resume 只重新提交 runSafely，本文件内不读 WAITING_APPROVAL 记录、不看 approved 参数、不清理旧工具调用记录。fail 对 CANCELLED 请求直接返回（750-752）。",
+      "counterEvidence": "300 显式置 STREAMING 后 return，说明挂起态有意保留给下游；fail 的 CANCELLED 分支说明作者认为取消链路自行负责终态。",
+      "untested": "取消接口是否兜底改消息终态、审批入口是否在外部改回状态并传 approved=true（均在文件外）。",
+      "nextSeam": "resume 是 public，语义由调用方决定；核对审批/取消入口与本文件的衔接。"
+    },
+    {
+      "id": "O06",
+      "category": "tool-loop",
+      "position": "AiChatOrchestrator.java:447-512, 656-669, 899-921",
+      "fact": "executeTools 顺序遍历 calls，命中需审批即 return true（511）；该轮剩余 call 不写 ai_tool_call、不发事件、不追加 tool 消息。进入执行前 persistAssistantToolCalls 已把全部 call 写进助手 blocks（665）。",
+      "counterEvidence": "dropOrphanToolMessages 要求声明集合==结果集合才保留（915-918），故下一轮读历史时该助手消息会被整段丢弃（919-921）——反证缺失结果确实不存在。",
+      "untested": "模型一轮返回多工具调用的实际概率；客户端挂起时是否另行处理未执行调用。",
+      "nextSeam": "挂起时是否应为未执行 call 落记录/事件（当前无声丢弃）。"
+    },
+    {
+      "id": "O07",
+      "category": "status-mapping",
+      "position": "AiChatOrchestrator.java:540, 545-553, 618-626",
+      "fact": "落库状态取 mapToolStatus(result)，isOk() 为真即 SUCCEEDED（619-621）；同一结果的事件里 completed.status 用原始 result.status()（548），NEED_CLIENT 另带 plan/needClient（550-553）。两者语义源不同，若 isOk() 覆盖非 SUCCEEDED 状态则 DB 与事件不一致。",
+      "counterEvidence": "622-624 对 REJECTED 单独分流，映射表仅三档；isOk() 定义不在本文件。",
+      "untested": "AiToolResult.isOk() 覆盖哪些状态（定义在 AiToolTypes，未读、不补因果）。",
+      "nextSeam": "若要 DB 与事件同源，应改为按 result.status() 显式映射。"
+    },
+    {
+      "id": "O08",
+      "category": "context",
+      "position": "AiChatOrchestrator.java:809-811, 1102-1119, 1121-1126, 176",
+      "fact": "allowUserContext 仅决定是否追加一句提示词（809-811）；sanitizeContext 的允许集合是 musicKeys ∪ adminKeys（1107-1108），与该开关无关，仅对 fileContent 按 allowFileContext 删除（1115-1117）。snapshotInput 落原始 context 的 key 集合（1124），而 request.create 落净化后 context（176），两处口径不同。",
+      "counterEvidence": "1115-1117 证明作者会在该函数按键删除，说明按开关删键的写法可行；此处未对 userContext 复用该模式。",
+      "untested": "AiConstants.ContextKey.adminKeys()/musicKeys() 的实际键值、客户端是否上送敏感键（均文件外）。",
+      "nextSeam": "若 allowUserContext 是数据面开关，需在 sanitizeContext 内按同一规则裁剪。"
+    },
+    {
+      "id": "O09",
+      "category": "record-consistency",
+      "position": "AiChatOrchestrator.java:447-461, 471-478, 514-516, 539-542",
+      "fact": "未授权/未知工具只产生 tool 消息与 TOOL_COMPLETED(REJECTED) 事件，无 ai_tool_call 行（447-461）；需审批分支只 insert 一条 WAITING_APPROVAL（478），本文件内没有把该行改为 RUNNING/SUCCEEDED 的路径。",
+      "counterEvidence": "514-516 与 540-542 证明正常路径 insert RUNNING 再 updateById；挂起分支在 511 直接 return，未复用该写法。",
+      "untested": "审批入口是否在外部 update 该记录，或因再次 resume 产生同一逻辑调用的多条记录。",
+      "nextSeam": "核对审批执行链路是否更新原 ai_tool_call 行。"
+    },
+    {
+      "id": "O10",
+      "category": "idempotency",
+      "position": "AiChatOrchestrator.java:142-156, 1121-1126",
+      "fact": "幂等命中（findByIdempotency(userId, agentId, key)）直接返回旧 requestId 与旧助手消息 ID，content 不参与判断；142-148 只校验非空与长度。",
+      "counterEvidence": "snapshotInput 会存 content 与 contextKeys（1121-1126），说明内容可得但未参与幂等键判断。",
+      "untested": "findByIdempotency 对 null key 的处理与判定条件（不在本文件）。",
+      "nextSeam": "相同 key 不同 content 的语义需在入口层约定。"
+    },
+    {
+      "id": "O11",
+      "category": "routing",
+      "position": "AiChatOrchestrator.java:774-792, 1159-1174, 1263-1273",
+      "fact": "route==null 时 modelService.list(null) 取第一个 enabled 模型（781-785），provider 由该模型反查（786）；此时 routeTemperature/routeTopP/routeMaxTokens 全部拿 null 或模型默认（1159-1174），路由级参数不生效。MAX_TOOL_ROUNDS 默认 4，可被 tool_policy_json.maxRounds 覆盖并夹在 [1,8]（1263-1273）。",
+      "counterEvidence": "785 无可用模型时抛 AI006，说明是刻意兜底而非遗漏；789-790 正常分支按 route 取 model/provider。",
+      "untested": "modelService.list(null) 的排序与租户过滤（不在本文件），因此“第一个”是否稳定未验证。",
+      "nextSeam": "是否要求版本必须绑定路由；当前实现允许无路由运行。"
+    },
+    {
+      "id": "O12",
+      "category": "history-repair",
+      "position": "AiChatOrchestrator.java:640-654, 825-827, 899-921",
+      "fact": "appendToolMessage 在 summary==null 时写空串（645）；history 遇 blank content 直接 continue（825-827），该 tool 结果不进消息序列；对应助手消息仍声明该 toolCall → dropOrphanToolMessages 判未配对，把助手段与结果段一起丢弃（919-921）。",
+      "counterEvidence": "855-858 要求 blocksJson 里能取到 toolCallId 才拼 tool 消息，说明依赖 blocks 元数据；但 825 的空白判断在 847 的角色分支之前。",
+      "untested": "是否真有 summary 为 null 的工具实现（本文件只保证不 NPE，不保证非空）。",
+      "nextSeam": "空摘要写占位文案，或让 825 的跳过条件放行 TOOL 角色。"
+    }
+  ],
+  "observationCount": 12,
+  "keyFlows": {
+    "start": "133-208（校验 142-148、幂等 150-156、落库 158-191、事件 192-203、异步提交 205）",
+    "resume": "211-213（仅重新提交 runSafely）",
+    "runSafely": "220-229（AiException → fail 指定码；其他异常 → AI006）",
+    "run": "231-342（CANCELLED 233、resolve 242、markRunning 243、预占 248-250、try 257、工具轮 273-307、兜底轮 313-326、finalize 331、finally 333-341）",
+    "callModel": "346-435（started 去重 389-395、onCompleted 补发 409-411、onError 抛出 428-430）",
+    "executeTools": "439-558（未知工具 447-461、需审批 471-512、执行 514-555）",
+    "invoke": "561-608（CSV 失败 fail-closed 574-576、注册组 577-581、配置组 582-587、context 588-599、异常转 FAILED 600-607）",
+    "requiresApproval": "611-616（HIGH 恒 true；否则 approval != NONE）",
+    "mapToolStatus": "618-626",
+    "finalize": "673-742",
+    "fail": "744-770（CANCELLED 直接返回 750-752）",
+    "resolve": "774-792",
+    "buildSystemPrompt": "794-817",
+    "history": "819-871",
+    "dropOrphanToolMessages": "879-924",
+    "responseFormat": "1234-1255",
+    "resolveMaxToolRounds": "1263-1273",
+    "sanitizeContext": "1102-1119",
+    "sanitizeRecommended": "1375-1539",
+    "clientSongUniverse": "1546-1572",
+    "extractJsonObjectCandidates": "1668-1711",
+    "pickAnswerNode": "1717-1737",
+    "freshClientSongs": "1755-1786",
+    "blockItems": "1794-1804"
+  },
+  "notCovered": [
+    "仅本文件；AiToolTypes（isOk 定义）、AiJson.splitPermissionCsv、AiQuotaService/AiUsageService、PermissionChecker、各 AiProvider 实现、审批/取消 controller 均未读，不据此补因果",
+    "未执行 Maven/测试/服务/DB/网络/浏览器；结论为静态阅读事实，不认证 runtime 行为",
+    "不认证整 AI 域完成、不认证 task-14 完成；未继承 failed 418fdc60 的任何 hash/区间/结论",
+    "HIGH+NONE 只记录“恒触发审批门 + 身份取 approvalPolicy”，未写成自动绕过",
+    "response_format 只确认本方法内包装层级错误，未外推 provider 必然失败"
+  ],
+  "claims": {
+    "runtimeVulnsCertified": false,
+    "wholeAiDomainComplete": false,
+    "task14Complete": false,
+    "sourceUnmodified": true,
+    "prePostHashEqual": true,
+    "continuousReadToEof": true
+  }
+}

@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "axis": "STANDARDS",
+  "candidateId": "7e89c485-d486-49ec-8e16-09bb6b0d50e6",
+  "reviewerAttribution": "Independent delegated Standards reader; actual tool reads in this session, not inherited Root semantic coverage",
+  "parentAgentId": "session-c9c6458f-4334-477e-a37f-4deb65f66d9f",
+  "workingDirectory": "F:/qtMusic/astral",
+  "skillLoaded": "code-review",
+  "procedureLookup": {"query": "standards review", "matchingProcedureFound": false},
+  "verdict": {"bounded": true, "status": "FAIL", "hardFindings": 1, "possibleJudgments": 1, "worstWithinStandards": "P3", "specEvaluated": false, "crossAxisRankingPerformed": false, "wholePass": false},
+  "scope": {
+    "sources": 2,
+    "authorizedWrites": ["F:/qtMusic/astral/docs/audit/2026-11-07/core-logsanitizer-standards-7e89c485.md", "F:/qtMusic/astral/docs/audit/2026-11-07/core-logsanitizer-standards-7e89c485.json"],
+    "neutralMandatoryMemoryLogAlsoAuthorized": true,
+    "sourceTestConfigLockDependencyChanges": false,
+    "buildTestGitBrowserNetworkActions": false,
+    "goalsTasksPlanHandoffChanges": false,
+    "specFindingsRead": false,
+    "specContentRead": false,
+    "core188SemanticReview": false,
+    "repositoryGlobalReview": false,
+    "noPdfUsed": true,
+    "localCommitUntouched": true,
+    "staged": false,
+    "committed": false,
+    "pushed": false,
+    "ownBackgroundJobsStarted": 0
+  },
+  "fixedPoint": {
+    "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+    "capturedHead": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+    "fixedDiffCommand": "git diff a39a3f3039ce7deafc3f547a25cc0dc4635c111a...HEAD -- astral-common/src/main/java/com/astral/common/util/LogSanitizer.java astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java",
+    "capturedCommitsCommand": "git log a39a3f3039ce7deafc3f547a25cc0dc4635c111a..HEAD --oneline",
+    "capturedCommits": [],
+    "gitCalledByReviewer": false,
+    "settledThreeDotEmptyExplicitlyAllowedByHuman": true,
+    "actualDelta": "Frozen tracked working-tree patch plus WHOLE untracked CommonUtilsTest addition; empty committed diff is not treated as no-change",
+    "specSourceFixedByHumanButNotReviewed": "F:/qtMusic/astral/docs/audit/2026-11-07/SPEC.md",
+    "candidateValidation": {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/validation.json", "bytes": 5300, "sha256": "f4aa2fccf03bed78c2c0e34ff0474f0eeabc025bba05505611a1ba265907f67f", "fullRead": true},
+    "capturedStatus": {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/status.txt", "bytes": 147, "sha256": "0d23d1415cf720a5134f17da65695bef4586d41f479fc65250b4f0bdbd35f4ef", "trackedModified": ["F:/qtMusic/astral/astral-common/src/main/java/com/astral/common/util/LogSanitizer.java"], "untrackedNotIgnored": ["F:/qtMusic/astral/astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java"]},
+    "capturedHeadFile": {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/HEAD.txt", "bytes": 41, "sha256": "8d38b8852d048558396574f3b6425c477040a39ff37ced56de8ac16aae86400c"},
+    "settledEmptyFiles": ["F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/settled-three-dot.patch", "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/commits.txt"],
+    "emptyFileSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "endpointSampling": {
+    "preSampleUtc": "2026-11-07T10:47:43.2415549Z",
+    "preSampleUtcTicks": "639296452632415549",
+    "prePhase": "Before first audited candidate/source/norm content read; hashes and line counts were metadata only",
+    "postSampleUtc": "2026-11-07T10:51:59.5161699Z",
+    "postSampleUtcTicks": "639296455195161699",
+    "postPhase": "After all 39 audited reads; before report writing",
+    "precision": "Native LastWriteTimeUtc ticks: 100 ns; exact integer strings, not millisecond-rounded",
+    "tupleFields": ["bytes", "rawLines", "nonblankLines", "sha256", "lastWriteTimeUtc", "lastWriteTimeUtcTicks"],
+    "all19PrePostTuplesEqual": true,
+    "metadataHashesAreNotSemanticReadEvidence": true,
+    "nativeSourcePreHashAndBytesMatchFrozen": true,
+    "nativeSourcesAndFourDocsPostByteComparedExact": true,
+    "continuousImmutabilityCertified": false,
+    "limit": "Two endpoint samples and a subsequent byte comparison do not certify continuous immutability, historical execution provenance, or filesystem identity throughout the interval. Native source content was not separately attributed as additional semantic reads."
+  },
+  "sources": [
+    {
+      "path": "F:/qtMusic/astral/astral-common/src/main/java/com/astral/common/util/LogSanitizer.java",
+      "changeKind": "tracked modification",
+      "current": {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/current/astral-common/src/main/java/com/astral/common/util/LogSanitizer.java", "bytes": 6411, "rawLines": 155, "nonblankLines": 144, "sha256": "efd9234628ac4906a89accebe143f57d2ab810de9e897c923d493343d8722b2b", "preLastWriteTimeUtc": "2026-11-07T10:45:38.9576997Z", "preLastWriteTimeUtcTicks": "639296451389576997", "postLastWriteTimeUtc": "2026-11-07T10:45:38.9576997Z", "postLastWriteTimeUtcTicks": "639296451389576997", "prePostFingerprintEqual": true, "fullSemanticRead": true, "explicitEOF": true},
+      "baselinePresent": true,
+      "baseline": {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/baseline/astral-common/src/main/java/com/astral/common/util/LogSanitizer.java", "bytes": 6604, "rawLines": 156, "nonblankLines": 145, "sha256": "7a873bbc4d7f9e479a087e5ad23dab1a9d73cd8a38556d3b61b955329df60c29", "preLastWriteTimeUtc": "2026-11-07T10:45:39.0261852Z", "preLastWriteTimeUtcTicks": "639296451390261852", "postLastWriteTimeUtc": "2026-11-07T10:45:39.0261852Z", "postLastWriteTimeUtcTicks": "639296451390261852", "prePostFingerprintEqual": true, "fullSemanticRead": true, "explicitEOF": true},
+      "nativeMetadata": {"bytes": 6411, "rawLines": 155, "nonblankLines": 144, "sha256": "efd9234628ac4906a89accebe143f57d2ab810de9e897c923d493343d8722b2b", "preLastWriteTimeUtc": "2026-11-07T09:06:23.7065559Z", "preLastWriteTimeUtcTicks": "639296391837065559", "postLastWriteTimeUtc": "2026-11-07T09:06:23.7065559Z", "postLastWriteTimeUtcTicks": "639296391837065559", "prePostFingerprintEqual": true, "postByteExactToSnapshot": true},
+      "allHunksReviewed": true,
+      "hardFindingIds": [],
+      "possibleFindingIds": []
+    },
+    {
+      "path": "F:/qtMusic/astral/astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java",
+      "changeKind": "WHOLE untracked addition",
+      "ignored": false,
+      "current": {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/current/astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java", "bytes": 6783, "rawLines": 137, "nonblankLines": 118, "sha256": "fb39ee01e4c46cc8383f20107a41bce5f4830e0d1c64efb39ffe3bc97ba25381", "preLastWriteTimeUtc": "2026-11-07T10:45:39.0286705Z", "preLastWriteTimeUtcTicks": "639296451390286705", "postLastWriteTimeUtc": "2026-11-07T10:45:39.0286705Z", "postLastWriteTimeUtcTicks": "639296451390286705", "prePostFingerprintEqual": true, "fullSemanticRead": true, "explicitEOF": true},
+      "baselinePresent": false,
+      "baseline": null,
+      "nativeMetadata": {"bytes": 6783, "rawLines": 137, "nonblankLines": 118, "sha256": "fb39ee01e4c46cc8383f20107a41bce5f4830e0d1c64efb39ffe3bc97ba25381", "preLastWriteTimeUtc": "2026-11-07T09:18:20.0486163Z", "preLastWriteTimeUtcTicks": "639296399000486163", "postLastWriteTimeUtc": "2026-11-07T09:18:20.0486163Z", "postLastWriteTimeUtcTicks": "639296399000486163", "prePostFingerprintEqual": true, "postByteExactToSnapshot": true},
+      "reviewedEntire137Lines": true,
+      "notJustNewTwoTests": true,
+      "historicalOriginalSeven": {"normalizedLines": 114, "normalizedSha256": "a2ada2680eff3494c36891152f1bbfda6a784c467c57ce411800765e6aa16ce6", "attribution": "Historical Root receipt and supplied human pin; not a baseline/HEAD-tracked test", "reportedPreservation": true, "independentlyRecomputedByReviewer": false},
+      "hardFindingIds": ["STD-01"],
+      "possibleFindingIds": ["POSSIBLE-01"]
+    }
+  ],
+  "patch": {
+    "path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/actual-tracked-wip.patch",
+    "bytes": 1793, "rawLines": 26, "nonblankLines": 26,
+    "sha256": "cda95e9e0465352289296a0897fcb911650586615fd7ee88653c7d70a19ca062",
+    "preLastWriteTimeUtc": "2026-11-07T10:45:38.8144192Z", "preLastWriteTimeUtcTicks": "639296451388144192", "postLastWriteTimeUtc": "2026-11-07T10:45:38.8144192Z", "postLastWriteTimeUtcTicks": "639296451388144192", "prePostFingerprintEqual": true,
+    "fullRead": true, "explicitEOF": true,
+    "grammar": "^@@ -(oldStart),(oldCount) +(newStart),(newCount) @@; space consumes both, minus old only, plus new only; file headers excluded",
+    "hunkCount": 1,
+    "hunks": [
+      {"header": "@@ -95,17 +95,16 @@ public final class LogSanitizer {", "patchHeaderLine": 5, "patchBodyLines": [6,26], "oldStart": 95, "oldCount": 17, "oldEnd": 111, "newStart": 95, "newCount": 16, "newEnd": 110, "contextLines": 12, "removedLines": 5, "addedLines": 4, "grammarCountsExact": true, "reviewed": true,
+       "removedQuotes": ["if (!isSensitiveKey(match.group(2)) || match.group(3).contains(MASK)) {", "if (!isSensitiveKey(match.group(2)) || match.group(3).startsWith(MASK)) {"],
+       "addedQuotes": ["// 敏感值始终整段替换，部分打码标记不能证明其余内容已脱敏。", "// 替换输出固定，多层链路重复调用仍保持幂等。", "if (!isSensitiveKey(match.group(2))) {"],
+       "oldChangedSourceLines": [[98,101],[108,108]], "newChangedSourceLines": [[98,100],[107,107]],
+       "assessment": "Two skip predicates removed; adjacent three comments replaced by two. Public pure-text function retains regex, sensitive-key policy and quoted fixed replacement shapes; no new production hard-standard or Fowler finding in this hunk."}
+    ],
+    "untrackedAddition": {"source": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/current/astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java", "conceptualHeader": "@@ -0,0 +1,137 @@", "headerIsDerivedCoverageNotationNotCapturedGitOutput": true, "oldStart": 0, "oldCount": 0, "newStart": 1, "newCount": 137, "wholeRead": true, "allImportsTypesMethodsAndAssertionsReviewed": true},
+    "regexChanged": false,
+    "sensitiveKeyPolicyChanged": false,
+    "protectedExistingLiteralChanged": false,
+    "noSecretValuesReproducedInReport": true,
+    "preexistingUnchangedProductionCommentsOrArchitectureNotReportedAsNewFindings": true
+  },
+  "norms": [
+    {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/norms/AGENTS.md", "nativePath": "F:/qtMusic/astral/AGENTS.md", "bytes": 51066, "rawLines": 534, "nonblankLines": 444, "sha256": "530cc67718822adb099c9c7df4a627cc98f4bb99a01979f9132fd0458c0c5c84", "preLastWriteTimeUtc": "2026-11-07T10:45:39.0286705Z", "preLastWriteTimeUtcTicks": "639296451390286705", "postLastWriteTimeUtc": "2026-11-07T10:45:39.0286705Z", "postLastWriteTimeUtcTicks": "639296451390286705", "nativePreLastWriteTimeUtc": "2026-11-06T19:13:28.4899782Z", "nativePreLastWriteTimeUtcTicks": "639295892084899782", "nativePostLastWriteTimeUtc": "2026-11-06T19:13:28.4899782Z", "nativePostLastWriteTimeUtcTicks": "639295892084899782", "prePostFingerprintEqual": true, "nativePostByteExact": true, "fullRead": true, "explicitEOF": true},
+    {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/norms/docs/CODING_GUIDE.md", "nativePath": "F:/qtMusic/astral/docs/CODING_GUIDE.md", "bytes": 18543, "rawLines": 207, "nonblankLines": 147, "sha256": "3451cdd3c96eceeb1c615e1bedcf14fe0e46695c025e3c1c7f784007633ebb3c", "preLastWriteTimeUtc": "2026-11-07T10:45:39.0312234Z", "preLastWriteTimeUtcTicks": "639296451390312234", "postLastWriteTimeUtc": "2026-11-07T10:45:39.0312234Z", "postLastWriteTimeUtcTicks": "639296451390312234", "nativePreLastWriteTimeUtc": "2026-10-30T01:57:14.1211780Z", "nativePreLastWriteTimeUtcTicks": "639289222341211780", "nativePostLastWriteTimeUtc": "2026-10-30T01:57:14.1211780Z", "nativePostLastWriteTimeUtcTicks": "639289222341211780", "prePostFingerprintEqual": true, "nativePostByteExact": true, "fullRead": true, "explicitEOF": true}
+  ],
+  "contextDocs": [
+    {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/norms/docs/audit/2026-11-07/core-logsanitizer-fix-current.md", "nativePath": "F:/qtMusic/astral/docs/audit/2026-11-07/core-logsanitizer-fix-current.md", "bytes": 2332, "rawLines": 22, "nonblankLines": 13, "sha256": "fd0a3a914e7e36a7ecce6b76735adb0af28284a7811745f6b6c0776987ea45d4", "preLastWriteTimeUtc": "2026-11-07T10:45:39.0336284Z", "preLastWriteTimeUtcTicks": "639296451390336284", "postLastWriteTimeUtc": "2026-11-07T10:45:39.0336284Z", "postLastWriteTimeUtcTicks": "639296451390336284", "nativePreLastWriteTimeUtc": "2026-11-07T10:19:44.2855898Z", "nativePreLastWriteTimeUtcTicks": "639296435842855898", "nativePostLastWriteTimeUtc": "2026-11-07T10:19:44.2855898Z", "nativePostLastWriteTimeUtcTicks": "639296435842855898", "prePostFingerprintEqual": true, "nativePostByteExact": true, "fullRead": true, "explicitEOF": true, "use": "Historical provenance and pure-function proof limits only; no Spec requirement ranking"},
+    {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/norms/docs/audit/2026-11-07/TEST-SEAMS.md", "nativePath": "F:/qtMusic/astral/docs/audit/2026-11-07/TEST-SEAMS.md", "bytes": 7165, "rawLines": 42, "nonblankLines": 29, "sha256": "ddbe6efd7a72855e17c1871c813d94c8383d92650487df993abdeff442ac6bdc", "preLastWriteTimeUtc": "2026-11-07T10:45:39.0336284Z", "preLastWriteTimeUtcTicks": "639296451390336284", "postLastWriteTimeUtc": "2026-11-07T10:45:39.0336284Z", "postLastWriteTimeUtcTicks": "639296451390336284", "nativePreLastWriteTimeUtc": "2026-11-07T08:35:58.2722721Z", "nativePreLastWriteTimeUtcTicks": "639296373582722721", "nativePostLastWriteTimeUtc": "2026-11-07T08:35:58.2722721Z", "nativePostLastWriteTimeUtcTicks": "639296373582722721", "prePostFingerprintEqual": true, "nativePostByteExact": true, "fullRead": true, "explicitEOF": true, "use": "Public-seam/boundary context only, especially lines 39–42; no requirement-completeness assessment"}
+  ],
+  "additionalCapturedMetadataEndpointTimes": [
+    {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/validation.json", "preLastWriteTimeUtc": "2026-11-07T10:45:39.0362453Z", "preLastWriteTimeUtcTicks": "639296451390362453", "postLastWriteTimeUtc": "2026-11-07T10:45:39.0362453Z", "postLastWriteTimeUtcTicks": "639296451390362453"},
+    {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/status.txt", "preLastWriteTimeUtc": "2026-11-07T10:45:38.8845529Z", "preLastWriteTimeUtcTicks": "639296451388845529", "postLastWriteTimeUtc": "2026-11-07T10:45:38.8845529Z", "postLastWriteTimeUtcTicks": "639296451388845529"},
+    {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/HEAD.txt", "preLastWriteTimeUtc": "2026-11-07T10:45:38.5969371Z", "preLastWriteTimeUtcTicks": "639296451385969371", "postLastWriteTimeUtc": "2026-11-07T10:45:38.5969371Z", "postLastWriteTimeUtcTicks": "639296451385969371"},
+    {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/settled-three-dot.patch", "bytes": 0, "rawLines": 0, "nonblankLines": 0, "preLastWriteTimeUtc": "2026-11-07T10:45:38.6744081Z", "preLastWriteTimeUtcTicks": "639296451386744081", "postLastWriteTimeUtc": "2026-11-07T10:45:38.6744081Z", "postLastWriteTimeUtcTicks": "639296451386744081"},
+    {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/commits.txt", "bytes": 0, "rawLines": 0, "nonblankLines": 0, "preLastWriteTimeUtc": "2026-11-07T10:45:38.7429912Z", "preLastWriteTimeUtcTicks": "639296451387429912", "postLastWriteTimeUtc": "2026-11-07T10:45:38.7429912Z", "postLastWriteTimeUtcTicks": "639296451387429912"}
+  ],
+  "standardsAssessment": {
+    "allFiveMandatoryRulesAssessed": true,
+    "ruleApplications": [
+      {"rule": "AGENTS mandatory §1 routes, lines 251–264", "status": "not applicable", "reason": "No HTTP route is declared or changed; empty nested annotation fixtures are not registered controllers."},
+      {"rule": "AGENTS mandatory §2 schema/table metadata, lines 266–284", "status": "not applicable", "reason": "No table, entity, DDL or schema metadata addition."},
+      {"rule": "AGENTS mandatory §3 UI/configurable enumerations, lines 286–291", "status": "not applicable", "reason": "Primitive boundary values and fixture strings are test inputs, not frontend enumeration labels or configurable business mappings."},
+      {"rule": "AGENTS mandatory §4 frontend/UI/request出口, lines 293–324", "status": "not applicable", "reason": "No UI or request client change; UI_GUIDE is not required for this pure-Java delta."},
+      {"rule": "AGENTS mandatory §5 permission-code shape, lines 326–351 plus global applicability line 249", "status": "hard finding STD-01", "reason": "WHOLE added CommonUtilsTest declares and expects three-segment admin:demo:view; no documented fixture exemption."},
+      {"rule": "CODING_GUIDE §0, lines 10–15", "status": "observed", "reason": "Manual whole-source/hunk review, not a claim that scanning proves semantic correctness."},
+      {"rule": "CODING_GUIDE §3.4, lines 98–103", "status": "observed in added tests", "reason": "Client IP cases directly call ClientIp.resolve and exercise untrusted/trusted peer behavior rather than duplicating IP parsing."},
+      {"rule": "CODING_GUIDE §4 charset, lines 140–141", "status": "observed in added tests", "reason": "CSV bytes are explicitly decoded with StandardCharsets.UTF_8; no default-charset decoding introduced."},
+      {"rule": "CODING_GUIDE §1/§2/§5/§8", "status": "not applicable", "reason": "No Async, Bean, transaction, mapper write, shared-state concurrency or generated entity changes; public synchronous functions and annotation metadata only."}
+    ],
+    "repoOverrideResolution": [
+      {"context": "CODING_GUIDE lines 79–80 older manual permissionChecker examples versus AGENTS lines 350–353 explicit declaration requirement", "resolution": "Use explicit AGENTS mandatory declaration rule; added fixture does use @RequiresPermission but its code shape is invalid. No request to introduce manual checks."},
+      {"context": "CODING_GUIDE lines 90–91 older null-field mass-assignment remedy versus AGENTS lines 364–373 explicit whitelist rule", "resolution": "Neither applies to these pure-function/tests changes; no legacy guidance generalized into a finding."},
+      {"context": "Public annotation-inheritance observation and public text outputs", "resolution": "Do not replace legitimate annotation metadata access/inheritance fixtures with wrappers or composition merely to satisfy Fowler heuristics."}
+    ],
+    "toolingEnforcedIssuesExcluded": [
+      {"rule": "AGENTS lines 478–495", "excluded": "Checkstyle naming/format/star-import checks, Spotless formatting/import cleanup/whitespace/end-of-file newline, SpotBugs mechanical patterns", "executedByReviewer": false},
+      {"rule": "CODING_GUIDE lines 19–24", "excluded": "Mechanically detectable CPD duplication", "executedByReviewer": false}
+    ],
+    "toolingProofLimit": "No new tool run and no full tooling pass claimed. Permission semantic segment role is not stated as a Checkstyle/Spotless/SpotBugs enforcement gate in the frozen documented toolchain.",
+    "hardFindings": [
+      {
+        "id": "STD-01", "axis": "STANDARDS", "severity": "P3", "classification": "HARD_DOCUMENTED_RULE", "judgmentOnly": false,
+        "title": "Added annotation-inheritance fixture uses an invalid three-segment permission code",
+        "source": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/current/astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java",
+        "nativeSource": "F:/qtMusic/astral/astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java",
+        "lines": [[123,123],[131,131]],
+        "exactQuotes": ["\"admin:demo:view\",", "@RequiresPermission(\"admin:demo:view\")"],
+        "standardSource": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/norms/AGENTS.md",
+        "standardLines": [[249,249],[326,335],[350,351]],
+        "standardQuotes": ["以下五条约束适用于**本项目所有新增/变更**", "权限编码规范**：`端:域:资源:操作[:范围]`，**全小写**、冒号分隔。"],
+        "reason": "admin:demo:view has only three segments; the documented code contract has four mandatory roles. Both the declaration and expected assertion perpetuate the incomplete form. The entire test is untracked addition against the fixed baseline even though this case predates the two F01 methods in a historical seal. No fixture exception is documented.",
+        "impact": "Documented convention inconsistency in a synthetic metadata fixture. Not a demonstrated production authorization or HTTP failure, because the nested types have no Spring controller/route declaration and no runtime authorization invocation.",
+        "recommendedLaterAuthorizedAction": "Use one valid four-segment synthetic code consistently in the fixture annotation and expected value, preserving all inheritance assertions. Do not change frozen source during this review lease; acceptance or revision/re-freeze belongs to the lead.",
+        "toolingEnforcedFinding": false,
+        "newRelativeToActualDelta": true,
+        "mandatorySpeculativeFix": false
+      }
+    ],
+    "possibleJudgments": [
+      {
+        "id": "POSSIBLE-01", "axis": "STANDARDS", "severity": "P3", "classification": "POSSIBLE", "judgmentOnly": true, "mandatoryFix": false,
+        "smell": "Divergent Change",
+        "source": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/current/astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java",
+        "lines": [[18,44],[46,84],[86,128]],
+        "exactQuotes": ["void pageQueryClampsUnsafeValues() {", "void csvExportEscapesFormulaAndRfc4180() {", "void patchValuesDistinguishMissingFromClearing() {", "void classLevelSecurityAnnotationsAreInheritedByControllerSubclasses() {"],
+        "reason": "The whole added class collects multiple independent utility/security contracts, so future unrelated changes may repeatedly edit the same test class. Its grouping is understandable for a small common-module regression suite and no repo rule mandates splitting.",
+        "suggestion": "If independent utility coverage grows, optionally split into utility-focused test classes to separate reasons to change; preserve all assertions and public seams. No mandatory or immediate speculative refactor.",
+        "repoOverride": "No documented prohibition of the present small common-module grouping; the explicit judgment remains optional, not a hard-standard violation."
+      }
+    ]
+  },
+  "fowlerBaseline": {
+    "allTwelveExplicitlyAssessed": true,
+    "everySmellJudgmentOnly": true,
+    "documentedRepoOverrides": true,
+    "noMandatorySpeculativeFix": true,
+    "assessments": [
+      {"smell": "Mysterious Name", "label": "POSSIBLE Mysterious Name", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Rename honestly; inability to name may reveal murky design", "assessment": "Changed predicate and both new method names reveal sensitive-key/mask-marker behavior. Whole added test method names identify their utility contracts; no misleading new identifier merits a finding. Unchanged production Javadoc references are outside the actual hunk."},
+      {"smell": "Duplicated Code", "label": "POSSIBLE Duplicated Code", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Extract the shared logic shape and call it from both places", "assessment": "JSON/form regression assertions share an arrange/act/idempotence shape but intentionally observe different public formats and preservation fields. No additional nonmechanical duplication finding; CPD-enforced duplication excluded. Production two matcher replacement shapes were already present and are not newly extracted/repeated by this delta."},
+      {"smell": "Feature Envy", "label": "POSSIBLE Feature Envy", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Move behavior to the object owning the data", "assessment": "Production matcher access stays local to replacement lambdas. Tests calling actual public utility APIs are the intended observation boundary, not behavior that should move into production utility owners."},
+      {"smell": "Data Clumps", "label": "POSSIBLE Data Clumps", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Bundle repeatedly travelling fields/parameters into one type", "assessment": "ClientIp.resolve primitive arguments exercise its existing public signature with deliberately different peers and headers. No new repeated travelling production parameter bundle in the hunk/addition warrants a fixture wrapper."},
+      {"smell": "Primitive Obsession", "label": "POSSIBLE Primitive Obsession", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Give the domain concept a small wrapper type", "assessment": "Strings and numeric extremes are actual public text/password/pagination boundary inputs. No new domain abstraction is needed to replace independent synthetic test values. Invalid permission literal is STD-01, not duplicated as a smell."},
+      {"smell": "Repeated Switches", "label": "POSSIBLE Repeated Switches", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Replace recurring same-type cascades with one map or polymorphism", "assessment": "Only two existing format matcher guards are simplified; no new switch or recurring type dispatch introduced in source/test."},
+      {"smell": "Shotgun Surgery", "label": "POSSIBLE Shotgun Surgery", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Gather scattered changes into one cohesive owner/module", "assessment": "Actual repair touches one utility hunk and its common-module regression file; no scattered cross-module edits in this two-file candidate."},
+      {"smell": "Divergent Change", "label": "POSSIBLE Divergent Change", "possibleFound": true, "judgmentOnly": true, "fixHeuristic": "Split so each module/class changes for one reason", "findingId": "POSSIBLE-01", "assessment": "WHOLE newly added CommonUtilsTest gathers pagination, CSV, sanitizer, patch, IP, password and annotation inheritance; optional future utility-focused split, not a required fix."},
+      {"smell": "Speculative Generality", "label": "POSSIBLE Speculative Generality", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Delete premature hooks/abstractions and inline until a concrete need exists", "assessment": "No hooks, abstraction layers, extra parameters or future extensibility introduced. Empty base/child fixture types are directly used by the inheritance test. No Spec content or requirement ranking used to infer scope."},
+      {"smell": "Message Chains", "label": "POSSIBLE Message Chains", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Hide a long object walk behind an owner method", "assessment": "ChildDemoController.class.getAnnotation(RequiresPermission.class).value()[0] observes public Java annotation metadata directly. Wrapping it would hide the seam and add indirection rather than protect a production object graph."},
+      {"smell": "Middle Man", "label": "POSSIBLE Middle Man", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Inline pure delegators unless the repository endorses them", "assessment": "No new production delegating facade. Tests assert actual outputs; CSV identity row lambda is a projection input, not a redundant service layer."},
+      {"smell": "Refused Bequest", "label": "POSSIBLE Refused Bequest", "possibleFound": false, "judgmentOnly": true, "fixHeuristic": "Replace unused/refused inheritance with composition", "assessment": "ChildDemoController deliberately inherits all tested annotation metadata and overrides/ignores nothing. Composition would invalidate the exact inheritance regression, so no speculative conversion."}
+    ]
+  },
+  "testBehaviorCoverage": {
+    "allNineMethodsReviewed": true,
+    "allAddedTypesReviewed": true,
+    "publicSeamsOnlyAsObserved": true,
+    "testExecutionByReviewer": false,
+    "methods": [
+      {"name": "pageQueryClampsUnsafeValues", "lines": [18,27], "publicSeams": ["PageQuery.pageNum", "PageQuery.pageSize", "PageQuery.limit"], "assessment": "Direct public primitive boundary clamps; no private reconstruction, external state or new domain type."},
+      {"name": "csvExportEscapesFormulaAndRfc4180", "lines": [29,44], "publicSeams": ["CsvExportUtil.build"], "assessment": "Real public CSV bytes, explicit UTF-8 decoding, BOM/CRLF/formula and quote observations, independent test inputs; no duplicate escape implementation."},
+      {"name": "logSanitizerMasksCredentialsButKeepsStructure", "lines": [46,61], "publicSeams": ["LogSanitizer.mask", "LogSanitizer.isSensitiveKey", "LogSanitizer.MASK"], "assessment": "Public text output, non-sensitive field preservation, sensitive-tail absence and repeat-call equality. isSensitiveKey is public, not a private normalizeKey invocation. Does not prove JSON validity or all formats."},
+      {"name": "logSanitizerRedactsReadableJsonCredentialEvenWhenItContainsAMaskMarker", "lines": [63,72], "publicSeams": ["LogSanitizer.mask"], "newF01Method": true, "assessment": "Independent synthetic JSON text, absence of readable suffix, non-sensitive field retention, idempotence; no regex reconstruction."},
+      {"name": "logSanitizerRedactsReadableFormCredentialEvenWhenItStartsWithAMaskMarker", "lines": [74,84], "publicSeams": ["LogSanitizer.mask"], "newF01Method": true, "assessment": "Independent synthetic form text, absence of readable suffix, both non-sensitive fields retained, idempotence; no DB/HTTP/client invocation."},
+      {"name": "patchValuesDistinguishMissingFromClearing", "lines": [86,94], "publicSeams": ["PatchValues.blankToNull", "PatchValues.orDefault", "PatchValues.orCurrent"], "assessment": "Missing versus explicit clear and untrimmed nonblank output observed through public APIs."},
+      {"name": "clientIpIgnoresForwardedHeadersFromUntrustedPeer", "lines": [96,109], "publicSeams": ["ClientIp.resolve", "ClientIp.DEFAULT_TRUSTED_PROXIES"], "assessment": "Synthetic untrusted/trusted peer strings; existing public resolver directly exercised, not fake server/network or copied parser."},
+      {"name": "passwordPolicyRejectsWeakPasswords", "lines": [111,118], "publicSeams": ["PasswordPolicy.validate"], "assessment": "Independent synthetic validation cases and literal policy messages; no real account/credential access. No claim of complete authentication strength."},
+      {"name": "classLevelSecurityAnnotationsAreInheritedByControllerSubclasses", "lines": [120,129], "publicSeams": ["Class.getAnnotation", "Class.isAnnotationPresent"], "assessment": "Public annotation metadata on real nested fixture types; does not invoke private scanner, registry, Spring HTTP or permission enforcement. Code-shape convention breach is STD-01."}
+    ],
+    "types": [
+      {"name": "CommonUtilsTest", "line": 16, "assessment": "Package-private JUnit regression class; broad utility grouping yields optional POSSIBLE-01."},
+      {"name": "BaseDemoController", "lines": [131,134], "assessment": "Empty synthetic annotated class; no route/Spring controller registration. Three-segment permission literal violates documented shape."},
+      {"name": "ChildDemoController", "line": 136, "assessment": "Empty subtype intentionally verifies inherited metadata, no refused or overridden bequest."}
+    ],
+    "importsReviewed": "Explicit JUnit assertion imports, common public annotation types, StandardCharsets, List, Test; no extra runtime/source inspection or dependency change. Mechanical import rules excluded from findings."
+  },
+  "ownReadEvidence": {
+    "reader": "This independent Standards session",
+    "tool": "functions.read",
+    "maximumRequestedLines": 80,
+    "allActualReadOutputsUnpruned": true,
+    "hashesNotSubstitutedForReads": true,
+    "injectedInstructionsAndRootReadClaimsExcludedFromOwnCounts": true,
+    "readTupleFields": ["requestedOffset", "requestedLimit", "returnedStart", "returnedEnd", "returnedLines", "explicitEOF", "unpruned"],
+    "tupleNullRangesMeanEmptyFile": true,
+    "files": [
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/actual-tracked-wip.patch", "role": "actual tracked patch", "fullCoverage": true, "reads": [[1,80,1,26,26,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/current/astral-common/src/main/java/com/astral/common/util/LogSanitizer.java", "role": "current source", "fullCoverage": true, "reads": [[1,80,1,80,80,false,true],[81,80,81,155,75,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/current/astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java", "role": "WHOLE untracked current source", "fullCoverage": true, "reads": [[1,80,1,80,80,false,true],[81,80,81,137,57,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/baseline/astral-common/src/main/java/com/astral/common/util/LogSanitizer.java", "role": "whole baseline source", "fullCoverage": true, "reads": [[1,80,1,80,80,false,true],[81,80,81,156,76,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/norms/AGENTS.md", "role": "documented norm", "fullCoverage": true, "reads": [[1,40,1,40,40,false,true],[41,40,41,80,40,false,true],[81,40,81,120,40,false,true],[121,40,121,160,40,false,true],[161,40,161,200,40,false,true],[201,40,201,240,40,false,true],[241,40,241,280,40,false,true],[281,40,281,320,40,false,true],[321,40,321,360,40,false,true],[361,40,361,400,40,false,true],[401,40,401,440,40,false,true],[441,40,441,480,40,false,true],[481,40,481,520,40,false,true],[521,40,521,534,14,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/norms/docs/CODING_GUIDE.md", "role": "documented norm", "fullCoverage": true, "reads": [[1,40,1,40,40,false,true],[41,40,41,80,40,false,true],[81,40,81,120,40,false,true],[121,40,121,160,40,false,true],[161,40,161,200,40,false,true],[201,40,201,207,7,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/norms/docs/audit/2026-11-07/core-logsanitizer-fix-current.md", "role": "proof-bound context", "fullCoverage": true, "reads": [[1,40,1,22,22,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/norms/docs/audit/2026-11-07/TEST-SEAMS.md", "role": "public-seam context", "fullCoverage": true, "reads": [[1,50,1,42,42,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/validation.json", "role": "Root candidate metadata", "fullCoverage": true, "reads": [[1,80,1,80,80,false,true],[81,80,81,111,31,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/status.txt", "role": "captured status", "fullCoverage": true, "reads": [[1,10,1,2,2,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/HEAD.txt", "role": "captured HEAD", "fullCoverage": true, "reads": [[1,10,1,1,1,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/settled-three-dot.patch", "role": "captured empty committed patch", "fullCoverage": true, "reads": [[1,10,null,null,0,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-common-reviewed-candidate-20261107-7e89c485-d486-49ec-8e16-09bb6b0d50e6/commits.txt", "role": "captured empty commit list", "fullCoverage": true, "reads": [[1,10,null,null,0,true,true]]},
+      {"path": "F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/validation.json", "role": "historical gate/bounds metadata supplement ONLY", "fullCoverage": false, "sourceSemanticCoverageCredit": 0, "totalFileLines": 1656, "reads": [[1370,60,1370,1429,60,false,true],[1430,60,1430,1489,60,false,true],[1490,60,1490,1549,60,false,true],[1640,30,1640,1656,17,true,true]], "explicitEOFDoesNotMeanWholeFileRead": true}
+    ],
+    "counts": {
+      "auditedReadRequests": 39,
+      "completeCorpusReadRequests": 35,
+      "partialHistoricalReceiptReadRequests": 4,
+      "fullReadFilesIncludingEmpty": 13,
+      "sourcePathsReviewed": 2,
+      "sourceMaterializationsReviewed": 3,
+      "sourceMaterializationReadRequests": 6,
+      "currentSources": {"rawLines": 292, "nonblankLines": 262, "bytes": 13194},
+      "baselineSources": {"rawLines": 156, "nonblankLines": 145, "bytes": 6604},
+      "allSourceMaterializations": {"rawLines": 448, "nonblankLines": 407, "bytes": 19798},
+      "trackedPatch": {"rawLines": 26, "nonblankLines": 26, "bytes": 1793},
+      "norms2": {"rawLines": 741, "nonblankLines": 591, "bytes": 69609},
+      "contextDocs2": {"rawLines": 64, "nonblankLines": 42, "bytes": 9497},
+      "candidateMetadata5IncludingTwoEmpty": {"rawLines": 114, "nonblankLines": 114, "bytes": 5488},
+      "completeCorpus": {"rawLines": 1393, "nonblankLines": 1180, "bytes": 106185},
+      "partialReceiptReturnedLines": 197,
+      "allAuditedReturnedLines": 1590,
+      "ownNativeSemanticReadRequests": 0,
+      "ownRawLogSemanticReadRequests": 0,
+      "inheritedRootSourceReadCredit": 0,
+      "hashOnlyCoverageCredit": 0
+    },
+    "otherReadOperationsNotCoverageCredit": ["Narrow historical memory lookup", "Skill load", "Directory globs", "One targeted grep locating receipt fields; matched lines not counted as additional coverage", "Native fingerprint/count/byte-equality sampling"],
+    "additionalStandardsDiscovery": {"scope": "Frozen candidate norms directory only", "glob": "**/{CODING_STANDARDS,CONTRIBUTING}*", "matches": [], "noGlobalNormDiscoveryClaim": true}
+  },
+  "historicalGateInputs": {
+    "sealPath": "F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/validation.json",
+    "bytes": 60773, "sha256": "1cc486271556ebc8a1d77633e614aeb38d525e93b5b789c9a4f1587a5dbca429",
+    "metadataSampleUtc": "2026-11-07T10:50:56.4642978Z", "lastWriteTimeUtc": "2026-11-07T10:17:49.9213309Z", "lastWriteTimeUtcTicks": "639296434699213309",
+    "samplingLimit": "Receipt metadata sample preceded explicit read ranges, but was concurrent with the locating grep; not asserted before every receipt-content operation. This supplemental receipt is not included in the 19-file source/norm pre/post tuple claim.",
+    "fieldsActuallyRead": ["originalSevenTestsNormalizedByteExact", "originalTestsNormalizedSHA256", "productionDeltaOnlyRemovedPartialMaskSkipsAndComment", "publicSeam", "gates", "bounds"],
+    "historicalOnly": true,
+    "currentTwoCommonInputsMatchSealedPins": true,
+    "noCombinedRerunByReviewer": true,
+    "otherAiToolSqlExtensionUnderRootActiveWorkNotReviewed": true,
+    "gates": [
+      {"name": "JSON behavior RED", "recordLines": [1382,1401], "tests": 8, "failures": 1, "errors": 0, "skipped": 0, "result": "GENUINE_BEHAVIOR_RED", "sealedRawLog": "F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/logs/audit-logsanitizer-partial-mask-json-20261107-red.log", "rawLogReadByReviewer": false},
+      {"name": "JSON GREEN", "recordLines": [1402,1421], "tests": 8, "failures": 0, "errors": 0, "skipped": 0, "result": "GREEN", "sealedRawLog": "F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/logs/audit-logsanitizer-partial-mask-json-20261107-green.log", "rawLogReadByReviewer": false},
+      {"name": "form behavior RED", "recordLines": [1422,1441], "tests": 9, "failures": 1, "errors": 0, "skipped": 0, "result": "GENUINE_BEHAVIOR_RED", "sealedRawLog": "F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/logs/audit-logsanitizer-partial-mask-form-20261107-red.log", "rawLogReadByReviewer": false},
+      {"name": "form GREEN", "recordLines": [1442,1461], "tests": 9, "failures": 0, "errors": 0, "skipped": 0, "result": "GREEN", "sealedRawLog": "F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/logs/audit-logsanitizer-partial-mask-form-20261107-green.log", "rawLogReadByReviewer": false},
+      {"name": "historical joint27 GREEN", "recordLines": [1462,1509], "tests": 27, "failures": 0, "errors": 0, "skipped": 0, "suiteCounts": [9,3,8,1,6], "result": "GREEN", "sealedRawLog": "F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/logs/audit-logsanitizer-partial-mask-20261107-combined-green.log", "rawLogReadByReviewer": false}
+    ],
+    "threeFormatExitZero": {"reported": true, "attribution": "Human supplied Root gate metadata and fully read frozen fix-context doc line14; not independently read format raw logs or rerun formatting", "sealedRawLogs": ["F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/logs/audit-logsanitizer-partial-mask-20261107-format-sanitizer.log", "F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/logs/audit-logsanitizer-partial-mask-20261107-format-common-test.log", "F:/qtMusic/astral/target/audit-core-logsanitizer-current-delta-seal-20261107-26c9c8e9-c5cb-41f5-be1d-11b1f0b57189/logs/audit-logsanitizer-partial-mask-20261107-format-http-test.log"]},
+    "proofLimits": ["Public synchronous LogSanitizer.mask(String) text behavior only", "Historical joint gate was current at that seal, not a claim about subsequent Root SQL-tool changes", "No actual HTTP/DB/browser/async/AOP validation by this reviewer", "No allFormats or universally safe privacy guarantee", "Output not promised valid JSON", "Original114 normalized proof is historical, not HEAD-tracked test", "Final no-skip generator gate pending", "Whole goal and both-axis acceptance pending", "Lead may consider LOCAL commit only after both axes; no stage/commit/push by reviewer"]
+  },
+  "finalClaims": {
+    "newConfirmedHardStandardsFindingIds": ["STD-01"],
+    "newPossibleJudgmentIds": ["POSSIBLE-01"],
+    "twoSourceStandardsCompleted": true,
+    "twoSourceStandardsAccepted": false,
+    "bothAxesAccepted": false,
+    "rootMetadataAndSemanticAcceptance": false,
+    "all188ReviewedByThisReader": false,
+    "wholeRepositoryAccepted": false,
+    "finalNoSkipGeneratorGate": false,
+    "runtimeVerifiedByThisReader": false,
+    "continuouslyImmutable": false,
+    "localCommitCreated": false
+  }
+}

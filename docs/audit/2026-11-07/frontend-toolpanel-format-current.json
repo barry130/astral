@@ -1,0 +1,368 @@
+{
+  "task": "Task35 rev2 bounded formatting review",
+  "status": "mechanical-equality-and-tooling-passed-with-pre-edit-read-order-deviation",
+  "independentAxesPerformed": false,
+  "integrationAccepted": false,
+  "taskCompleteClaimed": false,
+  "behavioralTdd": false,
+  "artifacts": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a",
+  "source": {
+    "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+    "baselineKind": "Frozen CURRENT TYPE-STAGE, not older PRE-TYPE phase2 source",
+    "before": {
+      "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+      "group": "source",
+      "sha256": "0aa01c8b49f4bb3ecd4934eb102753a0469c5627a0eb206c4745553ccd95099c",
+      "bytes": 33654,
+      "mtimeUtc": "2026-11-07T11:21:51.2224514Z",
+      "mtimeFileTime100ns": "134385241112224514"
+    },
+    "final": {
+      "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+      "group": "source",
+      "sha256": "a8cf43b14c3fcec8769b4c8a2d4a20011873b9a7264eb1404ad7f220baebaa5a",
+      "bytes": 34185,
+      "mtimeUtc": "2026-11-07T12:04:57.0363076Z",
+      "mtimeFileTime100ns": "134385266970363076",
+      "byteHashEqual": false,
+      "nativeTimeEqual": false
+    },
+    "finalEqualsProvenCandidate": true,
+    "configuredFormatIdempotent": true,
+    "configuredCheck": true,
+    "first730LinesEqual": true
+  },
+  "spelling": {
+    "expressions": [
+      "{' + '}",
+      "{' / '}",
+      "{'\\uFF1BSQL \\u53EA\\u5141\\u8BB8\\u5355\\u6761'}"
+    ],
+    "sqlTextValue": "；SQL 只允许单条",
+    "existingSeparateSpaceChildPreserved": true,
+    "minimumWithinTestedSpellings": true,
+    "testedSpellings": 7,
+    "acceptedForApplication": "explicit-plus-slash-sql-escaped",
+    "formatOnlyAdditionalHunks": 6,
+    "insertedLines": 43,
+    "deletedLines": 11,
+    "sourceLines": [
+      958,
+      990
+    ],
+    "noLiteralValuesOrBranchesChanged": true
+  },
+  "mechanicalComparison": {
+    "scope": "Entire emitted JavaScript with unchanged established normalization; identifiers/statements/literals/arrays/JSX children and boundaries included; not behavioral certification",
+    "helper": {
+      "name": "runtime-proof",
+      "originalSha256": "7e1ca895c2dfbc071105ffd6957cbbff9bdd1fb0b116dbc830ebe58e02c4415e",
+      "copySha256": "7e1ca895c2dfbc071105ffd6957cbbff9bdd1fb0b116dbc830ebe58e02c4415e",
+      "byteIdentical": true
+    },
+    "finalInvocation": {
+      "executable": "D:/Python/python3109/Scripts/node.exe",
+      "arguments": [
+        "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/unchanged-runtime-proof.cjs"
+      ],
+      "cwd": "F:/qtMusic/astral",
+      "exit": 0,
+      "purpose": "Original verbatim comparator direct real final source reads; no overlay"
+    },
+    "options": [
+      {
+        "name": "project",
+        "target": 4,
+        "module": 99,
+        "jsx": 4,
+        "esModuleInterop": true
+      },
+      {
+        "name": "public-loader",
+        "target": 9,
+        "module": 1,
+        "jsx": 4,
+        "esModuleInterop": true
+      }
+    ],
+    "normalization": {
+      "removeComments": true,
+      "sourceMap": false,
+      "parser": "babel",
+      "plugins": [],
+      "semi": true,
+      "singleQuote": true,
+      "trailingComma": "all",
+      "printWidth": 100
+    },
+    "rows": [
+      {
+        "file": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "31e2ff1906180796734ee4597f53bc6363f95dfb7ca91312e8813db4c359498b",
+        "afterSha256": "31e2ff1906180796734ee4597f53bc6363f95dfb7ca91312e8813db4c359498b",
+        "beforeBytes": 42439,
+        "afterBytes": 42439,
+        "beforePath": "emitted-final/project/src__components__ai__admin__ToolPanel.tsx.before.js",
+        "afterPath": "emitted-final/project/src__components__ai__admin__ToolPanel.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "719e2c6ab443b31c0dfa3202e118f3e6b4ed30ff3c47ffc7d2ff44fcec572c27",
+        "afterSha256": "719e2c6ab443b31c0dfa3202e118f3e6b4ed30ff3c47ffc7d2ff44fcec572c27",
+        "beforeBytes": 47425,
+        "afterBytes": 47425,
+        "beforePath": "emitted-final/public-loader/src__components__ai__admin__ToolPanel.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__components__ai__admin__ToolPanel.tsx.after.js"
+      }
+    ],
+    "allEqual": true,
+    "isolatedCandidatePreAndPostFormatBothProfilesEqual": true
+  },
+  "toolchain": {
+    "executable": "D:\\Python\\python3109\\lib\\site-packages\\nodejs_wheel\\node.exe",
+    "node": "v24.19.0",
+    "typescript": "5.9.3",
+    "prettier": "3.9.10",
+    "eslint": "9.39.4"
+  },
+  "actualGates": {
+    "baseline": [
+      {
+        "stage": "baseline",
+        "kind": "tsc",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/typescript/bin/tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T12:03:40.227Z",
+        "endedUtc": "2026-11-07T12:03:51.060Z",
+        "exit": 0,
+        "signal": null,
+        "log": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/tsc-baseline.txt",
+        "counts": {
+          "diagnostics": 0
+        }
+      },
+      {
+        "stage": "baseline",
+        "kind": "original13",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "--test",
+          "tests/form-contract.test.cjs"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T12:03:51.063Z",
+        "endedUtc": "2026-11-07T12:03:51.921Z",
+        "exit": 0,
+        "signal": null,
+        "log": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/original13-baseline.txt",
+        "counts": {
+          "tests": 13,
+          "pass": 13,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      },
+      {
+        "stage": "baseline",
+        "kind": "eslint",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/components/ai/admin/ToolPanel.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T12:03:51.922Z",
+        "endedUtc": "2026-11-07T12:03:52.926Z",
+        "exit": 0,
+        "signal": null,
+        "log": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/eslint-baseline.txt",
+        "counts": {}
+      },
+      {
+        "stage": "baseline",
+        "kind": "prettier",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/components/ai/admin/ToolPanel.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T12:03:52.928Z",
+        "endedUtc": "2026-11-07T12:03:53.375Z",
+        "exit": 1,
+        "signal": null,
+        "log": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/prettier-baseline.txt",
+        "counts": {}
+      }
+    ],
+    "final": [
+      {
+        "stage": "final",
+        "kind": "tsc",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/typescript/bin/tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T12:05:27.698Z",
+        "endedUtc": "2026-11-07T12:05:38.608Z",
+        "exit": 0,
+        "signal": null,
+        "log": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/tsc-final.txt",
+        "counts": {
+          "diagnostics": 0
+        }
+      },
+      {
+        "stage": "final",
+        "kind": "original13",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "--test",
+          "tests/form-contract.test.cjs"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T12:05:38.611Z",
+        "endedUtc": "2026-11-07T12:05:39.702Z",
+        "exit": 0,
+        "signal": null,
+        "log": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/original13-final.txt",
+        "counts": {
+          "tests": 13,
+          "pass": 13,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        }
+      },
+      {
+        "stage": "final",
+        "kind": "eslint",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/components/ai/admin/ToolPanel.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T12:05:39.703Z",
+        "endedUtc": "2026-11-07T12:05:40.886Z",
+        "exit": 0,
+        "signal": null,
+        "log": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/eslint-final.txt",
+        "counts": {}
+      },
+      {
+        "stage": "final",
+        "kind": "prettier",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/components/ai/admin/ToolPanel.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T12:05:40.887Z",
+        "endedUtc": "2026-11-07T12:05:41.407Z",
+        "exit": 0,
+        "signal": null,
+        "log": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/prettier-final.txt",
+        "counts": {}
+      }
+    ],
+    "prettierSourceConfig": {
+      "semi": true,
+      "singleQuote": true,
+      "tabWidth": 2,
+      "trailingComma": "all",
+      "printWidth": 100,
+      "plugins": [
+        "prettier-plugin-tailwindcss"
+      ]
+    }
+  },
+  "references": {
+    "phase2ReferenceCount": 17,
+    "phase2ReferenceDrift": 0,
+    "phase2OriginalSnapshotContinuityDrift": 0,
+    "additionalImmutableCount": 12,
+    "additionalImmutableDrift": 0,
+    "priorArtifactFiles": 179,
+    "priorArtifactDrift": 0,
+    "nativeSamplingIs100ns": true,
+    "continuousLockClaimed": false
+  },
+  "ownReads": {
+    "guidesFullUnprunedNow": true,
+    "guideUniqueLines": 990,
+    "originalSourceLines": 958,
+    "finalSourceReadLines": 990,
+    "finalSourceTotalLines": 990,
+    "everyChangedRangeCovered": true,
+    "maxBlockLines": 80,
+    "preEditFullUnprunedGuidesSatisfied": false
+  },
+  "proceduralDeviation": "UI_GUIDE81–160 initial response was middle-pruned. Unpruned rereads completed only after source editing. Earlier pre-edit coverage progress assertion was explicitly corrected to Lead. Full-read timing requirement remains unmet; no task/axis acceptance is asserted.",
+  "writeBoundary": {
+    "productionFiles": [
+      "astral-front/src/components/ai/admin/ToolPanel.tsx"
+    ],
+    "deliverables": [
+      "docs/audit/2026-11-07/frontend-toolpanel-format-current.md",
+      "docs/audit/2026-11-07/frontend-toolpanel-format-current.json"
+    ],
+    "ownedIgnoredArtifactPrefix": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a",
+    "sharedTasksGoalsPlanChanged": false,
+    "testsConfigurationsDependenciesChanged": false,
+    "otherProductionChanged": false,
+    "gitMavenBuildBrowserNetworkServersInvoked": false,
+    "commentsSuppressionsAnyAdded": false
+  },
+  "receipts": {
+    "candidates.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/candidates.json",
+    "runtime-proof-final.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/runtime-proof-final.json",
+    "source-diff.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/source-diff.json",
+    "changed-ranges.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/changed-ranges.json",
+    "fingerprints-before.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/fingerprints-before.json",
+    "fingerprints-after.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/fingerprints-after.json",
+    "phase2-reference-continuity.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/phase2-reference-continuity.json",
+    "read-receipts.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/read-receipts.json",
+    "live-validation.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/live-validation.json",
+    "commands.json": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/commands.json"
+  },
+  "markdownWords": 304,
+  "generatedHelpers": [
+    {
+      "path": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/candidates.cjs",
+      "sha256": "0b5e4c9f3e0c9d9b0e1c118cf866c339ed9c32e285b9608307d14fd7fb5f6e37"
+    },
+    {
+      "path": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/gates.cjs",
+      "sha256": "010d7f51d85b5f916c0c61120259db84b739876ed9ce122190ecab0d98834cd0"
+    },
+    {
+      "path": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/verify.cjs",
+      "sha256": "8f645e4c942a7b9f1b647a9f99d6387fa226dc5f546b09a4dc09c3c5f33c65be"
+    },
+    {
+      "path": "target/form-toolpanel-format-20261107-4d57981d-e529-4385-b9f1-cfb6916aa98a/report-data.cjs",
+      "sha256": "428ecee18fb13e8b7b83f5d25e889b4564ee9d0cb3fbdc27cdd8c3821e932acb"
+    }
+  ]
+}

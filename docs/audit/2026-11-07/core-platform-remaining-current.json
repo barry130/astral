@@ -1,0 +1,6434 @@
+{
+  "owner": "session-6ca189e99e96-core-platform-remaining-reader",
+  "reportKind": "read-only remaining121 continuation",
+  "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+  "startedAt": "2026-11-07T07:34:50.941Z",
+  "input": "docs/audit/2026-11-07/core-platform-current.json",
+  "inputSha256": "ff2e556623c4bb83e5c76ddb52a28424f301a18897f23489e5371893ffeb38b1",
+  "files": [
+    {
+      "index": 0,
+      "path": "astral-common/src/main/java/com/astral/common/annotation/RateLimit.java",
+      "pre": {
+        "sha256": "43910e223e03003bc16f8597cc604b4d3f4f1c91c8b45d40d293da5868e81ae3",
+        "bytes": 603,
+        "raw": 22,
+        "nonblank": 17,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 22,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "43910e223e03003bc16f8597cc604b4d3f4f1c91c8b45d40d293da5868e81ae3",
+        "bytes": 603,
+        "raw": 22,
+        "nonblank": 17,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Runtime rate-limit annotation with configurable key/window/count; interceptor wiring outside this subset.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "43910e223e03003bc16f8597cc604b4d3f4f1c91c8b45d40d293da5868e81ae3",
+        "bytes": 603,
+        "raw": 22,
+        "nonblank": 17,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 1,
+      "path": "astral-common/src/main/java/com/astral/common/annotation/RequiresSuper.java",
+      "pre": {
+        "sha256": "718275937506cbdb4d5cf228b5fdbded764a2351be55f2203efb82d09649706b",
+        "bytes": 1068,
+        "raw": 23,
+        "nonblank": 21,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 23,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "718275937506cbdb4d5cf228b5fdbded764a2351be55f2203efb82d09649706b",
+        "bytes": 1068,
+        "raw": 23,
+        "nonblank": 21,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Runtime inherited super-user annotation; declaration is not authorization-execution evidence.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "718275937506cbdb4d5cf228b5fdbded764a2351be55f2203efb82d09649706b",
+        "bytes": 1068,
+        "raw": 23,
+        "nonblank": 21,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 2,
+      "path": "astral-common/src/main/java/com/astral/common/constant/ApiConstants.java",
+      "pre": {
+        "sha256": "d1e4790b65398d6cf1ca9955c3dc7d27e1ce9ece5b2138db4eef8085f1ead79b",
+        "bytes": 2044,
+        "raw": 45,
+        "nonblank": 34,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 45,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "d1e4790b65398d6cf1ca9955c3dc7d27e1ce9ece5b2138db4eef8085f1ead79b",
+        "bytes": 2044,
+        "raw": 45,
+        "nonblank": 34,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Admin/app/all path constants centralize the documented API tiers.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "d1e4790b65398d6cf1ca9955c3dc7d27e1ce9ece5b2138db4eef8085f1ead79b",
+        "bytes": 2044,
+        "raw": 45,
+        "nonblank": 34,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 3,
+      "path": "astral-common/src/main/java/com/astral/common/constant/ErrorCode.java",
+      "pre": {
+        "sha256": "7b24d6abeff062e0c4fd6239006067d1314886d9f7e8560f555dd740ef0193d1",
+        "bytes": 661,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 25,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "7b24d6abeff062e0c4fd6239006067d1314886d9f7e8560f555dd740ef0193d1",
+        "bytes": 661,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Generic business-code constants; transport/body mapping implementation outside subset.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "7b24d6abeff062e0c4fd6239006067d1314886d9f7e8560f555dd740ef0193d1",
+        "bytes": 661,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 4,
+      "path": "astral-common/src/main/java/com/astral/common/constant/NoticeConstants.java",
+      "pre": {
+        "sha256": "e2b8459acb49dbea9b3cb51c9957af943c2850cfdcdbe8464d1862473d6807b9",
+        "bytes": 4051,
+        "raw": 85,
+        "nonblank": 67,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 85,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "e2b8459acb49dbea9b3cb51c9957af943c2850cfdcdbe8464d1862473d6807b9",
+        "bytes": 4051,
+        "raw": 85,
+        "nonblank": 67,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Host/plugin notice channel/type/display constants are outside generated entity classes; includes platform set.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "e2b8459acb49dbea9b3cb51c9957af943c2850cfdcdbe8464d1862473d6807b9",
+        "bytes": 4051,
+        "raw": 85,
+        "nonblank": 67,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 5,
+      "path": "astral-common/src/main/java/com/astral/common/constant/PermissionType.java",
+      "pre": {
+        "sha256": "ccabd8bfd0171e48d8545043b15594333ea67118e3fc492397dd045447bbb187",
+        "bytes": 1277,
+        "raw": 37,
+        "nonblank": 29,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 37,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "ccabd8bfd0171e48d8545043b15594333ea67118e3fc492397dd045447bbb187",
+        "bytes": 1277,
+        "raw": 37,
+        "nonblank": 29,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Explicit API4/DATA5 permission types; no segment-count inference.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "ccabd8bfd0171e48d8545043b15594333ea67118e3fc492397dd045447bbb187",
+        "bytes": 1277,
+        "raw": 37,
+        "nonblank": 29,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 6,
+      "path": "astral-common/src/main/java/com/astral/common/constant/SequenceType.java",
+      "pre": {
+        "sha256": "144009081e060ef75766288015fcfc4a404afd7fd031a446763ddab209268ddb",
+        "bytes": 2075,
+        "raw": 68,
+        "nonblank": 58,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 68,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "144009081e060ef75766288015fcfc4a404afd7fd031a446763ddab209268ddb",
+        "bytes": 2075,
+        "raw": 68,
+        "nonblank": 58,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Five sequence types; unknown/null fromValue fallback is SNOWFLAKE, consumer semantics unverified (C06).",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [
+        "C06"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "144009081e060ef75766288015fcfc4a404afd7fd031a446763ddab209268ddb",
+        "bytes": 2075,
+        "raw": 68,
+        "nonblank": 58,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 7,
+      "path": "astral-common/src/main/java/com/astral/common/error/ErrorCodes.java",
+      "pre": {
+        "sha256": "f8885a42283bff6b18b08df006d39ebcab9329303184c94ac031f283c3e9e881",
+        "bytes": 1746,
+        "raw": 45,
+        "nonblank": 38,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 45,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "f8885a42283bff6b18b08df006d39ebcab9329303184c94ac031f283c3e9e881",
+        "bytes": 1746,
+        "raw": 45,
+        "nonblank": 38,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Error message resource lookup/formatting fallback; no-placeholder arguments appended, callers unverified (C06).",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [
+        "C06"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "f8885a42283bff6b18b08df006d39ebcab9329303184c94ac031f283c3e9e881",
+        "bytes": 1746,
+        "raw": 45,
+        "nonblank": 38,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 8,
+      "path": "astral-common/src/main/java/com/astral/common/exception/BusinessException.java",
+      "pre": {
+        "sha256": "85f7412d43c5df54e33435d8e21054755498b0c20594b5a52bd940576234593f",
+        "bytes": 2484,
+        "raw": 67,
+        "nonblank": 56,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 67,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "85f7412d43c5df54e33435d8e21054755498b0c20594b5a52bd940576234593f",
+        "bytes": 2484,
+        "raw": 67,
+        "nonblank": 56,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "BusinessException constructors/factories distinguish detailed error codes and body-code/message cases.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "85f7412d43c5df54e33435d8e21054755498b0c20594b5a52bd940576234593f",
+        "bytes": 2484,
+        "raw": 67,
+        "nonblank": 56,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 9,
+      "path": "astral-common/src/main/java/com/astral/common/util/CsvExportUtil.java",
+      "pre": {
+        "sha256": "b9a346122ab833b8074233cf7e54479d37ca17f039fe0f4730063ebd1b92d5bd",
+        "bytes": 4034,
+        "raw": 106,
+        "nonblank": 98,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 106,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "b9a346122ab833b8074233cf7e54479d37ca17f039fe0f4730063ebd1b92d5bd",
+        "bytes": 4034,
+        "raw": 106,
+        "nonblank": 98,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "CSV BOM/RFC4180 output and first-non-ignorable-character formula protection; authored regression not executed.",
+      "followupRanges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 106,
+          "eof": true,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "b9a346122ab833b8074233cf7e54479d37ca17f039fe0f4730063ebd1b92d5bd",
+        "bytes": 4034,
+        "raw": 106,
+        "nonblank": 98,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 10,
+      "path": "astral-common/src/main/java/com/astral/common/util/LogSanitizer.java",
+      "pre": {
+        "sha256": "7a873bbc4d7f9e479a087e5ad23dab1a9d73cd8a38556d3b61b955329df60c29",
+        "bytes": 6604,
+        "raw": 156,
+        "nonblank": 145,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 156,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "7a873bbc4d7f9e479a087e5ad23dab1a9d73cd8a38556d3b61b955329df60c29",
+        "bytes": 6604,
+        "raw": 156,
+        "nonblank": 145,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "JSON/form sensitive-key masking and normalization; partial mask marker skips readable content (F01).",
+      "followupRanges": [
+        {
+          "offset": 75,
+          "limit": 80,
+          "start": 75,
+          "end": 154,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F01"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "7a873bbc4d7f9e479a087e5ad23dab1a9d73cd8a38556d3b61b955329df60c29",
+        "bytes": 6604,
+        "raw": 156,
+        "nonblank": 145,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 11,
+      "path": "astral-common/src/main/java/com/astral/common/util/PasswordPolicy.java",
+      "pre": {
+        "sha256": "7846b1243d8317f3ed8ec6a16b130dc828fb19c1b842dae44757dba086d2e2fa",
+        "bytes": 2607,
+        "raw": 67,
+        "nonblank": 62,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 67,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "7846b1243d8317f3ed8ec6a16b130dc828fb19c1b842dae44757dba086d2e2fa",
+        "bytes": 2607,
+        "raw": 67,
+        "nonblank": 62,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Password length/character/comparison policy; authentication/update integration not reread.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "7846b1243d8317f3ed8ec6a16b130dc828fb19c1b842dae44757dba086d2e2fa",
+        "bytes": 2607,
+        "raw": 67,
+        "nonblank": 62,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 12,
+      "path": "astral-common/src/main/java/com/astral/common/util/SequenceMetrics.java",
+      "pre": {
+        "sha256": "bf5a84427e8c8e027a1247ec9ab192f88c2b41e3c0e8898ca5ee7b2f890efd7a",
+        "bytes": 3614,
+        "raw": 96,
+        "nonblank": 85,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 96,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "bf5a84427e8c8e027a1247ec9ab192f88c2b41e3c0e8898ca5ee7b2f890efd7a",
+        "bytes": 3614,
+        "raw": 96,
+        "nonblank": 85,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Micrometer sequence metrics helper; actual registry wiring/export not executed.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "bf5a84427e8c8e027a1247ec9ab192f88c2b41e3c0e8898ca5ee7b2f890efd7a",
+        "bytes": 3614,
+        "raw": 96,
+        "nonblank": 85,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 13,
+      "path": "astral-common/src/main/java/com/astral/common/web/CsrfTokenSupport.java",
+      "pre": {
+        "sha256": "28b8fc76a1793635692ed11ba297d5d1825438be3e718be282558c77ad54da3a",
+        "bytes": 5776,
+        "raw": 130,
+        "nonblank": 117,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 130,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "28b8fc76a1793635692ed11ba297d5d1825438be3e718be282558c77ad54da3a",
+        "bytes": 5776,
+        "raw": 130,
+        "nonblank": 117,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "CSRF token generation/comparison/cookie support; proxy/HTTPS/request integration untested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "28b8fc76a1793635692ed11ba297d5d1825438be3e718be282558c77ad54da3a",
+        "bytes": 5776,
+        "raw": 130,
+        "nonblank": 117,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 14,
+      "path": "astral-common/src/main/resources/error-codes.properties",
+      "pre": {
+        "sha256": "b850dcad97ee4f5e497c94d44ca709533d9fda8006a260c6fd54f4b7fbabbf9f",
+        "bytes": 7674,
+        "raw": 204,
+        "nonblank": 190,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 160,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 161,
+          "limit": 80,
+          "start": 161,
+          "end": 204,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "b850dcad97ee4f5e497c94d44ca709533d9fda8006a260c6fd54f4b7fbabbf9f",
+        "bytes": 7674,
+        "raw": 204,
+        "nonblank": 190,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Auth/common/system/sequence/plugin business error message catalog; not a runtime exception-mapping test.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "b850dcad97ee4f5e497c94d44ca709533d9fda8006a260c6fd54f4b7fbabbf9f",
+        "bytes": 7674,
+        "raw": 204,
+        "nonblank": 190,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 15,
+      "path": "astral-common/src/test/java/com/astral/common/util/CommonUtilsTest.java",
+      "pre": {
+        "sha256": "a2ada2680eff3494c36891152f1bbfda6a784c467c57ce411800765e6aa16ce6",
+        "bytes": 5389,
+        "raw": 114,
+        "nonblank": 101,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 114,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "a2ada2680eff3494c36891152f1bbfda6a784c467c57ce411800765e6aa16ce6",
+        "bytes": 5389,
+        "raw": 114,
+        "nonblank": 101,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Authored utility tests cover CSV/masking/idempotence/patch/IP/password/annotations; no test execution; missing F01 adversarial cases.",
+      "followupRanges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F01"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "a2ada2680eff3494c36891152f1bbfda6a784c467c57ce411800765e6aa16ce6",
+        "bytes": 5389,
+        "raw": 114,
+        "nonblank": 101,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 16,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/ApiTopDTO.java",
+      "pre": {
+        "sha256": "891607c5256472fb36dd94a676d7fd9b2b32b0e47520c06b21a51a4b17321b02",
+        "bytes": 747,
+        "raw": 28,
+        "nonblank": 26,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 28,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "891607c5256472fb36dd94a676d7fd9b2b32b0e47520c06b21a51a4b17321b02",
+        "bytes": 747,
+        "raw": 28,
+        "nonblank": 26,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "API Top row DTO with count/status/rate fields; SQL aggregation producer not inferred from DTO alone.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "891607c5256472fb36dd94a676d7fd9b2b32b0e47520c06b21a51a4b17321b02",
+        "bytes": 747,
+        "raw": 28,
+        "nonblank": 26,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 17,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/ApiTopResultDTO.java",
+      "pre": {
+        "sha256": "962cc9b79e9643166d35680895bca0304e921ca1d4fe0baccd8b00a8127c7f5c",
+        "bytes": 784,
+        "raw": 26,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 26,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "962cc9b79e9643166d35680895bca0304e921ca1d4fe0baccd8b00a8127c7f5c",
+        "bytes": 784,
+        "raw": 26,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "API Top result separates limited rows from whole-day summary.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "962cc9b79e9643166d35680895bca0304e921ca1d4fe0baccd8b00a8127c7f5c",
+        "bytes": 784,
+        "raw": 26,
+        "nonblank": 22,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 18,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/ApiTopSummaryDTO.java",
+      "pre": {
+        "sha256": "209b469360105ddf1e194300f32172c3912bd6f6bc136617ac169352f748c1b8",
+        "bytes": 1183,
+        "raw": 33,
+        "nonblank": 29,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 33,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "209b469360105ddf1e194300f32172c3912bd6f6bc136617ac169352f748c1b8",
+        "bytes": 1183,
+        "raw": 33,
+        "nonblank": 29,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "API summary decimal formatting uses default locale and nullable successCount; actual service counts nonnull (C04).",
+      "followupRanges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 33,
+          "eof": true,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [],
+      "candidateIds": [
+        "C04"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "209b469360105ddf1e194300f32172c3912bd6f6bc136617ac169352f748c1b8",
+        "bytes": 1183,
+        "raw": 33,
+        "nonblank": 29,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 19,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/BusinessMonitorDTO.java",
+      "pre": {
+        "sha256": "7fe9427a8534234d795c793d66377c98e98dfb92ce18c6ef3f5da4842a21ea56",
+        "bytes": 784,
+        "raw": 24,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 24,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "7fe9427a8534234d795c793d66377c98e98dfb92ce18c6ef3f5da4842a21ea56",
+        "bytes": 784,
+        "raw": 24,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Business scale/thread DTO; count producer reviewed separately.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "7fe9427a8534234d795c793d66377c98e98dfb92ce18c6ef3f5da4842a21ea56",
+        "bytes": 784,
+        "raw": 24,
+        "nonblank": 22,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 20,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/DashboardOverviewDTO.java",
+      "pre": {
+        "sha256": "174d508e3cac5575058ce3ad7db746089350998e75ff791f1c105581b0509139",
+        "bytes": 1365,
+        "raw": 34,
+        "nonblank": 32,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 34,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "174d508e3cac5575058ce3ad7db746089350998e75ff791f1c105581b0509139",
+        "bytes": 1365,
+        "raw": 34,
+        "nonblank": 32,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Dashboard aggregate DTO combines system/JVM/business/statistics/DB/Redis results.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "174d508e3cac5575058ce3ad7db746089350998e75ff791f1c105581b0509139",
+        "bytes": 1365,
+        "raw": 34,
+        "nonblank": 32,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 21,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/DatabaseMonitorDTO.java",
+      "pre": {
+        "sha256": "76405308d07962ccee3923c720cd7cbdc5a2bf504be870df8d408758165ec315",
+        "bytes": 1439,
+        "raw": 38,
+        "nonblank": 36,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 38,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "76405308d07962ccee3923c720cd7cbdc5a2bf504be870df8d408758165ec315",
+        "bytes": 1439,
+        "raw": 38,
+        "nonblank": 36,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Database monitor DTO includes connection/storage/status shape; probe implementation outside121.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "76405308d07962ccee3923c720cd7cbdc5a2bf504be870df8d408758165ec315",
+        "bytes": 1439,
+        "raw": 38,
+        "nonblank": 36,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 22,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/DeviceOverviewDTO.java",
+      "pre": {
+        "sha256": "3666b564c75e8420564129b7d0265ec16bc5bd0aa927cce29b8fe671f3b4c132",
+        "bytes": 876,
+        "raw": 28,
+        "nonblank": 26,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 28,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "3666b564c75e8420564129b7d0265ec16bc5bd0aa927cce29b8fe671f3b4c132",
+        "bytes": 876,
+        "raw": 28,
+        "nonblank": 26,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Device overview date/new/active/total/metric counts DTO.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "3666b564c75e8420564129b7d0265ec16bc5bd0aa927cce29b8fe671f3b4c132",
+        "bytes": 876,
+        "raw": 28,
+        "nonblank": 26,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 23,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/ErrorSummaryDTO.java",
+      "pre": {
+        "sha256": "a4e2726274b49a48cb9bc2b31f9c9b16b2a8a32a6ec1d7301882d15a0bad3c02",
+        "bytes": 789,
+        "raw": 30,
+        "nonblank": 28,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 30,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "a4e2726274b49a48cb9bc2b31f9c9b16b2a8a32a6ec1d7301882d15a0bad3c02",
+        "bytes": 789,
+        "raw": 30,
+        "nonblank": 28,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Error summary grouping/count/latest-date DTO; raw exception data retrieval not executed.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "a4e2726274b49a48cb9bc2b31f9c9b16b2a8a32a6ec1d7301882d15a0bad3c02",
+        "bytes": 789,
+        "raw": 30,
+        "nonblank": 28,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 24,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/JvmMonitorDTO.java",
+      "pre": {
+        "sha256": "43e666cf390b82cc901fad78e8de021ac9d71f0e6492bf5feb393127a0d46c0c",
+        "bytes": 849,
+        "raw": 30,
+        "nonblank": 28,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 30,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "43e666cf390b82cc901fad78e8de021ac9d71f0e6492bf5feb393127a0d46c0c",
+        "bytes": 849,
+        "raw": 30,
+        "nonblank": 28,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "JVM heap/thread/GC/runtime DTO; producer long-to-int/unavailable GC candidate (C03).",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [
+        "C03"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "43e666cf390b82cc901fad78e8de021ac9d71f0e6492bf5feb393127a0d46c0c",
+        "bytes": 849,
+        "raw": 30,
+        "nonblank": 28,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 25,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/RedisMonitorDTO.java",
+      "pre": {
+        "sha256": "ccb124a47d75f3d7dff8d33a961fff532b5214f7a780f4b7a42d8a0d86e54d8c",
+        "bytes": 1621,
+        "raw": 46,
+        "nonblank": 44,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 46,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "ccb124a47d75f3d7dff8d33a961fff532b5214f7a780f4b7a42d8a0d86e54d8c",
+        "bytes": 1621,
+        "raw": 46,
+        "nonblank": 44,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Redis probe DTO includes size/client/memory/version/status; producer outside121.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "ccb124a47d75f3d7dff8d33a961fff532b5214f7a780f4b7a42d8a0d86e54d8c",
+        "bytes": 1621,
+        "raw": 46,
+        "nonblank": 44,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 26,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/SystemMonitorDTO.java",
+      "pre": {
+        "sha256": "9e0e1e71ebc6e5f726f14be792b48311a1fad487faa128a9bc6b0b81a8760394",
+        "bytes": 1073,
+        "raw": 34,
+        "nonblank": 32,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 34,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "9e0e1e71ebc6e5f726f14be792b48311a1fad487faa128a9bc6b0b81a8760394",
+        "bytes": 1073,
+        "raw": 34,
+        "nonblank": 32,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "System DTO separates host memory and heap fields; producer populates wrong domain and leaves heap fields unset (F05).",
+      "followupRanges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 34,
+          "eof": true,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F05"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "9e0e1e71ebc6e5f726f14be792b48311a1fad487faa128a9bc6b0b81a8760394",
+        "bytes": 1073,
+        "raw": 34,
+        "nonblank": 32,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 27,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/dto/TrendDTO.java",
+      "pre": {
+        "sha256": "57c5c02bf89daa6a30c0035cb81c3a984ae3a61a159cd6aeaf07140d69d11965",
+        "bytes": 800,
+        "raw": 31,
+        "nonblank": 28,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 31,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "57c5c02bf89daa6a30c0035cb81c3a984ae3a61a159cd6aeaf07140d69d11965",
+        "bytes": 800,
+        "raw": 31,
+        "nonblank": 28,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Trend DTO creates24 hourly labels and today/yesterday arrays; producer zero-fills hours.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "57c5c02bf89daa6a30c0035cb81c3a984ae3a61a159cd6aeaf07140d69d11965",
+        "bytes": 800,
+        "raw": 31,
+        "nonblank": 28,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 28,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/service/BusinessMonitorService.java",
+      "pre": {
+        "sha256": "d0238c46ebf52eb5f3b8d09e446a332b8cb0e5301d1cf07edab48fae674e6e77",
+        "bytes": 450,
+        "raw": 18,
+        "nonblank": 16,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 18,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "d0238c46ebf52eb5f3b8d09e446a332b8cb0e5301d1cf07edab48fae674e6e77",
+        "bytes": 450,
+        "raw": 18,
+        "nonblank": 16,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Public business monitor interface, no implementation or wiring proof by declaration alone.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "d0238c46ebf52eb5f3b8d09e446a332b8cb0e5301d1cf07edab48fae674e6e77",
+        "bytes": 450,
+        "raw": 18,
+        "nonblank": 16,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 29,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/service/DashboardOverviewService.java",
+      "pre": {
+        "sha256": "871179b955f3c09ff2b3d0d966a7e11260dce9ce1daa804e53fc1721d9873935",
+        "bytes": 3838,
+        "raw": 87,
+        "nonblank": 75,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 87,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "871179b955f3c09ff2b3d0d966a7e11260dce9ce1daa804e53fc1721d9873935",
+        "bytes": 3838,
+        "raw": 87,
+        "nonblank": 75,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Dashboard calls public delegates and parallel virtual-thread probes; unbounded joins/lifecycle depend on outside121 timeouts (C05).",
+      "followupRanges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [],
+      "candidateIds": [
+        "C05"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "871179b955f3c09ff2b3d0d966a7e11260dce9ce1daa804e53fc1721d9873935",
+        "bytes": 3838,
+        "raw": 87,
+        "nonblank": 75,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 30,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/service/impl/BusinessMonitorServiceImpl.java",
+      "pre": {
+        "sha256": "102e94ba9582e3f52c28ad9bdb22f12b304232c700645f269ebb49b503dffef3",
+        "bytes": 1427,
+        "raw": 44,
+        "nonblank": 39,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 44,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "102e94ba9582e3f52c28ad9bdb22f12b304232c700645f269ebb49b503dffef3",
+        "bytes": 1427,
+        "raw": 44,
+        "nonblank": 39,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Business monitor counts host users and obtains active thread estimate; actual DB count not executed.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "102e94ba9582e3f52c28ad9bdb22f12b304232c700645f269ebb49b503dffef3",
+        "bytes": 1427,
+        "raw": 44,
+        "nonblank": 39,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 31,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/service/impl/JvmMonitorServiceImpl.java",
+      "pre": {
+        "sha256": "e06bf6a22eddcd232fa54296da56cc380d3b27f6444bc305134d8831a2b35761",
+        "bytes": 2329,
+        "raw": 60,
+        "nonblank": 54,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 60,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "e06bf6a22eddcd232fa54296da56cc380d3b27f6444bc305134d8831a2b35761",
+        "bytes": 2329,
+        "raw": 60,
+        "nonblank": 54,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "JVM monitor maps heap/runtime correctly, sums unavailable GC counts and narrows long toint (C03).",
+      "followupRanges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 60,
+          "eof": true,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [],
+      "candidateIds": [
+        "C03"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "e06bf6a22eddcd232fa54296da56cc380d3b27f6444bc305134d8831a2b35761",
+        "bytes": 2329,
+        "raw": 60,
+        "nonblank": 54,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 32,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/service/impl/SystemMonitorServiceImpl.java",
+      "pre": {
+        "sha256": "3ae79bd94d374dd52c214cad449826ea6a3e171bd3ea0e1b0dda632216f9882e",
+        "bytes": 4185,
+        "raw": 121,
+        "nonblank": 106,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 121,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "3ae79bd94d374dd52c214cad449826ea6a3e171bd3ea0e1b0dda632216f9882e",
+        "bytes": 4185,
+        "raw": 121,
+        "nonblank": 106,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "System monitor puts heap metrics in system memory fields; unavailable probes return0 (F05,C03).",
+      "followupRanges": [
+        {
+          "offset": 41,
+          "limit": 80,
+          "start": 41,
+          "end": 120,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F05"
+      ],
+      "candidateIds": [
+        "C03"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "3ae79bd94d374dd52c214cad449826ea6a3e171bd3ea0e1b0dda632216f9882e",
+        "bytes": 4185,
+        "raw": 121,
+        "nonblank": 106,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 33,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/service/JvmMonitorService.java",
+      "pre": {
+        "sha256": "3ee18980779df0b9169cc247d85fa74634c49dd7f566196c75db138d4ddf6b5a",
+        "bytes": 405,
+        "raw": 18,
+        "nonblank": 16,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 18,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "3ee18980779df0b9169cc247d85fa74634c49dd7f566196c75db138d4ddf6b5a",
+        "bytes": 405,
+        "raw": 18,
+        "nonblank": 16,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Public JVM monitor interface; runtime implementation read, not executed.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "3ee18980779df0b9169cc247d85fa74634c49dd7f566196c75db138d4ddf6b5a",
+        "bytes": 405,
+        "raw": 18,
+        "nonblank": 16,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 34,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/service/StatReportService.java",
+      "pre": {
+        "sha256": "5216155f1ef579508d484d3d3e09b0eabe0b0049c9b967ae3523c4db8f778b42",
+        "bytes": 21351,
+        "raw": 487,
+        "nonblank": 445,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 160,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 161,
+          "limit": 80,
+          "start": 161,
+          "end": 240,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 241,
+          "limit": 80,
+          "start": 241,
+          "end": 320,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 321,
+          "limit": 80,
+          "start": 321,
+          "end": 400,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 401,
+          "limit": 80,
+          "start": 401,
+          "end": 480,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 481,
+          "limit": 80,
+          "start": 481,
+          "end": 487,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "5216155f1ef579508d484d3d3e09b0eabe0b0049c9b967ae3523c4db8f778b42",
+        "bytes": 21351,
+        "raw": 487,
+        "nonblank": 445,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Statistics cached day aggregates/Top/error paging/version list; whitelisted metric columns and zero-fill; cache/query ut mismatch (F02).",
+      "followupRanges": [
+        {
+          "offset": 65,
+          "limit": 80,
+          "start": 65,
+          "end": 144,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        },
+        {
+          "offset": 145,
+          "limit": 80,
+          "start": 145,
+          "end": 224,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        },
+        {
+          "offset": 401,
+          "limit": 80,
+          "start": 401,
+          "end": 480,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F02"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "5216155f1ef579508d484d3d3e09b0eabe0b0049c9b967ae3523c4db8f778b42",
+        "bytes": 21351,
+        "raw": 487,
+        "nonblank": 445,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 35,
+      "path": "astral-monitor/src/main/java/com/astral/monitor/service/SystemMonitorService.java",
+      "pre": {
+        "sha256": "d3b96387363e52c85a03b7b2ca2615722756385342ad50cdadc9a53f3530da16",
+        "bytes": 436,
+        "raw": 18,
+        "nonblank": 16,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 18,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "d3b96387363e52c85a03b7b2ca2615722756385342ad50cdadc9a53f3530da16",
+        "bytes": 436,
+        "raw": 18,
+        "nonblank": 16,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Public system monitor interface; system/heap semantic mismatch in implementation (F05).",
+      "followupRanges": [],
+      "findingIds": [
+        "F05"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "d3b96387363e52c85a03b7b2ca2615722756385342ad50cdadc9a53f3530da16",
+        "bytes": 436,
+        "raw": 18,
+        "nonblank": 16,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 36,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/controller/dto/SequenceHistoryResponse.java",
+      "pre": {
+        "sha256": "ff12663825dc1c8d5427a521b6c6f3679dde4d592507dd0dd1c737a20e332b78",
+        "bytes": 1293,
+        "raw": 37,
+        "nonblank": 34,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 37,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "ff12663825dc1c8d5427a521b6c6f3679dde4d592507dd0dd1c737a20e332b78",
+        "bytes": 1293,
+        "raw": 37,
+        "nonblank": 34,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "History response converts sequenceValue to text for JS precision; history row ID remains Long without a demonstrated runtime defect.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "ff12663825dc1c8d5427a521b6c6f3679dde4d592507dd0dd1c737a20e332b78",
+        "bytes": 1293,
+        "raw": 37,
+        "nonblank": 34,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 37,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/controller/dto/SequenceResponse.java",
+      "pre": {
+        "sha256": "f47a82b4e8f05e04045aa6587908d78bd63b3a4d77f631625e4242a3cbfc51b0",
+        "bytes": 886,
+        "raw": 27,
+        "nonblank": 25,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 27,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "f47a82b4e8f05e04045aa6587908d78bd63b3a4d77f631625e4242a3cbfc51b0",
+        "bytes": 886,
+        "raw": 27,
+        "nonblank": 25,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Sequence response carries string sequence/sequence list and count/type metadata.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "f47a82b4e8f05e04045aa6587908d78bd63b3a4d77f631625e4242a3cbfc51b0",
+        "bytes": 886,
+        "raw": 27,
+        "nonblank": 25,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 38,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/controller/SequenceHistoryController.java",
+      "pre": {
+        "sha256": "c445a11e80689037e4752d89a942a494364c7cfe8805e2d8d06723ac5cd4df3c",
+        "bytes": 2970,
+        "raw": 72,
+        "nonblank": 67,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 72,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "c445a11e80689037e4752d89a942a494364c7cfe8805e2d8d06723ac5cd4df3c",
+        "bytes": 2970,
+        "raw": 72,
+        "nonblank": 67,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Admin declarative history-view endpoints; maps entity results to response DTO; service limit clamped.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "c445a11e80689037e4752d89a942a494364c7cfe8805e2d8d06723ac5cd4df3c",
+        "bytes": 2970,
+        "raw": 72,
+        "nonblank": 67,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 39,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/controller/SequenceSegmentController.java",
+      "pre": {
+        "sha256": "0ea466a83402ff43e8e64816bbad75ce18f7858e6481fa8274f91c8706c8bc90",
+        "bytes": 2707,
+        "raw": 68,
+        "nonblank": 63,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 68,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "0ea466a83402ff43e8e64816bbad75ce18f7858e6481fa8274f91c8706c8bc90",
+        "bytes": 2707,
+        "raw": 68,
+        "nonblank": 63,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Admin declarative segment-view GET endpoints; read-only HTTP shape, wiring not tested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "0ea466a83402ff43e8e64816bbad75ce18f7858e6481fa8274f91c8706c8bc90",
+        "bytes": 2707,
+        "raw": 68,
+        "nonblank": 63,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 40,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/controller/SequenceStatisticsController.java",
+      "pre": {
+        "sha256": "808fdda61aabd8c31f7fc69daf229ca2591868d9dbd8ae2b71566e5fc0efa09b",
+        "bytes": 2541,
+        "raw": 66,
+        "nonblank": 61,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 66,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "808fdda61aabd8c31f7fc69daf229ca2591868d9dbd8ae2b71566e5fc0efa09b",
+        "bytes": 2541,
+        "raw": 66,
+        "nonblank": 61,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Admin declarative statistics-view GET endpoints; no runtime permission/mapper test.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "808fdda61aabd8c31f7fc69daf229ca2591868d9dbd8ae2b71566e5fc0efa09b",
+        "bytes": 2541,
+        "raw": 66,
+        "nonblank": 61,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 41,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/generator/SequenceGenerator.java",
+      "pre": {
+        "sha256": "5fabfed12cc9dd0751cd86726144048064ce5ebaffcea27fe6be3a4195e0d940",
+        "bytes": 1030,
+        "raw": 34,
+        "nonblank": 31,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 34,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "5fabfed12cc9dd0751cd86726144048064ce5ebaffcea27fe6be3a4195e0d940",
+        "bytes": 1030,
+        "raw": 34,
+        "nonblank": 31,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Public generator interface supports single/batch generation; actual generator allocation not reread.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "5fabfed12cc9dd0751cd86726144048064ce5ebaffcea27fe6be3a4195e0d940",
+        "bytes": 1030,
+        "raw": 34,
+        "nonblank": 31,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 42,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/service/SequenceHistoryService.java",
+      "pre": {
+        "sha256": "26417f935bdd46d94bfc53e9add8742844536dc514eaeb7ce43c121ba9f93875",
+        "bytes": 3729,
+        "raw": 98,
+        "nonblank": 92,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 98,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "26417f935bdd46d94bfc53e9add8742844536dc514eaeb7ce43c121ba9f93875",
+        "bytes": 3729,
+        "raw": 98,
+        "nonblank": 92,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "History query/filter/pagination and recent limit1..1000 before numeric LIMIT; actual SQL unexecuted.",
+      "followupRanges": [
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 98,
+          "eof": true,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "26417f935bdd46d94bfc53e9add8742844536dc514eaeb7ce43c121ba9f93875",
+        "bytes": 3729,
+        "raw": 98,
+        "nonblank": 92,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 43,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/service/SequenceResult.java",
+      "pre": {
+        "sha256": "c9be767835d8926723633c7e13328f37c4eb8b0cf7d61b7de1695aeb673dafd3",
+        "bytes": 1255,
+        "raw": 38,
+        "nonblank": 35,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 38,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "c9be767835d8926723633c7e13328f37c4eb8b0cf7d61b7de1695aeb673dafd3",
+        "bytes": 1255,
+        "raw": 38,
+        "nonblank": 35,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Sequence result contains sequence metadata and generated values; consumers outside subset.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "c9be767835d8926723633c7e13328f37c4eb8b0cf7d61b7de1695aeb673dafd3",
+        "bytes": 1255,
+        "raw": 38,
+        "nonblank": 35,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 44,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/service/SequenceSegmentService.java",
+      "pre": {
+        "sha256": "d74f54dd42697c3f86de37bd7279647de46bcce26cc2ecbe5a4ec7026b4e1e65",
+        "bytes": 351,
+        "raw": 10,
+        "nonblank": 8,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 10,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "d74f54dd42697c3f86de37bd7279647de46bcce26cc2ecbe5a4ec7026b4e1e65",
+        "bytes": 351,
+        "raw": 10,
+        "nonblank": 8,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Segment IService contract only; no allocator proof.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "d74f54dd42697c3f86de37bd7279647de46bcce26cc2ecbe5a4ec7026b4e1e65",
+        "bytes": 351,
+        "raw": 10,
+        "nonblank": 8,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 45,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/service/SequenceSegmentServiceImpl.java",
+      "pre": {
+        "sha256": "9dac414cb4f1287f5fe80729f2a5d5275efa0ac9937d432b5f5a4dc3028f770d",
+        "bytes": 610,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 15,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "9dac414cb4f1287f5fe80729f2a5d5275efa0ac9937d432b5f5a4dc3028f770d",
+        "bytes": 610,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Segment ServiceImpl delegates CRUD to mapper; physical service path declares service.impl package.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "9dac414cb4f1287f5fe80729f2a5d5275efa0ac9937d432b5f5a4dc3028f770d",
+        "bytes": 610,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 46,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/service/SequenceStatisticsService.java",
+      "pre": {
+        "sha256": "00dce43b967b83dc6effc75ef4e7f5805d97b901a6fa2985d0a3629de6e9bc3d",
+        "bytes": 360,
+        "raw": 10,
+        "nonblank": 8,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 10,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "00dce43b967b83dc6effc75ef4e7f5805d97b901a6fa2985d0a3629de6e9bc3d",
+        "bytes": 360,
+        "raw": 10,
+        "nonblank": 8,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Statistics IService contract only; no aggregation correctness proof.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "00dce43b967b83dc6effc75ef4e7f5805d97b901a6fa2985d0a3629de6e9bc3d",
+        "bytes": 360,
+        "raw": 10,
+        "nonblank": 8,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 47,
+      "path": "astral-sequence/src/main/java/com/astral/sequence/service/SequenceStatisticsServiceImpl.java",
+      "pre": {
+        "sha256": "bc808ab2e052c6e5e9ad6d8d962d9a62f66df7aaa18cbbde7360a58819dfc864",
+        "bytes": 631,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 15,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "bc808ab2e052c6e5e9ad6d8d962d9a62f66df7aaa18cbbde7360a58819dfc864",
+        "bytes": 631,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Statistics ServiceImpl delegates CRUD to mapper; physical service path declares service.impl package.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "bc808ab2e052c6e5e9ad6d8d962d9a62f66df7aaa18cbbde7360a58819dfc864",
+        "bytes": 631,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 48,
+      "path": "astral-server/src/main/java/com/astral/server/config/ScheduleConfig.java",
+      "pre": {
+        "sha256": "0bbff7b4b36d64d10a16a5e769ed834b05f17f51df7d77f1165698b8b230a452",
+        "bytes": 440,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 15,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "0bbff7b4b36d64d10a16a5e769ed834b05f17f51df7d77f1165698b8b230a452",
+        "bytes": 440,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Enables Spring scheduling only; tasks and scheduler lifecycle not exercised.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "0bbff7b4b36d64d10a16a5e769ed834b05f17f51df7d77f1165698b8b230a452",
+        "bytes": 440,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 49,
+      "path": "astral-server/src/main/resources/application-database-examples.yml",
+      "pre": {
+        "sha256": "01417ea1308e274ef4aa16cc98ede2d5645bfac7d960ad17114df35cfadd6f16",
+        "bytes": 4369,
+        "raw": 137,
+        "nonblank": 115,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 137,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "01417ea1308e274ef4aa16cc98ede2d5645bfac7d960ad17114df35cfadd6f16",
+        "bytes": 4369,
+        "raw": 137,
+        "nonblank": 115,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Database example promotes astral.database namespace contrary current runtime guidance; not active binding proof (F06).",
+      "followupRanges": [],
+      "findingIds": [
+        "F06"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "01417ea1308e274ef4aa16cc98ede2d5645bfac7d960ad17114df35cfadd6f16",
+        "bytes": 4369,
+        "raw": 137,
+        "nonblank": 115,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 50,
+      "path": "astral-server/src/main/resources/application-prod.yml",
+      "pre": {
+        "sha256": "a2871938fcd17a079ad677f84db93cce852e594b6251c097c4d4336980ad4c35",
+        "bytes": 3842,
+        "raw": 98,
+        "nonblank": 88,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 98,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "a2871938fcd17a079ad677f84db93cce852e594b6251c097c4d4336980ad4c35",
+        "bytes": 3842,
+        "raw": 98,
+        "nonblank": 88,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Prod defaults Secure cookies/actuator health-only/no details/OpenAPI disabled; environment/proxy/runtime untested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "a2871938fcd17a079ad677f84db93cce852e594b6251c097c4d4336980ad4c35",
+        "bytes": 3842,
+        "raw": 98,
+        "nonblank": 88,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 51,
+      "path": "astral-server/src/main/resources/db/migration/README.md",
+      "pre": {
+        "sha256": "c07e1e4783b5f68dbd6ba32724b0ed74577f4bb058d59e6145895541aa0f1dde",
+        "bytes": 26117,
+        "raw": 120,
+        "nonblank": 104,
+        "finalNewline": false
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 30,
+          "start": 1,
+          "end": 30,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 31,
+          "limit": 30,
+          "start": 31,
+          "end": 60,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 61,
+          "limit": 30,
+          "start": 61,
+          "end": 90,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 91,
+          "limit": 30,
+          "start": 91,
+          "end": 120,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "c07e1e4783b5f68dbd6ba32724b0ed74577f4bb058d59e6145895541aa0f1dde",
+        "bytes": 26117,
+        "raw": 120,
+        "nonblank": 104,
+        "finalNewline": false
+      },
+      "stable": true,
+      "semanticNotes": "Flyway fresh/upgrade ordering documentation and manifest; acknowledges unresolved early notice ALTER dependency (F03).",
+      "followupRanges": [
+        {
+          "offset": 61,
+          "limit": 30,
+          "start": 61,
+          "end": 90,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F03"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "c07e1e4783b5f68dbd6ba32724b0ed74577f4bb058d59e6145895541aa0f1dde",
+        "bytes": 26117,
+        "raw": 120,
+        "nonblank": 104,
+        "finalNewline": false
+      }
+    },
+    {
+      "index": 52,
+      "path": "astral-server/src/main/resources/db/migration/V20260914001__init.sql",
+      "pre": {
+        "sha256": "549fe9264cacd20719e1361e2adb0da1343b7cc90b791c44a1f7c4b0a4d38dc3",
+        "bytes": 92260,
+        "raw": 1663,
+        "nonblank": 1462,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 160,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 161,
+          "limit": 80,
+          "start": 161,
+          "end": 240,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 241,
+          "limit": 80,
+          "start": 241,
+          "end": 320,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 321,
+          "limit": 80,
+          "start": 321,
+          "end": 400,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 401,
+          "limit": 80,
+          "start": 401,
+          "end": 480,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 481,
+          "limit": 80,
+          "start": 481,
+          "end": 560,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 561,
+          "limit": 80,
+          "start": 561,
+          "end": 640,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 641,
+          "limit": 80,
+          "start": 641,
+          "end": 720,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 721,
+          "limit": 80,
+          "start": 721,
+          "end": 800,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 801,
+          "limit": 80,
+          "start": 801,
+          "end": 880,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 881,
+          "limit": 80,
+          "start": 881,
+          "end": 960,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 961,
+          "limit": 80,
+          "start": 961,
+          "end": 1040,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 1041,
+          "limit": 80,
+          "start": 1041,
+          "end": 1120,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 1121,
+          "limit": 80,
+          "start": 1121,
+          "end": 1200,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 1201,
+          "limit": 80,
+          "start": 1201,
+          "end": 1280,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 1281,
+          "limit": 80,
+          "start": 1281,
+          "end": 1360,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 1361,
+          "limit": 80,
+          "start": 1361,
+          "end": 1440,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 1441,
+          "limit": 80,
+          "start": 1441,
+          "end": 1520,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 1521,
+          "limit": 80,
+          "start": 1521,
+          "end": 1600,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 1601,
+          "limit": 80,
+          "start": 1601,
+          "end": 1663,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "549fe9264cacd20719e1361e2adb0da1343b7cc90b791c44a1f7c4b0a4d38dc3",
+        "bytes": 92260,
+        "raw": 1663,
+        "nonblank": 1462,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Fully read1663-line PostgreSQL baseline DDL/seeds/comments; no sys_notice creation (F03); credential-like seed material classified only.",
+      "followupRanges": [],
+      "findingIds": [
+        "F03"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "549fe9264cacd20719e1361e2adb0da1343b7cc90b791c44a1f7c4b0a4d38dc3",
+        "bytes": 92260,
+        "raw": 1663,
+        "nonblank": 1462,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 53,
+      "path": "astral-server/src/main/resources/db/migration/V20260914002__drop_legacy_schema_migrations.sql",
+      "pre": {
+        "sha256": "db50ca97f9f6b4da07363e01413216442453929efad3eda7a2c4a8d1df838721",
+        "bytes": 513,
+        "raw": 9,
+        "nonblank": 9,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 9,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "db50ca97f9f6b4da07363e01413216442453929efad3eda7a2c4a8d1df838721",
+        "bytes": 513,
+        "raw": 9,
+        "nonblank": 9,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Drops legacy schema_migrations compatibility table with IF EXISTS; actual upgrade unexecuted.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "db50ca97f9f6b4da07363e01413216442453929efad3eda7a2c4a8d1df838721",
+        "bytes": 513,
+        "raw": 9,
+        "nonblank": 9,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 54,
+      "path": "astral-server/src/main/resources/db/migration/V20260914003__storage_dict.sql",
+      "pre": {
+        "sha256": "ef68a5c24eb4ec236118b79ab44f5c6635e819e33934abf9e42047ed21013a15",
+        "bytes": 13408,
+        "raw": 198,
+        "nonblank": 161,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 160,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 161,
+          "limit": 80,
+          "start": 161,
+          "end": 198,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "ef68a5c24eb4ec236118b79ab44f5c6635e819e33934abf9e42047ed21013a15",
+        "bytes": 13408,
+        "raw": 198,
+        "nonblank": 161,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Storage dictionaries seeded with explicit historical IDs; later repair/watermark chain considered, no runtime seed claim.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "ef68a5c24eb4ec236118b79ab44f5c6635e819e33934abf9e42047ed21013a15",
+        "bytes": 13408,
+        "raw": 198,
+        "nonblank": 161,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 55,
+      "path": "astral-server/src/main/resources/db/migration/V20260914004__remove_cluster.sql",
+      "pre": {
+        "sha256": "c16a4fcc9b83acb281d8eb606ff2fe26706852107b7720f27ae768ac7903c1d8",
+        "bytes": 1453,
+        "raw": 26,
+        "nonblank": 21,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 26,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "c16a4fcc9b83acb281d8eb606ff2fe26706852107b7720f27ae768ac7903c1d8",
+        "bytes": 1453,
+        "raw": 26,
+        "nonblank": 21,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Removes cluster-era table/menu/permission metadata; historical destructive intent not deployment evidence.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "c16a4fcc9b83acb281d8eb606ff2fe26706852107b7720f27ae768ac7903c1d8",
+        "bytes": 1453,
+        "raw": 26,
+        "nonblank": 21,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 56,
+      "path": "astral-server/src/main/resources/db/migration/V20260914005__qt_source_dict.sql",
+      "pre": {
+        "sha256": "533cd0dd70f47eff5d07f0c5f68bb51d94c1c40888f1aa5864f9451631ad2b79",
+        "bytes": 1988,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 25,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "533cd0dd70f47eff5d07f0c5f68bb51d94c1c40888f1aa5864f9451631ad2b79",
+        "bytes": 1988,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Qt source dictionaries use historical fixed IDs/business values; no frontend option rendering executed.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "533cd0dd70f47eff5d07f0c5f68bb51d94c1c40888f1aa5864f9451631ad2b79",
+        "bytes": 1988,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 57,
+      "path": "astral-server/src/main/resources/db/migration/V20260914006__qt_source_dict_ext.sql",
+      "pre": {
+        "sha256": "b424a9f484212a33c26c5b2006e14440748a3b421279612c62ba2f0316c39706",
+        "bytes": 3603,
+        "raw": 47,
+        "nonblank": 40,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 47,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "b424a9f484212a33c26c5b2006e14440748a3b421279612c62ba2f0316c39706",
+        "bytes": 3603,
+        "raw": 47,
+        "nonblank": 40,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Extends Qt source values/metadata using authored seed script; final frontend integration outside subset.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "b424a9f484212a33c26c5b2006e14440748a3b421279612c62ba2f0316c39706",
+        "bytes": 3603,
+        "raw": 47,
+        "nonblank": 40,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 58,
+      "path": "astral-server/src/main/resources/db/migration/V20260925001__storage_folder_upload_policy.sql",
+      "pre": {
+        "sha256": "d48e0e45067de53675410ffe627cc51f6d79f57e6e8ea04d46481e9e34a06c68",
+        "bytes": 1621,
+        "raw": 23,
+        "nonblank": 19,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 23,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "d48e0e45067de53675410ffe627cc51f6d79f57e6e8ea04d46481e9e34a06c68",
+        "bytes": 1621,
+        "raw": 23,
+        "nonblank": 19,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Adds storage folder upload policy/quota fields with declared defaults; service enforcement not read.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "d48e0e45067de53675410ffe627cc51f6d79f57e6e8ea04d46481e9e34a06c68",
+        "bytes": 1621,
+        "raw": 23,
+        "nonblank": 19,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 59,
+      "path": "astral-server/src/main/resources/db/migration/V20260926001__qt_permission_codes.sql",
+      "pre": {
+        "sha256": "a621f560fa9dfb89c0e3ccdac536606be867f795a6ee827729a1f9d61a111df2",
+        "bytes": 1030,
+        "raw": 14,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 14,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "a621f560fa9dfb89c0e3ccdac536606be867f795a6ee827729a1f9d61a111df2",
+        "bytes": 1030,
+        "raw": 14,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Updates Qt beta permission descriptions/codes; later permission-model/side-prefix migrations supersede old code forms.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "a621f560fa9dfb89c0e3ccdac536606be867f795a6ee827729a1f9d61a111df2",
+        "bytes": 1030,
+        "raw": 14,
+        "nonblank": 13,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 60,
+      "path": "astral-server/src/main/resources/db/migration/V20260928001__sequence_segment_unique_key.sql",
+      "pre": {
+        "sha256": "866176aa439b70abdcdc7f28e0656b469a91ee96e4870c2f757e6f2c138d804f",
+        "bytes": 1068,
+        "raw": 20,
+        "nonblank": 18,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 20,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "866176aa439b70abdcdc7f28e0656b469a91ee96e4870c2f757e6f2c138d804f",
+        "bytes": 1068,
+        "raw": 20,
+        "nonblank": 18,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Deduplicates sequence segments by maximum/tie highest ID, then enforces unique biz_key.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "866176aa439b70abdcdc7f28e0656b469a91ee96e4870c2f757e6f2c138d804f",
+        "bytes": 1068,
+        "raw": 20,
+        "nonblank": 18,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 61,
+      "path": "astral-server/src/main/resources/db/migration/V20260929001__stat_api_hourly_client_dimension.sql",
+      "pre": {
+        "sha256": "74750fd3867ab20924ae0ef1c835714bc3366471004e886c16ad697ebb1d4147",
+        "bytes": 1671,
+        "raw": 27,
+        "nonblank": 24,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 27,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "74750fd3867ab20924ae0ef1c835714bc3366471004e886c16ad697ebb1d4147",
+        "bytes": 1671,
+        "raw": 27,
+        "nonblank": 24,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Extends hourly API statistics client dimensions/indexes; actual query/index execution untested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "74750fd3867ab20924ae0ef1c835714bc3366471004e886c16ad697ebb1d4147",
+        "bytes": 1671,
+        "raw": 27,
+        "nonblank": 24,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 62,
+      "path": "astral-server/src/main/resources/db/migration/V20260930001__permission_model_refactor.sql",
+      "pre": {
+        "sha256": "4b8cb00dc2add389426ebffe5919ca995ed83a7f598f9faf27ef97c15071019c",
+        "bytes": 6794,
+        "raw": 127,
+        "nonblank": 109,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 127,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "4b8cb00dc2add389426ebffe5919ca995ed83a7f598f9faf27ef97c15071019c",
+        "bytes": 6794,
+        "raw": 127,
+        "nonblank": 109,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Permission model/schema/tree/domain changes; base CTE with per-row NOT EXISTS avoids aggregate duplicate trap.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "4b8cb00dc2add389426ebffe5919ca995ed83a7f598f9faf27ef97c15071019c",
+        "bytes": 6794,
+        "raw": 127,
+        "nonblank": 109,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 63,
+      "path": "astral-server/src/main/resources/db/migration/V20260930002__permission_type_dict.sql",
+      "pre": {
+        "sha256": "9b71d46a32ad869c9d69ad376076344dd3377a9698b60c1eb363aa18c4dae718",
+        "bytes": 3155,
+        "raw": 43,
+        "nonblank": 37,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 43,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "9b71d46a32ad869c9d69ad376076344dd3377a9698b60c1eb363aa18c4dae718",
+        "bytes": 3155,
+        "raw": 43,
+        "nonblank": 37,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Historical permission_type seed hardcoded ID conflict explicitly repaired by V20260930006, not a final-current defect.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "9b71d46a32ad869c9d69ad376076344dd3377a9698b60c1eb363aa18c4dae718",
+        "bytes": 3155,
+        "raw": 43,
+        "nonblank": 37,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 64,
+      "path": "astral-server/src/main/resources/db/migration/V20260930003__permission_seed_new_codes.sql",
+      "pre": {
+        "sha256": "d9ff9ec189bcb215ee1d4b00d25d9c2ab36ea8bc01d8b81130a2fa0f3df15798",
+        "bytes": 4013,
+        "raw": 68,
+        "nonblank": 66,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 68,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "d9ff9ec189bcb215ee1d4b00d25d9c2ab36ea8bc01d8b81130a2fa0f3df15798",
+        "bytes": 4013,
+        "raw": 68,
+        "nonblank": 66,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Dynamic permission seed allocation/API4 declarations; later prefix migration supplies sides.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "d9ff9ec189bcb215ee1d4b00d25d9c2ab36ea8bc01d8b81130a2fa0f3df15798",
+        "bytes": 4013,
+        "raw": 68,
+        "nonblank": 66,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 65,
+      "path": "astral-server/src/main/resources/db/migration/V20260930004__permission_granular_write_and_tree.sql",
+      "pre": {
+        "sha256": "f8f6ddec628b80309c89039c5faf61998ae5c0d3bc9371b09b2e3837f2110705",
+        "bytes": 7644,
+        "raw": 131,
+        "nonblank": 126,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 131,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "f8f6ddec628b80309c89039c5faf61998ae5c0d3bc9371b09b2e3837f2110705",
+        "bytes": 7644,
+        "raw": 131,
+        "nonblank": 126,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Granular write permissions/tree seeding with business guards; later prefix and baseline migrations considered.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "f8f6ddec628b80309c89039c5faf61998ae5c0d3bc9371b09b2e3837f2110705",
+        "bytes": 7644,
+        "raw": 131,
+        "nonblank": 126,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 66,
+      "path": "astral-server/src/main/resources/db/migration/V20260930005__role_permission_baseline.sql",
+      "pre": {
+        "sha256": "43d7f19d0846c09ff3f45865c71d608f21b4efed0f4a5dd80991feac2947b2e2",
+        "bytes": 4236,
+        "raw": 80,
+        "nonblank": 76,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "43d7f19d0846c09ff3f45865c71d608f21b4efed0f4a5dd80991feac2947b2e2",
+        "bytes": 4236,
+        "raw": 80,
+        "nonblank": 76,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Role permission baseline updates regular/super association semantics; runtime permission cache not reread.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "43d7f19d0846c09ff3f45865c71d608f21b4efed0f4a5dd80991feac2947b2e2",
+        "bytes": 4236,
+        "raw": 80,
+        "nonblank": 76,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 67,
+      "path": "astral-server/src/main/resources/db/migration/V20260930006__permission_type_dict_fix.sql",
+      "pre": {
+        "sha256": "637854aa10510e67eadf803b6ab560b92bf47bd97293b4c6030a78abe914536e",
+        "bytes": 4485,
+        "raw": 87,
+        "nonblank": 84,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 87,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "637854aa10510e67eadf803b6ab560b92bf47bd97293b4c6030a78abe914536e",
+        "bytes": 4485,
+        "raw": 87,
+        "nonblank": 84,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Dynamic business-key permission_type repair and watermark; supersedes earlier hardcoded-ID collision.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "637854aa10510e67eadf803b6ab560b92bf47bd97293b4c6030a78abe914536e",
+        "bytes": 4485,
+        "raw": 87,
+        "nonblank": 84,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 68,
+      "path": "astral-server/src/main/resources/db/migration/V20261001001__permission_code_side_prefix.sql",
+      "pre": {
+        "sha256": "e493b6daea3d4d486447dc5d715f8d77d7d3e01f7cd40adde359649f06b774eb",
+        "bytes": 3917,
+        "raw": 77,
+        "nonblank": 72,
+        "finalNewline": false
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 77,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "e493b6daea3d4d486447dc5d715f8d77d7d3e01f7cd40adde359649f06b774eb",
+        "bytes": 3917,
+        "raw": 77,
+        "nonblank": 72,
+        "finalNewline": false
+      },
+      "stable": true,
+      "semanticNotes": "Prefixes permission/menu codes by side and migrates role associations; Java registry deployment synchronization untested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "e493b6daea3d4d486447dc5d715f8d77d7d3e01f7cd40adde359649f06b774eb",
+        "bytes": 3917,
+        "raw": 77,
+        "nonblank": 72,
+        "finalNewline": false
+      }
+    },
+    {
+      "index": 69,
+      "path": "astral-server/src/main/resources/db/migration/V20261001003__menu_type_dict.sql",
+      "pre": {
+        "sha256": "b33949c28eb09922af21c006883748d70730f869a30a511ee2e68b79cf735382",
+        "bytes": 3831,
+        "raw": 79,
+        "nonblank": 76,
+        "finalNewline": false
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 79,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "b33949c28eb09922af21c006883748d70730f869a30a511ee2e68b79cf735382",
+        "bytes": 3831,
+        "raw": 79,
+        "nonblank": 76,
+        "finalNewline": false
+      },
+      "stable": true,
+      "semanticNotes": "Menu type dictionary directory/menu/button options; existing-menu values adjusted; frontend rendering untested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "b33949c28eb09922af21c006883748d70730f869a30a511ee2e68b79cf735382",
+        "bytes": 3831,
+        "raw": 79,
+        "nonblank": 76,
+        "finalNewline": false
+      }
+    },
+    {
+      "index": 70,
+      "path": "astral-server/src/main/resources/db/migration/V20261001004__permission_cleanup_legacy_codes.sql",
+      "pre": {
+        "sha256": "44599dfa4267f06825217d1cf4b5dc4b093f465d0957fb42f38f4b21b1bf615b",
+        "bytes": 3234,
+        "raw": 63,
+        "nonblank": 61,
+        "finalNewline": false
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 63,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "44599dfa4267f06825217d1cf4b5dc4b093f465d0957fb42f38f4b21b1bf615b",
+        "bytes": 3234,
+        "raw": 63,
+        "nonblank": 61,
+        "finalNewline": false
+      },
+      "stable": true,
+      "semanticNotes": "Cleans leftover unprefixed permission codes and role links after side-prefix migration.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "44599dfa4267f06825217d1cf4b5dc4b093f465d0957fb42f38f4b21b1bf615b",
+        "bytes": 3234,
+        "raw": 63,
+        "nonblank": 61,
+        "finalNewline": false
+      }
+    },
+    {
+      "index": 71,
+      "path": "astral-server/src/main/resources/db/migration/V20261001005__app_user_role_and_permissions.sql",
+      "pre": {
+        "sha256": "f0dbe8a1051f76d226b76b4e00466ff87e6ede30c6e7f91e565b06e90c4214e4",
+        "bytes": 5465,
+        "raw": 109,
+        "nonblank": 105,
+        "finalNewline": false
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 109,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "f0dbe8a1051f76d226b76b4e00466ff87e6ede30c6e7f91e565b06e90c4214e4",
+        "bytes": 5465,
+        "raw": 109,
+        "nonblank": 105,
+        "finalNewline": false
+      },
+      "stable": true,
+      "semanticNotes": "APP_USER role/user-role/user-prefix permissions seed; later DATA revocation bounds historical broad grants.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "f0dbe8a1051f76d226b76b4e00466ff87e6ede30c6e7f91e565b06e90c4214e4",
+        "bytes": 5465,
+        "raw": 109,
+        "nonblank": 105,
+        "finalNewline": false
+      }
+    },
+    {
+      "index": 72,
+      "path": "astral-server/src/main/resources/db/migration/V20261001006__cleanup_orphan_unprefixed_permissions.sql",
+      "pre": {
+        "sha256": "8b013819e40c2a08105595cdcd65bd7084c2681efd41e0c8881484a09c1b4644",
+        "bytes": 2555,
+        "raw": 45,
+        "nonblank": 43,
+        "finalNewline": false
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 45,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "8b013819e40c2a08105595cdcd65bd7084c2681efd41e0c8881484a09c1b4644",
+        "bytes": 2555,
+        "raw": 45,
+        "nonblank": 43,
+        "finalNewline": false
+      },
+      "stable": true,
+      "semanticNotes": "Removes orphan obsolete unprefixed permission rows after registry/domain migration.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "8b013819e40c2a08105595cdcd65bd7084c2681efd41e0c8881484a09c1b4644",
+        "bytes": 2555,
+        "raw": 45,
+        "nonblank": 43,
+        "finalNewline": false
+      }
+    },
+    {
+      "index": 73,
+      "path": "astral-server/src/main/resources/db/migration/V20261001007__notice_channel_platform_multi.sql",
+      "pre": {
+        "sha256": "cab8fd8aece094d5b829cfaff45d302edd99b6a9cb30321eaf670d4a52944776",
+        "bytes": 4395,
+        "raw": 68,
+        "nonblank": 63,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 68,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "cab8fd8aece094d5b829cfaff45d302edd99b6a9cb30321eaf670d4a52944776",
+        "bytes": 4395,
+        "raw": 68,
+        "nonblank": 63,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Notice channel/platform dictionary expansion plus bare sys_notice ALTER/UPDATE before host creation (F03).",
+      "followupRanges": [],
+      "findingIds": [
+        "F03"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "cab8fd8aece094d5b829cfaff45d302edd99b6a9cb30321eaf670d4a52944776",
+        "bytes": 4395,
+        "raw": 68,
+        "nonblank": 63,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 74,
+      "path": "astral-server/src/main/resources/db/migration/V20261001008__daka_unique_and_stat_error_composite_index.sql",
+      "pre": {
+        "sha256": "12c73dab5e8c350798a096d03e87e00c57001f0592b08d465e97406007cc65a1",
+        "bytes": 3598,
+        "raw": 57,
+        "nonblank": 51,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 57,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "12c73dab5e8c350798a096d03e87e00c57001f0592b08d465e97406007cc65a1",
+        "bytes": 3598,
+        "raw": 57,
+        "nonblank": 51,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Qt daka duplicate cleanup/uniqueness guarded for missing plugin table; composite error-source index; no replay evidence.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "12c73dab5e8c350798a096d03e87e00c57001f0592b08d465e97406007cc65a1",
+        "bytes": 3598,
+        "raw": 57,
+        "nonblank": 51,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 75,
+      "path": "astral-server/src/main/resources/db/migration/V20261001009__app_user_revoke_data_permissions.sql",
+      "pre": {
+        "sha256": "1fefff4e6c319dd35731cfc6c0246230551c18ef84c85a39d1207ff7e29f9af3",
+        "bytes": 2657,
+        "raw": 51,
+        "nonblank": 49,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 51,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "1fefff4e6c319dd35731cfc6c0246230551c18ef84c85a39d1207ff7e29f9af3",
+        "bytes": 2657,
+        "raw": 51,
+        "nonblank": 49,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Revokes APP_USER DATA5 permissions while keeping API4 access; Java initializer/cache behavior outside subset.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "1fefff4e6c319dd35731cfc6c0246230551c18ef84c85a39d1207ff7e29f9af3",
+        "bytes": 2657,
+        "raw": 51,
+        "nonblank": 49,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 76,
+      "path": "astral-server/src/main/resources/db/migration/V20261001010__admin_console_hardening.sql",
+      "pre": {
+        "sha256": "ae275faf1aba9babee94745aa773630389fa38d05207420a86ccb6cfaa2dcb1a",
+        "bytes": 6534,
+        "raw": 114,
+        "nonblank": 106,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 114,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "ae275faf1aba9babee94745aa773630389fa38d05207420a86ccb6cfaa2dcb1a",
+        "bytes": 6534,
+        "raw": 114,
+        "nonblank": 106,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Admin security/error-source/alert DDL; seed account password-change marker; alert menu code remains dependency question.",
+      "followupRanges": [
+        {
+          "offset": 1,
+          "limit": 40,
+          "start": 1,
+          "end": 40,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "ae275faf1aba9babee94745aa773630389fa38d05207420a86ccb6cfaa2dcb1a",
+        "bytes": 6534,
+        "raw": 114,
+        "nonblank": 106,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 77,
+      "path": "astral-server/src/main/resources/db/migration/V20261002001__mail_scene_registry.sql",
+      "pre": {
+        "sha256": "53b284b511ce6157fe6463e19a14e2f3d5728dc1614a35b8dcc27a247e783fa4",
+        "bytes": 3000,
+        "raw": 35,
+        "nonblank": 31,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 35,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "53b284b511ce6157fe6463e19a14e2f3d5728dc1614a35b8dcc27a247e783fa4",
+        "bytes": 3000,
+        "raw": 35,
+        "nonblank": 31,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Mail template scene/channel unique index and business scene backfill; actual send resolution untested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "53b284b511ce6157fe6463e19a14e2f3d5728dc1614a35b8dcc27a247e783fa4",
+        "bytes": 3000,
+        "raw": 35,
+        "nonblank": 31,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 78,
+      "path": "astral-server/src/main/resources/db/migration/V20261002002__notify_channel_failclosed.sql",
+      "pre": {
+        "sha256": "4c7e8511d19d314ed7c0a895f452dedcbb63586c52c0de58575c7219079fcef7",
+        "bytes": 1214,
+        "raw": 16,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 16,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "4c7e8511d19d314ed7c0a895f452dedcbb63586c52c0de58575c7219079fcef7",
+        "bytes": 1214,
+        "raw": 16,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Notification channel enable/auth defaults tightened; later mail-plugin-auth removal supersedes obsolete authorization table.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "4c7e8511d19d314ed7c0a895f452dedcbb63586c52c0de58575c7219079fcef7",
+        "bytes": 1214,
+        "raw": 16,
+        "nonblank": 13,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 79,
+      "path": "astral-server/src/main/resources/db/migration/V20261002003__sms_channel.sql",
+      "pre": {
+        "sha256": "347238da594e5eb9932ee5fb70fe47c0f035022b1b8a8b072d758c796fd026b5",
+        "bytes": 4466,
+        "raw": 87,
+        "nonblank": 78,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 87,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "347238da594e5eb9932ee5fb70fe47c0f035022b1b8a8b072d758c796fd026b5",
+        "bytes": 4466,
+        "raw": 87,
+        "nonblank": 78,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "SMS provider/template/log DDL and configurable provider/audit dictionaries; provider secret/security implementation unreviewed.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "347238da594e5eb9932ee5fb70fe47c0f035022b1b8a8b072d758c796fd026b5",
+        "bytes": 4466,
+        "raw": 87,
+        "nonblank": 78,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 80,
+      "path": "astral-server/src/main/resources/db/migration/V20261002004__inapp_notice.sql",
+      "pre": {
+        "sha256": "1eea56d6c00c29459a95640ba9c437ae005ef17af3414c0121324b658ba9ba7a",
+        "bytes": 4169,
+        "raw": 76,
+        "nonblank": 65,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 76,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "1eea56d6c00c29459a95640ba9c437ae005ef17af3414c0121324b658ba9ba7a",
+        "bytes": 4169,
+        "raw": 76,
+        "nonblank": 65,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Transitional announcement/inapp tables and dictionaries; later unification drops announcement but leaves inapp (C01).",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [
+        "C01"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "1eea56d6c00c29459a95640ba9c437ae005ef17af3414c0121324b658ba9ba7a",
+        "bytes": 4169,
+        "raw": 76,
+        "nonblank": 65,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 81,
+      "path": "astral-server/src/main/resources/db/migration/V20261002005__notify_rule.sql",
+      "pre": {
+        "sha256": "2f1629e71bcbd925e12d4c43b0bdeaf8cb5bfdec5aeb0d5a0872fd3f60286d6b",
+        "bytes": 879,
+        "raw": 18,
+        "nonblank": 17,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 18,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "2f1629e71bcbd925e12d4c43b0bdeaf8cb5bfdec5aeb0d5a0872fd3f60286d6b",
+        "bytes": 879,
+        "raw": 18,
+        "nonblank": 17,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Old notification rule DDL uniquely constrains rule_name, not event_code; supports F04 multirow trigger.",
+      "followupRanges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 18,
+          "eof": true,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F04"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "2f1629e71bcbd925e12d4c43b0bdeaf8cb5bfdec5aeb0d5a0872fd3f60286d6b",
+        "bytes": 879,
+        "raw": 18,
+        "nonblank": 17,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 82,
+      "path": "astral-server/src/main/resources/db/migration/V20261002006__unify_notice.sql",
+      "pre": {
+        "sha256": "b043f810cbd247f5123bf2a871aef6cbb336da0baf1bd08be4eb042228ecf532",
+        "bytes": 1666,
+        "raw": 25,
+        "nonblank": 20,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 25,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "b043f810cbd247f5123bf2a871aef6cbb336da0baf1bd08be4eb042228ecf532",
+        "bytes": 1666,
+        "raw": 25,
+        "nonblank": 20,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Bare notice ALTER/index dependency (F03); drops announcement without copy and leaves transitional inapp table (C01).",
+      "followupRanges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 25,
+          "eof": true,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F03"
+      ],
+      "candidateIds": [
+        "C01"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "b043f810cbd247f5123bf2a871aef6cbb336da0baf1bd08be4eb042228ecf532",
+        "bytes": 1666,
+        "raw": 25,
+        "nonblank": 20,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 83,
+      "path": "astral-server/src/main/resources/db/migration/V20261002007__feedback_rule_notify.sql",
+      "pre": {
+        "sha256": "656346407f5e3a2ba00bd4ddaf6b67622a86b434c70069e5c28499c51e9e5885",
+        "bytes": 7563,
+        "raw": 102,
+        "nonblank": 89,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 102,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "656346407f5e3a2ba00bd4ddaf6b67622a86b434c70069e5c28499c51e9e5885",
+        "bytes": 7563,
+        "raw": 102,
+        "nonblank": 89,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Feedback scene templates/rules seeded; sends/required payloads/services outside subset.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "656346407f5e3a2ba00bd4ddaf6b67622a86b434c70069e5c28499c51e9e5885",
+        "bytes": 7563,
+        "raw": 102,
+        "nonblank": 89,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 84,
+      "path": "astral-server/src/main/resources/db/migration/V20261006001__qt_source_artifact_dict.sql",
+      "pre": {
+        "sha256": "db21d2ee55d9cdc0e34e164470926a7b3be453610599c741eee5c889d8ff59e4",
+        "bytes": 2306,
+        "raw": 28,
+        "nonblank": 25,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 28,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "db21d2ee55d9cdc0e34e164470926a7b3be453610599c741eee5c889d8ff59e4",
+        "bytes": 2306,
+        "raw": 28,
+        "nonblank": 25,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Qt source artifact path dictionary; code/artifact handling outside subset.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "db21d2ee55d9cdc0e34e164470926a7b3be453610599c741eee5c889d8ff59e4",
+        "bytes": 2306,
+        "raw": 28,
+        "nonblank": 25,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 85,
+      "path": "astral-server/src/main/resources/db/migration/V20261007001__storage_file_upload_id_unique.sql",
+      "pre": {
+        "sha256": "423409b34694c8468d5443d3845cd710b82be028f2b790fa79aaaf0de954eb1a",
+        "bytes": 1984,
+        "raw": 36,
+        "nonblank": 34,
+        "finalNewline": false
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 36,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "423409b34694c8468d5443d3845cd710b82be028f2b790fa79aaaf0de954eb1a",
+        "bytes": 1984,
+        "raw": 36,
+        "nonblank": 34,
+        "finalNewline": false
+      },
+      "stable": true,
+      "semanticNotes": "Retains newest duplicate upload ID, clears duplicate identifiers/soft status without deleting shared remote object, adds uniqueness.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "423409b34694c8468d5443d3845cd710b82be028f2b790fa79aaaf0de954eb1a",
+        "bytes": 1984,
+        "raw": 36,
+        "nonblank": 34,
+        "finalNewline": false
+      }
+    },
+    {
+      "index": 86,
+      "path": "astral-server/src/main/resources/db/migration/V20261008001__platform_linux_macos.sql",
+      "pre": {
+        "sha256": "be47cd16cf2222c8f6f17373807192552e8d765664e60a848682662d7fc74013",
+        "bytes": 5030,
+        "raw": 95,
+        "nonblank": 89,
+        "finalNewline": false
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 95,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "be47cd16cf2222c8f6f17373807192552e8d765664e60a848682662d7fc74013",
+        "bytes": 5030,
+        "raw": 95,
+        "nonblank": 89,
+        "finalNewline": false
+      },
+      "stable": true,
+      "semanticNotes": "Linux/macOS platform/update/notice dictionaries dynamically allocate IDs and align watermarks.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "be47cd16cf2222c8f6f17373807192552e8d765664e60a848682662d7fc74013",
+        "bytes": 5030,
+        "raw": 95,
+        "nonblank": 89,
+        "finalNewline": false
+      }
+    },
+    {
+      "index": 87,
+      "path": "astral-server/src/main/resources/db/migration/V20261009001__platform_harmony.sql",
+      "pre": {
+        "sha256": "6cce2d4e5f859fb4c5f3d4dd4f82112f6f3df372b41c5cc77490d136e0453912",
+        "bytes": 6836,
+        "raw": 124,
+        "nonblank": 116,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 124,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "6cce2d4e5f859fb4c5f3d4dd4f82112f6f3df372b41c5cc77490d136e0453912",
+        "bytes": 6836,
+        "raw": 124,
+        "nonblank": 116,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Harmony platform dictionaries and guarded notice/rule column widening96; later guard cannot repair earlier F03 failure.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "6cce2d4e5f859fb4c5f3d4dd4f82112f6f3df372b41c5cc77490d136e0453912",
+        "bytes": 6836,
+        "raw": 124,
+        "nonblank": 116,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 88,
+      "path": "astral-server/src/main/resources/db/migration/V20261010001__update_artifact_arch.sql",
+      "pre": {
+        "sha256": "4110c37b7c146064d47485c3d92ec66864eb9f6b68db5599301a79af135499df",
+        "bytes": 3077,
+        "raw": 48,
+        "nonblank": 46,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 48,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "4110c37b7c146064d47485c3d92ec66864eb9f6b68db5599301a79af135499df",
+        "bytes": 3077,
+        "raw": 48,
+        "nonblank": 46,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Update architecture dictionary seeds x64/x86/arm64 without plugin-table DDL; runtime selection untested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "4110c37b7c146064d47485c3d92ec66864eb9f6b68db5599301a79af135499df",
+        "bytes": 3077,
+        "raw": 48,
+        "nonblank": 46,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 89,
+      "path": "astral-server/src/main/resources/db/migration/V20261010002__update_artifact_backfill.sql",
+      "pre": {
+        "sha256": "826123a344d156da8a61061a849986ea4d2877a794725f5dba697f1ea3ba1100",
+        "bytes": 4781,
+        "raw": 95,
+        "nonblank": 89,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 95,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "826123a344d156da8a61061a849986ea4d2877a794725f5dba697f1ea3ba1100",
+        "bytes": 4781,
+        "raw": 95,
+        "nonblank": 89,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Creates artifact child table before guarded parent backfill; fills only absent artifacts and aligns explicit IDs.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "826123a344d156da8a61061a849986ea4d2877a794725f5dba697f1ea3ba1100",
+        "bytes": 4781,
+        "raw": 95,
+        "nonblank": 89,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 90,
+      "path": "astral-server/src/main/resources/db/migration/V20261011001__qt_update_platforms.sql",
+      "pre": {
+        "sha256": "48f83b7c19a8e403d21bff9c2f4a30939f53ac0a938911b1b1e0ae89f4097f0c",
+        "bytes": 5557,
+        "raw": 100,
+        "nonblank": 90,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 100,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "48f83b7c19a8e403d21bff9c2f4a30939f53ac0a938911b1b1e0ae89f4097f0c",
+        "bytes": 5557,
+        "raw": 100,
+        "nonblank": 90,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Guarded update platforms backfill before destructive old-type drop; ordered after type-based artifact migration.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "48f83b7c19a8e403d21bff9c2f4a30939f53ac0a938911b1b1e0ae89f4097f0c",
+        "bytes": 5557,
+        "raw": 100,
+        "nonblank": 90,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 91,
+      "path": "astral-server/src/main/resources/db/migration/V20261018001__user_role_change_notify.sql",
+      "pre": {
+        "sha256": "e21a1ff023edced812a66c47fb90d298f8aab956c351ff8004efc9d3afa7fad9",
+        "bytes": 2198,
+        "raw": 35,
+        "nonblank": 30,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 35,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "e21a1ff023edced812a66c47fb90d298f8aab956c351ff8004efc9d3afa7fad9",
+        "bytes": 2198,
+        "raw": 35,
+        "nonblank": 30,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "User-role-change notification template/rule seed and unguarded notice UPDATE; depends on F03 table creation.",
+      "followupRanges": [],
+      "findingIds": [
+        "F03"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "e21a1ff023edced812a66c47fb90d298f8aab956c351ff8004efc9d3afa7fad9",
+        "bytes": 2198,
+        "raw": 35,
+        "nonblank": 30,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 92,
+      "path": "astral-server/src/main/resources/db/migration/V20261018002__plugin_menu_directory.sql",
+      "pre": {
+        "sha256": "2785fefb117ea0ee336b9d9177a8d41a9bec3c998368dcbae049032a13473fea",
+        "bytes": 971,
+        "raw": 19,
+        "nonblank": 17,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 19,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "2785fefb117ea0ee336b9d9177a8d41a9bec3c998368dcbae049032a13473fea",
+        "bytes": 971,
+        "raw": 19,
+        "nonblank": 17,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Converts plugin menu root to directory and retains descendants via new child menu.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "2785fefb117ea0ee336b9d9177a8d41a9bec3c998368dcbae049032a13473fea",
+        "bytes": 971,
+        "raw": 19,
+        "nonblank": 17,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 93,
+      "path": "astral-server/src/main/resources/db/migration/V20261018003__storage_file_manager_dict.sql",
+      "pre": {
+        "sha256": "68e216eadb379dad22522fc3ae0d026526fd303a559655c9201b8214e43b8dab",
+        "bytes": 2160,
+        "raw": 36,
+        "nonblank": 34,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 36,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "68e216eadb379dad22522fc3ae0d026526fd303a559655c9201b8214e43b8dab",
+        "bytes": 2160,
+        "raw": 36,
+        "nonblank": 34,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Storage file category/sort dictionaries with business guards/watermarks; no existing object ownership changes.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "68e216eadb379dad22522fc3ae0d026526fd303a559655c9201b8214e43b8dab",
+        "bytes": 2160,
+        "raw": 36,
+        "nonblank": 34,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 94,
+      "path": "astral-server/src/main/resources/db/migration/V20261019001__ai_dict.sql",
+      "pre": {
+        "sha256": "eaca9e5e1f7761ae20a86e533c57593154ee5e760e251ef9557b4607bbb4a927",
+        "bytes": 7354,
+        "raw": 120,
+        "nonblank": 104,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 120,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "eaca9e5e1f7761ae20a86e533c57593154ee5e760e251ef9557b4607bbb4a927",
+        "bytes": 7354,
+        "raw": 120,
+        "nonblank": 104,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "AI dictionaries business guarded/watermarked; index-job/message defaults mismatch schema (F07).",
+      "followupRanges": [
+        {
+          "offset": 81,
+          "limit": 40,
+          "start": 81,
+          "end": 120,
+          "eof": true,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F07"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "eaca9e5e1f7761ae20a86e533c57593154ee5e760e251ef9557b4607bbb4a927",
+        "bytes": 7354,
+        "raw": 120,
+        "nonblank": 104,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 95,
+      "path": "astral-server/src/main/resources/db/migration/V20261019002__ai_schema.sql",
+      "pre": {
+        "sha256": "d3d7d3213ed104f891ca176bcb50d8ce1fb0747ead0c89d82e146897045fd0ab",
+        "bytes": 18243,
+        "raw": 528,
+        "nonblank": 502,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 160,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 161,
+          "limit": 80,
+          "start": 161,
+          "end": 240,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 241,
+          "limit": 80,
+          "start": 241,
+          "end": 320,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 321,
+          "limit": 80,
+          "start": 321,
+          "end": 400,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 401,
+          "limit": 80,
+          "start": 401,
+          "end": 480,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 481,
+          "limit": 80,
+          "start": 481,
+          "end": 528,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "d3d7d3213ed104f891ca176bcb50d8ce1fb0747ead0c89d82e146897045fd0ab",
+        "bytes": 18243,
+        "raw": 528,
+        "nonblank": 502,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "AI tables/indexes/global-segment seeds; schema status defaults mismatch dictionaries (F07),1000 reserve candidate (C02).",
+      "followupRanges": [
+        {
+          "offset": 221,
+          "limit": 30,
+          "start": 221,
+          "end": 250,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        },
+        {
+          "offset": 321,
+          "limit": 25,
+          "start": 321,
+          "end": 345,
+          "eof": false,
+          "unpruned": true,
+          "purpose": "Evidence verification after complete coverage"
+        }
+      ],
+      "findingIds": [
+        "F07"
+      ],
+      "candidateIds": [
+        "C02"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "d3d7d3213ed104f891ca176bcb50d8ce1fb0747ead0c89d82e146897045fd0ab",
+        "bytes": 18243,
+        "raw": 528,
+        "nonblank": 502,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 96,
+      "path": "astral-server/src/main/resources/db/migration/V20261019003__qt_update_version_info_widen.sql",
+      "pre": {
+        "sha256": "ff602714ec04ca5944d4d659f86922f595eded82e52e055183676f7157f7eb29",
+        "bytes": 947,
+        "raw": 17,
+        "nonblank": 16,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 17,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "ff602714ec04ca5944d4d659f86922f595eded82e52e055183676f7157f7eb29",
+        "bytes": 947,
+        "raw": 17,
+        "nonblank": 16,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Guards absent plugin update table before version_info widening; rich-text/runtime payload handling not tested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "ff602714ec04ca5944d4d659f86922f595eded82e52e055183676f7157f7eb29",
+        "bytes": 947,
+        "raw": 17,
+        "nonblank": 16,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 97,
+      "path": "astral-server/src/main/resources/db/migration/V20261020001__notice_read_seconds_terms_version.sql",
+      "pre": {
+        "sha256": "b60166961060222adf1cc77432355f7c75fdb6750df7d2a0c450e1552c99d6bd",
+        "bytes": 2326,
+        "raw": 35,
+        "nonblank": 33,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 35,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "b60166961060222adf1cc77432355f7c75fdb6750df7d2a0c450e1552c99d6bd",
+        "bytes": 2326,
+        "raw": 35,
+        "nonblank": 33,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Guarded notice terms_version/read_seconds additions/comments; later guard cannot rescue prior early ALTER (F03).",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "b60166961060222adf1cc77432355f7c75fdb6750df7d2a0c450e1552c99d6bd",
+        "bytes": 2326,
+        "raw": 35,
+        "nonblank": 33,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 98,
+      "path": "astral-server/src/main/resources/db/migration/V20261022001__cms_dict.sql",
+      "pre": {
+        "sha256": "b09a6e9806e5977dceef3e288add046ea507b882e4e41f6d36507033c7c1f8f9",
+        "bytes": 2257,
+        "raw": 38,
+        "nonblank": 34,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 38,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "b09a6e9806e5977dceef3e288add046ea507b882e4e41f6d36507033c7c1f8f9",
+        "bytes": 2257,
+        "raw": 38,
+        "nonblank": 34,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "CMS configurable status/type dictionaries with dynamic allocation and watermarks.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "b09a6e9806e5977dceef3e288add046ea507b882e4e41f6d36507033c7c1f8f9",
+        "bytes": 2257,
+        "raw": 38,
+        "nonblank": 34,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 99,
+      "path": "astral-server/src/main/resources/db/migration/V20261024001__cms_private_share_dict.sql",
+      "pre": {
+        "sha256": "ebed93fbcbff7b4b199d6dd48efd0acd9c475d954ae103b05c952bbdd1755bf8",
+        "bytes": 2559,
+        "raw": 47,
+        "nonblank": 41,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 47,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "ebed93fbcbff7b4b199d6dd48efd0acd9c475d954ae103b05c952bbdd1755bf8",
+        "bytes": 2559,
+        "raw": 47,
+        "nonblank": 41,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "CMS private status/share target dictionary and reordering; business-key guards and watermarks.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "ebed93fbcbff7b4b199d6dd48efd0acd9c475d954ae103b05c952bbdd1755bf8",
+        "bytes": 2559,
+        "raw": 47,
+        "nonblank": 41,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 100,
+      "path": "astral-server/src/main/resources/db/migration/V20261027001__sys_notice_to_host.sql",
+      "pre": {
+        "sha256": "ad07e4d1768fb786998dbdf92d196eddbd1136cde98df91198375c2e78b8db37",
+        "bytes": 8296,
+        "raw": 102,
+        "nonblank": 100,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 102,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "ad07e4d1768fb786998dbdf92d196eddbd1136cde98df91198375c2e78b8db37",
+        "bytes": 8296,
+        "raw": 102,
+        "nonblank": 100,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Host creates sys_notice with current columns/indexes/comments; explicitly acknowledges earlier missing-table chain (F03).",
+      "followupRanges": [],
+      "findingIds": [
+        "F03"
+      ],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "ad07e4d1768fb786998dbdf92d196eddbd1136cde98df91198375c2e78b8db37",
+        "bytes": 8296,
+        "raw": 102,
+        "nonblank": 100,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 101,
+      "path": "astral-server/src/main/resources/db/migration/V20261027002__notice_type_announce_notice.sql",
+      "pre": {
+        "sha256": "89bf65418a8745b339952b3af58f89ba0e3b1ed03c6c5aa6a91f351b3e10272b",
+        "bytes": 4628,
+        "raw": 71,
+        "nonblank": 67,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 71,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "89bf65418a8745b339952b3af58f89ba0e3b1ed03c6c5aa6a91f351b3e10272b",
+        "bytes": 4628,
+        "raw": 71,
+        "nonblank": 67,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Adds notice type and disables legacy aliases without rewriting old notice rows; dictionary watermark aligned.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "89bf65418a8745b339952b3af58f89ba0e3b1ed03c6c5aa6a91f351b3e10272b",
+        "bytes": 4628,
+        "raw": 71,
+        "nonblank": 67,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 102,
+      "path": "astral-server/src/main/resources/db/migration/V20261028001__message_template_channel_merge.sql",
+      "pre": {
+        "sha256": "10081dab95aa81c3222ba4015aa31d4ebc65dd2bb8086790221ce652b5de8e4e",
+        "bytes": 1773,
+        "raw": 30,
+        "nonblank": 29,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 30,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "10081dab95aa81c3222ba4015aa31d4ebc65dd2bb8086790221ce652b5de8e4e",
+        "bytes": 1773,
+        "raw": 30,
+        "nonblank": 29,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Replaces template-code-only uniqueness with template_code/channel; scene/channel uniqueness retained.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "10081dab95aa81c3222ba4015aa31d4ebc65dd2bb8086790221ce652b5de8e4e",
+        "bytes": 1773,
+        "raw": 30,
+        "nonblank": 29,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 103,
+      "path": "astral-server/src/main/resources/db/migration/V20261028002__notify_delivery_dicts.sql",
+      "pre": {
+        "sha256": "36e71b01ab6b73217beca1dd5b3eda626b0e6181fe09ac13066c8b7f0484362f",
+        "bytes": 4166,
+        "raw": 67,
+        "nonblank": 61,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 67,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "36e71b01ab6b73217beca1dd5b3eda626b0e6181fe09ac13066c8b7f0484362f",
+        "bytes": 4166,
+        "raw": 67,
+        "nonblank": 61,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Notification delivery/recipient/enable dictionaries with colors; dynamic allocation and watermark alignment.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "36e71b01ab6b73217beca1dd5b3eda626b0e6181fe09ac13066c8b7f0484362f",
+        "bytes": 4166,
+        "raw": 67,
+        "nonblank": 61,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 104,
+      "path": "astral-server/src/main/resources/db/migration/V20261028003__admin_enum_dicts.sql",
+      "pre": {
+        "sha256": "b115a45cc662ae62cc49d8430f6fb595530e6645fc4ee5b7343e5408103e8c52",
+        "bytes": 3004,
+        "raw": 45,
+        "nonblank": 43,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 45,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "b115a45cc662ae62cc49d8430f6fb595530e6645fc4ee5b7343e5408103e8c52",
+        "bytes": 3004,
+        "raw": 45,
+        "nonblank": 43,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Admin user/token/config/send/error/storage enums moved into dictionaries; no business-row changes.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "b115a45cc662ae62cc49d8430f6fb595530e6645fc4ee5b7343e5408103e8c52",
+        "bytes": 3004,
+        "raw": 45,
+        "nonblank": 43,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 105,
+      "path": "astral-server/src/main/resources/db/migration/V20261029001__notify_rule_channel_split.sql",
+      "pre": {
+        "sha256": "1aa53114ff9f10396cee3e7b28b1837d40efba0854b1ebc1f21a9091b5767aa2",
+        "bytes": 8087,
+        "raw": 135,
+        "nonblank": 126,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 135,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "1aa53114ff9f10396cee3e7b28b1837d40efba0854b1ebc1f21a9091b5767aa2",
+        "bytes": 8087,
+        "raw": 135,
+        "nonblank": 126,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Notification rule/channel/recipient split; row-number backfill then constant MAX+1 multirow inserts collide conditionally (F04); watermark candidate (C02).",
+      "followupRanges": [],
+      "findingIds": [
+        "F04"
+      ],
+      "candidateIds": [
+        "C02"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "1aa53114ff9f10396cee3e7b28b1837d40efba0854b1ebc1f21a9091b5767aa2",
+        "bytes": 8087,
+        "raw": 135,
+        "nonblank": 126,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 106,
+      "path": "astral-server/src/main/resources/db/migration/V20261029002__notify_rule_dicts.sql",
+      "pre": {
+        "sha256": "4046ad8f809f2d319550bd6ad17ff0e0db09154287e3bceef19c0fd238755953",
+        "bytes": 2585,
+        "raw": 38,
+        "nonblank": 36,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 38,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "4046ad8f809f2d319550bd6ad17ff0e0db09154287e3bceef19c0fd238755953",
+        "bytes": 2585,
+        "raw": 38,
+        "nonblank": 36,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Notification limit-scope/delivery/recipient dictionaries; existing business values retained; watermark aligned.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "4046ad8f809f2d319550bd6ad17ff0e0db09154287e3bceef19c0fd238755953",
+        "bytes": 2585,
+        "raw": 38,
+        "nonblank": 36,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 107,
+      "path": "astral-server/src/main/resources/db/migration/V20261029003__notice_sender.sql",
+      "pre": {
+        "sha256": "d6d0b741712f3833b9b1c145296478bdb7e19d8c252bc6c267cb0d511cef0cd9",
+        "bytes": 995,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 15,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "d6d0b741712f3833b9b1c145296478bdb7e19d8c252bc6c267cb0d511cef0cd9",
+        "bytes": 995,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Notice sender nullable column and feedback scene-prefix-only historical backfill; other senders stay unknown.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "d6d0b741712f3833b9b1c145296478bdb7e19d8c252bc6c267cb0d511cef0cd9",
+        "bytes": 995,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 108,
+      "path": "astral-server/src/main/resources/db/migration/V20261029004__drop_mail_plugin_auth.sql",
+      "pre": {
+        "sha256": "6d6780ed58ec4021bc8d0cc5615f7bcac90be8aae374547333de0f3b7b9f6bc1",
+        "bytes": 1489,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 25,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "6d6780ed58ec4021bc8d0cc5615f7bcac90be8aae374547333de0f3b7b9f6bc1",
+        "bytes": 1489,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Removes obsolete mail-plugin-auth permission links/codes/table; runtime claims in comments not independently adopted.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "6d6780ed58ec4021bc8d0cc5615f7bcac90be8aae374547333de0f3b7b9f6bc1",
+        "bytes": 1489,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 109,
+      "path": "astral-server/src/main/resources/db/migration/V20261029005__menu_message_statistics.sql",
+      "pre": {
+        "sha256": "3e781604d235dbaa72ed7e3a9837301f9d79b4eeaec8f6c31ced8b4e86ee2b8d",
+        "bytes": 535,
+        "raw": 9,
+        "nonblank": 9,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 9,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "3e781604d235dbaa72ed7e3a9837301f9d79b4eeaec8f6c31ced8b4e86ee2b8d",
+        "bytes": 535,
+        "raw": 9,
+        "nonblank": 9,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Renames existing mail-log menu to message statistics route; frontend routes outside subset.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "3e781604d235dbaa72ed7e3a9837301f9d79b4eeaec8f6c31ced8b4e86ee2b8d",
+        "bytes": 535,
+        "raw": 9,
+        "nonblank": 9,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 110,
+      "path": "astral-server/src/main/resources/db/migration/V20261029006__notice_type_personal_fix.sql",
+      "pre": {
+        "sha256": "fef7ccf07b37032103805fff175ee5d8bd9a3d3aee7059391200c7f8718a00b3",
+        "bytes": 638,
+        "raw": 9,
+        "nonblank": 9,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 9,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "fef7ccf07b37032103805fff175ee5d8bd9a3d3aee7059391200c7f8718a00b3",
+        "bytes": 638,
+        "raw": 9,
+        "nonblank": 9,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Reclassifies only three known personal-notification scenes from announce to notice; manual unrelated broadcasts unchanged.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "fef7ccf07b37032103805fff175ee5d8bd9a3d3aee7059391200c7f8718a00b3",
+        "bytes": 638,
+        "raw": 9,
+        "nonblank": 9,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 111,
+      "path": "astral-server/src/main/resources/db/migration/V20261102001__ai_tool_declarative.sql",
+      "pre": {
+        "sha256": "68968c606b6b3ed7da298be6ae5c83a277b485088f459beab6548d97b0e89608",
+        "bytes": 1226,
+        "raw": 12,
+        "nonblank": 12,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 12,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "68968c606b6b3ed7da298be6ae5c83a277b485088f459beab6548d97b0e89608",
+        "bytes": 1226,
+        "raw": 12,
+        "nonblank": 12,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Adds declarative HTTP executor columns; comments claim fixed safety guards, executors outside subset and not verified.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "68968c606b6b3ed7da298be6ae5c83a277b485088f459beab6548d97b0e89608",
+        "bytes": 1226,
+        "raw": 12,
+        "nonblank": 12,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 112,
+      "path": "astral-server/src/main/resources/db/migration/V20261102002__ai_tool_sql_executor.sql",
+      "pre": {
+        "sha256": "81b68d73daf31ae6c5e205d710000e4763335f3407747b1da2bc5c6f29c2ba9b",
+        "bytes": 1053,
+        "raw": 10,
+        "nonblank": 10,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 10,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "81b68d73daf31ae6c5e205d710000e4763335f3407747b1da2bc5c6f29c2ba9b",
+        "bytes": 1053,
+        "raw": 10,
+        "nonblank": 10,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Updates SQL executor column comments only; read-only/parser/rollback claims require actual executor/runtime evidence.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "81b68d73daf31ae6c5e205d710000e4763335f3407747b1da2bc5c6f29c2ba9b",
+        "bytes": 1053,
+        "raw": 10,
+        "nonblank": 10,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 113,
+      "path": "astral-server/src/main/resources/db/migration/V20261102003__ai_mcp_server.sql",
+      "pre": {
+        "sha256": "bc09297060ee0351cc313df38389b4a9f26e6ed480f3e98d39d3007cc720c72e",
+        "bytes": 2106,
+        "raw": 33,
+        "nonblank": 31,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 33,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "bc09297060ee0351cc313df38389b4a9f26e6ed480f3e98d39d3007cc720c72e",
+        "bytes": 2106,
+        "raw": 33,
+        "nonblank": 31,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Creates MCP server table with URL/header/risk metadata; SSRF/discovery/read-only claims not execution proof.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "bc09297060ee0351cc313df38389b4a9f26e6ed480f3e98d39d3007cc720c72e",
+        "bytes": 2106,
+        "raw": 33,
+        "nonblank": 31,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 114,
+      "path": "astral-server/src/main/resources/db/migration/V20261102004__ai_tool_executor_dict.sql",
+      "pre": {
+        "sha256": "dfb7f20fdf0f138e2f49c392e97a4e6e39dfbbd11ce1c7ad8af1ba0c08f5ef82",
+        "bytes": 2537,
+        "raw": 44,
+        "nonblank": 39,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 44,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "dfb7f20fdf0f138e2f49c392e97a4e6e39dfbbd11ce1c7ad8af1ba0c08f5ef82",
+        "bytes": 2537,
+        "raw": 44,
+        "nonblank": 39,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "MCP status/executor dictionaries and1000 segment seed; dictionary watermarks align, million-reserve candidate (C02).",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [
+        "C02"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "dfb7f20fdf0f138e2f49c392e97a4e6e39dfbbd11ce1c7ad8af1ba0c08f5ef82",
+        "bytes": 2537,
+        "raw": 44,
+        "nonblank": 39,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 115,
+      "path": "astral-server/src/main/resources/db/migration/V20261105001__storage_http_group_operation.sql",
+      "pre": {
+        "sha256": "587c02b15f6ca6aa1ffb586d1d69b1b0253037a42024bcde1993daf9295beebc",
+        "bytes": 13071,
+        "raw": 234,
+        "nonblank": 217,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 160,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 161,
+          "limit": 80,
+          "start": 161,
+          "end": 234,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "587c02b15f6ca6aa1ffb586d1d69b1b0253037a42024bcde1993daf9295beebc",
+        "bytes": 13071,
+        "raw": 234,
+        "nonblank": 217,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Storage groups/upload operation uniqueness/checks/snapshots/quota/version DDL and dictionaries; groups superseded by folder binding; reserve candidate (C02).",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [
+        "C02"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "587c02b15f6ca6aa1ffb586d1d69b1b0253037a42024bcde1993daf9295beebc",
+        "bytes": 13071,
+        "raw": 234,
+        "nonblank": 217,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 116,
+      "path": "astral-server/src/main/resources/db/migration/V20261106001__storage_delete_hard_row.sql",
+      "pre": {
+        "sha256": "a5025c13076b4e930fd7b988ac9645938d782a60a2404e53798b72213da38ca4",
+        "bytes": 999,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 15,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "a5025c13076b4e930fd7b988ac9645938d782a60a2404e53798b72213da38ca4",
+        "bytes": 999,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Hard-deletes historical DELETING/DELETED rows; task type spelling corrected in following migration; remote cleanup not executed.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "a5025c13076b4e930fd7b988ac9645938d782a60a2404e53798b72213da38ca4",
+        "bytes": 999,
+        "raw": 15,
+        "nonblank": 13,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 117,
+      "path": "astral-server/src/main/resources/db/migration/V20261106002__storage_delete_orphan_task_fix.sql",
+      "pre": {
+        "sha256": "4247ba1f886f172974c60b8882b53e752e749703a59e6f6d479d549fe7cad972",
+        "bytes": 863,
+        "raw": 11,
+        "nonblank": 11,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 11,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "4247ba1f886f172974c60b8882b53e752e749703a59e6f6d479d549fe7cad972",
+        "bytes": 863,
+        "raw": 11,
+        "nonblank": 11,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Corrects task type and deletes orphan non-messageId payload tasks while intending to preserve Telegram tasks; actual worker/payload validity untested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "4247ba1f886f172974c60b8882b53e752e749703a59e6f6d479d549fe7cad972",
+        "bytes": 863,
+        "raw": 11,
+        "nonblank": 11,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 118,
+      "path": "astral-server/src/main/resources/db/migration/V20261106003__storage_folder_target_binding.sql",
+      "pre": {
+        "sha256": "893c491ab86f6f9c714cdd27699296c3c3da95605726bbf87ece134e4ff61de5",
+        "bytes": 9693,
+        "raw": 176,
+        "nonblank": 160,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 80,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 81,
+          "limit": 80,
+          "start": 81,
+          "end": 160,
+          "eof": false,
+          "unpruned": true
+        },
+        {
+          "offset": 161,
+          "limit": 80,
+          "start": 161,
+          "end": 176,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "893c491ab86f6f9c714cdd27699296c3c3da95605726bbf87ece134e4ff61de5",
+        "bytes": 9693,
+        "raw": 176,
+        "nonblank": 160,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Migrates CONFIG/GROUP folders to bindings before dropping old columns/groups; INHERIT intentionally fail-closed; binding-ID watermark/reserve candidate (C02).",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [
+        "C02"
+      ],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "893c491ab86f6f9c714cdd27699296c3c3da95605726bbf87ece134e4ff61de5",
+        "bytes": 9693,
+        "raw": 176,
+        "nonblank": 160,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 119,
+      "path": "astral-server/src/main/resources/db/migration/V20261106004__storage_http_basic_dict.sql",
+      "pre": {
+        "sha256": "15a29a0cb6677f56ccccb266b6450e930369c9bcf647e349f1483505f0ddccfb",
+        "bytes": 1507,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 25,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "15a29a0cb6677f56ccccb266b6450e930369c9bcf647e349f1483505f0ddccfb",
+        "bytes": 1507,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Adds BASIC auth dictionary option and watermark, repairing missing earlier option; actual HTTP auth validation untested.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "15a29a0cb6677f56ccccb266b6450e930369c9bcf647e349f1483505f0ddccfb",
+        "bytes": 1507,
+        "raw": 25,
+        "nonblank": 22,
+        "finalNewline": true
+      }
+    },
+    {
+      "index": 120,
+      "path": "astral-server/src/main/resources/db/migration/V20261106005__upload_operation_expected_sha256_optional.sql",
+      "pre": {
+        "sha256": "3cf90677260f8b7696b37e9b905360db4aca31cc570db8604253658bb2ee8662",
+        "bytes": 878,
+        "raw": 16,
+        "nonblank": 14,
+        "finalNewline": true
+      },
+      "status": "FULL",
+      "ranges": [
+        {
+          "offset": 1,
+          "limit": 80,
+          "start": 1,
+          "end": 16,
+          "eof": true,
+          "unpruned": true
+        }
+      ],
+      "eof": true,
+      "semanticReadComplete": true,
+      "post": {
+        "sha256": "3cf90677260f8b7696b37e9b905360db4aca31cc570db8604253658bb2ee8662",
+        "bytes": 878,
+        "raw": 16,
+        "nonblank": 14,
+        "finalNewline": true
+      },
+      "stable": true,
+      "semanticNotes": "Drops expected_sha256 NOT NULL to align optional client declaration; supersedes earlier DDL constraint, comments production result not adopted.",
+      "followupRanges": [],
+      "findingIds": [],
+      "candidateIds": [],
+      "statusMeaning": "Actual semantic offset1-through-EOF read, not approval or test pass",
+      "closing": {
+        "sha256": "3cf90677260f8b7696b37e9b905360db4aca31cc570db8604253658bb2ee8662",
+        "bytes": 878,
+        "raw": 16,
+        "nonblank": 14,
+        "finalNewline": true
+      }
+    }
+  ],
+  "validation": {
+    "sourceMetadataConsistency": true,
+    "actualSemanticReadCoverage": true,
+    "testsExecuted": false,
+    "mavenExecuted": false,
+    "sqlExecuted": false,
+    "springContextExecuted": false,
+    "httpExecuted": false,
+    "deploymentVerified": false
+  },
+  "readCheckpointAt": "2026-11-07T07:42:55.791Z",
+  "finalFingerprintAt": "2026-11-07T07:46:23.623Z",
+  "sourceStability": {
+    "checked": 121,
+    "unchanged": 121,
+    "changedPaths": [],
+    "closingChecked": 121,
+    "closingUnchanged": 121,
+    "closingChangedPaths": []
+  },
+  "readEvidence": "Complete coverage ranges and separately listed followups transcribed only from actual unpruned read-tool returns. Limits<=80. Source metadata commands do not substitute for semantic reads; no per-call timestamps invented.",
+  "findings": [
+    {
+      "id": "F01",
+      "priority": "P1",
+      "classification": "confirmed-local-static",
+      "title": "Partial-mask marker bypasses credential masking",
+      "indices": [
+        10,
+        15
+      ],
+      "fact": "Sensitive JSON contains(MASK) and form startsWith(MASK) preserve other readable content.",
+      "counterevidence": "Existing ordinary/nested/idempotence test must remain valid; no adversarial mixed-marker case read.",
+      "publicSeam": "LogSanitizer.mask(String); CommonUtilsTest.logSanitizerMasksCredentialsButKeepsStructure",
+      "dependencyBoundary": "Unreviewed logging callers; no runtime credential exposure proven.",
+      "executed": false,
+      "requirements": "See corresponding Markdown finding for current guidance/source citations.",
+      "markdownSection": "F01"
+    },
+    {
+      "id": "F02",
+      "priority": "P2",
+      "classification": "confirmed-local-static",
+      "title": "Cache/query ut normalization mismatch",
+      "indices": [
+        34
+      ],
+      "fact": "Overview/trend cache keys trim ut but mapper equality predicates bind original ut.",
+      "counterevidence": "Version query and version-list ut are normalized; metric columns whitelisted.",
+      "publicSeam": "StatReportService.getOverview/getTrend on one instance with public mapper boundaries",
+      "dependencyBoundary": "Controller admissibility, PostgreSQL semantics and cache order tests unexecuted.",
+      "executed": false,
+      "requirements": "See corresponding Markdown finding for current guidance/source citations.",
+      "markdownSection": "F02"
+    },
+    {
+      "id": "F03",
+      "priority": "P1",
+      "classification": "confirmed-static-dependency",
+      "title": "Fresh notice migration chain alters before creation",
+      "indices": [
+        51,
+        52,
+        73,
+        82,
+        91,
+        100
+      ],
+      "fact": "Baseline lacks sys_notice; bare early ALTER before V20261027001 host creation.",
+      "counterevidence": "Populated upgrade schema may already contain table; later existence guards cannot rescue earlier failure.",
+      "publicSeam": "Real application Flyway entry with complete chain in isolated empty PostgreSQL schema",
+      "dependencyBoundary": "No Spring/Flyway/SQL execution or actual startup failure; published checksums immutable.",
+      "executed": false,
+      "requirements": "See corresponding Markdown finding for current guidance/source citations.",
+      "markdownSection": "F03"
+    },
+    {
+      "id": "F04",
+      "priority": "P2",
+      "classification": "confirmed-static-conditional",
+      "title": "Constant MAX+1 IDs collide across qualifying notification rows",
+      "indices": [
+        81,
+        105
+      ],
+      "fact": "Channel and recipient INSERT SELECT each use one scalar MAX(id)+1 for potentially multiple rows.",
+      "counterevidence": "Single fresh seeded rule avoids trigger; earlier backfill correctly uses ROW_NUMBER.",
+      "publicSeam": "Actual authored migration against isolated pre-upgrade two-rule fixtures",
+      "dependencyBoundary": "No proof deployed data satisfies multirow trigger; no SQL run; preserve historical checksum.",
+      "executed": false,
+      "requirements": "See corresponding Markdown finding for current guidance/source citations.",
+      "markdownSection": "F04"
+    },
+    {
+      "id": "F05",
+      "priority": "P2",
+      "classification": "confirmed-local-static",
+      "title": "System memory contains heap data and heap fields unset",
+      "indices": [
+        26,
+        32,
+        35
+      ],
+      "fact": "SystemInfo maps heap max/used to total/used/available host fields and never fills heap fields.",
+      "counterevidence": "Separate JVM producer correctly maps heap metrics.",
+      "publicSeam": "SystemMonitorService.getSystemInfo and JvmMonitorService.getJvmInfo",
+      "dependencyBoundary": "Host/container definition, UI/alert behavior and runtime probes untested.",
+      "executed": false,
+      "requirements": "See corresponding Markdown finding for current guidance/source citations.",
+      "markdownSection": "F05"
+    },
+    {
+      "id": "F06",
+      "priority": "P3",
+      "classification": "confirmed-artifact-standards-discrepancy",
+      "title": "Datasource examples contradict current configuration boundary",
+      "indices": [
+        49
+      ],
+      "fact": "Examples promote astral.database and claim precedence; current AGENTS requires spring.datasource.",
+      "counterevidence": "Example not necessarily loaded; actual binding classes preceding67 not reread.",
+      "publicSeam": "Real datasource binding and application-context entry under isolated authorized test",
+      "dependencyBoundary": "No runtime configuration switch or alternate database support verified.",
+      "executed": false,
+      "requirements": "See corresponding Markdown finding for current guidance/source citations.",
+      "markdownSection": "F06"
+    },
+    {
+      "id": "F07",
+      "priority": "P3",
+      "classification": "confirmed-artifact-mismatch",
+      "title": "AI schema defaults absent from status dictionaries",
+      "indices": [
+        94,
+        95
+      ],
+      "fact": "Index job QUEUED versus dictionary PENDING; message SUCCEEDED versus dictionary COMPLETED.",
+      "counterevidence": "Runtime creation may explicitly override status; no UI break proven.",
+      "publicSeam": "Real AI public creation/indexing/message entries and persisted/dictionary values",
+      "dependencyBoundary": "Companion schema metadata/services/initializers outside121 not reread.",
+      "executed": false,
+      "requirements": "See corresponding Markdown finding for current guidance/source citations.",
+      "markdownSection": "F07"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "title": "Legacy announcement row preservation and undeleted transitional inapp table",
+      "indices": [
+        80,
+        82
+      ],
+      "disposition": "Bounded dependency question, not proven runtime finding",
+      "executed": false
+    },
+    {
+      "id": "C02",
+      "title": "Million-ID reservation and same-migration explicit-ID watermarks depend on outside121 startup/generator behavior",
+      "indices": [
+        95,
+        105,
+        114,
+        115,
+        118
+      ],
+      "disposition": "Bounded dependency question, not proven runtime finding",
+      "executed": false
+    },
+    {
+      "id": "C03",
+      "title": "GC unavailable/overflow, thread estimate and unavailable resource zero semantics",
+      "indices": [
+        24,
+        31,
+        32
+      ],
+      "disposition": "Bounded dependency question, not proven runtime finding",
+      "executed": false
+    },
+    {
+      "id": "C04",
+      "title": "Default-locale decimal and nullable API summary constructor",
+      "indices": [
+        18
+      ],
+      "disposition": "Bounded dependency question, not proven runtime finding",
+      "executed": false
+    },
+    {
+      "id": "C05",
+      "title": "Static virtual executor/unbounded dashboard join depends on unread delegate timeouts",
+      "indices": [
+        29
+      ],
+      "disposition": "Bounded dependency question, not proven runtime finding",
+      "executed": false
+    },
+    {
+      "id": "C06",
+      "title": "Sequence enum fallback and no-placeholder error args depend on unread consumers",
+      "indices": [
+        6,
+        7
+      ],
+      "disposition": "Bounded dependency question, not proven runtime finding",
+      "executed": false
+    }
+  ],
+  "coverage": {
+    "assigned": 121,
+    "FULL": 121,
+    "PARTIAL": 0,
+    "NOTREAD": 0,
+    "raw": 9518,
+    "nonblank": 8600,
+    "bytes": 498369,
+    "completeCoverageCalls": 189,
+    "followupCalls": 20,
+    "totalActualSourceReadCalls": 209
+  },
+  "sourceSnapshotSha256": "26f96232f2d18d0fa8e2487162a729c598a27b148fe6527d6ac1f62a6d9bebf3",
+  "physicalLineConvention": "UTF8 split /\\r?\\n/, remove trailing empty split when ending newline, empty file0; nonblank=line.trim() nonempty",
+  "gitProvenance": {
+    "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+    "baselineSource": "Delegation/Spec supplied; not independently Git verified",
+    "initialSettledHead": null,
+    "finalSettledHead": null,
+    "initialDirtyTracked": null,
+    "initialDirtyUntracked": null,
+    "finalDirtyTracked": null,
+    "finalDirtyUntracked": null,
+    "diffStats": null,
+    "reason": "Git prohibited for reader; Lead-supplied closing provenance not yet received. Null means unavailable, never clean."
+  },
+  "acceptance": {
+    "readCoverageComplete": true,
+    "safe": false,
+    "approved": false,
+    "preceding67Renewed": false,
+    "task25Accepted": false,
+    "standardsIndependentComplete": false,
+    "specIndependentComplete": false
+  },
+  "untestedBoundaries": [
+    "Maven/compile/format/tests",
+    "SQL/PostgreSQL/Flyway",
+    "Spring wiring/initializers",
+    "HTTP/authorization/CSRF/proxy",
+    "Logging callsites/persisted data",
+    "Private/production configuration",
+    "Generated/schema/DAO dependencies outside121",
+    "Independent full Standards/Spec/task25 acceptance"
+  ],
+  "authorizedWrites": [
+    "docs/audit/2026-11-07/core-platform-remaining-current.md",
+    "docs/audit/2026-11-07/core-platform-remaining-current.json",
+    "mandatory neutral memory_log"
+  ],
+  "remainingWorkWithinAssigned121": [],
+  "leadNextSteps": [
+    "Verify this ledger and combine earlier67 separately",
+    "Triage F01-F07 with public seams and counterevidence",
+    "Obtain separately authorized isolated SQL/Spring/HTTP/tests",
+    "Remediate without published-migration checksum changes",
+    "Complete independent Spec/Standards/task25 acceptance"
+  ],
+  "deliverables": {
+    "markdown": {
+      "path": "docs/audit/2026-11-07/core-platform-remaining-current.md",
+      "bytes": 67297,
+      "sha256": "816992b57b34113a63e6abc08d067ab7c7a8ada2eb86edc4f7fcc1d71ff5a32d"
+    },
+    "json": {
+      "path": "docs/audit/2026-11-07/core-platform-remaining-current.json",
+      "hashDisclosure": "Final SHA256/bytes supplied in self-contained closing; no recursive self-hash embedded."
+    }
+  },
+  "completedAt": "2026-11-07T07:55:16.392Z",
+  "reportValidation": {
+    "scopeSelectionMatches": true,
+    "uniquePaths": 121,
+    "coverageContiguous": true,
+    "allLimitsAtMost80": true,
+    "explicitEOFPerPath": true,
+    "followupsValid": true,
+    "markdownInventoryRows": 121,
+    "linkAnchorIssues": [],
+    "validatedAt": "2026-11-07T07:55:53.372Z",
+    "closingSourceCounts": {
+      "bytes": 498369,
+      "raw": 9518,
+      "nonblank": 8600
+    },
+    "mdHashMatches": true
+  },
+  "closingFingerprintAt": "2026-11-07T07:56:29.660Z",
+  "inputFinalSha256": "ff2e556623c4bb83e5c76ddb52a28424f301a18897f23489e5371893ffeb38b1"
+}

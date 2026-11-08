@@ -1,0 +1,435 @@
+{
+  "shard": {
+    "id": "backend-ai-provider-02",
+    "kind": "bounded-read-only-audit-shard",
+    "date": "2026-11-07",
+    "cwd": "F:/qtMusic/astral",
+    "baseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+    "scope": "AI provider layer: provider service/registry wiring, model+route configuration, secret cipher, URL guard, and their two security tests",
+    "writesAllowed": ["docs/audit/2026-11-07/backend-ai-shards/provider-02.md", "docs/audit/2026-11-07/backend-ai-shards/provider-02.json"],
+    "writesPerformed": ["docs/audit/2026-11-07/backend-ai-shards/provider-02.md", "docs/audit/2026-11-07/backend-ai-shards/provider-02.json"],
+    "completion": {
+      "targetFullReadFiles": 8,
+      "completedFullReadFiles": 8,
+      "status": "exact-8-of-8-complete",
+      "versionSplit": false,
+      "prunedMiddle": false,
+      "note": "Every file was read 1..N with all lines visibly returned; no chunk was pruned or skipped, so no fill-in pass was needed. Pre-read and post-read SHA256 are byte-identical for all 8 files."
+    },
+    "explicitNonClaims": [
+      "Does not complete task-14 or any full AI-domain audit.",
+      "Does not claim full-project completion; other shards own other files.",
+      "Does not re-derive the Orchestrator guard; Lead's public GREEN6 result (requester live permissions, independent registered/config groups with ANY-within/both-required, strict lowercase REQUIRED CSV vs HELD wildcard grants, HIGH always needs approval, HIGH+NONE auto-bypass false) is taken as given.",
+      "Does not read the recovery JSON or old full reports; canonical partial history stays Lead-owned.",
+      "No production/test/schema/POM/source/build/DB/Git changes were made; only the two report files above were written."
+    ]
+  },
+  "environment": {
+    "webTools": {
+      "web_fetch": "unavailable: configured web provider \"fs-quality-fetch\" is not registered",
+      "web_search": "unavailable: configured web provider \"ddg\" is not registered",
+      "consequence": "The two canonical references below were NOT fetched in-session. They are listed as pointers only; no content is attributed to them beyond their titles."
+    },
+    "shellUsage": "PowerShell used only for file census, byte sizes and SHA256 (pre/post read). No cat/rg/private AST, no build, no Git, no Maven, no network."
+  },
+  "references": [
+    {
+      "title": "OWASP Server-Side Request Forgery Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "fetched": false,
+      "whyRelevant": "Canonical guidance that URL validation must happen at connect time / on the resolved address, not only as an input preflight (F-02, F-03)."
+    },
+    {
+      "title": "OWASP Cryptographic Storage Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html",
+      "fetched": false,
+      "whyRelevant": "Canonical guidance on authenticated encryption, nonce/IV handling, key derivation and key rotation for stored secrets (F-10)."
+    }
+  ],
+  "files": [
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java",
+      "role": "only real network provider implementation (chat/stream/testConnection)",
+      "rawLines": 483,
+      "nonBlankLines": 459,
+      "bytes": 22414,
+      "sha256Before": "99BBD672CE5D99524FF299F253859ECD4E06B0F5D3A6477B271D87CC0718D829",
+      "sha256After": "99BBD672CE5D99524FF299F253859ECD4E06B0F5D3A6477B271D87CC0718D829",
+      "readRanges": ["1-80", "81-160", "161-240", "241-320", "321-400", "401-483"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java",
+      "role": "provider CRUD, credential resolution, health test, base URL normalization",
+      "rawLines": 318,
+      "nonBlankLines": 300,
+      "bytes": 13763,
+      "sha256Before": "1E13E7202898B1E539B53A16E84DE139E4044C81589AEF51733B15B528AF7755",
+      "sha256After": "1E13E7202898B1E539B53A16E84DE139E4044C81589AEF51733B15B528AF7755",
+      "readRanges": ["1-80", "81-160", "161-240", "241-318"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiModelService.java",
+      "role": "model CRUD and normalization",
+      "rawLines": 150,
+      "nonBlankLines": 140,
+      "bytes": 6495,
+      "sha256Before": "43B8420E04AC6EA87E0B6E83BB939272DA9396760D3A397B63888E874A760AB4",
+      "sha256After": "43B8420E04AC6EA87E0B6E83BB939272DA9396760D3A397B63888E874A760AB4",
+      "readRanges": ["1-80", "81-150"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiRouteService.java",
+      "role": "route CRUD, validation, enabled-route resolution",
+      "rawLines": 140,
+      "nonBlankLines": 130,
+      "bytes": 6269,
+      "sha256Before": "863E909B5575EADA4B44B9E402F451A9E0511136840F114B049084A429341EE5",
+      "sha256After": "863E909B5575EADA4B44B9E402F451A9E0511136840F114B049084A429341EE5",
+      "readRanges": ["1-80", "81-140"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/security/AiSecretCipher.java",
+      "role": "AES-GCM secret envelope, env secret_ref resolution, HMAC helper",
+      "rawLines": 176,
+      "nonBlankLines": 163,
+      "bytes": 7052,
+      "sha256Before": "1DA88DCBDFC48AA9061567CD4A6BE612DB7F75BC28FEDEE05376DBD1B80526F9",
+      "sha256After": "1DA88DCBDFC48AA9061567CD4A6BE612DB7F75BC28FEDEE05376DBD1B80526F9",
+      "readRanges": ["1-80", "81-176"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/security/AiUrlGuard.java",
+      "role": "SSRF guard for admin-supplied base URLs",
+      "rawLines": 183,
+      "nonBlankLines": 174,
+      "bytes": 7205,
+      "sha256Before": "41E755A33BF184E58F22E67FC158F24ED544273C98E351BBCC1DBE092E04D6AB",
+      "sha256After": "41E755A33BF184E58F22E67FC158F24ED544273C98E351BBCC1DBE092E04D6AB",
+      "readRanges": ["1-80", "81-183"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/test/java/com/astral/ai/security/AiSecretCipherTest.java",
+      "role": "cipher regression (real JCE, no mocks)",
+      "rawLines": 126,
+      "nonBlankLines": 105,
+      "bytes": 4823,
+      "sha256Before": "C322B4A4C33AB352C8F67E67EDE5D02767E45056ABBF7C85095F4C8C6E360FEF",
+      "sha256After": "C322B4A4C33AB352C8F67E67EDE5D02767E45056ABBF7C85095F4C8C6E360FEF",
+      "readRanges": ["1-126"],
+      "coverage": "full"
+    },
+    {
+      "path": "astral-plugin/src/test/java/com/astral/ai/security/AiUrlGuardTest.java",
+      "role": "URL guard regression (real InetAddress, no mocks)",
+      "rawLines": 112,
+      "nonBlankLines": 95,
+      "bytes": 4544,
+      "sha256Before": "6531EE37EA688209DEB542F09F26B1AB0901B4004DDFDBA5899F712C80D1E543",
+      "sha256After": "6531EE37EA688209DEB542F09F26B1AB0901B4004DDFDBA5899F712C80D1E543",
+      "readRanges": ["1-112"],
+      "coverage": "full"
+    }
+  ],
+  "partialHelperReads": [
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminProviderController.java",
+      "ranges": ["36-170", "205-264", "262-301"],
+      "label": "partial",
+      "why": "reachability + response projection (ProviderVo) for provider/model/route endpoints; not a full-file read and not part of the 8"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/entity/AiProviderEntity.java",
+      "ranges": ["1-70"],
+      "label": "partial",
+      "why": "confirm whether encryptedApiKey carries a JSON masking annotation"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/dto/AiAdminDtos.java",
+      "ranges": ["38-97"],
+      "label": "partial",
+      "why": "request validation constraints for baseUrl/apiKey/secretRef/maxRetries"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/provider/AiProviderDtos.java",
+      "ranges": ["40-79"],
+      "label": "partial",
+      "why": "ChatRequest field order incl. maxRetries"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java",
+      "ranges": ["360-387"],
+      "label": "partial",
+      "why": "prove maxRetries is passed into ChatRequest and that no retry loop exists there"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-01",
+      "severity": "HIGH",
+      "category": "secret handling / privilege boundary",
+      "title": "secret_ref is an arbitrary environment-variable reader, and its value is sent to an admin-chosen host as a bearer token",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiSecretCipher.java", "line": 126, "quote": "String name = secretRef.startsWith(\"env:\") ? secretRef.substring(4) : secretRef;"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiSecretCipher.java", "line": 131, "quote": "String value = System.getenv(name);"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java", "line": 268, "quote": "String plain = cipher.resolveSecretRef(ref);"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java", "line": 218, "quote": "resolveApiKey(entity),"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/dto/AiAdminDtos.java", "line": 48, "quote": "@Size(max = 128) String secretRef,"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "line": 337, "quote": "builder.header(\"Authorization\", \"Bearer \" + request.apiKey());"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminProviderController.java", "lines": "122-123", "quote": "@PostMapping(\"/providers/{id}/test\") ... @RequiresPermission(\"admin:ai:provider:edit\")"}
+      ],
+      "reachability": "Caller holding only admin:ai:provider:edit can POST /api/v1/admin/ai/providers with baseUrl set to an attacker-controlled public host and secretRef set to any environment variable name (only @Size(128) is enforced, no pattern/allowlist), then POST /api/v1/admin/ai/providers/{id}/test. The server performs a real outbound request and sends that environment variable as 'Authorization: Bearer ...'.",
+      "impact": "Delegated AI-config admin can exfiltrate any server environment variable over a real socket. The sharpest case is ASTRAL_AI_SECRET_KEY itself (the KEK): compromising it decrypts every stored provider key, so a narrow config permission escalates to full AI-credential compromise. Database URLs/passwords and other deployment secrets are equally readable.",
+      "fixDirection": "Namespace the reference (accept only names matching an allowlist/prefix configured server-side, e.g. ASTRAL_AI_PROVIDER_SECRET_*), reject known-sensitive names, and resolve from a dedicated map rather than System.getenv. Keep the 3-state edit (blank = unchanged) semantics.",
+      "confidence": "high (code-verified end to end)",
+      "currentTestCoverage": "none; AiSecretCipherTest only proves env:PATH resolves (lines 99-109), which is exactly the primitive"
+    },
+    {
+      "id": "F-02",
+      "severity": "HIGH",
+      "category": "SSRF guard bypass",
+      "title": "Provider-type flip bypasses AiUrlGuard entirely and leaves a private/metadata base_url usable by the real provider",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java", "line": 136, "quote": "entity.setProviderType(providerType.toUpperCase(java.util.Locale.ROOT));"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java", "lines": "138-140", "quote": "if (baseUrl != null && !baseUrl.isBlank()) { entity.setBaseUrl(normalizeBaseUrl(entity.getProviderType(), baseUrl)); }"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java", "lines": "313-315", "quote": "if (MockAiProvider.TYPE.equalsIgnoreCase(providerType)) { return baseUrl == null || baseUrl.isBlank() ? \"mock://local\" : baseUrl.trim(); }"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java", "lines": "199-231", "quote": "test(): ChatRequest(entity.getBaseUrl(), resolveApiKey(entity), ...) -> registry.require(type).testConnection(request)"}
+      ],
+      "reachability": "Two admin calls with admin:ai:provider:edit: (1) create or update the provider with providerType=MOCK and baseUrl=http://169.254.169.254/latest/meta-data - normalizeBaseUrl returns it verbatim because MOCK skips the guard; (2) PUT /providers/{id} with providerType=OPENAI_COMPATIBLE and baseUrl omitted - the baseUrl branch is skipped, so the stored private URL is never validated. Then POST /providers/{id}/test issues a real request to that address.",
+      "impact": "The only SSRF boundary in the domain is bypassed without any DNS trickery, reaching loopback/RFC1918/cloud-metadata from the server. Provider health messages then carry the response body back up to 400 chars (see F-12), turning it into a read primitive against internal endpoints.",
+      "fixDirection": "Validate the effective (providerType, baseUrl) pair on every write, including the unchanged stored baseUrl when the type changes; persist an explicit 'urlValidated' marker or renormalize unconditionally for non-MOCK types. Make test/chat revalidate before connecting.",
+      "confidence": "high (code-verified)",
+      "currentTestCoverage": "none; AiUrlGuardTest never exercises the service update path, so this passes every existing test"
+    },
+    {
+      "id": "F-03",
+      "severity": "MEDIUM",
+      "category": "SSRF (real-socket) / defense in depth",
+      "title": "URL validation is a save-time DNS preflight only; the connection resolves again, and unresolvable hosts fail open",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiUrlGuard.java", "line": 61, "quote": "// 域名解析后仍指向内网的情况（DNS rebinding 的基础防护）"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiUrlGuard.java", "line": 63, "quote": "InetAddress[] addresses = InetAddress.getAllByName(normalizedHost);"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiUrlGuard.java", "lines": "70-73", "quote": "catch (UnknownHostException e) { // 解析失败不在此拦截，交给实际请求阶段报 AI006"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java", "line": 316, "quote": "return AiUrlGuard.validateBaseUrl(baseUrl, allowPrivateHosts());  // sole call site in the module"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "line": 331, "quote": ".uri(URI.create(url))  // HttpClient resolves the hostname again at connect time"}
+      ],
+      "reachability": "Set baseUrl to a hostname that is unresolvable (or resolves public) at save time - the guard explicitly allows that - then let it resolve to 127.0.0.1/169.254.169.254 by the time test/chat/stream connects. Redirects are not the vector (followRedirects NEVER, line 256); the re-resolution is.",
+      "impact": "The guard's stated rebinding protection does not hold against a real socket. Because UnknownHostException is deliberately fail-open, an attacker does not even need a live DNS record at save time.",
+      "fixDirection": "Pin the validated address (resolve once, connect to the IP with a Host header/SNI override), or revalidate the resolved address inside a custom HttpClient resolver. Block on unresolvable hosts at save time or mark them unverified and require explicit confirmation.",
+      "confidence": "high (structural), not runtime-verified in this read-only shard",
+      "currentTestCoverage": "no test where a hostname resolves to a private address; the test file deliberately avoids DNS (lines 18-20)"
+    },
+    {
+      "id": "F-04",
+      "severity": "MEDIUM",
+      "category": "data integrity / function failure",
+      "title": "AiModelService.delete has no route-reference guard, and its 'used' counter is a bare count of all models",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiModelService.java", "line": 110, "quote": "/** 删除模型（被路由引用时拒绝） */"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiModelService.java", "line": 114, "quote": "Long used = modelMapper.selectCount(null);"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiModelService.java", "line": 115, "quote": "modelMapper.deleteById(id);"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiRouteService.java", "lines": "57-60", "quote": "if (model == null || !Boolean.TRUE.equals(model.getEnabled())) { throw new BusinessException(\"AI007\", \"模型路由关联的模型不可用: \" + route.getName()); }"}
+      ],
+      "reachability": "Any admin with admin:ai:model:edit deletes a model that one or more routes reference (DELETE /api/v1/admin/ai/models/{id}). Nothing checks ai_provider_route.model_id or fallback_model_id.",
+      "impact": "Dangling route -> every agent run and every test using that route now fails with AI007 '模型路由关联的模型不可用'. The documented contract (reject when referenced) is simply absent, so the failure surfaces at runtime instead of at the delete. The log line '已删除模型' fires on every delete because selectCount(null) is always non-null.",
+      "fixDirection": "Count routes where model_id = id OR fallback_model_id = id and reject; delete the meaningless counter and log the real reference count.",
+      "confidence": "high",
+      "currentTestCoverage": "none for provider/model/route services (no test in the tree)"
+    },
+    {
+      "id": "F-05",
+      "severity": "MEDIUM",
+      "category": "data integrity / function failure",
+      "title": "AiRouteService.delete has no agent-version reference guard despite its contract",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiRouteService.java", "line": 113, "quote": "/** 删除路由（被智能体版本引用时拒绝） */"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiRouteService.java", "lines": "116-117", "quote": "require(id); routeMapper.deleteById(id);"}
+      ],
+      "reachability": "DELETE /api/v1/admin/ai/routes/{id} with admin:ai:route:edit removes a route still referenced by published agent versions.",
+      "impact": "Agent versions keep a routeId that no longer resolves; invocation fails at route resolution (AI007) for an agent that was working before, with no warning at delete time.",
+      "fixDirection": "Query agent-version references (route_id) before deleting and reject with the referencing versions listed; or detach/disable them in the same transaction.",
+      "confidence": "high",
+      "currentTestCoverage": "none"
+    },
+    {
+      "id": "F-06",
+      "severity": "MEDIUM",
+      "category": "invariant enforcement / wrong-model routing",
+      "title": "Route validation ignores fallbackModelId, and a model can be moved to another provider while routes still point at it",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiRouteService.java", "line": 73, "quote": "entity.setFallbackModelId(input.getFallbackModelId());"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiRouteService.java", "lines": "120-139", "quote": "validate(): provider require, model exists, model.providerId == provider.id, temperature/topP ranges - no fallbackModelId check"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiModelService.java", "lines": "78-81", "quote": "if (input.getProviderId() != null && !input.getProviderId().equals(entity.getProviderId())) { providerService.require(input.getProviderId()); entity.setProviderId(input.getProviderId()); }"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiModelService.java", "lines": "82-84", "quote": "modelCode updated with no duplicate re-check (create checks it at 63-68, update does not)"}
+      ],
+      "reachability": "PUT /api/v1/admin/ai/models/{id} changing providerId, or POST /PUT routes with a fallbackModelId belonging to a different provider or to no provider at all.",
+      "impact": "Route keeps provider A's base URL while its model now belongs to provider B -> the stored modelCode is sent to the wrong upstream and fails with an upstream 4xx that looks like a provider outage. Duplicate model codes per provider become possible after an update, which makes model resolution ambiguous.",
+      "fixDirection": "Validate fallbackModelId (exists, same provider, enabled) in validate(); reject a providerId change on a model that routes reference, or rewrite/cascade-validate those routes; re-check modelCode uniqueness on update.",
+      "confidence": "high",
+      "currentTestCoverage": "none"
+    },
+    {
+      "id": "F-07",
+      "severity": "MEDIUM",
+      "category": "streaming resource bounds / cancellation",
+      "title": "Streaming has no accumulated-size cap and no cancellation path; the idle guard's timeout is not a hard wall-clock bound",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "lines": "112-113", "quote": "StringBuilder content = new StringBuilder(); StringBuilder reasoning = new StringBuilder();  // no cap"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "lines": "124-125", "quote": "try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "lines": "462-465", "quote": "超时就关掉响应流（让阻塞的读立刻抛异常退出）并抛 AI006"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "lines": "472-474", "quote": "catch (TimeoutException e) { future.cancel(true); throw new AiException(\"AI006\", ...) }  // response stream not closed here"}
+      ],
+      "reachability": "Any upstream that keeps the socket open and either streams endlessly or stops mid-stream. No caller-supplied cancel flag, no byte/token ceiling, and MAX_RESPONSE_BYTES (4 MiB, line 52) applies only to the non-stream readBody path (line 359).",
+      "impact": "Two distinct failures. (a) Unbounded growth: content+reasoning accumulate every delta in heap with no ceiling, so a hostile or looping upstream can exhaust memory - the 4 MiB guard does not cover streaming. (b) The idle guard can still wedge the calling thread: on timeout the code only cancels the worker Future, then the try-with-resources close runs on the same thread while the worker may still be blocked inside reader.readLine(); BufferedReader serializes its methods on one internal monitor, so close() can wait for the monitor the blocked read holds. The socket read itself does not respond to Thread.interrupt. Net effect is the exact symptom the guard documents (line 460: '生成中' forever) under a stalled-but-open socket. Redirect-based escape is not involved (followRedirects NEVER, line 256).",
+      "fixDirection": "Enforce an accumulated-bytes/character ceiling and fail the stream when exceeded; keep an explicit cancellation flag checked per line and close the socket from the cancelling thread; avoid BufferedReader-close-under-concurrent-read (read the raw stream with an owned buffer, or set a socket read timeout) so the idle timeout is a real bound; add a per-request total duration ceiling alongside the idle one.",
+      "confidence": "unbounded accumulation and missing cancellation: certain from code; monitor-blocking close: high per JDK BufferedReader semantics but not runtime-verified here",
+      "currentTestCoverage": "zero tests for OpenAiCompatibleProvider (no provider test exists in the module's test tree)"
+    },
+    {
+      "id": "F-08",
+      "severity": "MEDIUM",
+      "category": "transport security",
+      "title": "Plain http is accepted for provider base URLs, so the API key travels in cleartext",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiUrlGuard.java", "lines": "43-46", "quote": "if (!\"http\".equals(scheme) && !\"https\".equals(scheme)) { throw new AiException(\"AI006\"); }"},
+        {"path": "astral-plugin/src/test/java/com/astral/ai/security/AiUrlGuardTest.java", "lines": "24-27", "quote": "void allowsPlainHttp() { assertEquals(\"http://api.example.com\", AiUrlGuard.validateBaseUrl(\"http://api.example.com\", null)); }"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "lines": "336-338", "quote": "builder.header(\"Authorization\", \"Bearer \" + request.apiKey());"}
+      ],
+      "reachability": "Configure any non-MOCK provider with http:// on a public host; every chat/stream/test sends the bearer token unencrypted.",
+      "impact": "Credential exposure to any on-path observer. The regression test institutionalizes http as acceptable, so this is a deliberate design point rather than an oversight, but it is still an unencrypted secret channel.",
+      "fixDirection": "Require https for non-private hosts; keep http only for hosts admitted by the private allowlist (local Ollama), and surface a warning in the admin UI/audit log when http is used.",
+      "confidence": "high",
+      "currentTestCoverage": "asserted as allowed (test line 26) - the test locks the current behavior in"
+    },
+    {
+      "id": "F-09",
+      "severity": "LOW",
+      "category": "configuration honored / reliability",
+      "title": "max_retries is validated and threaded through the call chain but never honored by the only real provider",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/dto/AiAdminDtos.java", "line": 52, "quote": "@Min(0) @Max(5) Integer maxRetries,"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java", "lines": "370-372", "quote": "resolved.provider().getMaxRetries() == null ? 0 : resolved.provider().getMaxRetries(),"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/AiProviderDtos.java", "line": 59, "quote": "int maxRetries,"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "line": 82, "quote": "HttpResponse<InputStream> response = client.send(httpRequest, ...);  // single attempt; the record field is never read in this file"}
+      ],
+      "reachability": "Set maxRetries=3 on a provider; a transient 429/5xx/connect reset still produces one attempt and an immediate AI006.",
+      "impact": "Admins tune a knob with no effect; transient upstream failures are surfaced as hard errors (and count against quota/UX) instead of being retried. Either implement it or remove it from the API to avoid a false reliability claim.",
+      "fixDirection": "Add bounded retry with backoff only for idempotent, pre-first-delta failures (never retry mid-stream); respect Retry-After; or drop the field from ProviderSaveReq/ProviderVo and ChatRequest.",
+      "confidence": "high (no retry loop exists in the fully-read provider)",
+      "currentTestCoverage": "none"
+    },
+    {
+      "id": "F-10",
+      "severity": "LOW",
+      "category": "secret storage / cryptographic envelope",
+      "title": "AES-GCM ciphertext is not bound to its provider or field, and there is no key version/rotation handle",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiSecretCipher.java", "line": 67, "quote": "cipher.init(Cipher.ENCRYPT_MODE, deriveKey(), new GCMParameterSpec(TAG_BITS, iv));  // no AAD"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiSecretCipher.java", "line": 108, "quote": "cipher.init(Cipher.DECRYPT_MODE, deriveKey(), new GCMParameterSpec(TAG_BITS, iv));  // no AAD check"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiSecretCipher.java", "lines": "146-150", "quote": "MessageDigest SHA-256 over the raw KEK string as the AES key"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiSecretCipher.java", "lines": "32-35", "quote": "PREFIX = \"v1:\", IV_LENGTH = 12, TAG_BITS = 128, AES/GCM/NoPadding"}
+      ],
+      "reachability": "Any path that can write the ciphertext column (a DB-level actor, a future import/restore feature, or a mass-assignment bug) can move provider A's ciphertext onto provider B; decryption succeeds because nothing authenticates the row identity.",
+      "impact": "Ciphertext transplant lets one provider silently use another provider's credential (wrong-tenant credential use, hard to notice because describe() just says ENCRYPTED). With no key id in the envelope, changing ASTRAL_AI_SECRET_KEY invalidates every stored key at once with no staged-rotation path.",
+      "fixDirection": "Bind with AAD = provider id + field name + envelope version at encrypt and decrypt; include a key id (kid) in the prefix and support decrypt-with-previous-key during rotation; document that the KEK must be high-entropy (SHA-256 without stretching is only acceptable for a random 32-byte secret).",
+      "confidence": "high (design-level; the primitive itself is correct AES-256-GCM with random 12-byte IV)",
+      "currentTestCoverage": "no tamper test and no AAD/transplant test; decrypt-bad-input tests (lines 64-73) cover format errors but not authentication failure on a well-formed ciphertext"
+    },
+    {
+      "id": "F-11",
+      "severity": "LOW",
+      "category": "doc/behavior mismatch",
+      "title": "Two documented guarantees do not exist in code, which misleads reviewers into skipping the real gaps",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiModelService.java", "lines": "17-18", "quote": "上下文与输出上限会与全局硬上限取小值，防止后台把上限配到危险区间"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiModelService.java", "lines": "121-149", "quote": "normalize(): modelKind/flags/currency/prices only - maxContextTokens and maxOutputTokens are never clamped"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiModelService.java", "lines": "96-99", "quote": "setMaxContextTokens/setMaxOutputTokens copied verbatim from input"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "line": 39, "quote": "连接/读取/整体超时都有上限，避免长挂"}
+      ],
+      "reachability": "Set maxOutputTokens to a huge value in model config; it flows to the request body (line 309-311) as-is.",
+      "impact": "No ceiling on per-request output/context configured by an admin, contrary to the stated safety property; combined with the inert maxRetries (F-09) and unbounded streaming (F-07) the cost/DoS posture is weaker than the documentation asserts. This is a documentation-versus-code defect either way: implement the clamp or delete the claim.",
+      "fixDirection": "Apply the documented min(config, global hard limit) in normalize() (or at request build), and correct the provider javadoc to describe the idle-based stream guard accurately.",
+      "confidence": "high",
+      "currentTestCoverage": "none"
+    },
+    {
+      "id": "F-12",
+      "severity": "LOW",
+      "category": "error exposure",
+      "title": "Upstream error bodies are echoed into exception messages, health messages and logs (400-char truncation)",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "line": 85, "quote": "throw new AiException(\"AI006\", \"上游返回 \" + response.statusCode() + \": \" + truncate(body));"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "lines": "412-418", "quote": "truncate(): whitespace-collapse, MAX_ERROR_CHARS = 400"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java", "line": 292, "quote": "patch.setLastHealthMessage(AiJson.truncate(result.message(), 400));"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/provider/OpenAiCompatibleProvider.java", "line": 102, "quote": "log.warn(\"[OpenAi] chat 失败 traceId={}: {}\", request.traceId(), e.getMessage());"}
+      ],
+      "reachability": "Admin-only surfaces (provider test result, health message column, AI logs) receive up to 400 characters of whatever the upstream returned.",
+      "impact": "With F-02/F-03 this becomes a small read primitive against internal endpoints (metadata text, internal error pages). Even without SSRF it leaks upstream-internal detail into persisted rows and logs. Bounded and admin-facing, so low severity, but it should not be presented as 'no internals exposed'.",
+      "fixDirection": "Keep the truncated body for server logs only; return a status-code-plus-safe-code message to the API and health column, with an opt-in debug flag for full detail.",
+      "confidence": "high",
+      "currentTestCoverage": "none"
+    },
+    {
+      "id": "F-13",
+      "severity": "LOW",
+      "category": "config fail-open",
+      "title": "The private-host allowlist accepts a '*' wildcard that disables the whole guard, metadata included",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiUrlGuard.java", "lines": "91-93", "quote": "if (candidate.equals(host) || candidate.equals(\"*\")) { return true; }"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/security/AiUrlGuard.java", "line": 52, "quote": "METADATA_HOSTS check also consults isAllowed(...)"},
+        {"path": "astral-plugin/src/test/java/com/astral/ai/security/AiUrlGuardTest.java", "lines": "88-91", "quote": "wildcardWhitelistDisablesTheGuard(): asserts 127.0.0.1 and 169.254.169.254 are accepted with \"*\""}
+      ],
+      "reachability": "Deployment sets ASTRAL_AI_ALLOW_PRIVATE_HOSTS=* (or the system property equivalent, AiProviderService.java:283-285). Not reachable from the admin API, so this is an operator footgun rather than a remote bypass.",
+      "impact": "One environment value silently removes SSRF protection for every provider, including cloud metadata. The test asserts the behavior, so it is intentional, but it is a fail-open default-with-one-flag and deserves an explicit comment/warning at startup.",
+      "fixDirection": "Drop the '*' wildcard (require explicit host entries) or log a prominent startup warning whenever it is set; never let '*' authorize METADATA_HOSTS.",
+      "confidence": "high",
+      "currentTestCoverage": "asserted (test lines 88-91) - coverage exists, it just certifies the insecure branch"
+    },
+    {
+      "id": "F-14",
+      "severity": "LOW",
+      "category": "projection hardening",
+      "title": "Provider entity carries the ciphertext field and list() returns raw entities; only the single current controller projects it away",
+      "evidence": [
+        {"path": "astral-plugin/src/main/java/com/astral/ai/entity/AiProviderEntity.java", "line": 41, "quote": "private String encryptedApiKey;  // no @JsonIgnore"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiProviderService.java", "lines": "46-48", "quote": "public List<AiProviderEntity> list() { return providerMapper.selectList(null); }"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminProviderController.java", "lines": "209-231", "quote": "toVo(): explicit projection, returns credentialSource(...) instead of the ciphertext"},
+        {"path": "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminProviderController.java", "line": 32, "quote": "密钥永不出现在任何响应里，只回报 credentialSource"}
+      ],
+      "reachability": "Currently no leak: the only controller using list() maps to ProviderVo, which omits encryptedApiKey. Risk is latent - any new endpoint, @JsonIgnore-less serialization or debug endpoint returning the entity exposes the ciphertext, and ciphertext transplant (F-10) then becomes practical.",
+      "impact": "Latent only. Recorded so the property is not lost silently; the claim in the controller javadoc is true today but enforced by convention at one call site, not by the type.",
+      "fixDirection": "Mark encryptedApiKey @JsonIgnore and/or return a narrow type from the service so the projection cannot be forgotten.",
+      "confidence": "high",
+      "currentTestCoverage": "none"
+    }
+  ],
+  "tests": {
+    "authenticity": {
+      "AiSecretCipherTest": "authentic: real javax.crypto (AES/GCM) and real AiProperties, no mocks, no reflection into private state. Covers round-trip, random IV per encryption, refuse-to-encrypt without KEK, null/blank handling, format-corruption nulls, fail-closed on KEK change/removal, describe() source labels, env secret resolution, constant-time compare, and a correct HMAC-SHA256 reference vector.",
+      "AiUrlGuardTest": "authentic: calls the real static guard including real InetAddress lookups; no mocks. Covers scheme allowlist, blank/broken URLs, metadata literals, ~all private ranges, boundary public addresses, per-host allowlist, case-insensitive allowlist, empty/unrelated entries, and the '*' wildcard.",
+      "verdict": "Both are genuine unit-level regressions that establish the isolated primitive semantics. Neither is a mocked 'green theater'."
+    },
+    "gaps": [
+      "No test where a hostname resolves to a private address, so the DNS-rebinding rejection branch (AiUrlGuard.java:60-74) is unproven; the test file deliberately avoids DNS (lines 18-20).",
+      "No test for the documented fail-open on unresolvable hosts (AiUrlGuard.java:70-73).",
+      "No test exercises AiProviderService normalization/update, so the type-flip bypass (F-02) passes the whole suite.",
+      "No tamper test on a well-formed ciphertext, and no AAD/transplant test (F-10).",
+      "No test at all for OpenAiCompatibleProvider: stream idle guard, response body cap, error truncation, timeouts and cancellation are untested.",
+      "AiSecretCipherTest depends on the ambient PATH variable (lines 106-108) - platform-real but environment-sensitive.",
+      "AiUrlGuardTest accepts http as valid (line 26) and asserts wildcard-all-disables (lines 88-91), i.e. two insecure behaviors are locked in as expected."
+    ],
+    "notClaimed": "Nothing here asserts that any of these classes were executed in this shard; no Maven/test run was performed (build and test execution are outside the read-only boundary)."
+  },
+  "recommendedOrderForLead": [
+    "F-01 (secret_ref env exfiltration / KEK compromise) and F-02 (type-flip SSRF bypass): both are reachable with a single delegated permission, admin:ai:provider:edit, and defeat the domain's stated secret/SSRF guarantees.",
+    "F-04 / F-05 / F-06: intact-referential-integrity fixes for delete/update paths that currently fail at runtime instead of at the API.",
+    "F-07: streaming bound + true cancellation, needs its own regression (no provider test exists today).",
+    "F-08 / F-03: https-only for public hosts and connect-time validation/pinning.",
+    "F-09 / F-10 / F-11 / F-12 / F-13 / F-14: correctness and hardening; F-10 changes the ciphertext format, so it needs a migration plan for existing rows."
+  ]
+}

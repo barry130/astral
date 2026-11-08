@@ -1,0 +1,422 @@
+{
+  "shard": "knowledge-01",
+  "domain": "backend-ai",
+  "axis": "knowledge source / document / chunk / index job / agent-knowledge binding",
+  "workspace": "F:/qtMusic/astral",
+  "base_review_commit": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+  "mode": "read-only static review; no build, no runtime, no DB, no browser, no credentials",
+  "scope_statement": "Shard-level only. Not a full AI-domain audit, not task-14 closure, not a whole-project conclusion.",
+  "permission_scope_note": "Delegated subagent; approval prompts disabled. web_search/web_fetch providers unregistered in this session, so external references could not be fetched.",
+  "target_file_prefix": "astral-plugin/src/main/java/com/astral/ai/",
+  "targets_total": 12,
+  "targets_fully_read": 12,
+  "targets_partial": 0,
+  "version_split_occurred": false,
+  "read_discipline": {
+    "max_lines_per_read": 80,
+    "pruned_ranges_reread_at": 40,
+    "hash_check": "SHA-256 of every file computed BEFORE and AFTER its complete read; all 12 pairs equal",
+    "hidden_lines_excluded": true,
+    "tool_used": "read tool (line-numbered); shell used only for hashing/metadata"
+  },
+  "files": [
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java",
+      "raw_lines": 712,
+      "nonblank_lines": 666,
+      "chars": 27813,
+      "sha256_before": "21941517003A1F8ECBDC81AE2C866BEA6736507ACCFA17E01FAB62DCA9E9FA07",
+      "sha256_after": "21941517003A1F8ECBDC81AE2C866BEA6736507ACCFA17E01FAB62DCA9E9FA07",
+      "read_ranges": ["1-80", "81-160", "161-240", "241-320", "321-400", "401-480", "481-560", "561-640", "641-712"],
+      "visible_lines": 712,
+      "coverage": "complete",
+      "pruned_ranges_reread": []
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java",
+      "raw_lines": 222,
+      "nonblank_lines": 202,
+      "chars": 9309,
+      "sha256_before": "0771E5D6B7BC6C664D9C3B9A51E59A59B9BDA066F11017BB7A56BC9CAE8EFD5A",
+      "sha256_after": "0771E5D6B7BC6C664D9C3B9A51E59A59B9BDA066F11017BB7A56BC9CAE8EFD5A",
+      "read_ranges": ["1-80", "81-160", "161-222"],
+      "visible_lines": 222,
+      "coverage": "complete",
+      "pruned_ranges_reread": []
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/entity/AiAgentKnowledgeEntity.java",
+      "raw_lines": 54,
+      "nonblank_lines": 41,
+      "chars": 1250,
+      "sha256_before": "3939AE1AB330CF3B3076517976502FD534D10FDAC72F318CE669F931EDBFDEE0",
+      "sha256_after": "3939AE1AB330CF3B3076517976502FD534D10FDAC72F318CE669F931EDBFDEE0",
+      "read_ranges": ["1-54"],
+      "visible_lines": 54,
+      "coverage": "complete",
+      "pruned_ranges_reread": []
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/entity/AiKnowledgeChunkEntity.java",
+      "raw_lines": 46,
+      "nonblank_lines": 35,
+      "chars": 1014,
+      "sha256_before": "1D61362BB21DBAA64AF50666438A4F74EEFAEE74E27864413F8A67B49A3E6E77",
+      "sha256_after": "1D61362BB21DBAA64AF50666438A4F74EEFAEE74E27864413F8A67B49A3E6E77",
+      "read_ranges": ["1-46"],
+      "visible_lines": 46,
+      "coverage": "complete",
+      "pruned_ranges_reread": []
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/entity/AiKnowledgeDocumentEntity.java",
+      "raw_lines": 62,
+      "nonblank_lines": 46,
+      "chars": 1313,
+      "sha256_before": "14AB488DCE83C425BCFDC2533CC9445570F48C722C5C1A4D2A1504AE8CB716B2",
+      "sha256_after": "14AB488DCE83C425BCFDC2533CC9445570F48C722C5C1A4D2A1504AE8CB716B2",
+      "read_ranges": ["1-62"],
+      "visible_lines": 62,
+      "coverage": "complete",
+      "pruned_ranges_reread": []
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/entity/AiKnowledgeIndexJobEntity.java",
+      "raw_lines": 59,
+      "nonblank_lines": 44,
+      "chars": 1308,
+      "sha256_before": "42E6782D2EEE8B2EC24FF20284BE50B12BBE68211E5B1485DE9A8AC8F8571155",
+      "sha256_after": "42E6782D2EEE8B2EC24FF20284BE50B12BBE68211E5B1485DE9A8AC8F8571155",
+      "read_ranges": ["1-59"],
+      "visible_lines": 59,
+      "coverage": "complete",
+      "pruned_ranges_reread": []
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/entity/AiKnowledgeSourceEntity.java",
+      "raw_lines": 65,
+      "nonblank_lines": 48,
+      "chars": 1394,
+      "sha256_before": "B595EF833340880A475B33BE5CA1FDDC124B0C914AADD6F4CE6C050BE63FA0A0",
+      "sha256_after": "B595EF833340880A475B33BE5CA1FDDC124B0C914AADD6F4CE6C050BE63FA0A0",
+      "read_ranges": ["1-65"],
+      "visible_lines": 65,
+      "coverage": "complete",
+      "pruned_ranges_reread": []
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/mapper/AiAgentKnowledgeMapper.java",
+      "raw_lines": 11,
+      "nonblank_lines": 9,
+      "chars": 322,
+      "sha256_before": "CD251ED861A1F069E02D7D75AF3318078DBA6022745938E6CD29FA4930D55D18",
+      "sha256_after": "CD251ED861A1F069E02D7D75AF3318078DBA6022745938E6CD29FA4930D55D18",
+      "read_ranges": ["1-11"],
+      "visible_lines": 11,
+      "coverage": "complete",
+      "pruned_ranges_reread": [],
+      "note": "@Mapper interface extends BaseMapper<AiAgentKnowledgeEntity>; no custom SQL"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/mapper/AiKnowledgeChunkMapper.java",
+      "raw_lines": 11,
+      "nonblank_lines": 9,
+      "chars": 318,
+      "sha256_before": "BAD02B792B76CBEF57A2C5F4201D233E17634055E5144EB902F982E03395314B",
+      "sha256_after": "BAD02B792B76CBEF57A2C5F4201D233E17634055E5144EB902F982E03395314B",
+      "read_ranges": ["1-11"],
+      "visible_lines": 11,
+      "coverage": "complete",
+      "pruned_ranges_reread": [],
+      "note": "@Mapper interface extends BaseMapper<AiKnowledgeChunkEntity>; no custom SQL"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/mapper/AiKnowledgeDocumentMapper.java",
+      "raw_lines": 11,
+      "nonblank_lines": 9,
+      "chars": 327,
+      "sha256_before": "FAD0863E30ABC30A1F3DCFC0B9B3A4259045B072E014B98C1E6A52E8820BB3D3",
+      "sha256_after": "FAD0863E30ABC30A1F3DCFC0B9B3A4259045B072E014B98C1E6A52E8820BB3D3",
+      "read_ranges": ["1-11"],
+      "visible_lines": 11,
+      "coverage": "complete",
+      "pruned_ranges_reread": [],
+      "note": "@Mapper interface extends BaseMapper<AiKnowledgeDocumentEntity>; no custom SQL"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/mapper/AiKnowledgeIndexJobMapper.java",
+      "raw_lines": 11,
+      "nonblank_lines": 9,
+      "chars": 330,
+      "sha256_before": "60C764F0E753175485FB6131546627D1D261C4C9E37A323A75F23A310F75CDB8",
+      "sha256_after": "60C764F0E753175485FB6131546627D1D261C4C9E37A323A75F23A310F75CDB8",
+      "read_ranges": ["1-11"],
+      "visible_lines": 11,
+      "coverage": "complete",
+      "pruned_ranges_reread": [],
+      "note": "@Mapper interface extends BaseMapper<AiKnowledgeIndexJobEntity>; no custom SQL"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/mapper/AiKnowledgeSourceMapper.java",
+      "raw_lines": 11,
+      "nonblank_lines": 9,
+      "chars": 319,
+      "sha256_before": "86B704D91937A30BB89845D46DA87829D969A0DD547F36D89143F9045E611C78",
+      "sha256_after": "86B704D91937A30BB89845D46DA87829D969A0DD547F36D89143F9045E611C78",
+      "read_ranges": ["1-11"],
+      "visible_lines": 11,
+      "coverage": "complete",
+      "pruned_ranges_reread": [],
+      "note": "@Mapper interface extends BaseMapper<AiKnowledgeSourceEntity>; no custom SQL"
+    }
+  ],
+  "totals": {
+    "raw_lines": 1275,
+    "nonblank_lines": 1135
+  },
+  "partial_context_reads_for_reachability": [
+    {"path": "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java", "ranges": ["252-273", "928-975"], "coverage": "partial", "purpose": "retrieveKnowledge call site / citation projection"},
+    {"path": "astral-plugin/src/main/java/com/astral/ai/tool/QaToolProvider.java", "ranges": ["362-401"], "coverage": "partial", "purpose": "doc-search tool reachability + client-type gating"},
+    {"path": "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminAgentController.java", "ranges": ["300-369"], "coverage": "partial", "purpose": "knowledge binding write path"},
+    {"path": "astral-plugin/src/main/java/com/astral/ai/controller/AiAppController.java", "ranges": ["278-299"], "coverage": "partial", "purpose": "capabilitiesOf / hasReadyKnowledge consumer"},
+    {"path": "astral-plugin/src/main/java/com/astral/ai/config/AiSeedInitializer.java", "ranges": ["290-359"], "coverage": "partial", "purpose": "seed document + syncSource + defaultMinScore"},
+    {"path": "astral-plugin/src/main/java/com/astral/ai/dto/AiAdminDtos.java", "ranges": ["380-434"], "coverage": "partial", "purpose": "request validation constraints"},
+    {"path": "astral-server/src/main/resources/db/migration/V20261019002__ai_schema.sql", "ranges": ["176-270"], "coverage": "partial", "purpose": "table/index/column definitions"},
+    {"path": "astral-server/src/main/resources/db/migration/V20261019001__ai_dict.sql", "ranges": ["grep-located"], "coverage": "partial", "purpose": "ai_knowledge_source_type / ai_knowledge_status / ai_index_job_status dictionary values"},
+    {"path": "astral-plugin/src/main/java/com/astral/ai/common/AiConstants.java", "ranges": ["grep-located"], "coverage": "partial", "purpose": "status vocabularies + Runtime.MAX_CITATIONS/MAX_MATCHED_TEXT"},
+    {"path": "astral-plugin/src/main/java/com/astral/ai/AiPlugin.java", "ranges": ["grep-located"], "coverage": "partial", "purpose": "permission registration for admin:ai:knowledge:*"},
+    {"path": "astral-server/src/main/java/com/astral/server/interceptor/AuthInterceptor.java", "ranges": ["grep-located"], "coverage": "partial", "purpose": "request attribute contract for operatorId"}
+  ],
+  "findings": [
+    {
+      "id": "K-01",
+      "severity": "HIGH",
+      "title": "Index job reports SUCCEEDED on partial failure, RUNNING never observable, no job listing",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:281-284",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:244-256",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:263-269",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:150",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:153-157",
+        "astral-plugin/src/main/java/com/astral/ai/common/AiConstants.java:220-230",
+        "astral-server/src/main/resources/db/migration/V20261019002__ai_schema.sql:237",
+        "astral-server/src/main/resources/db/migration/V20261019001__ai_dict.sql:92-96"
+      ],
+      "reachability": "POST /api/v1/admin/ai/knowledge/sources/{id}/sync (@RequiresPermission admin:ai:knowledge:sync) -> synchronous syncSource in one @Transactional",
+      "impact": "Admin sees success while documents failed; failed document state invisible; job history not queryable; 'submitted' wording contradicts synchronous behavior",
+      "fix_hint": "Add PARTIAL/FAILED semantics, commit RUNNING before work, add paginated job list, align DDL default with IndexJobStatus"
+    },
+    {
+      "id": "K-02",
+      "severity": "HIGH",
+      "title": "Retrieval loads all chunks of all enabled sources with no bound; ai_knowledge_chunk lacks source_id index",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:414-418",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:429-430",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:460-463",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:50-56",
+        "astral-server/src/main/resources/db/migration/V20261019002__ai_schema.sql:219-230",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java:262",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java:937-940",
+        "astral-plugin/src/main/java/com/astral/ai/tool/QaToolProvider.java:376"
+      ],
+      "reachability": "Every chat invoke (retrieveKnowledge) and the qa doc-search tool call knowledgeService.search",
+      "impact": "Latency/heap grow with knowledge-base size; concurrent chats are an OOM surface; no document READY filter so stale chunks of failed documents are still recalled",
+      "fix_hint": "Add index on (source_id[, document_id]); project only needed columns; bound candidates before loading content; two-stage retrieval"
+    },
+    {
+      "id": "K-03",
+      "severity": "MEDIUM",
+      "title": "min_score is persisted/editable but never applied; code default 30 vs DB default 0.2 are different scales",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:382-431",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:434-493",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:708-711",
+        "astral-plugin/src/main/java/com/astral/ai/entity/AiAgentKnowledgeEntity.java:39",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminAgentController.java:358",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiAgentService.java:513",
+        "astral-plugin/src/main/java/com/astral/ai/config/AiSeedInitializer.java:411",
+        "astral-server/src/main/resources/db/migration/V20261019002__ai_schema.sql:258"
+      ],
+      "reachability": "PUT /api/v1/admin/ai/agent-versions/{versionId}/knowledge stores minScore; retrieval path has zero references to it",
+      "impact": "Admin tuning has no effect; noise chunks with a single 2-gram hit become citations; future enforcement would behave differently for seeded (30) vs API-created (0.2) bindings",
+      "fix_hint": "Unify scale, filter in rankChunks by binding.minScore, add DTO range validation, migrate legacy 0.2"
+    },
+    {
+      "id": "K-04",
+      "severity": "MEDIUM",
+      "title": "syncMode (MANUAL/AUTO) is a dead configuration: written and echoed, never read",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:112",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:148-150",
+        "astral-plugin/src/main/java/com/astral/ai/dto/AiAdminDtos.java:386-395",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:82",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:101",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:174"
+      ],
+      "reachability": "grep over com.astral.ai finds no getSyncMode call and no @Scheduled; only setters and VO assembly",
+      "impact": "Selecting AUTO does nothing; knowledge silently goes stale since sync is manual-only",
+      "fix_hint": "Implement a scheduler keyed on syncMode/lastSyncTime, or remove/mark the field as reserved"
+    },
+    {
+      "id": "K-05",
+      "severity": "MEDIUM",
+      "title": "Reindex deletes chunks before reinserting and swallows per-document exceptions, producing zero-chunk documents with stale counters",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:498-521",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:263-278",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:266-269",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:281-284"
+      ],
+      "reachability": "syncSource (admin sync endpoint and startup seed) calls reindexDocument per document inside one transaction with catch-and-continue",
+      "impact": "Document can lose all chunks while chunk_count/status stay stale; combined with K-01 the job still reports success",
+      "fix_hint": "Write new chunks before deleting old ones (or per-document transaction), set document FAILED on error, expose error summary"
+    },
+    {
+      "id": "K-06",
+      "severity": "MEDIUM",
+      "title": "Knowledge listing reads full TEXT content then discards it; per-source N+1; no pagination",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:159-163",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:56-62",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:161-165",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:108-117",
+        "astral-server/src/main/resources/db/migration/V20261019002__ai_schema.sql:208"
+      ],
+      "reachability": "GET /api/v1/admin/ai/knowledge/sources and GET /api/v1/admin/ai/knowledge/sources/{id}/documents",
+      "impact": "Slow admin page and unnecessary heap/DB load proportional to document bodies (up to 400k chars each)",
+      "fix_hint": "Explicit column projection excluding content; persist chunk totals or aggregate once; paginate"
+    },
+    {
+      "id": "K-07",
+      "severity": "MEDIUM",
+      "title": "Content silently truncated at 400,000 chars; no @Size validation, no notice, hash computed on truncated body",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:56",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:193",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:194",
+        "astral-plugin/src/main/java/com/astral/ai/dto/AiAdminDtos.java:407-413",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:135"
+      ],
+      "reachability": "POST /api/v1/admin/ai/knowledge/sources/{id}/documents",
+      "impact": "Tail of large documents lost silently; content_hash no longer corresponds to the source document, breaking citation traceability",
+      "fix_hint": "Add @Size(max) and reject, or return an explicit truncated flag; move the limit to configuration"
+    },
+    {
+      "id": "K-08",
+      "severity": "MEDIUM",
+      "title": "Duplicate bindings cause a unique-index violation rendered as HTTP 500; citationPolicy/sourceType/syncMode accept values outside dictionary/enum",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:317-342",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:335-338",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:108",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:136-138",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminAgentController.java:346-363",
+        "astral-server/src/main/resources/db/migration/V20261019002__ai_schema.sql:264",
+        "astral-server/src/main/resources/db/migration/V20261019002__ai_schema.sql:259",
+        "astral-server/src/main/resources/db/migration/V20261019001__ai_dict.sql:64-70",
+        "astral-server/src/main/resources/db/migration/V20261019001__ai_dict.sql:72-76"
+      ],
+      "reachability": "PUT /api/v1/admin/ai/agent-versions/{versionId}/knowledge (body list) and POST/PUT knowledge sources",
+      "impact": "Unreadable 500 for duplicate source ids; dictionary-external source types silently fall out of QaToolProvider sourceTypes filtering",
+      "fix_hint": "Deduplicate bindings server-side; whitelist-validate enum-ish fields; throw business exceptions (300/320) instead of DB constraint errors"
+    },
+    {
+      "id": "K-09",
+      "severity": "LOW",
+      "title": "No index-job listing, no knowledge-source deletion, jobs accumulate per application start",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:153-157",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:228-235",
+        "astral-plugin/src/main/java/com/astral/ai/config/AiSeedInitializer.java:326"
+      ],
+      "reachability": "Controller has only GET index-jobs/{jobId}; service exposes no deleteSource/listJobs/cancel",
+      "impact": "No cleanup, no failure history, no cancel of an accidental full reindex; one extra job row plus full reindex on every boot",
+      "fix_hint": "Add paginated job list + retention, add source delete with cascade, skip seed sync when content hash is unchanged"
+    },
+    {
+      "id": "K-10",
+      "severity": "LOW",
+      "title": "hasReadyKnowledge only checks enabled bindings but is used as a readiness/capability flag",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:702-706",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:403-412",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAppController.java:285-296",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminChatController.java:424"
+      ],
+      "reachability": "AiAppController.capabilitiesOf (citationRequired) and AiAdminChatController banner",
+      "impact": "Capability advertised while retrieval returns empty (bound source disabled or empty); name/behavior mismatch",
+      "fix_hint": "Check source enabled + READY documents + chunk count, or rename to hasEnabledBinding"
+    },
+    {
+      "id": "K-11",
+      "severity": "LOW",
+      "title": "sha256 silently degrades to String.hashCode() on exception; raw exception messages persisted to error_summary",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:687-700",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:274",
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:286",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:200-212",
+        "astral-server/src/main/resources/db/migration/V20261019002__ai_schema.sql:243"
+      ],
+      "reachability": "Document save path and sync job error summary surfaced through IndexJobVo",
+      "impact": "Collision-prone 32-bit hash silently replaces SHA-256, breaking content identity; error_summary carries raw driver/SQL text (admin-visible only)",
+      "fix_hint": "Fail fast (or log.error + null) on digest failure; store error codes plus document keys, keep details in logs"
+    },
+    {
+      "id": "K-12",
+      "severity": "LOW",
+      "title": "refreshSourceCounters issues a redundant chunk COUNT whose result only reaches the log",
+      "evidence": [
+        "astral-plugin/src/main/java/com/astral/ai/service/AiKnowledgeService.java:571-583",
+        "astral-plugin/src/main/java/com/astral/ai/entity/AiKnowledgeSourceEntity.java:49-50",
+        "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminKnowledgeController.java:161-165"
+      ],
+      "reachability": "Called after every document save/delete",
+      "impact": "Wasted COUNT per save; chunk totals are instead recomputed in the controller by loading all documents",
+      "fix_hint": "Drop the redundant COUNT or add a chunk_count column and write it back; aggregate for listings"
+    }
+  ],
+  "counts": {
+    "findings_total": 12,
+    "HIGH": 2,
+    "MEDIUM": 5,
+    "LOW": 5
+  },
+  "verified_non_issues": [
+    {"topic": "SQL injection", "evidence": "all queries use LambdaQueryWrapper parameter binding; only raw fragment is AiKnowledgeService.java:199 .last(\"limit 1\") (constant literal)", "result": "none found"},
+    {"topic": "permission declaration", "evidence": "class-level @RequiresPermission admin:ai:config:view (controller:34) + method-level admin:ai:knowledge:{view,edit,sync} (55,65,71,88,109,120,139,147,154); codes registered in AiPlugin.java:134-136", "result": "compliant"},
+    {"topic": "operator attribution", "evidence": "controller:40-50 reads request.getAttribute(\"userId\"); AuthInterceptor.java:181,212 sets exactly that key", "result": "populated on HTTP paths; not a defect"},
+    {"topic": "client-facing citation projection", "evidence": "AiChatOrchestrator.java:962-969 builds Citation without path; AiCitationHit.path (service:366) is admin-only", "result": "no internal path leak to App clients"},
+    {"topic": "save/delete transactionality", "evidence": "AiKnowledgeService.java:179-225 and 228-235 are @Transactional(rollbackFor=Exception.class)", "result": "consistent for the single-document paths"},
+    {"topic": "binding preconditions", "evidence": "replaceBindings requireSource per binding (service:328); retrievalTopK clamped to [1,50] (service:333-334)", "result": "no dangling bindings"},
+    {"topic": "entity/DDL alignment", "evidence": "5 entities @TableId(INPUT) with fill annotations; unique indexes uk_ai_knowledge_source_code/uk_ai_knowledge_document_key/uk_ai_agent_knowledge at DDL 197,216,264", "result": "aligned apart from K-08 dedupe gap"}
+  ],
+  "mature_reference": {
+    "status": "unmet_due_to_environment",
+    "error_evidence": [
+      "web_search -> Error: configured web provider \"ddg\" is not registered",
+      "web_fetch -> Error: configured web provider \"fs-quality-fetch\" is not registered"
+    ],
+    "attempted_urls": [
+      "https://docs.aws.amazon.com/bedrock/latest/userguide/kb-chunking-parsing.html",
+      "https://learn.microsoft.com/en-us/azure/search/vector-search-how-to-chunk-documents",
+      "https://learn.microsoft.com/en-us/azure/search/search-how-to-indexer-status",
+      "https://learn.microsoft.com/en-us/azure/search/search-how-to-load-search-index"
+    ],
+    "caveat": "URLs are recorded as intended official references only; their content was NOT retrieved or verified in this session and must not be cited as verified fact.",
+    "internal_baseline_used": "AiKnowledgeService.java:33-43 javadoc promises citation traceability to document+section and states rankChunks is the only place to swap when embeddings arrive — K-03 and K-07 break those self-stated promises, which is verifiable from the repo alone."
+  },
+  "residual_limitations": [
+    "No mvn compile/test, Spotless, Checkstyle, SpotBugs executed; all findings are static source evidence.",
+    "No backend started, no DB connection, no HTTP request; the missing-index conclusion for K-02 is a DDL fact, but no EXPLAIN plan was captured.",
+    "No browser/frontend verification of the admin knowledge page behavior implied by K-01/K-06.",
+    "AiChatOrchestrator (1805 lines) and AdminToolProvider (1165 lines) were NOT audited as full targets; only the cited fragments were read.",
+    "Not covered: prompt/model/quota/approval, AI request-message persistence, MCP/HTTP tool transport, frontend AI pages.",
+    "Lead's in-flight fixes (Orchestrator requester permission groups, always-approval for HIGH, AiAdminRequestController metadata split) were not touched and are not judged here."
+  ],
+  "artifacts": {
+    "md": "docs/audit/2026-11-07/backend-ai-shards/knowledge-01.md",
+    "json": "docs/audit/2026-11-07/backend-ai-shards/knowledge-01.json"
+  }
+}

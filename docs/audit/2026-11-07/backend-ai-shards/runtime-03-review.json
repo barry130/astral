@@ -1,0 +1,648 @@
+{
+    "task":  "task-18",
+    "title":  "runtime-03 report correction and two-test bounded reread",
+    "reviewer":  "api-probe",
+    "producedAt":  "2026-11-07T12:05:00+08:00",
+    "mode":  "static-source-review-only",
+    "executed":  {
+                     "maven":  false,
+                     "tests":  false,
+                     "server":  false,
+                     "database":  false,
+                     "network":  false,
+                     "sourceModified":  false,
+                     "originalReportTouched":  true
+                 },
+    "files":  [
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/tool/AiToolTypes.java",
+                      "rawLines":  223,
+                      "nonBlankLines":  194,
+                      "bytes":  8499,
+                      "sha256Before":  "73bfd6acbaeb9b3d5f1701d3b9a518daf98cfc469141998820d5937e2d55bdb4",
+                      "sha256After":  "73bfd6acbaeb9b3d5f1701d3b9a518daf98cfc469141998820d5937e2d55bdb4",
+                      "readRanges":  [
+
+                                     ],
+                      "readToEof":  null,
+                      "historicalReportReadToEofClaim":  true,
+                      "historicalReportReadRanges":  [
+                                                         "1-80",
+                                                         "81-160",
+                                                         "161-223"
+                                                     ],
+                      "provenanceStatus":  "historical report claims; no new independent file verification"
+                  },
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/common/AiJson.java",
+                      "rawLines":  188,
+                      "nonBlankLines":  169,
+                      "bytes":  6249,
+                      "sha256Before":  "c899e1417b05b48c3167c6b59a20016f042ae13dddccfdf1025425d7b6825e46",
+                      "sha256After":  "c899e1417b05b48c3167c6b59a20016f042ae13dddccfdf1025425d7b6825e46",
+                      "readRanges":  [
+
+                                     ],
+                      "readToEof":  null,
+                      "historicalReportReadToEofClaim":  true,
+                      "historicalReportReadRanges":  [
+                                                         "1-80",
+                                                         "81-160",
+                                                         "161-188"
+                                                     ],
+                      "provenanceStatus":  "historical report claims; no new independent file verification"
+                  },
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/service/AiToolService.java",
+                      "rawLines":  624,
+                      "nonBlankLines":  584,
+                      "bytes":  28839,
+                      "sha256Before":  "6bdeb1cbb1a2e5f06c5afb85da94f843f5a9466642899bb29133fb00447d2d45",
+                      "sha256After":  "6bdeb1cbb1a2e5f06c5afb85da94f843f5a9466642899bb29133fb00447d2d45",
+                      "readRanges":  [
+
+                                     ],
+                      "readToEof":  null,
+                      "historicalReportReadToEofClaim":  true,
+                      "historicalReportReadRanges":  [
+                                                         "1-80",
+                                                         "81-160",
+                                                         "161-240",
+                                                         "241-320",
+                                                         "321-400",
+                                                         "401-480",
+                                                         "481-560",
+                                                         "561-624"
+                                                     ],
+                      "provenanceStatus":  "historical report claims; no new independent file verification"
+                  },
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java",
+                      "rawLines":  1805,
+                      "nonBlankLines":  1693,
+                      "bytes":  85936,
+                      "sha256Before":  "d60547ffa6a29453e7dabd10507b7529aa14fcdf8be1672636db3f1a4f81d1ea",
+                      "sha256After":  "d60547ffa6a29453e7dabd10507b7529aa14fcdf8be1672636db3f1a4f81d1ea",
+                      "readRanges":  [
+
+                                     ],
+                      "readToEof":  null,
+                      "historicalReportReadToEofClaim":  true,
+                      "historicalReportReadRanges":  [
+                                                         "1-80",
+                                                         "81-160",
+                                                         "161-240",
+                                                         "241-320",
+                                                         "321-400",
+                                                         "401-480",
+                                                         "481-560",
+                                                         "561-640",
+                                                         "641-720",
+                                                         "721-800",
+                                                         "801-880",
+                                                         "881-960",
+                                                         "961-1040",
+                                                         "1041-1120",
+                                                         "1121-1200",
+                                                         "1201-1280",
+                                                         "1281-1360",
+                                                         "1361-1440",
+                                                         "1441-1520",
+                                                         "1521-1600",
+                                                         "1601-1680",
+                                                         "1681-1760",
+                                                         "1761-1805"
+                                                     ],
+                      "provenanceStatus":  "historical report claims; no new independent file verification"
+                  },
+                  {
+                      "path":  "astral-plugin/src/test/java/com/astral/ai/service/AiChatOrchestratorPermissionTest.java",
+                      "rawLines":  205,
+                      "nonBlankLines":  177,
+                      "bytes":  8498,
+                      "sha256Before":  "b18c21f21b01728babfc97e8fc672a44bf9a0ffdc42c522737017116bf6f591b",
+                      "sha256After":  "b18c21f21b01728babfc97e8fc672a44bf9a0ffdc42c522737017116bf6f591b",
+                      "readRanges":  [
+
+                                     ],
+                      "readToEof":  null,
+                      "historicalReportReadToEofClaim":  true,
+                      "historicalReportReadRanges":  [
+                                                         "1-80",
+                                                         "81-178",
+                                                         "179-205"
+                                                     ],
+                      "provenanceStatus":  "historical report claims; no new independent file verification"
+                  },
+                  {
+                      "path":  "astral-plugin/src/test/java/com/astral/ai/service/AiToolServiceRiskFloorTest.java",
+                      "rawLines":  171,
+                      "nonBlankLines":  153,
+                      "bytes":  7965,
+                      "sha256Before":  "85fa6550a9b7b0d7864d1703cbb12cdc3a9710f04caa206c5ee395ec878b0d06",
+                      "sha256After":  "85fa6550a9b7b0d7864d1703cbb12cdc3a9710f04caa206c5ee395ec878b0d06",
+                      "readRanges":  [
+
+                                     ],
+                      "readToEof":  null,
+                      "historicalReportReadToEofClaim":  true,
+                      "historicalReportReadRanges":  [
+                                                         "1-80",
+                                                         "81-164",
+                                                         "165-171"
+                                                     ],
+                      "provenanceStatus":  "historical report claims; no new independent file verification"
+                  }
+              ],
+    "fileIntegrity":  {
+                          "hashesMatchBeforeAfter":  null,
+                          "anyFileChangedDuringReview":  null,
+                          "note":  "No current six-file integrity verification. Current two-test read and endpoint hashes are explicitly recorded in currentTaskTestReads; frozen source metadata is historical report claim only.",
+                          "provenanceStatus":  "historical report claim only; current task does not verify six files",
+                          "historicalHashesMatchBeforeAfterClaim":  true,
+                          "historicalReportIntegrityNote":  "六文件读前/读后 SHA256 完全一致；行数用 read 工具 total 与逐字节 \\n 切分双路对齐（Get-Content -Line 口径偏小，已弃用）。"
+                      },
+    "axes":  [
+                 {
+                     "axis":  "REQUIRED CSV 必须拒绝 wildcard / 3 段 / 空段",
+                     "verdict":  "HISTORICAL_REPORT_CLAIM_ONLY",
+                     "evidence":  [
+                                      "AiJson.java:146-159: split(\",\", -1) 保留空段 + 正则 (?:admin|user|all):[a-z0-9_-]+:[a-z0-9_-]+:[a-z0-9_-]+(?::[a-z0-9_-]+)* → 最少 4 段；* 不在字符类内；空段必不匹配 → 抛 AiException AI008",
+                                      "AiChatOrchestrator.java:570-576: 捕获后返回 rejected(\u0027工具权限配置异常，已拒绝执行\u0027)，fail-closed"
+                                  ],
+                     "counterEvidence":  "AiChatOrchestratorPermissionTest.java:88-94 与 118-125 从执行侧证明非法/分隔符 CSV 在 *:*:* 持有人下仍 REJECTED",
+                     "untested":  "3 段码与通配码的具体拒绝是在静态层判定，未见对应单元用例直接断言该正则",
+                     "evidenceStatus":  "historical source-report claims; current test source assertions only where specified; no test execution",
+                     "historicalReportedVerdict":  "CONFIRMED"
+                 },
+                 {
+                     "axis":  "HELD 通配不得与 REQUIRED 混为一谈",
+                     "verdict":  "HISTORICAL_REPORT_CLAIM_ONLY",
+                     "evidence":  [
+                                      "6 文件内不存在任何 HELD/通配分支；*:*:*、seg:* 写进 ai_tool.permission_codes 必被 AiJson.java:153 正则拒绝",
+                                      "AiChatOrchestrator.java:574-576 / 582-587：拒绝即 REJECTED，不会退化成放行"
+                                  ],
+                     "counterEvidence":  "范围外 PermissionChecker 的角色侧通配是另一条通路，与工具侧 REQUIRED 不共用代码",
+                     "untested":  "PermissionChecker.hasAnyPermissionByLoginId 如何展开调用者自身的通配（范围外）",
+                     "evidenceStatus":  "historical source-report claims; current test source assertions only where specified; no test execution",
+                     "historicalReportedVerdict":  "NO-CONFLATION-PATH-IN-SCOPE"
+                 },
+                 {
+                     "axis":  "注册组与配置组两组都必需",
+                     "verdict":  "HISTORICAL_REPORT_CLAIM_ONLY",
+                     "evidence":  [
+                                      "AiChatOrchestrator.java:577-581 注册组独立 if + early return",
+                                      "AiChatOrchestrator.java:582-587 配置组（仅当 != 注册组时）独立 if + early return"
+                                  ],
+                     "counterEvidence":  "两处均用 hasAnyPermissionByLoginId 一次传整组码 → 组内是 ANY 而不是 ALL",
+                     "untested":  "是否有意为之（工具声明多个码只要求任一）未在设计文档内确认",
+                     "evidenceStatus":  "historical source-report claims; current test source assertions only where specified; no test execution",
+                     "historicalReportedVerdict":  "CONFIRMED-WITH-ANY-WITHIN-GROUP"
+                 },
+                 {
+                     "axis":  "HIGH 恒审批",
+                     "verdict":  "HISTORICAL_REPORT_CLAIM_ONLY",
+                     "evidence":  [
+                                      "AiChatOrchestrator.java:611-616: risk=HIGH 无条件 requiresApproval=true，与 approvalPolicy 无关",
+                                      "风险下限三处防守: AiToolService.java:130-132 (sync), 211-213 (update), AiChatOrchestrator.java:603-605 (effective strongerRisk)",
+                                      "AiToolServiceRiskFloorTest.java:77-162 覆盖 HTTP/MCP 写工具不可降级"
+                                  ],
+                     "counterEvidence":  "AiChatOrchestrator.java:474-477 审批身份只读 approvalPolicy → HIGH 可被记成 USER_CONFIRM（F04）；AiToolService.java:559-560/606-607 绑定层 approvalPolicy 无校验无 floor（F03）",
+                     "untested":  "审批入口与放行逻辑在 6 文件外",
+                     "evidenceStatus":  "historical source-report claims; current test source assertions only where specified; no test execution",
+                     "historicalReportedVerdict":  "CONFIRMED-ON-EXECUTION-DEGRADED-ON-RECORD"
+                 },
+                 {
+                     "axis":  "原请求人活权限（审批者不可替代）",
+                     "verdict":  "HISTORICAL_REPORT_CLAIM_ONLY",
+                     "evidence":  [
+                                      "AiChatOrchestrator.java:577-587 鉴权只用 request.getUserId()，approved/approvedBy 不参与鉴权",
+                                      "AiChatOrchestratorPermissionTest.java:96-107 原请求人被撤权后，*:*:* 审批人仍被 REJECTED 且 handler 调用次数不增",
+                                      "AiChatOrchestratorPermissionTest.java:127-131 断言所有权限检查的 loginId 都是原请求人"
+                                  ],
+                     "counterEvidence":  "invoke 是 public 且接受 approved=true 入参 → 若调用方不校验审批人，HIGH 仍可被绕过（调用方不在 6 文件内）",
+                     "untested":  "approval=true 的产生点（审批接口）及其角色/状态校验",
+                     "evidenceStatus":  "historical source-report claims; current test source assertions only where specified; no test execution",
+                     "historicalReportedVerdict":  "CONFIRMED"
+                 },
+                 {
+                     "axis":  "testRun 确有操作日志",
+                     "verdict":  "HISTORICAL_REPORT_CLAIM_ONLY",
+                     "evidence":  [
+                                      "AiToolService.java:348-352 注释声称不写 ai_tool_call、留痕交给后台操作日志",
+                                      "AiToolService.java:358-383 testRun 自身不写任何日志表、无 @OperateLog"
+                                  ],
+                     "counterEvidence":  "6 文件内不存在 @OperateLog，注解与切面均在范围外，无法证实",
+                     "untested":  "controller 层 @OperateLog（仅可引用 Lead 收据）",
+                     "evidenceStatus":  "historical source-report claims; current test source assertions only where specified; no test execution",
+                     "historicalReportedVerdict":  "NOT-VERIFIABLE-IN-SCOPE"
+                 }
+             ],
+    "findings":  [
+                     {
+                         "id":  "F01",
+                         "severity":  "high",
+                         "title":  "Parent-level schema wrapper described by old report; provider rejection or silent JSON constraint loss not verified.",
+                         "position":  "AiChatOrchestrator.java:1247-1254",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "1234-1246 对协议格式原样透传、1250-1252 的 name/strict 确实写在 wrapper，排除有意打平。",
+                         "untested":  "范围外测试是否覆盖 responseFormat；提供方是否容忍非法 response_format；模型是否仍输出 JSON。",
+                         "classification":  "static_defect_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Parent-level schema wrapper described by old report; provider rejection or silent JSON constraint loss not verified.",
+                         "historicalOriginalTitle":  "responseFormat 把 schema 挂错层级，JSON 输出约束静默失效",
+                         "historicalOriginalDetail":  "format.putObject(\u0027json_schema\u0027) 返回 wrapper，name/strict 写在 wrapper 上，但 schema 用 format.set(\u0027schema\u0027, schema) 写回父节点；实际产出 json_schema 内缺 schema。"
+                     },
+                     {
+                         "id":  "F02",
+                         "severity":  "high",
+                         "title":  "Administrative testRun differs from requester execution. Controller authorization/manual-confirmation contract and handler semantics not checked; do not label proven privilege bypass.",
+                         "position":  "AiToolService.java:358-383",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "正常路径 AiChatOrchestrator.java:568-587 有双组权限校验 + 真实 userId；AiToolService.java:584-612 会剔除 DISABLED/clientTypes 不匹配的工具。",
+                         "untested":  "controller 权限 admin:ai:tool:edit 的覆盖面；handler 在 userId=null 下的行为。",
+                         "classification":  "unverified_security_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Administrative testRun differs from requester execution. Controller authorization/manual-confirmation contract and handler semantics not checked; do not label proven privilege bypass.",
+                         "historicalOriginalTitle":  "testRun 绕过启停/客户端/权限，并伪造 approved=true 与 userId=null",
+                         "historicalOriginalDetail":  "只 require(id)；不查 status=DISABLED、不查 client_types、不校验 permission_codes；上下文 userId=null, approved=true, agentCode=\u0027test-run\u0027 后直调 handler.execute。"
+                     },
+                     {
+                         "id":  "F03",
+                         "severity":  "medium-high",
+                         "title":  "Binding approval override is a static candidate. HIGH still requiresApproval independent of NONE; candidate concerns policy classification, not removal of all approval.",
+                         "position":  "AiToolService.java:559-560, 606-607",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "工具级 update 204-227 明确拒绝 HIGH floor 降 NONE/USER_CONFIRM，并有 RiskFloorTest 88-106 覆盖 → 绑定层是漏口。",
+                         "untested":  "任意非枚举字符串落库后的执行侧解释；绑定页是否有前端约束。",
+                         "classification":  "static_defect_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Binding approval override is a static candidate. HIGH still requiresApproval independent of NONE; candidate concerns policy classification, not removal of all approval.",
+                         "historicalOriginalTitle":  "绑定层 approvalPolicy 未枚举校验未夹紧，可把 HIGH 降为 NONE",
+                         "historicalOriginalDetail":  "addBinding 只校验 riskOverride 不降级；approvalPolicy 仅 toUpperCase 落库。resolveEffective 对 risk 走 strongerRisk（只升），对 approval 原样生效。"
+                     },
+                     {
+                         "id":  "F04",
+                         "severity":  "medium",
+                         "title":  "USER_CONFIRM record does not independently prove user self-approval/execution. Approval entry and role/state checks out of scope.",
+                         "position":  "AiChatOrchestrator.java:474-477",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "AiToolService.java:222-225 只拦 floor=HIGH 的降级，对 floor=READ 被抬到 HIGH 的组合不设审批下限 → 组合可达；RiskFloorTest 未覆盖。",
+                         "untested":  "审批落库与放行（谁可确认、是否复校审批人角色）在 6 文件外。",
+                         "classification":  "tentative_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "USER_CONFIRM record does not independently prove user self-approval/execution. Approval entry and role/state checks out of scope.",
+                         "historicalOriginalTitle":  "HIGH 风险的审批身份被降级为 USER_CONFIRM",
+                         "historicalOriginalDetail":  "approvalStatus 只由 approvalPolicy 决定，risk=HIGH 但 approvalPolicy=NONE 的行被记为 USER_CONFIRM，即用户自确认即可执行 HIGH 工具。"
+                     },
+                     {
+                         "id":  "F05",
+                         "severity":  "medium",
+                         "title":  "Reported allowUserContext prompt/sanitizer mismatch is a static candidate; actual key definitions and intended context contract unverified.",
+                         "position":  "AiChatOrchestrator.java:809-811 vs 1102-1119",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "1115-1117 存在按开关删键的正确写法，allowUserContext 处无对应实现；sanitizeContext 仅 176 一处调用。",
+                         "untested":  "ContextKey.adminKeys() 具体键值与前端是否传这些键（AiConstants 范围外）。",
+                         "classification":  "static_defect_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Reported allowUserContext prompt/sanitizer mismatch is a static candidate; actual key definitions and intended context contract unverified.",
+                         "historicalOriginalTitle":  "allowUserContext 只改提示词文案，不拦用户上下文投递",
+                         "historicalOriginalDetail":  "开关仅追加一句提示词；sanitizeContext 无条件放行 musicKeys ∪ adminKeys 并入 context_snapshot，只有 fileContent 受 allowFileContext 拦截。"
+                     },
+                     {
+                         "id":  "F06",
+                         "severity":  "medium",
+                         "title":  "Reported loop exits at first approval; permanent silent loss/replay behavior not established without complete resume contract.",
+                         "position":  "AiChatOrchestrator.java:447-512",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "656-669 已把全部 toolCalls 写进助手 blocks，而 899-921 的历史修复要求声明集合==结果集合才保留 → 下轮整段被丢，反证结果确实缺失。",
+                         "untested":  "模型多工具调用的实际频率；resume 后是否重放被丢弃的调用。",
+                         "classification":  "tentative_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Reported loop exits at first approval; permanent silent loss/replay behavior not established without complete resume contract.",
+                         "historicalOriginalTitle":  "同轮多工具调用遇审批挂起后其余调用被静默丢弃",
+                         "historicalOriginalDetail":  "遇第一个需审批调用即 return true；剩余调用不写 ai_tool_call、不发事件、不追加 tool 消息。"
+                     },
+                     {
+                         "id":  "F07",
+                         "severity":  "medium",
+                         "title":  "Reported NEED_CLIENT/SUCCEEDED mapping differs across channels; whether completion semantics are defective depends on contract/consumers.",
+                         "position":  "AiChatOrchestrator.java:618-621; AiToolTypes.java:157-159",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "622-624 对 REJECTED 单独分流，说明是状态映射；isOk 的「不算失败」被当成「已完成」借用。",
+                         "untested":  "是否有按 SUCCEEDED 统计成功率的报表/监控（范围外）。",
+                         "classification":  "static_defect_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Reported NEED_CLIENT/SUCCEEDED mapping differs across channels; whether completion semantics are defective depends on contract/consumers.",
+                         "historicalOriginalTitle":  "NEED_CLIENT 在库里记为 SUCCEEDED，与事件不一致",
+                         "historicalOriginalDetail":  "mapToolStatus 用 isOk()（NEED_CLIENT 也算 ok）→ ai_tool_call.status=SUCCEEDED；同结果事件 TOOL_COMPLETED 带 status=NEED_CLIENT 与 needClient=true（548-553）。"
+                     },
+                     {
+                         "id":  "F08",
+                         "severity":  "medium",
+                         "title":  "Release versus resume comment is tentative; reserve/release semantics not checked.",
+                         "position":  "AiChatOrchestrator.java:247-250, 296-302, 333-341",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "334-340 只有 succeeded 才 settle，代码上确实 release → 至少注释与实现有一处过时。",
+                         "untested":  "AiQuotaService.reserve/release 幂等性与 resume 能否重新预占（范围外，必须运行验证）。",
+                         "classification":  "tentative_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Release versus resume comment is tentative; reserve/release semantics not checked.",
+                         "historicalOriginalTitle":  "审批挂起时额度/用量预占被释放，与注释的「resume 复用」矛盾",
+                         "historicalOriginalDetail":  "挂起走 return 且 succeeded=false → finally 执行 release；246 注释却称「已预占过则跳过，resume 时复用」。"
+                     },
+                     {
+                         "id":  "F09",
+                         "severity":  "medium",
+                         "title":  "Reported second reserve outside cleanup region is a local cleanup candidate; actual quota leak/rollback behavior unverified.",
+                         "position":  "AiChatOrchestrator.java:248-250 与 257",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "252-256 的计数器同样在 try 外，说明 try 范围有意从模型调用开始；fail() 只处理请求/消息状态，不回收预占。",
+                         "untested":  "usageService.reserve 失败概率与是否自行回滚。",
+                         "classification":  "static_defect_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Reported second reserve outside cleanup region is a local cleanup candidate; actual quota leak/rollback behavior unverified.",
+                         "historicalOriginalTitle":  "额度预占后用量预占抛错会泄漏额度预占",
+                         "historicalOriginalDetail":  "quotaService.reserve 与 usageService.reserve 都在 try/finally 之外（try 从 257 开始），后者抛错时前者不会被 release。"
+                     },
+                     {
+                         "id":  "F10",
+                         "severity":  "low-medium",
+                         "title":  "Key reuse without content comparison is not a defect without an idempotency payload-conflict contract.",
+                         "position":  "AiChatOrchestrator.java:150-156",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "无任何内容指纹参与幂等键构造。",
+                         "untested":  "客户端同 key 同内容的约定；findByIdempotency 对 null key 的处理。",
+                         "classification":  "tentative_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Key reuse without content comparison is not a defect without an idempotency payload-conflict contract.",
+                         "historicalOriginalTitle":  "幂等键复用不校验内容",
+                         "historicalOriginalDetail":  "命中 findByIdempotency 即返回旧 requestId/旧助手消息，不比对 content；142-148 只校验非空与长度。"
+                     },
+                     {
+                         "id":  "F11",
+                         "severity":  "low-medium",
+                         "title":  "Null client filtering path reported; controller validation and null policy not checked.",
+                         "position":  "AiToolService.java:599-602",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "AiChatOrchestrator.java:133-141/168-176 不校验 clientType 非空，258-259 直接透传 → 空值可达。",
+                         "untested":  "controller 是否强制传 clientType。",
+                         "classification":  "tentative_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Null client filtering path reported; controller validation and null policy not checked.",
+                         "historicalOriginalTitle":  "clientType 为 null 时跳过 clientTypes 过滤",
+                         "historicalOriginalDetail":  "条件含 clientType != null，为 null 时声明了 client_types 的工具也会被下发。"
+                     },
+                     {
+                         "id":  "F12",
+                         "severity":  "low-medium",
+                         "title":  "Same-code sync collision is a static candidate; actual tool-code collision not established.",
+                         "position":  "AiToolService.java:106-124, 141-151",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "createDeclarative 有同码拦截（301-303），反向（代码侧新增同码）无拦截。",
+                         "untested":  "现网同码冲突；AiToolProvider 实现清单（范围外）。",
+                         "classification":  "static_defect_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Same-code sync collision is a static candidate; actual tool-code collision not established.",
+                         "historicalOriginalTitle":  "syncFromCode 会把同码声明式行改写成混合配置",
+                         "historicalOriginalDetail":  "按 tool_code 命中即覆盖 name/desc/handlerKey/permissionCodes/schema，但不改 executor_type → 声明式执行器 + 代码元数据。"
+                     },
+                     {
+                         "id":  "F13",
+                         "severity":  "low",
+                         "title":  "Unnormalized risk comparison is tentative; RiskLevel.order not read and effective stronger-risk floor must not be assumed bypassed.",
+                         "position":  "AiToolService.java:543-547",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "同文件 riskOrDefault/approvalOrDefault 均先 toUpperCase → 此处不一致。",
+                         "untested":  "AiConstants.RiskLevel.order 对未知串的返回值（范围外），决定误放行还是误拒。",
+                         "classification":  "tentative_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Unnormalized risk comparison is tentative; RiskLevel.order not read and effective stronger-risk floor must not be assumed bypassed.",
+                         "historicalOriginalTitle":  "addBinding 用未归一原串做风险比较",
+                         "historicalOriginalDetail":  "比较时直接吃原始大小写，落库时才 toUpperCase（557-558）；474-492 的同文件写法是先归一后校验。"
+                     },
+                     {
+                         "id":  "F14",
+                         "severity":  "low",
+                         "title":  "Cancellation message terminal-state responsibility out of scope; old MD body 150-152 contradicts listed 744-752, retained as historical citation error.",
+                         "position":  "AiChatOrchestrator.java:744-752",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "753-761 对非取消请求会写 FAILED，说明取消分支有意让位给取消链路。",
+                         "untested":  "取消接口是否兜底更新消息终态（范围外）。",
+                         "classification":  "tentative_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Cancellation message terminal-state responsibility out of scope; old MD body 150-152 contradicts listed 744-752, retained as historical citation error.",
+                         "historicalOriginalTitle":  "fail() 对已取消请求直接返回，助手消息停留 PENDING/STREAMING",
+                         "historicalOriginalDetail":  "状态 CANCELLED 即 return 不改消息状态；run 的取消路径 274-276/328-330 同样直接 return。"
+                     },
+                     {
+                         "id":  "F15",
+                         "severity":  "low",
+                         "title":  "Reported redundant null branch is low-impact static code-quality candidate, not demonstrated behavior failure.",
+                         "position":  "AiToolService.java:364-369",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "同文件 471/597 同样直接使用 readObject 返回值。",
+                         "untested":  "无（静态可判定），仅可读性/覆盖率噪声。",
+                         "classification":  "static_defect_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Reported redundant null branch is low-impact static code-quality candidate, not demonstrated behavior failure.",
+                         "historicalOriginalTitle":  "testRun 的 arguments == null 分支为死代码",
+                         "historicalOriginalDetail":  "AiJson.readObject 从不返回 null（AiJson.java:44-60），367-369 不可达；空参兜底已在 364-366 的三元表达式。"
+                     },
+                     {
+                         "id":  "F16",
+                         "severity":  "low",
+                         "title":  "Late read-side REQUIRED rejection may be save-time validation candidate; fail-closed behavior is not permission bypass.",
+                         "position":  "AiJson.java:162-173; AiToolService.java:121, 417",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "AiToolService.java:402-410 validateDeclarative 校验执行配置却不校验 permissionCodes；syncFromCode 直接信任 handler 定义。",
+                         "untested":  "后台表单是否有保存期同格式校验（前端范围外）。",
+                         "classification":  "static_defect_candidate",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Late read-side REQUIRED rejection may be save-time validation candidate; fail-closed behavior is not permission bypass.",
+                         "historicalOriginalTitle":  "joinCsv 不校验权限码格式，写回路径绕过强校验",
+                         "historicalOriginalDetail":  "格式校验只在读侧 splitPermissionCsv；非法码可先落库，直到执行时在 invoke(571-576) 炸成 REJECTED，表现为「工具突然不可用」。"
+                     },
+                     {
+                         "id":  "F17",
+                         "severity":  "low",
+                         "title":  "Schema bounds and server-side clamping can intentionally coexist; no reject-required contract. Neutral policy observation, not confirmed defect.",
+                         "position":  "AiToolTypes.java:89-92, 206-212",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "arg()/argList() 无类似钳制，argInt 是特例。",
+                         "untested":  "处理器是否依赖「越界即拒绝」（处理器不在 6 文件内）。",
+                         "classification":  "neutral_policy_observation",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Schema bounds and server-side clamping can intentionally coexist; no reject-required contract. Neutral policy observation, not confirmed defect.",
+                         "historicalOriginalTitle":  "argInt 钳制与 Schema 边界是两套规则",
+                         "historicalOriginalDetail":  "越界参数被 Math.max/min 夹紧而非拒绝，而 intParam 又把 minimum/maximum 写进 Schema 要求模型守界。"
+                     },
+                     {
+                         "id":  "F18",
+                         "severity":  "info",
+                         "title":  "Positive fail-closed defense; HELD wildcard is not REQUIRED CSV. Reread tests assert invalid text and separator-only rejection for a superuser holder, not a direct wildcard REQUIRED test.",
+                         "position":  "AiJson.java:146-159; AiChatOrchestrator.java:574-576",
+                         "detail":  "Current classification supersedes original report assertions; original text retained in historicalOriginalDetail.",
+                         "counterEvidence":  "AiChatOrchestratorPermissionTest.java:88-94 与 118-125 从执行侧证明通配不能替代工具权限码。",
+                         "untested":  "PermissionChecker 内部如何展开调用者侧通配（范围外）。",
+                         "classification":  "positive_defense_observation",
+                         "evidenceStatus":  "historical-report-only; source not reread in task-18",
+                         "confirmedIssue":  false,
+                         "currentConclusion":  "Positive fail-closed defense; HELD wildcard is not REQUIRED CSV. Reread tests assert invalid text and separator-only rejection for a superuser holder, not a direct wildcard REQUIRED test.",
+                         "historicalOriginalTitle":  "通配权限码在工具权限通道被硬拒（fail-closed）",
+                         "historicalOriginalDetail":  "*:*:* / admin:system:user:* 无法出现在 ai_tool.permission_codes；出现即使工具对该请求永久不可用，不会因通配而放行。"
+                     }
+                 ],
+    "findingCount":  18,
+    "notCovered":  [
+                       "testRun 的 @OperateLog 不在 6 文件内：本报告只确认 testRun 自身不写 ai_tool_call，审计留痕需 controller 侧证据",
+                       "审批接口（产生 approved=true 的入口）不在 6 文件内：谁可审批、是否复校角色/请求状态需另复核",
+                       "AiConstants（RiskLevel/ApprovalPolicy order、ContextKey）、AiQuotaService/AiUsageService 幂等语义、PermissionChecker 通配展开、HttpToolExecutor/McpToolExecutor 的 SSRF 与只读判定，均在 6 文件外",
+                       "未运行 mvn/测试/服务：F01/F03/F04/F08/F09 的触发与否需运行或用例覆盖",
+                       "既有 runtime-03 report 的全文/前后 hash/早前主张未由 Lead 接受，本报告不引用、不背书；冲突时以本报告版本锚点与源码位置为准"
+                   ],
+    "claims":  {
+                   "allAiDomainAudited":  false,
+                   "runtimeSuccessProven":  false,
+                   "onlySixFiles":  true,
+                   "sourceFilesUntouched":  true,
+                   "originalReportUntouched":  false,
+                   "note":  "Two authorized tests fully read now with matching endpoint hashes; four frozen source files only historical report claims. No test execution/full AI/task-12 completion."
+               },
+    "originalTask":  "task-16",
+    "taskRevision":  2,
+    "correction":  {
+                       "status":  "classification-corrected-two-test-reread-complete",
+                       "originalProducedAt":  "2026-11-07T12:05:00+08:00",
+                       "all18ConfirmedIssuesClaimRetracted":  true,
+                       "confirmedRuntimeIssueCount":  0,
+                       "originalMax80ReadClaimInvalid":  true,
+                       "historicalOverLimitRanges":  [
+                                                         {
+                                                             "lines":  98,
+                                                             "range":  "81-178",
+                                                             "file":  "AiChatOrchestratorPermissionTest.java"
+                                                         },
+                                                         {
+                                                             "lines":  84,
+                                                             "range":  "81-164",
+                                                             "file":  "AiToolServiceRiskFloorTest.java"
+                                                         }
+                                                     ],
+                       "historyNotReconstructed":  true,
+                       "fourRuntimeSources":  "frozen; historical report claims only; not reread",
+                       "priorDurableReader":  "failed before output/claim; no provenance inferred",
+                       "classificationCounts":  {
+                                                    "positive_defense_observation":  1,
+                                                    "tentative_candidate":  7,
+                                                    "neutral_policy_observation":  1,
+                                                    "unverified_security_candidate":  1,
+                                                    "static_defect_candidate":  8
+                                                }
+                   },
+    "correctedAt":  "2026-11-07T12:55:33.1383688+08:00",
+    "taskRecordRetrieval":  "retrieved-actual-Lead-get-receipt",
+    "currentTaskTestReads":  [
+                                 {
+                                     "path":  "astral-plugin/src/test/java/com/astral/ai/service/AiChatOrchestratorPermissionTest.java",
+                                     "rawLines":  205,
+                                     "nonBlankLines":  178,
+                                     "bytes":  8498,
+                                     "sha256Before":  "b18c21f21b01728babfc97e8fc672a44bf9a0ffdc42c522737017116bf6f591b",
+                                     "sha256After":  "b18c21f21b01728babfc97e8fc672a44bf9a0ffdc42c522737017116bf6f591b",
+                                     "hashBeforeAt":  "2026-11-07T12:48:53.7482760+08:00",
+                                     "hashAfterAt":  "2026-11-07T12:49:35.9304987+08:00",
+                                     "readRanges":  [
+                                                        "1-80",
+                                                        "81-160",
+                                                        "161-205"
+                                                    ],
+                                     "readCallCount":  3,
+                                     "maxReadLines":  80,
+                                     "continuousFromLine1":  true,
+                                     "readToEof":  true,
+                                     "fullRead":  true,
+                                     "testMethodCount":  6
+                                 },
+                                 {
+                                     "path":  "astral-plugin/src/test/java/com/astral/ai/service/AiToolServiceRiskFloorTest.java",
+                                     "rawLines":  171,
+                                     "nonBlankLines":  154,
+                                     "bytes":  7965,
+                                     "sha256Before":  "85fa6550a9b7b0d7864d1703cbb12cdc3a9710f04caa206c5ee395ec878b0d06",
+                                     "sha256After":  "85fa6550a9b7b0d7864d1703cbb12cdc3a9710f04caa206c5ee395ec878b0d06",
+                                     "hashBeforeAt":  "2026-11-07T12:48:53.8132935+08:00",
+                                     "hashAfterAt":  "2026-11-07T12:49:35.9733903+08:00",
+                                     "readRanges":  [
+                                                        "1-80",
+                                                        "81-160",
+                                                        "161-171"
+                                                    ],
+                                     "readCallCount":  3,
+                                     "maxReadLines":  80,
+                                     "continuousFromLine1":  true,
+                                     "readToEof":  true,
+                                     "fullRead":  true,
+                                     "testMethodCount":  10
+                                 }
+                             ],
+    "currentTaskTestFindings":  [
+                                    "Permission test uses real PermissionChecker and production invoke seam with mutable StpInterface grants and recording tool; six @Test methods. No tests executed.",
+                                    "Risk-floor test uses mocked mapper/JdbcTemplate dependencies and real service.update; ten @Test methods. No tests executed.",
+                                    "Permission fixture rejects malformed text and separator-only CSV for superuser-held permissions; does not directly assert REQUIRED wildcard/three-part rejection or two distinct permission-group behavior.",
+                                    "Approval-revocation fixture has READ/NONE effective tool; does not validate HIGH approval identity or approval endpoint authorization.",
+                                    "RiskFloorTest covers tool-level update HTTP/MCP write floor, HTTP GET/read-only MCP/SQL adjustment and unknown risk; does not cover addBinding/resolveEffective or READ-floor tool raised to HIGH."
+                                ],
+    "currentTaskScope":  {
+                             "sourceFilesRead":  0,
+                             "testFilesRead":  2,
+                             "fourRuntimeSourcesFrozen":  true,
+                             "liveBlogWriterRead":  false,
+                             "browser":  false,
+                             "git":  false,
+                             "maven":  false,
+                             "testsExecuted":  false,
+                             "server":  false,
+                             "database":  false,
+                             "network":  false,
+                             "sharedTaskModified":  false,
+                             "sharedPlanModified":  false,
+                             "onlyOwnedReportsModified":  true,
+                             "baselineReport":  "docs/audit/2026-11-07/blog-baseline-parity.md/json"
+                         },
+    "taskRecord":  {
+                       "id":  "task-18",
+                       "revision":  2,
+                       "status":  "in_progress",
+                       "ownerName":  "lead",
+                       "blockedBy":  [
+
+                                     ],
+                       "source":  "docs/audit/2026-11-07/task-recovery-records.json",
+                       "sourceReadRange":  "1-71",
+                       "relevantRanges":  [
+                                              "37-63",
+                                              "64-69"
+                                          ],
+                       "obtainedVia":  "Actual Lead team_task_get receipt saved by Lead and read by child; not a direct child Team call",
+                       "scopeMatchesInitialPrompt":  true,
+                       "sharedTaskModified":  false
+                   }
+}

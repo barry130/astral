@@ -1,0 +1,349 @@
+{
+    "task":  "task-17",
+    "shard":  "controllers-05",
+    "date":  "2026-11-07",
+    "mode":  "fresh-read-only-static-correction",
+    "sharedTask":  {
+                       "ownerAccordingToDirectAssignment":  "Lead",
+                       "revisionAccordingToDirectAssignment":  2,
+                       "claimedOrChangedByThisReader":  false,
+                       "getStatus":  "No task-get tool in child catalog; first action asked parent for read-only get task-17. No full receipt received at generation; parent session-event search timed out. No successful get claimed."
+                   },
+    "acceptance":  {
+                       "oldTask15ControllerCoverageAccepted":  false,
+                       "oldReaderAndCrossFileClaimsUsedAsProof":  false,
+                       "currentControllerCoverage":  {
+                                                         "full":  1,
+                                                         "partial":  1,
+                                                         "unreadFromOldEight":  6
+                                                     },
+                       "statement":  "This replaces the previous eight-full/20-confirmed presentation with a narrowly evidenced recovery. No full AI-domain or task-14/task-15 completion is asserted. Metadata-only knowledge of total lines does not prove reading."
+                   },
+    "method":  {
+                   "before":  "2026-11-07T12:48:01.3188578+08:00",
+                   "finalAfter":  "2026-11-07T13:00:37.5822850+08:00",
+                   "maxActualReadLimit":  80,
+                   "staticVsRuntime":  "Only current code/annotation/response-construction facts are confirmed. Spring runtime handler resolution, response serialization, authorization and database behavior were not executed.",
+                   "legacyArtifactsActuallyReadBeforeReplacement":  {
+                                                                        "controllers-05.md":  [
+                                                                                                  "1-80",
+                                                                                                  "81-124"
+                                                                                              ],
+                                                                        "controllers-05.json":  [
+                                                                                                    "1-80",
+                                                                                                    "81-160",
+                                                                                                    "161-240",
+                                                                                                    "241-320",
+                                                                                                    "321-400",
+                                                                                                    "401-428"
+                                                                                                ]
+                                                                    },
+                   "additionalSearch":  "grep ExceptionHandler|@Order on AiAdminAgentController returned no matches; this negative search is not full read coverage.",
+                   "prohibitedActionsNotPerformed":  "No source/Java/TS/test/POM/schema edits, Maven/build/backend/DB/network/browser/remote/sibling activity or Git writes. No shared PLAN or shared-task mutation."
+               },
+    "files":  [
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminMcpController.java",
+                      "before":  {
+                                     "bytes":  5720,
+                                     "rawLines":  125,
+                                     "nonBlankLines":  115,
+                                     "sha256":  "613CBD1DAD9AF298BE2CAC6EA1DED2C6CB72E979D21B74AB091C2944180CDBD4"
+                                 },
+                      "after":  {
+                                    "bytes":  5720,
+                                    "rawLines":  125,
+                                    "nonBlankLines":  115,
+                                    "sha256":  "613CBD1DAD9AF298BE2CAC6EA1DED2C6CB72E979D21B74AB091C2944180CDBD4"
+                                },
+                      "readRanges":  [
+                                         "1-80",
+                                         "81-125"
+                                     ],
+                      "coverage":  "full",
+                      "stable":  true
+                  },
+                  {
+                      "path":  "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminAgentController.java",
+                      "before":  {
+                                     "bytes":  21374,
+                                     "rawLines":  470,
+                                     "nonBlankLines":  440,
+                                     "sha256":  "A9CCAF27D9D5CD7372AC16069549011D931AFF804505A1C6A3A6FDA6E9DFF6E7"
+                                 },
+                      "after":  {
+                                    "bytes":  21374,
+                                    "rawLines":  470,
+                                    "nonBlankLines":  440,
+                                    "sha256":  "A9CCAF27D9D5CD7372AC16069549011D931AFF804505A1C6A3A6FDA6E9DFF6E7"
+                                },
+                      "readRangesInActualOrder":  [
+                                                      "225-304",
+                                                      "1-80"
+                                                  ],
+                      "unreadRanges":  [
+                                           "81-224",
+                                           "305-470"
+                                       ],
+                      "coverage":  "partial",
+                      "stable":  true
+                  }
+              ],
+    "contextFiles":  [
+                         {
+                             "path":  "astral-plugin/src/main/java/com/astral/ai/config/AiGlobalExceptionHandler.java",
+                             "before":  {
+                                            "bytes":  3233,
+                                            "rawLines":  73,
+                                            "nonBlankLines":  65,
+                                            "sha256":  "7F342905305F2457A9F2E11E2B82D72B580EE9ACD83767EDBA34C4DC0924A9E0"
+                                        },
+                             "after":  {
+                                           "bytes":  3233,
+                                           "rawLines":  73,
+                                           "nonBlankLines":  65,
+                                           "sha256":  "7F342905305F2457A9F2E11E2B82D72B580EE9ACD83767EDBA34C4DC0924A9E0"
+                                       },
+                             "readRanges":  [
+                                                "1-73"
+                                            ],
+                             "coverage":  "full-context"
+                         },
+                         {
+                             "path":  "astral-server/src/main/java/com/astral/server/exception/GlobalExceptionHandler.java",
+                             "before":  {
+                                            "bytes":  12140,
+                                            "rawLines":  232,
+                                            "nonBlankLines":  214,
+                                            "sha256":  "FF6C04EBF078CD5F34BD278C865479CCF68472C7915961633190EA202BAC032E"
+                                        },
+                             "after":  {
+                                           "bytes":  12140,
+                                           "rawLines":  232,
+                                           "nonBlankLines":  214,
+                                           "sha256":  "FF6C04EBF078CD5F34BD278C865479CCF68472C7915961633190EA202BAC032E"
+                                       },
+                             "readRanges":  [
+                                                "1-80",
+                                                "81-160",
+                                                "161-232"
+                                            ],
+                             "coverage":  "full-context"
+                         },
+                         {
+                             "path":  "astral-common/src/main/java/com/astral/common/result/Result.java",
+                             "beforeSampledAt":  "2026-11-07T12:50:14.0303967+08:00",
+                             "before":  {
+                                            "bytes":  5281,
+                                            "rawLines":  147,
+                                            "nonBlankLines":  123,
+                                            "sha256":  "CCCDE55BD916A2DB52092E39932608AE4EB170C08926BAA6EFF259ECE30537D6"
+                                        },
+                             "after":  {
+                                           "bytes":  5281,
+                                           "rawLines":  147,
+                                           "nonBlankLines":  123,
+                                           "sha256":  "CCCDE55BD916A2DB52092E39932608AE4EB170C08926BAA6EFF259ECE30537D6"
+                                       },
+                             "readRanges":  [
+                                                "26-105"
+                                            ],
+                             "coverage":  "partial-context"
+                         },
+                         {
+                             "path":  "astral-plugin/src/main/java/com/astral/ai/service/AiMcpServerService.java",
+                             "coverage":  "fresh-full-in-transport-review",
+                             "readRanges":  [
+                                                "1-80",
+                                                "81-160",
+                                                "161-240",
+                                                "241-285"
+                                            ],
+                             "proof":  "transport-04-review.json files[0] contains independently sampled before/after bytes/raw/nonblank/SHA; not inherited from the old transport report."
+                         }
+                     ],
+    "findings":  [
+                     {
+                         "id":  "F07",
+                         "kind":  "correction-not-confirmed-defect",
+                         "severity":  "info",
+                         "status":  "old-generic-500-claim-rejected",
+                         "title":  "replaceTools NumberFormatException already has an IllegalArgumentException handler; advice-specific errorCode differs",
+                         "evidence":  [
+                                          {
+                                              "path":  "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminAgentController.java",
+                                              "lines":  "288-304",
+                                              "fact":  "Long.valueOf(item.toString()) can throw NumberFormatException; draft gate precedes parsing."
+                                          },
+                                          {
+                                              "path":  "astral-server/src/main/java/com/astral/server/exception/GlobalExceptionHandler.java",
+                                              "lines":  "197-203",
+                                              "fact":  "Server IllegalArgumentException handler returns HTTP200/body320 with COMMON002; server class41-43 has no explicit order."
+                                          },
+                                          {
+                                              "path":  "astral-plugin/src/main/java/com/astral/ai/config/AiGlobalExceptionHandler.java",
+                                              "lines":  "25-27,61-65",
+                                              "fact":  "AI-scoped advice is ordered HIGHEST_PRECEDENCE+20 and handles IllegalArgumentException with @ResponseStatus(OK), Result.error(320,e.getMessage())."
+                                          },
+                                          {
+                                              "path":  "astral-common/src/main/java/com/astral/common/result/Result.java",
+                                              "lines":  "29-43,81-84",
+                                              "fact":  "The (int,String) error overload invokes a constructor that sets code/msg/data, not errorCode; errorCode remains null."
+                                          }
+                                      ],
+                         "staticConclusion":  "NumberFormatException extends IllegalArgumentException. Both visible advices have a specific handler, so generic500 is not supported. In normal ordered Spring advice resolution, the applicable high-priority AI advice is the expected winner for this AI controller: HTTP200/body320 with raw exception msg and no populated COMMON002. The server handler\u0027s COMMON002 mapping is real but cannot be assigned to this endpoint merely by assumption.",
+                         "counterEvidence":  "No local ExceptionHandler match found in Agent by grep; no running MVC resolver/other dynamically registered higher advice inspected. AI-specific errorCode is null rather than COMMON002. The rollback catch wraps BusinessException(AI007); AI handleBusiness itself uses a code/msg-only Result overload (38-43), so do not assume that wrapping with BusinessException(AI007) itself produces body320 with populated AI007.",
+                         "untested":  "No nonnumeric request, resolver registration/order, bean scanning, response JSON, exact Jackson null-field emission or returned message executed.",
+                         "recommendation":  "Do not add a catch solely to avoid generic500. If a stable parameter msg/errorCode is required, define and test the AI-specific contract deliberately in separately authorized work; preserve numeric inheritance and actual advice order. This report makes no source fix."
+                     },
+                     {
+                         "id":  "C01",
+                         "kind":  "current-static-data-flow",
+                         "severity":  "medium",
+                         "status":  "fresh-confirmed-static-not-runtime",
+                         "title":  "MCP view VO receives unmasked configured headers",
+                         "evidence":  [
+                                          {
+                                              "path":  "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminMcpController.java",
+                                              "lines":  "32-59,103-123",
+                                              "fact":  "List has class-level admin:ai:mcp:view and toVo passes headersJson at116."
+                                          },
+                                          {
+                                              "path":  "astral-plugin/src/main/java/com/astral/ai/service/AiMcpServerService.java",
+                                              "lines":  "81-91,107-108",
+                                              "fact":  "Fresh transport reads show direct configured headers storage."
+                                          }
+                                      ],
+                         "counterEvidence":  "A stored ${secret:key} reference may not expose the secret value; actual roles/enforcement, DTO serialization and real configured headers were not read or tested. No host credential leak is asserted.",
+                         "untested":  "No live mcp:view response, permission interception, serializer or database contents. Same source observation as transport T12, not an additional independent defect.",
+                         "recommendation":  "Review masking/unchanged-replace-clear semantics without exposing stored configured credentials to read-only roles."
+                     },
+                     {
+                         "id":  "P01",
+                         "kind":  "positive-observation",
+                         "severity":  "info",
+                         "status":  "positive-static-narrow-scope",
+                         "title":  "The inspected tool-binding entry checks draft and declares edit permission/logging",
+                         "evidence":  [
+                                          {
+                                              "path":  "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminAgentController.java",
+                                              "lines":  "288-293",
+                                              "fact":  "@RequiresPermission(agent:edit), @OperateLog and requireDraft(requireVersion(versionId)) are present before binding."
+                                          }
+                                      ],
+                         "counterEvidence":  "Only the shown entry is covered; no whole-controller/service immutability, registry, auth infrastructure, approval floor or all-writes-logged proof.",
+                         "untested":  "No proxy/permission interception, service rejection or other mutation paths exercised.",
+                         "recommendation":  "Retain this entry guard; do not generalize it into full AI-domain security acceptance."
+                     }
+                 ],
+    "legacyClaimDisposition":  [
+                                   {
+                                       "id":  "F01",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F02",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F03",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F04",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F05",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F06",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F07",
+                                       "status":  "incorrect-generic-500-premise-rejected",
+                                       "reason":  "Fresh ordered AI and server advice handle IllegalArgumentException; see current F07."
+                                   },
+                                   {
+                                       "id":  "F08",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F09",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F10",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F11",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F12",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F13",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F14",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F15",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F16",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F17",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F18",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F19",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   },
+                                   {
+                                       "id":  "F20",
+                                       "status":  "unaccepted-not-reverified-as-an-old-claim",
+                                       "reason":  "The old claim is not fresh proof. Only current F07/C01/P01 and their listed ranges are evidence in this correction."
+                                   }
+                               ],
+    "unreadFromHistoricalEight":  "Six historical controller files were not freshly read; their old ranges/hashes are not counted or reproduced as fresh evidence.",
+    "remainingLimits":  [
+                            "Full task17 get receipt is missing; no claim of shared-task acceptance or completion.",
+                            "Agent ranges81-224 and305-470 remain unread; six other legacy controllers remain unread; old eight-full claims are not accepted.",
+                            "AiAdminRequestController, AiAdminToolController, auth infrastructure, tests, source fixes, build and runtime verification remain outside scope.",
+                            "No Lead test results or old reader closing count as proof. No shared PLAN update.",
+                            "Final report hashes are reported outside self-referential files."
+                        ]
+}

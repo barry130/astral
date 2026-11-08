@@ -1,0 +1,2477 @@
+{
+  "schema": "bounded-form-callers-audit-v1",
+  "date": "2026-11-07",
+  "workspace": "F:/qtMusic/astral",
+  "artifact": "target/form-callers-task32-20261107-1911-12e5bc86",
+  "authorization": {
+    "task": "task-32",
+    "phase": 2,
+    "owner": "Lead",
+    "taskStateUnchanged": "in_progress rev3",
+    "goalStatusChanged": false,
+    "scope": [
+      "astral-front/src/app/dashboard/config/page.tsx",
+      "astral-front/src/app/dashboard/sequence/page.tsx",
+      "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+      "astral-front/src/app/dashboard/qt/page.tsx",
+      "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+      "astral-front/src/app/dashboard/system/dict/page.tsx",
+      "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+      "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+      "astral-front/src/components/ai/admin/RoutePanel.tsx",
+      "astral-front/src/components/ai/admin/ToolPanel.tsx"
+    ],
+    "reportPaths": [
+      "docs/audit/2026-11-07/frontend-form-callers-current.md",
+      "docs/audit/2026-11-07/frontend-form-callers-current.json"
+    ],
+    "wholeAuditAcceptance": false,
+    "wholeFrontendSemanticAudit": false,
+    "gitBuildServersBrowserNetworkDependencyChangesPerformed": false
+  },
+  "toolchain": {
+    "executable": "D:/Python/python3109/Scripts/node.exe",
+    "node": "v24.19.0",
+    "typescript": "5.9.3",
+    "eslint": "9.39.4",
+    "prettier": "3.9.10",
+    "react": "19.3.0",
+    "installationOrUpgrade": false
+  },
+  "result": {
+    "baselineTscExit": 2,
+    "baselineDiagnosticCount": 40,
+    "finalTscExit": 0,
+    "finalDiagnosticCount": 0,
+    "individualEslintPass": 10,
+    "individualPrettierPass": 9,
+    "originalPublicTests": {
+      "baselineExit": 0,
+      "finalExit": 0,
+      "pass": 13,
+      "fail": 0,
+      "skip": 0,
+      "assertionsAndLoaderByteUnchanged": true,
+      "inventedPrivateBehaviorTests": false
+    },
+    "finalNormalizedFullJavaScriptProfiles": 20,
+    "allFullJavaScriptEqual": true,
+    "formatterAcceptance": false
+  },
+  "diagnostics": {
+    "baselineLog": "target/form-callers-task32-20261107-1911-12e5bc86/tsc-baseline.txt",
+    "iterationLog": "target/form-callers-task32-20261107-1911-12e5bc86/tsc-iteration1.txt",
+    "finalLog": "target/form-callers-task32-20261107-1911-12e5bc86/tsc-validated.txt",
+    "countPerPath": {
+      "astral-front/src/app/dashboard/config/page.tsx": 3,
+      "astral-front/src/app/dashboard/sequence/page.tsx": 5,
+      "astral-front/src/app/dashboard/plugin/storage/page.tsx": 7,
+      "astral-front/src/app/dashboard/qt/page.tsx": 9,
+      "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx": 9,
+      "astral-front/src/app/dashboard/system/dict/page.tsx": 2,
+      "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx": 1,
+      "astral-front/src/app/dashboard/system/table-schema/page.tsx": 1,
+      "astral-front/src/components/ai/admin/RoutePanel.tsx": 2,
+      "astral-front/src/components/ai/admin/ToolPanel.tsx": 1
+    },
+    "original40": [
+      {
+        "path": "astral-front/src/app/dashboard/config/page.tsx",
+        "line": 81,
+        "column": 25,
+        "code": "TS2345",
+        "message": "Argument of type 'SequenceConfig' is not assignable to parameter of type 'FormValuePatch<FormValues>'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/config/page.tsx",
+        "line": 112,
+        "column": 51,
+        "code": "TS2345",
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/config/page.tsx",
+        "line": 115,
+        "column": 40,
+        "code": "TS2345",
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 196,
+        "column": 42,
+        "code": "TS2339",
+        "message": "Property 'trim' does not exist on type '{}'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 222,
+        "column": 39,
+        "code": "TS2345",
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type '{ name: string; providerType?: string | undefined; chatId?: string | undefined; workerBaseUrl?: string | undefined; providerOptions?: S3ProviderOptions | undefined; maxFileSize?: number | undefined; remark?: string | undefined; }'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 239,
+        "column": 41,
+        "code": "TS2345",
+        "message": "Argument of type '{}' is not assignable to parameter of type 'string'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 242,
+        "column": 52,
+        "code": "TS2345",
+        "message": "Argument of type '{}' is not assignable to parameter of type 'string'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 358,
+        "column": 22,
+        "code": "TS2339",
+        "message": "Property 'policyEnabled' does not exist on type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 369,
+        "column": 31,
+        "code": "TS7053",
+        "message": "Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 373,
+        "column": 39,
+        "code": "TS2345",
+        "message": "Argument of type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }' is not assignable to parameter of type '{ parentId?: number | undefined; folderName: string; visibility?: string | undefined; policy?: FolderUploadPolicy | undefined; storageStrategy?: string | undefined; configs?: StorageBindingReq[] | undefined; }'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 82,
+        "column": 9,
+        "code": "TS2740",
+        "message": "Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 239,
+        "column": 11,
+        "code": "TS2740",
+        "message": "Type '{}' is missing the following properties from type 'QtUpdateArtifact[]': length, pop, push, concat, and 35 more."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 256,
+        "column": 37,
+        "code": "TS2345",
+        "message": "Argument of type 'unknown' is not assignable to parameter of type '(string | number)[] | null | undefined'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 261,
+        "column": 41,
+        "code": "TS2345",
+        "message": "Argument of type 'unknown' is not assignable to parameter of type 'number'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 277,
+        "column": 34,
+        "code": "TS2345",
+        "message": "Argument of type 'QtGithubAccel' is not assignable to parameter of type 'FormValuePatch<FormValues>'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 292,
+        "column": 39,
+        "code": "TS2345",
+        "message": "Argument of type 'unknown' is not assignable to parameter of type 'number'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 293,
+        "column": 39,
+        "code": "TS2345",
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'QtGithubAccel'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 929,
+        "column": 27,
+        "code": "TS2740",
+        "message": "Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 930,
+        "column": 27,
+        "code": "TS2740",
+        "message": "Type '{}' is missing the following properties from type 'QtUpdateArtifact[]': length, pop, push, concat, and 35 more."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 189,
+        "column": 9,
+        "code": "TS2740",
+        "message": "Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 191,
+        "column": 9,
+        "code": "TS2740",
+        "message": "Type '{}' is missing the following properties from type 'ArtifactRow[]': length, pop, push, concat, and 35 more."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 384,
+        "column": 21,
+        "code": "TS2488",
+        "message": "Type '{}' must have a '[Symbol.iterator]()' method that returns an iterator."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 390,
+        "column": 8,
+        "code": "TS2339",
+        "message": "Property 'filter' does not exist on type '{}'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 401,
+        "column": 7,
+        "code": "TS2322",
+        "message": "Type 'unknown' is not assignable to type 'number[]'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 402,
+        "column": 7,
+        "code": "TS2322",
+        "message": "Type 'unknown' is not assignable to type 'string | undefined'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 403,
+        "column": 7,
+        "code": "TS2322",
+        "message": "Type 'unknown' is not assignable to type 'number | undefined'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 404,
+        "column": 7,
+        "code": "TS2322",
+        "message": "Type 'unknown' is not assignable to type 'string | undefined'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 414,
+        "column": 51,
+        "code": "TS2345",
+        "message": "Argument of type '{}' is not assignable to parameter of type 'number'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 172,
+        "column": 33,
+        "code": "TS2345",
+        "message": "Argument of type 'SequenceConfig' is not assignable to parameter of type 'FormValuePatch<FormValues>'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 211,
+        "column": 58,
+        "code": "TS2345",
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 214,
+        "column": 40,
+        "code": "TS2345",
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 460,
+        "column": 25,
+        "code": "TS2322",
+        "message": "Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<{ bizKey: string; type: string; }>'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 506,
+        "column": 25,
+        "code": "TS2322",
+        "message": "Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<{ bizKey: string; type: string; count: number; }>'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "line": 455,
+        "column": 46,
+        "code": "TS2538",
+        "message": "Type 'unknown' cannot be used as an index type."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "line": 455,
+        "column": 68,
+        "code": "TS7006",
+        "message": "Parameter 't' implicitly has an 'any' type."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+        "line": 225,
+        "column": 7,
+        "code": "TS2345",
+        "message": "Argument of type 'RuleFormValues' is not assignable to parameter of type 'FormValuePatch<FormValues>'."
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+        "line": 1136,
+        "column": 11,
+        "code": "TS2322",
+        "message": "Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<CreateTableValues>'."
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "line": 327,
+        "column": 37,
+        "code": "TS2345",
+        "message": "Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'."
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "line": 337,
+        "column": 37,
+        "code": "TS2345",
+        "message": "Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'."
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "line": 302,
+        "column": 31,
+        "code": "TS2345",
+        "message": "Argument of type 'DeclarativeFormValues' is not assignable to parameter of type 'FormValuePatch<FormValues>'."
+      }
+    ]
+  },
+  "changes": [
+    {
+      "path": "astral-front/src/app/dashboard/config/page.tsx",
+      "reason": "SequenceConfig finite Values at useForm; API and form shape coincide."
+    },
+    {
+      "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+      "reason": "Existing single/batch onFinish finite shapes and SequenceConfig; no submit changes."
+    },
+    {
+      "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+      "reason": "CreateConfig parameter type plus response status; form providerOptions is object, response providerOptions string is not used as form Values. Folder form adds required name already required by submit rules/API. Nine existing optional-policy deletion keys made readonly literal tuple with as const; none added, removed, or reordered. Safe formatting only."
+    },
+    {
+      "path": "astral-front/src/app/dashboard/qt/page.tsx",
+      "reason": "QtUpdate minus serialized platforms plus form number[]; QtGithubAccel finite Values. Two erased id non-null assertions are limited to existing editing=true branches guarded by values.id != null; no branch or async changes."
+    },
+    {
+      "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+      "reason": "Finite picked release fields plus existing optional ArtifactRow[]; original conversion/submit logic remains."
+    },
+    {
+      "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+      "reason": "Nested render-prop uses existing DictTypeWrite. Scalar dataType string-index assertion affects only existing lookup followed by || []; null/undefined/unrecognized values retain original property-key lookup/fallback. No DTO cast or new runtime narrowing. Required Select uses Object.keys(typeMapping), create default is String, edit dataType may be null. Safe formatting only."
+    },
+    {
+      "path": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+      "reason": "Existing RuleFormValues fields preserved as equivalent finite type alias, allowing implicit index-signature assignability to unchanged default-typed ChannelEditor without explicit index signature or sibling edits. Safe formatting only."
+    },
+    {
+      "path": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+      "reason": "Existing CreateTableValues matches existing onFinish and initial fields."
+    },
+    {
+      "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+      "reason": "AiRoute finite Values; original Partial<AiRoute> submit assertion untouched."
+    },
+    {
+      "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+      "reason": "Existing DeclarativeFormValues used at declForm; runtime tree preserved. Unsafe formatting candidate rejected."
+    }
+  ],
+  "semanticReading": {
+    "method": "Actual read-tool semantic walkthroughs and final changed-range/EOF reads, unpruned chunks of at most 80 lines; dense UI guide gap repaired with 10-line reads. Hashes, metadata, generated diff receipts and type-erasure comparison do not count as semantic source reading.",
+    "baselinePhysicalOwnedRawLines": 8899,
+    "finalPhysicalOwnedRawLines": 9142,
+    "finalSourceRereadLines": 1231,
+    "leasedFiles": [
+      {
+        "path": "astral-front/src/app/dashboard/config/page.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 265,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 265,
+        "finalSourceUnprunedReadRanges": [
+          [
+            41,
+            55
+          ],
+          [
+            246,
+            265
+          ]
+        ],
+        "finalSemanticReadLines": 35,
+        "finalSnapshotFullReread": false,
+        "finalRereadGapRanges": [
+          [
+            1,
+            40
+          ],
+          [
+            56,
+            245
+          ]
+        ],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            48,
+            48
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 1,
+          "removed": 1
+        }
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 693,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 693,
+        "finalSourceUnprunedReadRanges": [
+          [
+            61,
+            80
+          ],
+          [
+            674,
+            693
+          ]
+        ],
+        "finalSemanticReadLines": 40,
+        "finalSnapshotFullReread": false,
+        "finalRereadGapRanges": [
+          [
+            1,
+            60
+          ],
+          [
+            81,
+            673
+          ]
+        ],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            70,
+            70
+          ],
+          [
+            72,
+            72
+          ],
+          [
+            74,
+            74
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 3,
+          "removed": 3
+        }
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 2053,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 2060,
+        "finalSourceUnprunedReadRanges": [
+          [
+            167,
+            184
+          ],
+          [
+            303,
+            314
+          ],
+          [
+            352,
+            381
+          ],
+          [
+            665,
+            680
+          ],
+          [
+            1853,
+            1867
+          ],
+          [
+            1938,
+            1957
+          ],
+          [
+            2041,
+            2060
+          ]
+        ],
+        "finalSemanticReadLines": 131,
+        "finalSnapshotFullReread": false,
+        "finalRereadGapRanges": [
+          [
+            1,
+            166
+          ],
+          [
+            185,
+            302
+          ],
+          [
+            315,
+            351
+          ],
+          [
+            382,
+            664
+          ],
+          [
+            681,
+            1852
+          ],
+          [
+            1868,
+            1937
+          ],
+          [
+            1958,
+            2040
+          ]
+        ],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            174,
+            176
+          ],
+          [
+            308,
+            308
+          ],
+          [
+            361,
+            373
+          ],
+          [
+            673,
+            673
+          ],
+          [
+            1859,
+            1860
+          ],
+          [
+            1944,
+            1949
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 26,
+          "removed": 19
+        }
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 993,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 993,
+        "finalSourceUnprunedReadRanges": [
+          [
+            75,
+            96
+          ],
+          [
+            254,
+            267
+          ],
+          [
+            287,
+            301
+          ],
+          [
+            974,
+            993
+          ]
+        ],
+        "finalSemanticReadLines": 71,
+        "finalSnapshotFullReread": false,
+        "finalRereadGapRanges": [
+          [
+            1,
+            74
+          ],
+          [
+            97,
+            253
+          ],
+          [
+            268,
+            286
+          ],
+          [
+            302,
+            973
+          ]
+        ],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            80,
+            80
+          ],
+          [
+            90,
+            90
+          ],
+          [
+            261,
+            261
+          ],
+          [
+            292,
+            292
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 4,
+          "removed": 4
+        }
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 926,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 930,
+        "finalSourceUnprunedReadRanges": [
+          [
+            137,
+            154
+          ],
+          [
+            911,
+            930
+          ]
+        ],
+        "finalSemanticReadLines": 38,
+        "finalSnapshotFullReread": false,
+        "finalRereadGapRanges": [
+          [
+            1,
+            136
+          ],
+          [
+            155,
+            910
+          ]
+        ],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            143,
+            147
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 5,
+          "removed": 1
+        }
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 495,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 720,
+        "finalSourceUnprunedReadRanges": [
+          [
+            1,
+            720
+          ]
+        ],
+        "finalSemanticReadLines": 720,
+        "finalSnapshotFullReread": true,
+        "finalRereadGapRanges": [],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            19,
+            35
+          ],
+          [
+            73,
+            77
+          ],
+          [
+            86,
+            91
+          ],
+          [
+            129,
+            141
+          ],
+          [
+            143,
+            156
+          ],
+          [
+            159,
+            160
+          ],
+          [
+            164,
+            202
+          ],
+          [
+            204,
+            225
+          ],
+          [
+            227,
+            238
+          ],
+          [
+            242,
+            246
+          ],
+          [
+            250,
+            254
+          ],
+          [
+            258,
+            267
+          ],
+          [
+            270,
+            290
+          ],
+          [
+            294,
+            303
+          ],
+          [
+            307,
+            311
+          ],
+          [
+            315,
+            322
+          ],
+          [
+            325,
+            349
+          ],
+          [
+            351,
+            356
+          ],
+          [
+            415,
+            419
+          ],
+          [
+            509,
+            524
+          ],
+          [
+            526,
+            531
+          ],
+          [
+            547,
+            550
+          ],
+          [
+            572,
+            575
+          ],
+          [
+            591,
+            600
+          ],
+          [
+            603,
+            609
+          ],
+          [
+            617,
+            619
+          ],
+          [
+            635,
+            643
+          ],
+          [
+            663,
+            666
+          ],
+          [
+            669,
+            672
+          ],
+          [
+            690,
+            698
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 306,
+          "removed": 81
+        }
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 961,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 968,
+        "finalSourceUnprunedReadRanges": [
+          [
+            31,
+            80
+          ],
+          [
+            113,
+            123
+          ],
+          [
+            309,
+            325
+          ],
+          [
+            949,
+            968
+          ]
+        ],
+        "finalSemanticReadLines": 98,
+        "finalSnapshotFullReread": false,
+        "finalRereadGapRanges": [
+          [
+            1,
+            30
+          ],
+          [
+            81,
+            112
+          ],
+          [
+            124,
+            308
+          ],
+          [
+            326,
+            948
+          ]
+        ],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            39,
+            44
+          ],
+          [
+            66,
+            66
+          ],
+          [
+            72,
+            72
+          ],
+          [
+            118,
+            118
+          ],
+          [
+            316,
+            318
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 12,
+          "removed": 5
+        }
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 1180,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 1180,
+        "finalSourceUnprunedReadRanges": [
+          [
+            250,
+            263
+          ],
+          [
+            1161,
+            1180
+          ]
+        ],
+        "finalSemanticReadLines": 34,
+        "finalSnapshotFullReread": false,
+        "finalRereadGapRanges": [
+          [
+            1,
+            249
+          ],
+          [
+            264,
+            1160
+          ]
+        ],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            256,
+            256
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 1,
+          "removed": 1
+        }
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 375,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 375,
+        "finalSourceUnprunedReadRanges": [
+          [
+            49,
+            60
+          ],
+          [
+            356,
+            375
+          ]
+        ],
+        "finalSemanticReadLines": 32,
+        "finalSnapshotFullReread": false,
+        "finalRereadGapRanges": [
+          [
+            1,
+            48
+          ],
+          [
+            61,
+            355
+          ]
+        ],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            55,
+            55
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 1,
+          "removed": 1
+        }
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "initialWalkthroughToEOF": true,
+        "baselinePhysicalRawLines": 958,
+        "initialWalkthroughEpoch": "Pre-final source walkthrough; notify-rule and ToolPanel type declarations were edited during the walkthrough. This is not a full final-snapshot reread.",
+        "finalPhysicalRawLines": 958,
+        "finalSourceUnprunedReadRanges": [
+          [
+            206,
+            217
+          ],
+          [
+            939,
+            958
+          ]
+        ],
+        "finalSemanticReadLines": 32,
+        "finalSnapshotFullReread": false,
+        "finalRereadGapRanges": [
+          [
+            1,
+            205
+          ],
+          [
+            218,
+            938
+          ]
+        ],
+        "finalEOFRead": true,
+        "finalChangedRanges": [
+          [
+            211,
+            211
+          ]
+        ],
+        "allFinalChangedRangesRead": true,
+        "changedRawLines": {
+          "added": 1,
+          "removed": 1
+        }
+      }
+    ],
+    "requiredGuides": [
+      {
+        "path": "AGENTS.md",
+        "rawLines": 534,
+        "fullUnprunedSemanticRead": true
+      },
+      {
+        "path": "docs/CODING_GUIDE.md",
+        "rawLines": 207,
+        "fullUnprunedSemanticRead": true
+      },
+      {
+        "path": "docs/UI_GUIDE.md",
+        "rawLines": 249,
+        "fullUnprunedSemanticRead": true
+      }
+    ],
+    "sharedForm": {
+      "path": "astral-front/src/components/antd-compat/Form.tsx",
+      "rawLines": 1154,
+      "fullSemanticRead": false,
+      "readRanges": [
+        [
+          1,
+          80
+        ],
+        [
+          121,
+          200
+        ],
+        [
+          241,
+          320
+        ],
+        [
+          681,
+          760
+        ]
+      ],
+      "unchangedBytes": true
+    },
+    "publicTest": {
+      "path": "astral-front/tests/form-contract.test.cjs",
+      "rawLines": 281,
+      "fullSemanticRead": true
+    },
+    "publicLoader": {
+      "path": "astral-front/tests/helpers/load-typescript.cjs",
+      "rawLines": 50,
+      "fullSemanticRead": true
+    },
+    "firstPhaseReport": {
+      "markdownFullRead": true,
+      "jsonReadRanges": [
+        [
+          1,
+          80
+        ]
+      ],
+      "jsonRawLines": 1968,
+      "bothByteAndNativeMtimeUnchanged": true
+    },
+    "supportingPartialReads": [
+      {
+        "path": "astral-front/src/api/ai.ts",
+        "ranges": [
+          [
+            100,
+            127
+          ]
+        ],
+        "fullRead": false
+      },
+      {
+        "path": "astral-front/src/api/system-admin.ts",
+        "ranges": [
+          [
+            101,
+            140
+          ]
+        ],
+        "fullRead": false
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/mail/notify-rule/components/ChannelEditor.tsx",
+        "ranges": [
+          [
+            1,
+            80
+          ]
+        ],
+        "rawLines": 237,
+        "fullRead": false
+      },
+      {
+        "path": "astral-front/src/api/storage.ts",
+        "ranges": [
+          [
+            22,
+            101
+          ],
+          [
+            173,
+            232
+          ],
+          [
+            449,
+            513
+          ]
+        ],
+        "fullRead": false
+      },
+      {
+        "path": "astral-front/src/api/qt.ts",
+        "ranges": [
+          [
+            23,
+            92
+          ],
+          [
+            166,
+            207
+          ]
+        ],
+        "fullRead": false
+      },
+      {
+        "path": "astral-front/src/api/sequenceConfig.ts",
+        "ranges": [
+          [
+            1,
+            60
+          ]
+        ],
+        "fullRead": true
+      }
+    ]
+  },
+  "runtimeProof": {
+    "purpose": "Mechanical full-file type-erasure and whitespace-formatting equivalence only; not a behavioral or private-AST test.",
+    "typescript": "5.9.3",
+    "prettier": "3.9.10",
+    "options": [
+      {
+        "name": "project",
+        "target": 4,
+        "module": 99,
+        "jsx": 4,
+        "esModuleInterop": true
+      },
+      {
+        "name": "public-loader",
+        "target": 9,
+        "module": 1,
+        "jsx": 4,
+        "esModuleInterop": true
+      }
+    ],
+    "normalization": {
+      "removeComments": true,
+      "sourceMap": false,
+      "parser": "babel",
+      "plugins": [],
+      "semi": true,
+      "singleQuote": true,
+      "trailingComma": "all",
+      "printWidth": 100
+    },
+    "equal": true,
+    "rows": [
+      {
+        "file": "astral-front/src/app/dashboard/config/page.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "e52c12fb8b3f67b1fe76b3995bebdc433f72c50d82f292c5e40878bfaa3a991a",
+        "afterSha256": "e52c12fb8b3f67b1fe76b3995bebdc433f72c50d82f292c5e40878bfaa3a991a",
+        "beforeBytes": 7957,
+        "afterBytes": 7957,
+        "beforePath": "emitted-final/project/src__app__dashboard__config__page.tsx.before.js",
+        "afterPath": "emitted-final/project/src__app__dashboard__config__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/config/page.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "fd6eb481c39f9229b55b6a5a8ebbb6336b86d7e086d77ac9e0e177cea94b4f71",
+        "afterSha256": "fd6eb481c39f9229b55b6a5a8ebbb6336b86d7e086d77ac9e0e177cea94b4f71",
+        "beforeBytes": 9280,
+        "afterBytes": 9280,
+        "beforePath": "emitted-final/public-loader/src__app__dashboard__config__page.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__app__dashboard__config__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "8fc8ad1b5c44c8ae21b59f7d8fce20fc11f4b2b29a9d1235176bd776e0c5b62c",
+        "afterSha256": "8fc8ad1b5c44c8ae21b59f7d8fce20fc11f4b2b29a9d1235176bd776e0c5b62c",
+        "beforeBytes": 28700,
+        "afterBytes": 28700,
+        "beforePath": "emitted-final/project/src__app__dashboard__sequence__page.tsx.before.js",
+        "afterPath": "emitted-final/project/src__app__dashboard__sequence__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "4037363ad71c29128fefa58bbbb0fd45cac0724be58365d696c81e5d4fc18ff1",
+        "afterSha256": "4037363ad71c29128fefa58bbbb0fd45cac0724be58365d696c81e5d4fc18ff1",
+        "beforeBytes": 31262,
+        "afterBytes": 31262,
+        "beforePath": "emitted-final/public-loader/src__app__dashboard__sequence__page.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__app__dashboard__sequence__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "8d9f728aab6d136b4a9b3c7b20f41e8bbf7d4477c31d12fd3092ecdcaf3b8064",
+        "afterSha256": "8d9f728aab6d136b4a9b3c7b20f41e8bbf7d4477c31d12fd3092ecdcaf3b8064",
+        "beforeBytes": 95898,
+        "afterBytes": 95898,
+        "beforePath": "emitted-final/project/src__app__dashboard__plugin__storage__page.tsx.before.js",
+        "afterPath": "emitted-final/project/src__app__dashboard__plugin__storage__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "db2b4b4fdd751ffad771e9accda3a86368a6c9ee2baca44b5f31134a14b1d2f2",
+        "afterSha256": "db2b4b4fdd751ffad771e9accda3a86368a6c9ee2baca44b5f31134a14b1d2f2",
+        "beforeBytes": 98320,
+        "afterBytes": 98320,
+        "beforePath": "emitted-final/public-loader/src__app__dashboard__plugin__storage__page.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__app__dashboard__plugin__storage__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/qt/page.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "a2f8e8e6a4a5bf7eb6f4034b0abcd732108dc4a3b151f61b349f3b95682affaf",
+        "afterSha256": "a2f8e8e6a4a5bf7eb6f4034b0abcd732108dc4a3b151f61b349f3b95682affaf",
+        "beforeBytes": 43581,
+        "afterBytes": 43581,
+        "beforePath": "emitted-final/project/src__app__dashboard__qt__page.tsx.before.js",
+        "afterPath": "emitted-final/project/src__app__dashboard__qt__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/qt/page.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "9bac4b74bd7e0df3f0432dfa175defbe05172ad7733fe616569e76d1b703bba7",
+        "afterSha256": "9bac4b74bd7e0df3f0432dfa175defbe05172ad7733fe616569e76d1b703bba7",
+        "beforeBytes": 47775,
+        "afterBytes": 47775,
+        "beforePath": "emitted-final/public-loader/src__app__dashboard__qt__page.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__app__dashboard__qt__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "f6253e5280f49f8222d053366897f8d68823204c5419476d2253d9e102d4f6c6",
+        "afterSha256": "f6253e5280f49f8222d053366897f8d68823204c5419476d2253d9e102d4f6c6",
+        "beforeBytes": 35208,
+        "afterBytes": 35208,
+        "beforePath": "emitted-final/project/src__app__dashboard__qt__SourceReleasesTab.tsx.before.js",
+        "afterPath": "emitted-final/project/src__app__dashboard__qt__SourceReleasesTab.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "b863f426b1a14a9b63ceb8b4c351f249ef304011440a5974d53e3e39f47ee3fa",
+        "afterSha256": "b863f426b1a14a9b63ceb8b4c351f249ef304011440a5974d53e3e39f47ee3fa",
+        "beforeBytes": 36602,
+        "afterBytes": 36602,
+        "beforePath": "emitted-final/public-loader/src__app__dashboard__qt__SourceReleasesTab.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__app__dashboard__qt__SourceReleasesTab.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "3542525b1707a0d63ab07220ccc1c058fa3d59656f0fbf84948dad0ac3fe5313",
+        "afterSha256": "3542525b1707a0d63ab07220ccc1c058fa3d59656f0fbf84948dad0ac3fe5313",
+        "beforeBytes": 26287,
+        "afterBytes": 26287,
+        "beforePath": "emitted-final/project/src__app__dashboard__system__dict__page.tsx.before.js",
+        "afterPath": "emitted-final/project/src__app__dashboard__system__dict__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "4039f5ee62ad412d640e9b637e8e1c9ac4f4c3bedf6d8eb97d2bebb9e7270e52",
+        "afterSha256": "4039f5ee62ad412d640e9b637e8e1c9ac4f4c3bedf6d8eb97d2bebb9e7270e52",
+        "beforeBytes": 29281,
+        "afterBytes": 29281,
+        "beforePath": "emitted-final/public-loader/src__app__dashboard__system__dict__page.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__app__dashboard__system__dict__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "5f94cfe21ad0335908c102933fb0999d9765f2666eebcfa1209aeedd571ea74b",
+        "afterSha256": "5f94cfe21ad0335908c102933fb0999d9765f2666eebcfa1209aeedd571ea74b",
+        "beforeBytes": 37319,
+        "afterBytes": 37319,
+        "beforePath": "emitted-final/project/src__app__dashboard__system__mail__notify-rule__page.tsx.before.js",
+        "afterPath": "emitted-final/project/src__app__dashboard__system__mail__notify-rule__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "c644f846dd6f2482f5b69e12678116cdaa4e94c30138b06416d0d9782f584988",
+        "afterSha256": "c644f846dd6f2482f5b69e12678116cdaa4e94c30138b06416d0d9782f584988",
+        "beforeBytes": 38178,
+        "afterBytes": 38178,
+        "beforePath": "emitted-final/public-loader/src__app__dashboard__system__mail__notify-rule__page.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__app__dashboard__system__mail__notify-rule__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "800b35b224df46d8252611990069d8b6a14fb57b3a273c0b4b6059abc512438c",
+        "afterSha256": "800b35b224df46d8252611990069d8b6a14fb57b3a273c0b4b6059abc512438c",
+        "beforeBytes": 39703,
+        "afterBytes": 39703,
+        "beforePath": "emitted-final/project/src__app__dashboard__system__table-schema__page.tsx.before.js",
+        "afterPath": "emitted-final/project/src__app__dashboard__system__table-schema__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "c9067177160c122c55c706dae7ceb198210f4057e01949b78cdd5b1922bcb405",
+        "afterSha256": "c9067177160c122c55c706dae7ceb198210f4057e01949b78cdd5b1922bcb405",
+        "beforeBytes": 45360,
+        "afterBytes": 45360,
+        "beforePath": "emitted-final/public-loader/src__app__dashboard__system__table-schema__page.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__app__dashboard__system__table-schema__page.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "cda01d9038c11150413c2fdfd896612efd8e63a6d934a8eea18e49cb73fcb10a",
+        "afterSha256": "cda01d9038c11150413c2fdfd896612efd8e63a6d934a8eea18e49cb73fcb10a",
+        "beforeBytes": 14011,
+        "afterBytes": 14011,
+        "beforePath": "emitted-final/project/src__components__ai__admin__RoutePanel.tsx.before.js",
+        "afterPath": "emitted-final/project/src__components__ai__admin__RoutePanel.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "f9ce092bb62e26f87cf5c1ac81109f3b051ec33bcc34e5ad7090f6fa2aaeb206",
+        "afterSha256": "f9ce092bb62e26f87cf5c1ac81109f3b051ec33bcc34e5ad7090f6fa2aaeb206",
+        "beforeBytes": 17163,
+        "afterBytes": 17163,
+        "beforePath": "emitted-final/public-loader/src__components__ai__admin__RoutePanel.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__components__ai__admin__RoutePanel.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "mode": "project",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "31e2ff1906180796734ee4597f53bc6363f95dfb7ca91312e8813db4c359498b",
+        "afterSha256": "31e2ff1906180796734ee4597f53bc6363f95dfb7ca91312e8813db4c359498b",
+        "beforeBytes": 42439,
+        "afterBytes": 42439,
+        "beforePath": "emitted-final/project/src__components__ai__admin__ToolPanel.tsx.before.js",
+        "afterPath": "emitted-final/project/src__components__ai__admin__ToolPanel.tsx.after.js"
+      },
+      {
+        "file": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "mode": "public-loader",
+        "normalizedFullJavaScriptEqual": true,
+        "beforeSha256": "719e2c6ab443b31c0dfa3202e118f3e6b4ed30ff3c47ffc7d2ff44fcec572c27",
+        "afterSha256": "719e2c6ab443b31c0dfa3202e118f3e6b4ed30ff3c47ffc7d2ff44fcec572c27",
+        "beforeBytes": 47425,
+        "afterBytes": 47425,
+        "beforePath": "emitted-final/public-loader/src__components__ai__admin__ToolPanel.tsx.before.js",
+        "afterPath": "emitted-final/public-loader/src__components__ai__admin__ToolPanel.tsx.after.js"
+      }
+    ],
+    "receipt": "target/form-callers-task32-20261107-1911-12e5bc86/runtime-proof-final.json",
+    "script": "target/form-callers-task32-20261107-1911-12e5bc86/runtime-proof.cjs",
+    "artifactPathsRelativeTo": "target/form-callers-task32-20261107-1911-12e5bc86",
+    "interpretation": "Entire normalized emitted JS equality, not selective AST inspection. Both control-flow tree and literal sequence are retained. Type erasure removes types/assertions and comments; formatting normalization only strips incidental presentation. No runtime/lifecycle/browser acceptance is inferred."
+  },
+  "gates": {
+    "serial": true,
+    "cwd": "F:/qtMusic/astral/astral-front",
+    "receipt": "target/form-callers-task32-20261107-1911-12e5bc86/gates-validated.json",
+    "records": [
+      {
+        "kind": "tsc",
+        "file": "",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/typescript/bin/tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:19.8114102Z",
+        "endedUtc": "2026-11-07T11:29:31.8525282Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/tsc-validated.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/app/dashboard/config/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/app/dashboard/config/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:32.0073144Z",
+        "endedUtc": "2026-11-07T11:29:32.9864724Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-1.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/app/dashboard/config/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/app/dashboard/config/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:32.9874620Z",
+        "endedUtc": "2026-11-07T11:29:33.4582314Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-1.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/app/dashboard/sequence/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:33.4582314Z",
+        "endedUtc": "2026-11-07T11:29:34.6562984Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-2.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/app/dashboard/sequence/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:34.6562984Z",
+        "endedUtc": "2026-11-07T11:29:35.2443541Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-2.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/app/dashboard/plugin/storage/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:35.2453410Z",
+        "endedUtc": "2026-11-07T11:29:36.5956368Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-3.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/app/dashboard/plugin/storage/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:36.5956368Z",
+        "endedUtc": "2026-11-07T11:29:37.2054952Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-3.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/app/dashboard/qt/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/app/dashboard/qt/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:37.2054952Z",
+        "endedUtc": "2026-11-07T11:29:38.2301974Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-4.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/app/dashboard/qt/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/app/dashboard/qt/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:38.2301974Z",
+        "endedUtc": "2026-11-07T11:29:38.7266787Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-4.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/app/dashboard/qt/SourceReleasesTab.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:38.7272479Z",
+        "endedUtc": "2026-11-07T11:29:39.7253576Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-5.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/app/dashboard/qt/SourceReleasesTab.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:39.7253576Z",
+        "endedUtc": "2026-11-07T11:29:40.2153835Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-5.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/app/dashboard/system/dict/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:40.2153835Z",
+        "endedUtc": "2026-11-07T11:29:41.1853442Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-6.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/app/dashboard/system/dict/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:41.1853442Z",
+        "endedUtc": "2026-11-07T11:29:41.6532426Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-6.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/app/dashboard/system/mail/notify-rule/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:41.6542220Z",
+        "endedUtc": "2026-11-07T11:29:42.6362218Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-7.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/app/dashboard/system/mail/notify-rule/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:42.6362218Z",
+        "endedUtc": "2026-11-07T11:29:43.2337517Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-7.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/app/dashboard/system/table-schema/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:43.2337517Z",
+        "endedUtc": "2026-11-07T11:29:44.3683989Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-8.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/app/dashboard/system/table-schema/page.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:44.3683989Z",
+        "endedUtc": "2026-11-07T11:29:44.9229527Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-8.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/components/ai/admin/RoutePanel.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:44.9229527Z",
+        "endedUtc": "2026-11-07T11:29:46.0187114Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-9.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/components/ai/admin/RoutePanel.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:46.0187114Z",
+        "endedUtc": "2026-11-07T11:29:46.5202869Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-9.txt"
+      },
+      {
+        "kind": "eslint",
+        "file": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/components/ai/admin/ToolPanel.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:46.5212733Z",
+        "endedUtc": "2026-11-07T11:29:47.6718524Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/eslint-validated-10.txt"
+      },
+      {
+        "kind": "prettier",
+        "file": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/components/ai/admin/ToolPanel.tsx"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:47.6718524Z",
+        "endedUtc": "2026-11-07T11:29:48.3533732Z",
+        "exit": 1,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-10.txt"
+      },
+      {
+        "kind": "public13",
+        "file": "astral-front/tests/form-contract.test.cjs",
+        "executable": "D:/Python/python3109/Scripts/node.exe",
+        "arguments": [
+          "--test",
+          "tests/form-contract.test.cjs"
+        ],
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedUtc": "2026-11-07T11:29:48.3533732Z",
+        "endedUtc": "2026-11-07T11:29:49.2400684Z",
+        "exit": 0,
+        "log": "target/form-callers-task32-20261107-1911-12e5bc86/public13-validated.txt"
+      }
+    ]
+  },
+  "formattingConstraint": {
+    "affectedPath": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+    "baselineExit": 1,
+    "finalExit": 1,
+    "baselineLog": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-tool-baseline.txt",
+    "finalLog": "target/form-callers-task32-20261107-1911-12e5bc86/prettier-validated-10.txt",
+    "candidateReceipt": "target/form-callers-task32-20261107-1911-12e5bc86/format-candidates.json",
+    "candidateMismatch": "target/form-callers-task32-20261107-1911-12e5bc86/formatted/astral-front/src/components/ai/admin/ToolPanel.tsx.project.difference.json",
+    "reason": "Configured Prettier changes original JSX children tree: e.g. literal \" + \" becomes \" +\" and explicit \" \"; adjacent SQL text/space nodes also merge or split. Both emit profiles detect inequality. Candidate not applied; no prettier-ignore, plugin removal, config change or rule bypass. Only this formatting portion remains unaccepted."
+  },
+  "nativeFingerprints": {
+    "capturedUtc": "2026-11-07T11:31:10.0083488Z",
+    "filesystem": "Windows native LastWriteTimeUtc/ToFileTimeUtc: integer 100ns ticks as strings, not JavaScript milliseconds",
+    "rows": [
+      {
+        "path": "astral-front/src/app/dashboard/config/page.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/app/dashboard/config/page.tsx",
+          "sha256": "5a5aa40fb3f143183489c4bfb00f8261a13c233968ba87e3e0cc12df18e62ca8",
+          "bytes": 7592,
+          "rawLines": 265,
+          "nonblankLines": 252,
+          "mtimeUtc": "2026-10-31T07:41:40.1002386Z",
+          "mtimeFileTime100ns": "134379061001002386",
+          "owned": true
+        },
+        "final": {
+          "sha256": "cff0a9aadeed68ad183f4618ff9cc603abccae8573552d8893e3ac2dc4dbedf3",
+          "bytes": 7608,
+          "rawLines": 265,
+          "nonblankLines": 252,
+          "mtimeUtc": "2026-11-07T11:14:39.9618595Z",
+          "mtimeFileTime100ns": "134385236799618595"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+          "sha256": "12f6900b396611e23ef07e1b4ce8c93d8911fcf03456a96aa3240501ad8f8d44",
+          "bytes": 24781,
+          "rawLines": 693,
+          "nonblankLines": 664,
+          "mtimeUtc": "2026-11-06T18:46:17.1135721Z",
+          "mtimeFileTime100ns": "134384643771135721",
+          "owned": true
+        },
+        "final": {
+          "sha256": "4fb8af5ee108fc5562c28b4d99efddaccd6681d5af9ca106b1df1f6e62c8847c",
+          "bytes": 24880,
+          "rawLines": 693,
+          "nonblankLines": 664,
+          "mtimeUtc": "2026-11-07T11:14:48.6566396Z",
+          "mtimeFileTime100ns": "134385236886566396"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+          "sha256": "fddc7d0e26666450a5aac0c254870aeedd41013fe4a87f6d5c9a58635edc66cd",
+          "bytes": 82226,
+          "rawLines": 2053,
+          "nonblankLines": 2005,
+          "mtimeUtc": "2026-11-06T20:02:43.0218401Z",
+          "mtimeFileTime100ns": "134384689630218401",
+          "owned": true
+        },
+        "final": {
+          "sha256": "06717b39747bbc3d09595243fc59a923c23585f550f328ec249d217f143a634d",
+          "bytes": 82524,
+          "rawLines": 2060,
+          "nonblankLines": 2012,
+          "mtimeUtc": "2026-11-07T11:28:32.4485559Z",
+          "mtimeFileTime100ns": "134385245124485559"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "sha256": "a165384907ccdd4765a39a011e74b2d363889aa433956d9a860aa93245bda0ee",
+          "bytes": 37219,
+          "rawLines": 993,
+          "nonblankLines": 964,
+          "mtimeUtc": "2026-10-31T07:47:47.3898531Z",
+          "mtimeFileTime100ns": "134379064673898531",
+          "owned": true
+        },
+        "final": {
+          "sha256": "2114ccb90e2f19efa06a707396efaf9dc35abf3f950107c775b85bc4c610be59",
+          "bytes": 37291,
+          "rawLines": 993,
+          "nonblankLines": 964,
+          "mtimeUtc": "2026-11-07T11:23:34.6037294Z",
+          "mtimeFileTime100ns": "134385242146037294"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "sha256": "df41d795076ddcd5896765d0f143b90727994cec053c79ab79f9175ef7b027cf",
+          "bytes": 39162,
+          "rawLines": 926,
+          "nonblankLines": 889,
+          "mtimeUtc": "2026-11-06T21:41:49.9321803Z",
+          "mtimeFileTime100ns": "134384749099321803",
+          "owned": true
+        },
+        "final": {
+          "sha256": "d9d32398ebe2416f7282ff94ff915312834f487f47c1703fa68421ac3dec13b8",
+          "bytes": 39297,
+          "rawLines": 930,
+          "nonblankLines": 893,
+          "mtimeUtc": "2026-11-07T11:18:41.3298162Z",
+          "mtimeFileTime100ns": "134385239213298162"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+          "sha256": "8ed911cd5210b483ffbe1b1d620f4548f9278d9b1ef45e8de70d92bc4bb3c40e",
+          "bytes": 23082,
+          "rawLines": 495,
+          "nonblankLines": 478,
+          "mtimeUtc": "2026-11-07T01:44:45.3888682Z",
+          "mtimeFileTime100ns": "134384894853888682",
+          "owned": true
+        },
+        "final": {
+          "sha256": "3cc1e413a617ad7b8b1819f19ed15d475e64ec6325ea63bda66d73f01b0ad303",
+          "bytes": 25383,
+          "rawLines": 720,
+          "nonblankLines": 703,
+          "mtimeUtc": "2026-11-07T11:28:32.4722230Z",
+          "mtimeFileTime100ns": "134385245124722230"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+          "sha256": "d390050048918f055459384adebfb57921ad5fe749be512a9e388a47040451f1",
+          "bytes": 34006,
+          "rawLines": 961,
+          "nonblankLines": 906,
+          "mtimeUtc": "2026-11-07T01:44:45.3918045Z",
+          "mtimeFileTime100ns": "134384894853918045",
+          "owned": true
+        },
+        "final": {
+          "sha256": "5050bca4a281137fbf17306200e6f945cacea3b3815d8fd8c9729e4c3cab10f5",
+          "bytes": 34038,
+          "rawLines": 968,
+          "nonblankLines": 913,
+          "mtimeUtc": "2026-11-07T11:28:32.4737994Z",
+          "mtimeFileTime100ns": "134385245124737994"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+          "sha256": "40c20c540f734d557dca58094bdc22037f4779dac2dc2b0d617ea8ce0caecc0a",
+          "bytes": 38874,
+          "rawLines": 1180,
+          "nonblankLines": 1139,
+          "mtimeUtc": "2026-11-07T01:44:45.3918045Z",
+          "mtimeFileTime100ns": "134384894853918045",
+          "owned": true
+        },
+        "final": {
+          "sha256": "b1d44f1de8145873657bb36a9b26c2b0be6e0b0e782652900372e2959c311311",
+          "bytes": 38893,
+          "rawLines": 1180,
+          "nonblankLines": 1139,
+          "mtimeUtc": "2026-11-07T11:21:23.3751529Z",
+          "mtimeFileTime100ns": "134385240833751529"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+          "sha256": "3df863c4dc3de95a1bf3c494cf926e765f1b397b2177c78a1424dfed1955d506",
+          "bytes": 11218,
+          "rawLines": 375,
+          "nonblankLines": 351,
+          "mtimeUtc": "2026-10-29T09:28:13.0078515Z",
+          "mtimeFileTime100ns": "134377396930078515",
+          "owned": true
+        },
+        "final": {
+          "sha256": "4a59f0fedddf39f1357dc54d65c6c0a048a7900810440e973399c3173d7b7881",
+          "bytes": 11227,
+          "rawLines": 375,
+          "nonblankLines": 351,
+          "mtimeUtc": "2026-11-07T11:21:51.1722977Z",
+          "mtimeFileTime100ns": "134385241111722977"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "owned": true,
+        "baseline": {
+          "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+          "sha256": "55e9240db9518d82bd39c5d8f728722102cf2d25352cc9d7fa5a7b54ec9a2916",
+          "bytes": 33631,
+          "rawLines": 958,
+          "nonblankLines": 920,
+          "mtimeUtc": "2026-11-02T04:01:19.2067041Z",
+          "mtimeFileTime100ns": "134380656792067041",
+          "owned": true
+        },
+        "final": {
+          "sha256": "0aa01c8b49f4bb3ecd4934eb102753a0469c5627a0eb206c4745553ccd95099c",
+          "bytes": 33654,
+          "rawLines": 958,
+          "nonblankLines": 920,
+          "mtimeUtc": "2026-11-07T11:21:51.2224514Z",
+          "mtimeFileTime100ns": "134385241112224514"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": false,
+        "unchangedNativeMtime": false
+      },
+      {
+        "path": "astral-front/src/components/antd-compat/Form.tsx",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/src/components/antd-compat/Form.tsx",
+          "sha256": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+          "bytes": 38984,
+          "rawLines": 1154,
+          "nonblankLines": 1043,
+          "mtimeUtc": "2026-11-07T10:57:21.7339767Z",
+          "mtimeFileTime100ns": "134385226417339767",
+          "owned": false
+        },
+        "final": {
+          "sha256": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+          "bytes": 38984,
+          "rawLines": 1154,
+          "nonblankLines": 1043,
+          "mtimeUtc": "2026-11-07T10:57:21.7339767Z",
+          "mtimeFileTime100ns": "134385226417339767"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/tests/form-contract.test.cjs",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/tests/form-contract.test.cjs",
+          "sha256": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56",
+          "bytes": 9755,
+          "rawLines": 281,
+          "nonblankLines": 266,
+          "mtimeUtc": "2026-11-06T19:09:12.5799351Z",
+          "mtimeFileTime100ns": "134384657525799351",
+          "owned": false
+        },
+        "final": {
+          "sha256": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56",
+          "bytes": 9755,
+          "rawLines": 281,
+          "nonblankLines": 266,
+          "mtimeUtc": "2026-11-06T19:09:12.5799351Z",
+          "mtimeFileTime100ns": "134384657525799351"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/tests/helpers/load-typescript.cjs",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/tests/helpers/load-typescript.cjs",
+          "sha256": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112",
+          "bytes": 1899,
+          "rawLines": 50,
+          "nonblankLines": 47,
+          "mtimeUtc": "2026-11-06T17:15:24.9368946Z",
+          "mtimeFileTime100ns": "134384589249368946",
+          "owned": false
+        },
+        "final": {
+          "sha256": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112",
+          "bytes": 1899,
+          "rawLines": 50,
+          "nonblankLines": 47,
+          "mtimeUtc": "2026-11-06T17:15:24.9368946Z",
+          "mtimeFileTime100ns": "134384589249368946"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/tsconfig.json",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/tsconfig.json",
+          "sha256": "5f1263b73f021d62d4ced3745280621902f2688ffacdb6f0538123267ece5238",
+          "bytes": 703,
+          "rawLines": 41,
+          "nonblankLines": 41,
+          "mtimeUtc": "2026-09-28T06:43:31.9551541Z",
+          "mtimeFileTime100ns": "134350514119551541",
+          "owned": false
+        },
+        "final": {
+          "sha256": "5f1263b73f021d62d4ced3745280621902f2688ffacdb6f0538123267ece5238",
+          "bytes": 703,
+          "rawLines": 41,
+          "nonblankLines": 41,
+          "mtimeUtc": "2026-09-28T06:43:31.9551541Z",
+          "mtimeFileTime100ns": "134350514119551541"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/eslint.config.mjs",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/eslint.config.mjs",
+          "sha256": "d5750480e2e6b8e14f265dd82056fdb2644742982591c4d795fed0cadbf60979",
+          "bytes": 1917,
+          "rawLines": 73,
+          "nonblankLines": 72,
+          "mtimeUtc": "2026-10-29T06:32:19.6036802Z",
+          "mtimeFileTime100ns": "134377291396036802",
+          "owned": false
+        },
+        "final": {
+          "sha256": "d5750480e2e6b8e14f265dd82056fdb2644742982591c4d795fed0cadbf60979",
+          "bytes": 1917,
+          "rawLines": 73,
+          "nonblankLines": 72,
+          "mtimeUtc": "2026-10-29T06:32:19.6036802Z",
+          "mtimeFileTime100ns": "134377291396036802"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/.prettierrc",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/.prettierrc",
+          "sha256": "db98f90938f32deb2f9c2611b252446a1e2f0b2bc76d6ca6ecb6f0cf6b373d13",
+          "bytes": 152,
+          "rawLines": 8,
+          "nonblankLines": 8,
+          "mtimeUtc": "2026-10-29T06:33:13.2872365Z",
+          "mtimeFileTime100ns": "134377291932872365",
+          "owned": false
+        },
+        "final": {
+          "sha256": "db98f90938f32deb2f9c2611b252446a1e2f0b2bc76d6ca6ecb6f0cf6b373d13",
+          "bytes": 152,
+          "rawLines": 8,
+          "nonblankLines": 8,
+          "mtimeUtc": "2026-10-29T06:33:13.2872365Z",
+          "mtimeFileTime100ns": "134377291932872365"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/.prettierignore",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/.prettierignore",
+          "sha256": "33fe767e727a54c7786afd26bcfa4a8a2b5d32c5a4adad507da9b74a4bbb3b31",
+          "bytes": 229,
+          "rawLines": 26,
+          "nonblankLines": 19,
+          "mtimeUtc": "2026-10-29T06:34:46.3033757Z",
+          "mtimeFileTime100ns": "134377292863033757",
+          "owned": false
+        },
+        "final": {
+          "sha256": "33fe767e727a54c7786afd26bcfa4a8a2b5d32c5a4adad507da9b74a4bbb3b31",
+          "bytes": 229,
+          "rawLines": 26,
+          "nonblankLines": 19,
+          "mtimeUtc": "2026-10-29T06:34:46.3033757Z",
+          "mtimeFileTime100ns": "134377292863033757"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/package.json",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/package.json",
+          "sha256": "a1fae4f69f6aa2362be8986ed548d8e8ef5bc028e93f66621b8691df39666bcc",
+          "bytes": 2008,
+          "rawLines": 65,
+          "nonblankLines": 65,
+          "mtimeUtc": "2026-11-06T16:26:24.5911937Z",
+          "mtimeFileTime100ns": "134384559845911937",
+          "owned": false
+        },
+        "final": {
+          "sha256": "a1fae4f69f6aa2362be8986ed548d8e8ef5bc028e93f66621b8691df39666bcc",
+          "bytes": 2008,
+          "rawLines": 65,
+          "nonblankLines": 65,
+          "mtimeUtc": "2026-11-06T16:26:24.5911937Z",
+          "mtimeFileTime100ns": "134384559845911937"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/package-lock.json",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/package-lock.json",
+          "sha256": "e7854fce51764af6b758e7e0b53af8a1da21e1831cfd3fec0788635a97625351",
+          "bytes": 212511,
+          "rawLines": 5923,
+          "nonblankLines": 5923,
+          "mtimeUtc": "2026-11-02T04:13:24.2673687Z",
+          "mtimeFileTime100ns": "134380664042673687",
+          "owned": false
+        },
+        "final": {
+          "sha256": "e7854fce51764af6b758e7e0b53af8a1da21e1831cfd3fec0788635a97625351",
+          "bytes": 212511,
+          "rawLines": 5923,
+          "nonblankLines": 5923,
+          "mtimeUtc": "2026-11-02T04:13:24.2673687Z",
+          "mtimeFileTime100ns": "134380664042673687"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/next.config.js",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/next.config.js",
+          "sha256": "e05833f32444c93cbe1bd4e1557215a92e87479467b20002ae2dcbabe960f2b8",
+          "bytes": 3239,
+          "rawLines": 71,
+          "nonblankLines": 69,
+          "mtimeUtc": "2026-10-03T02:21:00.8542745Z",
+          "mtimeFileTime100ns": "134354676608542745",
+          "owned": false
+        },
+        "final": {
+          "sha256": "e05833f32444c93cbe1bd4e1557215a92e87479467b20002ae2dcbabe960f2b8",
+          "bytes": 3239,
+          "rawLines": 71,
+          "nonblankLines": 69,
+          "mtimeUtc": "2026-10-03T02:21:00.8542745Z",
+          "mtimeFileTime100ns": "134354676608542745"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/postcss.config.mjs",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/postcss.config.mjs",
+          "sha256": "d7cf5e4736be10181738a9384d2eb6a7e55ba390999ef8ad78e386b794ff0b84",
+          "bytes": 81,
+          "rawLines": 5,
+          "nonblankLines": 4,
+          "mtimeUtc": "2026-09-28T06:59:27.5637562Z",
+          "mtimeFileTime100ns": "134350523675637562",
+          "owned": false
+        },
+        "final": {
+          "sha256": "d7cf5e4736be10181738a9384d2eb6a7e55ba390999ef8ad78e386b794ff0b84",
+          "bytes": 81,
+          "rawLines": 5,
+          "nonblankLines": 4,
+          "mtimeUtc": "2026-09-28T06:59:27.5637562Z",
+          "mtimeFileTime100ns": "134350523675637562"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "astral-front/next-env.d.ts",
+        "owned": false,
+        "baseline": {
+          "path": "astral-front/next-env.d.ts",
+          "sha256": "0f70629890b72a0a82e91972cc032c04b658b26c265373cb711cf576bfbf8fcc",
+          "bytes": 296,
+          "rawLines": 7,
+          "nonblankLines": 6,
+          "mtimeUtc": "2026-11-06T16:34:17.3602755Z",
+          "mtimeFileTime100ns": "134384564573602755",
+          "owned": false
+        },
+        "final": {
+          "sha256": "0f70629890b72a0a82e91972cc032c04b658b26c265373cb711cf576bfbf8fcc",
+          "bytes": 296,
+          "rawLines": 7,
+          "nonblankLines": 6,
+          "mtimeUtc": "2026-11-06T16:34:17.3602755Z",
+          "mtimeFileTime100ns": "134384564573602755"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "docs/audit/2026-11-07/frontend-form-types-current.md",
+        "owned": false,
+        "baseline": {
+          "path": "docs/audit/2026-11-07/frontend-form-types-current.md",
+          "sha256": "04059b1f3ae1d9f01c7243a3dc7c275b516c40a311b307e105370c70b5c099d5",
+          "bytes": 2584,
+          "rawLines": 27,
+          "nonblankLines": 16,
+          "mtimeUtc": "2026-11-07T11:06:34.6233446Z",
+          "mtimeFileTime100ns": "134385231946233446",
+          "owned": false
+        },
+        "final": {
+          "sha256": "04059b1f3ae1d9f01c7243a3dc7c275b516c40a311b307e105370c70b5c099d5",
+          "bytes": 2584,
+          "rawLines": 27,
+          "nonblankLines": 16,
+          "mtimeUtc": "2026-11-07T11:06:34.6233446Z",
+          "mtimeFileTime100ns": "134385231946233446"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "docs/audit/2026-11-07/frontend-form-types-current.json",
+        "owned": false,
+        "baseline": {
+          "path": "docs/audit/2026-11-07/frontend-form-types-current.json",
+          "sha256": "8dc2089d2a5ec7f6b69d6ba46a0555b9d72e6087748de8209ac892f6bebf55ba",
+          "bytes": 77404,
+          "rawLines": 1968,
+          "nonblankLines": 1968,
+          "mtimeUtc": "2026-11-07T11:08:37.3642543Z",
+          "mtimeFileTime100ns": "134385233173642543",
+          "owned": false
+        },
+        "final": {
+          "sha256": "8dc2089d2a5ec7f6b69d6ba46a0555b9d72e6087748de8209ac892f6bebf55ba",
+          "bytes": 77404,
+          "rawLines": 1968,
+          "nonblankLines": 1968,
+          "mtimeUtc": "2026-11-07T11:08:37.3642543Z",
+          "mtimeFileTime100ns": "134385233173642543"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "AGENTS.md",
+        "owned": false,
+        "baseline": {
+          "path": "AGENTS.md",
+          "sha256": "530cc67718822adb099c9c7df4a627cc98f4bb99a01979f9132fd0458c0c5c84",
+          "bytes": 51066,
+          "rawLines": 534,
+          "nonblankLines": 444,
+          "mtimeUtc": "2026-11-06T19:13:28.4899782Z",
+          "mtimeFileTime100ns": "134384660084899782",
+          "owned": false
+        },
+        "final": {
+          "sha256": "530cc67718822adb099c9c7df4a627cc98f4bb99a01979f9132fd0458c0c5c84",
+          "bytes": 51066,
+          "rawLines": 534,
+          "nonblankLines": 444,
+          "mtimeUtc": "2026-11-06T19:13:28.4899782Z",
+          "mtimeFileTime100ns": "134384660084899782"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "docs/UI_GUIDE.md",
+        "owned": false,
+        "baseline": {
+          "path": "docs/UI_GUIDE.md",
+          "sha256": "a1fd12015f5b6e8e207e0db96106e19927ccca7b36e9a97e5e4feff02aae53aa",
+          "bytes": 25228,
+          "rawLines": 249,
+          "nonblankLines": 194,
+          "mtimeUtc": "2026-11-07T00:47:27.0337847Z",
+          "mtimeFileTime100ns": "134384860470337847",
+          "owned": false
+        },
+        "final": {
+          "sha256": "a1fd12015f5b6e8e207e0db96106e19927ccca7b36e9a97e5e4feff02aae53aa",
+          "bytes": 25228,
+          "rawLines": 249,
+          "nonblankLines": 194,
+          "mtimeUtc": "2026-11-07T00:47:27.0337847Z",
+          "mtimeFileTime100ns": "134384860470337847"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      },
+      {
+        "path": "docs/CODING_GUIDE.md",
+        "owned": false,
+        "baseline": {
+          "path": "docs/CODING_GUIDE.md",
+          "sha256": "3451cdd3c96eceeb1c615e1bedcf14fe0e46695c025e3c1c7f784007633ebb3c",
+          "bytes": 18543,
+          "rawLines": 207,
+          "nonblankLines": 147,
+          "mtimeUtc": "2026-10-30T01:57:14.1211780Z",
+          "mtimeFileTime100ns": "134377990341211780",
+          "owned": false
+        },
+        "final": {
+          "sha256": "3451cdd3c96eceeb1c615e1bedcf14fe0e46695c025e3c1c7f784007633ebb3c",
+          "bytes": 18543,
+          "rawLines": 207,
+          "nonblankLines": 147,
+          "mtimeUtc": "2026-10-30T01:57:14.1211780Z",
+          "mtimeFileTime100ns": "134377990341211780"
+        },
+        "baselineSnapshotMatches": true,
+        "unchangedBytes": true,
+        "unchangedNativeMtime": true
+      }
+    ],
+    "baselineOwnedRawLines": 8899,
+    "finalOwnedRawLines": 9142,
+    "frozenBytesUnchanged": true,
+    "frozenNativeMtimesUnchanged": true,
+    "baselineSnapshotsIntact": true
+  },
+  "sourceDiffReceipt": "target/form-callers-task32-20261107-1911-12e5bc86/source-diff.json",
+  "changedRangesReceipt": "target/form-callers-task32-20261107-1911-12e5bc86/changed-ranges.json",
+  "limitations": [
+    "Pre-existing ToolPanel formatting is not GREEN under the mandatory exact-runtime-tree/literal boundary.",
+    "Only dictionary has a complete final-snapshot semantic reread; all ten final changed ranges and EOFs were read. Explicit final-snapshot reread gaps are retained per file.",
+    "Form/API clients/first-phase JSON have the listed semantic-read gaps; immutable fingerprint proof is not semantic reading.",
+    "No whole-frontend/Root/audit acceptance, task completion, goal changes, new private behavioral tests, build or browser verification."
+  ]
+}

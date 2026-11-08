@@ -1,0 +1,398 @@
+{
+  "shard": "transport-04",
+  "title": "后端 AI 传输/声明式工具只读审阅（MCP Streamable HTTP / 声明式 HTTP / 声明式 SQL）",
+  "date": "2026-11-07",
+  "mode": "read-only static audit",
+  "baselineCommit": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+  "workspace": "F:/qtMusic/astral",
+  "scope": {
+    "module": "astral-plugin",
+    "package": "com.astral.ai",
+    "countedFiles": 6,
+    "counts": { "full": 6, "partial": 0, "split": 0 },
+    "nonCountedContextFiles": [
+      "astral-plugin/src/main/java/com/astral/ai/service/AiToolService.java",
+      "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java",
+      "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminToolController.java",
+      "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminMcpController.java",
+      "astral-plugin/src/main/java/com/astral/ai/common/AiJson.java",
+      "astral-plugin/src/main/java/com/astral/ai/entity/AiMcpServerEntity.java"
+    ]
+  },
+  "method": {
+    "reading": "每个计入文件按 <=80 行分块整读，记录 readRanges；阅读前后各取一次 SHA256 校验内容未变。",
+    "execution": "未启动 JVM / 未发真实 HTTP / 未连 MCP 服务 / 未连数据库 / 未跑 Maven / 未开浏览器；全部结论为静态源码事实，不含运行时或生产验证。",
+    "evidenceCap": "报告内直接引用代码片段总量 <= 40 行，其余以 <file>:<line> 锚点引用。"
+  },
+  "files": [
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiMcpServerService.java",
+      "lines": 285,
+      "nonBlankLines": 263,
+      "chars": 11851,
+      "bytes": 12859,
+      "sha256PreRead": "D55CE67F0869F02BEAD68212A23BD59DF13D6CA4AAFA972A6A9221B6336A6655",
+      "sha256PostRead": "D55CE67F0869F02BEAD68212A23BD59DF13D6CA4AAFA972A6A9221B6336A6655",
+      "unchanged": true,
+      "readRanges": ["1-80", "81-160", "161-240", "241-285"],
+      "status": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/service/AiMcpServerFailureRecorder.java",
+      "lines": 43,
+      "nonBlankLines": 39,
+      "chars": 1513,
+      "bytes": 1759,
+      "sha256PreRead": "4042A24EF0C8BEE4BC3717ECDFC1CEA6EB855173AF24A6E9D384471D71738D7C",
+      "sha256PostRead": "4042A24EF0C8BEE4BC3717ECDFC1CEA6EB855173AF24A6E9D384471D71738D7C",
+      "unchanged": true,
+      "readRanges": ["1-43"],
+      "status": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/tool/declarative/McpClient.java",
+      "lines": 427,
+      "nonBlankLines": 397,
+      "chars": 17043,
+      "bytes": 18451,
+      "sha256PreRead": "067A86655CCDACCF6DA03EC895B42278B37B59D0F7AEE7FCD1793EBB69E052B7",
+      "sha256PostRead": "067A86655CCDACCF6DA03EC895B42278B37B59D0F7AEE7FCD1793EBB69E052B7",
+      "unchanged": true,
+      "readRanges": ["1-80", "81-160", "161-240", "241-320", "321-400", "401-427"],
+      "status": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/tool/declarative/McpToolExecutor.java",
+      "lines": 197,
+      "nonBlankLines": 181,
+      "chars": 8165,
+      "bytes": 9135,
+      "sha256PreRead": "2A099C1D2F5A2D035B56116DB94596D5D7F70DB04746CCAA9EBFAEFC510128E7",
+      "sha256PostRead": "2A099C1D2F5A2D035B56116DB94596D5D7F70DB04746CCAA9EBFAEFC510128E7",
+      "unchanged": true,
+      "readRanges": ["1-80", "81-160", "161-197"],
+      "status": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/tool/declarative/SqlToolExecutor.java",
+      "lines": 441,
+      "nonBlankLines": 414,
+      "chars": 17407,
+      "bytes": 18893,
+      "sha256PreRead": "14B919C8321A9BB41DE188BA1FD075D1983BBD9107680ED9764E83396646F28F",
+      "sha256PostRead": "14B919C8321A9BB41DE188BA1FD075D1983BBD9107680ED9764E83396646F28F",
+      "unchanged": true,
+      "readRanges": ["1-80", "81-160", "161-240", "241-320", "321-400", "401-441"],
+      "status": "full"
+    },
+    {
+      "path": "astral-plugin/src/main/java/com/astral/ai/tool/declarative/HttpToolExecutor.java",
+      "lines": 583,
+      "nonBlankLines": 541,
+      "chars": 25792,
+      "bytes": 27970,
+      "sha256PreRead": "85455F40A36E4AD2DAC4E3C81436EAEBE086ABAF29C540D264C258A460D27264",
+      "sha256PostRead": "85455F40A36E4AD2DAC4E3C81436EAEBE086ABAF29C540D264C258A460D27264",
+      "unchanged": true,
+      "readRanges": ["1-80", "81-160", "161-240", "241-320", "321-400", "401-480", "481-560", "561-583", "262-306 (re-read for guardHost)"],
+      "status": "full"
+    }
+  ],
+  "contextReadRanges": [
+    "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java: 462-501, 552-596, 609-630（1805 行文件，仅取调用点）",
+    "astral-plugin/src/main/java/com/astral/ai/service/AiToolService.java: 150-199, 200-244, 243-302, 318-392, 390-434, 437-471（624 行文件，仅取调用点）",
+    "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminToolController.java: 100-179, 200-259（299 行文件，仅取门禁/审批调用点）",
+    "astral-plugin/src/main/java/com/astral/ai/controller/AiAdminMcpController.java: 28-97（125 行文件，仅取类级/方法级权限）",
+    "astral-plugin/src/main/java/com/astral/ai/common/AiJson.java: 36-115, 120-179（188 行文件，仅取解析/CSV 语义）",
+    "astral-plugin/src/main/java/com/astral/ai/entity/AiMcpServerEntity.java: 字段/注解 grep（仅确认 lastError 无字段级更新策略）",
+    "astral-plugin/src/main/java/com/astral/ai/tool/AdminToolProvider.java: 未读（1165 行），代码工具下限不在本分片结论内"
+  ],
+  "findings": [
+    {
+      "id": "F-01",
+      "domain": "egress/ssrf",
+      "severity": "medium",
+      "title": "DNS 解析在校验与连接之间发生两次，存在 rebinding/TOCTOU 绕过余量",
+      "loci": ["tool/declarative/HttpToolExecutor.java:268-297", "tool/declarative/HttpToolExecutor.java:378", "tool/declarative/McpClient.java:376"],
+      "evidence": "guardHost 用 InetAddress.getAllByName 逐地址 requirePublicAddress；实际连接仍由 JDK HttpClient 按主机名再次解析。",
+      "impact": "若被配置的外部域名 DNS 被接管/返回私网地址，校验通过后连接可落到内网或云元数据地址；白名单 astral.plugins.ai.http-tool.allowed-hosts 为空时无兜底。",
+      "reasoning": "OWASP SSRF 预防明确要求“解析后校验地址，并确保客户端只连接已校验地址”，并指出两次未绑定解析即构成 bypass 面。",
+      "notes": "requirePublicAddress 依赖 java.net 语义：isSiteLocalAddress 不覆盖 100.64.0.0/10（CGNAT）与 NAT64 前缀，故内网 100.64/10 服务不被拦截。",
+      "status": "confirmed-static",
+      "suggestedDirection": "改为解析一次并连接已校验 IP（保留 Host/SNI/证书校验，等价 curl --resolve），或把 allowed-hosts 设为必填并在连接层复核。"
+    },
+    {
+      "id": "F-02",
+      "domain": "resource-bounds",
+      "severity": "medium",
+      "title": "HTTP 工具响应体积上限在整包读入内存之后才判定",
+      "loci": ["tool/declarative/HttpToolExecutor.java:411-413", "tool/declarative/HttpToolExecutor.java:173-178"],
+      "evidence": "httpClient.send(request, BodyHandlers.ofByteArray()) 之后再比较 bytes.length 与 maxBytes。",
+      "impact": "恶意或异常大的响应在拒绝前已被完整缓冲，可造成堆内存压力/长时间占用；上限语义是“事后截断”而非“边读边限”。",
+      "reasoning": "配置边界（4096-1048576 字节）给人“内存有硬上限”的印象，但字节数组分配发生在检查之前。",
+      "status": "confirmed-static",
+      "suggestedDirection": "用带限量语义的 BodySubscriber/BodyHandlers 包装（读满上限即取消），保留现有错误码。"
+    },
+    {
+      "id": "F-03",
+      "domain": "resource-bounds",
+      "severity": "medium",
+      "title": "MCP 传输层响应完全无体积上限",
+      "loci": ["tool/declarative/McpClient.java:231", "tool/declarative/McpClient.java:48", "tool/declarative/McpClient.java:118"],
+      "evidence": "BodyHandlers.ofString(UTF_8) 整包读入；仅有 MAX_TOOLS=500 与 20 页游标保护，没有单响应字节上限。",
+      "impact": "远端（或中间人）返回超大 JSON/SSE 时，解析前已完整驻留内存，可触发 OOM；tools/list 单页大小同样不受 MAX_TOOLS 约束。",
+      "reasoning": "同一仓库的声明式 HTTP 执行器至少有 maxResponseBytes，MCP 通道没有对应参数，属通道间护栏不一致。",
+      "status": "confirmed-static",
+      "suggestedDirection": "为 MCP 增加 maxResponseBytes（配置项/常量），与 HTTP 通道同口径。"
+    },
+    {
+      "id": "F-04",
+      "domain": "mcp-protocol",
+      "severity": "low",
+      "title": "MCP 协议一致性偏窄：仅数字 id、无 batch、不校验 initialize 回显、后续请求不带协议版本头",
+      "loci": ["tool/declarative/McpClient.java:176-215", "tool/declarative/McpClient.java:273-330"],
+      "evidence": "parseEnvelope 只按数字 id 匹配帧；initialize 的 result.protocolVersion/capabilities 未被检查；send() 只补 Content-Type/Accept/Mcp-Session-Id。",
+      "impact": "对严格实现或升级后的服务端会表现为“永远拿不到响应/AI008”，排查成本高；协议版本不匹配时无显式错误。",
+      "reasoning": "属于互操作与可诊断性问题，不构成绕过；本分片未接真实服务端，故只作一致性风险记录。",
+      "status": "confirmed-static",
+      "suggestedDirection": "校验 initialize 回显版本并在后续请求带 Mcp-Protocol-Version；对 id 不匹配给出可诊断错误。"
+    },
+    {
+      "id": "F-05",
+      "domain": "transport-headers",
+      "severity": "low",
+      "title": "自定义 MCP 头可重复协议头，非法/受限头名抛出未包装异常",
+      "loci": ["tool/declarative/McpClient.java:220-232", "tool/declarative/McpClient.java:265-268", "tool/declarative/McpClient.java:390-405"],
+      "evidence": "渲染后的自定义头先写入 builder，send() 再追加 Content-Type/Accept/Mcp-Session-Id；header 名仅校验 KEY_SHAPE，Host/Content-Length 等受限名会在 build/send 处抛 IllegalArgumentException。",
+      "impact": "配置了 Content-Type/Mcp-Session-Id 时出现重复头（行为依赖服务端）；配置 Host 时抛出的 IllegalArgumentException 逃出 send() 的 AI008 包装，refresh 无 last_error 记录（见 F-09）。",
+      "reasoning": "头名白名单只排除形状非法，未排除协议保留名与 JDK 受限名。",
+      "status": "confirmed-static",
+      "suggestedDirection": "对保留头名给保存期校验错误（拒绝），并对发送期异常统一映射 AI008。"
+    },
+    {
+      "id": "F-06",
+      "domain": "sensitive-data",
+      "severity": "medium",
+      "title": "错误文本与响应内容会带出完整端点/远端正文并持久化",
+      "loci": ["tool/declarative/McpClient.java:233-262", "service/AiMcpServerService.java:216-232", "tool/declarative/HttpToolExecutor.java:470-500", "tool/declarative/McpClient.java:120-150"],
+      "evidence": "MCP 失败消息拼接 endpoint 与最多 200 字符远端正文；HTTP 失败拼 300 字符正文；last_error 截断 500 字符落库并经 VO 回显；工具 result_json 保存完整 payload。",
+      "impact": "远端错误页/URL 查询串中的令牌、内部主机名、业务数据会进入数据库与管理员界面，并可能再次进入模型上下文。",
+      "reasoning": "属数据最小化与留存问题；不是直接越权，但违反“敏感响应不回显/不落盘”的常识边界。",
+      "status": "confirmed-static",
+      "suggestedDirection": "错误文本只保留状态码与固定摘要；last_error 与 tool_call 结果按需脱敏/截断，URL 去掉 userinfo/query。"
+    },
+    {
+      "id": "F-07",
+      "domain": "mcp-lifecycle",
+      "severity": "medium",
+      "title": "刷新成功后无法清空 last_error（updateById 跳过 null）",
+      "loci": ["service/AiMcpServerService.java:236-262", "entity/AiMcpServerEntity.java:51"],
+      "evidence": "refresh 成功路径 setLastError(null) 后 updateById；lastError 字段无 @TableField(updateStrategy=...) 覆盖，沿用 MyBatis-Plus 默认 NOT_NULL（项目 AGENTS.md 明确该默认）。",
+      "impact": "一次失败后即使后续刷新全部成功，管理端仍长期显示旧错误，误导运维判断；数据库中的错误文本也一直保留。",
+      "reasoning": "默认字段策略下显式 null 不进入 SET 子句，`last_error` 从未被写回 NULL；需以 lambdaUpdate().set(lastError, null) 或字段级策略修正。",
+      "status": "confirmed-static",
+      "notes": "依赖框架默认策略的推断已与实体注解和项目规范交叉核对；未做数据库写入验证。",
+      "suggestedDirection": "改用显式 UpdateWrapper 置空，或在字段上声明 updateStrategy=ALWAYS。"
+    },
+    {
+      "id": "F-08",
+      "domain": "mcp-lifecycle",
+      "severity": "medium",
+      "title": "refresh 在数据库事务内做最长 60 秒的网络 I/O，失败时再占用第二条连接",
+      "loci": ["service/AiMcpServerService.java:236-262", "service/AiMcpServerFailureRecorder.java:24-42", "tool/declarative/McpClient.java:52-70"],
+      "evidence": "refresh 标注 @Transactional，内部 connect/listTools 受 mcpTimeoutSeconds（3-60）约束；失败记录走 REQUIRES_NEW 独立事务。",
+      "impact": "并发刷新/远端超时会长期占用连接池（每次刷新 1 条，失败时 2 条），可能拖垮同池的其他业务请求。",
+      "reasoning": "网络调用应移出事务边界：先探测再短事务落库，失败记录本身已独立事务。",
+      "status": "confirmed-static",
+      "suggestedDirection": "把 connect/listTools 移到事务外，写入阶段用短事务；refresh 加互斥/限流。"
+    },
+    {
+      "id": "F-09",
+      "domain": "mcp-lifecycle",
+      "severity": "low",
+      "title": "refresh 只捕获 AiException，非预期运行时异常不写失败记录",
+      "loci": ["service/AiMcpServerService.java:246-262", "tool/declarative/McpClient.java:265-268"],
+      "evidence": "catch (AiException e) 才调用 failureRecorder.record；header 渲染/构建阶段的 IllegalArgumentException 等不在此列。",
+      "impact": "这类失败在管理端表现为 500 且 last_error 保持旧值，运维看不到真实原因。",
+      "reasoning": "异常映射不完整；McpClient 的网络异常已包装为 AI008，但构建期异常未覆盖。",
+      "status": "confirmed-static",
+      "suggestedDirection": "在 refresh 捕获 RuntimeException 并统一记录（保留原始异常类型到日志）。"
+    },
+    {
+      "id": "F-10",
+      "domain": "mcp-sync",
+      "severity": "medium",
+      "title": "工具同步的增量语义有缺口：重名/截断冲突会中断整次同步，曾下架工具不会自动恢复",
+      "loci": ["service/AiMcpServerService.java:170-215", "tool/declarative/McpToolExecutor.java:120-145"],
+      "evidence": "按远端 toolName upsert；toolCodeOf 截断到 64 字符；远端缺失项只置 DISABLED，已存在 DISABLED 的行不会再被启用。",
+      "impact": "远端两个长名工具截断后同码 → 唯一键冲突使整次 refresh 回滚；工具临时消失后再出现时保持停用，模型侧静默缺少该工具。",
+      "reasoning": "同步逻辑把“远端缺失”与“人工停用”合并为同一状态，缺少区分标记。",
+      "status": "confirmed-static",
+      "suggestedDirection": "用远端集合显式启用/停用并区分人工停用；toolCode 冲突改为确定性后缀而非截断。"
+    },
+    {
+      "id": "F-11",
+      "domain": "mcp-service",
+      "severity": "low",
+      "title": "toolsOfServer 全表扫描后在内存过滤，delete 日志在删除后才统计",
+      "loci": ["service/AiMcpServerService.java:255-268", "service/AiMcpServerService.java:280-300"],
+      "evidence": "toolsOfServer 取全部 MCP 工具再按 serverId 过滤；delete 中先停用工具、删服务器，随后 countOfServer(id) 仅用于日志。",
+      "impact": "服务器与工具数量增长后每次刷新/删除为 O(全部 MCP 工具)；删除后的计数日志失去意义（不影响数据正确性）。",
+      "reasoning": "属性能与可观测性问题；serverId 存在 executor_config JSON 内，缺索引是根因。",
+      "status": "confirmed-static",
+      "suggestedDirection": "把 serverId 提升为独立列并建索引；删除前统计并记录。"
+    },
+    {
+      "id": "F-12",
+      "domain": "mcp-service",
+      "severity": "low",
+      "title": "更新服务器时 serverCode 被静默忽略",
+      "loci": ["service/AiMcpServerService.java:110-150", "controller/AiAdminMcpController.java:71-78"],
+      "evidence": "update 只应用 name/url/headers/readOnly/status 等字段，req.serverCode 不参与；接口注释称“编码不可改”，但请求体仍带该字段且返回成功。",
+      "impact": "调用方以为改码成功，实际未变；错误被推迟到后续按新码查询时暴露。",
+      "reasoning": "不可变字段应显式拒绝（400/AI008），静默忽略属契约缺陷。",
+      "status": "confirmed-static",
+      "suggestedDirection": "若 serverCode 传入且与现值不同则抛参数错误。"
+    },
+    {
+      "id": "F-13",
+      "domain": "sql-guard",
+      "severity": "medium",
+      "title": "SELECT-only 关键字门禁挡不住有状态函数（nextval/set_config/advisory lock 等）",
+      "loci": ["tool/declarative/SqlToolExecutor.java:60-92", "tool/declarative/SqlToolExecutor.java:162-200", "tool/declarative/SqlToolExecutor.java:255-264"],
+      "evidence": "words() 按 [^A-Za-z_]+ 切词，故 SET 黑名单不命中 set_config；FORBIDDEN_WORDS 不含函数级写语义。",
+      "impact": "声明为“只读”的 SQL 工具仍可推进序列（nextval 不随回滚撤销）、改会话/函数级配置、获取 advisory lock、调用 dblink 等外部连接函数。",
+      "reasoning": "回滚只保护事务内数据修改，不保护非事务性副作用；关键字黑名单无法表达函数白名单语义。",
+      "status": "confirmed-static",
+      "suggestedDirection": "用数据库只读角色 + 函数白名单/禁函数清单（或在只读副本上执行），不要只靠关键字。"
+    },
+    {
+      "id": "F-14",
+      "domain": "sql-guard",
+      "severity": "medium",
+      "title": "SQL 工具复用应用主数据源与主库账号，只读依赖驱动标志与回滚",
+      "loci": ["service/AiToolService.java:270-272", "tool/declarative/SqlToolExecutor.java:306-337"],
+      "evidence": "SqlToolExecutor.create 接收容器内 JdbcTemplate（应用主 DataSource）；执行时 setReadOnly(true)、setAutoCommit(false)、finally rollback。",
+      "impact": "一旦驱动忽略 readOnly 或 SQL 触发非事务副作用，写操作可达生产库；同账号权限等于应用全权限，缺少凭据级隔离。",
+      "reasoning": "纵深防御缺口：护栏集中在代码层，未在数据库角色/连接层收口。",
+      "status": "confirmed-static",
+      "suggestedDirection": "配置专用只读账号/只读副本连接；把 setReadOnly 放到连接获取处并对非 SELECT 直接拒绝。"
+    },
+    {
+      "id": "F-15",
+      "domain": "sql-result",
+      "severity": "low",
+      "title": "结果截断对模型不可见：多取一行但不报告 truncated",
+      "loci": ["tool/declarative/SqlToolExecutor.java:322-344"],
+      "evidence": "setMaxRows(maxRows+1)，循环条件 rows.size() < maxRows；payload 只写 rowCount=rows.size()。",
+      "impact": "查询命中 200 行上限时模型得到“恰好 200 行”的结论，可能据此做错误统计/判断；多取的一行完全未被使用。",
+      "reasoning": "截断标志缺失，多取一行的设计意图未落地。",
+      "status": "confirmed-static",
+      "suggestedDirection": "读取第 maxRows+1 行存在性并输出 truncated=true。"
+    },
+    {
+      "id": "F-16",
+      "domain": "sql-result",
+      "severity": "low",
+      "title": "同名列静默覆盖、带引号别名大小写被折叠",
+      "loci": ["tool/declarative/SqlToolExecutor.java:380-407"],
+      "evidence": "declaredColumns 与 label 均 toLowerCase 后按名字写入 ObjectNode，重复 label 后者覆盖前者。",
+      "impact": "JOIN 两侧同名列时只保留一列，数据看似完整实则缺列；模型无任何提示。",
+      "reasoning": "列名归一化与去重策略未定义。",
+      "status": "confirmed-static",
+      "suggestedDirection": "重复 label 加序号后缀或直接报错；大小写匹配保留原始 label 作为输出键。"
+    },
+    {
+      "id": "F-17",
+      "domain": "sql-result",
+      "severity": "medium",
+      "title": "单元格值无体积上限，单行可把极大文本/二进制灌进工具结果",
+      "loci": ["tool/declarative/SqlToolExecutor.java:311-345", "tool/declarative/SqlToolExecutor.java:409-435"],
+      "evidence": "byte[] 直接 Base64 全量编码，字符串原样写入 payload；仅有 maxRows（<=200）与 summary 1500 字符截断。",
+      "impact": "声称“结果收窄”的执行器可返回数百 MB 结果进入模型上下文与审计表，造成请求膨胀/OOM。",
+      "reasoning": "行数受限不等于字节受限；summary 截断不限制 payload。",
+      "status": "confirmed-static",
+      "suggestedDirection": "增加单值与总字节上限，超限截断并标记。"
+    },
+    {
+      "id": "F-18",
+      "domain": "permission-csv",
+      "severity": "low",
+      "title": "三个声明式执行器用 splitCsv 构造 permissionCodes（会大写），与权限码小写契约冲突",
+      "loci": ["tool/declarative/HttpToolExecutor.java:339-340", "tool/declarative/SqlToolExecutor.java:287-288", "tool/declarative/McpToolExecutor.java:104-105", "common/AiJson.java:131-159", "service/AiChatOrchestrator.java:568-587"],
+      "evidence": "definition() 用 AiJson.splitCsv(tool.getPermissionCodes())；AiJson 同文件注释明确“权限码使用小写；不得复用会大写客户端类型的 splitCsv”。",
+      "impact": "当前不构成越权：实际判定处对 definition 的权限码再走 splitPermissionCsv（toLowerCase + 严格正则），因此仍按小写比较；但管理端 VO 直接展示大写码（controller/AiAdminToolController.java:288），与库中存储值不一致，任何新增消费者按原样比较即失配。",
+      "reasoning": "契约层缺陷而非绕过；修正方向是改用 splitPermissionCsv，绝不放宽其严格性。",
+      "status": "confirmed-static",
+      "notes": "明确不建议：不接受 HELD 通配、不接受历史短码、不把 required 解析器改成大小写宽松。",
+      "suggestedDirection": "三处改用 AiJson.splitPermissionCsv；VO 展示保持库中原值。"
+    },
+    {
+      "id": "F-19",
+      "domain": "approval",
+      "severity": "medium",
+      "title": "审批按 toolCode 重解析工具，存在“先审批后改配置”的快照缺口",
+      "loci": ["controller/AiAdminToolController.java:229-245", "service/AiChatOrchestrator.java:560-616", "service/AiToolService.java:325-346"],
+      "evidence": "approve() 在确认时用 resolve(versionId, clientType, toolCode) 重新取 EffectiveTool，再以 approved=true 调 invoke；requiresApproval 在 approved 路径不再校验。",
+      "impact": "等待确认期间若工具 executor_config/风险被修改，管理员批准的是旧语义、执行的是新配置，且不再要求新的审批（需具备 admin:ai:tool:edit 才能造成）。",
+      "reasoning": "审批对象应绑定“当时快照”（配置哈希/版本），而不是可变的 toolCode。",
+      "status": "confirmed-static",
+      "notes": "HIGH+NONE 本身不构成绕过：requiresApproval 对 risk=HIGH 恒为 true（AiChatOrchestrator.java:611-615），且 riskFloor 在更新时重算（AiToolService.java:204-227, 441-468）。",
+      "suggestedDirection": "在 ai_tool_call 上记录审批时的配置摘要/版本，执行前比对不一致则要求重新确认。"
+    },
+    {
+      "id": "F-20",
+      "domain": "approval",
+      "severity": "low",
+      "title": "test-run 以 approved=true 直接执行且不写工具调用审计行",
+      "loci": ["service/AiToolService.java:348-383", "controller/AiAdminToolController.java:178-186"],
+      "evidence": "testRun 构造 AiToolContext(approved=true) 调 handler.execute；注释说明“等同人工确认”“不写 ai_tool_call”。",
+      "impact": "高危/写型工具可被具备 admin:ai:tool:edit 的人绕过审批链执行，留痕仅有 OperateLog；arguments 也不做 schema 校验（未知占位符仍会报 AI008）。",
+      "reasoning": "设计上把管理员手动触发视为确认，属可接受取舍；残余风险是审计粒度不足与参数未校验。",
+      "status": "confirmed-static",
+      "suggestedDirection": "test-run 也写入审计行（标记 source=TEST）并对 arguments 走与执行期一致的 schema 校验。"
+    }
+  ],
+  "verifiedControls": [
+    "重定向从不跟随：McpClient.java:63 followRedirects(NEVER)；HttpToolExecutor defaultClient 同样 NEVER —— 关闭了重定向型 SSRF。",
+    "超时全部有上下界：MCP 默认 20s 夹在 [3,60]；HTTP 请求 500-30000ms、连接 10s。",
+    "HTTP 工具主机必须字面量：URL_SHAPE/AUTHORITY_SHAPE 拒绝模板化 authority 与 userinfo；${ 直接拒绝；模板只允许出现在 path/query/header/body 且必须在 arguments_schema 中声明。",
+    "header 值拒绝 CR/LF；query/header 仅接受字符串值；path 渲染做 URL 编码（值内 '/' 被编码，抑制路径穿越）。",
+    "secrets 只来自配置 map 或环境变量，永不落库；JSON body 中的 secret 做 JSON 转义。",
+    "MCP 端点保存期与每次连接前都校验（AiMcpServerService create/update + McpClient.requireEndpoint），白名单不匹配即失败（fail-closed）。",
+    "refresh 拒绝非 ENABLED 服务器；失败写入走 REQUIRES_NEW 独立事务，不会随 refresh 回滚丢失（AiMcpServerFailureRecorder 43 行整读）。",
+    "MCP 发现阶段有 MAX_TOOLS=500 与 20 页游标双上限，避免无限翻页。",
+    "风险模型自洽：服务器非只读或远端 readOnlyHint=false → HIGH+ADMIN_CONFIRM；更新时 riskFloor 重算且禁止下调（AiToolService.java:204-227, 441-468）；requiresApproval 对 HIGH 恒真。",
+    "权限检查在原始请求人上执行，registered 与 configured 两组都查，任一不满足返回 rejected（AiChatOrchestrator.java:568-587）。",
+    "SQL 保存期与执行期都做结构校验：多语句、DDL/DML 关键字、WITH…INSERT、非 SELECT 开头一律拒绝；参数只经 #{name}→PreparedStatement 绑定；columns 必须显式声明；maxRows<=200、timeout<=15s；finally 必 rollback。",
+    "声明式工具的写操作下限写死：HTTP 非 GET 强制 HIGH+ADMIN_CONFIRM，SQL 下限 READ+NONE，后台无法下调（AiToolService.java:413-433）。"
+  ],
+  "notVerified": [
+    "未执行任何真实 HTTP/MCP 请求：TLS 校验、SNI、代理、真实 SSE 分帧、协议版本协商均为源码推断。",
+    "未连接数据库：readOnly/事务回滚语义、pgjdbc 具体行为、nextval 等函数副作用未实测。",
+    "未跑 Maven/测试：不含编译与单元测试结论，不引用任何 mock/单测结果作为安全证据。",
+    "未读 AdminToolProvider（1165 行）：代码注册工具的风险声明下限（weak handler floors）未验证。",
+    "未读 AiChatOrchestrator 全文（仅 3 段）：完整模型循环、审批持久化、事件流不在本分片结论内。",
+    "F-07 依赖 MyBatis-Plus 默认 NOT_NULL 字段策略（与实体注解及项目 AGENTS.md 交叉核对），未做写库验证。"
+  ],
+  "externalReferences": [
+    {
+      "title": "OWASP Server-Side Request Forgery Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "localCopy": "target/audit-reference-owasp-ssrf-20261107-1045.html",
+      "relevantLines": "5124-5129（本地副本行号）",
+      "point": "要求校验解析后的 IP 并让客户端只连接已校验地址；第二次未校验的 DNS 解析即构成绕过；连接已校验 IP 时须保留 Host/SNI/证书校验。"
+    }
+  ],
+  "summary": {
+    "confirmedFindingCount": 20,
+    "severityCounts": { "high": 0, "medium": 11, "low": 9 },
+    "topRisks": ["F-01 DNS rebinding", "F-13/F-14 SQL 只读护栏深度", "F-02/F-03 响应体积无有效上限", "F-07 last_error 不可清除", "F-19 审批快照缺口"],
+    "conclusion": "六个文件的传输/声明式执行面整体呈“窄口设计 + 多层护栏”形态，未发现 High 级可直接利用缺陷；确认问题集中在护栏深度（DNS 绑定、体积上限、SQL 函数级副作用）、生命周期一致性（last_error/同步状态）与审计/审批快照三类。"
+  },
+  "artifacts": {
+    "md": "docs/audit/2026-11-07/backend-ai-shards/transport-04.md",
+    "json": "docs/audit/2026-11-07/backend-ai-shards/transport-04.json",
+    "hashPolicy": "自哈希不可内嵌：.md 记录 .json 的完整 SHA256，.md 自身的完整 SHA256 在交付消息中给出，两者均在最终字节上计算。"
+  }
+}

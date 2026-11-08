@@ -1,0 +1,1968 @@
+{
+  "schemaVersion": 1,
+  "task": "task32 advisory Lead-owned",
+  "parenttask9Complete": false,
+  "sourceRepairReadyForLead": true,
+  "wholeFrontendAccepted": false,
+  "rootAccepted": false,
+  "productionWriteLease": [
+    "astral-front/src/components/antd-compat/Form.tsx"
+  ],
+  "actualProductionWrites": [
+    "astral-front/src/components/antd-compat/Form.tsx"
+  ],
+  "actualPublicTestWrites": [],
+  "gitRead": false,
+  "suppliedHeadAttribution": "a39 / uncommitted task9 WIP supplied by Lead; no independent Git read or command",
+  "sourceBefore": {
+    "sha256": "45f49f5f87459610ced0b8ae4cc7a871ce0ceff60ef388c6840c87aea94b76ba",
+    "bytes": 35557,
+    "rawLines": 1092,
+    "mtimeFileTime100ns": "134384667302129736",
+    "path": "F:\\qtMusic\\astral\\astral-front\\src\\components\\antd-compat\\Form.tsx",
+    "mtimeUtc": "2026-11-06T19:25:30.2129736Z",
+    "nonblankLines": 986
+  },
+  "sourceAfter": {
+    "mtimeFileTime100ns": "134385226417339767",
+    "nonblankLines": 1043,
+    "baselineUnchanged": false,
+    "rawLines": 1154,
+    "mtimeUtc": "2026-11-07T10:57:21.7339767Z",
+    "path": "F:\\qtMusic\\astral\\astral-front\\src\\components\\antd-compat\\Form.tsx",
+    "bytes": 38984,
+    "sha256": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657"
+  },
+  "delta": {
+    "rawLines": 62,
+    "nonblankLines": 57,
+    "bytes": 3427,
+    "explicitAny": {
+      "baselineEnforcedErrors": 83,
+      "finalEnforcedErrors": 0,
+      "finalWarnings": 0
+    }
+  },
+  "allBaselineMetadata": [
+    {
+      "sha256": "45f49f5f87459610ced0b8ae4cc7a871ce0ceff60ef388c6840c87aea94b76ba",
+      "bytes": 35557,
+      "rawLines": 1092,
+      "mtimeFileTime100ns": "134384667302129736",
+      "path": "F:\\qtMusic\\astral\\astral-front\\src\\components\\antd-compat\\Form.tsx",
+      "mtimeUtc": "2026-11-06T19:25:30.2129736Z",
+      "nonblankLines": 986
+    },
+    {
+      "sha256": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56",
+      "bytes": 9755,
+      "rawLines": 281,
+      "mtimeFileTime100ns": "134384657525799351",
+      "path": "F:\\qtMusic\\astral\\astral-front\\tests\\form-contract.test.cjs",
+      "mtimeUtc": "2026-11-06T19:09:12.5799351Z",
+      "nonblankLines": 266
+    },
+    {
+      "sha256": "530cc67718822adb099c9c7df4a627cc98f4bb99a01979f9132fd0458c0c5c84",
+      "bytes": 51066,
+      "rawLines": 534,
+      "mtimeFileTime100ns": "134384660084899782",
+      "path": "F:\\qtMusic\\astral\\AGENTS.md",
+      "mtimeUtc": "2026-11-06T19:13:28.4899782Z",
+      "nonblankLines": 444
+    },
+    {
+      "sha256": "a1fd12015f5b6e8e207e0db96106e19927ccca7b36e9a97e5e4feff02aae53aa",
+      "bytes": 25228,
+      "rawLines": 249,
+      "mtimeFileTime100ns": "134384860470337847",
+      "path": "F:\\qtMusic\\astral\\docs\\UI_GUIDE.md",
+      "mtimeUtc": "2026-11-07T00:47:27.0337847Z",
+      "nonblankLines": 194
+    },
+    {
+      "sha256": "3451cdd3c96eceeb1c615e1bedcf14fe0e46695c025e3c1c7f784007633ebb3c",
+      "bytes": 18543,
+      "rawLines": 207,
+      "mtimeFileTime100ns": "134377990341211780",
+      "path": "F:\\qtMusic\\astral\\docs\\CODING_GUIDE.md",
+      "mtimeUtc": "2026-10-30T01:57:14.1211780Z",
+      "nonblankLines": 147
+    },
+    {
+      "sha256": "ddbe6efd7a72855e17c1871c813d94c8383d92650487df993abdeff442ac6bdc",
+      "bytes": 7165,
+      "rawLines": 42,
+      "mtimeFileTime100ns": "134385141582722721",
+      "path": "F:\\qtMusic\\astral\\docs\\audit\\2026-11-07\\TEST-SEAMS.md",
+      "mtimeUtc": "2026-11-07T08:35:58.2722721Z",
+      "nonblankLines": 29
+    },
+    {
+      "sha256": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112",
+      "bytes": 1899,
+      "rawLines": 50,
+      "mtimeFileTime100ns": "134384589249368946",
+      "path": "F:\\qtMusic\\astral\\astral-front\\tests\\helpers\\load-typescript.cjs",
+      "mtimeUtc": "2026-11-06T17:15:24.9368946Z",
+      "nonblankLines": 47
+    },
+    {
+      "sha256": "a1fae4f69f6aa2362be8986ed548d8e8ef5bc028e93f66621b8691df39666bcc",
+      "bytes": 2008,
+      "rawLines": 65,
+      "mtimeFileTime100ns": "134384559845911937",
+      "path": "F:\\qtMusic\\astral\\astral-front\\package.json",
+      "mtimeUtc": "2026-11-06T16:26:24.5911937Z",
+      "nonblankLines": 65
+    },
+    {
+      "sha256": "db98f90938f32deb2f9c2611b252446a1e2f0b2bc76d6ca6ecb6f0cf6b373d13",
+      "bytes": 152,
+      "rawLines": 8,
+      "mtimeFileTime100ns": "134377291932872365",
+      "path": "F:\\qtMusic\\astral\\astral-front\\.prettierrc",
+      "mtimeUtc": "2026-10-29T06:33:13.2872365Z",
+      "nonblankLines": 8
+    },
+    {
+      "sha256": "d5750480e2e6b8e14f265dd82056fdb2644742982591c4d795fed0cadbf60979",
+      "bytes": 1917,
+      "rawLines": 73,
+      "mtimeFileTime100ns": "134377291396036802",
+      "path": "F:\\qtMusic\\astral\\astral-front\\eslint.config.mjs",
+      "mtimeUtc": "2026-10-29T06:32:19.6036802Z",
+      "nonblankLines": 72
+    }
+  ],
+  "allFinalMetadata": [
+    {
+      "mtimeFileTime100ns": "134385226417339767",
+      "nonblankLines": 1043,
+      "baselineUnchanged": false,
+      "rawLines": 1154,
+      "mtimeUtc": "2026-11-07T10:57:21.7339767Z",
+      "path": "F:\\qtMusic\\astral\\astral-front\\src\\components\\antd-compat\\Form.tsx",
+      "bytes": 38984,
+      "sha256": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657"
+    },
+    {
+      "mtimeFileTime100ns": "134384657525799351",
+      "nonblankLines": 266,
+      "baselineUnchanged": true,
+      "rawLines": 281,
+      "mtimeUtc": "2026-11-06T19:09:12.5799351Z",
+      "path": "F:\\qtMusic\\astral\\astral-front\\tests\\form-contract.test.cjs",
+      "bytes": 9755,
+      "sha256": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56"
+    },
+    {
+      "mtimeFileTime100ns": "134384660084899782",
+      "nonblankLines": 444,
+      "baselineUnchanged": true,
+      "rawLines": 534,
+      "mtimeUtc": "2026-11-06T19:13:28.4899782Z",
+      "path": "F:\\qtMusic\\astral\\AGENTS.md",
+      "bytes": 51066,
+      "sha256": "530cc67718822adb099c9c7df4a627cc98f4bb99a01979f9132fd0458c0c5c84"
+    },
+    {
+      "mtimeFileTime100ns": "134384860470337847",
+      "nonblankLines": 194,
+      "baselineUnchanged": true,
+      "rawLines": 249,
+      "mtimeUtc": "2026-11-07T00:47:27.0337847Z",
+      "path": "F:\\qtMusic\\astral\\docs\\UI_GUIDE.md",
+      "bytes": 25228,
+      "sha256": "a1fd12015f5b6e8e207e0db96106e19927ccca7b36e9a97e5e4feff02aae53aa"
+    },
+    {
+      "mtimeFileTime100ns": "134377990341211780",
+      "nonblankLines": 147,
+      "baselineUnchanged": true,
+      "rawLines": 207,
+      "mtimeUtc": "2026-10-30T01:57:14.1211780Z",
+      "path": "F:\\qtMusic\\astral\\docs\\CODING_GUIDE.md",
+      "bytes": 18543,
+      "sha256": "3451cdd3c96eceeb1c615e1bedcf14fe0e46695c025e3c1c7f784007633ebb3c"
+    },
+    {
+      "mtimeFileTime100ns": "134385141582722721",
+      "nonblankLines": 29,
+      "baselineUnchanged": true,
+      "rawLines": 42,
+      "mtimeUtc": "2026-11-07T08:35:58.2722721Z",
+      "path": "F:\\qtMusic\\astral\\docs\\audit\\2026-11-07\\TEST-SEAMS.md",
+      "bytes": 7165,
+      "sha256": "ddbe6efd7a72855e17c1871c813d94c8383d92650487df993abdeff442ac6bdc"
+    },
+    {
+      "mtimeFileTime100ns": "134384589249368946",
+      "nonblankLines": 47,
+      "baselineUnchanged": true,
+      "rawLines": 50,
+      "mtimeUtc": "2026-11-06T17:15:24.9368946Z",
+      "path": "F:\\qtMusic\\astral\\astral-front\\tests\\helpers\\load-typescript.cjs",
+      "bytes": 1899,
+      "sha256": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112"
+    },
+    {
+      "mtimeFileTime100ns": "134384559845911937",
+      "nonblankLines": 65,
+      "baselineUnchanged": true,
+      "rawLines": 65,
+      "mtimeUtc": "2026-11-06T16:26:24.5911937Z",
+      "path": "F:\\qtMusic\\astral\\astral-front\\package.json",
+      "bytes": 2008,
+      "sha256": "a1fae4f69f6aa2362be8986ed548d8e8ef5bc028e93f66621b8691df39666bcc"
+    },
+    {
+      "mtimeFileTime100ns": "134377291932872365",
+      "nonblankLines": 8,
+      "baselineUnchanged": true,
+      "rawLines": 8,
+      "mtimeUtc": "2026-10-29T06:33:13.2872365Z",
+      "path": "F:\\qtMusic\\astral\\astral-front\\.prettierrc",
+      "bytes": 152,
+      "sha256": "db98f90938f32deb2f9c2611b252446a1e2f0b2bc76d6ca6ecb6f0cf6b373d13"
+    },
+    {
+      "mtimeFileTime100ns": "134377291396036802",
+      "nonblankLines": 72,
+      "baselineUnchanged": true,
+      "rawLines": 73,
+      "mtimeUtc": "2026-10-29T06:32:19.6036802Z",
+      "path": "F:\\qtMusic\\astral\\astral-front\\eslint.config.mjs",
+      "bytes": 1917,
+      "sha256": "d5750480e2e6b8e14f265dd82056fdb2644742982591c4d795fed0cadbf60979"
+    }
+  ],
+  "readCoverage": [
+    {
+      "path": "astral-front/src/components/antd-compat/Form.tsx",
+      "endpoint": "baseline",
+      "sha256": "45f49f5f87459610ced0b8ae4cc7a871ce0ceff60ef388c6840c87aea94b76ba",
+      "status": "FULL",
+      "attribution": "Self task32 session earlier span, established by checkpoint; not inherited Lead reading",
+      "eof": 1092,
+      "requests": [
+        {
+          "request": {
+            "offset": 1,
+            "limit": 80
+          },
+          "returned": [
+            1,
+            80
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 81,
+            "limit": 80
+          },
+          "returned": [
+            81,
+            160
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 161,
+            "limit": 80
+          },
+          "returned": [
+            161,
+            240
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 241,
+            "limit": 80
+          },
+          "returned": [
+            241,
+            320
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 321,
+            "limit": 80
+          },
+          "returned": [
+            321,
+            400
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 401,
+            "limit": 80
+          },
+          "returned": [
+            401,
+            480
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 481,
+            "limit": 80
+          },
+          "returned": [
+            481,
+            560
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 561,
+            "limit": 80
+          },
+          "returned": [
+            561,
+            640
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 641,
+            "limit": 80
+          },
+          "returned": [
+            641,
+            720
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 721,
+            "limit": 80
+          },
+          "returned": [
+            721,
+            800
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 801,
+            "limit": 80
+          },
+          "returned": [
+            801,
+            880
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 881,
+            "limit": 80
+          },
+          "returned": [
+            881,
+            960
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 961,
+            "limit": 80
+          },
+          "returned": [
+            961,
+            1040
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 1041,
+            "limit": 80
+          },
+          "returned": [
+            1041,
+            1092
+          ],
+          "unpruned": true
+        }
+      ]
+    },
+    {
+      "path": "astral-front/src/components/antd-compat/Form.tsx",
+      "endpoint": "final",
+      "sha256": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+      "status": "PARTIAL",
+      "eof": 1154,
+      "attribution": "Self current span edited-boundary reads; no final end-to-end reread claimed"
+    },
+    {
+      "path": "astral-front/tests/form-contract.test.cjs",
+      "status": "FULL",
+      "eof": 281,
+      "returnedRanges": [
+        [
+          1,
+          200
+        ],
+        [
+          201,
+          281
+        ]
+      ],
+      "attribution": "Self task32 earlier span; original requested limits not retained in checkpoint"
+    },
+    {
+      "path": "astral-front/tests/helpers/load-typescript.cjs",
+      "status": "FULL",
+      "eof": 50,
+      "returnedRanges": [
+        [
+          1,
+          50
+        ]
+      ],
+      "attribution": "Self task32 earlier span; original requested limit not retained"
+    },
+    {
+      "path": "AGENTS.md",
+      "status": "FULL",
+      "eof": 534,
+      "initialWholeReadMiddlePruned": true,
+      "repair": [
+        {
+          "request": {
+            "offset": 1,
+            "limit": 80
+          },
+          "returned": [
+            1,
+            80
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 81,
+            "limit": 80
+          },
+          "returned": [
+            81,
+            160
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 161,
+            "limit": 80
+          },
+          "returned": [
+            161,
+            240
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 241,
+            "limit": 80
+          },
+          "returned": [
+            241,
+            320
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 321,
+            "limit": 80
+          },
+          "returned": [
+            321,
+            400
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 401,
+            "limit": 80
+          },
+          "returned": [
+            401,
+            480
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 481,
+            "limit": 80
+          },
+          "returned": [
+            481,
+            534
+          ],
+          "unpruned": true
+        }
+      ]
+    },
+    {
+      "path": "docs/CODING_GUIDE.md",
+      "status": "FULL",
+      "eof": 207,
+      "initialWholeReadMiddlePruned": true,
+      "repair": [
+        {
+          "request": {
+            "offset": 1,
+            "limit": 70
+          },
+          "returned": [
+            1,
+            70
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 71,
+            "limit": 70
+          },
+          "returned": [
+            71,
+            140
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 141,
+            "limit": 70
+          },
+          "returned": [
+            141,
+            207
+          ],
+          "unpruned": true
+        }
+      ]
+    },
+    {
+      "path": "docs/UI_GUIDE.md",
+      "status": "FULL",
+      "eof": 249,
+      "initialWholeReadMiddlePruned": true,
+      "earlierReturnedRanges": [
+        [
+          1,
+          60
+        ],
+        [
+          61,
+          120
+        ],
+        [
+          121,
+          180
+        ],
+        [
+          181,
+          249
+        ]
+      ],
+      "earlier61to120MiddlePruned": true,
+      "repairedByCurrentRequests": [
+        {
+          "request": {
+            "offset": 61,
+            "limit": 28
+          },
+          "returned": [
+            61,
+            88
+          ],
+          "unpruned": true
+        },
+        {
+          "request": {
+            "offset": 89,
+            "limit": 32
+          },
+          "returned": [
+            89,
+            120
+          ],
+          "unpruned": true
+        }
+      ],
+      "originalLimitsNotRetainedInCheckpoint": true
+    },
+    {
+      "path": "docs/audit/2026-11-07/TEST-SEAMS.md",
+      "status": "FULL",
+      "eof": 42,
+      "returnedRanges": [
+        [
+          1,
+          42
+        ]
+      ],
+      "attribution": "Self task32 earlier span; requested limit not retained"
+    },
+    {
+      "path": "astral-front/package.json",
+      "status": "FULL",
+      "eof": 65
+    },
+    {
+      "path": "astral-front/.prettierrc",
+      "status": "FULL",
+      "eof": 8
+    },
+    {
+      "path": "astral-front/eslint.config.mjs",
+      "status": "FULL",
+      "eof": 73
+    }
+  ],
+  "versions": {
+    "node": "v24.19.0",
+    "executable": "D:\\Python\\python3109\\lib\\site-packages\\nodejs_wheel\\node.exe",
+    "typescript": "5.9.3",
+    "eslint": "9.39.4",
+    "prettier": "3.9.10",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "baselineGates": [
+    {
+      "name": "eslint-before-node24",
+      "args": [
+        "node_modules/eslint/bin/eslint.js",
+        "src/components/antd-compat/Form.tsx",
+        "--rule",
+        "@typescript-eslint/no-explicit-any:error",
+        "--format",
+        "json"
+      ],
+      "exitCode": 1,
+      "elapsedMs": 2613.4474,
+      "error": null
+    },
+    {
+      "name": "public-before-node24",
+      "args": [
+        "--test",
+        "tests/form-contract.test.cjs"
+      ],
+      "exitCode": 0,
+      "elapsedMs": 816.0179000000003,
+      "error": null
+    },
+    {
+      "name": "tsc-before",
+      "args": [
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "exitCode": 0,
+      "elapsedMs": 12213.930800000002,
+      "error": null
+    }
+  ],
+  "finalGates": {
+    "results": [
+      {
+        "name": "prettier-final",
+        "args": [
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "src/components/antd-compat/Form.tsx"
+        ],
+        "node": "v24.19.0",
+        "executable": "D:\\Python\\python3109\\lib\\site-packages\\nodejs_wheel\\node.exe",
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedAt": "2026-11-07T10:58:57.451Z",
+        "finishedAt": "2026-11-07T10:58:58.144Z",
+        "exitCode": 0,
+        "elapsedMs": 689.7229,
+        "error": null,
+        "frozen": {
+          "source": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+          "publicTests": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56",
+          "loader": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112"
+        }
+      },
+      {
+        "name": "eslint-final",
+        "args": [
+          "node_modules/eslint/bin/eslint.js",
+          "src/components/antd-compat/Form.tsx",
+          "--rule",
+          "@typescript-eslint/no-explicit-any:error",
+          "--format",
+          "json"
+        ],
+        "node": "v24.19.0",
+        "executable": "D:\\Python\\python3109\\lib\\site-packages\\nodejs_wheel\\node.exe",
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedAt": "2026-11-07T10:58:58.144Z",
+        "finishedAt": "2026-11-07T10:58:59.686Z",
+        "exitCode": 0,
+        "elapsedMs": 1542.5426000000002,
+        "error": null,
+        "frozen": {
+          "source": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+          "publicTests": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56",
+          "loader": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112"
+        }
+      },
+      {
+        "name": "public-final",
+        "args": [
+          "--test",
+          "tests/form-contract.test.cjs"
+        ],
+        "node": "v24.19.0",
+        "executable": "D:\\Python\\python3109\\lib\\site-packages\\nodejs_wheel\\node.exe",
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedAt": "2026-11-07T10:58:59.686Z",
+        "finishedAt": "2026-11-07T10:59:00.728Z",
+        "exitCode": 0,
+        "elapsedMs": 1041.536,
+        "error": null,
+        "frozen": {
+          "source": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+          "publicTests": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56",
+          "loader": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112"
+        }
+      },
+      {
+        "name": "tsc-final",
+        "args": [
+          "node_modules/typescript/bin/tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ],
+        "node": "v24.19.0",
+        "executable": "D:\\Python\\python3109\\lib\\site-packages\\nodejs_wheel\\node.exe",
+        "cwd": "F:\\qtMusic\\astral\\astral-front",
+        "startedAt": "2026-11-07T10:59:00.728Z",
+        "finishedAt": "2026-11-07T10:59:14.884Z",
+        "exitCode": 2,
+        "elapsedMs": 14155.7745,
+        "error": null,
+        "frozen": {
+          "source": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+          "publicTests": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56",
+          "loader": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112"
+        }
+      }
+    ],
+    "sourceStable": true,
+    "testsStable": true,
+    "loaderStable": true
+  },
+  "publicRegression": {
+    "seam": "Original public exports and real React through untouched production loader; no copied production/private-service AST tests",
+    "before": {
+      "tests": 13,
+      "pass": 13,
+      "fail": 0,
+      "skipped": 0
+    },
+    "after": {
+      "tests": 13,
+      "pass": 13,
+      "fail": 0,
+      "skipped": 0
+    },
+    "testSnapshotMatchesCurrent": true,
+    "testBefore": {
+      "sha256": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56",
+      "bytes": 9755,
+      "rawLines": 281,
+      "mtimeFileTime100ns": "134384657525799351",
+      "path": "F:\\qtMusic\\astral\\astral-front\\tests\\form-contract.test.cjs",
+      "mtimeUtc": "2026-11-06T19:09:12.5799351Z",
+      "nonblankLines": 266
+    },
+    "testAfter": {
+      "mtimeFileTime100ns": "134384657525799351",
+      "nonblankLines": 266,
+      "baselineUnchanged": true,
+      "rawLines": 281,
+      "mtimeUtc": "2026-11-06T19:09:12.5799351Z",
+      "path": "F:\\qtMusic\\astral\\astral-front\\tests\\form-contract.test.cjs",
+      "bytes": 9755,
+      "sha256": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56"
+    },
+    "loaderBefore": {
+      "sha256": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112",
+      "bytes": 1899,
+      "rawLines": 50,
+      "mtimeFileTime100ns": "134384589249368946",
+      "path": "F:\\qtMusic\\astral\\astral-front\\tests\\helpers\\load-typescript.cjs",
+      "mtimeUtc": "2026-11-06T17:15:24.9368946Z",
+      "nonblankLines": 47
+    },
+    "loaderAfter": {
+      "mtimeFileTime100ns": "134384589249368946",
+      "nonblankLines": 47,
+      "baselineUnchanged": true,
+      "rawLines": 50,
+      "mtimeUtc": "2026-11-06T17:15:24.9368946Z",
+      "path": "F:\\qtMusic\\astral\\astral-front\\tests\\helpers\\load-typescript.cjs",
+      "bytes": 1899,
+      "sha256": "0813e35bfcd45b3dfb59f62a590173187fc7409e61ad26becaedb06f22431112"
+    },
+    "originalAssertionsPreserved": "Entire original test bytes and native100ns timestamp unchanged; no additions/deletions/skips",
+    "behavioralRedInvented": false
+  },
+  "publicTypeProbes": {
+    "final": [
+      {
+        "name": "public-types-positive",
+        "elapsedMs": 1131.3446,
+        "snippetSha256": "10a729160be7b0c5c125c3e3973112d7ef255a800c979845c2baefdd35fa8c2c",
+        "diagnostics": []
+      },
+      {
+        "name": "public-types-negative",
+        "elapsedMs": 807.7711999999999,
+        "snippetSha256": "e05a1a5d4e21b511eee5dee3877b5d9d36ab2ff16bb4cee4f967b1f9b34a3af4",
+        "diagnostics": [
+          {
+            "file": "../target/form-types-task32-20261107-1842/public-types-negative.tsx",
+            "line": 4,
+            "code": 2322,
+            "message": "Type 'string' is not assignable to type 'number'."
+          },
+          {
+            "file": "../target/form-types-task32-20261107-1842/public-types-negative.tsx",
+            "line": 5,
+            "code": 2322,
+            "message": "Type 'unknown' is not assignable to type 'string'."
+          },
+          {
+            "file": "../target/form-types-task32-20261107-1842/public-types-negative.tsx",
+            "line": 6,
+            "code": 2322,
+            "message": "Type 'string | undefined' is not assignable to type 'number | undefined'.\n  Type 'string' is not assignable to type 'number'."
+          },
+          {
+            "file": "../target/form-types-task32-20261107-1842/public-types-negative.tsx",
+            "line": 7,
+            "code": 2322,
+            "message": "Type 'string' is not assignable to type 'number'."
+          },
+          {
+            "file": "../target/form-types-task32-20261107-1842/public-types-negative.tsx",
+            "line": 8,
+            "code": 2322,
+            "message": "Type 'number' is not assignable to type 'string'."
+          }
+        ]
+      }
+    ],
+    "positiveDiagnostics": 0,
+    "negativeExpectedCount": 5,
+    "negativeActualCount": 5,
+    "negativeExpectedCodes": [
+      2322,
+      2322,
+      2322,
+      2322,
+      2322
+    ],
+    "negativeActualCodes": [
+      2322,
+      2322,
+      2322,
+      2322,
+      2322
+    ],
+    "purpose": "Auxiliary actual TypeScript compiler snippets import real public exports; not replacement runtime tests",
+    "initialGap": "Target-directory JSX fixture could not resolve react/jsx-runtime (2875). Final fixture checks actual public component call signatures without executing them; no compiler/dependency configuration was changed."
+  },
+  "runtimeTypeOnlyEvidence": {
+    "structuralJavaScriptEqual": true,
+    "baselineEmitSha256": "fa963b6d85a6ab742b5a1ce9bcf0db31bc2f09999538e40157dbeb6f7a87843d",
+    "finalEmitSha256": "94faea1c41795dded623742896f488168c8a0735d788e53fdb491036c8eeedb5",
+    "method": "Compare every emitted JS node kind, ordered child tree and terminal literal/identifier text; ignore source positions/comments/redundant ParenthesizedExpression only; SourceFile.text excluded",
+    "scope": "Mechanical emitted-JS audit only, not a behavioral test",
+    "changes": []
+  },
+  "earlierEvidenceGaps": [
+    "Node25 observations were retained, then all actual baselines/final gates used installed Node24.",
+    "UTF16/BOM originals retained with UTF8 projections or BOM-aware JSON decoding.",
+    "Early lexical scanner did not rescan template literals; early structural serializer included SourceFile.text. Corrected final emitted-JS tree comparison excludes positions/comments/root text and only redundant parenthesized wrappers."
+  ],
+  "strictTypeScript": {
+    "baselineExit": 0,
+    "finalExit": 2,
+    "diagnosticCount": 40,
+    "insideLeaseCount": 0,
+    "outsideLeaseCount": 40,
+    "diagnostics": [
+      {
+        "path": "astral-front/src/app/dashboard/config/page.tsx",
+        "line": 81,
+        "column": 25,
+        "code": 2345,
+        "message": "Argument of type 'SequenceConfig' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+        "rawReportLine": 1
+      },
+      {
+        "path": "astral-front/src/app/dashboard/config/page.tsx",
+        "line": 112,
+        "column": 51,
+        "code": 2345,
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.",
+        "rawReportLine": 3
+      },
+      {
+        "path": "astral-front/src/app/dashboard/config/page.tsx",
+        "line": 115,
+        "column": 40,
+        "code": 2345,
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.",
+        "rawReportLine": 5
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 196,
+        "column": 42,
+        "code": 2339,
+        "message": "Property 'trim' does not exist on type '{}'.",
+        "rawReportLine": 7
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 222,
+        "column": 39,
+        "code": 2345,
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type '{ name: string; providerType?: string | undefined; chatId?: string | undefined; workerBaseUrl?: string | undefined; providerOptions?: S3ProviderOptions | undefined; maxFileSize?: number | undefined; remark?: string | undefined; }'.",
+        "rawReportLine": 8
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 239,
+        "column": 41,
+        "code": 2345,
+        "message": "Argument of type '{}' is not assignable to parameter of type 'string'.",
+        "rawReportLine": 10
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 242,
+        "column": 52,
+        "code": 2345,
+        "message": "Argument of type '{}' is not assignable to parameter of type 'string'.",
+        "rawReportLine": 11
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 358,
+        "column": 22,
+        "code": 2339,
+        "message": "Property 'policyEnabled' does not exist on type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }'.",
+        "rawReportLine": 12
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 369,
+        "column": 31,
+        "code": 7053,
+        "message": "Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }'.",
+        "rawReportLine": 13
+      },
+      {
+        "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+        "line": 373,
+        "column": 39,
+        "code": 2345,
+        "message": "Argument of type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }' is not assignable to parameter of type '{ parentId?: number | undefined; folderName: string; visibility?: string | undefined; policy?: FolderUploadPolicy | undefined; storageStrategy?: string | undefined; configs?: StorageBindingReq[] | undefined; }'.",
+        "rawReportLine": 15
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 82,
+        "column": 9,
+        "code": 2740,
+        "message": "Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.",
+        "rawReportLine": 17
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 239,
+        "column": 11,
+        "code": 2740,
+        "message": "Type '{}' is missing the following properties from type 'QtUpdateArtifact[]': length, pop, push, concat, and 35 more.",
+        "rawReportLine": 18
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 256,
+        "column": 37,
+        "code": 2345,
+        "message": "Argument of type 'unknown' is not assignable to parameter of type '(string | number)[] | null | undefined'.",
+        "rawReportLine": 19
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 261,
+        "column": 41,
+        "code": 2345,
+        "message": "Argument of type 'unknown' is not assignable to parameter of type 'number'.",
+        "rawReportLine": 20
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 277,
+        "column": 34,
+        "code": 2345,
+        "message": "Argument of type 'QtGithubAccel' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+        "rawReportLine": 21
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 292,
+        "column": 39,
+        "code": 2345,
+        "message": "Argument of type 'unknown' is not assignable to parameter of type 'number'.",
+        "rawReportLine": 23
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 293,
+        "column": 39,
+        "code": 2345,
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'QtGithubAccel'.",
+        "rawReportLine": 24
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 929,
+        "column": 27,
+        "code": 2740,
+        "message": "Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.",
+        "rawReportLine": 26
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/page.tsx",
+        "line": 930,
+        "column": 27,
+        "code": 2740,
+        "message": "Type '{}' is missing the following properties from type 'QtUpdateArtifact[]': length, pop, push, concat, and 35 more.",
+        "rawReportLine": 27
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 189,
+        "column": 9,
+        "code": 2740,
+        "message": "Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.",
+        "rawReportLine": 28
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 191,
+        "column": 9,
+        "code": 2740,
+        "message": "Type '{}' is missing the following properties from type 'ArtifactRow[]': length, pop, push, concat, and 35 more.",
+        "rawReportLine": 29
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 384,
+        "column": 21,
+        "code": 2488,
+        "message": "Type '{}' must have a '[Symbol.iterator]()' method that returns an iterator.",
+        "rawReportLine": 30
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 390,
+        "column": 8,
+        "code": 2339,
+        "message": "Property 'filter' does not exist on type '{}'.",
+        "rawReportLine": 31
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 401,
+        "column": 7,
+        "code": 2322,
+        "message": "Type 'unknown' is not assignable to type 'number[]'.",
+        "rawReportLine": 32
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 402,
+        "column": 7,
+        "code": 2322,
+        "message": "Type 'unknown' is not assignable to type 'string | undefined'.",
+        "rawReportLine": 33
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 403,
+        "column": 7,
+        "code": 2322,
+        "message": "Type 'unknown' is not assignable to type 'number | undefined'.",
+        "rawReportLine": 34
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 404,
+        "column": 7,
+        "code": 2322,
+        "message": "Type 'unknown' is not assignable to type 'string | undefined'.",
+        "rawReportLine": 35
+      },
+      {
+        "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+        "line": 414,
+        "column": 51,
+        "code": 2345,
+        "message": "Argument of type '{}' is not assignable to parameter of type 'number'.",
+        "rawReportLine": 36
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 172,
+        "column": 33,
+        "code": 2345,
+        "message": "Argument of type 'SequenceConfig' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+        "rawReportLine": 37
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 211,
+        "column": 58,
+        "code": 2345,
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.",
+        "rawReportLine": 39
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 214,
+        "column": 40,
+        "code": 2345,
+        "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.",
+        "rawReportLine": 41
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 460,
+        "column": 25,
+        "code": 2322,
+        "message": "Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<{ bizKey: string; type: string; }>'.",
+        "rawReportLine": 43
+      },
+      {
+        "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+        "line": 506,
+        "column": 25,
+        "code": 2322,
+        "message": "Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<{ bizKey: string; type: string; count: number; }>'.",
+        "rawReportLine": 45
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "line": 455,
+        "column": 46,
+        "code": 2538,
+        "message": "Type 'unknown' cannot be used as an index type.",
+        "rawReportLine": 47
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+        "line": 455,
+        "column": 68,
+        "code": 7006,
+        "message": "Parameter 't' implicitly has an 'any' type.",
+        "rawReportLine": 48
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+        "line": 225,
+        "column": 7,
+        "code": 2345,
+        "message": "Argument of type 'RuleFormValues' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+        "rawReportLine": 49
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+        "line": 1136,
+        "column": 11,
+        "code": 2322,
+        "message": "Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<CreateTableValues>'.",
+        "rawReportLine": 51
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "line": 327,
+        "column": 37,
+        "code": 2345,
+        "message": "Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'.",
+        "rawReportLine": 53
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+        "line": 337,
+        "column": 37,
+        "code": 2345,
+        "message": "Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'.",
+        "rawReportLine": 54
+      },
+      {
+        "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+        "line": 302,
+        "column": 31,
+        "code": 2345,
+        "message": "Argument of type 'DeclarativeFormValues' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+        "rawReportLine": 55
+      }
+    ],
+    "groups": {
+      "astral-front/src/app/dashboard/config/page.tsx": [
+        {
+          "path": "astral-front/src/app/dashboard/config/page.tsx",
+          "line": 81,
+          "column": 25,
+          "code": 2345,
+          "message": "Argument of type 'SequenceConfig' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+          "rawReportLine": 1
+        },
+        {
+          "path": "astral-front/src/app/dashboard/config/page.tsx",
+          "line": 112,
+          "column": 51,
+          "code": 2345,
+          "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.",
+          "rawReportLine": 3
+        },
+        {
+          "path": "astral-front/src/app/dashboard/config/page.tsx",
+          "line": 115,
+          "column": 40,
+          "code": 2345,
+          "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.",
+          "rawReportLine": 5
+        }
+      ],
+      "astral-front/src/app/dashboard/plugin/storage/page.tsx": [
+        {
+          "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+          "line": 196,
+          "column": 42,
+          "code": 2339,
+          "message": "Property 'trim' does not exist on type '{}'.",
+          "rawReportLine": 7
+        },
+        {
+          "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+          "line": 222,
+          "column": 39,
+          "code": 2345,
+          "message": "Argument of type 'FormValues' is not assignable to parameter of type '{ name: string; providerType?: string | undefined; chatId?: string | undefined; workerBaseUrl?: string | undefined; providerOptions?: S3ProviderOptions | undefined; maxFileSize?: number | undefined; remark?: string | undefined; }'.",
+          "rawReportLine": 8
+        },
+        {
+          "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+          "line": 239,
+          "column": 41,
+          "code": 2345,
+          "message": "Argument of type '{}' is not assignable to parameter of type 'string'.",
+          "rawReportLine": 10
+        },
+        {
+          "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+          "line": 242,
+          "column": 52,
+          "code": 2345,
+          "message": "Argument of type '{}' is not assignable to parameter of type 'string'.",
+          "rawReportLine": 11
+        },
+        {
+          "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+          "line": 358,
+          "column": 22,
+          "code": 2339,
+          "message": "Property 'policyEnabled' does not exist on type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }'.",
+          "rawReportLine": 12
+        },
+        {
+          "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+          "line": 369,
+          "column": 31,
+          "code": 7053,
+          "message": "Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }'.",
+          "rawReportLine": 13
+        },
+        {
+          "path": "astral-front/src/app/dashboard/plugin/storage/page.tsx",
+          "line": 373,
+          "column": 39,
+          "code": 2345,
+          "message": "Argument of type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }' is not assignable to parameter of type '{ parentId?: number | undefined; folderName: string; visibility?: string | undefined; policy?: FolderUploadPolicy | undefined; storageStrategy?: string | undefined; configs?: StorageBindingReq[] | undefined; }'.",
+          "rawReportLine": 15
+        }
+      ],
+      "astral-front/src/app/dashboard/qt/page.tsx": [
+        {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "line": 82,
+          "column": 9,
+          "code": 2740,
+          "message": "Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.",
+          "rawReportLine": 17
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "line": 239,
+          "column": 11,
+          "code": 2740,
+          "message": "Type '{}' is missing the following properties from type 'QtUpdateArtifact[]': length, pop, push, concat, and 35 more.",
+          "rawReportLine": 18
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "line": 256,
+          "column": 37,
+          "code": 2345,
+          "message": "Argument of type 'unknown' is not assignable to parameter of type '(string | number)[] | null | undefined'.",
+          "rawReportLine": 19
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "line": 261,
+          "column": 41,
+          "code": 2345,
+          "message": "Argument of type 'unknown' is not assignable to parameter of type 'number'.",
+          "rawReportLine": 20
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "line": 277,
+          "column": 34,
+          "code": 2345,
+          "message": "Argument of type 'QtGithubAccel' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+          "rawReportLine": 21
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "line": 292,
+          "column": 39,
+          "code": 2345,
+          "message": "Argument of type 'unknown' is not assignable to parameter of type 'number'.",
+          "rawReportLine": 23
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "line": 293,
+          "column": 39,
+          "code": 2345,
+          "message": "Argument of type 'FormValues' is not assignable to parameter of type 'QtGithubAccel'.",
+          "rawReportLine": 24
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "line": 929,
+          "column": 27,
+          "code": 2740,
+          "message": "Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.",
+          "rawReportLine": 26
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/page.tsx",
+          "line": 930,
+          "column": 27,
+          "code": 2740,
+          "message": "Type '{}' is missing the following properties from type 'QtUpdateArtifact[]': length, pop, push, concat, and 35 more.",
+          "rawReportLine": 27
+        }
+      ],
+      "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx": [
+        {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "line": 189,
+          "column": 9,
+          "code": 2740,
+          "message": "Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.",
+          "rawReportLine": 28
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "line": 191,
+          "column": 9,
+          "code": 2740,
+          "message": "Type '{}' is missing the following properties from type 'ArtifactRow[]': length, pop, push, concat, and 35 more.",
+          "rawReportLine": 29
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "line": 384,
+          "column": 21,
+          "code": 2488,
+          "message": "Type '{}' must have a '[Symbol.iterator]()' method that returns an iterator.",
+          "rawReportLine": 30
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "line": 390,
+          "column": 8,
+          "code": 2339,
+          "message": "Property 'filter' does not exist on type '{}'.",
+          "rawReportLine": 31
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "line": 401,
+          "column": 7,
+          "code": 2322,
+          "message": "Type 'unknown' is not assignable to type 'number[]'.",
+          "rawReportLine": 32
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "line": 402,
+          "column": 7,
+          "code": 2322,
+          "message": "Type 'unknown' is not assignable to type 'string | undefined'.",
+          "rawReportLine": 33
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "line": 403,
+          "column": 7,
+          "code": 2322,
+          "message": "Type 'unknown' is not assignable to type 'number | undefined'.",
+          "rawReportLine": 34
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "line": 404,
+          "column": 7,
+          "code": 2322,
+          "message": "Type 'unknown' is not assignable to type 'string | undefined'.",
+          "rawReportLine": 35
+        },
+        {
+          "path": "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx",
+          "line": 414,
+          "column": 51,
+          "code": 2345,
+          "message": "Argument of type '{}' is not assignable to parameter of type 'number'.",
+          "rawReportLine": 36
+        }
+      ],
+      "astral-front/src/app/dashboard/sequence/page.tsx": [
+        {
+          "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+          "line": 172,
+          "column": 33,
+          "code": 2345,
+          "message": "Argument of type 'SequenceConfig' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+          "rawReportLine": 37
+        },
+        {
+          "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+          "line": 211,
+          "column": 58,
+          "code": 2345,
+          "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.",
+          "rawReportLine": 39
+        },
+        {
+          "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+          "line": 214,
+          "column": 40,
+          "code": 2345,
+          "message": "Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.",
+          "rawReportLine": 41
+        },
+        {
+          "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+          "line": 460,
+          "column": 25,
+          "code": 2322,
+          "message": "Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<{ bizKey: string; type: string; }>'.",
+          "rawReportLine": 43
+        },
+        {
+          "path": "astral-front/src/app/dashboard/sequence/page.tsx",
+          "line": 506,
+          "column": 25,
+          "code": 2322,
+          "message": "Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<{ bizKey: string; type: string; count: number; }>'.",
+          "rawReportLine": 45
+        }
+      ],
+      "astral-front/src/app/dashboard/system/dict/page.tsx": [
+        {
+          "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+          "line": 455,
+          "column": 46,
+          "code": 2538,
+          "message": "Type 'unknown' cannot be used as an index type.",
+          "rawReportLine": 47
+        },
+        {
+          "path": "astral-front/src/app/dashboard/system/dict/page.tsx",
+          "line": 455,
+          "column": 68,
+          "code": 7006,
+          "message": "Parameter 't' implicitly has an 'any' type.",
+          "rawReportLine": 48
+        }
+      ],
+      "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx": [
+        {
+          "path": "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+          "line": 225,
+          "column": 7,
+          "code": 2345,
+          "message": "Argument of type 'RuleFormValues' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+          "rawReportLine": 49
+        }
+      ],
+      "astral-front/src/app/dashboard/system/table-schema/page.tsx": [
+        {
+          "path": "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+          "line": 1136,
+          "column": 11,
+          "code": 2322,
+          "message": "Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<CreateTableValues>'.",
+          "rawReportLine": 51
+        }
+      ],
+      "astral-front/src/components/ai/admin/RoutePanel.tsx": [
+        {
+          "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+          "line": 327,
+          "column": 37,
+          "code": 2345,
+          "message": "Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'.",
+          "rawReportLine": 53
+        },
+        {
+          "path": "astral-front/src/components/ai/admin/RoutePanel.tsx",
+          "line": 337,
+          "column": 37,
+          "code": 2345,
+          "message": "Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'.",
+          "rawReportLine": 54
+        }
+      ],
+      "astral-front/src/components/ai/admin/ToolPanel.tsx": [
+        {
+          "path": "astral-front/src/components/ai/admin/ToolPanel.tsx",
+          "line": 302,
+          "column": 31,
+          "code": 2345,
+          "message": "Argument of type 'DeclarativeFormValues' is not assignable to parameter of type 'FormValuePatch<FormValues>'.",
+          "rawReportLine": 55
+        }
+      ]
+    },
+    "callerPlans": [
+      {
+        "paths": [
+          "astral-front/src/app/dashboard/config/page.tsx",
+          "astral-front/src/app/dashboard/sequence/page.tsx"
+        ],
+        "plan": "Use existing SequenceConfig for the config form and distinct finite single/batch generator UI-value interfaces; explicit Form.useForm<Values>(), not unknown-to-DTO casts."
+      },
+      {
+        "paths": [
+          "astral-front/src/app/dashboard/plugin/storage/page.tsx"
+        ],
+        "plan": "Type separate config/folder forms with complete UI-only fields including folderName and policyEnabled; narrow dynamic indexed keys; storage sibling writes remain Lead-owned."
+      },
+      {
+        "paths": [
+          "astral-front/src/app/dashboard/qt/page.tsx",
+          "astral-front/src/app/dashboard/qt/SourceReleasesTab.tsx"
+        ],
+        "plan": "Type update/release forms with platforms and artifact arrays plus existing request fields; use existing QtGithubAccel for its separate form. Preserve conversions and async ownership."
+      },
+      {
+        "paths": [
+          "astral-front/src/app/dashboard/system/dict/page.tsx"
+        ],
+        "plan": "Provide the dictionary data Values generic to standalone Form.Item render utilities so the declared dictionary type narrows getFieldValue; do not cast arbitrary unknown keys."
+      },
+      {
+        "paths": [
+          "astral-front/src/app/dashboard/system/mail/notify-rule/page.tsx",
+          "astral-front/src/app/dashboard/system/table-schema/page.tsx",
+          "astral-front/src/components/ai/admin/ToolPanel.tsx"
+        ],
+        "plan": "Use existing RuleFormValues/CreateTableValues/DeclarativeFormValues for their respective Form.useForm instances."
+      },
+      {
+        "paths": [
+          "astral-front/src/components/ai/admin/RoutePanel.tsx"
+        ],
+        "plan": "Give the route form a finite value interface including the numeric IDs passed at327/337."
+      }
+    ],
+    "callersEdited": false,
+    "compilerWeakened": false,
+    "rawReport": "target/form-types-task32-20261107-1842/tsc-final.txt",
+    "rawText": "src/app/dashboard/config/page.tsx(81,25): error TS2345: Argument of type 'SequenceConfig' is not assignable to parameter of type 'FormValuePatch<FormValues>'.\r\n  Index signature for type 'string' is missing in type 'SequenceConfig'.\r\nsrc/app/dashboard/config/page.tsx(112,51): error TS2345: Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.\r\n  Type 'FormValues' is missing the following properties from type 'SequenceConfig': bizKey, sequenceType, enabled\r\nsrc/app/dashboard/config/page.tsx(115,40): error TS2345: Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.\r\n  Type 'FormValues' is missing the following properties from type 'SequenceConfig': bizKey, sequenceType, enabled\r\nsrc/app/dashboard/plugin/storage/page.tsx(196,42): error TS2339: Property 'trim' does not exist on type '{}'.\r\nsrc/app/dashboard/plugin/storage/page.tsx(222,39): error TS2345: Argument of type 'FormValues' is not assignable to parameter of type '{ name: string; providerType?: string | undefined; chatId?: string | undefined; workerBaseUrl?: string | undefined; providerOptions?: S3ProviderOptions | undefined; maxFileSize?: number | undefined; remark?: string | undefined; }'.\r\n  Property 'name' is missing in type 'FormValues' but required in type '{ name: string; providerType?: string | undefined; chatId?: string | undefined; workerBaseUrl?: string | undefined; providerOptions?: S3ProviderOptions | undefined; maxFileSize?: number | undefined; remark?: string | undefined; }'.\r\nsrc/app/dashboard/plugin/storage/page.tsx(239,41): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.\r\nsrc/app/dashboard/plugin/storage/page.tsx(242,52): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.\r\nsrc/app/dashboard/plugin/storage/page.tsx(358,22): error TS2339: Property 'policyEnabled' does not exist on type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }'.\r\nsrc/app/dashboard/plugin/storage/page.tsx(369,31): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }'.\r\n  No index signature with a parameter of type 'string' was found on type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }'.\r\nsrc/app/dashboard/plugin/storage/page.tsx(373,39): error TS2345: Argument of type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }' is not assignable to parameter of type '{ parentId?: number | undefined; folderName: string; visibility?: string | undefined; policy?: FolderUploadPolicy | undefined; storageStrategy?: string | undefined; configs?: StorageBindingReq[] | undefined; }'.\r\n  Property 'folderName' is missing in type '{ policy: FolderUploadPolicy | undefined; storageStrategy: string; configs: { storageConfigId: number; priority: number; }[]; }' but required in type '{ parentId?: number | undefined; folderName: string; visibility?: string | undefined; policy?: FolderUploadPolicy | undefined; storageStrategy?: string | undefined; configs?: StorageBindingReq[] | undefined; }'.\r\nsrc/app/dashboard/qt/page.tsx(82,9): error TS2740: Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.\r\nsrc/app/dashboard/qt/page.tsx(239,11): error TS2740: Type '{}' is missing the following properties from type 'QtUpdateArtifact[]': length, pop, push, concat, and 35 more.\r\nsrc/app/dashboard/qt/page.tsx(256,37): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '(string | number)[] | null | undefined'.\r\nsrc/app/dashboard/qt/page.tsx(261,41): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'number'.\r\nsrc/app/dashboard/qt/page.tsx(277,34): error TS2345: Argument of type 'QtGithubAccel' is not assignable to parameter of type 'FormValuePatch<FormValues>'.\r\n  Index signature for type 'string' is missing in type 'QtGithubAccel'.\r\nsrc/app/dashboard/qt/page.tsx(292,39): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'number'.\r\nsrc/app/dashboard/qt/page.tsx(293,39): error TS2345: Argument of type 'FormValues' is not assignable to parameter of type 'QtGithubAccel'.\r\n  Property 'prefixUrl' is missing in type 'FormValues' but required in type 'QtGithubAccel'.\r\nsrc/app/dashboard/qt/page.tsx(929,27): error TS2740: Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.\r\nsrc/app/dashboard/qt/page.tsx(930,27): error TS2740: Type '{}' is missing the following properties from type 'QtUpdateArtifact[]': length, pop, push, concat, and 35 more.\r\nsrc/app/dashboard/qt/SourceReleasesTab.tsx(189,9): error TS2740: Type '{}' is missing the following properties from type 'number[]': length, pop, push, concat, and 35 more.\r\nsrc/app/dashboard/qt/SourceReleasesTab.tsx(191,9): error TS2740: Type '{}' is missing the following properties from type 'ArtifactRow[]': length, pop, push, concat, and 35 more.\r\nsrc/app/dashboard/qt/SourceReleasesTab.tsx(384,21): error TS2488: Type '{}' must have a '[Symbol.iterator]()' method that returns an iterator.\r\nsrc/app/dashboard/qt/SourceReleasesTab.tsx(390,8): error TS2339: Property 'filter' does not exist on type '{}'.\r\nsrc/app/dashboard/qt/SourceReleasesTab.tsx(401,7): error TS2322: Type 'unknown' is not assignable to type 'number[]'.\r\nsrc/app/dashboard/qt/SourceReleasesTab.tsx(402,7): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.\r\nsrc/app/dashboard/qt/SourceReleasesTab.tsx(403,7): error TS2322: Type 'unknown' is not assignable to type 'number | undefined'.\r\nsrc/app/dashboard/qt/SourceReleasesTab.tsx(404,7): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.\r\nsrc/app/dashboard/qt/SourceReleasesTab.tsx(414,51): error TS2345: Argument of type '{}' is not assignable to parameter of type 'number'.\r\nsrc/app/dashboard/sequence/page.tsx(172,33): error TS2345: Argument of type 'SequenceConfig' is not assignable to parameter of type 'FormValuePatch<FormValues>'.\r\n  Index signature for type 'string' is missing in type 'SequenceConfig'.\r\nsrc/app/dashboard/sequence/page.tsx(211,58): error TS2345: Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.\r\n  Type 'FormValues' is missing the following properties from type 'SequenceConfig': bizKey, sequenceType, enabled\r\nsrc/app/dashboard/sequence/page.tsx(214,40): error TS2345: Argument of type 'FormValues' is not assignable to parameter of type 'SequenceConfig'.\r\n  Type 'FormValues' is missing the following properties from type 'SequenceConfig': bizKey, sequenceType, enabled\r\nsrc/app/dashboard/sequence/page.tsx(460,25): error TS2322: Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<{ bizKey: string; type: string; }>'.\r\n  Type 'FormValues' is missing the following properties from type '{ bizKey: string; type: string; }': bizKey, type\r\nsrc/app/dashboard/sequence/page.tsx(506,25): error TS2322: Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<{ bizKey: string; type: string; count: number; }>'.\r\n  Type 'FormValues' is missing the following properties from type '{ bizKey: string; type: string; count: number; }': bizKey, type, count\r\nsrc/app/dashboard/system/dict/page.tsx(455,46): error TS2538: Type 'unknown' cannot be used as an index type.\r\nsrc/app/dashboard/system/dict/page.tsx(455,68): error TS7006: Parameter 't' implicitly has an 'any' type.\r\nsrc/app/dashboard/system/mail/notify-rule/page.tsx(225,7): error TS2345: Argument of type 'RuleFormValues' is not assignable to parameter of type 'FormValuePatch<FormValues>'.\r\n  Index signature for type 'string' is missing in type 'RuleFormValues'.\r\nsrc/app/dashboard/system/table-schema/page.tsx(1136,11): error TS2322: Type 'FormInstance<FormValues>' is not assignable to type 'FormInstance<CreateTableValues>'.\r\n  Type 'FormValues' is missing the following properties from type 'CreateTableValues': tableName, tableComment, moduleName\r\nsrc/components/ai/admin/RoutePanel.tsx(327,37): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'.\r\nsrc/components/ai/admin/RoutePanel.tsx(337,37): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'number | undefined'.\r\nsrc/components/ai/admin/ToolPanel.tsx(302,31): error TS2345: Argument of type 'DeclarativeFormValues' is not assignable to parameter of type 'FormValuePatch<FormValues>'.\r\n  Index signature for type 'string' is missing in type 'DeclarativeFormValues'.\r\n"
+  },
+  "runtimeInvariantsPreserved": [
+    "Submit/onFinish ownership, synchronous call timing and arbitrary caught error forwarding",
+    "Validation/touched/preserve/errors/notifications and stale async fences",
+    "DOM target/currentTarget/direct scalar event extraction and original child callbacks",
+    "Prototype-named own data writes, nested clones/merges/selections",
+    "List map/filter/spread contracts without new malformed-value guards"
+  ],
+  "typeAssertionsRationale": "Finite store/error/container/child assertions are erased and add no runtime guard; typed lookup results derive from supplied Values. Default/dynamic field values remain unknown.",
+  "sourceAssertionsLimits": [
+    "getFieldsValue selected return retains pre-existing Values contract; no newly guaranteed complete runtime object.",
+    "onFinishFailed remains unknown because arbitrary synchronous consumer errors still pass through unchanged; FormValidationFailure is separately exported.",
+    "Form.Item<Values> is explicit because context cannot propagate a parent generic statically."
+  ],
+  "snapshots": {
+    "before": "target/form-types-task32-20261107-1842/Form.before.tsx",
+    "final": "target/form-types-task32-20261107-1842/Form.final.tsx",
+    "testsBefore": "target/form-types-task32-20261107-1842/form-contract.before.cjs"
+  },
+  "exclusions": [
+    "Git/stage/commit/push",
+    "Maven/Java/builds",
+    "Global lint/format",
+    "Network/browser/CDP/server",
+    "Tasks/goals/shared PLAN updates",
+    "Dependency/config/lock edits",
+    "Caller/storage sibling edits"
+  ],
+  "acceptanceGaps": [
+    "No separate final source end-to-end reread.",
+    "Outside-lease TypeScript callers remain failing.",
+    "No build/browser/production/Root/full repository acceptance.",
+    "Locks were not independently hash-frozen; no lock/dependency edits were made by this agent."
+  ],
+  "jobs": {
+    "ids": [
+      "pwsh-fd6b3d4e513b4631",
+      "pwsh-9c83bd6e9adc4339",
+      "pwsh-1cc82aa4d3e64283",
+      "pwsh-79d5b227821a4bb0",
+      "pwsh-9f9ce7ac68cd4e7f",
+      "pwsh-73cf21999abe4813"
+    ],
+    "relevantRunning": 0,
+    "status": "All completed; final last-job collection recorded before handback"
+  },
+  "markdownWordCount": 301,
+  "markdownSha256": "04059b1f3ae1d9f01c7243a3dc7c275b516c40a311b307e105370c70b5c099d5",
+  "artifactHashes": [
+    {
+      "path": "target/form-types-task32-20261107-1842/baseline.json",
+      "sha256": "f22f58c651095d6f178ac4520404cfa7a60e0adb605313ef8994ec6970d92aa0",
+      "bytes": 3681
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/build-evidence.cjs",
+      "sha256": "c983332973fe8d03e88070c7896f9dc2cbef93ff2a004c0e7a68fdd8352c0e7f",
+      "bytes": 10227
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/eslint-before-node24.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/eslint-before-node24.txt",
+      "sha256": "450259e0332c5053f1e5f0878d3510cf5329a9ae29e40b1b8d175fba04c4a3b2",
+      "bytes": 88617
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/eslint-before-utf8.json",
+      "sha256": "b8631d336a4811934d9e583c94c0c5f20c8392f162bac9dc41f30491d703326f",
+      "bytes": 88618
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/eslint-before.json",
+      "sha256": "76adafaff5f382e80c916a4bd287c00887328050b95bbc9854844489aa915400",
+      "bytes": 173550
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/eslint-before.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/eslint-final.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/eslint-final.txt",
+      "sha256": "7245bbc4cf6b93e53b822358eef01838d268975649772212c711d7c9104fcb72",
+      "bytes": 252
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/final-metadata.json",
+      "sha256": "87cb119277159a239669598dda060f4f9f5423c05afe51aabfab0a24b41b58fc",
+      "bytes": 4048
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/form-contract.before.cjs",
+      "sha256": "b836bafc70b13a88c846c1a4001f896b6c7dea7def2dd2a7c5897d2158462c56",
+      "bytes": 9755
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/Form.after.runtime.js",
+      "sha256": "94faea1c41795dded623742896f488168c8a0735d788e53fdb491036c8eeedb5",
+      "bytes": 28656
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/Form.before.runtime.js",
+      "sha256": "fa963b6d85a6ab742b5a1ce9bcf0db31bc2f09999538e40157dbeb6f7a87843d",
+      "bytes": 28498
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/Form.before.tsx",
+      "sha256": "45f49f5f87459610ced0b8ae4cc7a871ce0ceff60ef388c6840c87aea94b76ba",
+      "bytes": 35557
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/Form.final.runtime.js",
+      "sha256": "94faea1c41795dded623742896f488168c8a0735d788e53fdb491036c8eeedb5",
+      "bytes": 28656
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/Form.final.tsx",
+      "sha256": "b41489c65ad7e10785c97602f4a46935a05c3c544c6fd8311dbf743b2c43f657",
+      "bytes": 38984
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/gates-baseline-node24.json",
+      "sha256": "ad9def5399d47961633babaf5abaddbede88f3fa0d5de57ad210ab1520efb486",
+      "bytes": 736
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/gates-before.json",
+      "sha256": "d71d3c82c13668028ba062161bc9ca1a216011dc54441b2c8137455748923f8d",
+      "bytes": 213
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/gates-final.json",
+      "sha256": "e2db43e8dbd6c8bbbc60dd108672c79a9446257d44beac2886253061eadd9f74",
+      "bytes": 3328
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/handoff-verification.json",
+      "sha256": "e7ae4634a5de0ebd35b8c1c7aada962a2915b9bcacb7e8a5cdf9a33e12b6f68b",
+      "bytes": 2627
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/node-version.txt",
+      "sha256": "16cfcc06cc542051cd233af4a9173fe10512d23b2864f80ae2b518895cd085f5",
+      "bytes": 20
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/npm-version.txt",
+      "sha256": "9f9d7de07968047cf7a711fe0423cb868e541f3e26130f5df977325f63fd159c",
+      "bytes": 20
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/package-versions.txt",
+      "sha256": "3a59aa09aa6077d8a6e67a6e09760cd9e7982197854b3f9a7942d831879e145c",
+      "bytes": 102
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/prettier-final.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/prettier-final.txt",
+      "sha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20",
+      "bytes": 66
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/prettier-write.json",
+      "sha256": "8a0c538300889b65b4d3094a00fcc64a281cfb936e03bfb6c5e46e5a59e0fe2a",
+      "bytes": 180
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/prettier-write.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/prettier-write.txt",
+      "sha256": "2f9cb6a8bbb75197e5978fddfde0bbf881695822a18b48e5ab0c79d3511bf474",
+      "bytes": 42
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-before-node24.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-before-node24.txt",
+      "sha256": "c8f94389fa072cff5cd7994efcfcab9b499d351c30dc18f7fa119b201e9958bb",
+      "bytes": 1239
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-before-utf8.txt",
+      "sha256": "38694a507ca1aecb4279bfb305b7febbd7a5a7dd133dbe75c8eb7adf78305e2b",
+      "bytes": 1259
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-before.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-before.txt",
+      "sha256": "290d79617caa1353d613be53eb7873f3d59cd651b6caaf5f056122cb921a23ca",
+      "bytes": 2436
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-final.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-final.txt",
+      "sha256": "2ee067ee15f7531a60f8da02b7952ee85b4843b221854f9bfcdf6b4b41098684",
+      "bytes": 1238
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-type-probes-final.json",
+      "sha256": "cb581a136f832fffa90780fbf0c20ff9fdde782cca980913237cff899a32b867",
+      "bytes": 1542
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-type-probes.json",
+      "sha256": "e0b23f50a13a69787066f0e940df0a0520f39592ef6612875fea55b159cd2fb7",
+      "bytes": 1969
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-types-negative.tsx",
+      "sha256": "e05a1a5d4e21b511eee5dee3877b5d9d36ab2ff16bb4cee4f967b1f9b34a3af4",
+      "bytes": 568
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/public-types-positive.tsx",
+      "sha256": "10a729160be7b0c5c125c3e3973112d7ef255a800c979845c2baefdd35fa8c2c",
+      "bytes": 1767
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/runtime-emitted-line-deltas.json",
+      "sha256": "203fa296c86b10ea9969c7cd14bf19dad2e9fd6664fd80aaeb7c0cb83bfec783",
+      "bytes": 18139
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/runtime-final-comparison.json",
+      "sha256": "dd8e09eb5e8323596fb59d249ab05f0b73ce8abbd2dbf4699eb383cf20fc7175",
+      "bytes": 405
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/runtime-final-token-deltas.json",
+      "sha256": "89f2fd9f6b280f77e0d2d4950b94c0b75c3b597ff5d22c135a8955724d69df62",
+      "bytes": 15328
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/runtime-normalization.json",
+      "sha256": "5304d7e371c7727f9837e2bdae6645e12f75b458fddb816753cc6f24d9d76fc5",
+      "bytes": 239
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/runtime-structural-comparison-final.json",
+      "sha256": "116ff163616becc43b05ebc5a646851a08c2353f07b62d80420b3bd548bb23de",
+      "bytes": 513
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/runtime-structural-comparison.json",
+      "sha256": "bf45e6c5061ba3ac32f23f90dc3fd5a62812ed9df3a03cf302ec04224de5ed21",
+      "bytes": 494
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-before.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-before.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-final.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-final.txt",
+      "sha256": "153e199020b70bc13c3fb394915824703407e82e6739b72db0cdb94be2bc9042",
+      "bytes": 8921
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-interim1.json",
+      "sha256": "6b4d48849bb7fc94e4ca5c3f9873c27d71b906cbb2e12074418910c0515b317b",
+      "bytes": 122
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-interim1.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-interim1.txt",
+      "sha256": "7a6bed6d45726fdea232ad4c62801c258f4a1daba84943da3a123507b5541a4a",
+      "bytes": 12070
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-interim2.json",
+      "sha256": "216692e554953cc29ef3e92a316d3a1339761d0c0bc88af974f6c631fa322d83",
+      "bytes": 115
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-interim2.stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/tsc-interim2.txt",
+      "sha256": "153e199020b70bc13c3fb394915824703407e82e6739b72db0cdb94be2bc9042",
+      "bytes": 8921
+    },
+    {
+      "path": "target/form-types-task32-20261107-1842/versions.json",
+      "sha256": "83fdb45fb9e72a63d89f0418e5c419e567a50db143c507a455528b480c01fbf6",
+      "bytes": 269
+    }
+  ]
+}

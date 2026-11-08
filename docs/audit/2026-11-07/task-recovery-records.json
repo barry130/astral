@@ -1,0 +1,71 @@
+{
+  "recordedBy": "lead",
+  "source": "Actual team_task_get results in the current Lead turn, not inferred",
+  "recordPurpose": "Read-only coordination receipt for child catalogs without Team tools; the initial task prompts already authorize these exact scopes",
+  "task17": {
+    "id": "task-17",
+    "revision": 2,
+    "status": "in_progress",
+    "ownerName": "lead",
+    "blockedBy": [],
+    "subject": "AI HTTP/MCP传输六文件当前整读与控制器报告反证纠正",
+    "writeScopes": [
+      "astral/docs/audit/2026-11-07/backend-ai-shards/controllers-05.md",
+      "astral/docs/audit/2026-11-07/backend-ai-shards/controllers-05.json",
+      "astral/docs/audit/2026-11-07/backend-ai-shards/transport-04-review.md",
+      "astral/docs/audit/2026-11-07/backend-ai-shards/transport-04-review.json"
+    ],
+    "readScope": [
+      "AiMcpServerService.java",
+      "AiMcpServerFailureRecorder.java",
+      "McpClient.java",
+      "McpToolExecutor.java",
+      "SqlToolExecutor.java",
+      "HttpToolExecutor.java",
+      "old transport-04 inventory only as path hints",
+      "controllers-05 reports only for error correction",
+      "GlobalExceptionHandler and AiGlobalExceptionHandler for F07 counter-evidence"
+    ],
+    "acceptance": [
+      "Six current transport files: actual continuous read calls from 1 to EOF, every limit at most 80; before/after SHA256, bytes, raw/nonblank line counts and actual read ranges",
+      "At most twenty findings, distinguishing verified source facts, positive controls and tentative/runtime-unverified candidates; each has position, counterEvidence and untested boundaries",
+      "Do not inherit failed old FULL/closing or all-domain completion claims",
+      "Correct F07: NumberFormatException extends IllegalArgumentException. Actual AiGlobalExceptionHandler.java 61-65 handles IllegalArgumentException as HTTP200/body320 without a fine-grained errorCode; server GlobalExceptionHandler.java197-203 handles it as HTTP200/body320/COMMON002. Do not copy the server fine-grained code into the AI advice claim",
+      "Final actual report hashes, precise closing and remaining limits; no whole AI or task14 completion assertion"
+    ]
+  },
+  "task18": {
+    "id": "task-18",
+    "revision": 2,
+    "status": "in_progress",
+    "ownerName": "lead",
+    "blockedBy": [],
+    "subject": "Runtime读取账本纠正及已提交博客editor基线功能对等整读",
+    "writeScopes": [
+      "astral/docs/audit/2026-11-07/backend-ai-shards/runtime-03-review.md",
+      "astral/docs/audit/2026-11-07/backend-ai-shards/runtime-03-review.json",
+      "astral/docs/audit/2026-11-07/blog-baseline-parity.md",
+      "astral/docs/audit/2026-11-07/blog-baseline-parity.json"
+    ],
+    "readScope": [
+      "AiChatOrchestratorPermissionTest.java, current 205 lines",
+      "AiToolServiceRiskFloorTest.java, current 171 lines",
+      "runtime-03-review reports, correction only",
+      "target/audit-blog-editor-baseline-20261107-1205.txt.utf8.log, immutable extraction of committed a39a3f3039ce7deafc3f547a25cc0dc4635c111a:astral-blog/src/components/markdown-editor.tsx"
+    ],
+    "acceptance": [
+      "Reread only the two authorized tests from1 to EOF with actual calls of at most80 lines and before/after hashes; intervals81-178 and81-164 in the old report were98 and84 lines, not at most80. Retain the provenance correction rather than rewriting invented history",
+      "Classify all18 report items correctly; positives and tentative/static candidates are not18 confirmed defects",
+      "Fully read the immutable baseline excerpt continuously from1 to EOF with every actual read at most80 lines; exact hash/counts/ranges",
+      "Evidence original Emoji, math insertion versus rendering, syntax help, toolbar/actions, bidirectional scroll, IME/selection/focus and nested shortcuts; bounded negative claims only after full relevant source",
+      "Do not read/touch live Blog writer source as acceptance evidence; no claim of live parity, browser validation, wholeAI or task12 completion"
+    ]
+  },
+  "commonConstraints": [
+    "Lead retains shared task ownership; children do not claim/mutate shared tasks or PLAN",
+    "Only the listed reports are writable; Java/TS/test/POM/schema/source/sibling edits are not authorized",
+    "No Maven/build/backend/production/DB/network/Gitremote/browser operation; only current source/report reads and required neutral memory_log",
+    "Browser preferences remain Chrome, extension_confirmed=false, auto_approve=false. No manual CDP/Chrome/Playwright/bootstrap/diagnostic or retry, even when labelled unaccepted",
+    "Plain-child UUID send_message is not routable in the current Team catalog. The coordination receipt does not enlarge the initial prompt scope or grant extra actions"
+  ]
+}
