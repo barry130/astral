@@ -89,6 +89,8 @@ shadcn 语义变量（`--background` / `--foreground` / `--primary` / `--muted` 
 | `ResizableTable`            | `ResizableTable.tsx`             | 列宽可调 + 列设置的表格（后台列表页主力）                                                                                                                                                                                                                                                                                                              |
 | `TableCardList`             | `TableCardList.tsx`              | 移动端卡片式列表（`DataTable` 内部自动调用，页面一般不直接用）                                                                                                                                                                                                                                                                                         |
 
+系统管理页的请求反馈复用 `admin/AdminLoadNotice.tsx`（`error` / `hasData` / `onRetry`）：复用 `ErrorState` 显示失败与重试，并明确标记保留的上次成功数据。同一模块的 `AdminLoadingNotice`（可选 `label`）提供非空、带 `role=status` 的待加载反馈；`AdminOptionNotice`（`error` / `onRetry`）用于必填选项失败，页面须在重试成功前禁用相应提交，不假装自由输入。并发读/单次写使用 `admin/use-admin-task.ts` 的 `useAdminLoader` / `useAdminMutation`，查询快照由 `useAdminQuery` 保留；这些接口不替代共享 axios 出口。
+
 ### 3.2 指标与数据展示
 
 | 组件                   | 文件                   | 说明                                                                                                                                                                                                                                                                                  |

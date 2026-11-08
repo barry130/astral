@@ -56,6 +56,8 @@
 | rate-limit-window-seconds | 600 | 评论限流窗口（秒） |
 | trusted-proxies | 内网网段 | X-Forwarded-For 可信代理 CIDR |
 
+评论限流为每实例滑动窗口：最多保留 10,000 个活跃 IP，满容量时拒绝新 IP 并提示稍后重试，不驱逐已有 IP 的计数。桶按最后通过限流检查的时间清理过期项；同一 IP 的检查与预占原子完成，后续写库失败不退还本次预占。窗口配置限制在 1–86,400 秒、每 IP 条数限制在 1–100，部署多实例时总容量和限额仍按实例计算。
+
 ## 管理 API（/api/v1/admin/cms，宿主 Sa-Token 鉴权）
 
 通用：列表/详情类接口需 `admin:cms:view`；写接口需对应 edit 权限。响应统一 `Result{code,errorCode,msg,data,timestamp}`（HTTP 200 = 服务端已处理，业务失败也返回 200，看 body 的 `code`：200 成功 / 300 业务失败 / 320 参数错误 / 401 未登录 / 403 无权限），分页为 MyBatis-Plus `Page{records,total,size,current,pages}`。
