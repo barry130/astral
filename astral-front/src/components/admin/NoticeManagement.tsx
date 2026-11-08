@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { formatDateTime } from '@/lib/format';
 import {
   Card,
@@ -27,7 +27,28 @@ import {
   ReloadOutlined,
   FileTextOutlined,
 } from '@/components/antd-compat/icons';
-import dayjs from 'dayjs';
+import { AdminLoadNotice, AdminOptionNotice } from '@/components/admin/AdminLoadNotice';
+import { useAdminLoader, useAdminMutation, useAdminQuery } from '@/components/admin/use-admin-task';
+import {
+  requireAdminSuccess,
+  numericSwitchBinding,
+  reportAdminError,
+} from '@/components/admin/admin-task';
+import {
+  loadAdminDictOptions,
+  dictLabel,
+  dictColor,
+  type DictOption,
+} from '@/components/admin/admin-dictionaries';
+import {
+  noticeEditorValues,
+  noticeEditorPayload,
+  splitNoticeDisplay,
+  toggleNoticeChannels as toggleChannel,
+  DEFAULT_NOTICE_CHANNELS as DEFAULT_CHANNELS,
+  DISCLAIMER_NOTICE_CHANNELS as DISCLAIMER_CHANNELS,
+  type NoticeEditorValues,
+} from '@/components/admin/notice-form';
 import {
   noticeAdminApi,
   SysNotice,
@@ -39,49 +60,10 @@ import {
   NOTICE_CHANNEL_ALL,
 } from '@/api/notice';
 import { RichTextEditor } from '@/components/rich-text-editor';
-import { sanitizeRichText } from '@/components/rich-text';
 import { ResizableTable } from '@/components/ResizableTable';
 import { usePerm } from '@/lib/perm';
 
 const { Paragraph } = Typography;
-
-/** 展示渠道选项（位掩码） */
-const DISPLAY_OPTIONS = [
-  { label: '开屏弹窗 (1)', value: 1 },
-  { label: '首页通告栏 (2)', value: 2 },
-  { label: '消息中心 (4)', value: 4 },
-];
-
-/** 可见人群 */
-const AUDIENCE_OPTIONS = [
-  { label: '全部', value: 'ALL' },
-  { label: '仅登录用户', value: 'LOGGED_IN' },
-  { label: '仅游客', value: 'NOT_LOGGED_IN' },
-];
-
-/** 新建通知的缺省投放平台：等价于改造前的 channel=app（Android + iOS） */
-const DEFAULT_CHANNELS = ['app-android', 'app-ios'];
-
-/**
- * 免责声明固定只投 App 六端（Android / iOS / 鸿蒙 / Windows / Linux / macOS），
- * 与后端 `NoticeTargets.allAppValue()` 保持一致；**不含 Web**（qt-web 不支持这套字段）。
- *
- * 为什么要在服务端强制改写：各端 `X-App-Ut` 跟着编译目标走（Windows→app-windows、
- * 鸿蒙原生包→app-harmony……），少勾一个平台那个平台的用户就永远收不到声明；
- * 同时老版本 APK（3.0.7 及以前）不认识 termsVersion，会把声明当成普通开屏公告，
- * 而声明模板是 `dialogClosable=0` —— 那个弹窗点「我知道了」执行的是 exitApp()。
- *
- * 服务端 `NoticeServiceImpl.clampDisclaimerChannel` 已经强制改写渠道并把
- * `dialogClosable` 顶回 1，这里同步是为了表单上显示的就是最终落库值（免得运营以为自己选的生效了）。
- */
-const DISCLAIMER_CHANNELS = [
-  'app-android',
-  'app-ios',
-  'app-windows',
-  'app-linux',
-  'app-macos',
-  'app-harmony',
-];
 
 /**
  * 首次启动免责声明的一键模板（后台「消息管理」→ 新建通知 → 选它自动填表）。
@@ -128,46 +110,41 @@ const DISCLAIMER_TEMPLATE: Partial<SysNotice> & { display?: number } = {
   ].join(''),
 };
 
-/** 落库值（逗号分隔）→ 多选控件值 */
-function parseChannels(channel?: string): string[] {
-  if (!channel) return DEFAULT_CHANNELS;
-  const parts = channel
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (!parts.length) return DEFAULT_CHANNELS;
-  // 兼容存量遗留值：app → Android+iOS，pc → Windows
-  if (parts.includes('app')) return [...DEFAULT_CHANNELS];
-  return parts.map((p) => (p === 'pc' ? 'app-windows' : p));
-}
-
-/** 多选控件值 → 落库值；「全部平台」独占 */
-function joinChannels(selected: string[]): string {
-  if (selected.includes(NOTICE_CHANNEL_ALL)) return NOTICE_CHANNEL_ALL;
-  return selected.join(',');
-}
-
-/**
- * 「全部平台」与具体平台互斥的取值切换：
- * 选中 all 时只留 all；已在 all 状态下再勾具体平台时丢弃 all。
- */
-function toggleChannel(next: string[], prev: string[]): string[] {
-  if (next.includes(NOTICE_CHANNEL_ALL) && !prev.includes(NOTICE_CHANNEL_ALL)) {
-    return [NOTICE_CHANNEL_ALL];
-  }
-  if (prev.includes(NOTICE_CHANNEL_ALL) && next.length > 1) {
-    return next.filter((v) => v !== NOTICE_CHANNEL_ALL);
-  }
-  return next;
-}
-
 /**
  * 通知管理面板（统一通知表 sys_notice，宿主通知模块）
  * <p>入口收敛到「消息中心 → 通知管理」页签（/dashboard/system/mail?tab=notice）与顶栏铃铛的
  * 「全部通知」链接；原 /dashboard/message 独立路由已删除。</p>
  */
 export default function NoticeManagement() {
-  const [loading, setLoading] = useState(false);
+  const { loading, error, run: runList } = useAdminLoader('加载通知失败');
+  const {
+    loading: optionLoading,
+    error: optionError,
+    run: runOptions,
+  } = useAdminLoader('加载通知选项失败');
+  const { busy: saving, run: runMutation, isBusy } = useAdminMutation('通知操作失败');
+  const query = useAdminQuery<{
+    pageNum: number;
+    pageSize: number;
+    keyword: string;
+    channel: string[];
+    noticeType?: string;
+  }>({ pageNum: 1, pageSize: 10, keyword: '', channel: [] });
+  const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
+  const editorScope = useRef<{ id: number | null; feedbackReply: boolean } | null>(null);
+  const DISPLAY_OPTIONS = useMemo(
+    () =>
+      (dicts.qt_notice_channel || [])
+        .map((option) => ({ label: option.label, value: Number(option.value) }))
+        .filter(
+          (option) =>
+            Number.isSafeInteger(option.value) &&
+            option.value >= 0 &&
+            splitNoticeDisplay(option.value).length === 1,
+        ),
+    [dicts],
+  );
+  const AUDIENCE_OPTIONS = dicts.qt_notice_audience || [];
   const [data, setData] = useState<SysNotice[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -178,7 +155,7 @@ export default function NoticeManagement() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SysNotice | null>(null);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<NoticeEditorValues>();
   const isFeedbackReply =
     editing?.scene === 'feedbackAdminReplied' || editing?.scene === 'feedbackUserReplied';
   /**
@@ -212,174 +189,156 @@ export default function NoticeManagement() {
   // （页面可见性另由 admin:message:view 控制，此处只加写权限闸门）
   const canEdit = hasPerm('admin:message:edit');
 
-  // kw/ch/ty 可由调用方显式传入：setState 异步，紧随其后的 load 读闭包会拿到旧筛选值
   const load = useCallback(
-    (p = page, s = pageSize, kw = keyword, ch = channelFilter, ty = typeFilter) => {
-      setLoading(true);
-      const params: Record<string, unknown> = { pageNum: p, pageSize: s };
-      // 渠道多选：后端按逗号分隔解析，逐项做包含匹配（筛选用原始多值，不做 all 独占折叠）
-      if (ch.length) params.channel = ch.join(',');
-      if (ty) params.noticeType = ty;
-      if (kw) params.keyword = kw;
-      noticeAdminApi
-        .page(params)
-        .then((res) => {
-          setData(res.data?.records || []);
-          setTotal(res.data?.total || 0);
-        })
-        .finally(() => setLoading(false));
+    (
+      p?: number,
+      size?: number,
+      patch?: Partial<{ keyword: string; channel: string[]; noticeType?: string }>,
+    ) => {
+      const next = query.read({
+        ...patch,
+        ...(p !== undefined ? { pageNum: p } : {}),
+        ...(size !== undefined ? { pageSize: size } : {}),
+      });
+      const params = {
+        pageNum: next.pageNum,
+        pageSize: next.pageSize,
+        channel: next.channel.join(','),
+        noticeType: next.noticeType,
+        keyword: next.keyword,
+      };
+      return runList(
+        async () => {
+          const result = requireAdminSuccess(await noticeAdminApi.page(params), '加载通知失败');
+          if (
+            !result ||
+            !Array.isArray(result.records) ||
+            !Number.isSafeInteger(result.total) ||
+            result.total < 0 ||
+            result.records.some(
+              (row) => !row || !Number.isSafeInteger(row.id) || Number(row.id) <= 0,
+            )
+          )
+            throw new Error('通知分页数据缺失或无效');
+          return result;
+        },
+        (result) => {
+          setData(result.records);
+          setTotal(result.total);
+          setPage(result.current ?? next.pageNum);
+          setPageSize(result.size ?? next.pageSize);
+        },
+      );
     },
-    [page, pageSize, keyword, channelFilter, typeFilter],
+    [query, runList],
   );
-
+  const loadOptions = useCallback(
+    () =>
+      runOptions(async () => {
+        const [notice, options] = await Promise.all([
+          loadNoticeDicts(),
+          loadAdminDictOptions([
+            'qt_notice_channel',
+            'qt_notice_audience',
+            'qt_yes_no',
+            'enable_status',
+          ]),
+        ]);
+        return {
+          ...options,
+          notice_channel: notice.noticeChannel || [],
+          notice_type: notice.noticeType || [],
+        };
+      }, setDicts),
+    [runOptions],
+  );
   useEffect(() => {
-    load(1, pageSize);
-    // 只预热通知自身的字典（notice_channel / notice_type）；反馈业务字典与本页无关
-    loadNoticeDicts().catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelFilter, typeFilter]);
+    void load();
+    void loadOptions();
+  }, [load, loadOptions]);
 
   const openCreate = () => {
+    if (!canEdit || isBusy() || optionLoading || optionError) return;
+    editorScope.current = { id: null, feedbackReply: false };
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({
-      channel: DEFAULT_CHANNELS,
-      noticeType: 'announce',
-      display: [4],
-      isShow: 1,
-      isTop: 0,
-      dialogClosable: 1,
-      firstLoginOnly: 0,
-      firstLaunchPopup: 0,
-      marquee: 0,
-      audience: 'ALL',
-    });
+    form.setFieldsValue(
+      noticeEditorValues({
+        channel: DEFAULT_CHANNELS.join(','),
+        noticeType: 'announce',
+        display: 4,
+      }),
+    );
     setModalOpen(true);
   };
-
-  /**
-   * 用免责声明模板新建：只填表不落库，运营还能改文案、改读秒、改版本号后再点确定。
-   * 单独一个入口而不是塞进 openCreate 的默认值 —— 普通公告不该默认带读秒和条款版本号，
-   * 那会让每条公告都被 qt-pc 当成免责声明（两个弹窗叠着弹）。
-   */
   const openCreateDisclaimer = () => {
+    if (!canEdit || isBusy() || optionLoading || optionError) return;
+    editorScope.current = { id: null, feedbackReply: false };
     setEditing(null);
     form.resetFields();
     form.setFieldsValue({
-      ...DISCLAIMER_TEMPLATE,
+      ...noticeEditorValues(DISCLAIMER_TEMPLATE),
       firstLaunchPopup: 1,
       channel: [...DISCLAIMER_CHANNELS],
-      display: [DISCLAIMER_TEMPLATE.display ?? 1],
+      termsVersion: defaultBatch(),
       effectiveRange: undefined,
     });
     setModalOpen(true);
   };
-
   const openEdit = useCallback(
     (record: SysNotice) => {
-      setEditing(record);
-      form.resetFields();
-      const display = record.display ? [1, 2, 4].filter((b) => (record.display! & b) === b) : [4];
-      form.setFieldsValue({
-        ...record,
-        display,
-        isShow: record.isShow ?? 1,
-        isTop: record.isTop ?? 0,
-        dialogClosable: record.dialogClosable ?? 1,
-        firstLoginOnly: record.firstLoginOnly ?? 0,
-        firstLaunchPopup: (record.termsVersion ?? '').trim() ? 1 : 0,
-        marquee: record.marquee ?? 0,
-        audience: record.audience || 'ALL',
-        channel:
-          record.scene === 'feedbackAdminReplied' || record.scene === 'feedbackUserReplied'
-            ? [NOTICE_CHANNEL_ALL]
-            : parseChannels(record.channel),
-        // 类型口径只有两档：历史 feedback/request 行在编辑保存时自然归一为 notice（§4.6，不做批量 UPDATE）
-        noticeType: record.noticeType === 'announce' ? 'announce' : 'notice',
-        effectiveRange:
-          record.effectiveStart && record.effectiveEnd
-            ? [dayjs(record.effectiveStart), dayjs(record.effectiveEnd)]
-            : undefined,
-      });
-      setModalOpen(true);
-    },
-    [form],
-  );
-
-  const submit = async () => {
-    const values = await form.validateFields();
-    // 位掩码列表 → 数值
-    let display = Array.isArray(values.display)
-      ? (values.display as number[]).reduce((acc, b) => acc | b, 0)
-      : values.display;
-    // 首次启动弹窗必须命中开屏位，否则客户端不会当成弹窗处理
-    if (values.firstLaunchPopup === 1) display = (display ?? 0) | 1;
-    const payload: SysNotice = {
-      id: editing?.id,
-      channel: isFeedbackReply
-        ? NOTICE_CHANNEL_ALL
-        : values.firstLaunchPopup === 1
-          ? DISCLAIMER_CHANNELS.join(',')
-          : Array.isArray(values.channel)
-            ? joinChannels(values.channel as string[])
-            : values.channel,
-      noticeType: values.noticeType,
-      title: values.title,
-      // 正文是富文本（HTML 片段）：落库前统一走白名单，把 script / 事件属性 / 外链样式剔掉
-      content: sanitizeRichText(values.content ?? ''),
-      url: values.url,
-      userId: values.userId,
-      display,
-      audience: values.audience || 'ALL',
-      versionMin: values.versionMin,
-      versionMax: values.versionMax,
-      isShow: values.isShow ?? 1,
-      isTop: values.isTop ?? 0,
-      dialogClosable: values.dialogClosable ?? 1,
-      firstLoginOnly: values.firstLoginOnly ?? 0,
-      marquee: values.marquee ?? 0,
-      // 首次启动弹窗两列。关掉开关 = 取消首次启动语义，必须真的写回 NULL：
-      // 后端的 update 对这两列是「无条件 set」，所以这里用 undefined 让 JSON 省略该键即可，
-      // 服务端收到 null 就会落 NULL（不要写成 0 或空串 —— 空串会让客户端误判成「有版本号」）
-      readSeconds:
-        values.firstLaunchPopup === 1
-          ? typeof values.readSeconds === 'number'
-            ? values.readSeconds
-            : 3
-          : undefined,
-      termsVersion:
-        values.firstLaunchPopup === 1
-          ? (values.termsVersion ?? '').trim() || defaultBatch()
-          : undefined,
-      effectiveStart: values.effectiveRange?.[0]?.format('YYYY-MM-DD HH:mm:ss') || undefined,
-      effectiveEnd: values.effectiveRange?.[1]?.format('YYYY-MM-DD HH:mm:ss') || undefined,
-    };
-    try {
-      if (editing?.id) {
-        await noticeAdminApi.update(editing.id, payload);
-        message.success('已更新');
-      } else {
-        await noticeAdminApi.create(payload);
-        message.success('已发布');
-      }
-      setModalOpen(false);
-      load();
-    } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : String(e));
-    }
-  };
-
-  const handleDelete = useCallback(
-    async (id: number) => {
+      if (!canEdit || isBusy() || optionLoading || optionError) return;
       try {
-        await noticeAdminApi.delete(id);
-        message.success('已删除');
-        load();
-      } catch (e: unknown) {
-        message.error(e instanceof Error ? e.message : String(e));
+        const values = noticeEditorValues(record);
+        const feedbackReply =
+          record.scene === 'feedbackAdminReplied' || record.scene === 'feedbackUserReplied';
+        if (feedbackReply) values.channel = [NOTICE_CHANNEL_ALL];
+        editorScope.current = { id: record.id ?? null, feedbackReply };
+        setEditing(record);
+        form.resetFields();
+        form.setFieldsValue(values);
+        setModalOpen(true);
+      } catch (cause: unknown) {
+        reportAdminError(cause, '通知字段无效', message.error);
       }
     },
-    [load],
+    [canEdit, isBusy, optionLoading, optionError, form],
+  );
+  const submit = () => {
+    const scope = editorScope.current;
+    if (!canEdit || !scope || optionLoading || optionError) return;
+    return runMutation(
+      async () => {
+        const values = await form.validateFields();
+        if (editorScope.current !== scope) throw new Error('编辑目标已变化');
+        const payload = noticeEditorPayload(values, {
+          feedbackReply: scope.feedbackReply,
+          defaultBatch: defaultBatch(),
+        });
+        if (scope.id)
+          requireAdminSuccess(await noticeAdminApi.update(scope.id, payload), '保存通知失败');
+        else requireAdminSuccess(await noticeAdminApi.create(payload), '发布通知失败');
+      },
+      () => {
+        message.success(scope.id ? '已更新' : '已发布');
+        editorScope.current = null;
+        setModalOpen(false);
+        void load();
+      },
+    );
+  };
+  const handleDelete = useCallback(
+    (id: number) => {
+      if (!canEdit) return;
+      return runMutation(
+        async () => requireAdminSuccess(await noticeAdminApi.delete(id), '删除通知失败'),
+        () => {
+          message.success('已删除');
+          void load(1);
+        },
+      );
+    },
+    [canEdit, runMutation, load],
   );
 
   // 用 useMemo 固定列引用，否则每次渲染新建数组会让 ResizableTable 内的列 useMemo 全部失效
@@ -400,7 +359,7 @@ export default function NoticeManagement() {
             <>
               {parts.map((p) => (
                 <Tag key={p} color={p === NOTICE_CHANNEL_ALL ? 'purple' : 'blue'}>
-                  {noticeChannelLabel(p)}
+                  {noticeChannelLabel(p, dicts.notice_channel || [])}
                 </Tag>
               ))}
             </>
@@ -408,12 +367,14 @@ export default function NoticeManagement() {
         },
       },
       {
-        // 类型口径只有两档：announce=公告（青），其余（notice/历史 feedback/request/未知）一律按「通知」渲染（蓝）
+        // 历史 feedback/request 归并 notice；其它未知值保留原始值。
         title: '类型',
         dataIndex: 'noticeType',
         width: 90,
         render: (v: string) => (
-          <Tag color={v === 'announce' ? 'cyan' : 'geekblue'}>{noticeTypeLabel(v)}</Tag>
+          <Tag color={v === 'announce' ? 'cyan' : 'geekblue'}>
+            {noticeTypeLabel(v, dicts.notice_type || [])}
+          </Tag>
         ),
       },
       { title: '标题', dataIndex: 'title', ellipsis: true },
@@ -425,10 +386,16 @@ export default function NoticeManagement() {
         render: (v: string, record: SysNotice) => {
           const ver = (v ?? '').trim();
           if (!ver) return '-';
-          const splash = ((record.display ?? 0) & 1) === 1;
+          const splash =
+            record.display != null &&
+            Number.isSafeInteger(record.display) &&
+            record.display >= 0 &&
+            record.display % 2 === 1;
           return (
             <Space size={4}>
-              <Tag color={splash ? 'green' : 'orange'}>{splash ? '是' : '缺开屏位'}</Tag>
+              <Tag color={splash ? 'green' : 'orange'}>
+                {splash ? dictLabel(dicts.qt_yes_no, 1) : '缺开屏位'}
+              </Tag>
               <Tag>{ver}</Tag>
             </Space>
           );
@@ -438,16 +405,20 @@ export default function NoticeManagement() {
         title: '展示位',
         dataIndex: 'display',
         width: 140,
-        render: (v: number) =>
-          DISPLAY_OPTIONS.filter((o) => (v & o.value) === o.value)
-            .map((o) => o.label.replace(/ \(\d\)$/, ''))
-            .join(' / ') || '-',
+        render: (v?: number) =>
+          v == null
+            ? '-'
+            : Number.isSafeInteger(v) && v >= 0
+              ? splitNoticeDisplay(v)
+                  .map((bit) => dictLabel(dicts.qt_notice_channel, bit))
+                  .join(' / ')
+              : String(v),
       },
       {
         title: '人群',
         dataIndex: 'audience',
         width: 100,
-        render: (v: string) => (v === 'ALL' ? '全部' : v === 'LOGGED_IN' ? '登录' : '游客'),
+        render: (v: string) => dictLabel(dicts.qt_notice_audience, v),
       },
       {
         title: '目标用户',
@@ -459,7 +430,9 @@ export default function NoticeManagement() {
         title: '启用',
         dataIndex: 'isShow',
         width: 70,
-        render: (v: number) => (v === 1 ? <Tag color="green">是</Tag> : <Tag color="red">否</Tag>),
+        render: (v: number) => (
+          <Tag color={dictColor(dicts.enable_status, v)}>{dictLabel(dicts.enable_status, v)}</Tag>
+        ),
       },
       {
         title: '时间',
@@ -477,17 +450,23 @@ export default function NoticeManagement() {
               type="link"
               size="small"
               icon={<EditOutlined />}
-              disabled={!canEdit}
+              disabled={!canEdit || saving || optionLoading || !!optionError}
               onClick={() => openEdit(record)}
             >
               编辑
             </Button>
             <Popconfirm
               title="确认删除该通知?"
-              disabled={!canEdit}
+              disabled={!canEdit || saving || optionLoading || !!optionError}
               onConfirm={() => handleDelete(record.id!)}
             >
-              <Button type="link" danger size="small" icon={<DeleteOutlined />} disabled={!canEdit}>
+              <Button
+                type="link"
+                danger
+                size="small"
+                icon={<DeleteOutlined />}
+                disabled={!canEdit || saving || optionLoading || !!optionError}
+              >
                 删除
               </Button>
             </Popconfirm>
@@ -495,7 +474,7 @@ export default function NoticeManagement() {
         ),
       },
     ],
-    [openEdit, handleDelete, canEdit],
+    [openEdit, handleDelete, canEdit, saving, optionLoading, optionError, dicts],
   );
 
   return (
@@ -507,6 +486,8 @@ export default function NoticeManagement() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
           <div>
@@ -516,17 +497,26 @@ export default function NoticeManagement() {
               通知（点对点站内信）（投放平台可多选，与接口统计口径一致）
             </Paragraph>
           </div>
-          <Space>
+          <Space wrap>
             <Button icon={<ReloadOutlined />} onClick={() => load()}>
               刷新
             </Button>
             {canEdit && (
-              <Button icon={<FileTextOutlined />} onClick={openCreateDisclaimer}>
+              <Button
+                disabled={saving || optionLoading || !!optionError}
+                icon={<FileTextOutlined />}
+                onClick={openCreateDisclaimer}
+              >
                 新建首次启动弹窗
               </Button>
             )}
             {canEdit && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              <Button
+                type="primary"
+                disabled={saving || optionLoading || !!optionError}
+                icon={<PlusOutlined />}
+                onClick={openCreate}
+              >
                 发布通知
               </Button>
             )}
@@ -537,12 +527,19 @@ export default function NoticeManagement() {
         <div style={{ marginBottom: 16 }}>
           <Space wrap>
             <Input.Search
+              aria-label="搜索通知标题或内容"
+              value={keyword}
+              onChange={(event) => {
+                const next = event.target.value;
+                setKeyword(next);
+                if (!next) void load(1, undefined, { keyword: '' });
+              }}
               placeholder="搜索标题/内容"
               allowClear
               style={{ width: 220 }}
               onSearch={(v) => {
                 setKeyword(v);
-                load(1, pageSize, v);
+                void load(1, undefined, { keyword: v });
               }}
             />
             <Select
@@ -551,8 +548,13 @@ export default function NoticeManagement() {
               allowClear
               style={{ width: 260 }}
               value={channelFilter}
-              onChange={(v) => setChannelFilter((v as string[]) || [])}
-              options={noticeChannelOptions()}
+              aria-label="筛选通知投放平台"
+              onChange={(v: string[]) => {
+                const next = [...(v || [])];
+                setChannelFilter(next);
+                void load(1, undefined, { channel: next });
+              }}
+              options={noticeChannelOptions(dicts.notice_channel || [])}
               maxTagCount="responsive"
             />
             <Select
@@ -560,12 +562,18 @@ export default function NoticeManagement() {
               allowClear
               style={{ width: 120 }}
               value={typeFilter}
-              onChange={(v) => setTypeFilter(v)}
-              options={noticeTypeOptions()}
+              aria-label="筛选通知类型"
+              onChange={(v?: string) => {
+                setTypeFilter(v);
+                void load(1, undefined, { noticeType: v });
+              }}
+              options={noticeTypeOptions(dicts.notice_type || [])}
             />
           </Space>
         </div>
 
+        <AdminLoadNotice error={error} hasData={data.length > 0} onRetry={load} />
+        <AdminOptionNotice error={optionError} onRetry={loadOptions} />
         <ResizableTable
           rowKey="id"
           columns={columns}
@@ -580,9 +588,7 @@ export default function NoticeManagement() {
             pageSizeOptions: ['5', '10', '20', '50', '100'],
             showTotal: (t) => `共 ${t} 条`,
             onChange: (p, ps) => {
-              setPage(p);
-              setPageSize(ps);
-              load(p, ps);
+              void load(p, ps);
             },
           }}
         />
@@ -594,11 +600,18 @@ export default function NoticeManagement() {
         open={modalOpen}
         onOk={submit}
         okButtonProps={{ disabled: !canEdit }}
-        onCancel={() => setModalOpen(false)}
+        confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        onCancel={() => {
+          if (!isBusy()) {
+            editorScope.current = null;
+            setModalOpen(false);
+          }
+        }}
         width={760}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
+        <Form form={form} layout="vertical" disabled={saving} style={{ marginTop: 12 }}>
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <Form.Item
@@ -621,7 +634,7 @@ export default function NoticeManagement() {
                 <Select
                   mode="multiple"
                   disabled={isFeedbackReply || firstLaunchOn}
-                  options={noticeChannelOptions()}
+                  options={noticeChannelOptions(dicts.notice_channel || [])}
                   placeholder="选择投放平台"
                   maxTagCount="responsive"
                 />
@@ -633,7 +646,7 @@ export default function NoticeManagement() {
                 label="类型"
                 rules={[{ required: true, message: '请选择类型' }]}
               >
-                <Select options={noticeTypeOptions()} />
+                <Select options={noticeTypeOptions(dicts.notice_type || [])} />
               </Form.Item>
             </Col>
           </Row>
@@ -670,12 +683,13 @@ export default function NoticeManagement() {
               <Form.Item
                 name="firstLaunchPopup"
                 label="仅首次启动弹出"
-                valuePropName="checked"
-                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
-                getValueProps={(v: number) => ({ checked: v === 1 })}
+                {...numericSwitchBinding}
                 extra="开启后：客户端只在首次启动时弹出一次，用户确认后不再出现；展示位固定含「开屏」，渠道固定 App 六端。用于免责声明、隐私政策这类必须首启告知的内容"
               >
-                <Switch checkedChildren="仅首次启动" unCheckedChildren="关闭" />
+                <Switch
+                  checkedChildren={dictLabel(dicts.qt_yes_no, 1)}
+                  unCheckedChildren={dictLabel(dicts.qt_yes_no, 0)}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -766,36 +780,27 @@ export default function NoticeManagement() {
 
           <Row gutter={16}>
             <Col xs={24} sm={8}>
-              <Form.Item
-                name="isShow"
-                label="是否启用"
-                valuePropName="checked"
-                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
-                getValueProps={(v: number) => ({ checked: v === 1 })}
-              >
-                <Switch checkedChildren="启用" unCheckedChildren="停用" />
+              <Form.Item name="isShow" label="是否启用" {...numericSwitchBinding}>
+                <Switch
+                  checkedChildren={dictLabel(dicts.qt_yes_no, 1)}
+                  unCheckedChildren={dictLabel(dicts.qt_yes_no, 0)}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item
-                name="isTop"
-                label="是否置顶"
-                valuePropName="checked"
-                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
-                getValueProps={(v: number) => ({ checked: v === 1 })}
-              >
-                <Switch checkedChildren="置顶" unCheckedChildren="普通" />
+              <Form.Item name="isTop" label="是否置顶" {...numericSwitchBinding}>
+                <Switch
+                  checkedChildren={dictLabel(dicts.qt_yes_no, 1)}
+                  unCheckedChildren={dictLabel(dicts.qt_yes_no, 0)}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item
-                name="marquee"
-                label="通告栏跑马灯"
-                valuePropName="checked"
-                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
-                getValueProps={(v: number) => ({ checked: v === 1 })}
-              >
-                <Switch checkedChildren="滚动" unCheckedChildren="静止" />
+              <Form.Item name="marquee" label="通告栏跑马灯" {...numericSwitchBinding}>
+                <Switch
+                  checkedChildren={dictLabel(dicts.qt_yes_no, 1)}
+                  unCheckedChildren={dictLabel(dicts.qt_yes_no, 0)}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -810,26 +815,21 @@ export default function NoticeManagement() {
                     ? '首次启动弹窗固定「可关闭」：旧客户端不认批次号会把不可关闭的声明当普通开屏，而「我知道了」执行的是退出 App'
                     : undefined
                 }
-                valuePropName="checked"
-                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
-                getValueProps={(v: number) => ({ checked: v === 1 })}
+                {...numericSwitchBinding}
               >
                 <Switch
                   disabled={firstLaunchOn}
-                  checkedChildren="可关闭"
-                  unCheckedChildren="不可关闭"
+                  checkedChildren={dictLabel(dicts.qt_yes_no, 1)}
+                  unCheckedChildren={dictLabel(dicts.qt_yes_no, 0)}
                 />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item
-                name="firstLoginOnly"
-                label="仅首次登录弹出"
-                valuePropName="checked"
-                getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
-                getValueProps={(v: number) => ({ checked: v === 1 })}
-              >
-                <Switch checkedChildren="仅首次" unCheckedChildren="每次" />
+              <Form.Item name="firstLoginOnly" label="仅首次登录弹出" {...numericSwitchBinding}>
+                <Switch
+                  checkedChildren={dictLabel(dicts.qt_yes_no, 1)}
+                  unCheckedChildren={dictLabel(dicts.qt_yes_no, 0)}
+                />
               </Form.Item>
             </Col>
           </Row>

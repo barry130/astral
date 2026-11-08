@@ -4,19 +4,19 @@ import type { DayOverview, ApiTopSummary } from './statistics';
 /** 系统监控数据接口 */
 export interface SystemMonitorDTO {
   /** CPU使用率（百分比） */
-  cpuUsage: number;
+  cpuUsage: number | null;
   /** 内存使用率（百分比） */
-  memoryUsage: number;
+  memoryUsage: number | null;
   /** 磁盘使用率（百分比） */
-  diskUsage: number;
-  /** 系统运行时间（秒） */
+  diskUsage: number | null;
+  /** 应用运行时间（毫秒） */
   uptime: number;
   /** 总内存大小（字节） */
-  totalMemory: number;
+  totalMemory: number | null;
   /** 已使用内存（字节） */
-  usedMemory: number;
+  usedMemory: number | null;
   /** 可用内存（字节） */
-  availableMemory: number;
+  availableMemory: number | null;
   /** 线程数 */
   threadCount: number;
 }

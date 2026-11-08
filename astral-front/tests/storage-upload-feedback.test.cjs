@@ -49,10 +49,13 @@ function harness(entries, upload, onQueueChange = () => {}) {
   let refresh = 0;
   let nextToastId = 0;
   const notifications = [];
+  const infos = [];
   const busy = [];
   const lock = { current: false };
+  const pendingBatchesRef = { current: [] };
   const context = {
     uploadLock: lock,
+    pendingBatchesRef,
     admin: true,
     uploadStorageFile: upload,
     setUploading: (value) => busy.push(value),
@@ -69,11 +72,26 @@ function harness(entries, upload, onQueueChange = () => {}) {
         notifications.push({ title, options: { ...options }, id });
         return id;
       },
+      info: (title) => {
+        infos.push(title);
+        return ++nextToastId;
+      },
     },
   };
   context.errorText = handler('src/components/storage/FileManager.tsx', 'errorText', {});
-  const run = handler('src/components/storage/FileManager.tsx', 'uploadEntries', context);
-  return { run, lock, busy, notifications, rows: () => rows, refresh: () => refresh };
+  let run;
+  context.uploadEntries = (...args) => run(...args);
+  run = handler('src/components/storage/FileManager.tsx', 'uploadEntries', context);
+  return {
+    run,
+    lock,
+    pendingBatchesRef,
+    busy,
+    notifications,
+    infos,
+    rows: () => rows,
+    refresh: () => refresh,
+  };
 }
 
 const serverMessage = '上传请求校验失败: 文件大小超过上限（最大 1 MB），请压缩后重试';
@@ -152,7 +170,7 @@ test('an explicit retry starts a fresh popup instead of suppressing the same err
   assert.equal(h.refresh(), 2);
 });
 
-test('locked queue does not start another batch or display a popup', async () => {
+test('locked upload queues the batch without starting a second batch or error popup', async () => {
   const item = entry('locked');
   const h = harness([item], async () => {
     throw new Error('Unexpected upload');
@@ -163,6 +181,44 @@ test('locked queue does not start another batch or display a popup', async () =>
   assert.deepEqual(h.busy, []);
   assert.equal(h.rows()[0].state, 'wait');
   assert.equal(h.lock.current, true);
+  assert.equal(h.pendingBatchesRef.current.length, 1);
+  assert.match(h.infos[0], /已加入等待队列（1 个文件）/);
+});
+
+test('queued batch drains automatically after the current batch finishes', async () => {
+  let releaseFirst;
+  const firstGate = new Promise((resolve) => {
+    releaseFirst = resolve;
+  });
+  let secondDone;
+  const secondFinished = new Promise((resolve) => {
+    secondDone = resolve;
+  });
+  const first = entry('first');
+  const second = entry('second');
+  const h = harness(
+    [first, second],
+    async (_folder, file) => {
+      if (file.name === 'first.png') await firstGate;
+      return `${file.name}-public-id`;
+    },
+    (rows) => {
+      if (rows.find((item) => item.id === 'second')?.state === 'ok') secondDone();
+    },
+  );
+  const running = h.run([first]);
+  const queued = h.run([second]);
+  assert.equal(h.pendingBatchesRef.current.length, 1);
+  releaseFirst();
+  await Promise.all([running, queued]);
+  await secondFinished;
+  await new Promise((resolve) => setImmediate(resolve));
+  // 连续批次之间不能出现 uploading=false，否则按钮会短暂恢复可点造成重复提交
+  assert.ok(h.busy.slice(0, -1).every(Boolean));
+  assert.equal(h.busy.at(-1), false);
+  assert.equal(h.lock.current, false);
+  assert.equal(h.pendingBatchesRef.current.length, 0);
+  assert.ok(h.rows().every((item) => item.state === 'ok'));
 });
 
 test('failure popup appears before another concurrent upload finishes', async () => {

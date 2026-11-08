@@ -52,7 +52,7 @@ export default function RoutePanel() {
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState<{ open: boolean; row?: AiRoute }>({ open: false });
   const [saving, setSaving] = useState(false);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<AiRoute>();
 
   const load = useCallback(async () => {
     setLoading(true);

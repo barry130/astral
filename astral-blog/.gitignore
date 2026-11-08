@@ -25,6 +25,9 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
+# Isolated offline build/browser receipts (no real environment files)
+/tests/.artifacts/
+
 # 部署产物
 .vercel
 .open-next

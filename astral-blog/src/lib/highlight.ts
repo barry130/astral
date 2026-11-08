@@ -6,6 +6,7 @@
  */
 
 import hljs from 'highlight.js/lib/core';
+import { escapeHtml } from '@/lib/url';
 
 import bash from 'highlight.js/lib/languages/bash';
 import c from 'highlight.js/lib/languages/c';
@@ -109,14 +110,6 @@ export function normalizeLanguage(raw: string | undefined | null): string | null
   ensureRegistered();
   const resolved = ALIASES[name] ?? name;
   return hljs.getLanguage(resolved) ? resolved : null;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 /** 高亮后的 HTML；语言未知时返回转义后的原文 */

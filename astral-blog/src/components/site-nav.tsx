@@ -34,23 +34,26 @@ const NAV_ITEMS: NavItem[] = [
   {
     href: '/',
     label: '首页',
-    match: (pathname) =>
-      pathname === '/' || pathname.startsWith('/post/') || pathname.startsWith('/tag/'),
+    match: (pathname) => pathname === '/' || pathname.startsWith('/post/'),
   },
   {
     href: '/categories',
     label: '分类',
-    match: (pathname) => pathname === '/categories' || pathname.startsWith('/category/'),
+    match: (pathname) =>
+      pathname === '/categories' ||
+      pathname.startsWith('/category/') ||
+      pathname.startsWith('/tag/'),
   },
 ];
 
 interface SiteNavProps {
   /** 顶层 Wiki 页面（后端 /page/tree），用于「页面」下拉 */
   pages?: WikiNode[];
+  failed?: boolean;
 }
 
-export function SiteNav({ pages = [] }: SiteNavProps) {
-  const pathname = usePathname();
+export function SiteNav({ pages = [], failed = false }: SiteNavProps) {
+  const pathname = usePathname() ?? '/';
   const [pagesOpen, setPagesOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pagesActive = pathname === '/wiki' || pathname.startsWith('/wiki/');
@@ -69,7 +72,7 @@ export function SiteNav({ pages = [] }: SiteNavProps) {
   const underline = (active: boolean) => (
     <span
       aria-hidden
-      className={`absolute inset-x-2.5 -bottom-0.5 h-[1.5px] rounded-full bg-brand transition-opacity duration-200 ${
+      className={`bg-brand absolute inset-x-2.5 -bottom-0.5 h-[1.5px] rounded-full transition-opacity duration-200 ${
         active ? 'opacity-100' : 'opacity-0'
       }`}
     />
@@ -102,12 +105,12 @@ export function SiteNav({ pages = [] }: SiteNavProps) {
               className={`inline-flex items-center gap-1 ${linkClass(pagesActive)}`}
             >
               页面
-              <ChevronDown className="h-3 w-3 text-ink-faint" />
+              <ChevronDown className="text-ink-faint h-3 w-3" />
               {underline(pagesActive)}
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[172px]">
-            <PageItems pages={pages} />
+            <PageItems pages={pages} failed={failed} />
           </DropdownMenuContent>
         </DropdownMenu>
       </nav>
@@ -118,7 +121,7 @@ export function SiteNav({ pages = [] }: SiteNavProps) {
           <button
             type="button"
             aria-label="打开导航菜单"
-            className="flex h-11 w-11 shrink-0 items-center justify-center border border-line bg-transparent text-ink-soft transition-colors active:bg-surface-muted sm:hidden"
+            className="border-line text-ink-soft active:bg-surface-muted flex h-11 w-11 shrink-0 items-center justify-center border bg-transparent transition-colors sm:hidden"
           >
             <Menu className="h-4 w-4" />
           </button>
@@ -130,7 +133,7 @@ export function SiteNav({ pages = [] }: SiteNavProps) {
                 href={item.href}
                 aria-current={item.match(pathname) ? 'page' : undefined}
                 className={`flex min-h-11 cursor-pointer items-center text-[13.5px] ${
-                  item.match(pathname) ? 'font-medium text-brand' : 'text-ink-body'
+                  item.match(pathname) ? 'text-brand font-medium' : 'text-ink-body'
                 }`}
               >
                 {item.label}
@@ -138,10 +141,10 @@ export function SiteNav({ pages = [] }: SiteNavProps) {
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-[11px] font-normal uppercase tracking-[0.12em] text-ink-faint">
+          <DropdownMenuLabel className="text-ink-faint text-[11px] font-normal tracking-[0.12em] uppercase">
             页面
           </DropdownMenuLabel>
-          <PageItems pages={pages} />
+          <PageItems pages={pages} failed={failed} />
         </DropdownMenuContent>
       </DropdownMenu>
     </>
@@ -149,7 +152,7 @@ export function SiteNav({ pages = [] }: SiteNavProps) {
 }
 
 /** 页面项列表（宽屏下拉与窄屏菜单共用），点击区域按移动端热区放大 */
-function PageItems({ pages }: { pages: WikiNode[] }) {
+function PageItems({ pages, failed }: { pages: WikiNode[]; failed: boolean }) {
   return (
     <>
       {pages.length > 0 ? (
@@ -157,21 +160,21 @@ function PageItems({ pages }: { pages: WikiNode[] }) {
           <DropdownMenuItem key={page.id} asChild>
             <Link
               href={wikiHref(page)}
-              className="flex min-h-11 cursor-pointer items-center text-[12.5px] text-ink-body focus:text-brand sm:min-h-0"
+              className="text-ink-body focus:text-brand flex min-h-11 cursor-pointer items-center text-[12.5px] sm:min-h-0"
             >
               {page.title}
             </Link>
           </DropdownMenuItem>
         ))
       ) : (
-        <DropdownMenuItem disabled className="text-[12.5px] text-ink-faint">
-          暂无页面
+        <DropdownMenuItem disabled className="text-ink-faint text-[12.5px]">
+          {failed ? '页面目录暂时无法加载' : '暂无页面'}
         </DropdownMenuItem>
       )}
       <DropdownMenuItem asChild>
         <Link
           href="/wiki"
-          className="flex min-h-11 cursor-pointer items-center text-[12.5px] text-ink-soft focus:text-brand sm:min-h-0"
+          className="text-ink-soft focus:text-brand flex min-h-11 cursor-pointer items-center text-[12.5px] sm:min-h-0"
         >
           全部页面
         </Link>

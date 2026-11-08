@@ -57,8 +57,8 @@ export default function CmsLayout({ children }: { children: React.ReactNode }) {
               className={cn(
                 'rounded-full px-3.5 py-1.5 text-[13px] transition-colors',
                 active
-                  ? 'font-semibold text-[var(--color-brand-text)] shadow-[0_1px_2px_rgba(16,32,26,0.1)] ring-1 ring-[color:var(--color-border-light)] bg-card'
-                  : 'text-[color:var(--color-text-tertiary)] hover:bg-card/80 hover:text-[color:var(--color-text)]',
+                  ? 'bg-card font-semibold text-[var(--color-brand-text)] shadow-[0_1px_2px_rgba(16,32,26,0.1)] ring-1 ring-[color:var(--color-border-light)]'
+                  : 'hover:bg-card/80 text-[color:var(--color-text-tertiary)] hover:text-[color:var(--color-text)]',
               )}
             >
               {item.label}
@@ -69,7 +69,7 @@ export default function CmsLayout({ children }: { children: React.ReactNode }) {
           href={blogUrl}
           target="_blank"
           rel="noreferrer"
-          className="ml-auto flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] text-[color:var(--color-text-tertiary)] transition-colors hover:bg-card hover:text-[color:var(--color-brand-text)]"
+          className="hover:bg-card ml-auto flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] text-[color:var(--color-text-tertiary)] transition-colors hover:text-[color:var(--color-brand-text)]"
           title={blogUrl}
         >
           <ExternalLink className="size-3.5" />

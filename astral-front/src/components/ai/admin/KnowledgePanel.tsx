@@ -1,13 +1,12 @@
 /**
  * 知识库。
  *
- * 左选知识源、右管文档。同步是显式动作而不是自动轮询，
- * 因为索引本身可能很慢（要切块、算向量），后台默默跑会让人以为「改了没生效」。
+ * 左选知识源、右管文档。重建任务持久化进度，支持取消、重试和重新打开后恢复查看。
  */
 
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   Alert,
@@ -186,6 +185,7 @@ export default function KnowledgePanel() {
             size="small"
             type="text"
             icon={<EditOutlined />}
+            aria-label={`编辑知识源：${row.name ?? ''}`}
             disabled={!canEdit}
             onClick={() => openModal(row)}
           />
@@ -260,6 +260,7 @@ export default function KnowledgePanel() {
         <div style={{ position: 'sticky', top: 12 }}>
           {selected ? (
             <DocumentBoard
+              key={selected.id}
               source={selected}
               canEdit={canEdit}
               canSync={canSync}
@@ -364,9 +365,19 @@ function DocumentBoard({
   onChanged: () => Promise<void>;
 }) {
   const [documents, setDocuments] = useState<AiKnowledgeDocument[]>([]);
+  const [pageNum, setPageNum] = useState(1);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [documentLoading, setDocumentLoading] = useState(false);
+  const loadVersion = useRef(0);
+  const editorVersion = useRef(0);
   const [syncing, setSyncing] = useState(false);
   const [job, setJob] = useState<AiIndexJob | undefined>();
+  const [jobError, setJobError] = useState<string>();
+  const [jobLoading, setJobLoading] = useState(true);
+  const jobVersion = useRef(0);
+  const jobWritePending = useRef(false);
+  const jobActive = job?.status === 'PENDING' || job?.status === 'RUNNING';
 
   const [modal, setModal] = useState<{ open: boolean; row?: AiKnowledgeDocument }>({ open: false });
   const [saving, setSaving] = useState(false);
@@ -374,64 +385,158 @@ function DocumentBoard({
 
   const load = useCallback(async () => {
     if (!source.id) return;
+    const version = ++loadVersion.current;
     setLoading(true);
     try {
-      const res = await aiKnowledgeApi.documents(source.id);
-      setDocuments(res.data ?? []);
+      const res = await aiKnowledgeApi.documents(source.id, pageNum, 20);
+      if (version !== loadVersion.current) return;
+      setDocuments(res.data?.records ?? []);
+      setTotal(res.data?.total ?? 0);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '文档加载失败');
+      if (version === loadVersion.current)
+        message.error(error instanceof Error ? error.message : '文档加载失败');
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
+    }
+  }, [source.id, pageNum]);
+
+  useEffect(() => {
+    const lifecycle = loadVersion;
+    void load();
+    return () => {
+      lifecycle.current++;
+    };
+  }, [load]);
+
+  useEffect(
+    () => () => {
+      editorVersion.current++;
+    },
+    [],
+  );
+
+  const loadJob = useCallback(async () => {
+    if (!source.id || jobWritePending.current) return;
+    const version = ++jobVersion.current;
+    setJobLoading(true);
+    try {
+      const res = await aiKnowledgeApi.latestJob(source.id);
+      if (version !== jobVersion.current) return;
+      setJob(res.data ?? undefined);
+      setJobError(undefined);
+    } catch (error) {
+      if (version === jobVersion.current)
+        setJobError(error instanceof Error ? error.message : '任务状态加载失败');
+    } finally {
+      if (version === jobVersion.current) setJobLoading(false);
     }
   }, [source.id]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    const lifecycle = jobVersion;
+    void loadJob();
+    return () => {
+      lifecycle.current++;
+    };
+  }, [loadJob]);
 
-  /** 索引任务一般是同步跑完的，但耗时可能到秒级，这里轮询几次直到终态 */
+  /** Keep retrying reads after transient errors; stop polling on terminal state or unmount. */
   useEffect(() => {
-    if (!job?.id) return;
-    if (job.status === 'SUCCEEDED' || job.status === 'FAILED' || job.status === 'CANCELLED') return;
-    const timer = setTimeout(async () => {
+    if (!job?.id || !jobActive || syncing) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      const version = jobVersion.current;
       try {
         const res = await aiKnowledgeApi.indexJob(job.id as number);
+        if (stopped || version !== jobVersion.current) return;
         setJob(res.data);
+        setJobError(undefined);
         if (res.data?.status === 'SUCCEEDED') {
           await load();
           await onChanged();
         }
-      } catch {
-        // 单次轮询失败忽略，下一跳再试
+      } catch (error) {
+        if (!stopped && version === jobVersion.current)
+          setJobError(error instanceof Error ? error.message : '任务状态读取失败，正在重试');
+      } finally {
+        if (!stopped) timer = setTimeout(poll, 1500);
       }
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [job, load, onChanged]);
+    };
+    timer = setTimeout(poll, 1500);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [job?.id, jobActive, syncing, load, onChanged]);
 
   const doSync = async () => {
-    if (!source.id) return;
+    if (!source.id || jobWritePending.current) return;
+    const version = ++jobVersion.current;
+    jobWritePending.current = true;
+    setJobLoading(false);
     setSyncing(true);
     try {
       const res = await aiKnowledgeApi.sync(source.id);
+      if (version !== jobVersion.current) return;
       setJob(res.data);
+      setJobError(undefined);
       message.success('已提交索引任务');
-      await load();
-      await onChanged();
     } catch (error) {
       message.error(error instanceof Error ? error.message : '同步失败');
     } finally {
+      jobWritePending.current = false;
       setSyncing(false);
     }
   };
 
-  const openModal = (row?: AiKnowledgeDocument) => {
+  const changeJob = async (action: 'cancel' | 'retry') => {
+    if (!job?.id || jobWritePending.current) return;
+    const version = ++jobVersion.current;
+    jobWritePending.current = true;
+    setJobLoading(false);
+    setSyncing(true);
+    try {
+      const response = await (action === 'cancel'
+        ? aiKnowledgeApi.cancelJob(job.id)
+        : aiKnowledgeApi.retryJob(job.id));
+      if (version !== jobVersion.current) return;
+      setJob(response.data);
+      setJobError(undefined);
+      message.success(action === 'cancel' ? '任务已取消' : '已提交重试任务');
+    } catch (error) {
+      if (version === jobVersion.current)
+        setJobError(error instanceof Error ? error.message : '任务操作失败');
+    } finally {
+      jobWritePending.current = false;
+      setSyncing(false);
+    }
+  };
+
+  const openModal = async (row?: AiKnowledgeDocument) => {
+    const version = ++editorVersion.current;
     setModal({ open: true, row });
     form.resetFields();
-    if (row) form.setFieldsValue({ ...row });
+    if (!row?.id) {
+      setDocumentLoading(false);
+      return;
+    }
+    setDocumentLoading(true);
+    try {
+      const response = await aiKnowledgeApi.document(row.id);
+      if (version !== editorVersion.current) return;
+      form.setFieldsValue({ ...response.data });
+    } catch (error) {
+      if (version !== editorVersion.current) return;
+      setModal({ open: false });
+      message.error(error instanceof Error ? error.message : '正文加载失败');
+    } finally {
+      if (version === editorVersion.current) setDocumentLoading(false);
+    }
   };
 
   const submit = async () => {
-    if (!source.id) return;
+    if (!source.id || documentLoading || saving) return;
     try {
       const values = await form.validateFields();
       setSaving(true);
@@ -478,7 +583,8 @@ function DocumentBoard({
             type="text"
             icon={<EditOutlined />}
             disabled={!canEdit}
-            onClick={() => openModal(row)}
+            onClick={() => void openModal(row)}
+            aria-label={`编辑文档：${row.title ?? ''}`}
           />
           <Popconfirm
             title="删除文档？"
@@ -527,7 +633,7 @@ function DocumentBoard({
           <Button
             size="small"
             icon={<DatabaseOutlined />}
-            disabled={!canSync}
+            disabled={!canSync || jobActive || jobLoading || !!jobError}
             loading={syncing}
             onClick={() => void doSync()}
           >
@@ -538,7 +644,7 @@ function DocumentBoard({
             type="primary"
             icon={<PlusOutlined />}
             disabled={!canEdit}
-            onClick={() => openModal()}
+            onClick={() => void openModal()}
           >
             添加文档
           </Button>
@@ -546,17 +652,47 @@ function DocumentBoard({
       }
       bodyStyle={{ padding: 12 }}
     >
+      {jobError && (
+        <Alert
+          type="error"
+          showIcon
+          message={jobError}
+          description={
+            <Button size="small" disabled={syncing || jobLoading} onClick={() => void loadJob()}>
+              刷新任务状态
+            </Button>
+          }
+        />
+      )}
       {job && (
         <Alert
           style={{ marginBottom: 10 }}
           type={job.status === 'FAILED' ? 'error' : job.status === 'SUCCEEDED' ? 'success' : 'info'}
           showIcon
-          message={`索引任务 ${job.status}`}
+          message={`索引任务 ${dict.label('ai_index_job_status', job.status ?? '')}`}
           description={
             <span style={{ fontSize: 12.5 }}>
               共 {job.totalCount ?? 0} 篇，已处理 {job.processedCount ?? 0}，失败{' '}
               {job.failedCount ?? 0}
               {job.errorSummary ? ` · ${truncate(job.errorSummary, 120)}` : ''}
+              {jobActive && (
+                <Button
+                  size="small"
+                  disabled={!canSync || syncing}
+                  onClick={() => void changeJob('cancel')}
+                >
+                  取消任务
+                </Button>
+              )}
+              {(job.status === 'FAILED' || job.status === 'CANCELLED') && (
+                <Button
+                  size="small"
+                  disabled={!canSync || syncing}
+                  onClick={() => void changeJob('retry')}
+                >
+                  重试任务
+                </Button>
+              )}
             </span>
           }
         />
@@ -566,7 +702,7 @@ function DocumentBoard({
         <div style={{ padding: 24, textAlign: 'center' }}>
           <Spin size="small" />
         </div>
-      ) : documents.length === 0 ? (
+      ) : documents.length === 0 && total === 0 ? (
         <Empty description="这个知识源还没有文档。点「添加文档」粘贴 Markdown 正文即可入库。" />
       ) : (
         <ResizableTable
@@ -574,7 +710,12 @@ function DocumentBoard({
           rowKey="id"
           columns={columns}
           dataSource={documents}
-          pagination={false}
+          pagination={{
+            current: pageNum,
+            pageSize: 20,
+            total,
+            onChange: (next: number) => setPageNum(next),
+          }}
           size="small"
         />
       )}
@@ -582,15 +723,22 @@ function DocumentBoard({
       <Modal
         title={modal.row ? '编辑文档' : '添加文档'}
         open={modal.open}
-        onCancel={() => setModal({ open: false })}
+        onCancel={() => {
+          if (saving) return;
+          editorVersion.current++;
+          setModal({ open: false });
+        }}
         onOk={() => void submit()}
         confirmLoading={saving}
+        okButtonProps={{ disabled: documentLoading }}
+        cancelButtonProps={{ disabled: saving }}
         okText="保存并索引"
         cancelText="取消"
         width={820}
         destroyOnClose
       >
-        <Form form={form} layout="vertical">
+        {documentLoading && <div role="status">正在加载完整正文…</div>}
+        <Form form={form} layout="vertical" disabled={documentLoading || saving}>
           <Space size={12} style={{ display: 'flex' }}>
             <Form.Item
               name="docKey"
@@ -626,7 +774,7 @@ function DocumentBoard({
             name="content"
             label="正文（Markdown）"
             rules={[{ required: true, message: '请输入正文' }]}
-            extra="按标题层级切块，写清楚小标题能让检索更准"
+            extra="最多 400000 个字符，超限请拆分文档；标题清晰能让检索更准"
           >
             <Input.TextArea
               rows={16}

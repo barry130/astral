@@ -47,19 +47,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  storageApi,
-  FileBatchRequest,
-  MyStorageFolder,
-  StorageFile,
-  StorageFolder,
-} from '@/api/storage';
+import { storageApi, FileBatchRequest, MyStorageFolder, StorageFile } from '@/api/storage';
 import { DictOption, fetchDictOptions } from '@/api/dict';
 import { uploadStorageFile } from '@/lib/storage-upload';
 import { cn } from '@/lib/utils';
 
 export function hasFolderPermission(folder: MyStorageFolder | undefined, permission: string) {
-  return folder?.myPermissions === 'ALL' || !!folder?.myPermissions.split(',').includes(permission);
+  const permissions = folder?.myPermissions;
+  return permissions === 'ALL' || !!permissions?.split(',').includes(permission);
 }
 
 function errorText(error: unknown) {
@@ -160,8 +155,11 @@ export default function FileManager({
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const requestVersion = useRef(0);
+  const foldersVersion = useRef(0);
   const previewVersion = useRef(0);
   const uploadLock = useRef(false);
+  /** 上传期间新拖入/选择的批次；当前批次结束后按序排队执行，避免静默丢弃 */
+  const pendingBatchesRef = useRef<QueueEntry[][]>([]);
 
   const current = folders.find((f) => f.id === folderId);
   const folderMap = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders]);
@@ -198,40 +196,53 @@ export default function FileManager({
   );
 
   const loadFolders = useCallback(async () => {
+    const version = ++foldersVersion.current;
     try {
-      const result = admin ? await storageApi.listFolders() : await storageApi.listMyFolders();
-      if (result.code !== 200) throw new Error(result.msg);
-      const rows: MyStorageFolder[] = admin
-        ? (result.data as StorageFolder[])
-            .filter((f) => f.id != null)
-            .map((f) => ({
-              id: f.id!,
-              parentId: f.parentId,
-              folderName: f.folderName || '',
-              folderPath: f.folderPath || '',
-              visibility: f.visibility || '',
-              status: f.status || '',
-              myPermissions: 'ALL',
-              bindingConfigIds: (f.configs || []).map((c) => c.configId),
-              targetVersion: f.targetVersion,
-              resolvedConfigId: f.resolvedConfigId,
-              resolvedProviderType: f.resolvedProviderType,
-              resolvedTargetName: f.resolvedTargetName,
-            }))
-        : result.data || [];
+      let rows: MyStorageFolder[];
+      if (admin) {
+        const result = await storageApi.listFolders();
+        if (result.code !== 200) throw new Error(result.msg);
+        rows = result.data
+          .filter((f) => f.id != null)
+          .map((f) => ({
+            id: f.id!,
+            parentId: f.parentId,
+            folderName: f.folderName || '',
+            folderPath: f.folderPath || '',
+            visibility: f.visibility || '',
+            status: f.status || '',
+            myPermissions: 'ALL',
+            bindingConfigIds: (f.configs || []).map((c) => c.configId),
+            targetVersion: f.targetVersion,
+            resolvedConfigId: f.resolvedConfigId,
+            resolvedProviderType: f.resolvedProviderType,
+            resolvedTargetName: f.resolvedTargetName,
+          }));
+      } else {
+        const result = await storageApi.listMyFolders();
+        if (result.code !== 200) throw new Error(result.msg);
+        rows = result.data;
+      }
+      if (version !== foldersVersion.current) return;
       rows.sort((a, b) => a.folderPath.localeCompare(b.folderPath, 'zh-CN'));
       setFolders(rows);
       setFolderId((id) => (id != null && !rows.some((f) => f.id === id) ? undefined : id));
     } catch (error) {
-      toast.error(errorText(error));
+      if (version === foldersVersion.current) toast.error(errorText(error));
     } finally {
-      setFoldersLoading(false);
+      if (version === foldersVersion.current) setFoldersLoading(false);
     }
   }, [admin]);
 
   useEffect(() => {
     void loadFolders();
   }, [loadFolders]);
+  useEffect(() => {
+    // 卸载后禁止旧目录响应回写状态（跨账号/快速切换后台视图时同样由版本号兜底）
+    return () => {
+      foldersVersion.current += 1;
+    };
+  }, []);
   useEffect(() => {
     let alive = true;
     fetchDictOptions([
@@ -295,8 +306,9 @@ export default function FileManager({
       .finally(() => {
         if (requestVersion.current === version) setLoading(false);
       });
+    const lifecycle = requestVersion;
     return () => {
-      requestVersion.current++;
+      lifecycle.current++;
     };
   }, [
     admin,
@@ -467,7 +479,13 @@ export default function FileManager({
   };
 
   const uploadEntries = async (entries: QueueEntry[]) => {
-    if (uploadLock.current) return;
+    if (!entries.length) return;
+    if (uploadLock.current) {
+      // 上传中再次拖入/选择文件：进入等待队列，当前批次结束后自动开下一批，不能静默丢弃。
+      pendingBatchesRef.current.push(entries);
+      toast.info(`正在上传，已加入等待队列（${entries.length} 个文件）`);
+      return;
+    }
     uploadLock.current = true;
     setUploading(true);
     const pending = [...entries];
@@ -502,12 +520,22 @@ export default function FileManager({
       await Promise.all([worker(), worker(), worker()]);
     } finally {
       uploadLock.current = false;
-      setUploading(false);
       setRefresh((v) => v + 1);
+      const next = pendingBatchesRef.current.shift();
+      if (next?.length) {
+        // 连续批次之间保持 uploading=true，避免按钮短暂恢复可点造成重复提交。
+        void uploadEntries(next);
+      } else {
+        setUploading(false);
+      }
     }
   };
   const addUploads = (incoming: File[]) => {
-    if (!canUpload || folderId == null || uploadLock.current || !incoming.length) return;
+    if (!incoming.length) return;
+    if (!canUpload || folderId == null) {
+      toast.error('当前目录不支持上传，请先进入已启用且有上传权限的文件夹');
+      return;
+    }
     if (incoming.length > 100) {
       toast.error('每次最多上传 100 个文件');
       return;

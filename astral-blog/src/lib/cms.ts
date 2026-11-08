@@ -1,25 +1,30 @@
 // astral 后端 CMS 公开 API 客户端（契约见 docs/CMS_PLUGIN.md「公开 API」一节）。
 // 所有对后端的请求都在服务端完成（RSC fetch / Route Handler 转发），浏览器不直连后端，天然无 CORS 问题。
-// 任何失败（后端不可达、HTTP 非 2xx、业务 code != 200）都不抛异常，返回 { ok: false }，
-// 页面据此渲染友好空态；构建期不发起必需数据请求，后端不可达也能正常 build。
+// HTTP200 + 合法 Result/code200 才是成功；显式404与可恢复的不可用状态分开返回。
+// 页面不会把读失败伪装为合法空数据；认证读始终 no-store，React cache 仅在当前渲染去重。
+import { cache } from 'react';
+import { isRecord, parseResult, resultMessage, type ResultEnvelope } from '@/lib/result';
+import { fetchBackend } from '@/lib/backend';
+import { backendFetch, canViewContent, getSessionUser } from '@/lib/auth-server';
+import {
+  parseCategoryTree,
+  parseCommentItem,
+  parsePageData,
+  parsePostDetail,
+  parsePostSummary,
+  parseSharedContent,
+  parseTagList,
+  parseWikiPage,
+  parseWikiTree,
+} from '@/lib/cms-validation';
+export { getApiBase } from '@/lib/backend';
 
-const DEFAULT_API_BASE = 'http://localhost:27000';
-
-/** 后端地址，末尾统一去掉斜杠，供 fetch 拼接 */
-export function getApiBase(): string {
-  return (process.env.CMS_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '');
+/** Only explicit backend missing-resource results may produce a page 404. */
+export type ApiResult<T> =
+  { ok: true; data: T } | { ok: false; error: string | null; notFound?: boolean };
+export interface ReadOptions {
+  anonymous?: boolean;
 }
-
-/** astral 统一响应壳 Result{code,errorCode,message,data,timestamp}，code==200 成功 */
-interface ResultEnvelope<T> {
-  code: number;
-  errorCode?: string | null;
-  message?: string | null;
-  data: T;
-  timestamp?: number;
-}
-
-export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string | null };
 
 /** error === null 表示网络层失败（后端不可达等），非 null 表示后端返回了业务错误信息 */
 const CMS_API = '/api/v1/app/cms';
@@ -35,35 +40,43 @@ const TOKEN_COOKIE = 'satoken';
  * 动态 import `next/headers`：cms.ts 也会被客户端组件以 `import type` 引用（类型在编译期擦除），
  * 动态引入能保证这段只在服务端执行。
  */
-async function authHeaders(): Promise<Record<string, string>> {
-  if (typeof window !== 'undefined') return {};
+async function authHeaders(options: ReadOptions): Promise<Record<string, string>> {
+  if (options.anonymous || typeof window !== 'undefined') return {};
   try {
     const { cookies } = await import('next/headers');
     const token = (await cookies()).get(TOKEN_COOKIE)?.value;
-    return token ? { cookie: `${TOKEN_COOKIE}=${token}` } : {};
+    if (!token || /[\s;,\r\n]/.test(token) || !canViewContent(await getSessionUser())) return {};
+    return { cookie: `${TOKEN_COOKIE}=${token}` };
   } catch {
-    // 非请求上下文（构建期静态分析等）拿不到 cookies，按匿名处理
+    // Static analysis has no request cookies; no credentials may be invented.
     return {};
   }
 }
 
-async function cmsGet<T>(path: string): Promise<ApiResult<T>> {
+async function cmsGet<T>(
+  path: string,
+  parseData: (raw: unknown) => T | null,
+  options: ReadOptions = {},
+): Promise<ApiResult<T>> {
   try {
-    const res = await fetch(`${getApiBase()}${CMS_API}${path}`, {
-      // 全站数据页按动态渲染处理：每次请求回源，构建期不发请求
-      cache: 'no-store',
-      headers: { accept: 'application/json', ...(await authHeaders()) },
-    });
-    if (!res.ok) {
-      return { ok: false, error: `HTTP ${res.status}` };
+    const res = await fetchBackend(`${CMS_API}${path}`, { headers: await authHeaders(options) });
+    const body = parseResult(await res.json().catch(() => null));
+    if (res.status !== 200 || !body || body.code !== 200) {
+      return {
+        ok: false,
+        error: resultMessage(
+          body?.code === 200 ? null : body,
+          res.status === 200 ? '内容服务响应异常，请稍后重试。' : `HTTP ${res.status}`,
+        ),
+        notFound: res.status === 404 || (res.status === 200 && body?.code === 404),
+      };
     }
-    const body = (await res.json()) as ResultEnvelope<T>;
-    if (body.code !== 200 || body.data == null) {
-      return { ok: false, error: body.message ?? null };
-    }
-    return { ok: true, data: body.data };
+    const data = parseData(body.data);
+    return data === null
+      ? { ok: false, error: '内容服务返回的数据格式异常，请稍后重试。', notFound: false }
+      : { ok: true, data };
   } catch {
-    return { ok: false, error: null };
+    return { ok: false, error: null, notFound: false };
   }
 }
 
@@ -135,6 +148,7 @@ export interface WikiNode {
   id: number;
   title: string;
   slug: string | null;
+  status?: string;
   children: WikiNode[] | null;
 }
 
@@ -191,38 +205,67 @@ export interface PostQuery {
   keyword?: string;
 }
 
-export async function getPostPage(query: PostQuery = {}): Promise<ApiResult<PageData<PostSummary>>> {
+export async function getPostPage(
+  query: PostQuery = {},
+  options: ReadOptions = {},
+): Promise<ApiResult<PageData<PostSummary>>> {
   const sp = new URLSearchParams();
   sp.set('pageNum', String(query.pageNum ?? 1));
   sp.set('pageSize', String(query.pageSize ?? 10));
   if (query.categorySlug) sp.set('categorySlug', query.categorySlug);
   if (query.tagSlug) sp.set('tagSlug', query.tagSlug);
   if (query.keyword) sp.set('keyword', query.keyword);
-  return cmsGet<PageData<PostSummary>>(`/post/page?${sp.toString()}`);
+  const pageNum = query.pageNum ?? 1;
+  const pageSize = query.pageSize ?? 10;
+  if (
+    !Number.isSafeInteger(pageNum) ||
+    pageNum < 1 ||
+    pageNum > 2_147_483_647 ||
+    !Number.isSafeInteger(pageSize) ||
+    pageSize < 1 ||
+    pageSize > 100
+  )
+    return { ok: false, error: '分页参数无效。' };
+  return cmsGet(
+    `/post/page?${sp.toString()}`,
+    (raw) => {
+      const parsed = parsePageData(raw, parsePostSummary);
+      return parsed?.current === pageNum && parsed.size === pageSize ? parsed : null;
+    },
+    options,
+  );
 }
 
-/** 文章详情：纯数字按 id，否则按 slug；须 published（后端同时浏览量 +1） */
-export async function getPost(idOrSlug: string): Promise<ApiResult<PostDetail>> {
-  return cmsGet<PostDetail>(`/post/${encodeURIComponent(idOrSlug)}`);
-}
+/**
+ * 文章详情：纯数字按 id，否则按 slug；须 published（后端同时浏览量 +1）。
+ * 用 React cache 包一层：generateMetadata 与页面正文在同一次请求里只回源一次，
+ * 避免浏览量被重复 +1。
+ */
+export const getPost = cache(async (idOrSlug: string): Promise<ApiResult<PostDetail>> => {
+  return cmsGet(`/post/${encodeURIComponent(idOrSlug)}`, parsePostDetail);
+});
 
-export async function getCategoryTree(): Promise<ApiResult<CategoryNode[]>> {
-  return cmsGet<CategoryNode[]>('/category/tree');
-}
+/** 分类树：分类页 metadata、分类页正文与站点侧栏在同一次请求内共用一次回源。 */
+export const getCategoryTree = cache(async (): Promise<ApiResult<CategoryNode[]>> => {
+  return cmsGet('/category/tree', parseCategoryTree);
+});
 
-export async function getTagList(): Promise<ApiResult<TagItem[]>> {
-  return cmsGet<TagItem[]>('/tag/list');
-}
+/** 标签列表：标签页 metadata、标签页正文与站点侧栏在同一次请求内共用一次回源。 */
+export const getTagList = cache(async (): Promise<ApiResult<TagItem[]>> => {
+  return cmsGet('/tag/list', parseTagList);
+});
 
-/** Wiki 目录树（仅 published，children 嵌套） */
-export async function getWikiTree(): Promise<ApiResult<WikiNode[]>> {
-  return cmsGet<WikiNode[]>('/page/tree');
-}
+/** Wiki 目录树（仅 published，children 嵌套）；页头导航与 Wiki 目录页在同一次请求内共用结果。 */
+export const getWikiTree = cache(
+  async (options: ReadOptions = {}): Promise<ApiResult<WikiNode[]>> => {
+    return cmsGet('/page/tree', parseWikiTree, options);
+  },
+);
 
-/** Wiki 页面详情：含 content、children（子页面）、breadcrumb（父链） */
-export async function getWikiPage(idOrSlug: string): Promise<ApiResult<WikiPageDetail>> {
-  return cmsGet<WikiPageDetail>(`/page/${encodeURIComponent(idOrSlug)}`);
-}
+/** Wiki 页面详情：含 content、children（子页面）、breadcrumb（父链）；同请求内 metadata 与页面共用一次回源。 */
+export const getWikiPage = cache(async (idOrSlug: string): Promise<ApiResult<WikiPageDetail>> => {
+  return cmsGet(`/page/${encodeURIComponent(idOrSlug)}`, parseWikiPage);
+});
 
 /** 已通过审核的评论分页（不含 email/ip/userAgent） */
 export async function getCommentPage(
@@ -236,12 +279,27 @@ export async function getCommentPage(
   sp.set('targetId', String(targetId));
   sp.set('pageNum', String(pageNum));
   sp.set('pageSize', String(pageSize));
-  return cmsGet<PageData<CommentItem>>(`/comment/page?${sp.toString()}`);
+  if (
+    (targetType !== 'post' && targetType !== 'page') ||
+    !Number.isSafeInteger(targetId) ||
+    targetId < 1 ||
+    !Number.isSafeInteger(pageNum) ||
+    pageNum < 1 ||
+    pageNum > 2_147_483_647 ||
+    !Number.isSafeInteger(pageSize) ||
+    pageSize < 1 ||
+    pageSize > 100
+  )
+    return { ok: false, error: '评论分页参数无效。' };
+  return cmsGet(`/comment/page?${sp.toString()}`, (raw) => {
+    const parsed = parsePageData(raw, parseCommentItem);
+    return parsed?.current === pageNum && parsed.size === pageSize ? parsed : null;
+  });
 }
 
 /**
  * 评论提交：仅供 Route Handler（app/api/comment/route.ts）在服务端转发使用。
- * 返回后端的原始 Result 包（业务失败时 code != 200，message 需透传给用户展示）。
+ * 返回后端的原始 Result 包（业务失败时 code != 200，msg 需透传给用户展示）。
  */
 export interface CommentUpstreamResult {
   reachable: boolean;
@@ -249,23 +307,23 @@ export interface CommentUpstreamResult {
   result: ResultEnvelope<unknown> | null;
 }
 
-export async function postCommentToBackend(payload: CommentSubmitPayload): Promise<CommentUpstreamResult> {
+export async function postCommentToBackend(
+  payload: CommentSubmitPayload,
+): Promise<CommentUpstreamResult> {
   try {
-    const res = await fetch(`${getApiBase()}${CMS_API}/comment`, {
+    const res = await backendFetch(`${CMS_API}/comment`, {
       method: 'POST',
-      // 带登录态：私密内容只允许登录的管理员评论（后端 requirePublishedTarget 已按可见性校验）
-      headers: { 'content-type': 'application/json', accept: 'application/json', ...(await authHeaders()) },
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
-      cache: 'no-store',
     });
-    let result: ResultEnvelope<unknown> | null = null;
-    try {
-      result = (await res.json()) as ResultEnvelope<unknown>;
-    } catch {
-      // 后端返回非 JSON 时的兜底
-      result = { code: res.status, message: `后端响应异常（HTTP ${res.status}）`, data: null };
-    }
-    return { reachable: true, httpStatus: res.status, result };
+    const result = parseResult(await res.json().catch(() => null));
+    // Submitted comment data may include email/IP. The browser only needs the
+    // business outcome; privacy fields must not be reflected in the response.
+    return {
+      reachable: true,
+      httpStatus: res.status,
+      result: result ? { ...result, data: null } : null,
+    };
   } catch {
     return { reachable: false, httpStatus: 502, result: null };
   }
@@ -288,16 +346,26 @@ export interface SiteSettings {
  * 开关按字符串 'true' 判定；字段缺失或请求失败时用兜底值，不抛异常。
  */
 export async function getSiteSettings(): Promise<ApiResult<SiteSettings>> {
-  const res = await cmsGet<Record<string, string>>('/setting');
+  const res = await cmsGet('/setting', (raw) => (isRecord(raw) ? raw : null));
   if (!res.ok) {
     return res;
   }
   const raw = res.data;
-  const text = (key: string): string => raw[key] ?? '';
-  // 开关：缺省按「开启」兜底，存在时只认 'true'（大小写不敏感，与后端 boolValue 口径一致）
+  for (const key of ['site_title', 'site_description', 'footer_text']) {
+    if (raw[key] != null && typeof raw[key] !== 'string')
+      return { ok: false, error: '站点设置格式异常。' };
+  }
+  for (const key of ['comment_enabled', 'comment_need_review']) {
+    if (raw[key] != null && typeof raw[key] !== 'boolean' && typeof raw[key] !== 'string')
+      return { ok: false, error: '评论设置格式异常。' };
+  }
+  const text = (key: string): string => (typeof raw[key] === 'string' ? (raw[key] as string) : '');
+  // 未配置时保守关闭评论；兼容后端布尔值与大小写不敏感的字符串。
   const flag = (key: string, fallback: boolean): boolean => {
     const value = raw[key];
-    return value === undefined ? fallback : value.toLowerCase() === 'true';
+    if (value === undefined || value === null) return fallback;
+    if (typeof value === 'boolean') return value;
+    return String(value).toLowerCase() === 'true';
   };
   return {
     ok: true,
@@ -305,7 +373,7 @@ export async function getSiteSettings(): Promise<ApiResult<SiteSettings>> {
       siteTitle: text('site_title') || 'Astral Blog',
       siteDescription: text('site_description'),
       footerText: text('footer_text'),
-      commentEnabled: flag('comment_enabled', true),
+      commentEnabled: flag('comment_enabled', false),
       commentNeedReview: flag('comment_need_review', true),
     },
   };
@@ -326,6 +394,6 @@ export interface ShareContent {
   page: WikiPageDetail | null;
 }
 
-export async function getSharedContent(token: string): Promise<ApiResult<ShareContent>> {
-  return cmsGet<ShareContent>(`/share/${encodeURIComponent(token)}`);
-}
+export const getSharedContent = cache(async (token: string): Promise<ApiResult<ShareContent>> => {
+  return cmsGet(`/share/${encodeURIComponent(token)}`, parseSharedContent, { anonymous: true });
+});

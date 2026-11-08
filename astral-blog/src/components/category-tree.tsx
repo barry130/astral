@@ -25,9 +25,7 @@ function CategoryBranch({
   return (
     <ul
       className={
-        depth === 0
-          ? 'space-y-0.5'
-          : 'ml-3 mt-0.5 space-y-0.5 border-l border-line-soft pl-2.5'
+        depth === 0 ? 'space-y-0.5' : 'border-line-soft mt-0.5 ml-3 space-y-0.5 border-l pl-2.5'
       }
     >
       {nodes.map((node) => {
@@ -39,7 +37,7 @@ function CategoryBranch({
               aria-current={active ? 'page' : undefined}
               className={`group/row flex min-h-11 items-center justify-between gap-2 px-2.5 py-1.5 text-[13px] transition-colors duration-150 sm:min-h-9 sm:text-[12.5px] ${
                 active
-                  ? 'bg-brand-wash font-medium text-brand'
+                  ? 'bg-brand-wash text-brand font-medium'
                   : 'text-ink-body hover:bg-brand-wash/70 hover:text-brand'
               }`}
             >
@@ -47,7 +45,7 @@ function CategoryBranch({
                 <span
                   aria-hidden
                   className={`h-3 w-[2px] shrink-0 rounded-full transition-colors duration-150 ${
-                    active ? 'bg-brand' : 'bg-transparent group-hover/row:bg-brand/40'
+                    active ? 'bg-brand' : 'group-hover/row:bg-brand/40 bg-transparent'
                   }`}
                 />
                 <span className="truncate" title={node.name}>

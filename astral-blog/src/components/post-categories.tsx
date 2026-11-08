@@ -21,7 +21,7 @@ export function PostCategories({ post, variant = 'meta', className = '' }: PostC
           <Link
             key={`${category.id}-${index}`}
             href={categoryHref(category)}
-            className="inline-flex items-center border border-brand-line bg-brand-wash px-2.5 py-1 text-[11.5px] font-medium text-brand hover:border-brand/40 hover:text-brand-strong max-sm:min-h-11 max-sm:px-3.5"
+            className="border-brand-line bg-brand-wash text-brand hover:border-brand/40 hover:text-brand-strong inline-flex items-center border px-2.5 py-1 text-[11.5px] font-medium max-sm:min-h-11 max-sm:px-3.5"
           >
             {category.name}
           </Link>
@@ -36,7 +36,7 @@ export function PostCategories({ post, variant = 'meta', className = '' }: PostC
         <Link
           key={`${category.id}-${index}`}
           href={categoryHref(category)}
-          className="relative z-10 text-[12px] font-medium text-brand hover:text-brand-strong max-sm:inline-flex max-sm:min-h-11 max-sm:items-center"
+          className="text-brand hover:text-brand-strong relative z-10 text-[12px] font-medium max-sm:inline-flex max-sm:min-h-11 max-sm:items-center"
         >
           {category.name}
         </Link>

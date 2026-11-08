@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Providers } from './providers';
+import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme-preference';
 
 /** 页面元数据配置 */
 export const metadata: Metadata = {
@@ -26,12 +27,6 @@ export const viewport: Viewport = {
     { media: '(prefers-color-scheme: dark)', color: '#0c1622' },
   ],
 };
-
-/**
- * 主题防闪脚本：在水合前读取 localStorage / 系统偏好并设置 data-theme，
- * 避免深色模式用户先看到一帧浅色（FOUC）。必须在 <head> 里同步执行。
- */
-const THEME_BOOTSTRAP_SCRIPT = `(function(){try{var t=localStorage.getItem('astral:theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}var r=document.documentElement;r.setAttribute('data-theme',t);if(t==='dark'){r.classList.add('dark');}}catch(e){}})();`;
 
 /**
  * 根布局组件

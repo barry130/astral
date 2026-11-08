@@ -93,7 +93,7 @@ export function TablePagination({ pagination, total, className }: TablePaginatio
           <select
             value={String(pageSize)}
             onChange={(e) => changePageSize(Number(e.target.value))}
-            className="h-9 cursor-pointer rounded-[10px] border border-[color:var(--color-border)] bg-card px-2 text-[13px] text-[color:var(--color-text)] outline-none transition-colors hover:border-[color:color-mix(in_srgb,var(--color-brand)_30%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]"
+            className="bg-card h-9 cursor-pointer rounded-[10px] border border-[color:var(--color-border)] px-2 text-[13px] text-[color:var(--color-text)] transition-colors outline-none hover:border-[color:color-mix(in_srgb,var(--color-brand)_30%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]"
             aria-label="每页条数"
           >
             {pageSizes.map((s) => (

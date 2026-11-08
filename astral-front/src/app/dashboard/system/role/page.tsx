@@ -9,7 +9,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Select,
   Switch,
   Tag,
   message,
@@ -25,15 +24,39 @@ import {
   DeleteOutlined,
   SafetyOutlined,
 } from '@/components/antd-compat/icons';
-import { request } from '@/api/client';
+import {
+  roleApi,
+  rolePayload,
+  permissionApi,
+  groupPermissionRows,
+  paginateRoles,
+  type Role,
+  type RoleWrite,
+  type PermissionNode as Permission,
+} from '@/api/system-admin';
+import { AdminLoadNotice } from '@/components/admin/AdminLoadNotice';
+import {
+  useAdminLoader,
+  useAdminMutation,
+  useAdminQuery,
+  useAdminTask,
+} from '@/components/admin/use-admin-task';
+import {
+  requireAdminSuccess,
+  numericSwitchBinding,
+  adminErrorMessage,
+} from '@/components/admin/admin-task';
 import { usePerm } from '@/lib/perm';
 import { PermissionSideTag } from '@/lib/permission-side';
 import { ResizableTable } from '@/components/ResizableTable';
-import { fetchDictOptions, DictOption } from '@/api/dict';
+import {
+  loadAdminDictOptions as fetchDictOptions,
+  dictLabel,
+  dictColor,
+  DictOption,
+} from '@/components/admin/admin-dictionaries';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar } from '@/components/filter-bar';
-
-const { Option } = Select;
 
 /** 权限类型标签配色：4=接口 / 5=数据（结果级权限）与菜单树类型区分 */
 const TYPE_COLORS: Record<string, string> = {
@@ -44,80 +67,23 @@ const TYPE_COLORS: Record<string, string> = {
   '5': 'magenta',
 };
 
-/** 角色实体接口 */
-interface Role {
-  /** 角色ID */
-  id: number;
-  /** 角色编码 */
-  roleCode: string;
-  /** 角色名称 */
-  roleName: string;
-  /** 角色描述 */
-  description: string;
-  /** 状态：1启用/0禁用 */
-  status: number;
-  /** 排序号 */
-  sort: number;
-  /** 是否超级管理员角色：1=持该角色即拥有全部权限 */
-  isSuper?: number;
-}
-
-/** 权限实体接口（树形结构；域分组节点的 id 为空） */
-interface Permission {
-  /** 权限ID（域分组节点为 null） */
-  id: number | null;
-  /** 权限编码 */
-  permissionCode: string;
-  /** 权限名称 */
-  permissionName: string;
-  /** 父级权限ID */
-  parentId: number;
-  /** 权限类型：1目录 2菜单 3按钮 4接口 5数据 */
-  type: number;
-  /** 权限域 */
-  domain?: string;
-  /** 子权限列表 */
-  children?: Permission[];
-}
-
-/** 角色管理API封装 */
-const roleApi = {
-  /** 分页查询角色 */
-  getPage: (pageNum: number, pageSize: number, params?: Record<string, unknown>) =>
-    request.get('/api/v1/admin/system/role/page', { params: { pageNum, pageSize, ...params } }),
-  /** 获取所有角色 */
-  getAll: () => request.get('/api/v1/admin/system/role/all'),
-  /** 创建角色 */
-  create: (data: Partial<Role>) => request.post('/api/v1/admin/system/role', data),
-  /** 更新角色 */
-  update: (id: number, data: Partial<Role>) => request.put(`/api/v1/admin/system/role/${id}`, data),
-  /** 删除角色 */
-  delete: (id: number) => request.delete(`/api/v1/admin/system/role/${id}`),
-  /** 获取角色的权限列表 */
-  getPermissions: (id: number) => request.get(`/api/v1/admin/system/role/${id}/permissions`),
-  /** 为角色分配权限 */
-  assignPermissions: (id: number, permissionIds: number[]) =>
-    request.put(`/api/v1/admin/system/role/${id}/permissions`, { permissionIds }),
-};
-
-/** 权限管理API封装 */
-const permissionApi = {
-  /**
-   * 获取权限树。
-   * groupBy=domain 时按「权限域」分组返回（域节点 id 为空，仅作展示分组，
-   * 勾选域会把该域下全部权限一并选中，不会提交出非法 ID）。
-   */
-  getTree: (groupBy?: 'domain') =>
-    request.get('/api/v1/admin/system/permission/tree', { params: groupBy ? { groupBy } : {} }),
-};
-
 /**
  * 角色权限管理页面组件
  * 提供角色的增删改查和权限分配功能
  */
 export default function RolePage() {
   /** 加载状态 */
-  const [loading, setLoading] = useState(false);
+  const { loading, error: loadError, run: runLoad } = useAdminLoader('加载角色列表失败');
+  const {
+    loading: permissionLoading,
+    error: permissionError,
+    run: runPermissions,
+  } = useAdminLoader('加载权限定义失败');
+  const { busy: saving, run: runMutation } = useAdminMutation('角色操作失败');
+  const selectionTask = useAdminTask();
+  const query = useAdminQuery({ current: 1, pageSize: 10, keyword: '' });
+  const [search, setSearch] = useState('');
+  const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
   /** 角色列表数据 */
   const [data, setData] = useState<Role[]>([]);
   /** 分页状态 */
@@ -137,22 +103,12 @@ export default function RolePage() {
   /** 权限类型字典（文案来源：数据字典 permission_type） */
   const [typeOptions, setTypeOptions] = useState<DictOption[]>([]);
   /** 角色表单实例 */
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<RoleWrite>();
 
   const hasPerm = usePerm();
   /** 是否具备角色维护权限：权限码需与后端 @RequiresPermission("admin:system:role:edit") 一致 */
   const canEdit = hasPerm('admin:system:role:edit');
-
-  /** 组件挂载时加载角色列表、权限树（按域分组）与类型字典 */
-  useEffect(() => {
-    loadData();
-    permissionApi.getTree('domain').then((res) => {
-      if (res.code === 200) setPermissionTree(res.data || []);
-    });
-    fetchDictOptions(['permission_type'])
-      .then((map) => setTypeOptions(map['permission_type'] || []))
-      .catch(() => {});
-  }, []);
+  const isSuper = hasPerm('*:*:*');
 
   /** 权限类型文案（字典兜底为原始值） */
   const typeLabel = useCallback(
@@ -197,88 +153,120 @@ export default function RolePage() {
   /** 当前分配弹窗的树数据（域分组的 value 需为 undefined，见 buildTreeNodes） */
   const treeData = useMemo(() => buildTreeNodes(permissionTree), [permissionTree, buildTreeNodes]);
 
-  /** 加载角色列表 */
-  const loadData = (page = 1, size = 10) => {
-    setLoading(true);
-    roleApi
-      .getPage(page, size)
-      .then((res) => {
-        if (res.code === 200) {
-          setData(res.data?.records || []);
-          setPagination({
-            current: res.data?.current || 1,
-            pageSize: res.data?.size || 10,
-            total: res.data?.total || 0,
-          });
+  const loadData = useCallback(
+    (patch: Partial<{ current: number; pageSize: number; keyword: string }> = {}) => {
+      const q = query.read(patch);
+      return runLoad(
+        async () => requireAdminSuccess(await roleApi.getAll(), '加载角色列表失败') || [],
+        (rows) => {
+          const page = paginateRoles(rows, q);
+          query.read({ current: page.current, pageSize: page.size });
+          setData(page.records);
+          setPagination({ current: page.current, pageSize: page.size, total: page.total });
+        },
+      );
+    },
+    [query, runLoad],
+  );
+  const loadPermissions = useCallback(
+    () =>
+      runPermissions(
+        async () => groupPermissionRows(await permissionApi.getAll()),
+        setPermissionTree,
+      ),
+    [runPermissions],
+  );
+
+  useEffect(() => {
+    void loadData();
+    if (isSuper) void loadPermissions();
+    let active = true;
+    fetchDictOptions(['permission_type', 'enable_status'])
+      .then((map) => {
+        if (active) {
+          setTypeOptions(map.permission_type || []);
+          setDicts(map);
         }
       })
-      .finally(() => setLoading(false));
-  };
+      .catch(() => {
+        /* Unknown labels retain their raw values. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [isSuper, loadData, loadPermissions]);
 
-  /** 打开新增角色弹窗 */
   const handleCreate = () => {
+    if (!isSuper || saving) return;
     setEditingRole(null);
     form.resetFields();
+    form.setFieldsValue({ status: 1, sort: 0 });
     setModalVisible(true);
   };
-
-  /** 打开编辑角色弹窗 */
   const handleEdit = (record: Role) => {
+    if (!canEdit || saving) return;
     setEditingRole(record);
-    form.setFieldsValue(record);
+    form.resetFields();
+    form.setFieldsValue(rolePayload(record, true));
     setModalVisible(true);
   };
-
-  /** 删除角色 */
-  const handleDelete = async (id: number) => {
-    try {
-      await roleApi.delete(id);
-      message.success('删除成功');
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleDelete = (id: number) => {
+    if (!canEdit) return;
+    return runMutation(
+      async () => requireAdminSuccess(await roleApi.delete(id), '删除失败'),
+      () => {
+        message.success('删除成功');
+        void loadData();
+      },
+    );
   };
-
-  /** 提交角色表单 */
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      if (editingRole?.id) {
-        await roleApi.update(editingRole.id, values);
-        message.success('更新成功');
-      } else {
-        await roleApi.create(values);
-        message.success('创建成功');
-      }
-      setModalVisible(false);
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleSubmit = () => {
+    if (!(editingRole ? canEdit : isSuper)) return;
+    const id = editingRole?.id;
+    return runMutation(
+      async () => {
+        const values = await form.validateFields();
+        return requireAdminSuccess(
+          id ? await roleApi.update(id, values) : await roleApi.create(values),
+          '保存失败',
+        );
+      },
+      () => {
+        message.success(id ? '更新成功' : '创建成功');
+        setModalVisible(false);
+        void loadData();
+      },
+    );
   };
-
-  /** 打开权限分配弹窗，加载角色已有权限 */
-  const handleAssignPermissions = async (record: Role) => {
-    setTargetRole(record);
-    const res = await roleApi.getPermissions(record.id);
-    if (res.code === 200) {
-      setSelectedPerms((res.data || []).map((p: Permission) => p.id));
-    }
-    setPermModalVisible(true);
+  const handleAssignPermissions = (record: Role) => {
+    if (!isSuper || permissionLoading || permissionError || record.isSuper === 1 || saving) return;
+    return selectionTask.run(
+      async () =>
+        requireAdminSuccess(await roleApi.getPermissions(record.id), '加载角色权限失败') || [],
+      {
+        onSuccess: (rows) => {
+          setTargetRole(record);
+          setSelectedPerms(
+            rows.map((row) => row.id).filter((id): id is number => id !== null && id > 0),
+          );
+          setPermModalVisible(true);
+        },
+        onError: (error) => message.error(adminErrorMessage(error, '加载角色权限失败')),
+      },
+    );
   };
-
-  /** 提交权限分配 */
-  const handleAssignPermissionsSubmit = async () => {
-    try {
-      if (targetRole) {
-        await roleApi.assignPermissions(targetRole.id, selectedPerms);
+  const handleAssignPermissionsSubmit = () => {
+    if (!isSuper || !targetRole || permissionLoading || permissionError) return;
+    const id = targetRole.id;
+    const ids = [...selectedPerms];
+    return runMutation(
+      async () => requireAdminSuccess(await roleApi.assignPermissions(id, ids), '权限分配失败'),
+      () => {
         message.success('权限分配成功');
         setPermModalVisible(false);
-      }
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+        void loadData();
+      },
+    );
   };
 
   /** 表格列定义 */
@@ -292,15 +280,20 @@ export default function RolePage() {
       dataIndex: 'isSuper',
       key: 'isSuper',
       width: 80,
-      render: (v: number) =>
-        v === 1 ? <Tag color="gold">超管</Tag> : <Tag color="default">普通</Tag>,
+      render: (v: number) => (
+        <Tag color={v === 1 ? 'gold' : 'default'}>
+          {v === 1 ? '超级管理员角色' : `isSuper=${v ?? 0}`}
+        </Tag>
+      ),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       render: (v: number) => (
-        <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '启用' : '禁用'}</Tag>
+        <Tag color={dictColor(dicts.enable_status, v) || 'default'}>
+          {dictLabel(dicts.enable_status, v, String(v))}
+        </Tag>
       ),
     },
     {
@@ -313,22 +306,28 @@ export default function RolePage() {
             type="link"
             icon={<EditOutlined />}
             onClick={() => handleEdit(r)}
-            disabled={!canEdit}
+            disabled={!canEdit || saving}
           >
             编辑
           </Button>
-          {/* 分配权限后端要求超管，前端不做门控 */}
+          {/* 提权写入口与后端 RequiresSuper 一致。 */}
           <Button
             type="link"
             icon={<SafetyOutlined />}
-            disabled={r.isSuper === 1}
+            disabled={
+              !isSuper || permissionLoading || !!permissionError || r.isSuper === 1 || saving
+            }
             title={r.isSuper === 1 ? '超管角色默认拥有全部权限，无需分配' : undefined}
             onClick={() => handleAssignPermissions(r)}
           >
             权限
           </Button>
-          <Popconfirm title="确认删除?" disabled={!canEdit} onConfirm={() => handleDelete(r.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>
+          <Popconfirm
+            title="确认删除?"
+            disabled={!canEdit || saving}
+            onConfirm={() => handleDelete(r.id)}
+          >
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit || saving}>
               删除
             </Button>
           </Popconfirm>
@@ -342,13 +341,26 @@ export default function RolePage() {
       <PageHeader title="角色权限" description="角色及其权限点、数据范围的分配" />
       <Card>
         <FilterBar split>
-          <Input.Search placeholder="搜索角色" allowClear style={{ width: 300 }} />
-          {canEdit && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+          <Input.Search
+            placeholder="搜索角色编码/名称/描述"
+            aria-label="搜索角色"
+            allowClear
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onSearch={(keyword) => void loadData({ current: 1, keyword })}
+            className="w-full sm:w-[300px]"
+          />
+          {isSuper && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate} disabled={saving}>
               新建角色
             </Button>
           )}
         </FilterBar>
+        <AdminLoadNotice
+          error={loadError}
+          hasData={data.length > 0}
+          onRetry={() => void loadData()}
+        />
         <ResizableTable
           dataSource={data}
           columns={columns}
@@ -360,6 +372,7 @@ export default function RolePage() {
             showQuickJumper: true,
             showSizeChanger: true,
             pageSizeOptions: ['5', '10', '20', '50', '100'],
+            onChange: (current, pageSize) => void loadData({ current, pageSize }),
           }}
         />
       </Card>
@@ -368,9 +381,13 @@ export default function RolePage() {
         title={editingRole ? '编辑角色' : '新建角色'}
         open={modalVisible}
         onOk={handleSubmit}
-        onCancel={() => setModalVisible(false)}
+        confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        onCancel={() => {
+          if (!saving) setModalVisible(false);
+        }}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} disabled={saving} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="roleCode" label="角色编码" rules={[{ required: true }]}>
             <Input disabled={!!editingRole} />
           </Form.Item>
@@ -387,22 +404,14 @@ export default function RolePage() {
               </Form.Item>
             </Col>
             <Col xs={{ span: 24 }} md={{ span: 12 }}>
-              <Form.Item name="status" label="状态" valuePropName="checked" initialValue>
-                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+              <Form.Item name="status" label="状态" {...numericSwitchBinding} initialValue={1}>
+                <Switch
+                  checkedChildren={dictLabel(dicts.enable_status, 1, '1')}
+                  unCheckedChildren={dictLabel(dicts.enable_status, 0, '0')}
+                />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item
-            name="isSuper"
-            label="超级管理员角色"
-            initialValue={0}
-            extra="超管角色无需分配权限即拥有全部权限（后端合成 *:*:*）；仅超级管理员可创建/修改"
-          >
-            <Select style={{ width: 120 }}>
-              <Option value={0}>否</Option>
-              <Option value={1}>是</Option>
-            </Select>
-          </Form.Item>
         </Form>
       </Modal>
 
@@ -410,9 +419,21 @@ export default function RolePage() {
         title={`分配权限${targetRole ? ` - ${targetRole.roleName}` : ''}`}
         open={permModalVisible}
         onOk={handleAssignPermissionsSubmit}
-        onCancel={() => setPermModalVisible(false)}
+        confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        onCancel={() => {
+          if (!saving) {
+            selectionTask.invalidate();
+            setPermModalVisible(false);
+          }
+        }}
         width={760}
       >
+        <AdminLoadNotice
+          error={permissionError}
+          hasData={permissionTree.length > 0}
+          onRetry={() => void loadPermissions()}
+        />
         <div style={{ marginTop: 16 }}>
           <div
             style={{
@@ -448,6 +469,7 @@ export default function RolePage() {
               allowClear
               placeholder="选择权限"
               style={{ width: '100%' }}
+              disabled={saving || permissionLoading || !!permissionError}
               value={selectedPerms}
               onChange={(val) => setSelectedPerms(val || [])}
             />

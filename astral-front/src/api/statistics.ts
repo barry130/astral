@@ -200,7 +200,8 @@ export const statApi = {
     source?: string;
     ut?: string;
     version?: string;
-  }) => request.get<PageResult<ErrorSummaryItem>>('/api/v1/admin/stat/error/summary/page', { params }),
+  }) =>
+    request.get<PageResult<ErrorSummaryItem>>('/api/v1/admin/stat/error/summary/page', { params }),
 
   /**
    * 某平台下出现过的版本列表（版本下拉数据源）

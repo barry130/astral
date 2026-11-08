@@ -45,7 +45,7 @@ export default function ConfigPage() {
   /** 可用的序列类型列表 */
   const [types, setTypes] = useState<SequenceType[]>([]);
   /** 表单实例（antd-compat 兼容层的同名同 API 实现，非 Ant Design 依赖） */
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<SequenceConfig>();
 
   /** 加载所有配置数据 */
   const loadData = () => {

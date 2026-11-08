@@ -17,6 +17,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type AriaAttributes,
   type ChangeEvent,
   type CSSProperties,
   type DragEvent,
@@ -45,7 +46,7 @@ const FIELD_BASE =
 
 /* ================================================================ Input */
 
-export interface InputProps {
+export interface InputProps extends AriaAttributes {
   value?: string | number;
   defaultValue?: string | number;
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -151,7 +152,7 @@ function InputBase({
       maxLength={maxLength}
       autoFocus={autoFocus}
       autoComplete={autoComplete}
-      aria-label={aria['aria-label']}
+      {...Object.fromEntries(Object.entries(aria).filter(([key]) => key.startsWith('aria-')))}
       className={cn(FIELD_BASE, SIZE_H[size] ?? SIZE_H.middle, className)}
       style={restStyle}
     />
@@ -730,7 +731,7 @@ function SelectBase({
           aria-disabled={disabled}
           tabIndex={disabled ? -1 : 0}
           className={cn(
-            'flex w-full cursor-pointer items-center gap-1 rounded-xl border border-[color:var(--color-border)] bg-card px-3 py-1 shadow-[0_1px_2px_rgba(16,32,26,0.03)] outline-none transition-[color,box-shadow,border-color] hover:border-[color:color-mix(in_srgb,var(--color-brand)_28%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]',
+            'bg-card flex w-full cursor-pointer items-center gap-1 rounded-xl border border-[color:var(--color-border)] px-3 py-1 shadow-[0_1px_2px_rgba(16,32,26,0.03)] transition-[color,box-shadow,border-color] outline-none hover:border-[color:color-mix(in_srgb,var(--color-brand)_28%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]',
             SIZE_H[size] ?? SIZE_H.middle,
             disabled && 'cursor-not-allowed opacity-50',
             status === 'error' && 'border-destructive',
@@ -1617,7 +1618,7 @@ export function TreeSelect({
           aria-expanded={open}
           tabIndex={disabled ? -1 : 0}
           className={cn(
-            'flex w-full cursor-pointer items-center gap-1 rounded-xl border border-[color:var(--color-border)] bg-card px-3 py-1 shadow-[0_1px_2px_rgba(16,32,26,0.03)] outline-none transition-[color,box-shadow,border-color] hover:border-[color:color-mix(in_srgb,var(--color-brand)_28%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]',
+            'bg-card flex w-full cursor-pointer items-center gap-1 rounded-xl border border-[color:var(--color-border)] px-3 py-1 shadow-[0_1px_2px_rgba(16,32,26,0.03)] transition-[color,box-shadow,border-color] outline-none hover:border-[color:color-mix(in_srgb,var(--color-brand)_28%,var(--color-border))] focus-visible:border-[color:var(--color-brand)] focus-visible:ring-[3px] focus-visible:ring-[color:color-mix(in_srgb,var(--color-brand)_18%,transparent)]',
             // 多选：不能沿用固定高度——已选项一多会换行，固定 h-9 会溢出；
             // 改用「最小高度」+ 标签区自身上限/内部滚动（见下方 max-h-20）。
             // 单选保持原固定高度，不影响其它调用方。

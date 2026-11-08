@@ -56,9 +56,6 @@ importers:
       highlight.js:
         specifier: ^11.12.0
         version: 11.12.0
-      jsencrypt:
-        specifier: ^3.5.4
-        version: 3.5.4
       lucide-react:
         specifier: ^1.61.0
         version: 1.61.0(@types/react@19.3.0)(react@19.3.1)
@@ -949,9 +946,6 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
-
-  jsencrypt@3.5.4:
-    resolution: {integrity: sha512-kNjfYEMNASxrDGsmcSQh/rUTmcoRfSUkxnAz+MMywM8jtGu+fFEZ3nJjHM58zscVnwR0fYmG9sGkTDjqUdpiwA==}
 
   lightningcss-android-arm64@1.32.0:
     resolution: {integrity: sha512-YK7/ClTt4kAK0vo6w3X+Pnm0D2cf2vPHbhOXdoNti1Ga0al1P4TBZhwjATvjNwLEBCnKvjJc2jQgHXH0NEwlAg==}
@@ -1947,8 +1941,6 @@ snapshots:
   highlight.js@11.12.0: {}
 
   jiti@2.7.0: {}
-
-  jsencrypt@3.5.4: {}
 
   lightningcss-android-arm64@1.32.0:
     optional: true

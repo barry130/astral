@@ -68,6 +68,13 @@ function parseOptions(json?: string | null): S3ProviderOptions {
   }
 }
 
+/** 统一错误文案：Error 取 message，非 Error（如表单校验对象）给可执行兜底 */
+function errText(error: unknown, fallback = '操作失败，请稍后重试') {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'object' && error && 'errorFields' in error) return '请检查表单必填项';
+  return fallback;
+}
+
 /** 状态 → Tag 颜色（展示配色属前端逻辑，保留映射；文案标签走字典） */
 const STATUS_COLOR: Record<string, string> = {
   ENABLED: 'success',
@@ -86,8 +93,8 @@ type PermRow = {
   subjectId: string;
   permissions: string;
   configs?: StorageBindingView[];
-  permConfigs?: number[];
-  permPriority?: number;
+  /** 每行独立的配置绑定（configId + priority），不再把所有绑定压成一个优先级 */
+  permConfigs?: { storageConfigId: number; priority: number }[];
 };
 
 /** 文件夹弹窗内一行存储绑定（configId × 优先级）；新行未选配置时 id 为空 */
@@ -123,6 +130,23 @@ export default function StoragePage() {
   const [dict, setDict] = useState<Record<string, DictOption[]>>({});
   const dictLabel = (code: string, value?: string) =>
     dict[code]?.find((o) => o.value === value)?.label || value || '-';
+  /** 后端 savePermissions 当前只接受 SUBJECT_USER，界面不再暴露 PLUGIN 等未实现主体 */
+  const subjectTypeOptions = useMemo(() => {
+    const users = (dict['storage_subject_type'] || []).filter((option) => option.value === 'USER');
+    return users.length ? users : [{ value: 'USER', label: 'USER' }];
+  }, [dict]);
+
+  /**
+   * 存储类型选项按权限裁剪：普通配置新建/编辑走 admin:storage:edit，CUSTOM_HTTP 渠道走
+   * admin:storage:channel:edit。两类权限可由不同角色持有，不能把无权创建的选项暴露给用户。
+   */
+  const providerOptions = useMemo(
+    () =>
+      (dict['storage_provider_type'] || []).filter((option) =>
+        option.value === 'CUSTOM_HTTP' ? canEditChannel : canEdit,
+      ),
+    [dict, canEdit, canEditChannel],
+  );
 
   // ==================== 存储配置 ====================
   const [configs, setConfigs] = useState<StorageConfig[]>([]);
@@ -135,7 +159,7 @@ export default function StoragePage() {
       .then((res) => {
         if (res.code === 200) setOverview(res.data);
       })
-      .catch(() => {});
+      .catch((e) => message.error(errText(e)));
   }, []);
   const [configModal, setConfigModal] = useState<{ open: boolean; editing?: StorageConfig }>({
     open: false,
@@ -145,7 +169,11 @@ export default function StoragePage() {
   const [httpApprovedTargets, setHttpApprovedTargets] = useState<HttpApprovedTarget[]>([]);
   const [httpBusy, setHttpBusy] = useState(false);
   const httpEditorRef = useRef<HttpChannelFieldsHandle>(null);
-  const [configForm] = Form.useForm();
+  /** 同步锁：validateFields / 渠道详情 await 期间重复点击「确定」必须被拦住 */
+  const configSubmitLockRef = useRef(false);
+  const [configForm] = Form.useForm<
+    Parameters<typeof storageApi.createConfig>[0] & Pick<StorageConfig, 'status'>
+  >();
 
   const loadConfigs = () => {
     loadOverview();
@@ -154,10 +182,12 @@ export default function StoragePage() {
       .then((res) => {
         if (res.code === 200) setConfigs(res.data || []);
       })
-      .catch((e) => message.error((e as Error).message));
+      .catch((e) => message.error(errText(e)));
   };
 
   const submitConfig = async () => {
+    if (configSubmitLockRef.current) return;
+    configSubmitLockRef.current = true;
     try {
       const values = await configForm.validateFields();
       // CUSTOM_HTTP：编辑态走 configModal.editing.providerType（编辑时类型下拉不渲染），新建态走表单值
@@ -170,7 +200,12 @@ export default function StoragePage() {
           message.warning('渠道详情加载中，请稍候再试');
           return;
         }
-        const error = await httpEditorRef.current?.submit({
+        const editor = httpEditorRef.current;
+        if (!editor) {
+          message.error('渠道编辑器尚未加载，请稍后重试');
+          return;
+        }
+        const error = await editor.submit({
           name,
           mode: configModal.editing?.id ? 'edit' : 'create',
           channelId: configModal.editing?.id,
@@ -194,7 +229,9 @@ export default function StoragePage() {
     } catch (e: unknown) {
       // 必填校验失败时 validateFields 抛的是 { errorFields } 不是 Error，取不到 message，兜底一句中文提示；
       // 字段级错误仍由表单内联展示，这里只保证「点了确定没有任何反馈」不再发生
-      message.error((e as Error)?.message || '请检查表单填写是否完整');
+      message.error(errText(e, '请检查表单填写是否完整'));
+    } finally {
+      configSubmitLockRef.current = false;
     }
   };
 
@@ -225,7 +262,7 @@ export default function StoragePage() {
           if (!cancelled) setHttpChannelDetail(res.data);
         })
         .catch((e: unknown) => {
-          if (!cancelled) message.error((e as Error).message);
+          if (!cancelled) message.error(errText(e));
         });
     }
     if (isHttpChannelConfig || editingHttp) {
@@ -234,7 +271,9 @@ export default function StoragePage() {
         .then((res) => {
           if (res.code === 200 && !cancelled) setHttpApprovedTargets(res.data || []);
         })
-        .catch(() => {});
+        .catch((e: unknown) => {
+          if (!cancelled) message.warning(`批准目标加载失败：${errText(e)}`);
+        });
     }
     return () => {
       cancelled = true;
@@ -249,9 +288,11 @@ export default function StoragePage() {
         if (res.data.healthStatus === 'UP') message.success(res.data.message);
         else message.error(res.data.message);
         loadConfigs();
+      } else {
+        message.error(res.msg || '测试失败');
       }
     } catch (e: unknown) {
-      message.error((e as Error).message);
+      message.error(errText(e));
     }
   };
 
@@ -264,7 +305,7 @@ export default function StoragePage() {
     bindings: FolderBindingRow[];
     strategy: string;
   }>({ open: false, bindings: [], strategy: 'FAILOVER' });
-  const [folderForm] = Form.useForm();
+  const [folderForm] = Form.useForm<FolderFormValues & { folderName: string }>();
   const [permModal, setPermModal] = useState<{
     open: boolean;
     folder?: StorageFolder;
@@ -278,7 +319,7 @@ export default function StoragePage() {
       .then((res) => {
         if (res.code === 200) setFolders(res.data || []);
       })
-      .catch((e) => message.error((e as Error).message));
+      .catch((e) => message.error(errText(e)));
   };
 
   // 收集弹窗中的策略表单字段并序列化为后端 policy 对象：
@@ -317,17 +358,19 @@ export default function StoragePage() {
         })),
       };
       delete payload.policyEnabled;
-      [
-        'policyRequireLogin',
-        'policyMinSizeBytes',
-        'policyMaxSizeMb',
-        'policyDailyLimit',
-        'policyMimes',
-        'policyExtensions',
-        'policyForceVisibility',
-        'policyVerifyContent',
-        'policyMaxPixels',
-      ].forEach((k) => delete payload[k]);
+      (
+        [
+          'policyRequireLogin',
+          'policyMinSizeBytes',
+          'policyMaxSizeMb',
+          'policyDailyLimit',
+          'policyMimes',
+          'policyExtensions',
+          'policyForceVisibility',
+          'policyVerifyContent',
+          'policyMaxPixels',
+        ] as const
+      ).forEach((k) => delete payload[k]);
       if (folderModal.editing?.id) {
         await storageApi.updateFolder(folderModal.editing.id, payload);
       } else {
@@ -338,7 +381,7 @@ export default function StoragePage() {
       loadFolders();
     } catch (e: unknown) {
       // 同 submitConfig：校验失败不会带上 message，兜底中文提示
-      message.error((e as Error)?.message || '请检查表单填写是否完整');
+      message.error(errText(e, '请检查表单填写是否完整'));
     }
   };
 
@@ -389,36 +432,60 @@ export default function StoragePage() {
           rows: (res.data || []).map((r) => ({
             ...r,
             key: r.id,
-            permConfigs: (r.configs || []).map((c) => c.configId),
-            permPriority: r.configs?.[0]?.priority ?? 100,
+            permConfigs: (r.configs || []).map((c) => ({
+              storageConfigId: c.configId,
+              priority: c.priority ?? 100,
+            })),
           })),
         });
+      } else {
+        message.error(res.msg || '授权加载失败');
       }
     } catch (e: unknown) {
-      message.error((e as Error).message);
+      message.error(errText(e, '授权加载失败'));
     }
   };
 
   const savePermissions = async () => {
+    // 后端会静默跳过 subjectId/permissions 为空的行（导致「保存成功但什么都没写」），必须先在前端拒绝
+    for (let i = 0; i < permModal.rows.length; i += 1) {
+      const row = permModal.rows[i];
+      if (!row.subjectId.trim()) {
+        message.error(`第 ${i + 1} 行缺少授权主体 ID`);
+        return;
+      }
+      if (!row.permissions.trim()) {
+        message.error(`第 ${i + 1} 行至少选择一个权限`);
+        return;
+      }
+    }
+    const seen = new Set<string>();
+    for (const row of permModal.rows) {
+      const key = `${row.subjectType}:${row.subjectId.trim()}`;
+      if (seen.has(key)) {
+        message.error(`授权主体重复：${row.subjectType} / ${row.subjectId}，请合并后再保存`);
+        return;
+      }
+      seen.add(key);
+    }
     const rows = permModal.rows.map((r) => ({
       subjectType: r.subjectType,
-      subjectId: r.subjectId,
+      subjectId: r.subjectId.trim(),
       permissions: r.permissions,
       // 授权绑定：空 = 跟随文件夹绑定；选定项必须是文件夹绑定的子集（后端 STORAGE058 校验）
-      configs:
-        r.permConfigs && r.permConfigs.length
-          ? r.permConfigs.map((id) => ({
-              storageConfigId: id,
-              priority: r.permPriority ?? 100,
-            }))
-          : undefined,
+      configs: r.permConfigs?.length
+        ? r.permConfigs.map((binding) => ({
+            storageConfigId: binding.storageConfigId,
+            priority: binding.priority ?? 100,
+          }))
+        : undefined,
     }));
     try {
       await storageApi.saveFolderPermissions(permModal.folder!.id!, rows);
       message.success('授权已保存');
       setPermModal({ open: false, rows: [] });
     } catch (e: unknown) {
-      message.error((e as Error).message);
+      message.error(errText(e, '授权保存失败'));
     }
   };
 
@@ -535,6 +602,12 @@ export default function StoragePage() {
       return;
     }
     const provider = testProvider;
+    if (provider === 'CUSTOM_HTTP') {
+      message.warning(
+        'CUSTOM_HTTP 渠道走服务端两步上传，不支持这里的直传端到端测试；请到「文件」页签使用两步上传，或在渠道编辑器执行离线校验/测试连接',
+      );
+      return;
+    }
     const steps = buildTestSteps(provider);
     setTestSteps(steps);
     setTestRunning(true);
@@ -574,8 +647,9 @@ export default function StoragePage() {
 
       // 3. 回执登记（成功响应即表示登记已完成；此处刷新列表核对落库）
       setStep(2, 'run');
-      const pageRes = await storageApi.pageFiles({ current: 1, size: 50, folderId: testFolderId });
-      const registered = (pageRes.code === 200 ? pageRes.data.records || [] : []).some(
+      const pageRes = await storageApi.pageFiles({ current: 1, size: 100, folderId: testFolderId });
+      if (pageRes.code !== 200) throw new Error(pageRes.msg || '文件列表查询失败');
+      const registered = (pageRes.data.records || []).some(
         (f: StorageFile) => f.publicId === publicId,
       );
       if (!registered) throw new Error('文件未在列表中出现，登记可能失败');
@@ -592,15 +666,14 @@ export default function StoragePage() {
       setStep(3, 'ok', `下载验证通过（${blob.size} 字节，地址有效）`);
       message.success(`上传测试通过：${isTelegram ? 'Telegram' : provider} 通道完整链路正常`);
     } catch (e: unknown) {
+      const detail = errText(e, '上传测试失败');
       setTestSteps((steps) => {
         const failedIdx = steps.findIndex((s) => s.state === 'run');
         return failedIdx >= 0
-          ? steps.map((s, i) =>
-              i === failedIdx ? { ...s, state: 'fail' as const, detail: (e as Error).message } : s,
-            )
+          ? steps.map((s, i) => (i === failedIdx ? { ...s, state: 'fail' as const, detail } : s))
           : steps;
       });
-      message.error(`测试失败：${(e as Error).message}`);
+      message.error(`测试失败：${detail}`);
     } finally {
       setTestRunning(false);
     }
@@ -620,26 +693,28 @@ export default function StoragePage() {
     current: 1,
   });
 
-  const loadTasks = () => {
+  const loadTasks = (current = 1, size = 20) => {
     storageApi
-      .pageTasks({ current: 1, size: 20 })
+      .pageTasks({ current, size })
       .then((res) => {
         if (res.code === 200) setTasks(res.data);
       })
-      .catch((e) => message.error((e as Error).message));
+      .catch((e) => message.error(errText(e)));
   };
-  const loadAudits = () => {
+  const loadAudits = (current = 1, size = 20) => {
     storageApi
-      .pageAudit({ current: 1, size: 20 })
+      .pageAudit({ current, size })
       .then((res) => {
         if (res.code === 200) setAudits(res.data);
       })
-      .catch((e) => message.error((e as Error).message));
+      .catch((e) => message.error(errText(e)));
   };
 
   useEffect(() => {
     loadConfigs();
     loadFolders();
+    loadTasks();
+    loadAudits();
     // 枚举选项走数据字典（storage_*，V5__storage_dict.sql）；失败时降级为字典原值展示
     fetchDictOptions([
       'storage_provider_type',
@@ -653,7 +728,9 @@ export default function StoragePage() {
       'storage_target_strategy',
     ])
       .then(setDict)
-      .catch(() => {});
+      .catch((error) => {
+        message.warning(`枚举字典加载失败，下拉与标签将显示原始值：${errText(error)}`);
+      });
     // 挂载一次性拉取；loadConfigs/loadFolders 每渲染重建，列入依赖会变成每渲染重拉（仓库既有 disable 惯例）
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -667,6 +744,7 @@ export default function StoragePage() {
     OSS: 'orange',
     UPYUN: 'green',
     TELEGRAM: 'orange',
+    CUSTOM_HTTP: 'magenta',
   };
   const providerTag = (v?: string) => (
     <Tag color={PROVIDER_COLOR[v || 'TELEGRAM'] || 'orange'}>
@@ -692,18 +770,22 @@ export default function StoragePage() {
       width: 200,
       ellipsis: true,
       render: (_: unknown, r: StorageConfig) =>
-        OBJECT_PROVIDERS.includes(r.providerType || 'TELEGRAM')
-          ? parseOptions(r.providerOptions).bucket || '-'
-          : r.chatId,
+        r.providerType === 'CUSTOM_HTTP'
+          ? '见渠道详情'
+          : OBJECT_PROVIDERS.includes(r.providerType || 'TELEGRAM')
+            ? parseOptions(r.providerOptions).bucket || '-'
+            : r.chatId,
     },
     {
       title: 'Worker/公开域名',
       dataIndex: 'workerBaseUrl',
       ellipsis: true,
       render: (_: unknown, r: StorageConfig) =>
-        OBJECT_PROVIDERS.includes(r.providerType || 'TELEGRAM')
-          ? parseOptions(r.providerOptions).publicBaseUrl || '-'
-          : r.workerBaseUrl,
+        r.providerType === 'CUSTOM_HTTP'
+          ? '见渠道详情'
+          : OBJECT_PROVIDERS.includes(r.providerType || 'TELEGRAM')
+            ? parseOptions(r.providerOptions).publicBaseUrl || '-'
+            : r.workerBaseUrl,
     },
     {
       title: '健康',
@@ -752,7 +834,7 @@ export default function StoragePage() {
                       loadConfigs();
                     }
                   } catch (e: unknown) {
-                    message.warning((e as Error).message);
+                    message.warning(errText(e, '测试请求失败'));
                   }
                 }}
               >
@@ -784,7 +866,7 @@ export default function StoragePage() {
                     message.success('已删除');
                     loadConfigs();
                   } catch (e: unknown) {
-                    message.error((e as Error).message);
+                    message.error(errText(e));
                   }
                 }}
               >
@@ -808,9 +890,13 @@ export default function StoragePage() {
               icon={<StarOutlined />}
               disabled={!canEdit}
               onClick={async () => {
-                await storageApi.setDefaultConfig(record.id!);
-                message.success('已设为默认');
-                loadConfigs();
+                try {
+                  await storageApi.setDefaultConfig(record.id!);
+                  message.success('已设为默认');
+                  loadConfigs();
+                } catch (e: unknown) {
+                  message.error(errText(e, '设为默认失败'));
+                }
               }}
             >
               设默认
@@ -852,7 +938,7 @@ export default function StoragePage() {
                   message.success('已删除');
                   loadConfigs();
                 } catch (e: unknown) {
-                  message.error((e as Error).message);
+                  message.error(errText(e));
                 }
               }}
             >
@@ -925,7 +1011,7 @@ export default function StoragePage() {
                 message.success('已删除');
                 loadFolders();
               } catch (e: unknown) {
-                message.error((e as Error).message);
+                message.error(errText(e));
               }
             }}
           >
@@ -987,7 +1073,7 @@ export default function StoragePage() {
                         <Button icon={<ReloadOutlined />} onClick={loadConfigs}>
                           刷新
                         </Button>
-                        {canEdit && (
+                        {(canEdit || canEditChannel) && (
                           <Button
                             type="primary"
                             icon={<PlusOutlined />}
@@ -1070,7 +1156,12 @@ export default function StoragePage() {
                             : undefined;
                           const p = cfg?.providerType || f.resolvedProviderType || 'TELEGRAM';
                           const label = `${f.folderPath || f.folderName}（${p === 'TELEGRAM' ? 'Telegram' : p === 'S3_COMPATIBLE' ? 'S3' : p === 'QINIU' ? '七牛' : p === 'COS' ? '腾讯COS' : p === 'OSS' ? '阿里OSS' : p === 'UPYUN' ? '又拍云' : p}）`;
-                          return { label, value: f.id! };
+                          return {
+                            label,
+                            value: f.id!,
+                            // CUSTOM_HTTP 是服务端两步上传，本页四步直传链路不适用
+                            disabled: p === 'CUSTOM_HTTP',
+                          };
                         })}
                       onChange={setTestFolderId}
                     />
@@ -1078,7 +1169,7 @@ export default function StoragePage() {
                       type="primary"
                       icon={<ExperimentOutlined />}
                       loading={testRunning}
-                      disabled={!testFolderId}
+                      disabled={!testFolderId || testProvider === 'CUSTOM_HTTP'}
                       onClick={runUploadTest}
                     >
                       开始测试
@@ -1170,7 +1261,7 @@ export default function StoragePage() {
                 <div className="space-y-3">
                   <FilterBar
                     actions={
-                      <Button icon={<ReloadOutlined />} onClick={loadTasks}>
+                      <Button icon={<ReloadOutlined />} onClick={() => loadTasks()}>
                         刷新
                       </Button>
                     }
@@ -1178,6 +1269,7 @@ export default function StoragePage() {
                   <PagedTable
                     files={tasks}
                     rowKey="id"
+                    onPage={(current, size) => loadTasks(current, size)}
                     columns={[
                       { title: 'ID', dataIndex: 'id', width: 100 },
                       { title: '类型', dataIndex: 'taskType', width: 200 },
@@ -1207,7 +1299,7 @@ export default function StoragePage() {
                 <div className="space-y-3">
                   <FilterBar
                     actions={
-                      <Button icon={<ReloadOutlined />} onClick={loadAudits}>
+                      <Button icon={<ReloadOutlined />} onClick={() => loadAudits()}>
                         刷新
                       </Button>
                     }
@@ -1215,6 +1307,7 @@ export default function StoragePage() {
                   <PagedTable
                     files={audits}
                     rowKey="id"
+                    onPage={(current, size) => loadAudits(current, size)}
                     columns={[
                       { title: '动作', dataIndex: 'action', width: 160 },
                       {
@@ -1308,10 +1401,10 @@ export default function StoragePage() {
             <Form.Item
               name="providerType"
               label="存储类型"
-              initialValue="TELEGRAM"
+              initialValue={canEdit ? 'TELEGRAM' : 'CUSTOM_HTTP'}
               extra="第三方 HTTP 接口：填好名称后点「确定」进入专用渠道编辑器；其余：TELEGRAM 经 Cloudflare Worker 中转，R2/S3/七牛走 S3 预签名 PUT，COS/OSS 走各自预签名 PUT，又拍云走表单直传"
             >
-              <Select options={dict['storage_provider_type'] || []} />
+              <Select options={providerOptions} />
             </Form.Item>
           )}
           {!isObjectConfig && !isHttpChannelConfig ? (
@@ -1595,9 +1688,12 @@ export default function StoragePage() {
                     style={{ width: 260 }}
                     placeholder="选择存储配置"
                     value={b.storageConfigId}
-                    options={configs
-                      .filter((c) => c.status === 'ENABLED')
-                      .map((c) => ({ label: c.name, value: c.id! }))}
+                    options={configs.map((c) => ({
+                      label: `${c.name}${c.status === 'ENABLED' ? '' : '（已禁用）'}`,
+                      value: c.id!,
+                      // 已绑定的禁用配置必须仍可见可移除；新选择只允许启用中的配置
+                      disabled: c.status !== 'ENABLED' && b.storageConfigId !== c.id,
+                    }))}
                     onChange={(v) =>
                       setFolderModal((m) => ({
                         ...m,
@@ -1760,8 +1856,8 @@ export default function StoragePage() {
       >
         <p style={{ color: '#909399' }}>
           授权为全量替换；权限集合：READ / UPLOAD / UPDATE / DELETE /
-          MANAGE。可选「限定配置」必须是该文件夹绑定的子集，留空 = 跟随文件夹绑定。 Qt
-          等插件调用方使用 PLUGIN 主体（预留）。
+          MANAGE。可选「限定配置」必须是该文件夹绑定的子集，留空 =
+          跟随文件夹绑定；每个限定配置可单独设置优先级。 当前仅支持 USER（用户）主体。
         </p>
         {permModal.rows.map((row, idx) => (
           <div
@@ -1777,7 +1873,7 @@ export default function StoragePage() {
               <Select
                 style={{ width: 110 }}
                 value={row.subjectType}
-                options={dict['storage_subject_type'] || []}
+                options={subjectTypeOptions}
                 onChange={(v) =>
                   setPermModal((m) => ({
                     ...m,
@@ -1823,38 +1919,74 @@ export default function StoragePage() {
                 移除
               </Button>
             </Space>
-            <Space style={{ display: 'flex', marginTop: 4 }}>
+            <Space style={{ display: 'flex', marginTop: 4 }} direction="vertical">
               <Select
                 style={{ width: 320 }}
                 mode="multiple"
                 placeholder="限定配置（可选，必须是文件夹绑定的子集）"
                 options={(permModal.folder?.configs || []).map((c) => ({
-                  label: `${c.configName || `#${c.configId}`}（优先级 ${c.priority}）`,
+                  label: `${c.configName || `#${c.configId}`}（文件夹优先级 ${c.priority}）`,
                   value: c.configId,
                 }))}
-                value={row.permConfigs || []}
+                value={(row.permConfigs || []).map((binding) => binding.storageConfigId)}
                 disabled={!permModal.folder?.configs?.length}
-                onChange={(v) =>
+                onChange={(ids: number[]) =>
                   setPermModal((m) => ({
                     ...m,
-                    rows: m.rows.map((r, i) => (i === idx ? { ...r, permConfigs: v } : r)),
+                    rows: m.rows.map((r, i) => {
+                      if (i !== idx) return r;
+                      const previous = r.permConfigs || [];
+                      return {
+                        ...r,
+                        permConfigs: ids.map((id) => {
+                          const existing = previous.find((item) => item.storageConfigId === id);
+                          const folderBinding = m.folder?.configs?.find((c) => c.configId === id);
+                          return (
+                            existing || {
+                              storageConfigId: id,
+                              priority: folderBinding?.priority ?? 100,
+                            }
+                          );
+                        }),
+                      };
+                    }),
                   }))
                 }
               />
-              <InputNumber
-                style={{ width: 140 }}
-                min={0}
-                max={10000}
-                placeholder="优先级"
-                value={row.permPriority ?? 100}
-                disabled={!(row.permConfigs || []).length}
-                onChange={(v) =>
-                  setPermModal((m) => ({
-                    ...m,
-                    rows: m.rows.map((r, i) => (i === idx ? { ...r, permPriority: v ?? 100 } : r)),
-                  }))
-                }
-              />
+              {(row.permConfigs || []).map((binding) => {
+                const config = permModal.folder?.configs?.find(
+                  (item) => item.configId === binding.storageConfigId,
+                );
+                return (
+                  <Space key={binding.storageConfigId}>
+                    <span>{config?.configName || `#${binding.storageConfigId}`}</span>
+                    <InputNumber
+                      style={{ width: 140 }}
+                      min={0}
+                      max={10000}
+                      placeholder="优先级"
+                      value={binding.priority}
+                      onChange={(value) =>
+                        setPermModal((m) => ({
+                          ...m,
+                          rows: m.rows.map((r, i) =>
+                            i === idx
+                              ? {
+                                  ...r,
+                                  permConfigs: (r.permConfigs || []).map((item) =>
+                                    item.storageConfigId === binding.storageConfigId
+                                      ? { ...item, priority: value ?? 100 }
+                                      : item,
+                                  ),
+                                }
+                              : r,
+                          ),
+                        }))
+                      }
+                    />
+                  </Space>
+                );
+              })}
             </Space>
             {!permModal.folder?.configs?.length && (
               <p style={{ color: '#f56c6c', marginBottom: 0 }}>
@@ -1878,7 +2010,6 @@ export default function StoragePage() {
                   subjectId: '',
                   permissions: 'READ,UPLOAD',
                   permConfigs: [],
-                  permPriority: 100,
                 },
               ],
             }))

@@ -26,7 +26,7 @@ import { DictOption, dictLabel, fetchDictOptions } from '@/api/dict';
 /** 正文 PUT 期间的轮询间隔与上限（服务端异步读取 + 上游发送，正常 10s 内终结） */
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLLS = 120;
-const ACCEPTED_MIME = 'image/png,image/jpeg,image/webp,image/gif,image/avif';
+const ACCEPTED_MIME = 'image/png,image/jpeg';
 
 type Stage =
   'idle' | 'hashing' | 'creating' | 'uploading' | 'polling' | 'done' | 'failed' | 'unknown';
@@ -99,17 +99,22 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
     storageApi
       .listFolders()
       .then((result) => {
-        if (!alive || result.code !== 200) return;
+        if (!alive) return;
+        if (result.code !== 200) throw new Error(result.msg);
         const list = (result.data || []).filter((item) => item.status === 'ENABLED');
         setFolders(list);
         if (list.length === 1 && list[0].id != null) setFolderId(String(list[0].id));
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (alive) toast.error(`上传目录加载失败：${errorText(error)}`);
+      });
     fetchDictOptions(['storage_upload_state'])
       .then((map) => {
         if (alive) setDict(map);
       })
-      .catch(() => {});
+      .catch((error) => {
+        if (alive) toast.warning(`上传状态字典加载失败，状态将显示原始值：${errorText(error)}`);
+      });
     return () => {
       alive = false;
       runIdRef.current += 1;
@@ -150,6 +155,7 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
     for (let attempt = 0; attempt < MAX_POLLS; attempt += 1) {
       const result = await storageApi.getUploadOperation(id, true);
       if (runId !== runIdRef.current) return;
+      if (result.code !== 200) throw new Error(result.msg);
       if (settle(result.data)) return;
       await delay(POLL_INTERVAL_MS);
       if (runId !== runIdRef.current) return;
@@ -158,12 +164,22 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
     setError('状态查询超时，请稍后点「查询状态」继续确认；不要重复上传同一份文件。');
   };
 
-  const handleFailure = (caught: unknown, knownUploadId: string, runId: number) => {
+  const handleFailure = (
+    caught: unknown,
+    knownUploadId: string,
+    runId: number,
+    phase: 'create' | 'send' | 'query',
+  ) => {
     if (runId !== runIdRef.current) return;
     const code = errorCodeOf(caught);
     const message = errorText(caught);
+    // 创建/发送请求超时或断网时，服务端可能已经受理；只有查询阶段且已知操作 ID 才可安全判为未知。
     const networkUnknown =
-      message.includes('无法连接到服务器') || message.includes('服务暂时不可用');
+      message.includes('无法连接到服务器') ||
+      message.includes('服务暂时不可用') ||
+      message.includes('timeout') ||
+      message.includes('超时');
+    const mayHaveReachedServer = networkUnknown && (phase !== 'query' || !!knownUploadId);
     if (code === 'STORAGE042' || message.includes('并发')) {
       setStage('failed');
       setError('上传并发已满（服务端返回 429），请稍后重试。为避免重复占用配额，请不要自动重试。');
@@ -189,9 +205,13 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
       setError('上传正文与声明不一致（大小或 SHA-256 不匹配），请重新选择文件。');
       return;
     }
-    if (code === 'STORAGE046' || code === 'STORAGE049' || (knownUploadId && networkUnknown)) {
+    if (code === 'STORAGE046' || code === 'STORAGE049' || mayHaveReachedServer) {
       setStage('unknown');
-      setError('结果未知，请查询原操作。请求可能已被服务端受理，不要用新上传替代。');
+      setError(
+        knownUploadId
+          ? '结果未知，请查询原操作。请求可能已被服务端受理，不要用新上传替代。'
+          : '结果未知，服务端可能已受理。请重新选择同一文件（系统会复用同一幂等键），不要换文件或用新键重传。',
+      );
       return;
     }
     setStage('failed');
@@ -220,6 +240,7 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
     setSha256('');
     setStage('hashing');
     let operationId = '';
+    let phase: 'create' | 'send' = 'create';
     try {
       // 摘要必须基于最终上传的字节；body 直接用同一个 File，避免二次拷贝
       const buffer = await picked.arrayBuffer();
@@ -243,6 +264,7 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
         idempotencyKey,
       );
       if (runId !== runIdRef.current) return;
+      if (created.code !== 200) throw new Error(created.msg);
       const operation = created.data;
       operationId = operation.uploadId;
       setUploadId(operation.uploadId);
@@ -259,6 +281,7 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
       }
 
       setStage('uploading');
+      phase = 'send';
       const sent = await storageApi.putUploadContent(
         operation.uploadId,
         picked,
@@ -277,7 +300,7 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
       setStage('polling');
       await pollOperation(operation.uploadId, runId);
     } catch (caught) {
-      handleFailure(caught, operationId, runId);
+      handleFailure(caught, operationId, runId, phase);
     }
   };
 
@@ -290,7 +313,7 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
     try {
       await pollOperation(uploadId, runId);
     } catch (caught) {
-      handleFailure(caught, uploadId, runId);
+      handleFailure(caught, uploadId, runId, 'query');
     }
   };
 
@@ -299,6 +322,7 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
     if (!publicId) return;
     try {
       const result = await storageApi.managerUrl(publicId, false, true);
+      if (result.code !== 200) throw new Error(result.msg);
       const url = result.data?.url;
       if (!url) {
         toast.error('服务端未返回下载地址');
@@ -325,6 +349,8 @@ export default function ServerSideUpload({ canUpload = true }: { canUpload?: boo
 
   const onPick = (event: ChangeEvent<HTMLInputElement>) => {
     const picked = event.target.files?.[0];
+    // 清空 value，允许结果未知时重新选择“同一个文件”以复用原幂等键
+    event.target.value = '';
     if (picked) void startUpload(picked);
   };
 

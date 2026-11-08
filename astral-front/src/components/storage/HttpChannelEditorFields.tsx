@@ -40,6 +40,8 @@ const REMARK_LIMIT = 512;
 const SECRET_NAME = /^[A-Za-z][A-Za-z0-9_]{0,31}$/;
 const SECRET_REF = /\$\{secret:([A-Za-z][A-Za-z0-9_]{0,31})\}/g;
 const MIME = /^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/i;
+/** 后端 HttpProfileValidator.SUPPORTED_MIMES 当前只有 PNG/JPEG（内容嗅探也只认这两种魔数） */
+const SUPPORTED_MIMES = ['image/png', 'image/jpeg'];
 /** 本期后端不接受匿名渠道（NONE 会返回 STORAGE034）；BASIC 已实现且有字典行（V20261106004） */
 const ALLOWED_AUTH_MODES = ['HEADER', 'QUERY', 'FORM', 'BASIC'];
 
@@ -101,11 +103,11 @@ function channelErrorHint(code?: string) {
     case 'STORAGE034':
       return '渠道凭据信封损坏或认证方式非法（匿名渠道会被拒绝），请重新设置凭据';
     case 'STORAGE035':
-      return '部署未配置批准的远端目标（approved-targets 为空），不会发出任何出站请求';
+      return '上传地址未精确匹配部署批准目标（路径也要一致；批准列表为空时同样返回该码），不会发出任何出站请求';
     case 'STORAGE036':
       return '缺少渠道必需的凭据，请先在「密钥」区设置';
     case 'STORAGE037':
-      return '渠道存在多余凭据，请清除不再引用的凭据';
+      return '凭据与当前画像不匹配（多余、未引用或上传地址绑定已变化），请按下方详情调整';
     case 'STORAGE039':
       return '当前部署未启用 HTTP 渠道（custom-http.enabled=false），不会发出任何出站请求';
     case 'STORAGE002':
@@ -138,7 +140,7 @@ function emptyForm(): ChannelFormState {
     headers: [],
     query: [],
     maxBytes: HARD_MAX_BYTES,
-    allowedMimes: 'image/png, image/jpeg, image/webp',
+    allowedMimes: 'image/png, image/jpeg',
     attemptMs: DEFAULT_ATTEMPT_MS,
     urlPointer: '/url',
     conditions: [{ pointer: '/success', op: 'EQ', type: 'BOOLEAN', value: 'true' }],
@@ -167,6 +169,10 @@ function parseMimes(input: string): string[] {
   if (tokens.length > 16) throw new Error('允许的 MIME 类型最多 16 个');
   for (const token of tokens) {
     if (!MIME.test(token)) throw new Error(`MIME 类型格式非法：${token}`);
+    if (!SUPPORTED_MIMES.includes(token))
+      throw new Error(
+        `当前后端仅支持 ${SUPPORTED_MIMES.join('、')}；GIF/WebP/AVIF 会被服务端内容校验拒绝`,
+      );
   }
   return Array.from(new Set(tokens));
 }
@@ -174,7 +180,9 @@ function parseMimes(input: string): string[] {
 function buildAuth(form: ChannelFormState): HttpAuthSpec {
   const mode = form.authMode || '';
   if (!mode || mode === 'NONE')
-    throw new Error('后端本期不接受匿名渠道（会返回 STORAGE034），请选择 HEADER / QUERY / FORM');
+    throw new Error(
+      '后端本期不接受匿名渠道（会返回 STORAGE034），请选择 HEADER / QUERY / FORM / BASIC',
+    );
   if (mode === 'BASIC') {
     if (!SECRET_NAME.test(form.usernameSecret.trim()))
       throw new Error('用户名凭据名非法：需以字母开头，仅含字母数字下划线，最长 32');
@@ -226,7 +234,8 @@ function buildProfile(
   base?: HttpUploadProfile,
 ): HttpUploadProfile {
   const endpoint = form.endpoint.trim();
-  if (!/^https?:\/\//i.test(endpoint)) throw new Error('上传地址需以 http:// 或 https:// 开头');
+  if (!/^https:\/\//i.test(endpoint))
+    throw new Error('上传地址需以 https:// 开头（后端只批准 HTTPS 目标，http 会被拒绝）');
   if (!form.fileField.trim()) throw new Error('multipart 文件字段名不能为空');
   const fileNameTemplate = form.fileNameTemplate.trim();
   if (!fileNameTemplate) throw new Error('上传文件名模板不能为空');
@@ -289,24 +298,21 @@ function buildProfile(
   };
 }
 
-/** 画像里引用的凭据名：auth 显式名 + 所有 ${secret:name} 模板 */
-function referencedSecrets(profile: HttpUploadProfile): string[] {
+/** 表单级凭据引用扫描：不依赖画像完整性，避免某个无关字段非法时把已引用凭据行藏起来 */
+function referencedSecretsFromForm(form: ChannelFormState): string[] {
   const names = new Set<string>();
-  const auth = profile.auth;
-  if (auth.usernameSecret) names.add(auth.usernameSecret);
-  if (auth.passwordSecret) names.add(auth.passwordSecret);
+  if (form.authMode === 'BASIC') {
+    if (form.usernameSecret.trim()) names.add(form.usernameSecret.trim());
+    if (form.passwordSecret.trim()) names.add(form.passwordSecret.trim());
+  }
   const scan = (value?: string) => {
     if (!value) return;
     SECRET_REF.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = SECRET_REF.exec(value))) {
-      names.add(match[1]);
-    }
+    while ((match = SECRET_REF.exec(value))) names.add(match[1]);
   };
-  scan(auth.valueTemplate);
-  Object.values(profile.query || {}).forEach(scan);
-  Object.values(profile.headers || {}).forEach(scan);
-  Object.values(profile.body?.fields || {}).forEach(scan);
+  scan(form.authValueTemplate);
+  for (const row of [...form.query, ...form.headers, ...form.fields]) scan(row.value);
   return Array.from(names).sort();
 }
 
@@ -458,6 +464,9 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
     const [validation, setValidation] = useState<HttpChannelValidation | null>(null);
     const [validating, setValidating] = useState(false);
     const [dict, setDict] = useState<Record<string, DictOption[]>>({});
+    /** 同步锁：state 更新前的同一事件循环内重复点击也必须被拦住 */
+    const submitLockRef = useRef(false);
+    const validateLockRef = useRef(false);
 
     useEffect(() => {
       let cancelled = false;
@@ -492,16 +501,21 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
       onBusyChange?.(busy);
     }, [busy, onBusyChange]);
 
-    const approvedOrigins = useMemo(
-      () => Array.from(new Set(approvedTargets.flatMap((target) => target.urlOrigins))),
-      [approvedTargets],
-    );
+    const matchedApprovedTarget = useMemo(() => {
+      const endpoint = form.endpoint.trim();
+      return approvedTargets.find((target) => `${target.origin}${target.path || ''}` === endpoint);
+    }, [form.endpoint, approvedTargets]);
 
     const planOrigins = useMemo(() => {
-      const fromProfile =
-        mode === 'edit' ? channel?.profile?.response?.allowedUrlOrigins : undefined;
-      return fromProfile?.length ? fromProfile : approvedOrigins;
-    }, [mode, channel, approvedOrigins]);
+      // 只使用当前 endpoint 精确对应的部署批准目标：已保存画像的 allowedUrlOrigins 可能已过期，
+      // 只有部署批准清单本身为空（功能未启用）时才回退到画像里的历史值。
+      // 未匹配时不能回退到「全部批准来源」，否则会把错误来源当成合法配置提交。
+      if (matchedApprovedTarget) return matchedApprovedTarget.urlOrigins ?? [];
+      if (approvedTargets.length === 0 && mode === 'edit') {
+        return channel?.profile?.response?.allowedUrlOrigins ?? [];
+      }
+      return [];
+    }, [matchedApprovedTarget, approvedTargets.length, mode, channel]);
 
     /** 后端本期拒绝匿名渠道（NONE → STORAGE034），只暴露三种注入方式 */
     const authModeOptions = useMemo<DictOption[]>(() => {
@@ -528,15 +542,7 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
       );
     };
 
-    const referencedNames = useMemo(() => {
-      try {
-        return referencedSecrets(
-          buildProfile(form, planOrigins, mode === 'edit' ? channel?.profile : undefined),
-        );
-      } catch {
-        return [];
-      }
-    }, [form, planOrigins, mode, channel]);
+    const referencedNames = useMemo(() => referencedSecretsFromForm(form), [form]);
 
     /** 密钥清单 = 画像引用名 ∪ 已配置名（已配置但不再引用的也要能清除） */
     const secretList = useMemo(() => {
@@ -550,31 +556,61 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
 
     const secretLabel = (row: SecretRowState) => {
       const op = secretOps[row.name] || 'KEEP';
+      const referenced = referencedNames.includes(row.name);
       if (op === 'SET') return '待设置（保存后生效）';
       if (op === 'CLEAR') return row.configured ? '已标记清除' : '未配置';
+      if (row.configured && !referenced) return '已配置但未被画像引用（保存时自动清除）';
       return row.configured ? `已配置 · ${timeText(row.updatedAt)}` : '未配置';
     };
 
+    /** 后端 HttpSecretEnvelope 的绑定 = channelId + endpoint origin + path；地址变化后旧凭据不可 KEEP */
+    const secretBindingChanged = useMemo(() => {
+      const baseEndpoint = mode === 'edit' ? channel?.profile?.endpoint : undefined;
+      if (!baseEndpoint) return false;
+      try {
+        const before = new URL(baseEndpoint);
+        const after = new URL(form.endpoint.trim());
+        return before.origin !== after.origin || before.pathname !== after.pathname;
+      } catch {
+        return false;
+      }
+    }, [mode, channel, form.endpoint]);
+
     const buildSecretChanges = useCallback((): Record<string, HttpSecretChange> => {
       const changes: Record<string, HttpSecretChange> = {};
+      const referenced = new Set(referencedNames);
       const names = new Set<string>([
         ...secretList.map((row) => row.name),
         ...Object.keys(secretOps),
       ]);
       for (const name of names) {
         const op = secretOps[name] || 'KEEP';
-        const configured = secretList.find((row) => row.name === name)?.configured;
+        const configured = secretList.find((row) => row.name === name)?.configured === true;
         if (op === 'SET') {
           const value = secretValuesRef.current[name];
-          if (value) changes[name] = { op: 'SET', value };
+          if (!referenced.has(name))
+            throw new Error(`凭据 ${name} 未被当前画像引用，不能设置（后端会返回 STORAGE037）`);
+          if (!value) throw new Error(`凭据 ${name} 已标记设置但内容为空，请重新输入`);
+          changes[name] = { op: 'SET', value };
         } else if (op === 'CLEAR') {
-          changes[name] = { op: 'CLEAR' };
+          // 从未配置过的凭据不需要发 CLEAR（后端对不存在的 key 虽容忍，但无意义）
+          if (configured) changes[name] = { op: 'CLEAR' };
         } else if (configured) {
+          if (!referenced.has(name)) {
+            // 画像已不再引用：保留会在后端触发「凭据未被画像引用」STORAGE037，自动清除
+            changes[name] = { op: 'CLEAR' };
+            continue;
+          }
+          if (secretBindingChanged) {
+            throw new Error(
+              `上传地址已变化，已配置凭据 ${name} 不能沿用；请重新输入该凭据或标记清除后再保存`,
+            );
+          }
           changes[name] = { op: 'KEEP' };
         }
       }
       return changes;
-    }, [secretList, secretOps]);
+    }, [secretList, secretOps, referencedNames, secretBindingChanged]);
 
     const submit = useCallback(
       async (options: {
@@ -583,7 +619,8 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
         channelId?: number;
         expectedVersion?: number;
       }): Promise<string | null> => {
-        if (saving || validating) return '正在处理中，请稍候';
+        if (submitLockRef.current || saving || validating) return '正在处理中，请稍候';
+        submitLockRef.current = true;
         setFormError('');
         setSaving(true);
         try {
@@ -624,6 +661,7 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
           setFormError(text);
           return text;
         } finally {
+          submitLockRef.current = false;
           setSaving(false);
         }
       },
@@ -631,7 +669,8 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
     );
 
     const runValidate = useCallback(async () => {
-      if (validating) return;
+      if (validateLockRef.current || validating || saving) return;
+      validateLockRef.current = true;
       setFormError('');
       setValidating(true);
       try {
@@ -653,9 +692,10 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
         setFormError(hint ? `${hint}（${errorText(error)}）` : errorText(error));
         setValidation(null);
       } finally {
+        validateLockRef.current = false;
         setValidating(false);
       }
-    }, [validating, form, planOrigins, buildSecretChanges, mode, channel]);
+    }, [validating, saving, form, planOrigins, buildSecretChanges, mode, channel]);
 
     useImperativeHandle(ref, () => ({ submit, validateOffline: runValidate }), [
       submit,
@@ -665,8 +705,8 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
     return (
       <div className="space-y-5">
         <p className="text-muted-foreground text-xs">
-          渠道以 POST + multipart 上传单个文件，图片硬上限 1
-          MiB；服务端凭据只进加密信封，接口不回显明文。保存前可先离线校验（不联网）。
+          渠道以 POST + multipart 上传单个文件，单文件硬上限 5 MiB（仅
+          JPEG/PNG）；服务端凭据只进加密信封，接口不回显明文。保存前可先离线校验（不联网）。
         </p>
 
         <section className="space-y-3">
@@ -855,7 +895,7 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
               />
             </label>
             <label className="space-y-1 text-sm sm:col-span-3">
-              <span>允许的 MIME 类型（逗号分隔）</span>
+              <span>允许的 MIME 类型（逗号分隔；当前仅支持 image/png、image/jpeg）</span>
               <Input
                 value={form.allowedMimes}
                 disabled={saving}
@@ -991,6 +1031,13 @@ const HttpChannelEditorFields = forwardRef<HttpChannelFieldsHandle, HttpChannelE
           <p className="text-muted-foreground text-xs">
             由部署配置决定，页面不能新增；上传返回的 URL 必须落在这些来源下。
           </p>
+          {form.endpoint.trim() && !matchedApprovedTarget && (
+            <p className="text-destructive text-xs">
+              {approvedTargets.length === 0
+                ? '当前部署未配置批准目标（custom-http.enabled=false 或 approved-targets 为空），保存会被后端拒绝（STORAGE039/STORAGE035），不会发出任何请求。'
+                : '当前上传地址未精确匹配部署批准目标（路径也必须一致），保存会被后端拒绝（STORAGE035），不会发出任何请求。'}
+            </p>
+          )}
           <div className="flex flex-wrap gap-1">
             {planOrigins.length ? (
               planOrigins.map((origin) => (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Card,
   Button,
@@ -16,19 +16,32 @@ import {
   Switch,
 } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@/components/antd-compat/icons';
-import { smsApi, SmsProvider } from '@/api/sms';
-import { fetchDictOptions, DictOption } from '@/api/dict';
+import { smsApi, smsProviderPayload, type SmsProvider, type SmsProviderWrite } from '@/api/sms';
+import { AdminLoadNotice, AdminOptionNotice } from '@/components/admin/AdminLoadNotice';
+import { useAdminLoader, useAdminMutation, useAdminQuery } from '@/components/admin/use-admin-task';
+import { requireAdminSuccess } from '@/components/admin/admin-task';
+import {
+  loadAdminDictOptions as fetchDictOptions,
+  DictOption,
+} from '@/components/admin/admin-dictionaries';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import { FilterBar } from '@/components/filter-bar';
 
 export default function SmsProviderPage() {
-  const [loading, setLoading] = useState(false);
+  const { loading, error: loadError, run: runLoad } = useAdminLoader('加载短信供应商失败');
+  const {
+    loading: optionsLoading,
+    error: optionsError,
+    run: runOptions,
+  } = useAdminLoader('加载供应商选项失败');
+  const { busy: saving, run: runMutation } = useAdminMutation('短信供应商操作失败');
+  const query = useAdminQuery({ current: 1, pageSize: 10 });
   const [data, setData] = useState<SmsProvider[]>([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<SmsProvider | null>(null);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<SmsProviderWrite>();
 
   /** 后端 SPI 已注册的供应商类型（MOCK/ALIYUN…） */
   const [types, setTypes] = useState<string[]>([]);
@@ -40,48 +53,57 @@ export default function SmsProviderPage() {
   const hasPerm = usePerm();
   const canEdit = hasPerm('admin:system:notify:sms:edit');
 
-  useEffect(() => {
-    loadData();
-    loadTypes();
-    loadDicts();
-  }, []);
-
-  /** 加载数据字典（失败时回退显示原始值） */
-  const loadDicts = () => {
-    fetchDictOptions(['enable_status'])
-      .then(setDicts)
-      .catch(() => {
-        /* 字典失败时回退显示原始值 */
+  const loadData = useCallback(
+    (page?: number, size?: number) => {
+      const q = query.read({
+        ...(page === undefined ? {} : { current: page }),
+        ...(size === undefined ? {} : { pageSize: size }),
       });
-  };
-
-  const loadData = (page = 1, size = 10) => {
-    setLoading(true);
-    smsApi
-      .providerPage(page, size)
-      .then((res) => {
-        if (res.code === 200) {
-          setData(res.data?.records || []);
+      return runLoad(
+        async () => {
+          const result = requireAdminSuccess(
+            await smsApi.providerPage(q.current, q.pageSize),
+            '加载短信供应商失败',
+          );
+          if (!result) throw new Error('供应商分页数据缺失');
+          return result;
+        },
+        (result) => {
+          setData(result.records || []);
           setPagination({
-            current: res.data?.current || 1,
-            pageSize: res.data?.size || 10,
-            total: res.data?.total || 0,
+            current: result.current || q.current,
+            pageSize: result.size || q.pageSize,
+            total: result.total || 0,
           });
-        }
-      })
-      .finally(() => setLoading(false));
-  };
-
-  const loadTypes = () => {
-    smsApi
-      .providerTypes()
-      .then((res) => {
-        if (res.code === 200) setTypes(res.data || []);
-      })
-      .catch(() => {
-        /* 类型加载失败不阻塞页面 */
-      });
-  };
+        },
+      );
+    },
+    [query, runLoad],
+  );
+  const loadOptions = useCallback(
+    () =>
+      runOptions(
+        async () => {
+          const [response, map] = await Promise.all([
+            smsApi.providerTypes(),
+            fetchDictOptions(['enable_status']),
+          ]);
+          const values = requireAdminSuccess(response, '加载供应商类型失败') || [];
+          if (!values.length || !map.enable_status?.length)
+            throw new Error('供应商类型或状态暂无可用选项');
+          return { values, map };
+        },
+        ({ values, map }) => {
+          setTypes(values);
+          setDicts(map);
+        },
+      ),
+    [runOptions],
+  );
+  useEffect(() => {
+    void loadData();
+    void loadOptions();
+  }, [loadData, loadOptions]);
 
   const handleCreate = () => {
     setEditing(null);
@@ -93,41 +115,46 @@ export default function SmsProviderPage() {
   const handleEdit = (r: SmsProvider) => {
     setEditing(r);
     // accessSecret 后端永远不回传；编辑留空 = 不修改原密钥
-    form.setFieldsValue({ ...r, accessSecret: undefined });
+    form.resetFields();
+    form.setFieldsValue(smsProviderPayload(r));
     setModalVisible(true);
   };
 
-  const handleDelete = async (id?: number) => {
-    if (!id) return;
-    try {
-      await smsApi.providerDelete(id);
-      message.success('删除成功');
-      loadData();
-    } catch (e: unknown) {
-      message.error((e as Error).message);
-    }
+  const handleDelete = (id?: number) => {
+    if (!canEdit || !id) return;
+    return runMutation(
+      async () => requireAdminSuccess(await smsApi.providerDelete(id), '删除失败'),
+      () => {
+        message.success('删除成功');
+        void loadData();
+      },
+    );
   };
-
-  const handleToggle = async (r: SmsProvider, enabled: number) => {
-    try {
-      await smsApi.providerUpdate(r.id!, { enabled });
-      loadData();
-    } catch (e: unknown) {
-      message.error((e as Error).message);
-    }
+  const handleToggle = (record: SmsProvider, enabled: number) => {
+    if (!canEdit || !record.id) return;
+    return runMutation(
+      async () =>
+        requireAdminSuccess(await smsApi.providerUpdate(record.id!, { enabled }), '状态更新失败'),
+      () => void loadData(),
+    );
   };
-
-  const handleSubmit = async () => {
-    const values = await form.validateFields();
-    try {
-      if (editing?.id) await smsApi.providerUpdate(editing.id, values);
-      else await smsApi.providerCreate(values);
-      message.success('保存成功');
-      setModalVisible(false);
-      loadData();
-    } catch (e: unknown) {
-      message.error((e as Error).message);
-    }
+  const handleSubmit = () => {
+    if (!canEdit || optionsLoading || optionsError) return;
+    const id = editing?.id;
+    return runMutation(
+      async () => {
+        const values = await form.validateFields();
+        return requireAdminSuccess(
+          id ? await smsApi.providerUpdate(id, values) : await smsApi.providerCreate(values),
+          '保存失败',
+        );
+      },
+      () => {
+        message.success('保存成功');
+        setModalVisible(false);
+        void loadData();
+      },
+    );
   };
 
   const columns = [
@@ -153,8 +180,9 @@ export default function SmsProviderPage() {
       render: (v: number, r: SmsProvider) => (
         <Switch
           size="small"
+          aria-label={`启用供应商：${r.providerName}`}
           checked={v === 1}
-          disabled={!canEdit}
+          disabled={!canEdit || saving}
           onChange={(c) => handleToggle(r, c ? 1 : 0)}
         />
       ),
@@ -168,18 +196,23 @@ export default function SmsProviderPage() {
       render: (_: unknown, r: SmsProvider) => (
         <Space>
           {canEdit && (
-            <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(r)}>
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(r)}
+              disabled={saving}
+            >
               编辑
             </Button>
           )}
           {canEdit && (
-            <Popconfirm title="确认删除?" onConfirm={() => handleDelete(r.id)}>
-              <Button type="link" danger icon={<DeleteOutlined />}>
+            <Popconfirm title="确认删除?" disabled={saving} onConfirm={() => handleDelete(r.id)}>
+              <Button type="link" danger icon={<DeleteOutlined />} disabled={saving}>
                 删除
               </Button>
             </Popconfirm>
           )}
-          {!canEdit && <span style={{ color: '#999' }}>无操作权限</span>}
+          {!canEdit && <span className="text-muted-foreground">无操作权限</span>}
         </Space>
       ),
     },
@@ -191,7 +224,12 @@ export default function SmsProviderPage() {
         <FilterBar
           actions={
             canEdit ? (
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreate}
+                disabled={saving || optionsLoading || !!optionsError}
+              >
                 新增供应商
               </Button>
             ) : null
@@ -199,11 +237,17 @@ export default function SmsProviderPage() {
         >
           <span style={{ fontWeight: 600, fontSize: 16 }}>
             短信供应商
-            <span style={{ marginLeft: 12, fontWeight: 400, fontSize: 12, color: '#999' }}>
+            <span className="text-muted-foreground ml-3 text-xs font-normal">
               按权重轮选发送，失败自动换下一个；密钥保存后不再回传
             </span>
           </span>
         </FilterBar>
+        <AdminLoadNotice
+          error={loadError}
+          hasData={data.length > 0}
+          onRetry={() => void loadData()}
+        />
+        <AdminOptionNotice error={optionsError} onRetry={() => void loadOptions()} />
         <ResizableTable
           dataSource={data}
           columns={columns}
@@ -224,11 +268,16 @@ export default function SmsProviderPage() {
         title={editing ? '编辑供应商' : '新增供应商'}
         open={modalVisible}
         onOk={handleSubmit}
-        onCancel={() => setModalVisible(false)}
+        confirmLoading={saving}
+        okButtonProps={{ disabled: optionsLoading || !!optionsError }}
+        cancelButtonProps={{ disabled: saving }}
+        onCancel={() => {
+          if (!saving) setModalVisible(false);
+        }}
         width={760}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} disabled={saving} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="providerName" label="供应商名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
@@ -276,7 +325,7 @@ export default function SmsProviderPage() {
           >
             <Input placeholder="dysmsapi.aliyuncs.com" />
           </Form.Item>
-          <Space size="large">
+          <Space size="large" wrap>
             <Form.Item name="enabled" label="启用" valuePropName="value">
               <Select
                 style={{ width: 100 }}

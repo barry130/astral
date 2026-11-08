@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Button,
   Modal,
@@ -18,9 +18,24 @@ import {
   DeleteOutlined,
   ReloadOutlined,
 } from '@/components/antd-compat/icons';
-import { request } from '@/api/client';
+import {
+  permissionApi,
+  permissionPayload,
+  permissionDomain,
+  type PermissionRow,
+  type PermissionWrite,
+} from '@/api/system-admin';
+import { usePerm } from '@/lib/perm';
+import { AdminLoadNotice } from '@/components/admin/AdminLoadNotice';
+import { useAdminLoader, useAdminMutation } from '@/components/admin/use-admin-task';
+import { requireAdminSuccess } from '@/components/admin/admin-task';
 import { ResizableTable } from '@/components/ResizableTable';
-import { fetchDictOptions, DictOption } from '@/api/dict';
+import {
+  loadAdminDictOptions as fetchDictOptions,
+  dictLabel,
+  dictColor,
+  DictOption,
+} from '@/components/admin/admin-dictionaries';
 import { PermissionSideTag, SIDE_META, sideOfCode } from '@/lib/permission-side';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar } from '@/components/filter-bar';
@@ -39,24 +54,13 @@ const TYPE_COLORS: Record<string, string> = {
   '5': 'magenta',
 };
 
-/** 权限行（sys_permission）：与后端 SysPermissionVo 对齐 */
-interface PermissionRow {
-  id: number;
-  domain?: string;
-  permissionCode: string;
-  permissionName: string;
-  /** 权限类型（1 菜单 2 接口，其余见权限类型字典） */
-  type?: number;
-  url?: string;
-  method?: string;
-  sort?: number;
-  status?: number;
-  remark?: string;
-}
-
 export default function PermissionPage() {
   const [permissions, setPermissions] = useState<PermissionRow[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { loading, error: loadError, run: runLoad } = useAdminLoader('获取权限列表失败');
+  const { busy: saving, run: runMutation } = useAdminMutation('权限操作失败');
+  const hasPerm = usePerm();
+  const isSuper = hasPerm('*:*:*');
+  const [statusOptions, setStatusOptions] = useState<DictOption[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingPermission, setEditingPermission] = useState<PermissionRow | null>(null);
   const [typeOptions, setTypeOptions] = useState<DictOption[]>([]);
@@ -64,14 +68,29 @@ export default function PermissionPage() {
   const [typeFilter, setTypeFilter] = useState<string | undefined>(undefined);
   const [sideFilter, setSideFilter] = useState<string | undefined>(undefined);
   const [keyword, setKeyword] = useState('');
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<PermissionWrite>();
 
+  const fetchPermissions = useCallback(
+    () => runLoad(() => permissionApi.getAll(), setPermissions),
+    [runLoad],
+  );
   useEffect(() => {
-    fetchPermissions();
-    fetchDictOptions([PERMISSION_TYPE_DICT])
-      .then((map) => setTypeOptions(map[PERMISSION_TYPE_DICT] || []))
-      .catch(() => {});
-  }, []);
+    void fetchPermissions();
+    let active = true;
+    fetchDictOptions([PERMISSION_TYPE_DICT, 'enable_status'])
+      .then((map) => {
+        if (active) {
+          setTypeOptions(map[PERMISSION_TYPE_DICT] || []);
+          setStatusOptions(map.enable_status || []);
+        }
+      })
+      .catch(() => {
+        /* Unknown labels retain their raw values. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [fetchPermissions]);
 
   const typeLabel = (type: number | undefined): string => {
     const key = String(type ?? '');
@@ -79,32 +98,10 @@ export default function PermissionPage() {
     return hit ? hit.label : key || '-';
   };
 
-  const fetchPermissions = async () => {
-    setLoading(true);
-    try {
-      const res = await request.get('/api/v1/admin/system/permission/page', {
-        params: { pageNum: 1, pageSize: 1000 },
-      });
-      setPermissions(res.data.records || []);
-    } catch (error: unknown) {
-      message.error((error as Error).message || '获取权限列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /** 权限域：后端 domain 字段为准，缺失时回退权限码首段 */
-  const domainOf = (record: PermissionRow): string => {
-    if (record?.domain) return record.domain;
-    const code: string = record?.permissionCode || '';
-    const idx = code.indexOf(':');
-    return idx > 0 ? code.slice(0, idx) : 'system';
-  };
-
   /** 域下拉选项：从现有权限里汇总（权限域是数据驱动的，不登记字典） */
   const domainOptions = useMemo(() => {
     const set = new Set<string>();
-    permissions.forEach((p) => set.add(domainOf(p)));
+    permissions.forEach((p) => set.add(permissionDomain(p)));
     return Array.from(set).sort();
   }, [permissions]);
 
@@ -112,7 +109,7 @@ export default function PermissionPage() {
   const dataSource = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
     return permissions
-      .filter((p) => (domainFilter ? domainOf(p) === domainFilter : true))
+      .filter((p) => (domainFilter ? permissionDomain(p) === domainFilter : true))
       .filter((p) => (typeFilter ? String(p.type) === typeFilter : true))
       .filter((p) => (sideFilter ? sideOfCode(p.permissionCode) === sideFilter : true))
       .filter((p) => {
@@ -127,7 +124,7 @@ export default function PermissionPage() {
         );
       })
       .sort((a, b) => {
-        const d = domainOf(a).localeCompare(domainOf(b));
+        const d = permissionDomain(a).localeCompare(permissionDomain(b));
         if (d !== 0) return d;
         const sa = sideOfCode(a.permissionCode) ?? 'zz';
         const sb = sideOfCode(b.permissionCode) ?? 'zz';
@@ -146,35 +143,38 @@ export default function PermissionPage() {
 
   const handleEdit = (record: PermissionRow) => {
     setEditingPermission(record);
-    form.setFieldsValue(record);
+    form.resetFields();
+    form.setFieldsValue(permissionPayload(record));
     setModalVisible(true);
   };
 
-  const handleDelete = async (id: number) => {
-    try {
-      await request.delete(`/api/v1/admin/system/permission/${id}`);
-      message.success('删除成功');
-      fetchPermissions();
-    } catch (error: unknown) {
-      message.error((error as Error).message || '删除失败');
-    }
+  const handleDelete = (id: number) => {
+    if (!isSuper) return;
+    return runMutation(
+      async () => requireAdminSuccess(await permissionApi.delete(id), '删除失败'),
+      () => {
+        message.success('删除成功');
+        void fetchPermissions();
+      },
+    );
   };
-
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      if (editingPermission) {
-        await request.put(`/api/v1/admin/system/permission/${editingPermission.id}`, values);
-        message.success('更新成功');
-      } else {
-        await request.post('/api/v1/admin/system/permission', values);
-        message.success('创建成功');
-      }
-      setModalVisible(false);
-      fetchPermissions();
-    } catch (error: unknown) {
-      message.error((error as Error).message || '操作失败');
-    }
+  const handleSubmit = () => {
+    if (!isSuper) return;
+    const id = editingPermission?.id;
+    return runMutation(
+      async () => {
+        const values = await form.validateFields();
+        return requireAdminSuccess(
+          id ? await permissionApi.update(id, values) : await permissionApi.create(values),
+          '保存失败',
+        );
+      },
+      () => {
+        message.success(id ? '更新成功' : '创建成功');
+        setModalVisible(false);
+        void fetchPermissions();
+      },
+    );
   };
 
   const columns = [
@@ -182,7 +182,9 @@ export default function PermissionPage() {
       title: '权限域',
       dataIndex: 'domain',
       width: 110,
-      render: (_: unknown, record: PermissionRow) => <Tag color="cyan">{domainOf(record)}</Tag>,
+      render: (_: unknown, record: PermissionRow) => (
+        <Tag color="cyan">{permissionDomain(record)}</Tag>
+      ),
     },
     {
       // 显式 key：与下一列同 dataIndex（permissionCode），不写 key 会让两列派生出
@@ -213,7 +215,9 @@ export default function PermissionPage() {
       dataIndex: 'status',
       width: 80,
       render: (status: number) => (
-        <Tag color={status === 1 ? 'success' : 'default'}>{status === 1 ? '启用' : '禁用'}</Tag>
+        <Tag color={dictColor(statusOptions, status) || 'default'}>
+          {dictLabel(statusOptions, status, String(status))}
+        </Tag>
       ),
     },
     {
@@ -221,11 +225,20 @@ export default function PermissionPage() {
       width: 150,
       render: (_: unknown, record: PermissionRow) => (
         <>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+            disabled={!isSuper || saving}
+          >
             编辑
           </Button>
-          <Popconfirm title="确定删除?" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />}>
+          <Popconfirm
+            title="确定删除?"
+            disabled={!isSuper || saving}
+            onConfirm={() => handleDelete(record.id)}
+          >
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!isSuper || saving}>
               删除
             </Button>
           </Popconfirm>
@@ -244,7 +257,12 @@ export default function PermissionPage() {
             <Button icon={<ReloadOutlined />} onClick={fetchPermissions}>
               刷新
             </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+              disabled={!isSuper || saving}
+            >
               新建权限
             </Button>
           </>
@@ -300,6 +318,11 @@ export default function PermissionPage() {
           </Select>
         </div>
       </FilterBar>
+      <AdminLoadNotice
+        error={loadError}
+        hasData={permissions.length > 0}
+        onRetry={() => void fetchPermissions()}
+      />
       <ResizableTable
         columns={columns}
         dataSource={dataSource}
@@ -312,9 +335,13 @@ export default function PermissionPage() {
         title={editingPermission ? '编辑权限' : '新建权限'}
         open={modalVisible}
         onOk={handleSubmit}
-        onCancel={() => setModalVisible(false)}
+        confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        onCancel={() => {
+          if (!saving) setModalVisible(false);
+        }}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} disabled={saving || !isSuper} layout="vertical">
           <Form.Item
             name="permissionCode"
             label="权限编码"
@@ -329,7 +356,7 @@ export default function PermissionPage() {
           <Form.Item
             name="domain"
             label="权限域"
-            extra="留空按权限码首段归域（管理端按域分组展示）"
+            extra="留空按权限码第2段归域，如 admin:system:user:view 的域为 system"
           >
             <Input placeholder="如: system / qt / storage" />
           </Form.Item>
@@ -373,8 +400,11 @@ export default function PermissionPage() {
           </Form.Item>
           <Form.Item name="status" label="状态" initialValue={1}>
             <Select>
-              <Option value={1}>启用</Option>
-              <Option value={0}>禁用</Option>
+              {statusOptions.map((option) => (
+                <Option key={option.value} value={Number(option.value)}>
+                  {option.label}
+                </Option>
+              ))}
             </Select>
           </Form.Item>
         </Form>

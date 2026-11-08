@@ -172,12 +172,12 @@ export function Modal({
           )}
           style={styles?.header}
         >
-          <DialogTitle className="text-[color:var(--color-text)] text-[16px] font-semibold">
+          <DialogTitle className="text-[16px] font-semibold text-[color:var(--color-text)]">
             {title}
           </DialogTitle>
           <DialogPrimitive.Close
             aria-label="关闭"
-            className="text-[color:var(--color-text-tertiary)] inline-flex size-8 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-[var(--color-bg-tint)] hover:text-[color:var(--color-text)]"
+            className="inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-[color:var(--color-text-tertiary)] transition-colors hover:bg-[var(--color-bg-tint)] hover:text-[color:var(--color-text)]"
           >
             <X className="size-4" />
           </DialogPrimitive.Close>
@@ -268,7 +268,7 @@ export function Drawer({
         <DialogPrimitive.Content
           data-slot="dialog-content"
           className={cn(
-            'border-[color:var(--color-border-light)] bg-card fixed z-50 flex flex-col shadow-[0_28px_70px_-30px_rgba(16,32,26,0.35)] outline-none',
+            'bg-card fixed z-50 flex flex-col border-[color:var(--color-border-light)] shadow-[0_28px_70px_-30px_rgba(16,32,26,0.35)] outline-none',
             PLACEMENT_CLS[placement] ?? PLACEMENT_CLS.right,
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             className,
@@ -285,7 +285,7 @@ export function Drawer({
           }}
         >
           <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[color:var(--color-border-light)] px-5 py-4">
-            <DialogPrimitive.Title className="text-[color:var(--color-text)] text-[16px] font-semibold">
+            <DialogPrimitive.Title className="text-[16px] font-semibold text-[color:var(--color-text)]">
               {title}
             </DialogPrimitive.Title>
             <div className="flex items-center gap-2">
@@ -420,9 +420,7 @@ function TabsBase({
           className={cn(
             'tabs-scroll flex w-fit items-center gap-1',
             // 卡片型页签保留贴边外观；普通页签改成 B 端常见的分段胶囊
-            card
-              ? 'border-border border-b'
-              : 'rounded-full bg-[var(--color-bg-tint)] p-1',
+            card ? 'border-border border-b' : 'rounded-full bg-[var(--color-bg-tint)] p-1',
           )}
         >
           {list.map((tab) => {
@@ -446,7 +444,7 @@ function TabsBase({
                         'border-border rounded-t-xl border border-b-0',
                         size === 'small' ? 'px-3 py-1.5' : 'px-4 py-2',
                         on
-                          ? 'bg-card text-[color:var(--color-text)] font-medium'
+                          ? 'bg-card font-medium text-[color:var(--color-text)]'
                           : 'bg-[var(--color-bg-tint)] text-[color:var(--color-text-tertiary)] hover:text-[color:var(--color-text)]',
                       )
                     : cn(

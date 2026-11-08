@@ -16,8 +16,16 @@ export async function downloadResponse(response: Response, filename: string): Pr
   }
   const blob = await response.blob();
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  const objectUrl = URL.createObjectURL(blob);
+  a.href = objectUrl;
   a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  a.hidden = true;
+  try {
+    document.body.appendChild(a);
+    a.click();
+  } finally {
+    a.remove();
+    // Leave the URL live for the browser's download handoff, then release it.
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
 }

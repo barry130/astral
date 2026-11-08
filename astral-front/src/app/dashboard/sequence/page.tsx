@@ -67,11 +67,11 @@ export default function SequencePage() {
   /** 当前编辑的配置 */
   const [editingConfig, setEditingConfig] = useState<SequenceConfig | null>(null);
   /** 单个生成表单实例 */
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<{ bizKey: string; type: string }>();
   /** 批量生成表单实例 */
-  const [batchForm] = Form.useForm();
+  const [batchForm] = Form.useForm<{ bizKey: string; type: string; count: number }>();
   /** 配置表单实例 */
-  const [configForm] = Form.useForm();
+  const [configForm] = Form.useForm<SequenceConfig>();
 
   /** 配置分页状态 */
   const [configPagination, setConfigPagination] = useState({ current: 1, pageSize: 10, total: 0 });
@@ -338,7 +338,7 @@ export default function SequencePage() {
       title: '序列号',
       dataIndex: 'sequenceValue',
       key: 'sequenceValue',
-      render: (v: number) => <code className="bg-muted rounded px-1.5 py-0.5 text-xs">{v}</code>,
+      render: (v: string) => <code className="bg-muted rounded px-1.5 py-0.5 text-xs">{v}</code>,
     },
     {
       title: '时间',
@@ -571,13 +571,17 @@ export default function SequencePage() {
                           background: 'var(--color-bg-base)',
                           padding: 16,
                           borderRadius: 8,
-                          fontSize: 24,
+                          fontSize: result.values ? 14 : 24,
                           fontWeight: 600,
                           fontFamily: 'monospace',
-                          textAlign: 'center',
+                          textAlign: result.values ? 'left' : 'center',
+                          maxHeight: 240,
+                          overflow: 'auto',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-all',
                         }}
                       >
-                        {result.sequence}
+                        {result.values ? result.values.split(',').join('\n') : result.sequence}
                       </div>
                     </div>
                   ) : (
@@ -669,6 +673,15 @@ export default function SequencePage() {
                 </Select.Option>
               ))}
             </Select>
+          </Form.Item>
+          <Form.Item
+            name="step"
+            label="步长"
+            tooltip="号段模式每批预分配的 ID 数量；修改后从下一个号段生效"
+            rules={[{ required: true, message: '请输入步长' }]}
+            initialValue={1000}
+          >
+            <InputNumber min={1} max={1000000} className="w-full" />
           </Form.Item>
           <Form.Item name="enabled" label="启用" valuePropName="checked" initialValue>
             <Switch checkedChildren="启用" unCheckedChildren="禁用" />

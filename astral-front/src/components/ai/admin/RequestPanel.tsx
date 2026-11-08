@@ -11,13 +11,14 @@
 
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   Alert,
   Button,
   Descriptions,
   Empty,
+  Form,
   Input,
   Modal,
   Select,
@@ -33,6 +34,7 @@ import { ResizableTable } from '@/components/ResizableTable';
 
 import {
   aiRequestApi,
+  aiToolApi,
   type AiAdminMessage,
   type AiConversationAudit,
   type AiRequest,
@@ -75,6 +77,8 @@ export default function RequestPanel() {
 
 function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
   const hasPerm = usePerm();
+  const canReadContent =
+    hasPerm('admin:ai:request:view') && hasPerm('admin:ai:conversation:content:view');
   const [rows, setRows] = useState<AiRequest[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNum, setPageNum] = useState(1);
@@ -83,6 +87,19 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
   const [addon, setAddon] = useState('');
   const [focus, setFocus] = useState<AiRequestDetail | undefined>();
   const [focusLoading, setFocusLoading] = useState(false);
+  const focusRef = useRef<{ id?: number; generation: number }>({ generation: 0 });
+
+  const closeDetail = () => {
+    focusRef.current = { generation: focusRef.current.generation + 1 };
+    setFocus(undefined);
+    setFocusLoading(false);
+  };
+  useEffect(
+    () => () => {
+      focusRef.current = { generation: focusRef.current.generation + 1 };
+    },
+    [],
+  );
 
   const load = useCallback(
     async (page = pageNum) => {
@@ -112,15 +129,19 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
 
   const openDetail = async (id?: number) => {
     if (!id) return;
+    const operation = { id, generation: focusRef.current.generation + 1 };
+    focusRef.current = operation;
     setFocusLoading(true);
     setFocus(undefined);
     try {
-      const res = await aiRequestApi.detail(id, true);
+      const res = await aiRequestApi.detail(id, canReadContent);
+      if (focusRef.current !== operation) return;
       setFocus(res.data);
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '详情加载失败');
+      if (focusRef.current === operation)
+        message.error(error instanceof Error ? error.message : '详情加载失败');
     } finally {
-      setFocusLoading(false);
+      if (focusRef.current === operation) setFocusLoading(false);
     }
   };
 
@@ -231,6 +252,7 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
           String(row.id ?? '').includes(addon.trim()) || (row.userId ?? 0) === Number(addon.trim()),
       )
     : rows;
+  const detailOperation = focusRef.current;
 
   return (
     <div>
@@ -305,10 +327,10 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
       <Modal
         title={focus ? `请求 #${focus.request?.id}` : '请求详情'}
         open={focusLoading || Boolean(focus)}
-        onCancel={() => setFocus(undefined)}
+        onCancel={closeDetail}
         footer={
           <Space>
-            <Button onClick={() => setFocus(undefined)}>关闭</Button>
+            <Button onClick={closeDetail}>关闭</Button>
             {focus?.request?.conversationId && hasPerm('admin:ai:conversation:content:view') && (
               <Button type="primary" onClick={() => window.open(`/dashboard/plugin/ai/request`)}>
                 查看会话
@@ -325,7 +347,15 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
             <Spin />
           </div>
         ) : (
-          <RequestDetailBody detail={focus} dict={dict} />
+          <RequestDetailBody
+            key={`${focus.request?.id}:${detailOperation.generation}`}
+            detail={focus}
+            dict={dict}
+            canReadContent={canReadContent}
+            onChanged={async () => {
+              if (focusRef.current === detailOperation) await openDetail(focus.request?.id);
+            }}
+          />
         )}
       </Modal>
     </div>
@@ -335,13 +365,86 @@ function RequestList({ dict }: { dict: ReturnType<typeof useAiDict> }) {
 function RequestDetailBody({
   detail,
   dict,
+  canReadContent,
+  onChanged,
 }: {
   detail: AiRequestDetail;
   dict: ReturnType<typeof useAiDict>;
+  canReadContent: boolean;
+  onChanged: () => Promise<void>;
 }) {
+  const hasPerm = usePerm();
+  const [approving, setApproving] = useState<number>();
+  const [reconcileId, setReconcileId] = useState<number>();
+  const [savingReconciliation, setSavingReconciliation] = useState(false);
+  const [reconcileForm] = Form.useForm<{ outcome: string; note: string }>();
+  const reconcile = async () => {
+    if (reconcileId === undefined || savingReconciliation) return;
+    try {
+      const values = await reconcileForm.validateFields();
+      setSavingReconciliation(true);
+      await aiToolApi.reconcile(reconcileId, values.outcome, values.note);
+      setReconcileId(undefined);
+      message.success('核对结果已保存');
+      await onChanged();
+    } catch (error) {
+      if (error instanceof Error) message.error(error.message);
+    } finally {
+      setSavingReconciliation(false);
+    }
+  };
+  const approve = async (id: number, approved: boolean) => {
+    if (approving !== undefined) return;
+    setApproving(id);
+    try {
+      await aiToolApi.approve(id, approved);
+      message.success(approved ? '审批已处理' : '已拒绝');
+      await onChanged();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '审批失败');
+    } finally {
+      setApproving(undefined);
+    }
+  };
   const req = detail.request ?? {};
   return (
     <div>
+      <Modal
+        title="核对工具执行结果"
+        open={reconcileId !== undefined}
+        onCancel={() => {
+          if (!savingReconciliation) setReconcileId(undefined);
+        }}
+        onOk={() => void reconcile()}
+        confirmLoading={savingReconciliation}
+        okText="保存核对结果"
+        cancelText="取消"
+        destroyOnClose
+      >
+        <Hint>
+          请先在实际业务系统确认操作结果。这里只记录核对结论，不会再次执行工具或恢复模型请求。
+        </Hint>
+        <Form form={reconcileForm} layout="vertical" disabled={savingReconciliation}>
+          <Form.Item
+            name="outcome"
+            label="实际结果"
+            rules={[{ required: true, message: '请选择核实结果' }]}
+          >
+            <Select
+              options={dict
+                .options('ai_tool_call_status')
+                .filter((item) => ['SUCCEEDED', 'FAILED'].includes(String(item.value)))}
+            />
+          </Form.Item>
+          <Form.Item
+            name="note"
+            label="核对依据"
+            rules={[{ required: true, whitespace: true, message: '请填写核对依据' }]}
+          >
+            <Input.TextArea rows={3} maxLength={1000} />
+          </Form.Item>
+        </Form>
+      </Modal>
       <Descriptions
         column={3}
         size="small"
@@ -372,7 +475,7 @@ function RequestDetailBody({
         ]}
       />
 
-      {req.errorSummary && (
+      {canReadContent && req.errorSummary && (
         <Alert
           type="error"
           showIcon
@@ -382,159 +485,218 @@ function RequestDetailBody({
         />
       )}
 
-      <div style={{ marginTop: 14 }}>
-        <Tabs
-          size="small"
-          items={[
-            {
-              key: 'input',
-              label: '输入快照',
-              children: <pre style={preStyle}>{detail.inputSnapshot || '（无）'}</pre>,
-            },
-            {
-              key: 'context',
-              label: '上下文快照',
-              children: <JsonBlock value={detail.contextSnapshot} maxHeight={280} />,
-            },
-            {
-              key: 'config',
-              label: '配置快照',
-              children: <JsonBlock value={detail.configurationSnapshot} maxHeight={280} />,
-            },
-            {
-              key: 'knowledge',
-              label: '知识快照',
-              children: <JsonBlock value={detail.knowledgeSnapshot} maxHeight={280} />,
-            },
-            {
-              key: 'safety',
-              label: '安全/工具策略',
-              children: (
-                <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>工具策略</div>
-                  <JsonBlock value={detail.toolPolicySnapshot} maxHeight={200} />
-                  <div style={{ fontSize: 12, opacity: 0.7 }}>安全策略</div>
-                  <JsonBlock value={detail.safetyPolicySnapshot} maxHeight={200} />
-                </Space>
-              ),
-            },
-            {
-              key: 'tools',
-              label: `工具调用 (${detail.toolCalls?.length ?? 0})`,
-              children:
-                detail.toolCalls && detail.toolCalls.length > 0 ? (
-                  <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                    {detail.toolCalls.map((call) => (
-                      <div
-                        key={call.id}
-                        style={{
-                          border: '1px solid var(--border, rgba(127,127,127,0.18))',
-                          borderRadius: 8,
-                          padding: 10,
-                        }}
-                      >
-                        <Space size={8} wrap>
-                          <span style={{ fontWeight: 500 }}>{call.toolName ?? call.toolCode}</span>
-                          <StatusTag dict={dict} code="ai_tool_risk_level" value={call.riskLevel} />
-                          <Tag color="default">{call.status}</Tag>
-                          {call.approvalStatus && (
-                            <Tag color="warning">审批：{call.approvalStatus}</Tag>
-                          )}
-                        </Space>
-                        <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>参数</div>
-                        <JsonBlock value={call.argumentsJson} maxHeight={140} />
-                        {call.resultJson && (
-                          <>
-                            <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>结果</div>
-                            <JsonBlock value={call.resultJson} maxHeight={180} />
-                          </>
-                        )}
-                        {call.errorMessage && (
-                          <Alert
-                            type="error"
-                            showIcon
-                            style={{ marginTop: 8 }}
-                            message={call.errorMessage}
-                          />
-                        )}
-                      </div>
-                    ))}
+      {!canReadContent ? (
+        <Alert
+          className="mt-4"
+          type="info"
+          showIcon
+          message="当前仅显示请求元数据"
+          description="输入、上下文、工具参数与结果等正文需要额外的正文查看权限。"
+        />
+      ) : (
+        <div style={{ marginTop: 14 }}>
+          <Tabs
+            size="small"
+            items={[
+              {
+                key: 'input',
+                label: '输入快照',
+                children: <pre style={preStyle}>{detail.inputSnapshot || '（无）'}</pre>,
+              },
+              {
+                key: 'context',
+                label: '上下文快照',
+                children: <JsonBlock value={detail.contextSnapshot} maxHeight={280} />,
+              },
+              {
+                key: 'config',
+                label: '配置快照',
+                children: <JsonBlock value={detail.configurationSnapshot} maxHeight={280} />,
+              },
+              {
+                key: 'knowledge',
+                label: '知识快照',
+                children: <JsonBlock value={detail.knowledgeSnapshot} maxHeight={280} />,
+              },
+              {
+                key: 'safety',
+                label: '安全/工具策略',
+                children: (
+                  <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>工具策略</div>
+                    <JsonBlock value={detail.toolPolicySnapshot} maxHeight={200} />
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>安全策略</div>
+                    <JsonBlock value={detail.safetyPolicySnapshot} maxHeight={200} />
                   </Space>
-                ) : (
-                  <Empty description="本次请求没有调用工具" />
                 ),
-            },
-            {
-              key: 'events',
-              label: `事件 (${detail.events?.length ?? 0})`,
-              children:
-                detail.events && detail.events.length > 0 ? (
-                  <Timeline
-                    items={detail.events.map((event) => ({
-                      label: (
-                        <span style={{ fontSize: 11, opacity: 0.55 }}>
-                          {formatTime(event.createdAt)}
-                        </span>
-                      ),
-                      children: (
-                        <div>
-                          <Space size={6}>
-                            <Tag color="default">{event.sequence}</Tag>
-                            <code style={{ fontSize: 12 }}>{event.type}</code>
-                          </Space>
-                          {event.dataJson && (
-                            <div style={{ marginTop: 4 }}>
-                              <JsonBlock value={event.dataJson} maxHeight={120} />
-                            </div>
-                          )}
-                        </div>
-                      ),
-                    }))}
-                  />
-                ) : (
-                  <Empty description="没有事件记录" />
-                ),
-            },
-            {
-              key: 'messages',
-              label: `消息 (${detail.messages?.length ?? 0})`,
-              children:
-                detail.messages && detail.messages.length > 0 ? (
-                  <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                    {detail.messages.map((item) => (
-                      <div
-                        key={item.id}
-                        style={{
-                          borderLeft: '2px solid var(--border, rgba(127,127,127,0.2))',
-                          paddingLeft: 10,
-                        }}
-                      >
-                        <Space size={6}>
-                          <Tag color={item.role === 'USER' ? 'blue' : 'green'}>{item.role}</Tag>
-                          <span style={{ fontSize: 11, opacity: 0.55 }}>
-                            {formatTime(item.createTime)}
-                          </span>
-                        </Space>
+              },
+              {
+                key: 'tools',
+                label: `工具调用 (${detail.toolCalls?.length ?? 0})`,
+                children:
+                  detail.toolCalls && detail.toolCalls.length > 0 ? (
+                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                      {detail.toolCalls.map((call) => (
                         <div
+                          key={call.id}
                           style={{
-                            marginTop: 4,
-                            fontSize: 13,
-                            whiteSpace: 'pre-wrap',
-                            lineHeight: 1.7,
+                            border: '1px solid var(--border, rgba(127,127,127,0.18))',
+                            borderRadius: 8,
+                            padding: 10,
                           }}
                         >
-                          {truncate(item.content, 1200)}
+                          <Space size={8} wrap>
+                            <span style={{ fontWeight: 500 }}>
+                              {call.toolName ?? call.toolCode}
+                            </span>
+                            <StatusTag
+                              dict={dict}
+                              code="ai_tool_risk_level"
+                              value={call.riskLevel}
+                            />
+                            <Tag color="default">
+                              {dict.label('ai_tool_call_status', call.status)}
+                            </Tag>
+                            {call.approvalStatus && (
+                              <Tag color="warning">审批：{call.approvalStatus}</Tag>
+                            )}
+                          </Space>
+                          <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>参数</div>
+                          <JsonBlock value={call.argumentsJson} maxHeight={140} />
+                          {call.resultJson && (
+                            <>
+                              <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>结果</div>
+                              <JsonBlock value={call.resultJson} maxHeight={180} />
+                            </>
+                          )}
+                          {call.errorMessage && (
+                            <Alert
+                              type="error"
+                              showIcon
+                              style={{ marginTop: 8 }}
+                              message={call.errorMessage}
+                            />
+                          )}
+                          {call.id !== undefined &&
+                            call.status === 'WAITING_APPROVAL' &&
+                            call.approvalStatus === 'ADMIN_CONFIRM' &&
+                            req.status === 'WAITING_APPROVAL' &&
+                            hasPerm('admin:ai:tool:approve') && (
+                              <Space className="mt-3">
+                                <Button
+                                  type="primary"
+                                  disabled={approving !== undefined}
+                                  loading={approving === call.id}
+                                  onClick={() => void approve(call.id!, true)}
+                                >
+                                  确认执行
+                                </Button>
+                                <Button
+                                  disabled={approving !== undefined}
+                                  onClick={() => void approve(call.id!, false)}
+                                >
+                                  拒绝
+                                </Button>
+                              </Space>
+                            )}
+                          {call.reconciledAt && (
+                            <p className="mt-2 text-sm">
+                              核对人 #{call.reconciledBy} · {formatTime(call.reconciledAt)}：
+                              {call.reconciliationNote}
+                            </p>
+                          )}
+                          {call.id !== undefined &&
+                            call.status === 'UNKNOWN' &&
+                            hasPerm('admin:ai:tool:reconcile') && (
+                              <Button
+                                className="mt-3"
+                                onClick={() => {
+                                  reconcileForm.resetFields();
+                                  setReconcileId(call.id);
+                                }}
+                              >
+                                核对执行结果
+                              </Button>
+                            )}
                         </div>
-                      </div>
-                    ))}
-                  </Space>
-                ) : (
-                  <Empty description="没有消息" />
-                ),
-            },
-          ]}
-        />
-      </div>
+                      ))}
+                    </Space>
+                  ) : (
+                    <Empty description="本次请求没有调用工具" />
+                  ),
+              },
+              {
+                key: 'events',
+                label: `事件 (${detail.events?.length ?? 0})`,
+                children:
+                  detail.events && detail.events.length > 0 ? (
+                    <Timeline
+                      items={detail.events.map((event) => ({
+                        label: (
+                          <span style={{ fontSize: 11, opacity: 0.55 }}>
+                            {formatTime(event.createdAt)}
+                          </span>
+                        ),
+                        children: (
+                          <div>
+                            <Space size={6}>
+                              <Tag color="default">{event.sequence}</Tag>
+                              <code style={{ fontSize: 12 }}>{event.type}</code>
+                            </Space>
+                            {event.dataJson && (
+                              <div style={{ marginTop: 4 }}>
+                                <JsonBlock value={event.dataJson} maxHeight={120} />
+                              </div>
+                            )}
+                          </div>
+                        ),
+                      }))}
+                    />
+                  ) : (
+                    <Empty description="没有事件记录" />
+                  ),
+              },
+              {
+                key: 'messages',
+                label: `消息 (${detail.messages?.length ?? 0})`,
+                children:
+                  detail.messages && detail.messages.length > 0 ? (
+                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                      {detail.messages.map((item) => (
+                        <div
+                          key={item.id}
+                          style={{
+                            borderLeft: '2px solid var(--border, rgba(127,127,127,0.2))',
+                            paddingLeft: 10,
+                          }}
+                        >
+                          <Space size={6}>
+                            <Tag color={item.role === 'USER' ? 'blue' : 'green'}>{item.role}</Tag>
+                            <span style={{ fontSize: 11, opacity: 0.55 }}>
+                              {formatTime(item.createTime)}
+                            </span>
+                          </Space>
+                          <div
+                            style={{
+                              marginTop: 4,
+                              fontSize: 13,
+                              whiteSpace: 'pre-wrap',
+                              lineHeight: 1.7,
+                            }}
+                          >
+                            {truncate(item.content, 1200)}
+                          </div>
+                        </div>
+                      ))}
+                    </Space>
+                  ) : (
+                    <Empty description="没有消息" />
+                  ),
+              },
+            ]}
+          />
+        </div>
+      )}
     </div>
   );
 }

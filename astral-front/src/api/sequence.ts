@@ -15,8 +15,10 @@ export interface SequenceResponse {
   bizKey: string;
   /** 使用的序列类型 */
   type: string;
-  /** 生成的序列号 */
-  sequence: number;
+  /** 生成的序列号（字符串，避免 Snowflake 64 位值在 JS 中丢精度）；批量时为最后一个值 */
+  sequence: string;
+  /** 批量生成的完整序列号列表（英文逗号分隔） */
+  values?: string;
   /** 生成时间戳 */
   timestamp: number;
 }
@@ -47,8 +49,8 @@ export interface SequenceHistory {
   bizKey: string;
   /** 序列类型 */
   sequenceType: string;
-  /** 序列值 */
-  sequenceValue: number;
+  /** 序列值（字符串，避免 Snowflake 64 位值在 JS 中丢精度） */
+  sequenceValue: string;
   /** 创建时间 */
   createTime: string;
 }
@@ -67,7 +69,11 @@ export const sequenceApi = {
   getTypes: (): Promise<ApiResult<SequenceType[]>> => request.get('/api/v1/all/sequence/types'),
 
   /** 分页查询序列历史记录 */
-  getHistoryPage: (pageNum = 1, pageSize = 20, bizKey?: string): Promise<ApiResult<PageResult<SequenceHistory>>> =>
+  getHistoryPage: (
+    pageNum = 1,
+    pageSize = 20,
+    bizKey?: string,
+  ): Promise<ApiResult<PageResult<SequenceHistory>>> =>
     request.get('/api/v1/admin/sequence/history/page', { params: { pageNum, pageSize, bizKey } }),
 
   /** 获取最近的序列历史记录 */

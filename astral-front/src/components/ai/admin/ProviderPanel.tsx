@@ -415,7 +415,11 @@ export default function ProviderPanel() {
             <Input.Password placeholder="sk-..." maxLength={512} autoComplete="new-password" />
           </Form.Item>
 
-          <Form.Item name="secretRef" label="密钥引用" extra="环境变量名，优先级高于数据库中的密钥">
+          <Form.Item
+            name="secretRef"
+            label="密钥引用"
+            extra="环境变量名；API Key 留空时，填写引用会替换已存密钥。同时填写时使用新的 API Key。"
+          >
             <Input placeholder="例如 OPENAI_API_KEY" maxLength={128} />
           </Form.Item>
 

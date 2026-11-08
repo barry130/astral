@@ -1,5 +1,6 @@
 import { request, ApiResult } from './client';
 import type { PageResult } from './types';
+import { pickWriteFields } from './write-fields';
 
 /**
  * 消息统计（三渠道统一视图）。
@@ -29,7 +30,7 @@ export interface MessageStatisticsQuery {
   scene?: string;
   /** 1 成功 / 0 失败；站内信恒为成功，传 0 时站内信不参与统计 */
   status?: number;
-  /** 发送方插件；站内信固定归为 feedback */
+  /** 发送方插件；站内信取 sys_notice.sender，未声明的历史行归 unknown */
   pluginId?: string;
   /** 关键字：模糊匹配收件人 / 标题 / 主题 / 正文 */
   keyword?: string;
@@ -129,6 +130,84 @@ export interface MessageDelivery {
   sendTime?: string;
   /** 发送方插件 */
   pluginId?: string;
+}
+
+/** Validate civil datetime values without changing their timezone or silently normalizing invalid dates. */
+export function statisticsTimeRange(
+  start?: string,
+  end?: string,
+): { start?: string; end?: string } {
+  const normalize = (value?: string) => {
+    if (!value?.trim()) return undefined;
+    const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value.trim());
+    if (!match || Number(match[1]) < 1) throw new Error('统计时间格式无效');
+    const canonical = `${match[1]}-${match[2]}-${match[3]} ${match[4]}:${match[5]}:${match[6] || '00'}`;
+    const parsed = new Date(`${canonical.replace(' ', 'T')}Z`);
+    if (
+      !Number.isFinite(parsed.getTime()) ||
+      parsed.getUTCFullYear() !== Number(match[1]) ||
+      parsed.getUTCMonth() + 1 !== Number(match[2]) ||
+      parsed.getUTCDate() !== Number(match[3]) ||
+      parsed.getUTCHours() !== Number(match[4]) ||
+      parsed.getUTCMinutes() !== Number(match[5]) ||
+      parsed.getUTCSeconds() !== Number(match[6] || 0)
+    )
+      throw new Error('统计时间无效');
+    return canonical;
+  };
+  const a = normalize(start),
+    b = normalize(end);
+  if (a && b && a > b) throw new Error('开始时间不能晚于结束时间');
+  return { ...(a ? { start: a } : {}), ...(b ? { end: b } : {}) };
+}
+
+export interface MessageStatisticsSnapshot {
+  overview: MessageStatistics;
+  trend: TrendPoint[];
+  rows: MessageDelivery[];
+  total: number;
+}
+
+/** Publish one checked result only after all three requests for the same filter have succeeded. */
+export async function loadMessageStatistics(
+  params: MessageStatisticsQuery,
+): Promise<MessageStatisticsSnapshot> {
+  const base = {
+    ...pickWriteFields(params, ['channel', 'scene', 'status', 'pluginId', 'keyword']),
+    ...statisticsTimeRange(params.start, params.end),
+  };
+  const bounded = (value: number | undefined, fallback: number, max: number) =>
+    Number.isFinite(value) && value !== undefined
+      ? Math.max(1, Math.min(max, Math.trunc(value)))
+      : fallback;
+  const [overview, trend, list] = await Promise.all([
+    messageStatisticsApi.overview({ ...base }),
+    messageStatisticsApi.trend({ ...base, days: bounded(params.days, 7, 90) }),
+    messageStatisticsApi.list({
+      ...base,
+      pageNum: bounded(params.pageNum, 1, Number.MAX_SAFE_INTEGER),
+      pageSize: bounded(params.pageSize, 20, 200),
+    }),
+  ]);
+  for (const response of [overview, trend, list]) {
+    if (response.code !== 200) throw new Error(response.msg || '加载消息统计失败');
+  }
+  if (
+    !overview.data ||
+    typeof overview.data.total !== 'number' ||
+    !Array.isArray(trend.data) ||
+    !list.data ||
+    !Array.isArray(list.data.records) ||
+    typeof list.data.total !== 'number'
+  ) {
+    throw new Error('消息统计数据缺失，请重试');
+  }
+  return {
+    overview: overview.data,
+    trend: trend.data,
+    rows: list.data.records,
+    total: list.data.total,
+  };
 }
 
 const BASE = '/api/v1/admin/system/message/statistics';

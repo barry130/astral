@@ -847,12 +847,16 @@ function VersionBoard({
               {
                 key: 'tools',
                 label: '工具',
-                children: <ToolBinding version={active} canEdit={canEdit && isDraft} />,
+                children: (
+                  <ToolBinding key={active.id} version={active} canEdit={canEdit && isDraft} />
+                ),
               },
               {
                 key: 'knowledge',
                 label: '知识源',
-                children: <KnowledgeBinding version={active} canEdit={canEdit && isDraft} />,
+                children: (
+                  <KnowledgeBinding key={active.id} version={active} canEdit={canEdit && isDraft} />
+                ),
               },
               { key: 'raw', label: '快照 JSON', children: <RawSnapshot version={active} /> },
             ]}
@@ -1166,6 +1170,25 @@ function KnowledgeBinding({ version, canEdit }: { version: AiAgentVersion; canEd
                         )
                       }
                       style={{ width: 70 }}
+                    />
+                    <span style={{ fontSize: 11.5, opacity: 0.55 }}>最低相关度</span>
+                    <InputNumber
+                      size="small"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={binding.minScore ?? 0.2}
+                      disabled={!canEdit}
+                      onChange={(value) =>
+                        setBindings((prev) =>
+                          prev.map((item) =>
+                            item.sourceId === source.id
+                              ? { ...item, minScore: value ?? 0.2 }
+                              : item,
+                          ),
+                        )
+                      }
+                      style={{ width: 80 }}
                     />
                   </Space>
                 )}

@@ -60,7 +60,7 @@ export function Card({
         >
           <CardTitle
             className={cn(
-              'text-[color:var(--color-text)] text-[15px] font-semibold tracking-[-0.01em]',
+              'text-[15px] font-semibold tracking-[-0.01em] text-[color:var(--color-text)]',
               size === 'small' && 'text-[14px]',
             )}
           >

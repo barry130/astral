@@ -9,6 +9,8 @@ export interface SequenceConfig {
   bizKey: string;
   /** 序列类型（SNOWFLAKE/SEGMENT/REDIS/DATABASE/SIMPLE） */
   sequenceType: string;
+  /** 号段步长（每批预分配的 ID 数量，1-1000000） */
+  step?: number;
   /** 是否启用 */
   enabled: boolean;
   /** 当前序列值 */

@@ -18,7 +18,13 @@ const strokeProps = {
 /** 站点标记 / 空态装饰：四角星（Astral 意象） */
 export function IconSpark({ className, ...props }: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className} {...props}>
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      className={className}
+      {...props}
+    >
       <path d="M12 2.6c.72 4.6 3.8 7.68 8.4 8.4-4.6.72-7.68 3.8-8.4 8.4-.72-4.6-3.8-7.68-8.4-8.4 4.6-.72 7.68-3.8 8.4-8.4Z" />
     </svg>
   );

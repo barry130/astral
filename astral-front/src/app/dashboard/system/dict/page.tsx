@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef, useSyncExternalStore } from 'react';
 import {
   Card,
   Button,
@@ -16,7 +16,27 @@ import {
   Select,
 } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@/components/antd-compat/icons';
-import { request } from '@/api/client';
+import {
+  adminDictApi as dictApi,
+  paginateDictTypes,
+  dictTypePayload,
+  dictDataPayload,
+  loadDictDataPage,
+  type AdminDictType as DictType,
+  type AdminDictData as DictData,
+  type DictTypeWrite,
+  type DictDataWrite,
+} from '@/api/system-admin';
+import {
+  loadAdminDictOptions as fetchDictOptions,
+  dictLabel,
+  dictColor,
+  type DictOption,
+} from '@/components/admin/admin-dictionaries';
+import { AdminLoadNotice, AdminOptionNotice } from '@/components/admin/AdminLoadNotice';
+import { useAdminLoader, useAdminMutation, useAdminQuery } from '@/components/admin/use-admin-task';
+import { requireAdminSuccess, adminErrorMessage } from '@/components/admin/admin-task';
+import { createAdminCache } from '@/components/admin/admin-cache';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import { PageHeader } from '@/components/page-header';
@@ -44,105 +64,31 @@ const typeMapping: Record<string, string[]> = {
   Blob: ['BLOB'],
 };
 
-/** 字典类型实体接口 */
-interface DictType {
-  /** 类型ID */
-  id: number;
-  /** 字典编码 */
-  dictCode: string;
-  /** 字典名称 */
-  dictName: string;
-  /** Java数据类型 */
-  dataType: string;
-  /** JDBC类型 */
-  jdbcType: string;
-  /** 数据长度 */
-  dataLength: number;
-  /** 描述 */
-  description: string;
-  /** 状态：1启用/0禁用 */
-  status: number;
-}
-
-/** 字典数据实体接口 */
-interface DictData {
-  /** 数据ID */
-  id: number;
-  /** 所属字典类型ID */
-  dictTypeId: number;
-  /** 字典标签（显示名称） */
-  dictLabel: string;
-  /** 字典值（实际存储值） */
-  dictValue: string;
-  /** 排序号 */
-  dictSort: number;
-  /** CSS样式类 */
-  cssClass: string;
-  /** 列表样式类 */
-  listClass: string;
-  /** 是否为默认值：1是/0否 */
-  isDefault: number;
-  /** 状态：1启用/0禁用 */
-  status: number;
-  /** 描述 */
-  description: string;
-}
-
-/** 字典类型分页结果 */
-interface DictTypePage {
-  records: DictType[];
-  current: number;
-  size: number;
-  total: number;
-}
-
-/** 字典数据分页结果 */
-interface DictDataPage {
-  records: DictData[];
-  current: number;
-  size: number;
-  total: number;
-}
-
-/** 数据字典API封装 */
-const dictApi = {
-  /** 分页查询字典类型 */
-  getTypePage: (pageNum: number, pageSize: number, params?: Record<string, unknown>) =>
-    request.get<DictTypePage>('/api/v1/admin/system/dict/type/page', {
-      params: { pageNum, pageSize, ...params },
-    }),
-  /** 获取所有字典类型（用于下拉选择） */
-  getAllTypes: () => request.get<DictType[]>('/api/v1/admin/system/dict/type/all'),
-  /** 创建字典类型 */
-  createType: (data: Partial<DictType>) => request.post('/api/v1/admin/system/dict/type', data),
-  /** 更新字典类型 */
-  updateType: (id: number, data: Partial<DictType>) =>
-    request.put(`/api/v1/admin/system/dict/type/${id}`, data),
-  /** 删除字典类型 */
-  deleteType: (id: number) => request.delete(`/api/v1/admin/system/dict/type/${id}`),
-  /** 分页查询字典数据 */
-  getDataPage: (pageNum: number, pageSize: number, dictTypeId?: number) =>
-    request.get<DictDataPage>('/api/v1/admin/system/dict/data/page', {
-      params: { pageNum, pageSize, dictTypeId },
-    }),
-  /** 创建字典数据 */
-  createData: (data: Partial<DictData>) => request.post('/api/v1/admin/system/dict/data', data),
-  /** 更新字典数据 */
-  updateData: (id: number, data: Partial<DictData>) =>
-    request.put(`/api/v1/admin/system/dict/data/${id}`, data),
-  /** 删除字典数据 */
-  deleteData: (id: number) => request.delete(`/api/v1/admin/system/dict/data/${id}`),
-};
-
 /**
  * 数据字典管理页面组件
  * 提供字典类型和字典数据的增删改查，支持展开查看子数据
  */
 export default function DictPage() {
   /** 字典类型加载状态 */
-  const [typeLoading, setTypeLoading] = useState(false);
+  const {
+    loading: typeLoading,
+    error: typeError,
+    run: runTypes,
+  } = useAdminLoader('加载字典类型失败');
+  const { error: optionError, run: runOptions } = useAdminLoader('加载字典标签失败');
+  const { busy: saving, run: runMutation, isBusy } = useAdminMutation('字典操作失败');
+  const typeQuery = useAdminQuery({ current: 1, pageSize: 10, keyword: '' });
+  const dataQuery = useAdminQuery({ current: 1, pageSize: 10 });
+  const [typeKeyword, setTypeKeyword] = useState('');
+  const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
+  const editorScope = useRef<{ kind: 'type' | 'data'; id: number | null } | null>(null);
   /** 字典数据加载状态 */
-  const [dataLoading, setDataLoading] = useState(false);
+  const {
+    loading: dataLoading,
+    error: dataError,
+    run: runData,
+    invalidate: invalidateData,
+  } = useAdminLoader('加载字典数据失败');
   /** 字典类型列表 */
   const [types, setTypes] = useState<DictType[]>([]);
   /** 字典类型分页状态 */
@@ -167,201 +113,247 @@ export default function DictPage() {
   /** 当前编辑的字典数据 */
   const [editingData, setEditingData] = useState<DictData | null>(null);
   /** 展开行数据缓存 */
-  const [expandedRowData, setExpandedRowData] = useState<Record<number, DictData[]>>({});
+  const [cache] = useState(() => createAdminCache<DictData[]>());
+  useSyncExternalStore(cache.subscribe, cache.getSnapshot, cache.getServerSnapshot);
+  const expandedIds = useRef(new Set<number>());
+  const [expandedErrors, setExpandedErrors] = useState<Record<number, string>>({});
   /** 字典类型表单实例 */
-  const [typeForm] = Form.useForm();
+  const [typeForm] = Form.useForm<DictTypeWrite>();
   /** 字典数据表单实例 */
-  const [dataForm] = Form.useForm();
+  const [dataForm] = Form.useForm<DictDataWrite>();
 
   const hasPerm = usePerm();
   /** 是否具备数据字典维护权限：权限码需与后端 @RequiresPermission("admin:system:dict:edit") 一致 */
   const canEdit = hasPerm('admin:system:dict:edit');
 
-  /** 组件挂载时加载字典类型列表 */
-  useEffect(() => {
-    loadTypes();
-    loadAllTypes();
-  }, []);
-
-  /** 选中字典类型：切换右侧数据列表 */
-  const handleSelectType = (id: number | null) => {
-    setSelectedTypeId(id);
-  };
-
-  /** 选中类型变化时加载对应的字典数据 */
-  useEffect(() => {
-    selectedTypeIdRef.current = selectedTypeId;
-    if (selectedTypeId) {
-      setDataLoading(true);
-      dictApi
-        .getDataPage(1, 10, selectedTypeId)
-        .then((res) => {
-          if (res.code === 200) {
-            setDictData(res.data?.records || []);
-            setDataPagination({
-              current: res.data?.current || 1,
-              pageSize: res.data?.size || 10,
-              total: res.data?.total || 0,
-            });
-          }
-        })
-        .finally(() => setDataLoading(false));
-    } else {
+  const handleSelectType = useCallback(
+    (id: number | null | undefined) => {
+      const next = id == null ? null : id;
+      if (next != null && (!Number.isSafeInteger(next) || next <= 0)) return;
+      invalidateData();
+      selectedTypeIdRef.current = next;
+      setSelectedTypeId(next);
+      dataQuery.read({ current: 1, pageSize: 10 });
       setDictData([]);
       setDataPagination({ current: 1, pageSize: 10, total: 0 });
-    }
-  }, [selectedTypeId]);
+    },
+    [invalidateData, dataQuery],
+  );
 
-  /** 加载字典类型列表（分页） */
-  const loadTypes = (page = 1, size = 10) => {
-    setTypeLoading(true);
-    dictApi
-      .getTypePage(page, size)
-      .then((res) => {
-        if (res.code === 200) {
-          setTypes(res.data?.records || []);
+  const loadExpandedData = useCallback(
+    async (typeId: number) => {
+      setExpandedErrors((previous) => ({ ...previous, [typeId]: '' }));
+      try {
+        await cache.load(typeId, async () => (await loadDictDataPage(1, 100, typeId)).records);
+      } catch (error: unknown) {
+        setExpandedErrors((previous) => ({
+          ...previous,
+          [typeId]: adminErrorMessage(error, '加载预览失败'),
+        }));
+      }
+    },
+    [cache],
+  );
+  useEffect(() => () => cache.invalidate(), [cache]);
+  const refreshPreviews = useCallback(() => {
+    cache.invalidate();
+    setExpandedErrors({});
+    for (const id of expandedIds.current) void loadExpandedData(id);
+  }, [cache, loadExpandedData]);
+
+  const loadTypes = useCallback(
+    (page?: number, size?: number, keyword?: string) => {
+      const query = typeQuery.read({
+        ...(page !== undefined ? { current: page } : {}),
+        ...(size !== undefined ? { pageSize: size } : {}),
+        ...(keyword !== undefined ? { keyword } : {}),
+      });
+      return runTypes(
+        async () => {
+          const rows = requireAdminSuccess(await dictApi.getAllTypes(), '加载字典类型失败');
+          if (
+            !Array.isArray(rows) ||
+            rows.some((row) => !row || !Number.isSafeInteger(row.id) || row.id <= 0)
+          )
+            throw new Error('字典类型数据缺失或无效');
+          return { rows, page: paginateDictTypes(rows, query) };
+        },
+        ({ rows, page: result }) => {
+          setAllTypes(rows);
+          setTypes(result.records);
+          typeQuery.read({ current: result.current, pageSize: result.size });
           setTypePagination({
-            current: res.data?.current || 1,
-            pageSize: res.data?.size || 10,
-            total: res.data?.total || 0,
+            current: result.current,
+            pageSize: result.size,
+            total: result.total,
           });
-        }
-      })
-      .finally(() => setTypeLoading(false));
-  };
+          if (
+            selectedTypeIdRef.current &&
+            !rows.some((row) => row.id === selectedTypeIdRef.current)
+          )
+            handleSelectType(null);
+          expandedIds.current = new Set(
+            [...expandedIds.current].filter((id) => rows.some((row) => row.id === id)),
+          );
+        },
+      );
+    },
+    [typeQuery, runTypes, handleSelectType],
+  );
 
-  /** 加载所有字典类型（用于下拉选择） */
-  const loadAllTypes = () => {
-    dictApi.getAllTypes().then((res) => {
-      if (res.code === 200) {
-        setAllTypes(res.data || []);
-      }
-    });
-  };
-
-  /** 加载展开行的字典数据（懒加载） */
-  const loadExpandedData = async (typeId: number) => {
-    if (expandedRowData[typeId]) return;
-    try {
-      const res = await dictApi.getDataPage(1, 100, typeId);
-      if (res.code === 200) {
-        setExpandedRowData((prev) => ({ ...prev, [typeId]: res.data?.records || [] }));
-      }
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
-  };
-
-  /** 加载字典数据列表（使用ref获取最新选中ID） */
-  const loadData = (page = 1, size = 10) => {
-    setDataLoading(true);
-    dictApi
-      .getDataPage(page, size, selectedTypeIdRef.current || undefined)
-      .then((res) => {
-        if (res.code === 200) {
-          setDictData(res.data?.records || []);
+  const loadData = useCallback(
+    (page?: number, size?: number) => {
+      const id = selectedTypeIdRef.current;
+      if (!id) return;
+      const query = dataQuery.read({
+        ...(page !== undefined ? { current: page } : {}),
+        ...(size !== undefined ? { pageSize: size } : {}),
+      });
+      return runData(
+        () => loadDictDataPage(query.current, query.pageSize, id),
+        (result) => {
+          setDictData(result.records);
           setDataPagination({
-            current: res.data?.current || 1,
-            pageSize: res.data?.size || 10,
-            total: res.data?.total || 0,
+            current: result.current ?? query.current,
+            pageSize: result.size ?? query.pageSize,
+            total: result.total,
           });
-        }
-      })
-      .finally(() => setDataLoading(false));
-  };
+        },
+      );
+    },
+    [dataQuery, runData],
+  );
 
-  /** 打开新增字典类型弹窗 */
+  const loadOptions = useCallback(
+    () => runOptions(() => fetchDictOptions(['enable_status', 'qt_yes_no']), setDicts),
+    [runOptions],
+  );
+  useEffect(() => {
+    void loadTypes();
+    void loadOptions();
+  }, [loadTypes, loadOptions]);
+  useEffect(() => {
+    if (selectedTypeId) void loadData(1, 10);
+    else invalidateData();
+  }, [selectedTypeId, loadData, invalidateData]);
+
   const handleCreateType = () => {
+    if (!canEdit || isBusy()) return;
+    editorScope.current = { kind: 'type', id: null };
     setEditingType(null);
     typeForm.resetFields();
+    typeForm.setFieldsValue({ dataType: 'String', jdbcType: 'VARCHAR', status: 1 });
     setTypeModalVisible(true);
   };
-
-  /** 打开编辑字典类型弹窗 */
   const handleEditType = (record: DictType) => {
+    if (!canEdit || isBusy()) return;
+    editorScope.current = { kind: 'type', id: record.id };
+    typeForm.resetFields();
     setEditingType(record);
-    typeForm.setFieldsValue(record);
+    typeForm.setFieldsValue(dictTypePayload(record));
     setTypeModalVisible(true);
   };
-
-  /** 删除字典类型 */
-  const handleDeleteType = async (id: number) => {
-    try {
-      await dictApi.deleteType(id);
-      message.success('删除成功');
-      loadTypes();
-      loadAllTypes();
-      if (selectedTypeId === id) {
-        setSelectedTypeId(null);
-        setDictData([]);
-      }
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleDeleteType = (id: number) => {
+    if (!canEdit) return;
+    return runMutation(
+      async () => requireAdminSuccess(await dictApi.deleteType(id), '删除类型失败'),
+      () => {
+        message.success('删除成功');
+        expandedIds.current.delete(id);
+        if (selectedTypeIdRef.current === id) handleSelectType(null);
+        refreshPreviews();
+        void loadTypes();
+      },
+    );
   };
-
-  /** 提交字典类型表单 */
-  const handleSubmitType = async () => {
-    try {
-      const values = await typeForm.validateFields();
-      if (editingType?.id) {
-        await dictApi.updateType(editingType.id, values);
-        message.success('更新成功');
-      } else {
-        await dictApi.createType(values);
-        message.success('创建成功');
-      }
-      setTypeModalVisible(false);
-      loadTypes();
-      loadAllTypes();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleSubmitType = () => {
+    const scope = editorScope.current;
+    if (!canEdit || !scope || scope.kind !== 'type') return;
+    return runMutation(
+      async () => {
+        const values = await typeForm.validateFields();
+        if (editorScope.current !== scope) throw new Error('编辑目标已变化');
+        requireAdminSuccess(
+          scope.id
+            ? await dictApi.updateType(scope.id, dictTypePayload(values))
+            : await dictApi.createType(dictTypePayload(values)),
+          '保存类型失败',
+        );
+      },
+      () => {
+        message.success('保存成功');
+        setTypeModalVisible(false);
+        editorScope.current = null;
+        refreshPreviews();
+        void loadTypes();
+      },
+    );
   };
-
-  /** 打开新增字典数据弹窗 */
   const handleCreateData = () => {
+    if (!canEdit || isBusy() || !selectedTypeIdRef.current || typeLoading || typeError) return;
+    editorScope.current = { kind: 'data', id: null };
     setEditingData(null);
     dataForm.resetFields();
-    dataForm.setFieldValue('dictTypeId', selectedTypeId);
+    dataForm.setFieldsValue({
+      dictTypeId: selectedTypeIdRef.current,
+      dictSort: 0,
+      status: 1,
+      isDefault: 0,
+    });
     setDataModalVisible(true);
   };
-
-  /** 打开编辑字典数据弹窗 */
   const handleEditData = (record: DictData) => {
+    if (!canEdit || isBusy()) return;
+    editorScope.current = { kind: 'data', id: record.id };
     setEditingData(record);
-    dataForm.setFieldsValue(record);
+    dataForm.resetFields();
+    dataForm.setFieldsValue(dictDataPayload(record));
     setDataModalVisible(true);
   };
-
-  /** 删除字典数据 */
-  const handleDeleteData = async (id: number) => {
-    try {
-      await dictApi.deleteData(id);
-      message.success('删除成功');
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleDeleteData = (id: number) => {
+    if (!canEdit) return;
+    return runMutation(
+      async () => requireAdminSuccess(await dictApi.deleteData(id), '删除数据失败'),
+      () => {
+        message.success('删除成功');
+        refreshPreviews();
+        void loadData(1);
+      },
+    );
   };
-
-  /** 提交字典数据表单 */
-  const handleSubmitData = async () => {
-    try {
-      const values = await dataForm.validateFields();
-      if (editingData?.id) {
-        await dictApi.updateData(editingData.id, values);
-        message.success('更新成功');
-      } else {
-        await dictApi.createData(values);
-        message.success('创建成功');
-      }
-      setDataModalVisible(false);
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleSubmitData = () => {
+    const scope = editorScope.current;
+    if (!canEdit || !scope || scope.kind !== 'data') return;
+    const typeId = editingData?.dictTypeId ?? selectedTypeIdRef.current;
+    if (!typeId) return;
+    return runMutation(
+      async () => {
+        const values = await dataForm.validateFields();
+        if (editorScope.current !== scope) throw new Error('编辑目标已变化');
+        const payload = dictDataPayload(values);
+        payload.dictTypeId = typeId;
+        requireAdminSuccess(
+          scope.id
+            ? await dictApi.updateData(scope.id, payload)
+            : await dictApi.createData(payload),
+          '保存数据失败',
+        );
+      },
+      () => {
+        message.success('保存成功');
+        setDataModalVisible(false);
+        editorScope.current = null;
+        refreshPreviews();
+        void loadData();
+      },
+    );
   };
+  const renderStatus = (value: number) => (
+    <Tag color={dictColor(dicts.enable_status, value)}>{dictLabel(dicts.enable_status, value)}</Tag>
+  );
+  const renderDefault = (value: number) => (
+    <Tag color={dictColor(dicts.qt_yes_no, value)}>{dictLabel(dicts.qt_yes_no, value)}</Tag>
+  );
 
   /** 字典类型表格列定义 */
   const typeColumns = [
@@ -379,15 +371,13 @@ export default function DictPage() {
       key: 'jdbcType',
       render: (v: string) => <Tag color="cyan">{v || '-'}</Tag>,
     },
-    { title: '长度', dataIndex: 'dataLength', key: 'dataLength', render: (v: number) => v || '-' },
+    { title: '长度', dataIndex: 'dataLength', key: 'dataLength', render: (v: number) => v ?? '-' },
     { title: '描述', dataIndex: 'description', key: 'description' },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (v: number) => (
-        <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '启用' : '禁用'}</Tag>
-      ),
+      render: renderStatus,
     },
     {
       title: '操作',
@@ -399,16 +389,16 @@ export default function DictPage() {
             type="link"
             icon={<EditOutlined />}
             onClick={() => handleEditType(r)}
-            disabled={!canEdit}
+            disabled={!canEdit || saving}
           >
             编辑
           </Button>
           <Popconfirm
             title="确认删除?"
-            disabled={!canEdit}
+            disabled={!canEdit || saving}
             onConfirm={() => handleDeleteType(r.id)}
           >
-            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit || saving}>
               删除
             </Button>
           </Popconfirm>
@@ -419,10 +409,16 @@ export default function DictPage() {
 
   /** 展开行渲染：显示该类型下的字典数据（预览前 100 条，完整列表在右侧数据表） */
   const expandedRowRender = (record: DictType) => {
-    const data = expandedRowData[record.id] || [];
+    const data = cache.get(record.id) || [];
     return (
       <div>
+        <AdminLoadNotice
+          error={expandedErrors[record.id]}
+          hasData={data.length > 0}
+          onRetry={() => loadExpandedData(record.id)}
+        />
         <ResizableTable
+          loading={cache.isBusy(record.id)}
           dataSource={data}
           columns={[
             { title: '字典标签', dataIndex: 'dictLabel', key: 'dictLabel' },
@@ -432,26 +428,22 @@ export default function DictPage() {
               title: '默认',
               dataIndex: 'isDefault',
               key: 'isDefault',
-              render: (v: number) => (
-                <Tag color={v === 1 ? 'blue' : 'default'}>{v === 1 ? '是' : '否'}</Tag>
-              ),
+              render: renderDefault,
             },
             {
               title: '状态',
               dataIndex: 'status',
               key: 'status',
-              render: (v: number) => (
-                <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '启用' : '禁用'}</Tag>
-              ),
+              render: renderStatus,
             },
           ]}
           rowKey="id"
           scroll={{ x: 'max-content' }}
           pagination={false}
           size="small"
-          locale={{ emptyText: '暂无字典数据' }}
+          locale={{ emptyText: expandedErrors[record.id] ? '预览未加载成功' : '暂无字典数据' }}
         />
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary, #999)', marginTop: 4 }}>
+        <div className="text-muted-foreground mt-1 text-xs">
           仅预览前 100 条，查看全部请选中左侧类型后在右侧「字典数据」表翻页
         </div>
       </div>
@@ -467,17 +459,13 @@ export default function DictPage() {
       title: '默认',
       dataIndex: 'isDefault',
       key: 'isDefault',
-      render: (v: number) => (
-        <Tag color={v === 1 ? 'blue' : 'default'}>{v === 1 ? '是' : '否'}</Tag>
-      ),
+      render: renderDefault,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (v: number) => (
-        <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '启用' : '禁用'}</Tag>
-      ),
+      render: renderStatus,
     },
     {
       title: '操作',
@@ -489,16 +477,16 @@ export default function DictPage() {
             type="link"
             icon={<EditOutlined />}
             onClick={() => handleEditData(r)}
-            disabled={!canEdit}
+            disabled={!canEdit || saving}
           >
             编辑
           </Button>
           <Popconfirm
             title="确认删除?"
-            disabled={!canEdit}
+            disabled={!canEdit || saving}
             onConfirm={() => handleDeleteData(r.id)}
           >
-            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit || saving}>
               删除
             </Button>
           </Popconfirm>
@@ -518,13 +506,35 @@ export default function DictPage() {
             children: (
               <Card>
                 <FilterBar split>
-                  <Input.Search placeholder="搜索字典类型" allowClear style={{ width: 300 }} />
+                  <Input.Search
+                    aria-label="搜索字典编码或名称"
+                    placeholder="搜索字典编码或名称"
+                    value={typeKeyword}
+                    allowClear
+                    className="w-full sm:w-[300px]"
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      setTypeKeyword(next);
+                      if (!next) void loadTypes(1, undefined, '');
+                    }}
+                    onSearch={(value) => {
+                      setTypeKeyword(value);
+                      void loadTypes(1, undefined, value);
+                    }}
+                  />
                   {canEdit && (
-                    <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateType}>
+                    <Button
+                      type="primary"
+                      disabled={saving}
+                      icon={<PlusOutlined />}
+                      onClick={handleCreateType}
+                    >
                       新建类型
                     </Button>
                   )}
                 </FilterBar>
+                <AdminLoadNotice error={typeError} hasData={types.length > 0} onRetry={loadTypes} />
+                <AdminOptionNotice error={optionError} onRetry={loadOptions} />
                 <ResizableTable
                   dataSource={types}
                   columns={typeColumns}
@@ -534,7 +544,10 @@ export default function DictPage() {
                   expandable={{
                     expandedRowRender,
                     onExpand: (expanded, record) => {
-                      if (expanded) loadExpandedData(record.id);
+                      if (expanded) {
+                        expandedIds.current.add(record.id);
+                        void loadExpandedData(record.id);
+                      } else expandedIds.current.delete(record.id);
                     },
                   }}
                   pagination={{
@@ -556,7 +569,10 @@ export default function DictPage() {
                 <FilterBar split>
                   <Select
                     placeholder="选择字典类型"
-                    style={{ width: 300 }}
+                    aria-label="选择字典类型"
+                    allowClear
+                    disabled={typeLoading || !!typeError || saving}
+                    className="w-full sm:w-[300px]"
                     value={selectedTypeId}
                     onChange={handleSelectType}
                     options={allTypes.map((t) => ({ label: t.dictName, value: t.id }))}
@@ -566,13 +582,31 @@ export default function DictPage() {
                       type="primary"
                       icon={<PlusOutlined />}
                       onClick={handleCreateData}
-                      disabled={!selectedTypeId}
+                      disabled={!selectedTypeId || saving || typeLoading || !!typeError}
                     >
                       新建数据
                     </Button>
                   )}
                 </FilterBar>
+                <AdminLoadNotice
+                  error={typeError}
+                  hasData={allTypes.length > 0}
+                  onRetry={loadTypes}
+                />
+                <AdminLoadNotice
+                  error={dataError}
+                  hasData={dictData.length > 0}
+                  onRetry={loadData}
+                />
+                <AdminOptionNotice error={optionError} onRetry={loadOptions} />
                 <ResizableTable
+                  locale={{
+                    emptyText: !selectedTypeId
+                      ? '请先选择字典类型'
+                      : dataError
+                        ? '字典数据未加载成功'
+                        : '暂无字典数据',
+                  }}
                   dataSource={dictData}
                   columns={dataColumns}
                   rowKey="id"
@@ -581,18 +615,7 @@ export default function DictPage() {
                   pagination={{
                     ...dataPagination,
                     onChange: (page, pageSize) => {
-                      if (selectedTypeId) {
-                        dictApi.getDataPage(page, pageSize, selectedTypeId).then((res) => {
-                          if (res.code === 200) {
-                            setDictData(res.data?.records || []);
-                            setDataPagination({
-                              current: res.data?.current || page,
-                              pageSize: res.data?.size || pageSize,
-                              total: res.data?.total || 0,
-                            });
-                          }
-                        });
-                      }
+                      void loadData(page, pageSize);
                     },
                     showQuickJumper: true,
                     showSizeChanger: true,
@@ -609,9 +632,17 @@ export default function DictPage() {
         title={editingType ? '编辑字典类型' : '新建字典类型'}
         open={typeModalVisible}
         onOk={handleSubmitType}
-        onCancel={() => setTypeModalVisible(false)}
+        onCancel={() => {
+          if (!isBusy()) {
+            editorScope.current = null;
+            setTypeModalVisible(false);
+          }
+        }}
+        confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        okButtonProps={{ disabled: saving || !canEdit }}
       >
-        <Form form={typeForm} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={typeForm} layout="vertical" disabled={saving} style={{ marginTop: 16 }}>
           <Form.Item name="dictCode" label="字典编码" rules={[{ required: true }]}>
             <Input disabled={!!editingType} />
           </Form.Item>
@@ -629,10 +660,16 @@ export default function DictPage() {
             />
           </Form.Item>
           <Form.Item name="jdbcType" label="JDBC类型">
-            <Form.Item noStyle shouldUpdate={(prev, next) => prev.dataType !== next.dataType}>
+            <Form.Item<DictTypeWrite>
+              noStyle
+              shouldUpdate={(prev, next) => prev.dataType !== next.dataType}
+            >
               {({ getFieldValue }) => {
                 const dataType = getFieldValue('dataType');
-                const options = (typeMapping[dataType] || []).map((t) => ({ label: t, value: t }));
+                const options = (typeMapping[dataType as string] || []).map((t) => ({
+                  label: t,
+                  value: t,
+                }));
                 return <Select options={options} />;
               }}
             </Form.Item>
@@ -650,9 +687,17 @@ export default function DictPage() {
         title={editingData ? '编辑字典数据' : '新建字典数据'}
         open={dataModalVisible}
         onOk={handleSubmitData}
-        onCancel={() => setDataModalVisible(false)}
+        onCancel={() => {
+          if (!isBusy()) {
+            editorScope.current = null;
+            setDataModalVisible(false);
+          }
+        }}
+        confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        okButtonProps={{ disabled: saving || !canEdit }}
       >
-        <Form form={dataForm} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={dataForm} layout="vertical" disabled={saving} style={{ marginTop: 16 }}>
           <Form.Item name="dictTypeId" hidden>
             <Input />
           </Form.Item>

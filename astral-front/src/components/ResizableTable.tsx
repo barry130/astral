@@ -467,7 +467,7 @@ export function ResizableTable<T extends object>(props: ResizableTableProps<T>) 
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-[color:var(--color-text-tertiary)] rounded-full text-[12.5px]"
+                className="rounded-full text-[12.5px] text-[color:var(--color-text-tertiary)]"
               >
                 <SlidersHorizontal className="size-3.5" />
                 列设置

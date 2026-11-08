@@ -1,55 +1,48 @@
-import { NextResponse } from 'next/server';
-import { backendFetch, getSessionUser, canEditContent } from '@/lib/auth-server';
+import { backendFetch, getSessionState, canViewContent } from '@/lib/auth-server';
+import { privateJson, upstreamFailure } from '@/lib/bff';
+import { parseResult } from '@/lib/result';
+import { parseCategoryTree, parseTagList, parseWikiTree } from '@/lib/cms-validation';
+import { parseStatusDictionary } from '@/lib/editor';
 
-/**
- * 编辑区需要的后台「基础数据」：分类树、标签列表、页面树。
- *
- * 为什么合成一个接口：三份数据都是打开编辑器时一次性要用的，
- * 分三个请求在同一个渲染过程里并发度一样但要过三次鉴权与三次网络往返。
- * 这里在服务端并发取回，任一失败给空数组 —— 编辑器要能打开，缺选项不该阻塞编辑。
- */
+export const dynamic = 'force-dynamic';
 
-const ADMIN_CATEGORY_TREE = '/api/v1/admin/cms/category/tree';
-const ADMIN_TAG_LIST = '/api/v1/admin/cms/tag/list';
-const ADMIN_PAGE_TREE = '/api/v1/admin/cms/page/tree';
-
-interface Envelope<T> {
-  code?: number;
-  data?: T | null;
-}
-
-async function safeGet<T>(path: string): Promise<T | null> {
-  try {
-    const res = await backendFetch(path);
-    if (!res.ok) return null;
-    const body = (await res.json()) as Envelope<T>;
-    return body.code === 200 && body.data != null ? body.data : null;
-  } catch {
-    return null;
-  }
-}
-
+/** Failures are explicit, never silently replaced by destructive empty options. */
 export async function GET() {
-  const user = await getSessionUser();
-  if (!user) {
-    return NextResponse.json({ code: 401, message: '请先登录。' }, { status: 401 });
+  const session = await getSessionState();
+  if (!session.available)
+    return privateJson({ code: 502, msg: '会话暂时无法确认，请稍后重试。', data: null }, 502);
+  const user = session.user;
+  if (!user) return privateJson({ code: 401, msg: '请先登录。', data: null });
+  if (!canViewContent(user))
+    return privateJson({ code: 403, msg: '当前账号没有内容查看权限。', data: null });
+  try {
+    const paths = [
+      '/api/v1/admin/cms/category/tree',
+      '/api/v1/admin/cms/tag/list',
+      '/api/v1/admin/cms/page/tree',
+      '/api/v1/admin/system/dict/data/byCode?code=cms_content_status',
+    ];
+    const responses = await Promise.all(paths.map((path) => backendFetch(path)));
+    const bodies = await Promise.all(
+      responses.map(async (response) => parseResult(await response.json().catch(() => null))),
+    );
+    const failed = bodies.findIndex(
+      (body, index) => responses[index].status !== 200 || body?.code !== 200,
+    );
+    if (failed >= 0)
+      return upstreamFailure(
+        bodies[failed],
+        '编辑基础数据暂时不可用，请重试。',
+        responses[failed].status,
+      );
+    const categories = parseCategoryTree(bodies[0]?.data);
+    const tags = parseTagList(bodies[1]?.data);
+    const pages = parseWikiTree(bodies[2]?.data);
+    const statuses = parseStatusDictionary(bodies[3]?.data);
+    if (!categories || !tags || !pages || !statuses)
+      return privateJson({ code: 502, msg: '编辑基础数据格式异常。', data: null }, 502);
+    return privateJson({ code: 200, data: { categories, tags, pages, statuses } });
+  } catch {
+    return privateJson({ code: 502, msg: '编辑基础数据暂时不可用，请重试。', data: null }, 502);
   }
-  if (!canEditContent(user)) {
-    return NextResponse.json({ code: 403, message: '当前账号没有内容编辑权限。' }, { status: 403 });
-  }
-
-  const [categories, tags, pages] = await Promise.all([
-    safeGet<unknown[]>(ADMIN_CATEGORY_TREE),
-    safeGet<unknown[]>(ADMIN_TAG_LIST),
-    safeGet<unknown[]>(ADMIN_PAGE_TREE),
-  ]);
-
-  return NextResponse.json({
-    code: 200,
-    data: {
-      categories: categories ?? [],
-      tags: tags ?? [],
-      pages: pages ?? [],
-    },
-  });
 }

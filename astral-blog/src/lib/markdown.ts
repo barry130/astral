@@ -1,11 +1,101 @@
-import { Marked } from 'marked';
-import type { Token, Tokens } from 'marked';
+import { Marked, type Token, type Tokens } from 'marked';
 
 import { highlightCode, normalizeLanguage } from '@/lib/highlight';
+import { escapeHtml, safeImageUrl, safeUrl } from '@/lib/url';
 
 /** marked 渲染器里 this.parser 的最小形状（只用到行内渲染） */
 interface InlineParser {
   parseInline(tokens: Token[]): string;
+}
+
+/**
+ * 正文里允许原样输出的 HTML 标签，**只允许不带任何属性**。
+ *
+ * 为什么要有这层白名单：CMS 的写权限 `admin:cms:content:edit` 是可下放的（后端 AGENTS.md
+ * 「写接口的粒度取舍」明确把它列为可下放码），也就是内容编辑者不是超管；而正文 HTML 是
+ * 直接 innerHTML 进公开页面的。一旦放行任意 HTML，一个内容编辑就能在公开页塞
+ * `<script>` / `<img onerror>`，对所有读者构成存储型 XSS，还能用读者里的管理员会话反打
+ * 管理接口（同源 /api/admin/**）。
+ *
+ * 这里只放行「纯排版、无属性」的标签：没有属性就没有 on* 事件、没有 src/href、没有 style，
+ * 剩下的标签自身不制造可执行上下文。script/style/iframe/object/embed/svg/math/form/a/img
+ * 一律不在表内 —— 链接与图片必须走 Markdown 语法，由上面的 renderer 过 safeUrl 协议白名单。
+ */
+const RAW_HTML_TAGS = new Set([
+  'abbr',
+  'b',
+  'blockquote',
+  'br',
+  'cite',
+  'code',
+  'dd',
+  'del',
+  'details',
+  'div',
+  'dl',
+  'dt',
+  'em',
+  'figcaption',
+  'figure',
+  'hr',
+  'i',
+  'ins',
+  'kbd',
+  'li',
+  'mark',
+  'ol',
+  'p',
+  'q',
+  's',
+  'small',
+  'span',
+  'strong',
+  'sub',
+  'summary',
+  'sup',
+  'time',
+  'u',
+  'ul',
+  'wbr',
+]);
+
+/** 只匹配「开标签 / 闭标签，且没有属性、没有自闭合斜杠之外的杂音」 */
+const RAW_TAG_PATTERN = /^<\s*(\/?)\s*([a-zA-Z][a-zA-Z0-9]*)\s*>$/;
+
+/**
+ * 把一段原样 HTML 收敛成「白名单标签 + 其余一律转义」。
+ *
+ * 只逐段检查标签本身，标签之间的文字保持原样（纯文本没有可执行能力）。
+ * 不在白名单内的 `<` 只转义这一个字符、游标前进一位，避免把一个 `<` 当成整段标签吞掉，
+ * 导致后面的合法标签也跟着失效。
+ */
+export function sanitizeRawHtml(raw: string): string {
+  if (!raw) return '';
+  let out = '';
+  let index = 0;
+  while (index < raw.length) {
+    const open = raw.indexOf('<', index);
+    if (open < 0) {
+      out += raw.slice(index);
+      break;
+    }
+    out += raw.slice(index, open);
+    const close = raw.indexOf('>', open);
+    if (close < 0) {
+      out += escapeHtml(raw.slice(open));
+      break;
+    }
+    const match = RAW_TAG_PATTERN.exec(raw.slice(open, close + 1));
+    const tag = match ? match[2].toLowerCase() : '';
+    if (match && RAW_HTML_TAGS.has(tag)) {
+      out += `<${match[1]}${tag}>`;
+      index = close + 1;
+    } else {
+      out += escapeHtml('<');
+      index = open + 1;
+    }
+  }
+  return out;
 }
 
 /**
@@ -20,6 +110,20 @@ function applyCommonRenderers(parser: Marked): void {
       },
       image({ href, title, text }) {
         return renderImage(href, title ?? null, text);
+      },
+      link({ href, title, tokens }) {
+        const inner = this.parser.parseInline(tokens);
+        const url = safeUrl(href);
+        if (!url) {
+          // 不安全协议不生成可点击链接，保留原文字避免内容消失
+          return `<span class="md-unsafe-link">${inner}</span>`;
+        }
+        const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
+        return `<a href="${escapeHtml(url)}"${titleAttr}>${inner}</a>`;
+      },
+      // 原样 HTML 走白名单：落笔即消毒，评论区之类不经此渲染器的入口另走纯文本。
+      html({ text }) {
+        return sanitizeRawHtml(text);
       },
       table(token) {
         return renderTable(token, this.parser as unknown as InlineParser);
@@ -45,10 +149,10 @@ function renderCodeBlock(code: string, langRaw: string | null): string {
   // hljs 输出的 class 用于着色，没有对应语言时保持原文
   const className = language ? `hljs language-${language}` : 'hljs';
   return (
-    `<div class="md-code" data-lang="${label.replace(/"/g, '')}">` +
+    `<div class="md-code" data-lang="${escapeHtml(label)}">` +
     `<div class="md-code-bar">` +
     `<span class="md-code-dots" aria-hidden="true"><i></i><i></i><i></i></span>` +
-    `<span class="md-code-lang">${label.replace(/</g, '&lt;')}</span>` +
+    `<span class="md-code-lang">${escapeHtml(label)}</span>` +
     `<button class="md-code-copy" type="button" aria-label="复制代码">复制</button>` +
     `</div>` +
     `<pre><code class="${className}">${highlighted}</code></pre>` +
@@ -61,10 +165,12 @@ function renderCodeBlock(code: string, langRaw: string | null): string {
  * 带 Referer 的请求会被 403，前端 <img> 能逐个声明，HTML 字符串只能在这里加。
  */
 function renderImage(href: string, title: string | null, text: string): string {
-  const alt = text.replace(/"/g, '&quot;');
-  const titleAttr = title ? ` title="${title.replace(/"/g, '&quot;')}"` : '';
+  const url = safeImageUrl(href);
+  if (!url) return `<span class="md-unsafe-image">${escapeHtml(text)}</span>`;
+  const alt = escapeHtml(text);
+  const titleAttr = title ? ` title="${escapeHtml(title)}"` : '';
   return (
-    `<img src="${href.replace(/"/g, '&quot;')}" alt="${alt}"${titleAttr}` +
+    `<img src="${escapeHtml(url)}" alt="${alt}"${titleAttr}` +
     ` referrerpolicy="no-referrer" loading="lazy" decoding="async">`
   );
 }
@@ -83,7 +189,9 @@ function renderTable(token: Tokens.Table, parser: InlineParser): string {
   };
   const head =
     `<thead><tr>` +
-    token.header.map((cell) => `<th${align(cell)}>${parser.parseInline(cell.tokens)}</th>`).join('') +
+    token.header
+      .map((cell) => `<th${align(cell)}>${parser.parseInline(cell.tokens)}</th>`)
+      .join('') +
     `</tr></thead>`;
   const body = token.rows
     .map(
@@ -122,7 +230,7 @@ export interface RenderedMarkdown {
  * 同名标题追加 -2 / -3 保证全页唯一。
  */
 function createAnchors() {
-  const used = new Map<string, number>();
+  const used = new Set<string>();
   return (rawText: string): string => {
     const base =
       rawText
@@ -132,9 +240,11 @@ function createAnchors() {
         .replace(/\s+/g, '-')
         .slice(0, 64)
         .replace(/^-+|-+$/g, '') || 'section';
-    const seen = used.get(base) ?? 0;
-    used.set(base, seen + 1);
-    return seen === 0 ? base : `${base}-${seen + 1}`;
+    let candidate = base;
+    let suffix = 2;
+    while (used.has(candidate)) candidate = `${base}-${suffix++}`;
+    used.add(candidate);
+    return candidate;
   };
 }
 
@@ -189,7 +299,7 @@ export interface TocOptions {
  * 服务端把文章 / Wiki 页面的 Markdown 正文渲染为 HTML，并同时抽取标题目录。
  *
  * - 标题带上锚点 id（详情页左侧 TOC 点击跳转用）
- * - 内容由后台管理员（受信方）撰写，故不做额外消毒
+ * - 与编辑预览共用 HTML / URL 白名单，不把可下放的内容编辑权限当作可信 HTML
  * - 每次调用使用独立 Marked 实例，避免 heading 计数器在并发请求间串味
  */
 export function renderMarkdownWithToc(
@@ -237,8 +347,12 @@ export function renderMarkdownWithToc(
 
 /**
  * 服务端把文章 / Wiki 页面的 Markdown 正文渲染为 HTML。
- * 内容由后台管理员（受信方）撰写，故不做额外消毒；
- * 公开评论不经过此函数（纯文本渲染）。
+ *
+ * 消毒边界（不要退回「作者可信所以不消毒」）：正文确实由后台撰写，但写权限
+ * `admin:cms:content:edit` 可下放给非超管内容编辑者，而产物是公开页面的 innerHTML。
+ * 因此 Markdown 语法内的链接/图片过 safeUrl 协议白名单，正文里的原样 HTML 过
+ * sanitizeRawHtml 标签白名单（无属性），两条路径都不允许注入可执行内容。
+ * 公开评论不走此函数（comment-list 按纯文本渲染）。
  */
 export function renderMarkdown(markdown: string | null | undefined): string {
   if (!markdown) return '';

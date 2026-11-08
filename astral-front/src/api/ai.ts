@@ -409,6 +409,10 @@ export interface AiUsage {
   outputTokens?: number;
   estimatedCost?: number;
   currency?: string;
+  reservedAmount?: number;
+  reconciledBy?: number;
+  reconciledAt?: string;
+  reconciliationNote?: string;
   status?: string;
   createTime?: string;
 }
@@ -428,6 +432,12 @@ export interface AiUsageSummary {
   outputTokens?: number;
   estimatedCost?: number;
   currency?: string;
+  costs?: {
+    currency: string;
+    settledAmount: number;
+    reservedAmount: number;
+    unknownStages: number;
+  }[];
   trend?: AiUsageTrendPoint[];
 }
 
@@ -470,6 +480,9 @@ export interface AiToolCall {
   approvedAt?: string;
   startedAt?: string;
   finishedAt?: string;
+  reconciledBy?: number;
+  reconciledAt?: string;
+  reconciliationNote?: string;
 }
 
 /** 请求事件（管理端） */
@@ -791,8 +804,13 @@ export const aiKnowledgeApi = {
     request.post<AiKnowledgeSource>('/api/v1/admin/ai/knowledge/sources', data),
   updateSource: (id: number, data: Partial<AiKnowledgeSource>) =>
     request.put<AiKnowledgeSource>(`/api/v1/admin/ai/knowledge/sources/${id}`, data),
-  documents: (sourceId: number) =>
-    request.get<AiKnowledgeDocument[]>(`/api/v1/admin/ai/knowledge/sources/${sourceId}/documents`),
+  documents: (sourceId: number, pageNum = 1, pageSize = 20) =>
+    request.get<{ records: AiKnowledgeDocument[]; total: number }>(
+      `/api/v1/admin/ai/knowledge/sources/${sourceId}/documents`,
+      { params: { pageNum, pageSize } },
+    ),
+  document: (documentId: number) =>
+    request.get<AiKnowledgeDocument>(`/api/v1/admin/ai/knowledge/documents/${documentId}`),
   saveDocument: (sourceId: number, data: Partial<AiKnowledgeDocument>) =>
     request.post<AiKnowledgeDocument>(
       `/api/v1/admin/ai/knowledge/sources/${sourceId}/documents`,
@@ -804,21 +822,26 @@ export const aiKnowledgeApi = {
     request.post<AiIndexJob>(`/api/v1/admin/ai/knowledge/sources/${sourceId}/sync`),
   indexJob: (jobId: number) =>
     request.get<AiIndexJob>(`/api/v1/admin/ai/knowledge/index-jobs/${jobId}`),
+  latestJob: (sourceId: number) =>
+    request.get<AiIndexJob | null>(`/api/v1/admin/ai/knowledge/sources/${sourceId}/index-job`),
+  cancelJob: (jobId: number) =>
+    request.post<AiIndexJob>(`/api/v1/admin/ai/knowledge/index-jobs/${jobId}/cancel`),
+  retryJob: (jobId: number) =>
+    request.post<AiIndexJob>(`/api/v1/admin/ai/knowledge/index-jobs/${jobId}/retry`),
 };
 
 /* ==================== 管理端：工具 ==================== */
 
 export const aiToolApi = {
+  reconcile: (id: number, outcome: string, note: string) =>
+    request.post<unknown>(`/api/v1/admin/ai/tool-calls/${id}/reconcile`, { outcome, note }),
   list: () => request.get<AiTool[]>('/api/v1/admin/ai/tools'),
   sync: () => request.post<{ changed?: number }>('/api/v1/admin/ai/tools/sync'),
   update: (id: number, data: Partial<AiTool>) =>
     request.put<AiTool>(`/api/v1/admin/ai/tools/${id}`, data),
   /** 新建声明式工具：executorType 只接受 HTTP / SQL */
   createDeclarative: (executorType: string, data: DeclarativeToolSaveReq) =>
-    request.post<AiTool>(
-      `/api/v1/admin/ai/tools/${executorType === 'SQL' ? 'sql' : 'http'}`,
-      data,
-    ),
+    request.post<AiTool>(`/api/v1/admin/ai/tools/${executorType === 'SQL' ? 'sql' : 'http'}`, data),
   /** 修改声明式工具 */
   updateDeclarative: (executorType: string, id: number, data: DeclarativeToolSaveReq) =>
     request.put<AiTool>(
@@ -847,8 +870,7 @@ export const aiMcpApi = {
     request.put<AiMcpServer>(`/api/v1/admin/ai/mcp-servers/${id}`, data),
   remove: (id: number) => request.delete<void>(`/api/v1/admin/ai/mcp-servers/${id}`),
   /** 刷新远端工具清单：新增的写入 ai_tool，远端已下线的置为停用 */
-  refresh: (id: number) =>
-    request.post<AiMcpServer>(`/api/v1/admin/ai/mcp-servers/${id}/refresh`),
+  refresh: (id: number) => request.post<AiMcpServer>(`/api/v1/admin/ai/mcp-servers/${id}/refresh`),
 };
 
 /* ==================== 管理端：额度 / 用量 / 请求 / 审计 / 总览 ==================== */
@@ -863,6 +885,8 @@ export const aiQuotaApi = {
 };
 
 export const aiUsageApi = {
+  reconcile: (id: number, body: { inputTokens: number; outputTokens: number; note: string }) =>
+    request.post<AiUsage>(`/api/v1/admin/ai/usage/${id}/reconcile`, body),
   list: (params: {
     userId?: number;
     agentId?: number;
@@ -886,8 +910,9 @@ export const aiRequestApi = {
     pageNum?: number;
     pageSize?: number;
   }) => request.get<PageResult<AiRequest>>('/api/v1/admin/ai/requests', { params }),
+  /** Metadata stays available without content scope; explicit content uses its own guarded route. */
   detail: (id: number, content?: boolean) =>
-    request.get<AiRequestDetail>(`/api/v1/admin/ai/requests/${id}`, { params: { content } }),
+    request.get<AiRequestDetail>(`/api/v1/admin/ai/requests/${id}${content ? '/content' : ''}`),
   /**
    * 全会话审计列表（跨用户）。
    *
@@ -929,6 +954,11 @@ export const aiOverviewApi = {
  * 前端不写死任何模型、提示词或工具——这些都来自后端已发布版本。
  */
 export const aiChatApi = {
+  approveTool: (id: number, approved: boolean, admin = false) =>
+    request.post<{ toolCallId: number; status: string; summary?: string }>(
+      `/api/v1/admin/ai/${admin ? '' : 'chat/'}tool-calls/${id}/approve`,
+      { approved },
+    ),
   /** 当前用户可见的智能体卡片 */
   assistants: () => request.get<AiAgentCard[]>('/api/v1/admin/ai/assistants'),
   /** 智能体能力（会话、反馈、文件上下文、引用、动作） */
@@ -972,7 +1002,9 @@ export const aiChatApi = {
       silent: true,
     }),
   cancel: (requestId: number, reason?: string) =>
-    request.post<unknown>(`/api/v1/admin/ai/requests/${requestId}/cancel`, { reason }),
+    request.post<{ status?: string }>(`/api/v1/admin/ai/chat/requests/${requestId}/cancel`, {
+      reason,
+    }),
   feedback: (
     messageId: number,
     data: { feedbackType: string; reasonCode?: string; comment?: string },

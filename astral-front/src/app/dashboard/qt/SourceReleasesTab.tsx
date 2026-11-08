@@ -92,6 +92,18 @@ const FALLBACK_STATE_LABEL: Record<string, string> = {
 };
 
 /**
+ * 从「登记上传」的返回里取 publicId。
+ * 返回体是 StorageFile，publicId 在实体上是可选字段（old 数据/迁移行可能为空），
+ * 但直传链路下游拿永久地址必须用它 —— 缺了不能静默拼 `undefined` 去请求，
+ * 宁可当场抛错让上传行显示失败原因。
+ */
+const requirePublicId = (regRes: Awaited<ReturnType<typeof storageApi.registerUpload>>): string => {
+  const publicId = regRes.data?.publicId;
+  if (!publicId) throw new Error('登记成功但未返回文件标识（publicId），请检查存储插件');
+  return publicId;
+};
+
+/**
  * artifacts 编辑行：path 从数据字典下拉选择；url 既可行内上传生成（永久地址），
  * 也可手填已有的永久直链（上传成功会覆盖手填值）。
  */
@@ -128,7 +140,11 @@ export default function SourceReleasesTab() {
   const [modal, setModal] = useState(false);
   const [statsModal, setStatsModal] = useState(false);
   const [stats, setStats] = useState<QtSourceStatRow[]>([]);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<
+    Pick<QtSourceRelease, 'id' | 'platforms' | 'channel' | 'hostApiVersion' | 'notes'> & {
+      artifacts?: ArtifactRow[];
+    }
+  >();
 
   /** 数据字典选项（按 dict_code 动态拉取，避免写死枚举文案） */
   const [dict, setDict] = useState<Record<string, DictOption[]>>({});
@@ -455,7 +471,7 @@ export default function SourceReleasesTab() {
       if (!putResp.ok) throw new Error(`对象存储返回 ${putResp.status}`);
       const regRes = await storageApi.registerUpload(ticket.uploadId);
       if (regRes.code !== 200) throw new Error(regRes.msg);
-      publicId = regRes.data.publicId;
+      publicId = requirePublicId(regRes);
     } else if (ticket.form) {
       const form = new FormData();
       form.append('policy', ticket.form.policy);
@@ -465,13 +481,14 @@ export default function SourceReleasesTab() {
       if (!resp.ok) throw new Error(`又拍云返回 ${resp.status}`);
       const regRes = await storageApi.registerUpload(ticket.uploadId);
       if (regRes.code !== 200) throw new Error(regRes.msg);
-      publicId = regRes.data.publicId;
+      publicId = requirePublicId(regRes);
     } else {
       const form = new FormData();
       form.append(ticket.formField || 'file', file);
       const resp = await fetch(ticket.uploadUrl, { method: ticket.method, body: form });
       const json = await resp.json().catch(() => ({}));
       if (!resp.ok || !json.ok) throw new Error(json.message || `Worker 返回 ${resp.status}`);
+      if (!json.publicId) throw new Error('Worker 未返回文件标识（publicId）');
       publicId = json.publicId;
     }
     const urlRes = await storageApi.permanentUrl(publicId);

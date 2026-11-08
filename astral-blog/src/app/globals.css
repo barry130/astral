@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 /*
  * astral-blog 全局样式。
@@ -10,14 +10,14 @@
 
 @theme {
   --font-sans:
-    "PingFang SC", "HarmonyOS Sans SC", "Source Han Sans SC", "Noto Sans SC", "Hiragino Sans GB",
-    "Microsoft YaHei", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+    'PingFang SC', 'HarmonyOS Sans SC', 'Source Han Sans SC', 'Noto Sans SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   --font-display:
-    Georgia, "Times New Roman", "Songti SC", "STSong", "Source Han Serif SC", "Noto Serif CJK SC",
-    "SimSun", serif;
+    Georgia, 'Times New Roman', 'Songti SC', 'STSong', 'Source Han Serif SC', 'Noto Serif CJK SC',
+    'SimSun', serif;
   --font-mono:
-    ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New",
+    ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
 
   /* 纸张由外向内分三层，正文与页面之间不再垫一层白色卡片。 */
@@ -29,7 +29,9 @@
   --color-ink: #29251f;
   --color-ink-body: #494239;
   --color-ink-soft: #70675c;
-  --color-ink-faint: #8b8073;
+  /* 元信息同时用于纸面与 muted 表面；#6f655a 在 muted(#f0e9dc) 上为 4.72:1。
+     原 #746a5e 在 muted 上仅 4.39:1，不能只核对 canvas。 */
+  --color-ink-faint: #6f655a;
 
   --color-line: #dcd2c2;
   --color-line-soft: #eae2d5;
@@ -88,7 +90,7 @@
     background-color: var(--color-canvas);
     color: var(--color-ink-body);
     font-family: var(--font-sans);
-    font-feature-settings: "kern" 1;
+    font-feature-settings: 'kern' 1;
     text-rendering: optimizeLegibility;
   }
 
@@ -100,13 +102,20 @@
   /* 触屏设备可点区域补到 44px（组件里已放大的保持原样） */
   @media (pointer: coarse) {
     button:not([data-compact]),
-    [role="button"]:not([data-compact]) {
+    [role='button']:not([data-compact]) {
+      min-height: 2.75rem;
+    }
+
+    /* 表单控件同样按 44px 触控高度处理；checkbox/radio 保持原生尺寸由标签扩大热区 */
+    input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+    textarea,
+    select {
       min-height: 2.75rem;
     }
   }
 
   /* 弹层打开时不要连带滚动背后页面 */
-  [data-slot="dialog-content"] {
+  [data-slot='dialog-content'] {
     overscroll-behavior: contain;
   }
 
@@ -177,7 +186,7 @@
   }
 
   .eyebrow::before {
-    content: "";
+    content: '';
     width: 1.125rem;
     height: 2px;
     flex: none;
@@ -243,7 +252,7 @@
   }
 
   .markdown h2::before {
-    content: "";
+    content: '';
     position: absolute;
     top: 0.3em;
     bottom: 0.28em;
@@ -552,7 +561,7 @@
     background: linear-gradient(90deg, transparent, var(--color-line-strong), transparent);
   }
 
-  .markdown input[type="checkbox"] {
+  .markdown input[type='checkbox'] {
     margin-right: 0.45em;
     accent-color: var(--color-brand);
     vertical-align: -0.08em;
@@ -567,7 +576,7 @@
 
   .markdown .hljs-comment,
   .markdown .hljs-quote {
-    color: #7d786d;
+    color: #a29b8d;
     font-style: italic;
   }
 

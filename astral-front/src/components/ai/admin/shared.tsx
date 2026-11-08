@@ -33,6 +33,8 @@ export const AI_DICT_CODES = [
   'ai_index_job_status',
   'ai_feedback_type',
   'ai_quota_scope_type',
+  'ai_usage_status',
+  'ai_tool_call_status',
 ] as const;
 
 export interface AiDict {

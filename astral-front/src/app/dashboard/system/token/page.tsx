@@ -1,68 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { formatDateTime } from '@/lib/format';
 import { Card, Button, Space, Tag, message, Popconfirm, Select } from '@/components/antd-compat';
 import { DeleteOutlined, LogoutOutlined, RollbackOutlined } from '@/components/antd-compat/icons';
-import { request } from '@/api/client';
-import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
+import { tokenApi, userApi, type Token, type SysUser as User } from '@/api/system-admin';
+import { AdminLoadNotice } from '@/components/admin/AdminLoadNotice';
+import {
+  useAdminLoader,
+  useAdminMutation,
+  useAdminQuery,
+  useAdminTask,
+} from '@/components/admin/use-admin-task';
+import { requireAdminSuccess, adminErrorMessage } from '@/components/admin/admin-task';
+import {
+  loadAdminDictOptions as fetchDictOptions,
+  dictLabel,
+  dictColor,
+  DictOption,
+} from '@/components/admin/admin-dictionaries';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar } from '@/components/filter-bar';
-
-/** Token会话实体接口 */
-interface Token {
-  /** Token ID */
-  id: string;
-  /** 用户ID */
-  userId: number;
-  /** 用户名 */
-  username: string;
-  /** Token值 */
-  token: string;
-  /** 过期时间 */
-  expireTime: string;
-  /** 登录IP */
-  loginIp: string;
-  /** 登录端标识（ADMIN=管理端 / APP=轻听App；is-share:false 之前的旧会话为空） */
-  device?: string;
-  /** 状态：1有效/0已吊销 */
-  status: number;
-  /** 创建时间 */
-  createTime: string;
-}
-
-/** 用户简要信息接口 */
-interface User {
-  /** 用户ID */
-  id: number;
-  /** 用户名 */
-  username: string;
-}
-
-/** Token管理API封装 */
-const tokenApi = {
-  /** 分页查询Token */
-  getPage: (pageNum: number, pageSize: number, params?: Record<string, unknown>) =>
-    request.get('/api/v1/admin/system/token/page', { params: { pageNum, pageSize, ...params } }),
-  /** 吊销指定Token */
-  revoke: (id: string) =>
-    request.put(`/api/v1/admin/system/token/${encodeURIComponent(id)}/revoke`),
-  /** 踢出用户所有会话 */
-  kickOut: (userId: number) => request.put(`/api/v1/admin/system/token/user/${userId}/kick`),
-  /** 清理所有过期Token */
-  cleanExpired: () => request.delete('/api/v1/admin/system/token/expired'),
-  /** 全端会话重置（吊销所有在线 Token，所有人含操作者本人重新登录，需超管） */
-  revokeAll: () => request.put('/api/v1/admin/system/token/revoke-all'),
-};
-
-/** 用户管理API封装（用于获取用户列表筛选） */
-const userApi = {
-  /** 分页查询用户 */
-  getPage: (pageNum: number, pageSize: number) =>
-    request.get('/api/v1/admin/system/user/page', { params: { pageNum, pageSize } }),
-};
 
 /**
  * Token管理页面组件
@@ -70,7 +30,15 @@ const userApi = {
  */
 export default function TokenPage() {
   /** 加载状态 */
-  const [loading, setLoading] = useState(false);
+  const { loading, error: loadError, run: runLoad } = useAdminLoader('加载会话列表失败');
+  const { busy: mutating, run: runMutation } = useAdminMutation('会话操作失败');
+  const userTask = useAdminTask();
+  const query = useAdminQuery<{
+    current: number;
+    pageSize: number;
+    userId?: number;
+    status?: number;
+  }>({ current: 1, pageSize: 10 });
   /** Token列表数据 */
   const [data, setData] = useState<Token[]>([]);
   /** 用户列表（用于筛选） */
@@ -91,106 +59,125 @@ export default function TokenPage() {
   /** 全端会话重置属全局高危操作，与后端 @RequiresSuper 对齐 */
   const isSuper = hasPerm('*:*:*');
 
-  /** 组件挂载时加载Token列表和用户列表 */
-  useEffect(() => {
-    loadData();
-    loadDicts();
-    userApi.getPage(1, 1000).then((res) => {
-      if (res.code === 200) setUsers(res.data?.records || []);
-    });
-  }, []);
-
-  /** 加载数据字典（失败时回退显示原始值） */
-  const loadDicts = () => {
-    fetchDictOptions(['token_status'])
-      .then(setDicts)
-      .catch(() => {
-        /* 字典失败时回退显示原始值 */
-      });
-  };
-
-  /** 加载Token列表（支持按用户和状态筛选） */
-  const loadData = (page = 1, size = 10, userId?: number, status?: number) => {
-    setLoading(true);
-    const params: Record<string, unknown> = {};
-    if (userId) params.userId = userId;
-    if (status !== undefined) params.status = status;
-    tokenApi
-      .getPage(page, size, params)
-      .then((res) => {
-        if (res.code === 200) {
-          setData(res.data?.records || []);
+  const loadData = useCallback(
+    (
+      patch: Partial<{ current: number; pageSize: number; userId?: number; status?: number }> = {},
+    ) => {
+      const q = query.read(patch);
+      return runLoad(
+        async () => {
+          const page = requireAdminSuccess(
+            await tokenApi.getPage(q.current, q.pageSize, { userId: q.userId, status: q.status }),
+            '加载会话列表失败',
+          );
+          if (!page) throw new Error('会话分页数据缺失');
+          return page;
+        },
+        (page) => {
+          setData(page.records || []);
           setPagination({
-            current: res.data?.current || 1,
-            pageSize: res.data?.size || 10,
-            total: res.data?.total || 0,
+            current: page.current || q.current,
+            pageSize: page.size || q.pageSize,
+            total: page.total || 0,
           });
-        }
+        },
+      );
+    },
+    [query, runLoad],
+  );
+
+  const loadUsers = useCallback(
+    (keyword = '') =>
+      userTask.run(
+        async () => {
+          const page = requireAdminSuccess(
+            await userApi.getPage(1, 50, { username: keyword || undefined }),
+            '加载用户筛选失败',
+          );
+          return page?.records || [];
+        },
+        {
+          onSuccess: setUsers,
+          onError: (error) => message.error(adminErrorMessage(error, '加载用户筛选失败')),
+        },
+      ),
+    [userTask],
+  );
+
+  useEffect(() => {
+    void loadData();
+    void loadUsers();
+    let active = true;
+    fetchDictOptions(['token_status', 'user_type'])
+      .then((map) => {
+        if (active) setDicts(map);
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        /* Unknown labels retain their raw values. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadData, loadUsers]);
+
+  const handleRevoke = (id: string) => {
+    if (!canEdit) return;
+    return runMutation(
+      async () => requireAdminSuccess(await tokenApi.revoke(id), '吊销失败'),
+      () => {
+        message.success('已吊销');
+        void loadData();
+      },
+    );
+  };
+  const handleKickOut = (userId: number) => {
+    if (!canEdit) return;
+    return runMutation(
+      async () => requireAdminSuccess(await tokenApi.kickOut(userId), '踢出失败'),
+      () => {
+        message.success('已踢出');
+        void loadData();
+      },
+    );
+  };
+  const handleCleanExpired = () => {
+    if (!canEdit) return;
+    return runMutation(
+      async () => requireAdminSuccess(await tokenApi.cleanExpired(), '清理失败'),
+      () => {
+        message.success('已清理过期会话');
+        void loadData();
+      },
+    );
+  };
+  const handleRevokeAll = () => {
+    if (!isSuper) return;
+    return runMutation(
+      async () => requireAdminSuccess(await tokenApi.revokeAll(), '会话重置失败'),
+      () => {
+        message.success('已重置全部会话，请重新登录');
+        window.location.href = '/login';
+      },
+    );
   };
 
-  /** 吊销指定Token */
-  const handleRevoke = async (id: string) => {
-    try {
-      await tokenApi.revoke(id);
-      message.success('已吊销');
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
-  };
-
-  /** 踢出用户所有会话 */
-  const handleKickOut = async (userId: number) => {
-    try {
-      await tokenApi.kickOut(userId);
-      message.success('已踢出');
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
-  };
-
-  /** 清理所有过期Token */
-  const handleCleanExpired = async () => {
-    try {
-      await tokenApi.cleanExpired();
-      message.success('已清理过期Token');
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
-  };
-
-  /** 全端会话重置：吊销所有在线 Token，操作者本人也会被登出 */
-  const handleRevokeAll = async () => {
-    try {
-      await tokenApi.revokeAll();
-      message.success('已重置全部会话，请重新登录');
-      window.location.href = '/login';
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
-  };
-
-  /** 登录端标识渲染：ADMIN/APP 上色，旧会话（无 device 记录）显示「未记录」 */
-  const renderDevice = (v?: string) => {
-    if (v === 'ADMIN') return <Tag color="blue">管理端</Tag>;
-    if (v === 'APP') return <Tag color="green">App</Tag>;
-    return <Tag>未记录</Tag>;
-  };
+  const renderDevice = (v?: string) => (
+    <Tag color={dictColor(dicts.user_type, v) || 'default'}>
+      {dictLabel(dicts.user_type, v, v || '-')}
+    </Tag>
+  );
 
   /** 表格列定义 */
   const columns = [
     { title: '用户ID', dataIndex: 'userId', key: 'userId', width: 80 },
     { title: '用户', dataIndex: 'username', key: 'username' },
     {
-      title: 'Token',
-      dataIndex: 'token',
-      key: 'token',
+      title: '会话指纹',
+      dataIndex: 'id',
+      key: 'id',
       ellipsis: true,
-      render: (v: string) => `${v.substring(0, 20)}...`,
+      render: (v?: string) =>
+        typeof v === 'string' ? (v.length > 20 ? `${v.slice(0, 20)}…` : v) : '-',
     },
     { title: '登录IP', dataIndex: 'loginIp', key: 'loginIp' },
     {
@@ -232,10 +219,10 @@ export default function TokenPage() {
           {r.status === 1 && (
             <Popconfirm
               title="确认踢出该用户所有会话?"
-              disabled={!canEdit}
+              disabled={!canEdit || mutating}
               onConfirm={() => handleKickOut(r.userId)}
             >
-              <Button type="link" danger icon={<LogoutOutlined />} disabled={!canEdit}>
+              <Button type="link" danger icon={<LogoutOutlined />} disabled={!canEdit || mutating}>
                 踢出
               </Button>
             </Popconfirm>
@@ -243,10 +230,10 @@ export default function TokenPage() {
           {r.status === 1 && (
             <Popconfirm
               title="确认吊销此Token?"
-              disabled={!canEdit}
+              disabled={!canEdit || mutating}
               onConfirm={() => handleRevoke(r.id)}
             >
-              <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit}>
+              <Button type="link" danger icon={<DeleteOutlined />} disabled={!canEdit || mutating}>
                 吊销
               </Button>
             </Popconfirm>
@@ -269,8 +256,10 @@ export default function TokenPage() {
               value={selectedUserId}
               onChange={(v) => {
                 setSelectedUserId(v);
-                loadData(1, pagination.pageSize, v, selectedStatus);
+                void loadData({ current: 1, userId: v });
               }}
+              filterOption={false}
+              onSearch={(keyword) => void loadUsers(keyword)}
               options={users.map((u) => ({ label: u.username, value: u.id }))}
             />
             <Select
@@ -280,7 +269,7 @@ export default function TokenPage() {
               value={selectedStatus}
               onChange={(v) => {
                 setSelectedStatus(v);
-                loadData(1, pagination.pageSize, selectedUserId, v);
+                void loadData({ current: 1, status: v });
               }}
               options={(tokenStatusDict || []).map((o) => ({
                 label: o.label,
@@ -291,24 +280,29 @@ export default function TokenPage() {
           <Space>
             <Popconfirm
               title="确认清理所有过期Token?"
-              disabled={!canEdit}
+              disabled={!canEdit || mutating}
               onConfirm={handleCleanExpired}
             >
-              <Button icon={<DeleteOutlined />} disabled={!canEdit}>
+              <Button icon={<DeleteOutlined />} disabled={!canEdit || mutating}>
                 清理过期
               </Button>
             </Popconfirm>
             <Popconfirm
               title="全端会话重置会吊销所有在线Token，所有人（包括你自己）都需要重新登录，确认执行？"
-              disabled={!isSuper}
+              disabled={!isSuper || mutating}
               onConfirm={handleRevokeAll}
             >
-              <Button danger icon={<RollbackOutlined />} disabled={!isSuper}>
+              <Button danger icon={<RollbackOutlined />} disabled={!isSuper || mutating}>
                 全端会话重置
               </Button>
             </Popconfirm>
           </Space>
         </FilterBar>
+        <AdminLoadNotice
+          error={loadError}
+          hasData={data.length > 0}
+          onRetry={() => void loadData()}
+        />
         <ResizableTable
           dataSource={data}
           columns={columns}
@@ -320,7 +314,7 @@ export default function TokenPage() {
             showQuickJumper: true,
             showSizeChanger: true,
             pageSizeOptions: ['5', '10', '20', '50', '100'],
-            onChange: (page, pageSize) => loadData(page, pageSize, selectedUserId, selectedStatus),
+            onChange: (current, pageSize) => void loadData({ current, pageSize }),
           }}
         />
       </Card>

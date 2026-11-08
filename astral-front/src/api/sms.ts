@@ -55,6 +55,33 @@ export interface SmsLog {
   sendTime?: string;
 }
 
+export type SmsProviderWrite = Omit<SmsProvider, 'id' | 'createTime' | 'updateTime'>;
+
+/** Blank secret means preserve, never silently rotate to whitespace or send server-owned fields. */
+export const smsProviderPayload = (values: SmsProviderWrite): SmsProviderWrite => {
+  const fields = [
+    'providerName',
+    'providerType',
+    'accessKey',
+    'signName',
+    'region',
+    'endpoint',
+    'enabled',
+    'weight',
+    'remark',
+  ] as const;
+  const payload: SmsProviderWrite = {};
+  for (const field of fields) {
+    if (Object.hasOwn(values, field) && values[field] !== undefined) {
+      Object.assign(payload, { [field]: values[field] });
+    }
+  }
+  if (typeof values.accessSecret === 'string' && values.accessSecret.trim()) {
+    payload.accessSecret = values.accessSecret;
+  }
+  return payload;
+};
+
 export const smsApi = {
   // ===== 供应商 =====
   providerPage: (pageNum: number, pageSize: number): Promise<ApiResult<PageResult<SmsProvider>>> =>
@@ -63,10 +90,10 @@ export const smsApi = {
     request.get(`/api/v1/admin/system/sms/provider/${id}`),
   providerTypes: (): Promise<ApiResult<string[]>> =>
     request.get('/api/v1/admin/system/sms/provider/types'),
-  providerCreate: (data: Partial<SmsProvider>) =>
-    request.post('/api/v1/admin/system/sms/provider', data),
-  providerUpdate: (id: number, data: Partial<SmsProvider>) =>
-    request.put(`/api/v1/admin/system/sms/provider/${id}`, data),
+  providerCreate: (data: SmsProviderWrite) =>
+    request.post('/api/v1/admin/system/sms/provider', smsProviderPayload(data)),
+  providerUpdate: (id: number, data: SmsProviderWrite) =>
+    request.put(`/api/v1/admin/system/sms/provider/${id}`, smsProviderPayload(data)),
   providerDelete: (id: number) => request.delete(`/api/v1/admin/system/sms/provider/${id}`),
 
   // ===== 模板 =====

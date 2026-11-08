@@ -36,7 +36,12 @@ import {
   NotifyRuleVo,
   NotifyTemplateOption,
 } from '@/api/notify';
-import { dictColor, dictLabel, fetchDictOptions, DictOption } from '@/api/dict';
+import {
+  dictColor,
+  dictLabel,
+  loadAdminDictOptions as fetchDictOptions,
+  DictOption,
+} from '@/components/admin/admin-dictionaries';
 import { usePerm } from '@/lib/perm';
 import { formatDateTime } from '@/lib/format';
 import { ResizableTable } from '@/components/ResizableTable';
@@ -58,13 +63,13 @@ interface ChannelFormValue {
 type ChannelsFormValue = Record<string, ChannelFormValue | undefined>;
 
 /** 弹窗表单值（与 toFormValue 输出、resetForm 默认值同形） */
-interface RuleFormValues {
+type RuleFormValues = {
   ruleName?: string;
   eventCode?: string;
   enabled?: boolean;
   remark?: string;
   channels?: ChannelsFormValue;
-}
+};
 
 /** 新建渠道时的默认配置：至少一条收件人，否则保存必被后端 NOTIFY013 打回 */
 function defaultChannelValue(): ChannelFormValue {
@@ -110,7 +115,7 @@ export default function NotifyRulePage() {
   const [publishing, setPublishing] = useState(false);
   const [publishResults, setPublishResults] = useState<NotifyPublishResult[]>([]);
 
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<RuleFormValues>();
   const watchedEventCode = Form.useWatch('eventCode', form) as string | undefined;
   const watchedChannels = Form.useWatch('channels', form) as ChannelsFormValue | undefined;
   /** 上一次选中的事件码：只在「真的换了事件」时清空各渠道已选模板 */
@@ -308,7 +313,9 @@ export default function NotifyRulePage() {
   };
 
   /** 构造保存体；必达渠道强制启用，前端先挡住能挡的问题，后端错误码兜底 */
-  const buildSaveDto = (values: RuleFormValues): { dto?: NotifyRuleSaveDto; problems: string[] } => {
+  const buildSaveDto = (
+    values: RuleFormValues,
+  ): { dto?: NotifyRuleSaveDto; problems: string[] } => {
     const problems: string[] = [];
     const def = eventDefOf(values.eventCode);
     const allowed = new Set(def?.channels || []);

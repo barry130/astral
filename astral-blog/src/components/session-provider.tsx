@@ -1,48 +1,43 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { requestJson } from '@/lib/client-request';
+import { isRecord, parseResult, resultMessage } from '@/lib/result';
+import { parseSessionSnapshot, type SessionSnapshot, type SessionUserView } from '@/lib/session';
 
-/**
- * 博客前台登录态（客户端）。
- *
- * 令牌在 HttpOnly Cookie 里，JS 读不到，所以登录态只能问服务端：
- * `/api/auth/session` 是本站 Route Handler，它会带着 Cookie 去后端 /auth/info 验。
- *
- * 前台是公开站点，未登录是常态：这里不做重定向、不弹窗，
- * 只在登录后把 canEdit 交给「编辑」按钮决定是否露出。
- */
-
-export interface SessionUser {
-  id: number;
-  username: string;
-  nickname: string | null;
-  userType: string | null;
+export type SessionUser = SessionUserView;
+export interface LogoutResult {
+  localLoggedOut: boolean;
+  upstreamRevoked: boolean;
+  message: string;
 }
-
-interface SessionState {
-  /** 首次查询尚未返回 */
+interface SessionState extends SessionSnapshot {
   loading: boolean;
-  loggedIn: boolean;
-  canEdit: boolean;
-  user: SessionUser | null;
-  refresh: () => Promise<void>;
-  logout: () => Promise<void>;
+  error: string | null;
+  /** True only when the latest read confirmed a signed-in session. */
+  refresh: () => Promise<boolean>;
+  logout: () => Promise<LogoutResult>;
 }
-
+const ANONYMOUS: SessionSnapshot = { loggedIn: false, canEdit: false, user: null };
 const SessionContext = createContext<SessionState>({
+  ...ANONYMOUS,
   loading: false,
-  loggedIn: false,
-  canEdit: false,
-  user: null,
-  refresh: async () => {},
-  logout: async () => {},
+  error: null,
+  refresh: async () => false,
+  logout: async () => ({
+    localLoggedOut: false,
+    upstreamRevoked: false,
+    message: '会话尚未初始化。',
+  }),
 });
-
-interface SessionResponse {
-  loggedIn?: boolean;
-  canEdit?: boolean;
-  user?: SessionUser;
-}
 
 export function SessionProvider({
   children,
@@ -55,58 +50,117 @@ export function SessionProvider({
   initialCanEdit?: boolean;
   initialUser?: SessionUser | null;
 }) {
-  // 服务端已算过一次登录态（layout 里读 Cookie），这里作为初始值，
-  // 避免首屏闪现「未登录」再跳成「已登录」。
-  const [loggedIn, setLoggedIn] = useState(initialLoggedIn);
-  const [canEdit, setCanEdit] = useState(initialCanEdit);
-  const [user, setUser] = useState<SessionUser | null>(initialUser);
+  const [snapshot, setSnapshot] = useState<SessionSnapshot>(
+    () =>
+      parseSessionSnapshot({
+        loggedIn: initialLoggedIn,
+        canEdit: initialCanEdit,
+        user: initialUser,
+      }) ?? ANONYMOUS,
+  );
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(true);
+  const generation = useRef(0);
+  const readController = useRef<AbortController | null>(null);
+  const logoutController = useRef<AbortController | null>(null);
+  const logoutPending = useRef<Promise<LogoutResult> | null>(null);
 
-  const apply = useCallback((data: SessionResponse | null) => {
-    if (data?.loggedIn) {
-      setLoggedIn(true);
-      setCanEdit(Boolean(data.canEdit));
-      setUser(data.user ?? null);
-    } else {
-      setLoggedIn(false);
-      setCanEdit(false);
-      setUser(null);
+  const refresh = useCallback(async (): Promise<boolean> => {
+    if (logoutPending.current || !mounted.current) return false;
+    const current = ++generation.current;
+    readController.current?.abort();
+    const controller = new AbortController();
+    readController.current = controller;
+    setLoading(true);
+    try {
+      const { response, body } = await requestJson('/api/auth/session', {
+        signal: controller.signal,
+      });
+      if (!mounted.current || current !== generation.current) return false;
+      const next = response.ok ? parseSessionSnapshot(body) : null;
+      if (!next) throw new Error(resultMessage(body, '会话暂时无法确认，请稍后重试。'));
+      setSnapshot(next);
+      setError(null);
+      return next.loggedIn;
+    } catch (failure) {
+      if (mounted.current && current === generation.current) {
+        // A transient failure is not proof that cookies were removed. Preserve
+        // the identity for honest feedback but fail closed for editing.
+        setSnapshot((previous) => ({ ...previous, canEdit: false }));
+        setError(failure instanceof Error ? failure.message : '会话暂时无法确认。');
+      }
+      return false;
+    } finally {
+      if (mounted.current && current === generation.current) setLoading(false);
     }
   }, []);
 
-  const refresh = useCallback(async () => {
+  const logout = useCallback((): Promise<LogoutResult> => {
+    if (logoutPending.current) return logoutPending.current;
+    const current = ++generation.current;
+    readController.current?.abort();
+    const controller = new AbortController();
+    logoutController.current = controller;
     setLoading(true);
-    try {
-      const res = await fetch('/api/auth/session', { cache: 'no-store' });
-      apply(res.ok ? ((await res.json()) as SessionResponse) : null);
-    } catch {
-      apply(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [apply]);
+    setSnapshot((previous) => ({ ...previous, canEdit: false }));
+    const operation = (async (): Promise<LogoutResult> => {
+      try {
+        const { response, body: raw } = await requestJson('/api/auth/logout', {
+          method: 'POST',
+          signal: controller.signal,
+        });
+        const body = parseResult(raw);
+        const data = isRecord(body?.data) ? body.data : null;
+        if (!body || data?.localLoggedOut !== true)
+          throw new Error(resultMessage(raw, '退出请求未确认，请重试。'));
+        const upstreamRevoked = response.ok && body.code === 200 && data.upstreamRevoked === true;
+        const message = resultMessage(
+          body,
+          upstreamRevoked ? '已退出登录' : '已退出本站，但后端令牌撤销未确认。',
+        );
+        if (mounted.current && current === generation.current) {
+          setSnapshot(ANONYMOUS);
+          setError(upstreamRevoked ? null : message);
+        }
+        return { localLoggedOut: true, upstreamRevoked, message };
+      } catch (failure) {
+        const message = failure instanceof Error ? failure.message : '退出请求未确认，请重试。';
+        if (mounted.current && current === generation.current) setError(message);
+        return { localLoggedOut: false, upstreamRevoked: false, message };
+      } finally {
+        logoutPending.current = null;
+        if (mounted.current && current === generation.current) setLoading(false);
+      }
+    })();
+    logoutPending.current = operation;
+    return operation;
+  }, []);
 
-  const logout = useCallback(async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch {
-      // 网络失败也按已退出处理：用户体验上比卡在登录态更合理
-    }
-    apply(null);
-  }, [apply]);
-
-  // 初始值来自服务端；若服务端判定未登录（可能 Cookie 刚过期），静默复核一次
   useEffect(() => {
-    if (!initialLoggedIn) {
-      void refresh();
-    }
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      generation.current += 1;
+      readController.current?.abort();
+      logoutController.current?.abort();
+    };
+  }, []);
+  useEffect(() => {
+    if (!initialLoggedIn) void refresh();
   }, [initialLoggedIn, refresh]);
+  useEffect(() => {
+    const recheck = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    document.addEventListener('visibilitychange', recheck);
+    return () => document.removeEventListener('visibilitychange', recheck);
+  }, [refresh]);
 
   const value = useMemo<SessionState>(
-    () => ({ loading, loggedIn, canEdit, user, refresh, logout }),
-    [loading, loggedIn, canEdit, user, refresh, logout],
+    () => ({ ...snapshot, loading, error, refresh, logout }),
+    [snapshot, loading, error, refresh, logout],
   );
-
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

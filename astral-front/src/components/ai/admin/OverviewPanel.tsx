@@ -9,15 +9,7 @@
 
 import React from 'react';
 
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Space,
-  Spin,
-  Tag,
-  Tooltip,
-} from '@/components/antd-compat';
+import { Alert, Button, Descriptions, Space, Spin, Tag, Tooltip } from '@/components/antd-compat';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,

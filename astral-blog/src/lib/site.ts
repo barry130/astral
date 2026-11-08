@@ -14,7 +14,7 @@ export const FALLBACK_SITE_SETTINGS: SiteSettings = {
   siteTitle: SITE_TITLE,
   siteDescription: SITE_DESCRIPTION,
   footerText: FOOTER_TEXT,
-  commentEnabled: true,
+  commentEnabled: false,
   commentNeedReview: true,
 };
 

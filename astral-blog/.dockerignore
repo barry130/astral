@@ -1,6 +1,8 @@
 # astral-blog 构建上下文瘦身（Dockerfile 在 astral-blog/ 下）
 node_modules
 .next
+# Scoped test builds, browser profiles and receipts must never enter an image context.
+tests/.artifacts
 .git
 .gitignore
 *.md

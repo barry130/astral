@@ -1,51 +1,57 @@
-import { request, ApiResult } from './client';
+import { request, type ApiResult, type ApiRequestConfig } from './client';
 
 /** 登录请求参数接口 */
 export interface LoginRequest {
-  /** 用户名 */
   username: string;
-  /** 密码 */
   password: string;
-  /** TOTP 动态验证码：启用二次验证的账号必填（缺失时后端返回 errorCode=AUTH010） */
+  /** 启用二次验证的账号必填；缺失时后端返回 AUTH010。 */
   totpCode?: string;
 }
 
-/** 登录响应数据接口（字段与后端 LoginResponse.java 保持一致） */
-export interface LoginResponse {
-  /** 认证令牌 */
-  token: string;
-  /** 用户ID（后端 Long id，注意不是 userId） */
+/** /auth/info 的身份快照，不包含可重新使用的认证凭据。 */
+export interface SessionInfoResponse {
   id: number;
-  /** 用户名 */
   username: string;
-  /** 用户昵称 */
   nickname: string;
-  /** 用户类型：ADMIN 管理端 / APP 轻听 App 端 */
   userType?: string;
-  /** 用户角色编码列表 */
   roles: string[];
-  /** 用户权限编码列表 */
   permissions: string[];
-  /** 是否需要强制改密：1=是（管理端登录后必须先到个人中心修改密码） */
   mustChangePassword?: number;
-  /**
-   * 管理端 CSRF 双提交令牌（仅管理端返回）。
-   *
-   * 后端同时把它写在非 HttpOnly 的 `astral_csrf` Cookie 里，但**跨域直连**部署时
-   * 页面所在域读不到 API 域的 Cookie，因此响应体里也带一份，由 client.ts 缓存在内存。
-   */
-  csrfToken?: string;
+  /** Cookie 登录的双提交值；跨域页面读不到 API 域 Cookie，ADMIN 与 APP 均需要。 */
+  csrfToken?: string | null;
 }
 
-/** 认证相关API接口 */
+/** 新登录保留原有调用方凭据契约，不能把整个响应存入用户上下文或持久化。 */
+export interface LoginResponse extends SessionInfoResponse {
+  token: string;
+}
+
+/** 用户上下文从认证响应生成身份快照。 */
+export function sessionInfoFromResponse(source: SessionInfoResponse): SessionInfoResponse {
+  if (
+    !Array.isArray(source.roles) ||
+    !source.roles.every((role) => typeof role === 'string') ||
+    !Array.isArray(source.permissions) ||
+    !source.permissions.every((permission) => typeof permission === 'string')
+  ) {
+    throw new Error('登录信息格式异常，请重试');
+  }
+  return {
+    id: source.id,
+    username: source.username,
+    nickname: source.nickname,
+    userType: source.userType,
+    roles: [...source.roles],
+    permissions: [...source.permissions],
+    mustChangePassword: source.mustChangePassword,
+    csrfToken: source.csrfToken,
+  };
+}
+
 export const authApi = {
-  /** 用户登录 */
   login: (data: LoginRequest): Promise<ApiResult<LoginResponse>> =>
-    request.post('/api/v1/all/auth/login', data),
-
-  /** 用户登出 */
-  logout: (): Promise<ApiResult<void>> => request.post('/api/v1/all/auth/logout'),
-
-  /** 获取当前用户信息（后端 /api/v1/all/auth/info 返回的同样是 LoginResponse） */
-  getUserInfo: (): Promise<ApiResult<LoginResponse>> => request.get('/api/v1/all/auth/info'),
+    request.post<LoginResponse>('/api/v1/all/auth/login', data),
+  logout: (): Promise<ApiResult<void>> => request.post<void>('/api/v1/all/auth/logout'),
+  getUserInfo: (config?: ApiRequestConfig): Promise<ApiResult<SessionInfoResponse>> =>
+    request.get<SessionInfoResponse>('/api/v1/all/auth/info', config),
 };

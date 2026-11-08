@@ -40,29 +40,32 @@ export function Toc({ items }: TocProps) {
   }, [items]);
 
   if (entries.length === 0) {
-    return (
-      <p className="text-[12px] leading-relaxed text-ink-faint">
-        这篇文章没有小标题。
-      </p>
-    );
+    return <p className="text-ink-faint text-[12px] leading-relaxed">这篇文章没有小标题。</p>;
   }
 
   // 目录深度归一：h2 为 0 级，h3 为 1 级……（h1 不进目录）
   const minDepth = entries.reduce((min, item) => Math.min(min, item.depth), 6);
 
   const handleJump = (event: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    // 保留浏览器原生行为：新标签/新窗口打开（Ctrl/Cmd/Shift/Alt + 点击）不应被拦截。
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
     const target = document.getElementById(id);
     if (!target) return;
     setActiveId(id);
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // 顶栏 sticky 高 68px，滚动后补偏移，避免标题被盖住
-    window.history.replaceState(null, '', `#${id}`);
+    // 顶栏 sticky 高约 68px，再留 20px 呼吸位；scrollIntoView 不支持 offset。
+    const top = target.getBoundingClientRect().top + window.scrollY - 88;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? 'auto' : 'smooth' });
+    window.history.replaceState(window.history.state, '', `#${encodeURIComponent(id)}`);
+    // 便于键盘用户从跳转点继续阅读
+    target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
   };
 
   return (
     <nav aria-label="文章目录">
-      <ul className="space-y-[3px] border-l border-line-soft">
+      <ul className="border-line-soft space-y-[3px] border-l">
         {entries.map((entry) => {
           const level = Math.max(0, entry.depth - minDepth);
           const active = activeId === entry.id;
@@ -74,8 +77,8 @@ export function Toc({ items }: TocProps) {
                 style={{ paddingLeft: 12 + level * 12 }}
                 className={`-ml-px block border-l py-3 pr-2 text-[clamp(13.5px,0.28vw+9.5px,15.5px)] leading-[1.65] transition-colors sm:py-[5px] ${
                   active
-                    ? 'border-brand font-medium text-brand'
-                    : 'border-transparent text-ink-soft hover:border-line-strong hover:text-ink'
+                    ? 'border-brand text-brand font-medium'
+                    : 'text-ink-soft hover:border-line-strong hover:text-ink border-transparent'
                 }`}
               >
                 {entry.text}

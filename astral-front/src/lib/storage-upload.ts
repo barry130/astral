@@ -77,9 +77,30 @@ export async function uploadViaUploadOperations(folderId: number, file: File): P
     );
   }
   if (operation.canSendContent) {
-    const sent = await storageApi.putUploadContent(operation.uploadId, file, contentType);
+    let sent: Awaited<ReturnType<typeof storageApi.putUploadContent>>;
+    try {
+      sent = await storageApi.putUploadContent(operation.uploadId, file, contentType);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '上传请求失败';
+      // 正文请求断网/超时时服务端可能已收到字节，不能按普通失败让用户直接重传
+      const mayHaveReachedServer =
+        message.includes('无法连接到服务器') ||
+        message.includes('服务暂时不可用') ||
+        message.includes('Network Error') ||
+        message.includes('ERR_NETWORK') ||
+        message.toLowerCase().includes('timeout') ||
+        message.includes('超时');
+      if (mayHaveReachedServer) {
+        throw new Error(`上传结果未知：${message}。请稍后在文件列表确认，不要重复上传同一份文件`);
+      }
+      throw error;
+    }
     if (sent.code !== 200) throw new Error(sent.msg);
-    if (sent.data.contentAccepted) return settle(sent.data.operation);
+    // contentAccepted 只表示正文已收到，不代表已落库：切换候选目标后可能仍是 CREATED/REMOTE_SUCCEEDED，
+    // 必须继续查询到终态，不能把「已受理」当成功或失败。
+    if (sent.data.contentAccepted && isTerminal(sent.data.operation)) {
+      return settle(sent.data.operation);
+    }
   }
   // 重复提交命中已有操作、或 PUT 返回仍非终态：转 GET 查询原操作
   for (let attempt = 0; attempt < TWO_STEP_MAX_POLLS; attempt += 1) {
@@ -108,10 +129,34 @@ function settle(status: UploadOperationStatus): string {
   throw new Error(`上传未完成${status.safeFailureCode ? `（${status.safeFailureCode}）` : ''}`);
 }
 
+/** 直传请求的错误可能来自浏览器网络层，原始 "Failed to fetch" 对用户没有可操作信息。 */
+async function fetchUpload(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    const networkish =
+      message.includes('Failed to fetch') ||
+      message.includes('fetch failed') ||
+      message.includes('NetworkError') ||
+      message.includes('network') ||
+      message.toLowerCase().includes('timeout') ||
+      message.toLowerCase().includes('abort') ||
+      message.includes('超时') ||
+      message.includes('中止');
+    if (networkish) {
+      throw new Error(
+        '上传连接中断，无法确认服务端是否收到文件。请检查网络后重试；如稍后文件列表出现同名文件，请勿重复上传',
+      );
+    }
+    throw error;
+  }
+}
+
 /** 可复用已签发的凭证，供后台逐步验证上传链路。 */
 export async function uploadWithStorageTicket(ticket: TicketView, file: File): Promise<string> {
   if (ticket.method === 'PUT') {
-    const response = await fetch(ticket.uploadUrl, {
+    const response = await fetchUpload(ticket.uploadUrl, {
       method: 'PUT',
       body: file,
       signal: AbortSignal.timeout(600_000),
@@ -124,7 +169,7 @@ export async function uploadWithStorageTicket(ticket: TicketView, file: File): P
       form.append('authorization', ticket.form.authorization);
     }
     form.append(ticket.formField || 'file', file);
-    const response = await fetch(ticket.uploadUrl, {
+    const response = await fetchUpload(ticket.uploadUrl, {
       method: ticket.method,
       body: form,
       signal: AbortSignal.timeout(600_000),
@@ -139,5 +184,7 @@ export async function uploadWithStorageTicket(ticket: TicketView, file: File): P
   }
   const registered = await storageApi.registerUpload(ticket.uploadId);
   if (registered.code !== 200) throw new Error(registered.msg);
-  return registered.data.publicId;
+  const publicId = registered.data.publicId;
+  if (!publicId) throw new Error('上传登记未返回文件标识，请在文件列表确认结果');
+  return publicId;
 }

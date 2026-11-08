@@ -128,7 +128,9 @@ export function Statistic({
       ) : null}
       <span
         // 值可能很长（如「平均停留 3321161m52s」）：单行裁切 + 悬停看全量，避免撑破卡片
-        title={typeof display === 'string' || typeof display === 'number' ? String(display) : undefined}
+        title={
+          typeof display === 'string' || typeof display === 'number' ? String(display) : undefined
+        }
         className="flex min-w-0 items-baseline gap-1 truncate text-[22px] leading-tight font-semibold tracking-[-0.01em] tabular-nums"
         style={valueStyle}
       >
@@ -377,7 +379,7 @@ export interface TableProps<T = any> {
   defaultExpandAllRows?: boolean;
   onRow?: (record: T, index: number) => Record<string, unknown>;
   /** 分页/排序变化（antd 同形：第一参为分页对象）；项目内仅使用分页信息 */
-   
+
   onChange?: (pagination: any, filters?: any, sorter?: any, extra?: any) => void;
   rowClassName?: string | ((record: T, index: number) => string);
   title?: () => ReactNode;

@@ -28,15 +28,20 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# 项目当前无 public 目录, 但保证其存在, 供 runner 阶段 COPY 使用
+# public 当前仅有占位文件；仍保证目录存在，供 runner 阶段 COPY 使用
 RUN mkdir -p public
 # 后端公开 CMS API 地址。构建期不请求它（页面全 force-dynamic），
 # 但 standalone 产物仍需在运行时能读到该环境变量，故 runner 阶段会再声明一次。
 ARG CMS_API_BASE=http://backend:27000
 ENV CMS_API_BASE=$CMS_API_BASE
+# NEXT_PUBLIC_* 会进入浏览器 bundle，必须在镜像构建时配置；运行时 -e 不能改写它。
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_ADMIN_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_ADMIN_URL=$NEXT_PUBLIC_ADMIN_URL
 # 不设 NEXT_TELEMETRY_DISABLED 会在构建时上报匿名统计（部分网络会卡住）
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm run build
+RUN node scripts/validate-public-build-urls.mjs && pnpm run build
 
 # 第三阶段: 运行 (standalone 产物)
 FROM node:24-alpine AS runner
@@ -53,12 +58,13 @@ RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 # 复制静态资源
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# 复制 public (builder 阶段已保证存在, 当前为空目录)
+# 复制 public（builder 阶段已保证存在，包含当前占位文件及后续静态资源）
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 # 注意：package.json 的 start 脚本写死了 -p 3001（本地避开管理端 3000），
 # 容器里走 standalone 的 server.js，端口由上面的 PORT 决定，不经过该脚本。
 CMD ["node", "server.js"]

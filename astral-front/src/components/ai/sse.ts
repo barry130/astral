@@ -38,7 +38,8 @@ export function createSseDecoder(): (chunk: string) => SseFrame[] {
   let buffer = '';
 
   return (chunk: string): SseFrame[] => {
-    buffer += chunk.replace(/\r\n/g, '\n');
+    buffer = (buffer + chunk).replace(/\r\n/g, '\n');
+    if (buffer.length > 1024 * 1024) throw new Error('事件内容超过大小限制');
     const frames: SseFrame[] = [];
 
     let sep = buffer.indexOf('\n\n');
@@ -177,6 +178,7 @@ export async function openEventStream(
       const frames = decode(textDecoder.decode(value, { stream: true }));
       for (const frame of frames) {
         if (frame.event === STREAM_END_EVENT) {
+          onEvent(toAiEvent(frame));
           ended = true;
           break;
         }
@@ -187,8 +189,8 @@ export async function openEventStream(
     // 收尾：把缓冲区里最后一帧（若服务端未以空行结束）也交付出去
     if (!ended) {
       for (const frame of decode('\n\n')) {
-        if (frame.event === STREAM_END_EVENT) break;
         onEvent(toAiEvent(frame));
+        if (frame.event === STREAM_END_EVENT) break;
       }
     }
 

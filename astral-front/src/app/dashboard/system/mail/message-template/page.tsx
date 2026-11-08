@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Card,
   Button,
@@ -24,11 +24,28 @@ import {
   messageTemplateApi,
   MessageTemplate,
   MessageTemplateEventOption,
+  type MessageTemplateSave,
+  messageTemplatePayload,
+  parseTemplateVariables,
+  mergeTemplateVariables,
+  previewMessageTemplate,
 } from '@/api/message-template';
-import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
+import {
+  loadAdminDictOptions as fetchDictOptions,
+  dictLabel,
+  dictColor,
+  DictOption,
+} from '@/components/admin/admin-dictionaries';
 import { usePerm, MAIL_PERMISSIONS } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import { FilterBar } from '@/components/filter-bar';
+import {
+  AdminLoadNotice,
+  AdminLoadingNotice,
+  AdminOptionNotice,
+} from '@/components/admin/AdminLoadNotice';
+import { useAdminLoader, useAdminMutation } from '@/components/admin/use-admin-task';
+import { requireAdminSuccess } from '@/components/admin/admin-task';
 
 /**
  * 投递渠道一律给全量（邮箱/站内信/短信），不再按事件声明收窄 ——
@@ -44,12 +61,27 @@ const ALL_CHANNELS = ['EMAIL', 'INAPP', 'SMS'];
  * 取消勾选的渠道会被删除。发送侧仍按「事件 × 渠道」取模板，行为不变。
  */
 export default function MessageTemplatePage() {
-  const [loading, setLoading] = useState(false);
+  const { loading, error: loadError, run: runLoad } = useAdminLoader('加载模板列表失败');
+  const {
+    loading: optionsLoading,
+    error: optionsError,
+    run: runOptions,
+  } = useAdminLoader('加载模板选项失败');
+  const {
+    loading: previewLoading,
+    error: previewError,
+    run: runPreview,
+    invalidate: invalidatePreview,
+  } = useAdminLoader('预览失败');
+  const { busy: saving, run: runMutation, isBusy } = useAdminMutation('模板操作失败');
+  const previewInput = useRef<Pick<MessageTemplate, 'scene' | 'content' | 'variables'> | null>(
+    null,
+  );
   const [data, setData] = useState<MessageTemplate[]>([]);
   const [events, setEvents] = useState<MessageTemplateEventOption[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<MessageTemplate | null>(null);
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<MessageTemplateSave>();
 
   /**
    * 表单当前选中的渠道（决定显隐邮件/短信字段块）。
@@ -69,41 +101,43 @@ export default function MessageTemplatePage() {
   const hasPerm = usePerm();
   const canEdit = hasPerm(MAIL_PERMISSIONS.templateEdit);
 
+  const loadData = useCallback(
+    () =>
+      runLoad(async () => {
+        const rows = requireAdminSuccess(await messageTemplateApi.list(), '加载模板列表失败');
+        if (!Array.isArray(rows)) throw new Error('模板列表数据缺失');
+        return rows;
+      }, setData),
+    [runLoad],
+  );
+  const loadOptions = useCallback(
+    () =>
+      runOptions(
+        async () => {
+          const [response, dictionary] = await Promise.all([
+            messageTemplateApi.options(),
+            fetchDictOptions(['notify_delivery_channel', 'notify_sms_audit_status']),
+          ]);
+          const eventRows = requireAdminSuccess(response, '加载事件选项失败');
+          if (!eventRows?.length) throw new Error('暂无已注册事件，暂不能保存模板');
+          if (
+            !dictionary.notify_delivery_channel?.length ||
+            !dictionary.notify_sms_audit_status?.length
+          )
+            throw new Error('模板字典选项为空');
+          return { eventRows, dictionary };
+        },
+        (result) => {
+          setEvents(result.eventRows);
+          setDicts(result.dictionary);
+        },
+      ),
+    [runOptions],
+  );
   useEffect(() => {
-    loadData();
-    loadEvents();
-    loadDicts();
-  }, []);
-
-  const loadDicts = () => {
-    fetchDictOptions(['notify_delivery_channel', 'notify_sms_audit_status'])
-      .then(setDicts)
-      .catch(() => {
-        /* 字典失败时回退显示原始值 */
-      });
-  };
-
-  const loadData = () => {
-    setLoading(true);
-    messageTemplateApi
-      .list()
-      .then((res) => {
-        if (res.code === 200) setData(res.data || []);
-      })
-      .catch((e: unknown) => message.error((e as Error).message))
-      .finally(() => setLoading(false));
-  };
-
-  const loadEvents = () => {
-    messageTemplateApi
-      .options()
-      .then((res) => {
-        if (res.code === 200) setEvents(res.data || []);
-      })
-      .catch(() => {
-        /* 事件列表失败不阻塞，退化为自由输入 */
-      });
-  };
+    void loadData();
+    void loadOptions();
+  }, [loadData, loadOptions]);
 
   const eventDefOf = (code?: string) => (code ? events.find((e) => e.code === code) : undefined);
   const eventOptions = events.map((e) => ({ label: `${e.name}（${e.code}）`, value: e.code }));
@@ -125,27 +159,11 @@ export default function MessageTemplatePage() {
   const mailSelected = channels.some((c) => c === 'EMAIL' || c === 'INAPP');
   const smsSelected = channels.includes('SMS');
 
-  const parseDeclaredVars = (raw?: string): string[] => {
-    try {
-      const arr = JSON.parse(raw || '[]');
-      return Array.isArray(arr) ? arr.filter((k: unknown) => typeof k === 'string') : [];
-    } catch {
-      return [];
-    }
-  };
+  const parseDeclaredVars = parseTemplateVariables;
 
-  /** 提取文本中的 ${变量}（与后端 NotifyEventRegistry.extractVariables 同规则） */
-  const extractVars = (text?: string): string[] =>
-    text ? Array.from(text.matchAll(/\$\{([A-Za-z0-9_.-]+)\}/g), (m) => m[1]) : [];
-
-  /** 变量声明 = 显式声明 ∪ 正文/主题中实际用到的，保序去重后回写为 JSON 数组 */
-  const mergeUsedVars = (declaredRaw: string | undefined, texts: string[]): string =>
-    JSON.stringify(
-      Array.from(new Set([...parseDeclaredVars(declaredRaw), ...texts.flatMap(extractVars)])),
-    );
-
-  /** 选事件：变量自动补全为 payload 字段，渠道收窄到事件声明的渠道 */
+  /** 选事件：补全变量与空渠道默认值，不覆盖已配置渠道。 */
   const handleScenePicked = (code: string) => {
+    if (isBusy()) return;
     setSelectedScene(code);
     const def = eventDefOf(code);
     if (!def) return;
@@ -162,6 +180,7 @@ export default function MessageTemplatePage() {
   };
 
   const openCreate = () => {
+    if (!canEdit || isBusy()) return;
     setEditing(null);
     setSelectedScene(undefined);
     form.resetFields();
@@ -170,6 +189,8 @@ export default function MessageTemplatePage() {
   };
 
   const openEdit = (row: MessageTemplate) => {
+    if (!canEdit || isBusy()) return;
+    form.resetFields();
     setEditing(row);
     setSelectedScene(row.scene);
     form.setFieldsValue({
@@ -190,59 +211,68 @@ export default function MessageTemplatePage() {
     setModalVisible(true);
   };
 
-  const handleSubmit = async () => {
-    const values = await form.validateFields();
-    // 变量声明与正文保持一致：后端按「用到的变量」校验并归一化，这里同步回显，避免表单里
-    // 留着过期的声明（编辑老模板时最容易踩：声明缺字段被误判为"必须覆盖全部字段"）。
-    const merged = mergeUsedVars(
-      values.variables as string | undefined,
-      [values.subject, values.content].filter(Boolean) as string[],
+  const handleSubmit = () => {
+    if (!canEdit || optionsLoading || optionsError) return;
+    const original = editing ? { templateCode: editing.templateCode, scene: editing.scene } : null;
+    return runMutation(
+      async () => {
+        const values = await form.validateFields();
+        const variables = mergeTemplateVariables(values.variables, [
+          values.subject,
+          values.content,
+        ]);
+        const payload = messageTemplatePayload({
+          ...values,
+          variables,
+          channels: values.channels || [],
+          originalCode:
+            original && original.templateCode !== values.templateCode
+              ? original.templateCode
+              : undefined,
+          originalScene: original && original.scene !== values.scene ? original.scene : undefined,
+        });
+        requireAdminSuccess(await messageTemplateApi.save(payload), '保存模板失败');
+      },
+      () => {
+        message.success('保存成功');
+        setModalVisible(false);
+        void loadData();
+      },
     );
-    form.setFieldsValue({ variables: merged });
-    const payload = {
-      ...values,
-      variables: merged,
-      channels: values.channels || channels,
-      originalCode:
-        editing && editing.templateCode !== values.templateCode ? editing.templateCode : undefined,
-      originalScene: editing && editing.scene !== values.scene ? editing.scene : undefined,
-    };
-    try {
-      await messageTemplateApi.save(payload);
-      message.success('保存成功');
-      setModalVisible(false);
-      loadData();
-    } catch (e: unknown) {
-      message.error((e as Error).message);
-    }
   };
 
-  const handleDelete = async (row: MessageTemplate) => {
-    try {
-      await messageTemplateApi.remove(row.templateCode, row.scene);
-      message.success('删除成功');
-      loadData();
-    } catch (e: unknown) {
-      message.error((e as Error).message);
-    }
+  const handleDelete = (row: MessageTemplate) => {
+    if (!canEdit) return;
+    const code = row.templateCode,
+      scene = row.scene;
+    return runMutation(
+      async () => requireAdminSuccess(await messageTemplateApi.remove(code, scene), '删除模板失败'),
+      () => {
+        message.success('删除成功');
+        void loadData();
+      },
+    );
   };
 
-  const handlePreview = async () => {
-    const def = eventDefOf(selectedScene);
-    const vars: Record<string, string> = {};
-    const declared = parseDeclaredVars(form.getFieldValue('variables'));
-    (def?.payloadFields?.length ? def.payloadFields : declared).forEach(
-      (k) => (vars[k] = '示例值'),
-    );
-    try {
-      const res = await messageTemplateApi.preview(form.getFieldValue('content') || '', vars);
-      if (res.code === 200) {
-        setPreviewHtml(res.data || '');
-        setPreviewVisible(true);
-      }
-    } catch (e: unknown) {
-      message.error((e as Error).message);
-    }
+  const loadPreview = useCallback(
+    () =>
+      runPreview(
+        async () => {
+          const input = previewInput.current;
+          if (!input?.content?.trim()) throw new Error('模板正文为空');
+          const event = events.find((entry) => entry.code === input.scene);
+          return previewMessageTemplate(input, event?.payloadFields || []);
+        },
+        (html) => setPreviewHtml(html),
+      ),
+    [runPreview, events],
+  );
+
+  const handlePreview = (row: MessageTemplate) => {
+    previewInput.current = { scene: row.scene, content: row.content, variables: row.variables };
+    setPreviewHtml('');
+    setPreviewVisible(true);
+    void loadPreview();
   };
 
   const sceneHint = (() => {
@@ -322,10 +352,8 @@ export default function MessageTemplatePage() {
                 type="text"
                 size="small"
                 icon={<EyeOutlined />}
-                onClick={() => {
-                  openEdit(r);
-                  setTimeout(() => handlePreview(), 0);
-                }}
+                aria-label={`预览模板 ${r.templateCode}`}
+                onClick={() => handlePreview(r)}
               />
             </Tooltip>
           )}
@@ -335,6 +363,8 @@ export default function MessageTemplatePage() {
                 type="text"
                 size="small"
                 icon={<EditOutlined />}
+                aria-label={`编辑模板 ${r.templateCode}`}
+                disabled={saving}
                 onClick={() => openEdit(r)}
               />
             </Tooltip>
@@ -342,11 +372,18 @@ export default function MessageTemplatePage() {
           {canEdit && (
             <Popconfirm title="确认删除该模板的全部渠道内容?" onConfirm={() => handleDelete(r)}>
               <Tooltip title="删除">
-                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                <Button
+                  aria-label={`删除模板 ${r.templateCode}`}
+                  disabled={saving}
+                  type="text"
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                />
               </Tooltip>
             </Popconfirm>
           )}
-          {!canEdit && <span style={{ color: '#999' }}>无权限</span>}
+          {!canEdit && <span className="text-muted-foreground">无权限</span>}
         </Space>
       ),
     },
@@ -358,7 +395,12 @@ export default function MessageTemplatePage() {
         <FilterBar
           actions={
             canEdit ? (
-              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              <Button
+                type="primary"
+                disabled={saving || optionsLoading || !!optionsError}
+                icon={<PlusOutlined />}
+                onClick={openCreate}
+              >
                 新建模板
               </Button>
             ) : null
@@ -366,6 +408,8 @@ export default function MessageTemplatePage() {
         >
           <span style={{ fontWeight: 600, fontSize: 16 }}>消息模板</span>
         </FilterBar>
+        <AdminLoadNotice error={loadError} hasData={data.length > 0} onRetry={loadData} />
+        <AdminOptionNotice error={optionsError} onRetry={loadOptions} />
         <ResizableTable
           dataSource={data}
           columns={columns}
@@ -385,12 +429,17 @@ export default function MessageTemplatePage() {
         title={editing ? '编辑消息模板' : '新建消息模板'}
         open={modalVisible}
         onOk={handleSubmit}
-        onCancel={() => setModalVisible(false)}
+        onCancel={() => {
+          if (!isBusy()) setModalVisible(false);
+        }}
+        confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        okButtonProps={{ disabled: saving || optionsLoading || !!optionsError }}
         width={820}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Space size={16} style={{ display: 'flex' }}>
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }} disabled={saving}>
+          <Space size={16} wrap style={{ display: 'flex' }}>
             <Form.Item
               name="templateCode"
               label="模板编码"
@@ -466,7 +515,7 @@ export default function MessageTemplatePage() {
 
           {smsSelected && (
             <>
-              <Space size={16} style={{ display: 'flex' }}>
+              <Space size={16} wrap style={{ display: 'flex' }}>
                 <Form.Item
                   name="smsProviderTemplateCode"
                   label="供应商模板编码"
@@ -482,7 +531,7 @@ export default function MessageTemplatePage() {
               <Form.Item name="smsContentSample" label="短信内容示例">
                 <Input.TextArea rows={3} placeholder="【Astral】您的反馈已处理完成" />
               </Form.Item>
-              <Space size={16} style={{ display: 'flex' }}>
+              <Space size={16} wrap style={{ display: 'flex' }}>
                 <Form.Item name="smsAuditStatus" label="报备状态" style={{ flex: 1 }}>
                   <Select
                     options={(auditDict || []).map((o) => ({
@@ -509,21 +558,32 @@ export default function MessageTemplatePage() {
         open={previewVisible}
         footer={null}
         width={760}
-        onCancel={() => setPreviewVisible(false)}
+        onCancel={() => {
+          invalidatePreview();
+          previewInput.current = null;
+          setPreviewVisible(false);
+        }}
       >
         {/* 正文是管理端可写内容，必须 sandbox 渲染：不执行脚本、不同源访问父页 */}
-        <iframe
-          title="模板预览"
-          srcDoc={previewHtml}
-          sandbox=""
-          style={{
-            width: '100%',
-            height: 360,
-            border: '1px solid var(--color-border-light)',
-            borderRadius: 8,
-            background: '#fff',
-          }}
-        />
+        <AdminLoadNotice error={previewError} hasData={!!previewHtml} onRetry={loadPreview} />
+        {previewLoading ? (
+          <AdminLoadingNotice label="正在渲染模板预览…" />
+        ) : (
+          !previewError && (
+            <iframe
+              title="模板预览"
+              srcDoc={previewHtml}
+              sandbox=""
+              className="bg-background"
+              style={{
+                width: '100%',
+                height: 'min(360px, 70vh)',
+                border: '1px solid var(--color-border-light)',
+                borderRadius: 8,
+              }}
+            />
+          )
+        )}
       </Modal>
     </div>
   );

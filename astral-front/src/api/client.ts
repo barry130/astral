@@ -6,19 +6,76 @@ import { clientHeaders } from '@/lib/client-info';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 /** 扩展请求配置：silent 为 true 时不触发全局加载指示（轮询 / 心跳等后台请求） */
-export interface ApiRequestConfig extends AxiosRequestConfig {
+export interface ApiRequestConfig extends AxiosRequestConfig<unknown> {
   silent?: boolean;
+}
+
+/** 文件流须显式声明允许的媒体类型，普通 request 方法仍要求 Result。 */
+export interface ApiDownloadConfig extends Omit<ApiRequestConfig, 'responseType'> {
+  mediaTypes: readonly string[];
 }
 
 /** 判断请求是否为静默请求（不显示全局加载动画） */
 const isSilent = (config?: AxiosRequestConfig): boolean =>
   Boolean((config as ApiRequestConfig | undefined)?.silent);
 
+/** 非 plain-object 标记经 axios 配置合并仍保留身份，finally 只归还本请求。 */
+class RequestTracker {
+  private active = false;
+  private finished = false;
+
+  get isFinished(): boolean {
+    return this.finished;
+  }
+
+  start(silent: boolean): void {
+    if (!silent && !this.active && !this.finished) {
+      this.active = true;
+      beginRequest();
+    }
+  }
+
+  finish(): void {
+    if (this.finished) return;
+    this.finished = true;
+    if (this.active) endRequest();
+  }
+}
+
+function finishRequest(config?: AxiosRequestConfig): void {
+  (config as CsrfRetryConfig | undefined)?.__requestTracker?.finish();
+}
+
+function redirectUnauthorized(config?: CsrfRetryConfig): void {
+  if (config?.__csrfSessionRevision !== csrfSessionRevision || typeof window === 'undefined')
+    return;
+  const pathname = window.location.pathname;
+  if (pathname === '/dashboard' || pathname.startsWith('/dashboard/')) {
+    window.location.href = '/login';
+  }
+}
+
+function isApiResult(value: unknown): value is ApiResult<unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'code' in value &&
+    typeof value.code === 'number' &&
+    Number.isInteger(value.code) &&
+    'msg' in value &&
+    typeof value.msg === 'string' &&
+    (!('errorCode' in value) ||
+      value.errorCode === undefined ||
+      typeof value.errorCode === 'string')
+  );
+}
+
 /**
  * CSRF 双提交令牌的 Cookie 名 / 请求头名。
  *
- * 认证令牌由后端写在 HttpOnly Cookie（`satoken`）里，浏览器自动携带 —— JS 读不到，
- * XSS 也就偷不走。代价是「跨站发起的写请求也会自动带上凭据」，于是需要双提交校验：
+ * HttpOnly 使 JS 不能经 document.cookie 读取 satoken，但不是 XSS 免疫：
+ * 同源脚本仍可发带凭据的请求，且新登录的兼容响应仍含 token；不能将它长期保存或放进用户上下文。
+ * 浏览器自动携带 Cookie，跨站写请求因此仍需要双提交校验：
  * 后端下发一枚非 HttpOnly 的 `astral_csrf` Cookie，前端读出后原样回填请求头，
  * 两者一致才放行（契约见后端 com.astral.common.web.CsrfTokenSupport）。
  */
@@ -36,14 +93,17 @@ const CSRF_HEADER = 'X-CSRF-Token';
  * 这不削弱双提交模型：跨站页面同样读不到我们的响应体。
  */
 let csrfTokenCache = '';
+let csrfSessionRevision = 0;
 
 /** 写入令牌缓存（登录、拉取用户信息成功后调用） */
 export function setCsrfToken(token?: string | null): void {
+  csrfSessionRevision += 1;
   csrfTokenCache = typeof token === 'string' ? token : '';
 }
 
 /** 清空令牌缓存（登出时调用，避免下次登录前带着过期指纹） */
 export function clearCsrfToken(): void {
+  csrfSessionRevision += 1;
   csrfTokenCache = '';
 }
 
@@ -53,9 +113,11 @@ export function clearCsrfToken(): void {
  */
 export function readCsrfToken(): string {
   if (typeof document !== 'undefined') {
-    const matched = document.cookie.match(new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]*)`));
-    if (matched && matched[1]) {
-      return decodeURIComponent(matched[1]);
+    try {
+      const matched = document.cookie.match(new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]*)`));
+      if (matched && matched[1]) return decodeURIComponent(matched[1]);
+    } catch {
+      // 损坏的编码或受限 Cookie 访问不可阻断全部接口；仍可使用登录响应下发的缓存。
     }
   }
   return csrfTokenCache;
@@ -63,7 +125,11 @@ export function readCsrfToken(): string {
 
 /** 请求配置上的内部标记：AUTH013 已刷新重试过一次，避免死循环 */
 interface CsrfRetryConfig extends ApiRequestConfig {
+  __downloadMediaTypes?: readonly string[];
   __csrfRetried?: boolean;
+  __csrfSessionRevision?: number;
+  __csrfFailure?: Error;
+  __requestTracker?: RequestTracker;
 }
 
 /**
@@ -76,17 +142,33 @@ interface CsrfRetryConfig extends ApiRequestConfig {
  * 该重新登录而不是重试），调用方据此放弃重放 —— 这样无论 axios 是否保留自定义配置键，
  * 都不可能重试打转。
  */
-async function refreshCsrfToken(): Promise<boolean> {
+let csrfRefresh: { revision: number; promise: Promise<boolean> } | undefined;
+
+function refreshCsrfToken(): Promise<boolean> {
+  const revision = csrfSessionRevision;
+  if (csrfRefresh?.revision === revision) return csrfRefresh.promise;
   const before = readCsrfToken();
-  try {
-    const info = await client.get('/api/v1/all/auth/info', { silent: true } as ApiRequestConfig);
-    setCsrfToken(info?.data?.csrfToken);
-  } catch {
-    // 刷新失败（未登录 / 网络异常）：不重放，交给通用错误处理给出准确提示
-    return false;
-  }
-  const after = readCsrfToken();
-  return Boolean(after) && after !== before;
+  const promise = (async () => {
+    try {
+      const info = await request.get<{ csrfToken?: string }>('/api/v1/all/auth/info', {
+        silent: true,
+      });
+      if (revision !== csrfSessionRevision) return false;
+      // 同一会话并发失败只刷新一次；账号切换会递增 revision，旧响应不得回填。
+      const token = info?.data?.csrfToken;
+      if (typeof token !== 'string') return false;
+      csrfTokenCache = token;
+      const after = readCsrfToken();
+      return Boolean(after) && after !== before;
+    } catch {
+      // 刷新失败不重放，由原请求保留准确的业务错误。
+      return false;
+    }
+  })().finally(() => {
+    if (csrfRefresh?.promise === promise) csrfRefresh = undefined;
+  });
+  csrfRefresh = { revision, promise };
+  return promise;
 }
 
 const client = axios.create({
@@ -102,6 +184,11 @@ const client = axios.create({
 
 client.interceptors.request.use(
   (config) => {
+    const retryConfig = config as CsrfRetryConfig;
+    if (retryConfig.__csrfRetried && retryConfig.__csrfSessionRevision !== csrfSessionRevision) {
+      throw retryConfig.__csrfFailure ?? new Error('会话已变更，请重新操作');
+    }
+    if (!retryConfig.__csrfRetried) retryConfig.__csrfSessionRevision = csrfSessionRevision;
     // 统一客户端系统头（X-App-Ut=web / X-App-Version / X-Device / X-OS）：
     // 本实例的请求全部走 /api/**，由 next.config.js 的 rewrite 转发到 astral，
     // 因此整个管理台只要是经这里发出的请求都满足「请求 astral 必带这几个头」。
@@ -115,15 +202,21 @@ client.interceptors.request.use(
     if (csrfToken) {
       config.headers.set(CSRF_HEADER, csrfToken);
     }
-    if (!isSilent(config)) {
-      beginRequest();
-    }
+    const tracker = retryConfig.__requestTracker;
+    retryConfig.__requestTracker = tracker && !tracker.isFinished ? tracker : new RequestTracker();
+    const adapter = axios.getAdapter(config.adapter ?? client.defaults.adapter);
+    config.adapter = async (dispatched) => {
+      try {
+        return await adapter(dispatched);
+      } finally {
+        finishRequest(dispatched);
+      }
+    };
+    retryConfig.__requestTracker.start(isSilent(config));
     return config;
   },
-  (error) => {
-    if (!isSilent(error.config)) {
-      endRequest();
-    }
+  (error: unknown) => {
+    if (axios.isAxiosError(error)) finishRequest(error.config);
     return Promise.reject(error);
   },
 );
@@ -159,19 +252,33 @@ async function handleBusinessFailure(
   // 双提交校验失败（AUTH013）：多半是跨域直连下 Cookie 读不到、令牌缓存又为空。
   // 刷新一次令牌，只有确实拿到新值才重放原请求（见 refreshCsrfToken 的自限说明）；
   // 拿不到就落回下面的通用处理，把后端原始 msg 交给调用方。
-  if (result.code === 403 && result.errorCode === 'AUTH013' && config && !config.__csrfRetried) {
+  if (
+    result.code === 403 &&
+    result.errorCode === 'AUTH013' &&
+    config &&
+    !config.__csrfRetried &&
+    config.__csrfSessionRevision === csrfSessionRevision
+  ) {
+    const revision = csrfSessionRevision;
     config.__csrfRetried = true;
-    if (await refreshCsrfToken()) {
+    config.__csrfFailure = businessFailure(result);
+    if ((await refreshCsrfToken()) && revision === csrfSessionRevision) {
       return client.request(config);
     }
   }
   if (result.code === 401) {
     // 与错误分支一致：只在「确定已登录过」的页面上跳转，避免落地页匿名访客被弹走。
-    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
-      window.location.href = '/login';
-    }
+    redirectUnauthorized(config);
   }
   throw businessFailure(result);
+}
+
+/** Bound JSON decoding, not the browser adapter's network receive buffer. */
+async function decodeJsonBlob(blob: Blob): Promise<unknown> {
+  if (blob.size > 64 * 1024) {
+    throw new Error('服务器下载响应格式异常，请稍后重试');
+  }
+  return JSON.parse(await blob.text()) as unknown;
 }
 
 /**
@@ -188,40 +295,89 @@ client.interceptors.response.use(
   // axios 的类型签名要求返回 AxiosResponse，但这里刻意把 body 直接交给调用方
   // （`request.*` 返回 Promise<ApiResult<T>>），因此这里对 axios 的签名做一次显式断言：
   // 拦截器实际返回的是 ApiResult（成功）或 reject（业务/传输失败）。
-  ((response: AxiosResponse): ApiResult<unknown> | Promise<unknown> => {
-    if (!isSilent(response.config)) {
-      endRequest();
-    }
-    const result = response.data as ApiResult;
-    if (result.code === 200) {
-      if (result.errorCode) {
-        return Promise.reject(businessFailure(result));
+  (async (response: AxiosResponse<unknown>): Promise<unknown> => {
+    finishRequest(response.config);
+    let result: unknown = response.data;
+    const contentType = response.headers['content-type'];
+    const mediaType =
+      typeof contentType === 'string' ? contentType.split(';')[0].trim().toLowerCase() : '';
+    if (
+      typeof Blob !== 'undefined' &&
+      result instanceof Blob &&
+      (mediaType === 'application/json' || mediaType.endsWith('+json'))
+    ) {
+      try {
+        result = await decodeJsonBlob(result);
+      } catch {
+        return Promise.reject(new Error('服务器下载响应格式异常，请稍后重试'));
       }
+    }
+    const fileTypes = (response.config as CsrfRetryConfig | undefined)?.__downloadMediaTypes;
+    if (fileTypes) {
+      if (typeof Blob !== 'undefined' && result instanceof Blob && fileTypes.includes(mediaType)) {
+        return result;
+      }
+      if (!isApiResult(result) || (result.code === 200 && !result.errorCode)) {
+        return Promise.reject(new Error('服务器下载响应格式异常，请稍后重试'));
+      }
+    }
+    if (!isApiResult(result)) {
+      return Promise.reject(new Error('服务器响应格式异常，请稍后重试'));
+    }
+    if (result.code === 200) {
+      if (result.errorCode) return Promise.reject(businessFailure(result));
       return result;
     }
     return handleBusinessFailure(result, response.config as CsrfRetryConfig | undefined);
-  }) as unknown as (response: AxiosResponse) => AxiosResponse,
-  (error) => {
-    // 成功与失败都要归还计数，否则泄漏会让加载指示永久常驻
-    if (!isSilent(error.config)) {
-      endRequest();
+  }) as unknown as (response: AxiosResponse<unknown>) => AxiosResponse<unknown>,
+  async (error: unknown): Promise<unknown> => {
+    if (!axios.isAxiosError<unknown>(error)) return Promise.reject(error);
+    finishRequest(error.config);
+    if (axios.isCancel(error)) return Promise.reject(error);
+    let body: unknown = error.response?.data;
+    const contentType = error.response?.headers['content-type'];
+    const mediaType =
+      typeof contentType === 'string' ? contentType.split(';')[0].trim().toLowerCase() : '';
+    if (
+      typeof Blob !== 'undefined' &&
+      body instanceof Blob &&
+      (mediaType === 'application/json' || mediaType.endsWith('+json'))
+    ) {
+      try {
+        body = await decodeJsonBlob(body);
+      } catch {
+        // An unreadable gateway payload must fall back to the transport status.
+        body = null;
+      }
     }
-    // 传输层错误也可能带 Result 响应体（404/413/500/503 都是 Result），能读到 msg 就直接用，
-    // errorCode 一并透传；读不到再按状态码/网络错误给兜底文案。
-    const body = error.response?.data as ApiResult | undefined;
-    if (body?.msg) {
-      return Promise.reject(businessFailure(body));
+    if (error.response?.status === 401) {
+      redirectUnauthorized(error.config as CsrfRetryConfig | undefined);
+    }
+    // 网关的失败载荷不一定完整，但字符串消息和细分码仍可安全保留。
+    if (
+      typeof body === 'object' &&
+      body !== null &&
+      'msg' in body &&
+      typeof body.msg === 'string' &&
+      body.msg
+    ) {
+      const errorCode =
+        'errorCode' in body && typeof body.errorCode === 'string' ? body.errorCode : undefined;
+      return Promise.reject(
+        businessFailure({
+          code: error.response?.status ?? 500,
+          msg: body.msg,
+          errorCode,
+          data: null,
+          timestamp: 0,
+        }),
+      );
     }
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
       return Promise.reject(new Error('无法连接到服务器，请检查后端服务是否启动'));
     }
-    if (error.response?.status === 401) {
-      // 防御：容器/网关级 401（业务层 401 是 HTTP 200 + code 401，走上面的业务分支）。
-      // 令牌在 HttpOnly Cookie 里，前端删不掉也不需要删：跳登录页重新走一次登录流程，
-      // 登录成功时后端覆盖 Cookie。只在已进入受保护区时跳，避免匿名访客被弹走。
-      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/dashboard')) {
-        window.location.href = '/login';
-      }
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      return Promise.reject(new Error('请求超时，请稍后重试'));
     }
     if (error.response?.status) {
       return Promise.reject(new Error(`服务暂时不可用（HTTP ${error.response.status}）`));
@@ -238,26 +394,59 @@ export interface ApiResult<T = unknown> {
   timestamp: number;
 }
 
-/**
- * 裸调用 request.*（未显式指定泛型 T）时的响应载荷默认类型。
- * 取 AxiosResponse['data']（即 any）：存量 api/* 包装函数与 storage-upload 等
- * 大量调用点直接访问裸调用 result.data 的属性，本次改动不扩大范围去补齐
- * 显式泛型，故默认值保留 any 语义；待调用方逐步补齐泛型后可收紧为 unknown。
- */
-type ApiPayloadDefault = AxiosResponse['data'];
+/** 即使在 adapter 之前序列化失败，也只归还这次调用自己的加载计数。 */
+async function send<T>(config: ApiRequestConfig): Promise<ApiResult<T>> {
+  const tracker = new RequestTracker();
+  const tracked: CsrfRetryConfig = { ...config, __requestTracker: tracker };
+  try {
+    return await client.request<unknown, ApiResult<T>, unknown>(tracked);
+  } finally {
+    tracker.finish();
+  }
+}
+
+async function sendBlob(url: string, config: ApiDownloadConfig): Promise<Blob> {
+  const { mediaTypes, ...options } = config;
+  const downloadMediaTypes = mediaTypes.map((type) => type.trim().toLowerCase());
+  if (!downloadMediaTypes.length || downloadMediaTypes.some((type) => !type)) {
+    throw new Error('请指定明确的下载文件类型');
+  }
+  const tracker = new RequestTracker();
+  const tracked: CsrfRetryConfig = {
+    ...options,
+    url,
+    method: 'get',
+    responseType: 'blob',
+    __downloadMediaTypes: downloadMediaTypes,
+    __requestTracker: tracker,
+  };
+  try {
+    return await client.request<unknown, Blob, unknown>(tracked);
+  } finally {
+    tracker.finish();
+  }
+}
 
 export const request = {
-  get: <T = ApiPayloadDefault>(url: string, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
-    client.get(url, config),
+  getBlob: sendBlob,
 
-  post: <T = ApiPayloadDefault>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
-    client.post(url, data, config),
+  get: <T = unknown>(url: string, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
+    send<T>({ ...config, url, method: 'get' }),
 
-  put: <T = ApiPayloadDefault>(url: string, data?: unknown, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
-    client.put(url, data, config),
+  post: <T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: ApiRequestConfig,
+  ): Promise<ApiResult<T>> => send<T>({ ...config, url, method: 'post', data }),
 
-  delete: <T = ApiPayloadDefault>(url: string, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
-    client.delete(url, config),
+  put: <T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: ApiRequestConfig,
+  ): Promise<ApiResult<T>> => send<T>({ ...config, url, method: 'put', data }),
+
+  delete: <T = unknown>(url: string, config?: ApiRequestConfig): Promise<ApiResult<T>> =>
+    send<T>({ ...config, url, method: 'delete' }),
 };
 
 export default client;

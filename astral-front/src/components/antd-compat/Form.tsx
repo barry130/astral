@@ -24,6 +24,7 @@ import {
   isValidElement,
   useCallback,
   useContext,
+  useId,
   useMemo,
   useReducer,
   useRef,
@@ -64,17 +65,34 @@ export const pathKey = (path: (string | number)[]): string => path.map(String).j
 export const keyToPath = (key: string): (string | number)[] =>
   key.split(PATH_SEP).map((s) => (/^\d+$/.test(s) ? Number(s) : s));
 
-export function getAtPath(root: any, path: (string | number)[]): any {
+export type FormValues = Record<string, unknown>;
+
+export function getAtPath(root: unknown, path: (string | number)[]): unknown {
   let cur = root;
   for (const k of path) {
-    if (cur === null || cur === undefined) return undefined;
-    cur = cur[k as any];
+    if (cur === null || cur === undefined || !Object.hasOwn(cur, k)) return undefined;
+    // hasOwn also supports boxed primitives; retain their ordinary indexed reads.
+    cur = (cur as Record<string | number, unknown>)[k];
   }
   return cur;
 }
 
+/** JSON 字段 __proto__ 应为自有数据属性，不得调用对象原型 setter。 */
+function setOwnValue(target: object, key: string | number, value: unknown): void {
+  if (key === '__proto__') {
+    Object.defineProperty(target, key, {
+      value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  } else {
+    Reflect.set(target, key, value);
+  }
+}
+
 /** 不可变写入：沿路径复制容器，未触及的分支保留原引用（保证 useWatch 的快照稳定） */
-export function setAtPath(root: any, path: (string | number)[], value: any): any {
+export function setAtPath(root: unknown, path: (string | number)[], value: unknown): unknown {
   if (path.length === 0) return value;
   const [head, ...rest] = path;
   const base =
@@ -85,29 +103,29 @@ export function setAtPath(root: any, path: (string | number)[], value: any): any
       : Array.isArray(root)
         ? [...root]
         : { ...root };
-  base[head as any] = setAtPath(
-    root === null || root === undefined ? undefined : root[head as any],
-    rest,
-    value,
-  );
+  setOwnValue(base, head, setAtPath(getAtPath(root, [head]), rest, value));
   return base;
 }
 
 /** 不可变删除 */
-function deleteAtPath(root: any, path: (string | number)[]): any {
+function deleteAtPath(root: unknown, path: (string | number)[]): unknown {
   if (path.length === 0) return root;
   const [head, ...rest] = path;
   if (root === null || root === undefined || typeof root !== 'object') return root;
   if (path.length === 1) {
     if (Array.isArray(root)) return root.filter((_, i) => i !== head);
-    const next = { ...root };
-    delete next[head as any];
+    const next: Record<string | number, unknown> = { ...root };
+    delete next[head];
     return next;
   }
-  return setAtPath(root, [head], deleteAtPath(root[head as any], rest));
+  return setAtPath(
+    root,
+    [head],
+    deleteAtPath((root as Record<string | number, unknown>)[head], rest),
+  );
 }
 
-const isPlainObject = (v: any): boolean =>
+const isPlainObject = (v: unknown): v is FormValues =>
   v !== null &&
   typeof v === 'object' &&
   !Array.isArray(v) &&
@@ -116,24 +134,24 @@ const isPlainObject = (v: any): boolean =>
 export function deepClone<T>(v: T): T {
   if (Array.isArray(v)) return v.map((x) => deepClone(x)) as unknown as T;
   if (isPlainObject(v)) {
-    const out: any = {};
-    for (const k of Object.keys(v as any)) out[k] = deepClone((v as any)[k]);
-    return out;
+    const out: FormValues = {};
+    for (const k of Object.keys(v)) setOwnValue(out, k, deepClone(v[k]));
+    return out as T;
   }
   return v;
 }
 
 /** 深合并：patch 中显式写出的 `undefined` 会覆盖 base（支持「清空字段」语义） */
-export function deepMerge(base: any, patch: any): any {
+export function deepMerge(base: unknown, patch: unknown): unknown {
   if (!isPlainObject(patch)) return patch;
-  const out: any = isPlainObject(base) ? { ...base } : {};
+  const out: FormValues = isPlainObject(base) ? { ...base } : {};
   for (const k of Object.keys(patch)) {
     const pv = patch[k];
     if (pv === undefined) {
-      out[k] = undefined;
+      setOwnValue(out, k, undefined);
       continue;
     }
-    out[k] = isPlainObject(pv) ? deepMerge(out[k], pv) : pv;
+    setOwnValue(out, k, isPlainObject(pv) ? deepMerge(getAtPath(out, [k]), pv) : pv);
   }
   return out;
 }
@@ -152,77 +170,77 @@ export interface FormRule {
   pattern?: RegExp;
   /** 禁止纯空白 */
   whitespace?: boolean;
-  enum?: any[];
-  transform?: (value: any) => any;
+  enum?: unknown[];
+  transform?(value: unknown): unknown;
   /** 自定义校验：抛出 Error / reject 表示失败 */
-  validator?: (rule: FormRule, value: any) => void | Promise<void>;
+  validator?(rule: FormRule, value: unknown): void | Promise<void>;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const isEmptyValue = (v: any): boolean =>
+const isEmptyValue = (v: unknown): boolean =>
   v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
 
 /** 顺序执行规则，返回第一条错误信息；全部通过返回 undefined */
-export async function runRules(value: any, rules: FormRule[]): Promise<string | undefined> {
+export async function runRules(value: unknown, rules: FormRule[]): Promise<string | undefined> {
   for (const rule of rules) {
     const v = rule.transform ? rule.transform(value) : value;
     const empty = isEmptyValue(v);
 
     if (rule.required && empty) return rule.message ?? '此项为必填项';
-    if (empty) continue;
+    if (!empty) {
+      if (rule.whitespace && typeof v === 'string' && !v.trim())
+        return rule.message ?? '不能为纯空白字符';
 
-    if (rule.whitespace && typeof v === 'string' && !v.trim())
-      return rule.message ?? '不能为纯空白字符';
+      switch (rule.type) {
+        case 'email':
+          if (!EMAIL_RE.test(String(v))) return rule.message ?? '邮箱格式不正确';
+          break;
+        case 'url':
+          try {
+            new URL(String(v));
+          } catch {
+            return rule.message ?? 'URL 格式不正确';
+          }
+          break;
+        case 'number':
+          if (Number.isNaN(Number(v))) return rule.message ?? '请输入数字';
+          break;
+        case 'integer':
+          if (!Number.isInteger(Number(v))) return rule.message ?? '请输入整数';
+          break;
+        case 'array':
+          if (!Array.isArray(v)) return rule.message ?? '应为数组';
+          break;
+        case 'boolean':
+          if (typeof v !== 'boolean') return rule.message ?? '应为布尔值';
+          break;
+        case 'object':
+          if (!isPlainObject(v)) return rule.message ?? '应为对象';
+          break;
+        default:
+          break;
+      }
 
-    switch (rule.type) {
-      case 'email':
-        if (!EMAIL_RE.test(String(v))) return rule.message ?? '邮箱格式不正确';
-        break;
-      case 'url':
-        try {
-          new URL(String(v));
-        } catch {
-          return rule.message ?? 'URL 格式不正确';
-        }
-        break;
-      case 'number':
-        if (Number.isNaN(Number(v))) return rule.message ?? '请输入数字';
-        break;
-      case 'integer':
-        if (!Number.isInteger(Number(v))) return rule.message ?? '请输入整数';
-        break;
-      case 'array':
-        if (!Array.isArray(v)) return rule.message ?? '应为数组';
-        break;
-      case 'boolean':
-        if (typeof v !== 'boolean') return rule.message ?? '应为布尔值';
-        break;
-      case 'object':
-        if (!isPlainObject(v)) return rule.message ?? '应为对象';
-        break;
-      default:
-        break;
+      if (rule.len !== undefined && String(v).length !== rule.len) {
+        return rule.message ?? `长度必须为 ${rule.len} 个字符`;
+      }
+      if (rule.min !== undefined) {
+        const n = typeof v === 'number' ? v : Array.isArray(v) ? v.length : String(v).length;
+        if (n < rule.min) return rule.message ?? `不能小于 ${rule.min}`;
+      }
+      if (rule.max !== undefined) {
+        const n = typeof v === 'number' ? v : Array.isArray(v) ? v.length : String(v).length;
+        if (n > rule.max) return rule.message ?? `不能大于 ${rule.max}`;
+      }
+      if (rule.pattern) {
+        const re = rule.pattern.global
+          ? new RegExp(rule.pattern.source, rule.pattern.flags.replace(/g/g, ''))
+          : rule.pattern;
+        if (!re.test(String(v))) return rule.message ?? '格式不正确';
+      }
+      if (rule.enum && !rule.enum.includes(v)) return rule.message ?? '取值不在允许范围内';
     }
-
-    if (rule.len !== undefined && String(v).length !== rule.len) {
-      return rule.message ?? `长度必须为 ${rule.len} 个字符`;
-    }
-    if (rule.min !== undefined) {
-      const n = typeof v === 'number' ? v : Array.isArray(v) ? v.length : String(v).length;
-      if (n < rule.min) return rule.message ?? `不能小于 ${rule.min}`;
-    }
-    if (rule.max !== undefined) {
-      const n = typeof v === 'number' ? v : Array.isArray(v) ? v.length : String(v).length;
-      if (n > rule.max) return rule.message ?? `不能大于 ${rule.max}`;
-    }
-    if (rule.pattern) {
-      const re = rule.pattern.global
-        ? new RegExp(rule.pattern.source, rule.pattern.flags.replace(/g/g, ''))
-        : rule.pattern;
-      if (!re.test(String(v))) return rule.message ?? '格式不正确';
-    }
-    if (rule.enum && !rule.enum.includes(v)) return rule.message ?? '取值不在允许范围内';
     if (rule.validator) {
       try {
         await rule.validator(rule, v);
@@ -237,11 +255,44 @@ export async function runRules(value: any, rules: FormRule[]): Promise<string | 
 
 /* ================================ FormInstance ================================ */
 
-export interface FormInstance<Values = any> {
-  getFieldsValue(): Values;
-  getFieldValue(name: NamePath): any;
-  setFieldsValue(values: any): void;
-  setFieldValue(name: NamePath, value: any): void;
+type PathSegmentValue<Value, Segment> = Segment extends keyof NonNullable<Value>
+  ? NonNullable<Value>[Segment]
+  : NonNullable<Value> extends readonly (infer Item)[]
+    ? Segment extends number | `${number}`
+      ? Item
+      : unknown
+    : unknown;
+
+/** Literal keys, dotted paths and tuple paths retain the supplied form's field type. */
+export type FormFieldValue<Values, Path> = Path extends readonly [infer Head, ...infer Rest]
+  ? Rest extends []
+    ? PathSegmentValue<Values, Head>
+    : FormFieldValue<PathSegmentValue<Values, Head>, Rest>
+  : Path extends `${infer Head}.${infer Rest}`
+    ? FormFieldValue<PathSegmentValue<Values, Head>, Rest>
+    : Path extends string | number
+      ? PathSegmentValue<Values, Path>
+      : unknown;
+
+export type FormValuePatch<Values> = {
+  [Key in keyof Values]?: Values[Key] extends readonly unknown[]
+    ? Values[Key]
+    : Values[Key] extends object
+      ? FormValuePatch<Values[Key]>
+      : Values[Key];
+};
+
+export interface FormValidationFailure<Values = FormValues> {
+  values: Values;
+  errorFields: { name: NamePath; errors: (string | undefined)[] }[];
+  outOfDate?: boolean;
+}
+
+export interface FormInstance<Values extends object = FormValues> {
+  getFieldsValue(names?: NamePath[] | true): Values;
+  getFieldValue<const Path extends NamePath>(name: Path): FormFieldValue<Values, Path>;
+  setFieldsValue(values: FormValuePatch<Values>): void;
+  setFieldValue(name: NamePath, value: unknown): void;
   resetFields(names?: NamePath[]): void;
   validateFields(names?: NamePath[]): Promise<Values>;
   submit(): void;
@@ -249,26 +300,29 @@ export interface FormInstance<Values = any> {
   getFieldError(name: NamePath): string[];
   scrollToField(name: NamePath): void;
   /* ---------- 内部状态（兼容层自用，业务代码请勿直接访问） ---------- */
-  _store: Record<string, any>;
+  _store: FormValues;
   _touched: Set<string>;
   _errors: Record<string, string | undefined>;
-  _fieldInitials: any;
+  _fieldInitials: FormValues;
   _initialRegistered: Set<string>;
   _fieldRules: Map<string, FormRule[]>;
   _watchers: Set<() => void>;
   _rerender: () => void;
   _notify: () => void;
   _subscribe: (cb: () => void) => () => void;
-  _value: (path: (string | number)[]) => any;
-  _values: () => any;
-  _registerField: (path: (string | number)[], initialValue: any, rules?: FormRule[]) => void;
+  _value: (path: (string | number)[]) => unknown;
+  _values: () => FormValues;
+  _registerField: (path: (string | number)[], initialValue: unknown, rules?: FormRule[]) => void;
   /** 表单标识，用于生成控件 id 与原生 submit 触发 */
   _formId?: string;
 }
 
-export function createFormInstance<Values = any>(): FormInstance<Values> {
-  const inst = {
-    _store: {} as Record<string, any>,
+export function createFormInstance<Values extends object = FormValues>(): FormInstance<Values> {
+  let valuesRevision = 0;
+  let nextValidationVersion = 0;
+  const validationVersions = new Map<string, number>();
+  const inst: FormInstance<Values> = {
+    _store: {} as FormValues,
     _touched: new Set<string>(),
     _errors: {} as Record<string, string | undefined>,
     _fieldInitials: {},
@@ -289,16 +343,17 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
       };
     },
 
-    _registerField(path: (string | number)[], initialValue: any, rules?: FormRule[]) {
+    _registerField(path: (string | number)[], initialValue: unknown, rules?: FormRule[]) {
       if (path.length === 0) return;
       const key = pathKey(path);
       if (!inst._initialRegistered.has(key)) {
         inst._initialRegistered.add(key);
         if (initialValue !== undefined) {
-          inst._fieldInitials = setAtPath(inst._fieldInitials, path, initialValue);
+          inst._fieldInitials = setAtPath(inst._fieldInitials, path, initialValue) as FormValues;
         }
       }
       if (rules) inst._fieldRules.set(key, rules);
+      else inst._fieldRules.delete(key);
     },
 
     _value(path: (string | number)[]) {
@@ -310,44 +365,47 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
     },
 
     _values() {
-      return deepMerge(inst._fieldInitials, inst._store);
+      return deepMerge(inst._fieldInitials, inst._store) as FormValues;
     },
 
-    getFieldsValue(...args: any[]) {
+    getFieldsValue(...args: [names?: NamePath[] | true]) {
       const all = inst._values();
-      const names: NamePath[] | undefined = args[0];
-      if (!names || !Array.isArray(names) || names.length === 0) return all;
-      const out: any = {};
+      const names = args[0];
+      if (!names || !Array.isArray(names) || names.length === 0) return all as Values;
+      let out: unknown = {};
       for (const n of names) {
         const p = toPath(n);
         const v = getAtPath(all, p);
-        if (v !== undefined) out[p[0]] = v;
+        if (p.length > 0 && v !== undefined) out = setAtPath(out, p, v);
       }
-      return out;
+      return out as Values;
     },
 
-    getFieldValue(name: NamePath) {
-      return inst._value(toPath(name));
+    getFieldValue<const Path extends NamePath>(name: Path) {
+      return inst._value(toPath(name)) as FormFieldValue<Values, Path>;
     },
 
-    setFieldValue(name: NamePath, value: any) {
+    setFieldValue(name: NamePath, value: unknown) {
       const path = toPath(name);
       if (path.length === 0) return;
+      valuesRevision += 1;
       inst._touched.add(pathKey(path));
-      inst._store = setAtPath(inst._store, path, value);
-      if (inst._errors[pathKey(path)])
+      inst._store = setAtPath(inst._store, path, value) as FormValues;
+      if (getAtPath(inst._errors, [pathKey(path)]))
         inst._errors = { ...inst._errors, [pathKey(path)]: undefined };
       inst._notify();
     },
 
-    setFieldsValue(values: any) {
+    setFieldsValue(values: unknown) {
       if (!isPlainObject(values)) return;
-      inst._store = deepMerge(inst._store, values);
+      valuesRevision += 1;
+      inst._store = deepMerge(inst._store, values) as FormValues;
       markTouched(values, []);
       inst._notify();
     },
 
     resetFields(names?: NamePath[]) {
+      valuesRevision += 1;
       if (!names || names.length === 0) {
         inst._store = {};
         inst._touched.clear();
@@ -356,7 +414,7 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
         for (const n of names) {
           const p = toPath(n);
           const key = pathKey(p);
-          inst._store = deleteAtPath(inst._store, p);
+          inst._store = deleteAtPath(inst._store, p) as FormValues;
           for (const t of Array.from(inst._touched)) {
             if (t === key || t.startsWith(`${key}${PATH_SEP}`)) inst._touched.delete(t);
           }
@@ -370,6 +428,26 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
 
     async validateFields(names?: NamePath[]) {
       const targets = collectKeys(inst, names);
+      const revisionAtStart = valuesRevision;
+      const versionsAtStart = new Map<string, number>();
+      for (const key of targets) {
+        const version = ++nextValidationVersion;
+        versionsAtStart.set(key, version);
+        validationVersions.set(key, version);
+      }
+      const ensureCurrentValidation = () => {
+        if (
+          valuesRevision !== revisionAtStart ||
+          targets.some(
+            (key) =>
+              validationVersions.get(key) !== versionsAtStart.get(key) ||
+              !inst._fieldRules.has(key),
+          )
+        ) {
+          // 迟到结果仍向调用方报告失效，但绝不覆盖更新后的字段错误。
+          throw { values: inst._values(), errorFields: [], outOfDate: true };
+        }
+      };
       const nextErrors: Record<string, string | undefined> = {};
       let firstKey: string | null = null;
 
@@ -377,13 +455,20 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
         const rules = inst._fieldRules.get(key);
         if (!rules || rules.length === 0) continue;
         const msg = await runRules(inst._value(keyToPath(key)), rules);
+        ensureCurrentValidation();
         if (msg) {
-          nextErrors[key] = msg;
+          setOwnValue(nextErrors, key, msg);
           if (firstKey === null) firstKey = key;
         }
       }
 
-      inst._errors = nextErrors;
+      if (names?.length) {
+        const retainedErrors = { ...inst._errors };
+        for (const key of targets) delete retainedErrors[key];
+        inst._errors = { ...retainedErrors, ...nextErrors };
+      } else {
+        inst._errors = nextErrors;
+      }
       inst._notify();
 
       if (firstKey !== null) {
@@ -395,7 +480,7 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
           })),
         };
       }
-      return inst._values() as Values;
+      return inst.getFieldsValue(names) as Values;
     },
 
     submit() {
@@ -410,13 +495,15 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
     },
 
     getFieldError(name: NamePath) {
-      const msg = inst._errors[pathKey(toPath(name))];
+      const msg = getAtPath(inst._errors, [pathKey(toPath(name))]) as string | undefined;
       return msg ? [msg] : [];
     },
 
     scrollToField(name: NamePath) {
       const key = pathKey(toPath(name));
-      const el = document.getElementById(`${inst._formId ?? 'antd-form'}_${key}`);
+      const el = document.getElementById(
+        `${inst._formId ?? 'antd-form'}_${encodeURIComponent(key)}`,
+      );
       el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       (el as HTMLElement | null)?.focus?.();
     },
@@ -426,7 +513,7 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
   };
 
   /** 递归标记 setFieldsValue 传入的叶子路径为「已触碰」 */
-  function markTouched(values: any, prefix: (string | number)[]) {
+  function markTouched(values: FormValues, prefix: (string | number)[]) {
     for (const k of Object.keys(values)) {
       const v = values[k];
       const path = [...prefix, k];
@@ -439,7 +526,7 @@ export function createFormInstance<Values = any>(): FormInstance<Values> {
 }
 
 /** 收集需要校验的字段 key（未指定 names 时取全部已注册字段） */
-function collectKeys(inst: FormInstance, names?: NamePath[]): string[] {
+function collectKeys(inst: FormInstance<object>, names?: NamePath[]): string[] {
   const all = Array.from(inst._fieldRules.keys());
   if (!names || names.length === 0) return all;
   const prefixes = names.map((n) => pathKey(toPath(n)));
@@ -448,14 +535,21 @@ function collectKeys(inst: FormInstance, names?: NamePath[]): string[] {
 
 /* ================================ useForm / useWatch ================================ */
 
-export function useForm<Values = any>(form?: FormInstance<Values>): [FormInstance<Values>] {
+export function useForm<Values extends object = FormValues>(
+  form?: FormInstance<Values>,
+): [FormInstance<Values>] {
   const ref = useRef<FormInstance<Values> | null>(null);
   if (ref.current === null) ref.current = form ?? createFormInstance<Values>();
   return [ref.current];
 }
 
 /** 订阅表单字段值（对应 antd `Form.useWatch`，快照引用稳定，可用于 useSyncExternalStore） */
-export function useWatch(name: NamePath, form?: FormInstance<any>): any {
+export function useWatch<Values extends object, const Path extends NamePath>(
+  name: Path,
+  form: FormInstance<Values>,
+): FormFieldValue<Values, Path> | undefined;
+export function useWatch(name: NamePath, form?: FormInstance<object>): unknown;
+export function useWatch(name: NamePath, form?: FormInstance<object>): unknown {
   const ctx = useContext(FormContext);
   const inst = form ?? ctx?.form;
   const path = useMemo(() => toPath(name), [name]);
@@ -480,7 +574,7 @@ export function useWatch(name: NamePath, form?: FormInstance<any>): any {
 /* ================================ Form 上下文 ================================ */
 
 interface FormContextValue {
-  form: FormInstance<any>;
+  form: FormInstance<object>;
   layout: 'horizontal' | 'vertical' | 'inline';
   disabled?: boolean;
   /** 每次 store 变更都会换新对象引用，驱动所有 Form.Item 重渲染 */
@@ -499,13 +593,14 @@ export const useFormContext = () => useContext(FormContext);
  */
 const FormListContext = createContext<(string | number)[]>([]);
 
-export interface FormProps {
-  form?: FormInstance<any>;
-  initialValues?: any;
+export interface FormProps<Values extends object = FormValues> {
+  form?: FormInstance<Values>;
+  initialValues?: FormValuePatch<NoInfer<Values>>;
   layout?: 'horizontal' | 'vertical' | 'inline';
-  onFinish?: (values: any) => void;
-  onFinishFailed?: (errorInfo: { values: any; errorFields: any[] }) => void;
-  onValuesChange?: (changed: any, all: any) => void;
+  onFinish?: (values: Values) => void;
+  // The existing submit catch also forwards synchronous consumer errors unchanged.
+  onFinishFailed?: (errorInfo: unknown) => void;
+  onValuesChange?: (changed: FormValuePatch<Values>, all: Values) => void;
   disabled?: boolean;
   labelCol?: { span?: number };
   wrapperCol?: { span?: number };
@@ -519,7 +614,7 @@ export interface FormProps {
   size?: 'small' | 'middle' | 'large';
 }
 
-function FormRoot({
+function FormRoot<Values extends object = FormValues>({
   form,
   initialValues,
   layout = 'vertical',
@@ -533,19 +628,21 @@ function FormRoot({
   style,
   children,
   name,
-}: FormProps) {
-  const [internal] = useForm();
+}: FormProps<Values>) {
+  const [internal] = useForm<Values>();
   const inst = form ?? internal;
   const [, forceRender] = useReducer((x: number) => x + 1, 0);
+  const automaticId = useId();
 
   // 首帧同步把 initialValues / 重渲染钩子写入实例（避免 useEffect 造成的空值闪烁）
   const inited = useRef(false);
   if (!inited.current) {
     inited.current = true;
-    if (initialValues) inst._fieldInitials = deepMerge(inst._fieldInitials, initialValues);
+    if (initialValues)
+      inst._fieldInitials = deepMerge(inst._fieldInitials, initialValues) as FormValues;
   }
   inst._rerender = forceRender;
-  if (name) inst._formId = name;
+  inst._formId = name || `antd-form-${automaticId}`;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -553,7 +650,7 @@ function FormRoot({
     try {
       const values = await inst.validateFields();
       onFinish?.(values);
-    } catch (errorInfo: any) {
+    } catch (errorInfo: unknown) {
       onFinishFailed?.(errorInfo);
     }
   };
@@ -588,22 +685,22 @@ interface FormLayoutContextValue {
 
 const FormLayoutContext = createContext<FormLayoutContextValue>({ layout: 'vertical' });
 
-export interface FormItemProps {
+export interface FormItemProps<Values extends object = FormValues> {
   name?: NamePath;
   label?: ReactNode;
   /** 支持 antd 的函数式规则：`({ getFieldValue }) => ({ validator })` */
-  rules?: Array<FormRule | ((utils: FormItemRenderUtils) => FormRule)>;
+  rules?: Array<FormRule | ((utils: FormItemRenderUtils<Values>) => FormRule)>;
   required?: boolean;
-  initialValue?: any;
+  initialValue?: unknown;
   /** 默认 'value'；Switch 场景传 'checked' */
   valuePropName?: string;
   trigger?: string;
-  getValueFromEvent?: (...args: any[]) => any;
-  getValueProps?: (value: any) => Record<string, any>;
+  getValueFromEvent?(...args: unknown[]): unknown;
+  getValueProps?(value: unknown): Record<string, unknown>;
   /** 只渲染控件，不渲染 label / 错误信息 */
   noStyle?: boolean;
   /** 传入后按 render-prop 渲染，children 收到表单操作对象 */
-  shouldUpdate?: boolean | ((prev: any, next: any) => boolean);
+  shouldUpdate?: boolean | ((prev: Values, next: Values) => boolean);
   dependencies?: NamePath[];
   tooltip?: ReactNode;
   extra?: ReactNode;
@@ -612,16 +709,16 @@ export interface FormItemProps {
   hidden?: boolean;
   className?: string;
   style?: CSSProperties;
-  children?: ReactNode | ((utils: FormItemRenderUtils) => ReactNode);
+  children?: ReactNode | ((utils: FormItemRenderUtils<Values>) => ReactNode);
 }
 
-export interface FormItemRenderUtils {
-  getFieldValue: (name: NamePath) => any;
-  getFieldsValue: () => any;
-  setFieldValue: (name: NamePath, value: any) => void;
-  setFieldsValue: (values: any) => void;
+export interface FormItemRenderUtils<Values extends object = FormValues> {
+  getFieldValue<const Path extends NamePath>(name: Path): FormFieldValue<Values, Path> | undefined;
+  getFieldsValue: () => Values | undefined;
+  setFieldValue: (name: NamePath, value: unknown) => void;
+  setFieldsValue: (values: FormValuePatch<Values>) => void;
   resetFields: (names?: NamePath[]) => void;
-  validateFields: (names?: NamePath[]) => Promise<any>;
+  validateFields: (names?: NamePath[]) => Promise<Values | FormValues>;
   isFieldTouched: (name: NamePath) => boolean;
 }
 
@@ -633,8 +730,13 @@ const FORM_ITEM_FLAG = '__antdCompatFormItem';
  * 例如 `<Input />` 的 onChange 传的是 ChangeEvent，字段值应取 `e.target.value`；
  * 而 `<Switch />` 直接抛布尔值，则原样返回。
  */
-function defaultGetValueFromEvent(valuePropName: string, args: any[]): any {
-  const event = args[0];
+function defaultGetValueFromEvent(valuePropName: string, args: unknown[]): unknown {
+  // Optional event targets describe only the properties this compatibility boundary reads.
+  // The assertion is erased; direct scalar values still fall through unchanged.
+  const event = args[0] as
+    | { target?: Record<string, unknown>; currentTarget?: Record<string, unknown> }
+    | null
+    | undefined;
   if (event && event.target && valuePropName in event.target) return event.target[valuePropName];
   if (event && event.currentTarget && valuePropName in event.currentTarget) {
     return event.currentTarget[valuePropName];
@@ -642,7 +744,7 @@ function defaultGetValueFromEvent(valuePropName: string, args: any[]): any {
   return event;
 }
 
-function FormItem({
+function FormItem<Values extends object = FormValues>({
   name,
   label,
   rules,
@@ -662,27 +764,28 @@ function FormItem({
   className,
   style,
   children,
-}: FormItemProps) {
+}: FormItemProps<Values>) {
   const ctx = useFormContext();
   const layoutCtx = useContext(FormLayoutContext);
   const listPrefix = useContext(FormListContext);
   const inst = ctx?.form;
   const path = useMemo(() => [...listPrefix, ...toPath(name)], [listPrefix, name]);
   const key = path.length ? pathKey(path) : '';
-  const fieldId = inst && key ? `${inst._formId ?? 'antd-form'}_${key}` : undefined;
+  const fieldId =
+    inst && key ? `${inst._formId ?? 'antd-form'}_${encodeURIComponent(key)}` : undefined;
 
   const isRenderProp = typeof children === 'function';
 
   // 注册字段（initialValue + rules），在渲染期同步完成，保证首帧即取到初值
   if (inst && key) {
     // 函数式规则在此展开为普通规则对象（validator 内部仍读取 form 实时值）
-    const utils: FormItemRenderUtils = {
-      getFieldValue: (n) => inst._value(toPath(n)),
-      getFieldsValue: () => inst._values(),
+    const utils: FormItemRenderUtils<Values> = {
+      getFieldValue: (n) => inst._value(toPath(n)) as FormFieldValue<Values, typeof n> | undefined,
+      getFieldsValue: () => inst._values() as Values,
       setFieldValue: (n, v) => inst.setFieldValue(n, v),
       setFieldsValue: (v) => inst.setFieldsValue(v),
       resetFields: (n) => inst.resetFields(n),
-      validateFields: (n) => inst.validateFields(n),
+      validateFields: (n) => inst.validateFields(n) as Promise<Values>,
       isFieldTouched: (n) => inst.isFieldTouched(n),
     };
     const expanded: FormRule[] = (rules ?? []).map((r) => (typeof r === 'function' ? r(utils) : r));
@@ -697,16 +800,17 @@ function FormItem({
 
   /* ---------- render-prop 模式（shouldUpdate / 函数 children） ---------- */
   if (isRenderProp) {
-    const renderUtils: FormItemRenderUtils = {
-      getFieldValue: (n) => inst?._value(toPath(n)),
-      getFieldsValue: () => inst?._values(),
+    const renderUtils: FormItemRenderUtils<Values> = {
+      getFieldValue: (n) => inst?._value(toPath(n)) as FormFieldValue<Values, typeof n> | undefined,
+      getFieldsValue: () => inst?._values() as Values | undefined,
       setFieldValue: (n, v) => inst?.setFieldValue(n, v),
       setFieldsValue: (v) => inst?.setFieldsValue(v),
       resetFields: (n) => inst?.resetFields(n),
-      validateFields: (n) => inst?.validateFields(n) ?? Promise.resolve({}),
+      validateFields: (n) =>
+        (inst?.validateFields(n) as Promise<Values> | undefined) ?? Promise.resolve({}),
       isFieldTouched: (n) => inst?.isFieldTouched(n) ?? false,
     };
-    const rendered = (children as (u: FormItemRenderUtils) => ReactNode)(renderUtils);
+    const rendered = (children as (u: FormItemRenderUtils<Values>) => ReactNode)(renderUtils);
     if (noStyle) return <>{rendered}</>;
     return (
       <FormItemFrame
@@ -731,42 +835,69 @@ function FormItem({
 
   /* ---------- 普通字段：注入 value / onChange ---------- */
   const value = inst._value(path);
-  const error = inst._errors[key] ?? (typeof help === 'string' ? help : undefined);
+  const error = getAtPath(inst._errors, [key]) as string | undefined;
   const status = validateStatus ?? (error ? 'error' : undefined);
+  const displayedHelp = help !== undefined ? help : error;
 
   const valueProps = getValueProps ? getValueProps(value) : undefined;
 
-  const injected: Record<string, any> = { ...(valueProps ?? {}) };
+  const injected: Record<string, unknown> = { ...(valueProps ?? {}) };
   if (!valueProps || !(valuePropName in valueProps)) injected[valuePropName] = value;
   if (fieldId) injected.id = fieldId;
+  if (status === 'error') injected['aria-invalid'] = true;
+  if (required || inst._fieldRules.get(key)?.some((rule) => rule.required)) {
+    injected['aria-required'] = true;
+  }
+  const childDescription = isValidElement(children)
+    ? (children.props as Record<string, unknown>)['aria-describedby']
+    : undefined;
+  const descriptionIds = [typeof childDescription === 'string' ? childDescription : undefined];
+  if (fieldId && (noStyle ? error : displayedHelp)) descriptionIds.push(`${fieldId}-help`);
+  if (fieldId && !noStyle && extra) descriptionIds.push(`${fieldId}-extra`);
+  const descriptions = descriptionIds.filter((id): id is string => Boolean(id));
+  if (descriptions.length) injected['aria-describedby'] = descriptions.join(' ');
   // 子组件自己声明的 onChange 不会被 cloneElement 覆盖掉：与 antd 一致，
   // 注入的 handler 只负责把事件写进表单，写完后继续执行子组件原本的 onChange。
   const childTriggerHandler = isValidElement(children)
-    ? (children.props as Record<string, any> | null)?.[trigger]
+    ? (children.props as Record<string, unknown> | null)?.[trigger]
     : undefined;
-  injected[trigger] = (...args: any[]) => {
+  injected[trigger] = (...args: unknown[]) => {
     const next = getValueFromEvent
       ? getValueFromEvent(...args)
       : defaultGetValueFromEvent(valuePropName, args);
+    const hadError = Boolean(getAtPath(inst._errors, [key]));
     inst.setFieldValue(path, next);
-    if (inst._errors[key]) void inst.validateFields([path]);
+    if (hadError) {
+      void inst.validateFields([path]).catch(() => {
+        // 校验失败已写入字段错误；事件触发的校验不再产生未处理的 Promise rejection。
+      });
+    }
     if (typeof childTriggerHandler === 'function') childTriggerHandler(...args);
   };
 
   const isFormItemChild =
-    isValidElement(children) && (children.type as any)?.[FORM_ITEM_FLAG] === true;
+    isValidElement(children) &&
+    (children.type as { [FORM_ITEM_FLAG]?: boolean })?.[FORM_ITEM_FLAG] === true;
 
   const control = isFormItemChild
     ? (children as ReactNode)
     : isValidElement(children)
-      ? cloneElement(children as ReactElement<any>, injected)
+      ? cloneElement(children as ReactElement<Record<string, unknown>>, injected)
       : children;
 
   if (noStyle) {
     return (
       <>
         {control}
-        {error ? <p className="text-destructive mt-1 text-xs">{error}</p> : null}
+        {error ? (
+          <p
+            id={fieldId ? `${fieldId}-help` : undefined}
+            role="alert"
+            className="text-destructive mt-1 text-xs"
+          >
+            {error}
+          </p>
+        ) : null}
       </>
     );
   }
@@ -777,7 +908,7 @@ function FormItem({
         label,
         tooltip,
         extra,
-        help: error ?? help,
+        help: displayedHelp,
         validateStatus: status,
         className,
         style,
@@ -796,7 +927,7 @@ function FormItem({
   );
 }
 
-(FormItem as any)[FORM_ITEM_FLAG] = true;
+(FormItem as typeof FormItem & { [FORM_ITEM_FLAG]: boolean })[FORM_ITEM_FLAG] = true;
 
 /* ---------- Form.Item 外壳（label / 必填星号 / 提示 / 错误） ---------- */
 
@@ -865,8 +996,23 @@ function FormItemFrame({
   const body = (
     <>
       {children}
-      {help && isError ? <p className="text-destructive mt-1 text-xs">{help}</p> : null}
-      {!isError && extra ? <p className="text-muted-foreground mt-1 text-xs">{extra}</p> : null}
+      {help ? (
+        <p
+          id={fieldId ? `${fieldId}-help` : undefined}
+          role={isError ? 'alert' : undefined}
+          className={cn('mt-1 text-xs', isError ? 'text-destructive' : 'text-muted-foreground')}
+        >
+          {help}
+        </p>
+      ) : null}
+      {extra ? (
+        <p
+          id={fieldId ? `${fieldId}-extra` : undefined}
+          className="text-muted-foreground mt-1 text-xs"
+        >
+          {extra}
+        </p>
+      ) : null}
     </>
   );
 
@@ -907,15 +1053,15 @@ export interface FormListField {
 }
 
 export interface FormListOperation {
-  add: (defaultValue?: any, insertIndex?: number) => void;
+  add: (defaultValue?: unknown, insertIndex?: number) => void;
   remove: (index: number) => void;
   move: (from: number, to: number) => void;
-  insert: (index: number, value: any) => void;
+  insert: (index: number, value: unknown) => void;
 }
 
 export interface FormListProps {
   name: NamePath;
-  initialValue?: any[];
+  initialValue?: unknown[];
   children: (
     fields: FormListField[],
     operation: FormListOperation,
@@ -933,18 +1079,19 @@ function FormList({ name, initialValue, children }: FormListProps) {
   if (inst) {
     const arr = inst._value(path);
     if (arr === undefined && initialValue !== undefined && inst._fieldInitials) {
-      inst._fieldInitials = setAtPath(inst._fieldInitials, path, initialValue);
+      inst._fieldInitials = setAtPath(inst._fieldInitials, path, initialValue) as FormValues;
     }
   }
 
-  const list: any[] = (inst ? inst._value(path) : undefined) ?? [];
+  const list = ((inst ? inst._value(path) : undefined) ?? []) as unknown[];
   const fields: FormListField[] = list.map((_, i) => ({ name: i, key: i, fieldKey: i }));
 
   const operation: FormListOperation = {
-    add: (defaultValue?: any, insertIndex?: number) => {
+    add: (defaultValue?: unknown, insertIndex?: number) => {
       if (!inst) return;
-      const current: any[] =
-        getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? [];
+      const current: unknown[] = (getAtPath(inst._store, path) ??
+        getAtPath(inst._fieldInitials, path) ??
+        []) as unknown[];
       const next = [...current];
       const idx =
         insertIndex === undefined ? next.length : Math.max(0, Math.min(insertIndex, next.length));
@@ -953,8 +1100,9 @@ function FormList({ name, initialValue, children }: FormListProps) {
     },
     remove: (index: number) => {
       if (!inst) return;
-      const current: any[] =
-        getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? [];
+      const current: unknown[] = (getAtPath(inst._store, path) ??
+        getAtPath(inst._fieldInitials, path) ??
+        []) as unknown[];
       inst.setFieldValue(
         path,
         current.filter((_, i) => i !== index),
@@ -962,18 +1110,22 @@ function FormList({ name, initialValue, children }: FormListProps) {
     },
     move: (from: number, to: number) => {
       if (!inst) return;
-      const current: any[] = [
-        ...(getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? []),
+      const current: unknown[] = [
+        ...((getAtPath(inst._store, path) ??
+          getAtPath(inst._fieldInitials, path) ??
+          []) as unknown[]),
       ];
       if (from < 0 || from >= current.length || to < 0 || to >= current.length) return;
       const [item] = current.splice(from, 1);
       current.splice(to, 0, item);
       inst.setFieldValue(path, current);
     },
-    insert: (index: number, value: any) => {
+    insert: (index: number, value: unknown) => {
       if (!inst) return;
-      const current: any[] = [
-        ...(getAtPath(inst._store, path) ?? getAtPath(inst._fieldInitials, path) ?? []),
+      const current: unknown[] = [
+        ...((getAtPath(inst._store, path) ??
+          getAtPath(inst._fieldInitials, path) ??
+          []) as unknown[]),
       ];
       current.splice(index, 0, value);
       inst.setFieldValue(path, current);
@@ -987,7 +1139,7 @@ function FormList({ name, initialValue, children }: FormListProps) {
   );
 }
 
-(FormList as any)[FORM_ITEM_FLAG] = true;
+(FormList as typeof FormList & { [FORM_ITEM_FLAG]: boolean })[FORM_ITEM_FLAG] = true;
 
 /* ================================ 导出 ================================ */
 

@@ -77,7 +77,7 @@ export default function QtAdminPage() {
   const [qtTab, setQtTab] = useState('updates');
   const [updateModal, setUpdateModal] = useState(false);
   const [updateIsEdit, setUpdateIsEdit] = useState(false);
-  const [updateForm] = Form.useForm();
+  const [updateForm] = Form.useForm<Omit<QtUpdate, 'platforms'> & { platforms: number[] }>();
   /** 监听「平台」多选：勾选多个平台时提示这一条版本会同时投放给几个平台 */
   const watchedUpdatePlatforms: number[] = Form.useWatch('platforms', updateForm) || [];
 
@@ -87,7 +87,7 @@ export default function QtAdminPage() {
   const [accelPage, setAccelPage] = useState(1);
   const [accelsLoading, setAccelsLoading] = useState(false);
   const [accelModal, setAccelModal] = useState(false);
-  const [accelForm] = Form.useForm();
+  const [accelForm] = Form.useForm<QtGithubAccel>();
   const [probing, setProbing] = useState(false);
   /** 探活结果按节点 id 归并到列表行内展示（仅展示，不写库） */
   const [probeMap, setProbeMap] = useState<Record<number, QtGithubAccelProbe>>({});
@@ -258,7 +258,7 @@ export default function QtAdminPage() {
       const { id: _id, platforms: _platforms, ...rest } = values;
       const payload = { ...rest, platforms, artifacts };
       const res = editing
-        ? await qtAdminApi.updateUpdate(values.id, payload)
+        ? await qtAdminApi.updateUpdate(values.id!, payload)
         : await qtAdminApi.createUpdate(payload);
       if (res.code !== 200) throw new Error(res.msg || '操作失败');
       message.success(editing ? '版本信息已更新' : '版本信息已创建');
@@ -289,7 +289,7 @@ export default function QtAdminPage() {
     const editing = values.id != null;
     try {
       const res = editing
-        ? await githubAccelApi.update(values.id, values)
+        ? await githubAccelApi.update(values.id!, values)
         : await githubAccelApi.create(values);
       if (res.code === 200) {
         message.success(editing ? '节点已更新，缓存已刷新' : '节点已创建，缓存已刷新');

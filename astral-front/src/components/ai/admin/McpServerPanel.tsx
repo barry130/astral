@@ -190,7 +190,9 @@ export default function McpServerPanel() {
       title: '状态',
       dataIndex: 'status',
       width: 90,
-      render: (value: string) => <StatusTag dict={dict} code="ai_mcp_server_status" value={value} />,
+      render: (value: string) => (
+        <StatusTag dict={dict} code="ai_mcp_server_status" value={value} />
+      ),
     },
     {
       key: 'tools',
@@ -265,8 +267,8 @@ export default function McpServerPanel() {
   return (
     <div>
       <Hint>
-        MCP 服务器是远端提供的工具集合（Streamable HTTP 传输）。填好地址后点
-        「刷新工具」，远端 <code>tools/list</code> 的结果会写进「工具」页签，随后就能在智能体版本里绑定。
+        MCP 服务器是远端提供的工具集合（Streamable HTTP 传输）。填好地址后点 「刷新工具」，远端{' '}
+        <code>tools/list</code> 的结果会写进「工具」页签，随后就能在智能体版本里绑定。
         <strong>工具不会凭空可用</strong>：远端删掉的工具会被置为停用，需要人工确认风险与确认策略。
         私网地址（含 <code>127.0.0.1</code>、<code>169.254.169.254</code>）一律拒绝。
       </Hint>
@@ -289,7 +291,12 @@ export default function McpServerPanel() {
           <ReadOnlyNote show={!canEdit} />
         </Space>
         <Space size={8} wrap>
-          <Button size="small" icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            loading={loading}
+            onClick={() => void load()}
+          >
             刷新
           </Button>
           <Button
@@ -340,8 +347,8 @@ export default function McpServerPanel() {
             message="只有公网 http(s) 地址可用"
             description={
               <span style={{ fontSize: 12.5 }}>
-                保存时会先握手一次（<code>initialize</code> + <code>notifications/initialized</code>），
-                握手失败不会落库。工具清单在「刷新工具」时拉取，不在保存时拉取。
+                保存时会先握手一次（<code>initialize</code> + <code>notifications/initialized</code>
+                ）， 握手失败不会落库。工具清单在「刷新工具」时拉取，不在保存时拉取。
               </span>
             }
           />
@@ -386,7 +393,10 @@ export default function McpServerPanel() {
             label="附加请求头（JSON）"
             extra={'凭据不要写明文，用 ${secret:KEY} 引用服务端环境变量'}
           >
-            <Input.TextArea rows={2} placeholder={'{"Authorization": "Bearer ${secret:MCP_TOKEN}"}'} />
+            <Input.TextArea
+              rows={2}
+              placeholder={'{"Authorization": "Bearer ${secret:MCP_TOKEN}"}'}
+            />
           </Form.Item>
           <Space size={24} style={{ display: 'flex' }} align="start">
             <Form.Item

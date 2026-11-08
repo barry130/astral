@@ -10,25 +10,37 @@ interface PaginationProps {
   basePath: string;
   /** 需要随分页保留的其余查询参数（可选） */
   keepParams?: Record<string, string | undefined>;
+  pageParam?: string;
+  hash?: string;
 }
 
 /** 链接式分页（服务端组件，无客户端状态） */
-export function Pagination({ current, pages, basePath, keepParams }: PaginationProps) {
-  if (pages <= 1) return null;
+export function Pagination({
+  current,
+  pages,
+  basePath,
+  keepParams,
+  pageParam = 'page',
+  hash,
+}: PaginationProps) {
+  const totalPages = Number.isFinite(pages) && pages > 0 ? Math.floor(pages) : 0;
+  if (totalPages <= 1) return null;
+  // 越界页码（如 ?page=999）钳到最后一页，避免高亮一个不存在的页码、上一页链接指向更越界的位置。
+  const safeCurrent = Math.min(Math.max(1, Math.floor(current) || 1), totalPages);
 
   const hrefFor = (page: number) => {
     const sp = new URLSearchParams();
     for (const [key, value] of Object.entries(keepParams ?? {})) {
-      if (value) sp.set(key, value);
+      if (value && key !== pageParam) sp.set(key, value);
     }
-    if (page > 1) sp.set('page', String(page));
+    if (page > 1) sp.set(pageParam, String(page));
     const qs = sp.toString();
-    return qs ? `${basePath}?${qs}` : basePath;
+    return (qs ? `${basePath}?${qs}` : basePath) + (hash ? `#${encodeURIComponent(hash)}` : '');
   };
 
   const windowSize = 5;
-  let start = Math.max(1, current - Math.floor(windowSize / 2));
-  const end = Math.min(pages, start + windowSize - 1);
+  let start = Math.max(1, safeCurrent - Math.floor(windowSize / 2));
+  const end = Math.min(totalPages, start + windowSize - 1);
   start = Math.max(1, end - windowSize + 1);
   const pageItems: number[] = [];
   for (let p = start; p <= end; p += 1) pageItems.push(p);
@@ -42,8 +54,8 @@ export function Pagination({ current, pages, basePath, keepParams }: PaginationP
 
   return (
     <nav aria-label="分页" className="flex flex-wrap items-center justify-center gap-1.5">
-      {current > 1 ? (
-        <Link href={hrefFor(current - 1)} className={navClass} rel="prev" aria-label="上一页">
+      {safeCurrent > 1 ? (
+        <Link href={hrefFor(safeCurrent - 1)} className={navClass} rel="prev" aria-label="上一页">
           <IconChevronLeft className="h-3.5 w-3.5" />
           上一页
         </Link>
@@ -53,15 +65,15 @@ export function Pagination({ current, pages, basePath, keepParams }: PaginationP
           <Link href={hrefFor(1)} className={idleClass}>
             1
           </Link>
-          {start > 2 ? <span className="px-1 text-[12px] text-ink-faint">…</span> : null}
+          {start > 2 ? <span className="text-ink-faint px-1 text-[12px]">…</span> : null}
         </>
       ) : null}
       {pageItems.map((page) =>
-        page === current ? (
+        page === safeCurrent ? (
           <span
             key={page}
             aria-current="page"
-            className={`${base} border-brand bg-brand font-medium text-white shadow-[0_6px_14px_-10px_rgb(3_105_161_/_0.9)]`}
+            className={`${base} border-brand bg-brand text-primary-foreground font-medium`}
           >
             {page}
           </span>
@@ -71,16 +83,16 @@ export function Pagination({ current, pages, basePath, keepParams }: PaginationP
           </Link>
         ),
       )}
-      {end < pages ? (
+      {end < totalPages ? (
         <>
-          {end < pages - 1 ? <span className="px-1 text-[12px] text-ink-faint">…</span> : null}
-          <Link href={hrefFor(pages)} className={idleClass}>
-            {pages}
+          {end < totalPages - 1 ? <span className="text-ink-faint px-1 text-[12px]">…</span> : null}
+          <Link href={hrefFor(totalPages)} className={idleClass}>
+            {totalPages}
           </Link>
         </>
       ) : null}
-      {current < pages ? (
-        <Link href={hrefFor(current + 1)} className={navClass} rel="next" aria-label="下一页">
+      {safeCurrent < totalPages ? (
+        <Link href={hrefFor(safeCurrent + 1)} className={navClass} rel="next" aria-label="下一页">
           下一页
           <IconChevronRight className="h-3.5 w-3.5" />
         </Link>

@@ -35,7 +35,7 @@ export interface ChatAction {
 
 /** 工具调用轨迹（让用户看见助手在查什么，而不是干等） */
 export interface ChatToolTrace {
-  toolCallId?: string;
+  toolCallId: number;
   toolCode?: string;
   name?: string;
   risk?: string;
@@ -43,6 +43,8 @@ export interface ChatToolTrace {
   summary?: string;
   /** 需要用户确认时的参数快照 */
   arguments?: Record<string, unknown>;
+  approvalPolicy?: string;
+  submitting?: boolean;
 }
 
 /** 会话中的一条消息（在后端消息基础上叠加流式态） */
@@ -104,6 +106,8 @@ export interface UseAiChatResult {
   conversations: AiConversation[];
   activeConversationId?: number;
   messages: ChatMessage[];
+  tools: ChatToolTrace[];
+  approveTool: (id: number, approved: boolean, admin?: boolean) => Promise<void>;
   run: ChatRunState;
   loading: boolean;
   /** 首屏/切会话时的加载态，与发送中的 loading 区分开 */
@@ -131,6 +135,7 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
   const [conversations, setConversations] = useState<AiConversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<number | undefined>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [tools, setTools] = useState<ChatToolTrace[]>([]);
   const [run, setRun] = useState<ChatRunState>({ running: false });
   const [loading, setLoading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -153,6 +158,28 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
   const abortRef = useRef<AbortController | null>(null);
   /** 组件卸载标记，阻止已废弃的异步回写 */
   const aliveRef = useRef(true);
+  const viewRef = useRef(0);
+  const approvalRef = useRef(new Set<number>());
+  const sendRef = useRef<{ view: number; cancel: boolean } | null>(null);
+  const historyLoadingRef = useRef(false);
+
+  const detach = useCallback(() => {
+    viewRef.current += 1;
+    historyLoadingRef.current = false;
+    abortRef.current?.abort();
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    pollTimerRef.current = null;
+    if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    flushTimerRef.current = null;
+    bufferRef.current.clear();
+    runningRef.current = {};
+    cursorRef.current = 0;
+    setRun({ running: false });
+    setTools([]);
+    setLoading(false);
+    setLoadingMessages(false);
+    setConversationsLoading(false);
+  }, []);
 
   useEffect(() => {
     aliveRef.current = true;
@@ -196,7 +223,9 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
 
   const patchMessage = useCallback((messageId: number, patch: Partial<ChatMessage>) => {
     setMessages((prev) =>
-      prev.map((message) => (message.id === messageId ? { ...message, ...patch } : message)),
+      prev.some((message) => message.id === messageId)
+        ? prev.map((message) => (message.id === messageId ? { ...message, ...patch } : message))
+        : [...prev, { id: messageId, role: 'ASSISTANT', content: '', status: 'PENDING', ...patch }],
     );
   }, []);
 
@@ -225,16 +254,29 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
     (event: AiEvent) => {
       if (typeof event.sequence === 'number' && event.sequence > cursorRef.current) {
         cursorRef.current = event.sequence;
+      } else if (
+        typeof event.sequence === 'number' &&
+        event.sequence > 0 &&
+        event.type !== 'stream.end'
+      ) {
+        return;
       }
       const data = (event.data ?? {}) as Record<string, unknown>;
       const messageId = num(data.messageId) ?? runningRef.current.assistantMessageId;
 
       switch (event.type) {
         case 'message.started': {
-          if (messageId !== undefined) patchMessage(messageId, { status: 'STREAMING' });
+          if (messageId !== undefined) {
+            runningRef.current.assistantMessageId = messageId;
+            patchMessage(messageId, { status: 'STREAMING' });
+          }
           break;
         }
         case 'message.delta': {
+          if (messageId !== undefined) {
+            runningRef.current.assistantMessageId = messageId;
+            patchMessage(messageId, { status: 'STREAMING' });
+          }
           const delta = str(data.delta) ?? '';
           // 兼容后端未来可能改字段名的情况：content 也认
           applyDelta(messageId, delta || str(data.content) || '');
@@ -270,6 +312,47 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
             patchMessage(messageId, { actions: asArray<ChatAction>(data.actions) });
           break;
         }
+        case 'tool.planned':
+        case 'tool.started':
+        case 'tool.approval.required':
+        case 'tool.completed': {
+          const id = num(data.toolCallId);
+          if (id === undefined) break;
+          const status =
+            event.type === 'tool.approval.required'
+              ? 'WAITING_APPROVAL'
+              : event.type === 'tool.started'
+                ? 'RUNNING'
+                : event.type === 'tool.completed'
+                  ? (str(data.status) ?? 'FAILED')
+                  : 'PLANNED';
+          setTools((prev) => {
+            const old = prev.find((item) => item.toolCallId === id);
+            const item: ChatToolTrace = {
+              ...old,
+              toolCallId: id,
+              status,
+              toolCode: str(data.toolCode) ?? old?.toolCode,
+              name: str(data.name) ?? old?.name,
+              risk: str(data.risk) ?? old?.risk,
+              approvalPolicy: str(data.approvalPolicy) ?? old?.approvalPolicy,
+              arguments:
+                data.arguments &&
+                typeof data.arguments === 'object' &&
+                !Array.isArray(data.arguments)
+                  ? (data.arguments as Record<string, unknown>)
+                  : old?.arguments,
+              summary: str(data.summary) ?? old?.summary,
+            };
+            return old
+              ? prev.map((trace) => (trace.toolCallId === id ? item : trace))
+              : [...prev, item];
+          });
+          if (event.type === 'tool.approval.required' && messageId !== undefined) {
+            patchMessage(messageId, { status: 'COMPLETED' });
+          }
+          break;
+        }
         case 'request.failed': {
           const message = str(data.message) ?? 'AI 请求失败';
           const code = str(data.errorCode);
@@ -296,10 +379,21 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
   /* ==================== 轮询降级 ==================== */
 
   const pollOnce = useCallback(
-    async (requestId: number) => {
-      if (!aliveRef.current) return;
+    async (requestId: number, view: number) => {
+      if (
+        !aliveRef.current ||
+        view !== viewRef.current ||
+        runningRef.current.requestId !== requestId
+      )
+        return;
       try {
         const res = await aiChatApi.events(requestId, cursorRef.current, 100);
+        if (
+          !aliveRef.current ||
+          view !== viewRef.current ||
+          runningRef.current.requestId !== requestId
+        )
+          return;
         const batch = res.data;
         for (const event of batch?.events ?? []) {
           handleEvent({ ...event, requestId });
@@ -311,47 +405,58 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
         setRun((prev) => ({ ...prev, running: true, transport: 'poll' }));
       } catch (err) {
         // 轮询失败不立即放弃：网络抖动会自愈，只有连续失败由用户手动停止
-        if (!aliveRef.current) return;
+        if (
+          !aliveRef.current ||
+          view !== viewRef.current ||
+          runningRef.current.requestId !== requestId
+        )
+          return;
         setError(err instanceof Error ? err.message : String(err));
       }
-      if (aliveRef.current) {
-        pollTimerRef.current = setTimeout(() => void pollOnce(requestId), POLL_INTERVAL_MS);
+      if (
+        aliveRef.current &&
+        view === viewRef.current &&
+        runningRef.current.requestId === requestId
+      ) {
+        pollTimerRef.current = setTimeout(() => void pollOnce(requestId, view), POLL_INTERVAL_MS);
       }
     },
     [finishRun, handleEvent],
   );
 
   const watch = useCallback(
-    async (requestId: number) => {
-      cursorRef.current = 0;
+    async (requestId: number, after = 0) => {
+      const view = viewRef.current;
+      cursorRef.current = after;
       const controller = new AbortController();
       abortRef.current = controller;
-      let received = 0;
 
       await openEventStream(
-        aiStreamUrl(requestId),
+        `${aiStreamUrl(requestId)}?after=${after}`,
         {
           onEvent: (event) => {
-            received += 1;
+            if (
+              !aliveRef.current ||
+              view !== viewRef.current ||
+              controller.signal.aborted ||
+              runningRef.current.requestId !== requestId
+            )
+              return;
             setRun((prev) => ({ ...prev, running: true, transport: 'sse' }));
             handleEvent({ ...event, requestId });
-          },
-          onError: () => {
-            // SSE 不可用（代理缓冲、网关超时等）→ 退回轮询，用户无感
-            if (!aliveRef.current) return;
-            void pollOnce(requestId);
           },
         },
         { signal: controller.signal },
       );
 
       // 流正常关闭：若还卡在 running，说明服务端没发终态，用轮询补齐
-      if (aliveRef.current && received >= 0) {
-        setRun((prev) => {
-          if (!prev.running) return prev;
-          void pollOnce(requestId);
-          return prev;
-        });
+      if (
+        aliveRef.current &&
+        view === viewRef.current &&
+        !controller.signal.aborted &&
+        runningRef.current.requestId === requestId
+      ) {
+        void pollOnce(requestId, view);
       }
     },
     [handleEvent, pollOnce],
@@ -359,34 +464,69 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
 
   /* ==================== 会话加载 ==================== */
 
-  const loadMessages = useCallback(async (conversationId: number) => {
-    setLoadingMessages(true);
-    try {
-      const res = await aiChatApi.messages(conversationId, undefined, CONVERSATION_MESSAGE_LIMIT);
-      const page = res.data;
-      const items: ChatMessage[] = (page?.items ?? []).map((item) => ({
-        id: item.id ?? 0,
-        role: item.role ?? 'ASSISTANT',
-        content: item.content ?? '',
-        status: item.status ?? 'COMPLETED',
-        blocks: item.blocks,
-        citations: item.citations,
-        modelName: item.modelName,
-        createTime: item.createTime,
-      }));
-      setMessages(items);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, []);
+  const loadMessages = useCallback(
+    async (conversationId: number) => {
+      const view = viewRef.current;
+      historyLoadingRef.current = true;
+      setLoadingMessages(true);
+      try {
+        const res = await aiChatApi.messages(conversationId, undefined, CONVERSATION_MESSAGE_LIMIT);
+        const page = res.data;
+        if (!aliveRef.current || view !== viewRef.current) return;
+        const items: ChatMessage[] = (page?.items ?? [])
+          .filter((item) => item.role !== 'TOOL')
+          .map((item) => ({
+            id: item.id ?? 0,
+            role: item.role ?? 'ASSISTANT',
+            content: item.content ?? '',
+            status: item.status ?? 'COMPLETED',
+            blocks: item.blocks,
+            citations: item.citations,
+            modelName: item.modelName,
+            createTime: item.createTime,
+          }));
+        setMessages(items);
+        const latest = [...(page?.items ?? [])]
+          .reverse()
+          .find((item) => item.requestId !== undefined);
+        if (latest?.requestId !== undefined) {
+          const batch = (await aiChatApi.events(latest.requestId, 0, 100)).data;
+          if (!aliveRef.current || view !== viewRef.current) return;
+          const assistant = [...(page?.items ?? [])]
+            .reverse()
+            .find((item) => item.requestId === latest.requestId && item.role === 'ASSISTANT');
+          runningRef.current = {
+            requestId: latest.requestId,
+            conversationId,
+            assistantMessageId: assistant?.id,
+          };
+          cursorRef.current = 0;
+          setRun({ running: true, requestId: latest.requestId });
+          for (const event of batch.events ?? [])
+            handleEvent({ ...event, requestId: latest.requestId });
+          if (batch.terminal) finishRun(batch.status);
+          else void watch(latest.requestId, cursorRef.current);
+        }
+      } catch (err) {
+        if (aliveRef.current && view === viewRef.current)
+          setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (aliveRef.current && view === viewRef.current) {
+          historyLoadingRef.current = false;
+          setLoadingMessages(false);
+        }
+      }
+    },
+    [finishRun, handleEvent, watch],
+  );
 
   const loadConversations = useCallback(
     async (selectFirst: boolean) => {
+      const view = viewRef.current;
       setConversationsLoading(true);
       try {
         const res = await aiChatApi.conversations(agentCode);
+        if (!aliveRef.current || view !== viewRef.current) return;
         const list = res.data ?? [];
         setConversations(list);
         if (selectFirst && list.length > 0 && list[0].id !== undefined) {
@@ -397,15 +537,18 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
           setMessages([]);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+        if (aliveRef.current && view === viewRef.current)
+          setError(err instanceof Error ? err.message : String(err));
       } finally {
-        setConversationsLoading(false);
+        if (aliveRef.current && view === viewRef.current) setConversationsLoading(false);
       }
     },
     [agentCode, loadMessages],
   );
 
   const reload = useCallback(async () => {
+    detach();
+    const view = viewRef.current;
     setError(undefined);
     setLoading(true);
     try {
@@ -415,15 +558,17 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
         aiChatApi.assistants(),
         loadConversations(true).catch(() => undefined),
       ]);
+      if (!aliveRef.current || view !== viewRef.current) return;
       const found = (cards.data ?? []).find((item) => item.agentCode === agentCode);
       setCard(found);
       setCapabilities(found?.capabilities);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (aliveRef.current && view === viewRef.current)
+        setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      if (aliveRef.current && view === viewRef.current) setLoading(false);
     }
-  }, [agentCode, loadConversations]);
+  }, [agentCode, detach, loadConversations]);
 
   useEffect(() => {
     void reload();
@@ -432,8 +577,11 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
   /* ==================== 操作 ==================== */
 
   const newConversation = useCallback(async (): Promise<number | undefined> => {
+    detach();
+    const view = viewRef.current;
     try {
       const res = await aiChatApi.createConversation(agentCode);
+      if (!aliveRef.current || view !== viewRef.current) return undefined;
       const created = res.data;
       if (created?.id === undefined) return undefined;
       setConversations((prev) => [created, ...prev]);
@@ -441,22 +589,26 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
       setMessages([]);
       return created.id;
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      if (aliveRef.current && view === viewRef.current)
+        setError(err instanceof Error ? err.message : String(err));
       return undefined;
     }
-  }, [agentCode]);
+  }, [agentCode, detach]);
 
   const selectConversation = useCallback(
     async (id: number) => {
+      detach();
       setActiveConversationId(id);
       setError(undefined);
       await loadMessages(id);
     },
-    [loadMessages],
+    [detach, loadMessages],
   );
 
   const renameConversation = useCallback(async (id: number, title: string) => {
+    const view = viewRef.current;
     const res = await aiChatApi.renameConversation(id, title);
+    if (!aliveRef.current || view !== viewRef.current) return;
     const updated = res.data;
     setConversations((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updated } : item)),
@@ -465,50 +617,79 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
 
   const removeConversation = useCallback(
     async (id: number) => {
+      const view = viewRef.current;
       await aiChatApi.removeConversation(id);
-      setConversations((prev) => {
-        const next = prev.filter((item) => item.id !== id);
-        if (id === activeConversationId) {
-          const fallback = next[0]?.id;
-          setActiveConversationId(fallback);
-          if (fallback !== undefined) void loadMessages(fallback);
-          else setMessages([]);
-        }
-        return next;
-      });
+      if (!aliveRef.current || view !== viewRef.current) return;
+      if (id === activeConversationId) detach();
+      const next = conversations.filter((item) => item.id !== id);
+      setConversations(next);
+      if (id === activeConversationId) {
+        const fallback = next[0]?.id;
+        setActiveConversationId(fallback);
+        if (fallback !== undefined) await loadMessages(fallback);
+        else setMessages([]);
+      }
     },
-    [activeConversationId, loadMessages],
+    [activeConversationId, conversations, detach, loadMessages],
   );
 
   const stop = useCallback(async () => {
+    const view = viewRef.current;
     const requestId = runningRef.current.requestId;
-    abortRef.current?.abort();
-    if (pollTimerRef.current) {
-      clearTimeout(pollTimerRef.current);
-      pollTimerRef.current = null;
+    if (requestId === undefined && sendRef.current?.view === view) {
+      sendRef.current.cancel = true;
+      return;
     }
+    let status = 'CANCELLED';
     if (requestId !== undefined) {
       try {
-        await aiChatApi.cancel(requestId, '用户停止');
-      } catch {
-        // 取消失败不影响本地收尾：请求可能刚好已自然结束
+        const response = await aiChatApi.cancel(requestId, '用户停止');
+        status = response.data?.status ?? 'CANCELLED';
+      } catch (error) {
+        if (aliveRef.current && view === viewRef.current)
+          setError(error instanceof Error ? error.message : '取消未成功，请重试');
+        return;
       }
     }
+    if (!aliveRef.current || view !== viewRef.current || requestId !== runningRef.current.requestId)
+      return;
+    if (status !== 'CANCELLED') return; // Continue receiving the server's final answer/failure.
+    abortRef.current?.abort();
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+    pollTimerRef.current = null;
     finishRun('CANCELLED');
   }, [finishRun]);
 
   const send = useCallback(
     async (content: string) => {
       const text = content.trim();
-      if (!text || run.running) return;
+      if (
+        !text ||
+        historyLoadingRef.current ||
+        loading ||
+        run.running ||
+        sendRef.current?.view === viewRef.current
+      )
+        return;
+
+      const operation = { view: viewRef.current, cancel: false };
+      sendRef.current = operation;
 
       setError(undefined);
+      setTools([]);
       setLoading(true);
       try {
         let conversationId = activeConversationId;
         if (conversationId === undefined) {
+          operation.view = viewRef.current + 1;
           conversationId = await newConversation();
         }
+        if (
+          !aliveRef.current ||
+          operation.view !== viewRef.current ||
+          sendRef.current !== operation
+        )
+          return;
         if (conversationId === undefined) {
           setError('无法创建会话，请检查 AI 插件是否启用');
           return;
@@ -528,10 +709,25 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
         const res = await aiChatApi.send(conversationId, {
           content: text,
           clientMessageId: `web-${tempUser}`,
+          idempotencyKey: `web-${tempUser}`,
           context: context?.(),
         });
         const result = res.data;
         const requestId = result?.requestId;
+        if (operation.cancel && requestId !== undefined) {
+          try {
+            await aiChatApi.cancel(requestId, '用户停止');
+          } catch {
+            if (aliveRef.current && operation.view === viewRef.current)
+              setError('取消未成功，请重试');
+          }
+        }
+        if (
+          !aliveRef.current ||
+          operation.view !== viewRef.current ||
+          sendRef.current !== operation
+        )
+          return;
         const assistantMessageId = result?.assistantMessageId;
         const userMessageId = result?.userMessageId;
 
@@ -575,6 +771,12 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
         void loadConversations(false);
         void watch(requestId);
       } catch (err) {
+        if (
+          !aliveRef.current ||
+          operation.view !== viewRef.current ||
+          sendRef.current !== operation
+        )
+          return;
         const message = err instanceof Error ? err.message : String(err);
         setError(message);
         setMessages((prev) => {
@@ -585,10 +787,19 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
         });
         setRun({ running: false });
       } finally {
-        setLoading(false);
+        if (sendRef.current === operation) sendRef.current = null;
+        if (aliveRef.current && operation.view === viewRef.current) setLoading(false);
       }
     },
-    [activeConversationId, context, loadConversations, newConversation, run.running, watch],
+    [
+      activeConversationId,
+      context,
+      loadConversations,
+      loading,
+      newConversation,
+      run.running,
+      watch,
+    ],
   );
 
   const feedback = useCallback(
@@ -598,6 +809,32 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
     [],
   );
 
+  const approveTool = useCallback(async (id: number, approved: boolean, admin = false) => {
+    if (approvalRef.current.has(id)) return;
+    approvalRef.current.add(id);
+    const view = viewRef.current;
+    setTools((prev) =>
+      prev.map((item) => (item.toolCallId === id ? { ...item, submitting: true } : item)),
+    );
+    try {
+      const response = await aiChatApi.approveTool(id, approved, admin);
+      if (aliveRef.current && view === viewRef.current) {
+        setTools((prev) =>
+          prev.map((item) =>
+            item.toolCallId === id ? { ...item, ...response.data, submitting: false } : item,
+          ),
+        );
+      }
+    } finally {
+      approvalRef.current.delete(id);
+      if (aliveRef.current && view === viewRef.current) {
+        setTools((prev) =>
+          prev.map((item) => (item.toolCallId === id ? { ...item, submitting: false } : item)),
+        );
+      }
+    }
+  }, []);
+
   return useMemo(
     () => ({
       card,
@@ -605,6 +842,8 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
       conversations,
       activeConversationId,
       messages,
+      tools,
+      approveTool,
       run,
       loading,
       loadingMessages,
@@ -630,6 +869,8 @@ export function useAiChat({ agentCode, context }: UseAiChatOptions): UseAiChatRe
       loading,
       loadingMessages,
       messages,
+      tools,
+      approveTool,
       newConversation,
       reload,
       removeConversation,

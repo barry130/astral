@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { formatDateTime } from '@/lib/format';
 import {
   Card,
@@ -15,44 +15,20 @@ import {
   Popconfirm,
 } from '@/components/antd-compat';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@/components/antd-compat/icons';
-import { request } from '@/api/client';
-import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
+import { configApi, configPayload, type ConfigWrite, type SysConfig } from '@/api/system-admin';
+import { AdminLoadNotice } from '@/components/admin/AdminLoadNotice';
+import { useAdminLoader, useAdminMutation, useAdminQuery } from '@/components/admin/use-admin-task';
+import { requireAdminSuccess } from '@/components/admin/admin-task';
+import {
+  loadAdminDictOptions as fetchDictOptions,
+  dictLabel,
+  dictColor,
+  DictOption,
+} from '@/components/admin/admin-dictionaries';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar } from '@/components/filter-bar';
-
-/** 系统配置实体接口 */
-interface SysConfig {
-  /** 配置ID */
-  id: number;
-  /** 配置名称 */
-  configName: string;
-  /** 配置键 */
-  configKey: string;
-  /** 配置值 */
-  configValue: string;
-  /** 配置类型：1内置/2自定义 */
-  configType: number;
-  /** 配置描述 */
-  description: string;
-  /** 创建时间 */
-  createTime: string;
-}
-
-/** 系统配置API封装 */
-const configApi = {
-  /** 分页查询配置 */
-  getPage: (pageNum: number, pageSize: number, configName?: string) =>
-    request.get('/api/v1/admin/system/config/page', { params: { pageNum, pageSize, configName } }),
-  /** 创建配置 */
-  create: (data: Record<string, unknown>) => request.post('/api/v1/admin/system/config', data),
-  /** 更新配置 */
-  update: (id: number, data: Record<string, unknown>) =>
-    request.put(`/api/v1/admin/system/config/${id}`, data),
-  /** 删除配置 */
-  delete: (id: number) => request.delete(`/api/v1/admin/system/config/${id}`),
-};
 
 /**
  * 系统配置管理页面组件
@@ -60,7 +36,9 @@ const configApi = {
  */
 export default function ConfigPage() {
   /** 加载状态 */
-  const [loading, setLoading] = useState(false);
+  const { loading, error: loadError, run: runLoad } = useAdminLoader('加载配置失败');
+  const { busy: saving, run: runMutation } = useAdminMutation('操作配置失败');
+  const query = useAdminQuery({ current: 1, pageSize: 10, keyword: '' });
   /** 配置列表数据 */
   const [data, setData] = useState<SysConfig[]>([]);
   /** 分页状态 */
@@ -70,46 +48,59 @@ export default function ConfigPage() {
   /** 当前编辑的配置，null表示新增模式 */
   const [editingConfig, setEditingConfig] = useState<SysConfig | null>(null);
   /** 表单实例 */
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<ConfigWrite>();
   /** 配置类型枚举一律取数据字典 */
   const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
   const configTypeDict = dicts.config_type;
+  /** 当前搜索关键字：删除/保存后的重查必须沿用，否则会把筛选态悄悄丢掉 */
+  const [keywordState, setKeywordState] = useState('');
 
   const hasPerm = usePerm();
   /** 是否具备系统配置维护权限：权限码需与后端 @RequiresPermission("admin:system:config:edit") 一致 */
   const canEdit = hasPerm('admin:system:config:edit');
 
-  /** 组件挂载时加载数据 */
-  useEffect(() => {
-    loadData();
-    loadDicts();
-  }, []);
-
-  /** 加载数据字典（失败时回退显示原始值） */
-  const loadDicts = () => {
-    fetchDictOptions(['config_type'])
-      .then(setDicts)
-      .catch(() => {
-        /* 字典失败时回退显示原始值 */
-      });
-  };
-
-  /** 加载配置列表 */
-  const loadData = (page = 1, size = 10, keyword = '') => {
-    setLoading(true);
-    configApi
-      .getPage(page, size, keyword)
-      .then((res) => {
-        if (res.code === 200) {
-          setData(res.data?.records || []);
+  const loadData = useCallback(
+    (patch: Partial<{ current: number; pageSize: number; keyword: string }> = {}) => {
+      const q = query.read(patch);
+      return runLoad(
+        async () => {
+          const res = await configApi.getPage(q.current, q.pageSize, q.keyword);
+          const page = requireAdminSuccess(res, '加载配置失败');
+          if (!page) throw new Error('配置分页数据缺失');
+          return page;
+        },
+        (page) => {
+          setData(page.records || []);
           setPagination({
-            current: res.data?.current || 1,
-            pageSize: res.data?.size || 10,
-            total: res.data?.total || 0,
+            current: page.current || q.current,
+            pageSize: page.size || q.pageSize,
+            total: page.total || 0,
           });
-        }
+        },
+      );
+    },
+    [query, runLoad],
+  );
+
+  useEffect(() => {
+    void loadData();
+    let active = true;
+    fetchDictOptions(['config_type'])
+      .then((map) => {
+        if (active) setDicts(map);
       })
-      .finally(() => setLoading(false));
+      .catch(() => {
+        /* Unknown labels retain their raw values. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadData]);
+
+  /** 分页/搜索统一入口（表格 onChange 也要回到这里，否则删除后页码与筛选会漂） */
+  const handleSearch = (page: number, size: number, keyword: string) => {
+    setKeywordState(keyword);
+    void loadData({ current: page, pageSize: size, keyword });
   };
 
   /** 打开新增配置弹窗 */
@@ -122,37 +113,39 @@ export default function ConfigPage() {
   /** 打开编辑配置弹窗 */
   const handleEdit = (record: SysConfig) => {
     setEditingConfig(record);
-    form.setFieldsValue(record);
+    form.resetFields();
+    form.setFieldsValue(configPayload(record));
     setModalVisible(true);
   };
 
-  /** 删除配置 */
-  const handleDelete = async (id: number) => {
-    try {
-      await configApi.delete(id);
-      message.success('删除成功');
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleDelete = (id: number) => {
+    if (!canEdit || data.find((row) => row.id === id)?.configType === 1) return;
+    return runMutation(
+      async () => requireAdminSuccess(await configApi.delete(id), '删除失败'),
+      () => {
+        message.success('删除成功');
+        void loadData();
+      },
+    );
   };
 
-  /** 提交表单：新增或更新 */
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      if (editingConfig?.id) {
-        await configApi.update(editingConfig.id, values);
-        message.success('更新成功');
-      } else {
-        await configApi.create(values);
-        message.success('创建成功');
-      }
-      setModalVisible(false);
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleSubmit = () => {
+    if (!canEdit) return;
+    const id = editingConfig?.id;
+    return runMutation(
+      async () => {
+        const values = await form.validateFields();
+        return requireAdminSuccess(
+          id ? await configApi.update(id, values) : await configApi.create(values),
+          '保存失败',
+        );
+      },
+      () => {
+        message.success(id ? '更新成功' : '创建成功');
+        setModalVisible(false);
+        void loadData();
+      },
+    );
   };
 
   /** 表格列定义 */
@@ -226,15 +219,21 @@ export default function ConfigPage() {
           <Input.Search
             placeholder="搜索配置名称"
             allowClear
-            onSearch={(v) => loadData(1, pagination.pageSize, v)}
-            style={{ width: 300 }}
+            onSearch={(v) => handleSearch(1, pagination.pageSize, v)}
+            aria-label="搜索配置名称"
+            className="w-full sm:w-[300px]"
           />
           {canEdit && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate} disabled={saving}>
               新建配置
             </Button>
           )}
         </FilterBar>
+        <AdminLoadNotice
+          error={loadError}
+          hasData={data.length > 0}
+          onRetry={() => void loadData()}
+        />
         <ResizableTable
           dataSource={data}
           columns={columns}
@@ -246,6 +245,7 @@ export default function ConfigPage() {
             showQuickJumper: true,
             showSizeChanger: true,
             pageSizeOptions: ['5', '10', '20', '50', '100'],
+            onChange: (page, size) => handleSearch(page, size, keywordState),
           }}
         />
       </Card>
@@ -254,9 +254,13 @@ export default function ConfigPage() {
         title={editingConfig ? '编辑配置' : '新建配置'}
         open={modalVisible}
         onOk={handleSubmit}
-        onCancel={() => setModalVisible(false)}
+        confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        onCancel={() => {
+          if (!saving) setModalVisible(false);
+        }}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} disabled={saving} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="configName" label="配置名称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>

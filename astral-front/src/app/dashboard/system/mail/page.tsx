@@ -1,7 +1,8 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   MailOutlined,
@@ -10,67 +11,40 @@ import {
   NotificationOutlined,
   ApiOutlined,
 } from '@/components/antd-compat/icons';
-import MailAccountPage from './account/page';
-import MessageTemplatePage from './message-template/page';
-import SmsProviderPage from './sms-provider/page';
-import NoticeManagement from '@/components/admin/NoticeManagement';
-import NotifyRulePage from './notify-rule/page';
+import { AdminLoadingNotice } from '@/components/admin/AdminLoadNotice';
+import { mailCenterHref, mailCenterTab } from '@/components/admin/mail-center-tabs';
 import { PageHeader } from '@/components/page-header';
 
-/** 页签 key 白名单（同时作为 ?tab= 深链的合法取值；template/smsTemplate 为合并前的旧深链别名） */
-const TAB_KEYS = [
-  'account',
-  'messageTemplate',
-  'smsProvider',
-  'notice',
-  'rule',
-  'template',
-  'smsTemplate',
-] as const;
+const loading = () => <AdminLoadingNotice label="正在加载消息中心页签…" />;
+const MailAccountPage = dynamic(() => import('./account/page'), { loading });
+const MessageTemplatePage = dynamic(() => import('./message-template/page'), { loading });
+const SmsProviderPage = dynamic(() => import('./sms-provider/page'), { loading });
+const NoticeManagement = dynamic(() => import('@/components/admin/NoticeManagement'), { loading });
+const NotifyRulePage = dynamic(() => import('./notify-rule/page'), { loading });
 
-/** 旧深链 ?tab=template|smsTemplate 统一落到合并后的消息模板页 */
-const TAB_ALIAS: Record<string, string> = {
-  template: 'messageTemplate',
-  smsTemplate: 'messageTemplate',
-};
-
-/**
- * 消息中心页：邮箱帐户/消息模板（邮箱 + 站内信 + 短信合并，投递渠道多选）、
- * 短信供应商、通知管理（统一通知表 sys_notice，
- * 广播公告 + 点对点站内信，与反馈管理/顶栏铃铛/轻听三端共用）、
- * 事件订阅规则（事件 × 渠道 → 模板 + 收件人，统一发布入口）。
- *
- * <p>支持 `?tab=` 深链（如顶栏铃铛的「全部通知」→ `/dashboard/system/mail?tab=notice`）：
- * 原 /dashboard/message 独立路由已删除，入口收敛到本页「通知管理」页签 + 顶栏铃铛。</p>
- */
+/** Controlled URL state preserves deep links and follows browser back/forward changes. */
 function MailCenter() {
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get('tab');
-  // 只接受白名单内的 key，非法/缺省一律落到「邮箱帐户」，避免脏参数导致空白页
-  const rawTab =
-    tabParam && (TAB_KEYS as readonly string[]).includes(tabParam) ? tabParam : 'account';
-  const initialTab = TAB_ALIAS[rawTab] || rawTab;
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const router = useRouter();
+  const pathname = usePathname();
+  const activeTab = mailCenterTab(searchParams.get('tab'));
+  const changeTab = (tab: string) =>
+    router.push(
+      mailCenterHref(pathname || '/dashboard/system/mail', searchParams.toString(), tab),
+      { scroll: false },
+    );
 
   return (
-    <div style={{ background: 'var(--color-bg-base)', minHeight: '100%' }}>
-      <div style={{ padding: '24px 24px 0' }}>
+    <div className="bg-background min-h-full">
+      <div className="px-4 pt-6 sm:px-6">
         <PageHeader
           title="消息中心"
           description="邮箱、短信与站内信的发送通道、模板与订阅规则配置"
         />
       </div>
-      <div
-        style={{
-          background: 'var(--color-bg-base)',
-          padding: '0 24px',
-          position: 'sticky',
-          top: 56,
-          zIndex: 100,
-        }}
-      >
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-muted/60 h-9">
+      <div className="bg-background sticky top-14 z-20 overflow-x-auto px-4 sm:px-6">
+        <Tabs value={activeTab} onValueChange={changeTab}>
+          <TabsList className="bg-muted/60 h-9 min-w-max justify-start">
             <TabsTrigger value="account" className="px-3 text-xs">
               <MailOutlined /> 邮箱帐户
             </TabsTrigger>
@@ -89,8 +63,7 @@ function MailCenter() {
           </TabsList>
         </Tabs>
       </div>
-
-      <div style={{ padding: '16px 24px 24px' }}>
+      <div className="px-4 pt-4 pb-6 sm:px-6">
         {activeTab === 'account' && <MailAccountPage />}
         {activeTab === 'messageTemplate' && <MessageTemplatePage />}
         {activeTab === 'smsProvider' && <SmsProviderPage />}
@@ -101,13 +74,9 @@ function MailCenter() {
   );
 }
 
-/**
- * useSearchParams 在静态预渲染时要求包裹 Suspense（Next 16 App Router），
- * 与 dashboard/profile 页的处理方式保持一致。
- */
 export default function MailPage() {
   return (
-    <Suspense fallback={<div style={{ padding: 24 }} />}>
+    <Suspense fallback={<AdminLoadingNotice label="正在加载消息中心…" />}>
       <MailCenter />
     </Suspense>
   );

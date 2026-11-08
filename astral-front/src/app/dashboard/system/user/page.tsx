@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatDateTime } from '@/lib/format';
 import {
   Card,
@@ -26,96 +26,37 @@ import {
   LockOutlined,
   LoginOutlined,
 } from '@/components/antd-compat/icons';
-import { request, readCsrfToken } from '@/api/client';
-import { fetchDictOptions, dictLabel, dictColor, DictOption } from '@/api/dict';
-import { clientHeaders } from '@/lib/client-info';
+
+import {
+  userApi,
+  roleApi,
+  userProfilePayload,
+  saveUserProfile,
+  UserPartialSaveError,
+  type SysUser as User,
+  type Role,
+  type UserCreateWrite,
+  type UserEditorWrite,
+} from '@/api/system-admin';
+import {
+  AdminLoadNotice,
+  AdminLoadingNotice,
+  AdminOptionNotice,
+} from '@/components/admin/AdminLoadNotice';
+import { useAdminLoader, useAdminMutation, useAdminQuery } from '@/components/admin/use-admin-task';
+import { requireAdminSuccess } from '@/components/admin/admin-task';
+import {
+  loadAdminDictOptions as fetchDictOptions,
+  dictLabel,
+  dictColor,
+  DictOption,
+} from '@/components/admin/admin-dictionaries';
+
 import { downloadResponse } from '@/lib/http-download';
 import { usePerm } from '@/lib/perm';
 import { ResizableTable } from '@/components/ResizableTable';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar } from '@/components/filter-bar';
-
-/** 用户实体接口 */
-interface User {
-  /** 用户ID */
-  id: number;
-  /** 用户名 */
-  username: string;
-  /** 用户昵称 */
-  nickname: string;
-  /** 邮箱 */
-  email: string;
-  /** 手机号 */
-  phone: string;
-  /** 头像地址 */
-  avatar?: string;
-  /** 状态：1启用/0禁用 */
-  status: number;
-  /** 封禁/注销理由 */
-  statusReason?: string;
-  /** 用户类型：ADMIN 管理端 / APP 轻听App */
-  userType?: string;
-  /** 密码（仅创建时需要） */
-  password?: string;
-  /** 创建时间 */
-  createTime: string;
-  /** 更新时间 */
-  updateTime: string;
-}
-
-/** 角色实体接口 */
-interface Role {
-  /** 角色ID */
-  id: number;
-  /** 角色编码 */
-  roleCode: string;
-  /** 角色名称 */
-  roleName: string;
-}
-
-/** 用户管理API封装 */
-const userApi = {
-  /** 分页查询用户 */
-  getPage: (pageNum: number, pageSize: number, params?: Record<string, unknown>) =>
-    request.get('/api/v1/admin/system/user/page', {
-      params: { pageNum, pageSize, ...params },
-    }),
-  /** 创建用户 */
-  create: (data: Record<string, unknown>) => request.post('/api/v1/admin/system/user', data),
-  /** 更新用户 */
-  update: (id: number, data: Record<string, unknown>) =>
-    request.put(`/api/v1/admin/system/user/${id}`, data),
-  /** 删除用户 */
-  delete: (id: number) => request.delete(`/api/v1/admin/system/user/${id}`),
-  /** 重置用户密码 */
-  resetPassword: (id: number, password: string) =>
-    request.put(`/api/v1/admin/system/user/${id}/password`, { password }),
-  /** 更新用户状态（封禁时 reason 必填，后端校验；解封传空） */
-  updateStatus: (id: number, status: number, reason?: string) =>
-    request.put(`/api/v1/admin/system/user/${id}/status`, null, {
-      params: { status, reason: reason || undefined },
-    }),
-  /**
-   * 修改用户类型（ADMIN / APP）。
-   * 必须走这个专用接口：`PUT /{id}` 会在后端把 userType 置 null 防 mass assignment，
-   * 类型字段放在普通更新里会被静默丢弃（表现为下拉框改了但保存无效）。
-   */
-  changeType: (id: number, userType: string) =>
-    request.put(`/api/v1/admin/system/user/${id}/type`, { userType }),
-  /** 踢下线 */
-  kickOut: (id: number) => request.put(`/api/v1/admin/system/user/${id}/kick`),
-  /** 为用户分配角色 */
-  assignRoles: (id: number, roleIds: number[]) =>
-    request.put(`/api/v1/admin/system/user/${id}/roles`, { roleIds }),
-  /** 获取用户已有角色 */
-  getUserRoles: (id: number) => request.get<Role[]>(`/api/v1/admin/system/user/${id}/roles`),
-};
-
-/** 角色管理API封装 */
-const roleApi = {
-  /** 获取所有角色（用于角色分配下拉） */
-  getAll: () => request.get<Role[]>('/api/v1/admin/system/role/all'),
-};
 
 /**
  * 用户管理页面组件
@@ -124,7 +65,23 @@ const roleApi = {
  */
 export default function UserPage() {
   /** 加载状态 */
-  const [loading, setLoading] = useState(false);
+  const { loading, error: loadError, run: runLoad } = useAdminLoader('加载用户列表失败');
+  const {
+    loading: optionsLoading,
+    error: optionsError,
+    run: runOptions,
+  } = useAdminLoader('加载用户选项失败');
+  const {
+    loading: rolesLoading,
+    error: rolesError,
+    run: runUserRoles,
+    invalidate: invalidateUserRoles,
+  } = useAdminLoader('加载用户角色失败');
+  const { busy: saving, run: runMutation, isBusy } = useAdminMutation('用户操作失败');
+  const { busy: exporting, run: runExport } = useAdminMutation('导出用户失败');
+  const query = useAdminQuery({ current: 1, pageSize: 10, keyword: '', userType: '' });
+  const editorId = useRef<number | null>(null);
+  const [hydratedUserId, setHydratedUserId] = useState<number | null>(null);
   /** 用户列表数据 */
   const [data, setData] = useState<User[]>([]);
   /** 分页状态 */
@@ -144,19 +101,19 @@ export default function UserPage() {
   /** 所有角色列表 */
   const [roles, setRoles] = useState<Role[]>([]);
   /** 用户已有角色ID列表 */
-  const [_userRoles, setUserRoles] = useState<number[]>([]);
+  // Role assignment remains disabled until this specific user has hydrated successfully.
   /** 用户表单实例 */
-  const [form] = Form.useForm();
+  const [form] = Form.useForm<UserEditorWrite>();
   /** 封禁理由弹窗 */
   const [banModalOpen, setBanModalOpen] = useState(false);
   const [banTargetId, setBanTargetId] = useState<number | null>(null);
   const [banReason, setBanReason] = useState('');
   /** 新建用户表单实例 */
-  const [createForm] = Form.useForm();
+  const [createForm] = Form.useForm<UserCreateWrite>();
   /** 密码表单实例 */
-  const [passwordForm] = Form.useForm();
+  const [passwordForm] = Form.useForm<{ password: string }>();
   /** 角色表单实例 */
-  const [roleForm] = Form.useForm();
+  const [roleForm] = Form.useForm<{ roleIds: number[] }>();
   /** 用户类型枚举一律取数据字典 */
   const [dicts, setDicts] = useState<Record<string, DictOption[]>>({});
   const userTypeDict = dicts.user_type;
@@ -166,218 +123,268 @@ export default function UserPage() {
   const hasPerm = usePerm();
   /** 是否具备用户维护权限：权限码需与后端 @RequiresPermission("admin:system:user:edit") 一致 */
   const canEdit = hasPerm('admin:system:user:edit');
+  const isSuper = hasPerm('*:*:*');
 
-  /** 组件挂载时加载用户列表和角色列表 */
-  useEffect(() => {
-    loadData();
-    loadDicts();
-    roleApi.getAll().then((res) => {
-      if (res.code === 200) setRoles(res.data || []);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /** 加载数据字典（失败时回退显示原始值） */
-  const loadDicts = () => {
-    fetchDictOptions(['user_type'])
-      .then(setDicts)
-      .catch(() => {
-        /* 字典失败时回退显示原始值 */
+  const loadData = useCallback(
+    (page?: number, size?: number, keyword?: string, userType?: string) => {
+      const q = query.read({
+        ...(page === undefined ? {} : { current: page }),
+        ...(size === undefined ? {} : { pageSize: size }),
+        ...(keyword === undefined ? {} : { keyword }),
+        ...(userType === undefined ? {} : { userType }),
       });
-  };
-
-  /** 加载用户列表 */
-  const loadData = (page = 1, size = 10, keyword = '', utype = typeFilter) => {
-    setLoading(true);
-    const params: Record<string, unknown> = {};
-    if (keyword) params.username = keyword;
-    if (utype) params.userType = utype;
-    userApi
-      .getPage(page, size, params)
-      .then((res) => {
-        if (res.code === 200) {
-          setData(res.data?.records || []);
+      return runLoad(
+        async () => {
+          const value = requireAdminSuccess(
+            await userApi.getPage(q.current, q.pageSize, {
+              username: q.keyword || undefined,
+              userType: q.userType || undefined,
+            }),
+            '加载用户列表失败',
+          );
+          if (!value) throw new Error('用户分页数据缺失');
+          return value;
+        },
+        (value) => {
+          setData(value.records || []);
           setPagination({
-            current: res.data?.current || 1,
-            pageSize: res.data?.size || 10,
-            total: res.data?.total || 0,
+            current: value.current || q.current,
+            pageSize: value.size || q.pageSize,
+            total: value.total || 0,
           });
-        }
-      })
-      .finally(() => setLoading(false));
-  };
+        },
+      );
+    },
+    [query, runLoad],
+  );
+  const loadOptions = useCallback(
+    () =>
+      runOptions(
+        async () => {
+          const [map, response] = await Promise.all([
+            fetchDictOptions(['user_type', 'enable_status']),
+            isSuper ? roleApi.getAll() : Promise.resolve({ code: 200, data: [] as Role[] }),
+          ]);
+          const roleRows = requireAdminSuccess(response, '加载角色选项失败') || [];
+          if (!map.user_type?.length) throw new Error('用户类型字典暂无选项');
+          return { map, roleRows };
+        },
+        ({ map, roleRows }) => {
+          setDicts(map);
+          setRoles(roleRows);
+        },
+      ),
+    [runOptions, isSuper],
+  );
+  const loadUserRoles = useCallback(
+    (id: number) =>
+      runUserRoles(
+        async () => requireAdminSuccess(await userApi.getUserRoles(id), '加载用户角色失败') || [],
+        (rows) => {
+          if (editorId.current !== id) return;
+          roleForm.setFieldsValue({ roleIds: rows.map((row) => row.id) });
+          setHydratedUserId(id);
+        },
+      ),
+    [runUserRoles, roleForm],
+  );
+  useEffect(() => {
+    void loadData();
+    void loadOptions();
+  }, [loadData, loadOptions]);
 
   /** 打开新建用户弹窗 */
   const handleCreate = () => {
+    if (!isSuper || isBusy() || optionsLoading || optionsError) return;
     createForm.resetFields();
     createForm.setFieldsValue({ userType: 'ADMIN' });
     setCreateVisible(true);
   };
 
-  /** 打开编辑用户面板，加载基本信息、角色、密码重置默认 */
-  const openEdit = async (record: User) => {
+  const openEdit = (record: User) => {
+    if (!canEdit || isBusy()) return;
+    invalidateUserRoles();
+    editorId.current = record.id;
+    setHydratedUserId(null);
     setEditingUser(record);
-    form.setFieldsValue(record);
-    setActiveTab('info');
-    // 加载该用户已有角色
-    try {
-      const res = await userApi.getUserRoles(record.id);
-      if (res.code === 200) {
-        setUserRoles((res.data || []).map((r: Role) => r.id));
-        roleForm.setFieldsValue({ roleIds: (res.data || []).map((r: Role) => r.id) });
-      } else {
-        setUserRoles([]);
-        roleForm.setFieldsValue({ roleIds: [] });
-      }
-    } catch {
-      setUserRoles([]);
-      roleForm.setFieldsValue({ roleIds: [] });
-    }
+    form.resetFields();
+    form.setFieldsValue({ ...userProfilePayload(record), userType: record.userType });
+    roleForm.resetFields();
     passwordForm.resetFields();
+    setActiveTab('info');
     setEditVisible(true);
+    if (isSuper) void loadUserRoles(record.id);
+  };
+  const closeEditor = () => {
+    if (isBusy()) return;
+    editorId.current = null;
+    invalidateUserRoles();
+    setEditVisible(false);
+  };
+  const handleSubmitInfo = () => {
+    if (!canEdit || !editingUser) return;
+    const id = editingUser.id,
+      originalType = editingUser.userType;
+    return runMutation(
+      async () => {
+        const values = await form.validateFields();
+        if (editorId.current !== id) throw new Error('编辑目标已变化，请重新打开');
+        try {
+          return await saveUserProfile(id, values, originalType, isSuper);
+        } catch (failure: unknown) {
+          if (failure instanceof UserPartialSaveError && editorId.current === id) {
+            editorId.current = null;
+            invalidateUserRoles();
+            setEditVisible(false);
+            setEditingUser(null);
+          }
+          throw failure;
+        } finally {
+          void loadData();
+        }
+      },
+      ({ profile, userType, typeChanged }) => {
+        message.success(typeChanged ? '资料与用户类型已保存，该用户需重新登录' : '保存成功');
+        setEditingUser((current) =>
+          current?.id === id ? { ...current, ...profile, userType } : current,
+        );
+      },
+    );
   };
 
-  /** 提交编辑（基本信息 + 用户类型一并保存） */
-  const handleSubmitInfo = async () => {
-    if (!editingUser) return;
-    try {
-      const values = await form.validateFields();
-      // userType 不能混在普通更新里提交（后端会置 null 丢弃），必须单独走 /type 接口。
-      // 该接口是超管专属，且会踢掉目标用户会话使新类型立刻生效。
-      const { userType, ...profile } = values;
-      const typeChanged = userType && userType !== editingUser.userType;
-      await userApi.update(editingUser.id, profile);
-      if (typeChanged) {
-        await userApi.changeType(editingUser.id, userType);
-      }
-      message.success(typeChanged ? '保存成功，用户类型已变更（该用户需重新登录）' : '保存成功');
-      setEditingUser((prev) => (prev ? { ...prev, ...profile, userType } : prev));
-      loadData();
-    } catch (error: unknown) {
-      if ((error as { errorFields?: unknown })?.errorFields) return; // 表单校验失败
-      message.error((error as Error).message);
-    }
+  const handleCreateSubmit = () => {
+    if (!isSuper || optionsLoading || optionsError) return;
+    return runMutation(
+      async () =>
+        requireAdminSuccess(await userApi.create(await createForm.validateFields()), '创建失败'),
+      () => {
+        message.success('创建成功');
+        setCreateVisible(false);
+        void loadData();
+      },
+    );
   };
-
-  /** 创建用户 */
-  const handleCreateSubmit = async () => {
-    try {
-      const values = await createForm.validateFields();
-      await userApi.create(values);
-      message.success('创建成功');
-      setCreateVisible(false);
-      loadData();
-    } catch (error: unknown) {
-      if ((error as { errorFields?: unknown })?.errorFields) return;
-      message.error((error as Error).message);
-    }
+  const handleDelete = (id: number) => {
+    if (!isSuper) return;
+    return runMutation(
+      async () => requireAdminSuccess(await userApi.delete(id), '删除失败'),
+      () => {
+        message.success('删除成功');
+        if (editorId.current === id) {
+          editorId.current = null;
+          invalidateUserRoles();
+          setEditVisible(false);
+          setEditingUser(null);
+        }
+        void loadData();
+      },
+    );
   };
-
-  /** 删除用户 */
-  const handleDelete = async (id: number) => {
-    try {
-      await userApi.delete(id);
-      message.success('删除成功');
-      setEditVisible(false);
-      setEditingUser(null);
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleResetPasswordSubmit = () => {
+    if (!isSuper || !editingUser) return;
+    const id = editingUser.id;
+    return runMutation(
+      async () => {
+        const values = await passwordForm.validateFields();
+        if (editorId.current !== id) throw new Error('编辑目标已变化');
+        return requireAdminSuccess(
+          await userApi.resetPassword(id, values.password),
+          '密码重置失败',
+        );
+      },
+      () => {
+        message.success('密码重置成功');
+        if (editorId.current === id) passwordForm.resetFields();
+      },
+    );
   };
-
-  /** 提交密码重置 */
-  const handleResetPasswordSubmit = async () => {
-    if (!editingUser) return;
-    try {
-      const values = await passwordForm.validateFields();
-      await userApi.resetPassword(editingUser.id, values.password);
-      message.success('密码重置成功');
-      passwordForm.resetFields();
-    } catch (error: unknown) {
-      if ((error as { errorFields?: unknown })?.errorFields) return;
-      message.error((error as Error).message);
-    }
+  const handleUnban = (id: number) => {
+    if (!canEdit) return;
+    return runMutation(
+      async () => requireAdminSuccess(await userApi.updateStatus(id, 1), '启用失败'),
+      () => {
+        message.success('已启用');
+        setEditingUser((current) =>
+          current?.id === id ? { ...current, status: 1, statusReason: undefined } : current,
+        );
+        void loadData();
+      },
+    );
   };
-
-  /** 解封（无需理由） */
-  const handleUnban = async (id: number) => {
-    try {
-      await userApi.updateStatus(id, 1);
-      message.success('已启用');
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
-  };
-
-  /** 请求封禁：打开理由弹窗（封禁必填理由，后端强校验） */
   const requestBan = (id: number) => {
+    if (!canEdit || isBusy()) return;
     setBanTargetId(id);
     setBanReason('');
     setBanModalOpen(true);
   };
+  const handleBanSubmit = () => {
+    if (!canEdit || banTargetId === null) return;
+    const id = banTargetId,
+      reason = banReason.trim();
+    return runMutation(
+      async () => {
+        if (!reason) throw new Error('封禁必须填写理由');
+        return requireAdminSuccess(await userApi.updateStatus(id, 0, reason), '封禁失败');
+      },
+      () => {
+        message.success('已封禁并强制下线');
+        setBanModalOpen(false);
+        setEditingUser((current) =>
+          current?.id === id ? { ...current, status: 0, statusReason: reason } : current,
+        );
+        void loadData();
+      },
+    );
+  };
 
-  /** 提交封禁 */
-  const handleBanSubmit = async () => {
-    if (banTargetId == null) return;
-    if (!banReason.trim()) {
-      message.error('封禁必须填写理由');
+  /** Export the last applied query via the explicit shared-client binary contract. */
+  const handleExport = () => {
+    const snapshot = query.read();
+    return runExport(
+      async () => {
+        const blob = await userApi.exportCsv({
+          username: snapshot.keyword || undefined,
+          userType: snapshot.userType || undefined,
+        });
+        await downloadResponse(
+          new Response(blob, { headers: { 'Content-Type': blob.type } }),
+          `users-${new Date().toISOString().slice(0, 10)}.csv`,
+        );
+      },
+      () => message.success('已触发下载'),
+    );
+  };
+
+  const handleAssignRolesSubmit = () => {
+    if (
+      !isSuper ||
+      !editingUser ||
+      hydratedUserId !== editingUser.id ||
+      rolesLoading ||
+      optionsLoading ||
+      optionsError
+    )
       return;
-    }
-    try {
-      await userApi.updateStatus(banTargetId, 0, banReason.trim());
-      message.success('已封禁并强制下线');
-      setBanModalOpen(false);
-      loadData();
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+    const id = editingUser.id;
+    return runMutation(
+      async () => {
+        const values = await roleForm.validateFields();
+        if (editorId.current !== id) throw new Error('编辑目标已变化');
+        return requireAdminSuccess(
+          await userApi.assignRoles(id, values.roleIds || []),
+          '角色分配失败',
+        );
+      },
+      () => message.success('角色分配成功'),
+    );
   };
-
-  /** 导出用户 CSV（fetch 直连：axios 拦截器面向 Result 包装，二进制流绕行，同预签名直传） */
-  const handleExport = async () => {
-    try {
-      // 认证凭据走 HttpOnly Cookie（浏览器自动携带）；写语义请求必须回填 CSRF 头，
-      // 否则被后端双提交校验拦下。见 src/api/client.ts 的 readCsrfToken。
-      const headers: Record<string, string> = { ...clientHeaders() };
-      const csrf = readCsrfToken();
-      if (csrf) headers['X-CSRF-Token'] = csrf;
-      const resp = await fetch('/api/v1/admin/system/user/export', {
-        headers,
-        credentials: 'same-origin',
-      });
-      // 新契约下业务失败是 HTTP 200 + Result JSON，成功/失败判定交给 downloadResponse
-      await downloadResponse(resp, `users-${new Date().toISOString().slice(0, 10)}.csv`);
-      message.success('已导出');
-    } catch (error: unknown) {
-      message.error((error as Error).message || '导出失败');
-    }
-  };
-
-  /** 提交角色分配 */
-  const handleAssignRolesSubmit = async () => {
-    if (!editingUser) return;
-    try {
-      const values = await roleForm.validateFields();
-      await userApi.assignRoles(editingUser.id, values.roleIds || []);
-      setUserRoles(values.roleIds || []);
-      message.success('角色分配成功');
-    } catch (error: unknown) {
-      if ((error as { errorFields?: unknown })?.errorFields) return;
-      message.error((error as Error).message);
-    }
-  };
-
-  /** 踢下线 */
-  const handleKickOut = async () => {
-    if (!editingUser) return;
-    try {
-      await userApi.kickOut(editingUser.id);
-      message.success('已踢下线');
-    } catch (error: unknown) {
-      message.error((error as Error).message);
-    }
+  const handleKickOut = () => {
+    if (!canEdit || !editingUser) return;
+    const id = editingUser.id;
+    return runMutation(
+      async () => requireAdminSuccess(await userApi.kickOut(id), '踢下线失败'),
+      () => message.success('已踢下线'),
+    );
   };
 
   /** 表格列定义 */
@@ -405,9 +412,10 @@ export default function UserPage() {
         <Switch
           checked={v === 1}
           onChange={(checked) => (checked ? handleUnban(r.id) : requestBan(r.id))}
-          disabled={!canEdit}
-          checkedChildren="启用"
-          unCheckedChildren="禁用"
+          disabled={!canEdit || saving}
+          aria-label={`启用用户：${r.username}`}
+          checkedChildren={dictLabel(dicts.enable_status, 1, '1')}
+          unCheckedChildren={dictLabel(dicts.enable_status, 0, '0')}
         />
       ),
     },
@@ -427,7 +435,7 @@ export default function UserPage() {
             type="link"
             icon={<EditOutlined />}
             onClick={() => openEdit(r)}
-            disabled={!canEdit}
+            disabled={!canEdit || saving}
           >
             编辑
           </Button>
@@ -443,19 +451,27 @@ export default function UserPage() {
           key: 'info',
           label: '基本信息',
           children: (
-            <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
+            <Form form={form} disabled={saving} layout="vertical" style={{ marginTop: 8 }}>
               <Form.Item
                 name="userType"
                 label="用户类型"
-                extra="修改后保存可变更用户归属（管理端/App）"
+                extra={
+                  isSuper ? '修改后保存可变更用户归属（管理端/App）' : '类型变更仅限超级管理员'
+                }
               >
                 <Select
-                  disabled={editingUser.userType === 'ADMIN' && editingUser.username === 'admin'}
+                  disabled={
+                    !isSuper ||
+                    saving ||
+                    optionsLoading ||
+                    !!optionsError ||
+                    (editingUser.userType === 'ADMIN' && editingUser.username === 'admin')
+                  }
                   options={userTypeOptions}
                 />
               </Form.Item>
-              <Form.Item name="username" label="用户名">
-                <Input disabled />
+              <Form.Item label="用户名">
+                <Input value={editingUser.username} disabled />
               </Form.Item>
               <Form.Item name="nickname" label="昵称">
                 <Input />
@@ -470,7 +486,7 @@ export default function UserPage() {
                 <Input />
               </Form.Item>
               <Space>
-                <Button type="primary" onClick={handleSubmitInfo} disabled={!canEdit}>
+                <Button type="primary" onClick={handleSubmitInfo} disabled={!canEdit || saving}>
                   保存
                 </Button>
               </Space>
@@ -481,20 +497,43 @@ export default function UserPage() {
           key: 'roles',
           label: '角色',
           children: (
-            <Form form={roleForm} layout="vertical" style={{ marginTop: 8 }}>
-              <Form.Item
-                name="roleIds"
-                label="分配角色"
-                rules={[{ required: true, message: '请选择角色' }]}
-              >
+            <Form
+              form={roleForm}
+              disabled={
+                saving ||
+                rolesLoading ||
+                hydratedUserId !== editingUser.id ||
+                optionsLoading ||
+                !!optionsError
+              }
+              layout="vertical"
+              style={{ marginTop: 8 }}
+            >
+              {rolesLoading && <AdminLoadingNotice label="正在加载该用户角色…" />}
+              <AdminLoadNotice
+                error={rolesError}
+                hasData={false}
+                onRetry={() => void loadUserRoles(editingUser.id)}
+              />
+              <Form.Item name="roleIds" label="分配角色">
                 <Select
                   mode="multiple"
                   placeholder="选择角色"
                   options={roles.map((r) => ({ label: r.roleName, value: r.id }))}
                 />
               </Form.Item>
-              {/* 分配角色后端要求超管，前端不做门控 */}
-              <Button type="primary" onClick={handleAssignRolesSubmit}>
+              <Button
+                type="primary"
+                onClick={handleAssignRolesSubmit}
+                disabled={
+                  !isSuper ||
+                  saving ||
+                  rolesLoading ||
+                  hydratedUserId !== editingUser.id ||
+                  optionsLoading ||
+                  !!optionsError
+                }
+              >
                 保存角色
               </Button>
             </Form>
@@ -510,12 +549,15 @@ export default function UserPage() {
                 <div
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
-                  <span>{editingUser.status === 1 ? '当前状态：已启用' : '当前状态：已封禁'}</span>
+                  <span>
+                    当前状态：
+                    {dictLabel(dicts.enable_status, editingUser.status, String(editingUser.status))}
+                  </span>
                   {editingUser.status === 1 ? (
                     <Button
                       danger
                       icon={<LockOutlined />}
-                      disabled={!canEdit}
+                      disabled={!canEdit || saving}
                       onClick={() => requestBan(editingUser.id)}
                     >
                       封禁
@@ -524,55 +566,72 @@ export default function UserPage() {
                     <Button
                       icon={<DeleteOutlined />}
                       onClick={() => handleUnban(editingUser.id)}
-                      disabled={!canEdit}
+                      disabled={!canEdit || saving}
                     >
                       解封
                     </Button>
                   )}
                 </div>
                 {editingUser.status === 0 && (
-                  <div style={{ color: '#cf1322' }}>
+                  <div className="text-destructive">
                     封禁/注销理由：{editingUser.statusReason || '-'}
                   </div>
                 )}
-                <Button icon={<LoginOutlined />} onClick={handleKickOut} disabled={!canEdit}>
+                <Button
+                  icon={<LoginOutlined />}
+                  onClick={handleKickOut}
+                  disabled={!canEdit || saving}
+                >
                   踢下线
                 </Button>
               </Space>
 
-              <Divider />
-              <Typography.Title level={5}>重置密码</Typography.Title>
-              <Form form={passwordForm} layout="vertical">
-                <Form.Item
-                  name="password"
-                  label="新密码"
-                  rules={[{ required: true, min: 6, message: '密码至少6位' }]}
-                >
-                  <Input.Password />
-                </Form.Item>
-                {/* 重置密码后端要求超管，前端不做门控 */}
-                <Button icon={<KeyOutlined />} onClick={handleResetPasswordSubmit}>
-                  重置密码
-                </Button>
-              </Form>
+              {isSuper && (
+                <>
+                  <Divider />
+                  <Typography.Title level={5}>重置密码</Typography.Title>
+                  <Form form={passwordForm} disabled={saving} layout="vertical">
+                    <Form.Item
+                      name="password"
+                      label="新密码"
+                      rules={[
+                        { required: true, min: 8, message: '密码至少8位' },
+                        {
+                          pattern: /^(?=.*[a-zA-Z])(?=.*\d)\S+$/,
+                          message: '必须同时包含字母和数字',
+                        },
+                      ]}
+                    >
+                      <Input.Password />
+                    </Form.Item>
+                    <Button
+                      icon={<KeyOutlined />}
+                      onClick={handleResetPasswordSubmit}
+                      disabled={!isSuper || saving}
+                    >
+                      重置密码
+                    </Button>
+                  </Form>
 
-              <Divider />
-              <Typography.Title level={5} type="danger">
-                危险操作
-              </Typography.Title>
-              <Popconfirm
-                title="确认删除该用户?"
-                disabled={!canEdit}
-                onConfirm={() => handleDelete(editingUser.id)}
-              >
-                <Button danger icon={<DeleteOutlined />} disabled={!canEdit}>
-                  删除该用户
-                </Button>
-              </Popconfirm>
+                  <Divider />
+                  <Typography.Title level={5} type="danger">
+                    危险操作
+                  </Typography.Title>
+                  <Popconfirm
+                    title="确认删除该用户?"
+                    disabled={!canEdit || saving}
+                    onConfirm={() => handleDelete(editingUser.id)}
+                  >
+                    <Button danger icon={<DeleteOutlined />} disabled={!canEdit || saving}>
+                      删除该用户
+                    </Button>
+                  </Popconfirm>
+                </>
+              )}
             </div>
           ),
         },
-      ]
+      ].filter((item) => isSuper || item.key !== 'roles')
     : [];
 
   return (
@@ -584,19 +643,21 @@ export default function UserPage() {
             {/* 必须写回 search 状态，否则翻页时 loadData(p, ps, search) 传回空串、丢失搜索条件 */}
             <Input.Search
               placeholder="搜索用户名"
+              aria-label="搜索用户名"
               allowClear
               onChange={(e) => setSearch(e.target.value)}
               onSearch={(v) => {
                 setSearch(v);
                 loadData(1, pagination.pageSize, v);
               }}
-              style={{ width: 300 }}
+              className="w-full sm:w-[300px]"
             />
             <Select
               value={typeFilter}
               style={{ width: 140 }}
               allowClear
               placeholder="用户类型"
+              aria-label="筛选用户类型"
               options={userTypeOptions}
               onChange={(v) => {
                 setTypeFilter(v || '');
@@ -605,16 +666,32 @@ export default function UserPage() {
             />
           </div>
           <Space>
-            <Button icon={<DeleteOutlined />} onClick={handleExport}>
+            <Button
+              icon={<LoginOutlined />}
+              loading={exporting}
+              disabled={exporting || loading || !!loadError}
+              onClick={handleExport}
+            >
               导出 CSV
             </Button>
-            {canEdit && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            {isSuper && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreate}
+                disabled={saving || optionsLoading || !!optionsError}
+              >
                 新建用户
               </Button>
             )}
           </Space>
         </FilterBar>
+        <AdminLoadNotice
+          error={loadError}
+          hasData={data.length > 0}
+          onRetry={() => void loadData()}
+        />
+        <AdminOptionNotice error={optionsError} onRetry={() => void loadOptions()} />
         <ResizableTable
           dataSource={data}
           columns={columns}
@@ -623,7 +700,7 @@ export default function UserPage() {
           scroll={{ x: 'max-content' }}
           pagination={{
             ...pagination,
-            onChange: (p, ps) => loadData(p, ps, search),
+            onChange: (p, ps) => loadData(p, ps),
             showQuickJumper: true,
             showSizeChanger: true,
             pageSizeOptions: ['5', '10', '20', '50', '100'],
@@ -636,9 +713,14 @@ export default function UserPage() {
         title="新建用户"
         open={createVisible}
         onOk={handleCreateSubmit}
-        onCancel={() => setCreateVisible(false)}
+        confirmLoading={saving}
+        okButtonProps={{ disabled: !isSuper || optionsLoading || !!optionsError }}
+        cancelButtonProps={{ disabled: saving }}
+        onCancel={() => {
+          if (!isBusy()) setCreateVisible(false);
+        }}
       >
-        <Form form={createForm} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={createForm} disabled={saving} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="userType" label="用户类型" rules={[{ required: true }]}>
             <Select options={userTypeOptions} />
           </Form.Item>
@@ -675,9 +757,13 @@ export default function UserPage() {
         open={editVisible}
         width={760}
         footer={null}
-        onCancel={() => setEditVisible(false)}
+        onCancel={closeEditor}
       >
-        <Tabs activeKey={activeTab} onChange={setActiveTab} items={editTabItems} />
+        <Tabs
+          activeKey={!isSuper && activeTab === 'roles' ? 'info' : activeTab}
+          onChange={setActiveTab}
+          items={editTabItems}
+        />
       </Modal>
 
       {/* 封禁理由弹窗（封禁必填理由，后端强校验） */}
@@ -686,8 +772,12 @@ export default function UserPage() {
         open={banModalOpen}
         onOk={handleBanSubmit}
         okText="确认封禁"
-        okButtonProps={{ danger: true }}
-        onCancel={() => setBanModalOpen(false)}
+        confirmLoading={saving}
+        okButtonProps={{ danger: true, disabled: !canEdit }}
+        cancelButtonProps={{ disabled: saving }}
+        onCancel={() => {
+          if (!isBusy()) setBanModalOpen(false);
+        }}
       >
         <div style={{ marginTop: 16 }}>
           <div style={{ marginBottom: 8 }}>
@@ -695,6 +785,8 @@ export default function UserPage() {
           </div>
           <Input.TextArea
             rows={3}
+            aria-label="封禁理由"
+            disabled={saving}
             value={banReason}
             onChange={(e) => setBanReason(e.target.value)}
             placeholder="例如：违规使用 / 刷量 / 安全事件"

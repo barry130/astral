@@ -1,10 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Check, Download as IconDownload, X } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,762 +26,650 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useSession } from '@/components/session-provider';
-import { MarkdownEditor } from '@/components/markdown-editor';
+import { requestJson } from '@/lib/client-request';
+import { parseResult, resultMessage } from '@/lib/result';
+import { safeImageUrl } from '@/lib/url';
 import { cn } from '@/lib/utils';
+import {
+  flattenCategoryOptions,
+  getPageParentOptions,
+  parseEditorMeta,
+  parseEditorRecord,
+  validateContentSave,
+  type AdminPageRecord,
+  type AdminPostRecord,
+  type ContentKind,
+  type EditorMeta,
+} from '@/lib/editor';
 
-/**
- * 文章 / Wiki 页面的「就地编辑工作台」。
- *
- * 为什么不塞在正文卡片里：
- * - 正文卡片是 760px 的阅读宽度，长文改起来要一直横向滚动；
- * - 目录栏在编辑时是干扰，全屏工作台天然把它盖住；
- * - 后台的分类/标签/封面/发布设置原本要另开一个页面，来回切换容易丢改动。
- *
- * 所以编辑态切换成覆盖视口的工作台：左侧标题 + 大号正文编辑器（吃满剩余高度），
- * 右侧是后台那套结构化字段。保存仍走本站 Route Handler 转发到后端 Admin 接口，
- * 权限由后端 admin:cms:content:edit 二次校验。
- */
-
-type Kind = 'post' | 'page';
-
-interface ResultEnvelope<T> {
-  code?: number;
-  message?: string | null;
-  data?: T | null;
-}
-
-interface AdminPostRecord {
+const MarkdownEditor = dynamic(
+  () => import('@/components/markdown-editor').then((mod) => mod.MarkdownEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <p
+        role="status"
+        className="border-line bg-surface-muted text-ink-soft border border-dashed p-6 text-sm"
+      >
+        编辑器加载中…
+      </p>
+    ),
+  },
+);
+interface Props {
+  kind: ContentKind;
   id: number;
-  title: string;
-  slug: string | null;
-  summary: string | null;
-  content: string;
-  cover: string | null;
-  status: string;
-  isTop: boolean | null;
-  publishedAt: string | null;
-  categoryId: number | null;
-  categories?: Array<{ id: number; name: string }> | null;
-  tags?: Array<{ id: number; name: string }> | null;
-}
-
-interface AdminPageRecord {
-  id: number;
-  title: string;
-  slug: string | null;
-  content: string;
-  parentId: number | null;
-  sort: number | null;
-  status: string;
-  publishedAt: string | null;
-}
-
-interface CategoryNode {
-  id: number;
-  name: string;
-  parentId?: number | null;
-  children?: CategoryNode[] | null;
-}
-
-interface TagItem {
-  id: number;
-  name: string;
-}
-
-interface PageNode {
-  id: number;
-  title: string;
-  parentId?: number | null;
-  children?: PageNode[] | null;
-}
-
-interface MetaPayload {
-  categories: CategoryNode[];
-  tags: TagItem[];
-  pages: PageNode[];
-}
-
-interface FlatOption {
-  id: number;
-  label: string;
-  depth: number;
-}
-
-const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'published', label: '已发布' },
-  { value: 'private', label: '私密' },
-  { value: 'draft', label: '草稿' },
-  { value: 'hidden', label: '隐藏' },
-];
-
-/** 分类树摊平成带缩进的选项，label 是完整路径（子分类可能重名） */
-function flattenCategories(
-  nodes: CategoryNode[],
-  depth = 0,
-  path: string[] = [],
-  out: FlatOption[] = [],
-): FlatOption[] {
-  for (const node of nodes) {
-    const nextPath = [...path, node.name || `#${node.id}`];
-    out.push({ id: node.id, label: nextPath.join(' / '), depth });
-    if (node.children && node.children.length > 0) {
-      flattenCategories(node.children, depth + 1, nextPath, out);
-    }
-  }
-  return out;
-}
-
-/** 页面树摊平，用于选择父页面 */
-function flattenPages(
-  nodes: PageNode[],
-  depth = 0,
-  path: string[] = [],
-  out: FlatOption[] = [],
-): FlatOption[] {
-  for (const node of nodes) {
-    const nextPath = [...path, node.title || `#${node.id}`];
-    out.push({ id: node.id, label: nextPath.join(' / '), depth });
-    if (node.children && node.children.length > 0) {
-      flattenPages(node.children, depth + 1, nextPath, out);
-    }
-  }
-  return out;
-}
-
-/**
- * 收集某个页面自身及全部子孙 id：父页面下拉里必须排除，否则会成环。
- * 返回值只表示「本层子树里是否命中目标」，不能借用 acc 是否为空判断——
- * 那样先遍历到的兄弟分支命中后，后面无关分支也会被误加进来。
- */
-function collectPageIds(nodes: PageNode[], targetId: number, acc: Set<number>): boolean {
-  let found = false;
-  for (const node of nodes) {
-    const childHit = node.children ? collectPageIds(node.children, targetId, acc) : false;
-    if (node.id === targetId || childHit) {
-      acc.add(node.id);
-      found = true;
-    }
-  }
-  return found;
-}
-
-interface EditableArticleProps {
-  kind: Kind;
-  id: number;
-  /** 服务端渲染的正文区（阅读态原样展示） */
   children: React.ReactNode;
 }
+interface Draft {
+  title: string;
+  content: string;
+  status: string;
+  slug: string;
+  publishedAt: string | null;
+  summary: string;
+  cover: string;
+  isTop: boolean;
+  categoryIds: number[];
+  tagIds: number[];
+  parentId: number | null;
+  sort: number;
+}
+const EMPTY_META: EditorMeta = { categories: [], tags: [], pages: [], statuses: [] };
 
-export function EditableArticle({ kind, id, children }: EditableArticleProps) {
-  // 登录态统一由 layout 里的 SessionProvider 提供（服务端已经读 Cookie 算好了）。
-  // 这里不能再套一层 Provider：内层用默认值 false 会把外层登录态盖掉，
-  // 导致明明已登录却看不到「编辑」按钮。
-  return (
-    <EditableArticleInner kind={kind} id={id}>
-      {children}
-    </EditableArticleInner>
-  );
+/** Navigation gives each content record a distinct lifecycle and draft. */
+export function EditableArticle(props: Props) {
+  return <ArticleWorkbench key={`${props.kind}:${props.id}`} {...props} />;
 }
 
-function EditableArticleInner({ kind, id, children }: EditableArticleProps) {
+function ArticleWorkbench({ kind, id, children }: Props) {
   const { canEdit } = useSession();
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
+  const fieldId = useId();
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [baseline, setBaseline] = useState('');
+  const [meta, setMeta] = useState<EditorMeta>(EMPTY_META);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [bodyFullscreen, setBodyFullscreen] = useState(false);
+  const mounted = useRef(true);
+  const generation = useRef(0);
+  const loadingLock = useRef(false);
+  const savingLock = useRef(false);
+  const controller = useRef<AbortController | null>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const latestDraft = useRef(draft);
+  latestDraft.current = draft;
+  const editable = useRef(canEdit);
+  editable.current = canEdit;
+  const endpoint = `/api/admin/${kind}/${id}`;
+  const serialized = JSON.stringify(draft);
+  const dirty = draft !== null && serialized !== baseline;
 
-  // —— 表单字段 ——
-  const [title, setTitle] = useState('');
-  const [summary, setSummary] = useState('');
-  const [content, setContent] = useState('');
-  const [status, setStatus] = useState('published');
-  const [slug, setSlug] = useState('');
-  const [cover, setCover] = useState('');
-  const [isTop, setIsTop] = useState(false);
-  const [categoryIds, setCategoryIds] = useState<number[]>([]);
-  const [tagIds, setTagIds] = useState<number[]>([]);
-  const [parentId, setParentId] = useState<number | null>(null);
-  const [sort, setSort] = useState(0);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      generation.current += 1;
+      controller.current?.abort();
+    };
+  }, []);
+  useEffect(() => {
+    if (!dirty && !saving) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty, saving]);
 
-  // 未编辑的字段原样带回，避免保存时把发布时间等字段清空
-  const [snapshot, setSnapshot] = useState<AdminPostRecord | AdminPageRecord | null>(null);
-  // 用于判断「有没有未保存的改动」
-  const [baseline, setBaseline] = useState<string>('');
-
-  const [meta, setMeta] = useState<MetaPayload>({ categories: [], tags: [], pages: [] });
-
-  const endpoint = kind === 'post' ? `/api/admin/post/${id}` : `/api/admin/page/${id}`;
-
-  const applyRecord = useCallback((data: AdminPostRecord | AdminPageRecord) => {
-    const isPost = kind === 'post';
-    const post = data as AdminPostRecord;
-    const page = data as AdminPageRecord;
-    const nextCategories = isPost
-      ? (post.categories?.map((item) => item.id) ??
-        (post.categoryId != null ? [post.categoryId] : []))
-      : [];
-    const nextTags = isPost ? (post.tags?.map((item) => item.id) ?? []) : [];
-
-    setTitle(data.title ?? '');
-    setContent(data.content ?? '');
-    setStatus(data.status ?? 'published');
-    setSlug(data.slug ?? '');
-    setSummary(isPost ? (post.summary ?? '') : '');
-    setCover(isPost ? (post.cover ?? '') : '');
-    setIsTop(isPost ? Boolean(post.isTop) : false);
-    setCategoryIds(nextCategories);
-    setTagIds(nextTags);
-    setParentId(isPost ? null : page.parentId ?? null);
-    setSort(isPost ? 0 : page.sort ?? 0);
-
-    setBaseline(
-      JSON.stringify({
-        title: data.title ?? '',
-        content: data.content ?? '',
-        status: data.status ?? 'published',
-        slug: data.slug ?? '',
-        summary: isPost ? (post.summary ?? '') : '',
-        cover: isPost ? (post.cover ?? '') : '',
-        isTop: isPost ? Boolean(post.isTop) : false,
-        categoryIds: nextCategories,
-        tagIds: nextTags,
-        parentId: isPost ? null : page.parentId ?? null,
-        sort: isPost ? 0 : page.sort ?? 0,
-      }),
-    );
-  }, [kind]);
-
-  const startEditing = useCallback(async () => {
+  const load = useCallback(async () => {
+    if (loadingLock.current || savingLock.current || !editable.current) return;
+    loadingLock.current = true;
+    const current = ++generation.current;
+    controller.current?.abort();
+    controller.current = new AbortController();
     setLoading(true);
+    setError(null);
+    setMeta(EMPTY_META);
     try {
-      // 详情与基础数据一起拉：分类/标签/页面树只在打开工作台时用一次
-      const [detailRes, metaRes] = await Promise.all([
-        fetch(endpoint, { cache: 'no-store' }),
-        fetch('/api/admin/meta', { cache: 'no-store' }).catch(() => null),
+      const [detail, metadata] = await Promise.all([
+        requestJson(endpoint, { signal: controller.current.signal }),
+        requestJson('/api/admin/meta', { signal: controller.current.signal }),
       ]);
-
-      const body = (await detailRes.json().catch(() => null)) as ResultEnvelope<
-        AdminPostRecord | AdminPageRecord
-      > | null;
-      const data = body?.data;
-      if (!detailRes.ok || !data) {
-        toast.error(body?.message || '无法读取文章内容，请重新登录后再试。');
-        return;
-      }
-
-      if (metaRes && metaRes.ok) {
-        const metaBody = (await metaRes.json().catch(() => null)) as ResultEnvelope<MetaPayload> | null;
-        if (metaBody?.data) {
-          setMeta({
-            categories: metaBody.data.categories ?? [],
-            tags: metaBody.data.tags ?? [],
-            pages: metaBody.data.pages ?? [],
-          });
-        }
-      }
-
-      setSnapshot(data);
-      applyRecord(data);
-      setEditing(true);
-    } catch {
-      toast.error('网络异常，无法读取文章内容。');
+      if (!mounted.current || current !== generation.current || !editable.current) return;
+      const detailBody = parseResult(detail.body);
+      const metaBody = parseResult(metadata.body);
+      if (!detail.response.ok || detailBody?.code !== 200)
+        throw new Error(resultMessage(detailBody, '内容暂时无法读取，请重新登录或重试。'));
+      if (!metadata.response.ok || metaBody?.code !== 200)
+        throw new Error(resultMessage(metaBody, '编辑基础数据无法读取，请重试。'));
+      const record = parseEditorRecord(kind, detailBody.data);
+      const nextMeta = parseEditorMeta(metaBody.data);
+      if (!record || record.id !== id || !nextMeta)
+        throw new Error('内容或编辑基础数据格式异常，请重试。');
+      const post = kind === 'post' ? (record as AdminPostRecord) : null;
+      const page = kind === 'page' ? (record as AdminPageRecord) : null;
+      const categories = post?.categories?.map((category) => category.id) ?? [];
+      const next: Draft = {
+        title: record.title,
+        content: record.content,
+        status: record.status,
+        slug: record.slug ?? '',
+        publishedAt: record.publishedAt,
+        summary: post?.summary ?? '',
+        cover: post?.cover ?? '',
+        isTop: post?.isTop ?? false,
+        categoryIds: categories.length ? categories : post?.categoryId ? [post.categoryId] : [],
+        tagIds: post?.tags?.map((tag) => tag.id) ?? [],
+        parentId: page?.parentId ?? null,
+        sort: page?.sort ?? 0,
+      };
+      setMeta(nextMeta);
+      setDraft(next);
+      setBaseline(JSON.stringify(next));
+    } catch (failure) {
+      if (mounted.current && current === generation.current)
+        setError(failure instanceof Error ? failure.message : '网络异常，无法读取编辑内容。');
     } finally {
-      setLoading(false);
+      loadingLock.current = false;
+      if (mounted.current && current === generation.current) setLoading(false);
     }
-  }, [endpoint, applyRecord]);
+  }, [endpoint, kind, id]);
 
-  // 分类：带完整路径的扁平选项（子分类可重名，靠 path 区分）
-  const categoryOptions = useMemo(
-    () => flattenCategories(meta.categories),
-    [meta.categories],
-  );
-
-  // 页面：父页面下拉必须排除自身及全部子孙，否则会成环（后端也会拦，但别让用户先踩坑）
-  const pageOptions = useMemo(() => {
-    if (kind !== 'page') return [];
-    const excluded = new Set<number>();
-    collectPageIds(meta.pages, id, excluded);
-    return flattenPages(meta.pages).filter((option) => !excluded.has(option.id));
-  }, [kind, meta.pages, id]);
-
-  const currentState = useMemo(
-    () =>
-      JSON.stringify({
-        title,
-        content,
-        status,
-        slug,
-        summary,
-        cover,
-        isTop,
-        categoryIds,
-        tagIds,
-        parentId,
-        sort,
-      }),
-    [title, content, status, slug, summary, cover, isTop, categoryIds, tagIds, parentId, sort],
-  );
-  const dirty = editing && baseline !== '' && currentState !== baseline;
-
-  const cancel = useCallback(() => {
-    if (dirty && !window.confirm('有未保存的改动，确定放弃吗？')) {
-      return;
-    }
-    setEditing(false);
-    setSnapshot(null);
+  const close = useCallback(() => {
+    if (savingLock.current) return;
+    generation.current += 1;
+    controller.current?.abort();
+    setDraft(null);
+    setBodyFullscreen(false);
     setBaseline('');
-  }, [dirty]);
+    setConfirmDiscard(false);
+    setError(null);
+  }, []);
+  const cancel = useCallback(() => {
+    if (savingLock.current) return;
+    if (dirty) setConfirmDiscard(true);
+    else close();
+  }, [dirty, close]);
+  const categories = useMemo(() => flattenCategoryOptions(meta.categories), [meta.categories]);
+  const parents = useMemo(() => getPageParentOptions(meta.pages, id), [meta.pages, id]);
 
   const save = useCallback(async () => {
-    if (!snapshot || saving) return;
-    if (!title.trim() || !content.trim()) {
-      toast.error('标题和正文不能为空。');
+    if (savingLock.current || !draft || !editable.current || confirmDiscard) return;
+    if (
+      kind === 'page' &&
+      draft.parentId != null &&
+      !parents.some((option) => option.id === draft.parentId)
+    ) {
+      setError('父页面无效或已不在目录中，请重新选择；当前草稿已保留。');
       return;
     }
-
-    // 后端要求提交完整 DTO：未在表单里的字段必须回传原值
-    const payload =
-      kind === 'post'
-        ? {
-            title: title.trim(),
-            slug: slug.trim() || null,
-            summary: summary.trim() || null,
-            content,
-            cover: cover.trim() || null,
-            status,
-            isTop,
-            publishedAt: (snapshot as AdminPostRecord).publishedAt,
-            // 多分类为唯一写入源；categoryId 冗余成主分类，兼容旧读取方
-            categoryIds,
-            categoryId: categoryIds[0] ?? null,
-            tagIds,
-          }
-        : {
-            title: title.trim(),
-            slug: slug.trim() || null,
-            content,
-            parentId,
-            sort,
-            status,
-            publishedAt: (snapshot as AdminPageRecord).publishedAt,
-          };
-
+    const payload = validateContentSave(kind, draft, id);
+    if (!payload.ok) {
+      setError(payload.error);
+      return;
+    }
+    savingLock.current = true;
+    const current = generation.current;
+    const submitted = JSON.stringify(draft);
+    controller.current = new AbortController();
     setSaving(true);
+    setError(null);
     try {
-      const res = await fetch(endpoint, {
+      const { response, body: raw } = await requestJson(endpoint, {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload.data),
+        signal: controller.current.signal,
       });
-      const body = (await res.json().catch(() => null)) as ResultEnvelope<unknown> | null;
-      if (!res.ok || body?.code !== 200) {
-        toast.error(body?.message || '保存失败，请稍后重试。');
+      if (!mounted.current || current !== generation.current) return;
+      const body = parseResult(raw);
+      if (!response.ok || body?.code !== 200)
+        throw new Error(resultMessage(body, '保存结果无法确认，请核对后再重试；草稿已保留。'));
+      if (!editable.current) {
+        setError('会话已变化，请重新登录后核对保存结果；草稿已保留。');
         return;
       }
-      toast.success('已保存');
-      setEditing(false);
-      setSnapshot(null);
-      setBaseline('');
-      // 重新拉服务端数据：正文 HTML 与目录都需要重新生成
+      if (JSON.stringify(latestDraft.current) !== submitted) {
+        setBaseline(submitted);
+        setError('提交版本已保存，当前的新修改尚未保存。');
+      } else {
+        setDraft(null);
+        setBodyFullscreen(false);
+        setBaseline('');
+        toast.success('已保存');
+      }
       router.refresh();
-    } catch {
-      toast.error('网络异常，保存失败。');
+    } catch (failure) {
+      if (mounted.current && current === generation.current)
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : '保存结果无法确认，请核对后再重试；草稿已保留。',
+        );
     } finally {
-      setSaving(false);
+      savingLock.current = false;
+      if (mounted.current && current === generation.current) setSaving(false);
     }
-  }, [
-    snapshot, saving, title, content, summary, status, kind, endpoint, router,
-    slug, cover, isTop, categoryIds, tagIds, parentId, sort,
-  ]);
+  }, [draft, kind, id, parents, endpoint, router, confirmDiscard]);
 
-  // 工作台快捷键：Ctrl/Cmd+S 保存、Esc 关闭
   useEffect(() => {
-    if (!editing) return;
-    const onKeyDown = (event: KeyboardEvent) => {
+    if (!draft) return;
+    const shortcut = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        void save();
-      } else if (event.key === 'Escape') {
-        // 弹层（下拉/对话框）自己会先吃掉 Esc，这里只在没有弹层时生效
-        if (document.querySelector('[data-state="open"][role="dialog"], [data-radix-popper-content-wrapper]')) {
-          return;
-        }
-        cancel();
+        const layer =
+          event.target instanceof Element
+            ? event.target.closest('[data-slot="dialog-content"]')
+            : null;
+        if (!event.isComposing && layer?.hasAttribute('data-article-editor')) void save();
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [editing, save, cancel]);
+    window.addEventListener('keydown', shortcut);
+    return () => window.removeEventListener('keydown', shortcut);
+  }, [draft, save]);
 
-  if (!canEdit) {
-    return <div className="relative">{children}</div>;
-  }
+  const update = <K extends keyof Draft>(key: K, value: Draft[K]) => {
+    if (!savingLock.current)
+      setDraft((previous) => (previous ? { ...previous, [key]: value } : null));
+  };
+  const toggle = (key: 'categoryIds' | 'tagIds', value: number) => {
+    if (!draft) return;
+    update(
+      key,
+      draft[key].includes(value)
+        ? draft[key].filter((item) => item !== value)
+        : [...draft[key], value],
+    );
+  };
+  const statuses =
+    draft && !meta.statuses.some((option) => option.value === draft.status)
+      ? [...meta.statuses, { value: draft.status, label: draft.status }]
+      : meta.statuses;
+  const coverUrl = safeImageUrl(draft?.cover);
 
   return (
     <div className="relative">
-      {editing ? null : (
-        <div className="absolute right-0 top-0 z-10 flex items-center gap-0.5">
-          {/* 阅读态也能导出：只要求 canEdit，进了工作台就不用先点「编辑」 */}
+      {!draft && canEdit ? (
+        <div className="mb-3 flex justify-end gap-2">
           <a
             href={`/api/admin/export/${kind}/${id}`}
-            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[12px] text-ink-faint transition-colors hover:text-brand max-sm:h-11 max-sm:px-3"
-            title="导出为 Markdown 文件"
+            className="text-ink-soft hover:text-brand inline-flex min-h-9 items-center gap-1 rounded px-2 text-sm"
           >
-            <IconDownload className="size-3.5" />
+            <Download className="size-4" aria-hidden />
             导出
           </a>
           <Button
+            ref={editButton}
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => {
-              void startEditing();
-            }}
+            onClick={() => void load()}
             disabled={loading}
-            className="h-7 px-2 text-[12px] text-ink-faint hover:text-brand max-sm:h-11"
           >
             {loading ? '读取中…' : '编辑'}
           </Button>
         </div>
-      )}
-
+      ) : null}
+      {!draft && error ? (
+        <p role="alert" className="text-destructive mb-4 text-sm">
+          {error}
+        </p>
+      ) : null}
       {children}
-
-      {editing ? (
-        <div className="fixed inset-0 z-50 flex flex-col bg-canvas">
-          {/* 顶栏：标题 + 脏标记 + 取消/保存 */}
-          <header className="safe-top flex shrink-0 items-center gap-3 border-b border-line bg-surface px-4 py-2.5 sm:px-6">
-            <span className="shrink-0 text-[12px] font-medium uppercase tracking-[0.12em] text-ink-faint">
-              {kind === 'post' ? '编辑文章' : '编辑页面'}
-            </span>
-            <span className="min-w-0 truncate text-[13px] text-ink-soft">
-              {title || '未命名'}
-            </span>
-            {dirty ? (
-              <span className="shrink-0 rounded-full border border-line-strong bg-surface-muted px-2 py-0.5 text-[10.5px] text-ink-soft">
-                未保存
-              </span>
-            ) : null}
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-              <span className="hidden text-[11px] text-ink-faint sm:inline">
-                Ctrl/Cmd + S 保存 · Esc 关闭
-              </span>
-              {/* 导出当前内容为 Markdown：走本站转发，携带登录 Cookie */}
-              <a
-                href={`/api/admin/export/${kind}/${id}`}
-                className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-[12px] text-ink-soft transition-colors hover:bg-surface-muted hover:text-ink"
-                title="导出为 Markdown 文件"
-              >
-                <IconDownload className="size-3.5" />
-                导出
-              </a>
-              <Button type="button" variant="ghost" size="sm" onClick={cancel} disabled={saving}>
-                取消
-              </Button>
-              <Button type="button" size="sm" onClick={() => void save()} disabled={saving}>
-                {saving ? '保存中…' : '保存'}
-              </Button>
-            </div>
-          </header>
-
-          {/* 主体：左正文（吃满高度）+ 右字段面板 */}
-          <div className="safe-bottom flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-5 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:overflow-hidden">
-            <div className="flex min-h-0 flex-1 flex-col gap-3">
-              <input
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="标题"
-                aria-label="标题"
-                className="w-full shrink-0 rounded-lg border border-line bg-surface px-3.5 py-2.5 text-[17px] font-semibold tracking-[-0.01em] text-ink outline-none transition-colors placeholder:font-normal placeholder:text-ink-faint focus:border-brand-line"
-              />
-              <div className="min-h-[55vh] flex-1 lg:min-h-0">
-                <MarkdownEditor
-                  fill
-                  value={content}
-                  onChange={setContent}
-                  placeholder="支持 Markdown：标题、列表、代码块、表格、图片、引用……"
-                />
+      <Dialog
+        open={draft !== null}
+        onOpenChange={(open) => {
+          if (!open) cancel();
+        }}
+      >
+        {draft ? (
+          <DialogContent
+            data-article-editor
+            showCloseButton={false}
+            className="safe-bottom bg-canvas fixed inset-0 flex h-dvh max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:max-w-none"
+            onEscapeKeyDown={(event) => {
+              // Radix owns a document-level Escape listener before textarea bubbling.
+              // Body mode must exit first, never close/discard the article behind it.
+              if (savingLock.current || bodyFullscreen) event.preventDefault();
+            }}
+            onInteractOutside={(event) => event.preventDefault()}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              editButton.current?.focus();
+            }}
+          >
+            <header
+              hidden={bodyFullscreen}
+              inert={bodyFullscreen}
+              className={
+                bodyFullscreen
+                  ? 'hidden'
+                  : 'safe-top border-line bg-surface flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3 sm:px-6'
+              }
+            >
+              <DialogTitle className="text-sm font-medium">
+                {kind === 'post' ? '编辑文章' : '编辑页面'}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Markdown 正文与发布属性工作台。保存期间不能关闭或修改字段；取消修改需要确认。
+              </DialogDescription>
+              {dirty ? <span className="text-ink-soft text-xs">未保存</span> : null}
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-ink-faint hidden text-xs sm:inline">Ctrl/Cmd + S 保存</span>
+                <Button type="button" variant="ghost" size="sm" disabled={saving} onClick={cancel}>
+                  取消
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={saving || !canEdit}
+                  onClick={() => void save()}
+                >
+                  {saving ? '保存中…' : '保存'}
+                </Button>
               </div>
-            </div>
-
-            <aside className="flex shrink-0 flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-0.5">
-              <PanelCard title="发布">
-                <div className="space-y-1.5">
-                  <Label className="text-[11.5px] text-ink-soft">状态</Label>
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger className="h-8 w-full text-[12.5px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          className="text-[12.5px]"
-                        >
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            </header>
+            {!canEdit ? (
+              <p
+                role="alert"
+                className="border-line bg-surface text-destructive border-b px-4 py-2 text-sm"
+              >
+                会话暂时不可编辑；当前草稿保留，请复制或重新登录后核对。
+              </p>
+            ) : null}
+            {error ? (
+              <p role="alert" className="border-line text-destructive border-b px-4 py-2 text-sm">
+                {error}
+              </p>
+            ) : null}
+            <div
+              aria-busy={saving}
+              className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-5 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:overflow-hidden"
+            >
+              <section className="flex shrink-0 flex-col gap-3 lg:min-h-0" aria-label="正文编辑">
+                <div hidden={bodyFullscreen} inert={bodyFullscreen}>
+                  <Field label="标题" htmlFor={`${fieldId}-title`}>
+                    <Input
+                      id={`${fieldId}-title`}
+                      aria-label="标题"
+                      autoFocus
+                      maxLength={256}
+                      disabled={saving}
+                      value={draft.title}
+                      onChange={(event) => update('title', event.target.value)}
+                      className="h-11 text-base font-semibold"
+                    />
+                  </Field>
                 </div>
-
-                {kind === 'post' ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="edit-top" className="cursor-pointer text-[12px] text-ink-body">
-                        置顶
-                      </Label>
-                      <p className="text-[11px] text-ink-faint">排在文章列表前面</p>
-                    </div>
-                    <Switch id="edit-top" checked={isTop} onCheckedChange={setIsTop} />
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-1.5">
-                      <Label className="text-[11.5px] text-ink-soft">父页面</Label>
-                      <Select
-                        value={parentId == null ? '__root__' : String(parentId)}
-                        onValueChange={(value) =>
-                          setParentId(value === '__root__' ? null : Number(value))
-                        }
-                      >
-                        <SelectTrigger className="h-8 w-full text-[12.5px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__root__" className="text-[12.5px]">
-                            根页面
-                          </SelectItem>
-                          {pageOptions.map((option) => (
-                            <SelectItem
-                              key={option.id}
-                              value={String(option.id)}
-                              className="text-[12.5px]"
-                            >
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="edit-sort" className="text-[11.5px] text-ink-soft">
-                        排序（越小越靠前）
-                      </Label>
-                      <Input
-                        id="edit-sort"
-                        type="number"
-                        value={sort}
-                        onChange={(event) => setSort(Number(event.target.value) || 0)}
-                        className="h-8 text-[12.5px]"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-slug" className="text-[11.5px] text-ink-soft">
-                    URL 别名
-                  </Label>
-                  <Input
-                    id="edit-slug"
-                    value={slug}
-                    onChange={(event) => setSlug(event.target.value)}
-                    placeholder="留空则按 ID 访问"
-                    className="h-8 text-[12.5px]"
+                <div className="min-h-[55vh] flex-1 lg:min-h-0">
+                  <MarkdownEditor
+                    fill
+                    onFullscreenChange={setBodyFullscreen}
+                    disabled={saving}
+                    value={draft.content}
+                    onChange={(value) => update('content', value)}
+                    placeholder="支持 Markdown：标题、列表、代码块、表格、图片、引用……"
                   />
                 </div>
-              </PanelCard>
-
-              {kind === 'post' ? (
-                <>
-                  <PanelCard title="摘要">
-                    <Textarea
-                      value={summary}
-                      onChange={(event) => setSummary(event.target.value)}
-                      rows={3}
-                      placeholder="留空则由后端按正文生成"
-                      className="text-[12px] leading-relaxed"
-                    />
-                  </PanelCard>
-
-                  <PanelCard title="封面图">
+              </section>
+              <aside
+                hidden={bodyFullscreen}
+                inert={bodyFullscreen}
+                className="space-y-4 lg:min-h-0 lg:overflow-y-auto lg:pr-1"
+                aria-label="发布属性"
+              >
+                <Panel title="发布">
+                  <Field label="状态" htmlFor={`${fieldId}-status`}>
+                    <Select
+                      value={draft.status}
+                      disabled={saving}
+                      onValueChange={(value) => update('status', value)}
+                    >
+                      <SelectTrigger id={`${fieldId}-status`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statuses.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {meta.statuses.length === 0 ? (
+                      <p className="text-ink-faint text-xs">状态字典未配置，仅保留当前原值。</p>
+                    ) : null}
+                  </Field>
+                  {kind === 'post' ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <Label htmlFor={`${fieldId}-top`}>置顶文章</Label>
+                      <Switch
+                        id={`${fieldId}-top`}
+                        disabled={saving}
+                        checked={draft.isTop}
+                        onCheckedChange={(value) => update('isTop', value)}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <Field label="父页面" htmlFor={`${fieldId}-parent`}>
+                        <Select
+                          value={draft.parentId == null ? '__root__' : String(draft.parentId)}
+                          disabled={saving}
+                          onValueChange={(value) =>
+                            update('parentId', value === '__root__' ? null : Number(value))
+                          }
+                        >
+                          <SelectTrigger id={`${fieldId}-parent`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__root__">根页面</SelectItem>
+                            {parents.map((option) => (
+                              <SelectItem key={option.id} value={String(option.id)}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                            {draft.parentId != null &&
+                            !parents.some((option) => option.id === draft.parentId) ? (
+                              <SelectItem value={String(draft.parentId)} disabled>
+                                #{draft.parentId}（不可选）
+                              </SelectItem>
+                            ) : null}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field label="排序（整数，越小越靠前）" htmlFor={`${fieldId}-sort`}>
+                        <Input
+                          id={`${fieldId}-sort`}
+                          type="number"
+                          step={1}
+                          min={-2147483648}
+                          max={2147483647}
+                          disabled={saving}
+                          value={Number.isFinite(draft.sort) ? draft.sort : ''}
+                          onChange={(event) =>
+                            update(
+                              'sort',
+                              event.target.value === '' ? NaN : Number(event.target.value),
+                            )
+                          }
+                        />
+                      </Field>
+                    </>
+                  )}
+                  <Field label="URL 别名" htmlFor={`${fieldId}-slug`}>
                     <Input
-                      value={cover}
-                      onChange={(event) => setCover(event.target.value)}
-                      placeholder="https://…"
-                      className="h-8 text-[12px]"
+                      id={`${fieldId}-slug`}
+                      maxLength={128}
+                      disabled={saving}
+                      value={draft.slug}
+                      onChange={(event) => update('slug', event.target.value)}
+                      placeholder="留空则按 ID 访问"
                     />
-                    {cover.trim() ? (
-                      <div className="overflow-hidden rounded-md border border-line-soft bg-surface-muted">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- 封面来自任意图床，不进 next/image 白名单 */}
+                  </Field>
+                  <p className="text-ink-faint text-xs">
+                    发布时间：{draft.publishedAt || '未发布'}（原值保留）
+                  </p>
+                </Panel>
+                {kind === 'post' ? (
+                  <>
+                    <Panel title="摘要与封面">
+                      <Field label="摘要" htmlFor={`${fieldId}-summary`}>
+                        <Textarea
+                          id={`${fieldId}-summary`}
+                          maxLength={512}
+                          rows={3}
+                          disabled={saving}
+                          value={draft.summary}
+                          onChange={(event) => update('summary', event.target.value)}
+                        />
+                      </Field>
+                      <Field label="封面图片 URL" htmlFor={`${fieldId}-cover`}>
+                        <Input
+                          id={`${fieldId}-cover`}
+                          maxLength={512}
+                          disabled={saving}
+                          value={draft.cover}
+                          onChange={(event) => update('cover', event.target.value)}
+                          placeholder="https://…"
+                        />
+                      </Field>
+                      {coverUrl ? (
                         <img
-                          src={cover}
+                          src={coverUrl}
                           alt="封面预览"
                           referrerPolicy="no-referrer"
-                          className="block max-h-28 w-full object-cover"
+                          className="max-h-32 w-full rounded object-cover"
                         />
-                      </div>
-                    ) : null}
-                  </PanelCard>
-
-                  <PanelCard
-                    title="分类"
-                    hint={categoryIds.length > 0 ? `${categoryIds.length} 个` : '未分类'}
-                  >
-                    {categoryOptions.length === 0 ? (
-                      <p className="text-[11.5px] text-ink-faint">暂无分类</p>
-                    ) : (
-                      <>
-                        {categoryIds.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {categoryIds.map((cid, index) => (
-                              <span
-                                key={cid}
-                                className={cn(
-                                  'flex max-w-full items-center gap-1 rounded border py-0.5 pl-1.5 pr-1 text-[11px]',
-                                  index === 0
-                                    ? 'border-brand-line bg-brand-wash text-brand'
-                                    : 'border-line text-ink-soft',
-                                )}
-                              >
-                                <span className="truncate">
-                                  {categoryLabelOf(cid)}
-                                </span>
-                                {index === 0 ? (
-                                  <span className="shrink-0 text-[10px] text-ink-faint">主</span>
-                                ) : null}
-                                <button
-                                  type="button"
-                                  aria-label={`移除分类 ${cid}`}
-                                  className="shrink-0 rounded p-0.5 transition-colors hover:bg-surface hover:text-ink"
-                                  onClick={() => toggleCategory(cid)}
-                                >
-                                  <X className="h-2.5 w-2.5" />
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        <div className="max-h-52 space-y-0.5 overflow-y-auto rounded-md border border-line-soft bg-canvas p-1">
-                          {categoryOptions.map((option) => {
-                            const selected = categoryIds.includes(option.id);
-                            return (
-                              <button
-                                key={option.id}
-                                type="button"
-                                role="checkbox"
-                                aria-checked={selected}
-                                title={option.label}
-                                onClick={() => toggleCategory(option.id)}
-                                style={{ paddingLeft: `${option.depth * 12 + 6}px` }}
-                                className={cn(
-                                  'flex w-full items-center gap-1.5 rounded py-1 pr-1.5 text-left text-[12px] transition-colors',
-                                  selected
-                                    ? 'bg-brand-wash text-brand'
-                                    : 'text-ink-soft hover:bg-surface-muted hover:text-ink',
-                                )}
-                              >
-                                <span
-                                  className={cn(
-                                    'flex size-3 shrink-0 items-center justify-center rounded-[3px] border',
-                                    selected
-                                      ? 'border-brand bg-brand text-white'
-                                      : 'border-line-strong',
-                                  )}
-                                >
-                                  {selected ? <Check className="h-2 w-2" strokeWidth={3} /> : null}
-                                </span>
-                                <span className="truncate">
-                                  {option.label.split(' / ').pop()}
-                                </span>
-                                {categoryIds[0] === option.id ? (
-                                  <span className="ml-auto shrink-0 text-[10px] text-ink-faint">
-                                    主
-                                  </span>
-                                ) : null}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
-                    )}
-                  </PanelCard>
-
-                  <PanelCard
-                    title="标签"
-                    hint={tagIds.length > 0 ? `${tagIds.length} 个` : '无'}
-                  >
-                    {meta.tags.length === 0 ? (
-                      <p className="text-[11.5px] text-ink-faint">暂无可选标签</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {meta.tags.map((tag) => {
-                          const selected = tagIds.includes(tag.id);
-                          return (
-                            <button
-                              key={tag.id}
-                              type="button"
-                              onClick={() =>
-                                setTagIds((prev) =>
-                                  prev.includes(tag.id)
-                                    ? prev.filter((item) => item !== tag.id)
-                                    : [...prev, tag.id],
-                                )
-                              }
-                              className={cn(
-                                'rounded-full border px-2 py-0.5 text-[11.5px] transition-colors',
-                                selected
-                                  ? 'border-brand-line bg-brand-wash text-brand'
-                                  : 'border-line text-ink-soft hover:border-line-strong hover:text-ink',
-                              )}
+                      ) : null}
+                      {draft.cover.trim() && !coverUrl ? (
+                        <p className="text-destructive text-xs">封面 URL 无效，不加载预览。</p>
+                      ) : null}
+                    </Panel>
+                    <Panel title="分类">
+                      <p className="text-ink-faint text-xs">
+                        首个选中项为主分类。取消再勾选可调整顺序。
+                      </p>
+                      {draft.categoryIds.length ? (
+                        <p className="text-ink-soft text-xs break-words">
+                          已选：
+                          {draft.categoryIds
+                            .map(
+                              (value) =>
+                                categories.find((option) => option.id === value)?.label ??
+                                `#${value}`,
+                            )
+                            .join(' · ')}
+                        </p>
+                      ) : null}
+                      {categories.length ? (
+                        <div className="max-h-56 space-y-1 overflow-y-auto">
+                          {categories.map((option) => (
+                            <label
+                              key={option.id}
+                              className="flex min-h-9 cursor-pointer items-center gap-2 text-sm"
+                              style={{ paddingLeft: option.depth * 12 }}
                             >
-                              {tag.name}
-                            </button>
-                          );
-                        })}
+                              <input
+                                type="checkbox"
+                                disabled={saving}
+                                checked={draft.categoryIds.includes(option.id)}
+                                onChange={() => toggle('categoryIds', option.id)}
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-ink-faint text-sm">
+                          暂无可选分类；已有选择不会自动清空。
+                        </p>
+                      )}
+                    </Panel>
+                    <Panel title="标签">
+                      <div className="flex flex-wrap gap-2">
+                        {meta.tags.map((tag) => (
+                          <Button
+                            key={tag.id}
+                            type="button"
+                            variant={draft.tagIds.includes(tag.id) ? 'secondary' : 'outline'}
+                            size="sm"
+                            aria-pressed={draft.tagIds.includes(tag.id)}
+                            disabled={saving}
+                            onClick={() => toggle('tagIds', tag.id)}
+                          >
+                            {tag.name}
+                          </Button>
+                        ))}
                       </div>
-                    )}
-                  </PanelCard>
-                </>
-              ) : null}
-            </aside>
-          </div>
-        </div>
-      ) : null}
+                      {draft.tagIds
+                        .filter((value) => !meta.tags.some((tag) => tag.id === value))
+                        .map((value) => (
+                          <p key={value} className="text-ink-faint text-xs">
+                            保留标签 #{value}
+                          </p>
+                        ))}
+                      {!meta.tags.length ? (
+                        <p className="text-ink-faint text-sm">
+                          暂无可选标签；已有选择不会自动清空。
+                        </p>
+                      ) : null}
+                    </Panel>
+                  </>
+                ) : null}
+              </aside>
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
+      <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle>放弃未保存的修改？</DialogTitle>
+            <DialogDescription>
+              关闭工作台后，当前草稿会丢失。保存中的请求不能在这里取消。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setConfirmDiscard(false)}>
+              继续编辑
+            </Button>
+            <Button type="button" variant="destructive" disabled={saving} onClick={close}>
+              放弃修改
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-
-  function toggleCategory(cid: number) {
-    setCategoryIds((prev) =>
-      prev.includes(cid) ? prev.filter((item) => item !== cid) : [...prev, cid],
-    );
-  }
-
-  function categoryLabelOf(cid: number) {
-    return categoryOptions.find((option) => option.id === cid)?.label ?? `#${cid}`;
-  }
 }
 
-/** 右侧字段面板的单张卡片 */
-function PanelCard({
-  title,
-  hint,
+function Field({
+  label,
+  htmlFor,
   children,
 }: {
-  title: string;
-  hint?: string;
+  label: string;
+  htmlFor: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-2.5 rounded-lg border border-line bg-surface p-3.5">
-      <div className="flex items-baseline justify-between gap-2 border-b border-line-soft pb-1.5">
-        <h2 className="text-[11.5px] font-medium uppercase tracking-[0.1em] text-ink-faint">
-          {title}
-        </h2>
-        {hint ? <span className="text-[10.5px] tabular-nums text-ink-faint">{hint}</span> : null}
-      </div>
+    <div className="space-y-1.5">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+    </div>
+  );
+}
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className={cn('border-line bg-surface space-y-3 rounded-md border p-4')}>
+      <h2 className="border-line-soft text-ink border-b pb-2 text-sm font-medium">{title}</h2>
       {children}
     </section>
   );

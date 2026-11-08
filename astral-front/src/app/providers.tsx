@@ -1,6 +1,20 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from 'react';
+import {
+  getServerThemeSnapshot,
+  getThemeSnapshot,
+  setThemePreference,
+  subscribeThemePreference,
+  type ThemeMode,
+} from '@/lib/theme-preference';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 
@@ -10,27 +24,8 @@ import { Toaster } from '@/components/ui/sonner';
 
 /** 移动端断点（与 globals.css 的 @media 断点保持一致） */
 const MOBILE_QUERY = '(max-width: 768px)';
-/** 系统「深色外观」偏好 */
-const SYSTEM_DARK_QUERY = '(prefers-color-scheme: dark)';
-/** 主题持久化键 */
-const THEME_STORAGE_KEY = 'astral:theme';
-
-type ThemeMode = 'light' | 'dark';
-
 /** dayjs 中文语言包（业务侧日期格式化本地化） */
 dayjs.locale('zh-cn');
-
-/** 从 localStorage / 系统偏好读取初始主题（SSR 阶段返回 light，避免水合不一致） */
-const getInitialThemeMode = (): ThemeMode => {
-  if (typeof window === 'undefined') return 'light';
-  try {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark') return stored;
-    return window.matchMedia(SYSTEM_DARK_QUERY).matches ? 'dark' : 'light';
-  } catch {
-    return 'light';
-  }
-};
 
 interface ThemeContextType {
   /** 当前主题模式 */
@@ -50,41 +45,25 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  * antd ConfigProvider 已随 UI 迁移（shadcn/ui + Tailwind）移除。
  */
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
+  const themeMode = useSyncExternalStore(
+    subscribeThemePreference,
+    getThemeSnapshot,
+    getServerThemeSnapshot,
+  );
 
-  /** 主题持久化 + 应用到 <html>（供 CSS 变量与选择器生效） */
+  /** 应用外观不代表用户选择：不在此effect持久化系统推导值。 */
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute('data-theme', themeMode);
+    root.classList.toggle('dark', themeMode === 'dark');
     document.body.classList.toggle('dark', themeMode === 'dark');
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
-    } catch {
-      /* 隐私模式等场景下存储不可用，静默降级 */
-    }
   }, [themeMode]);
-
-  /** 跟随系统外观：仅在用户未显式选择主题时生效 */
-  useEffect(() => {
-    const mq = window.matchMedia(SYSTEM_DARK_QUERY);
-    const apply = () => {
-      try {
-        if (!window.localStorage.getItem(THEME_STORAGE_KEY)) {
-          setThemeMode(mq.matches ? 'dark' : 'light');
-        }
-      } catch {
-        /* ignore */
-      }
-    };
-    mq.addEventListener('change', apply);
-    return () => mq.removeEventListener('change', apply);
-  }, []);
 
   const themeValue = useMemo<ThemeContextType>(
     () => ({
       mode: themeMode,
-      setMode: setThemeMode,
-      toggle: () => setThemeMode((m) => (m === 'dark' ? 'light' : 'dark')),
+      setMode: setThemePreference,
+      toggle: () => setThemePreference(getThemeSnapshot() === 'dark' ? 'light' : 'dark'),
     }),
     [themeMode],
   );

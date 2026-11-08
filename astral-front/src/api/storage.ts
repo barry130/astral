@@ -1,5 +1,23 @@
 import { request } from './client';
 
+/** 存储配置连通性测试结果（ConfigTestResp） */
+export interface StorageConfigTestResult {
+  healthStatus?: string;
+  message?: string;
+  botUsername?: string;
+}
+
+/** 下载链接（DownloadUrlView；永久链接不含 expiresAt） */
+export interface StorageDownloadUrl {
+  url: string;
+  expiresAt?: number;
+}
+
+/** 永久公开链接（PermanentUrlView） */
+export interface StoragePermanentUrl {
+  url: string;
+}
+
 /** 存储配置（providerOptions 为 JSON 字符串；TELEGRAM 只存非敏感信息，R2/S3 的 secretAccessKey 返回时打码为 ******） */
 export interface StorageConfig {
   id?: number;
@@ -10,6 +28,8 @@ export interface StorageConfig {
   providerOptions?: string | null;
   maxFileSize?: number;
   status?: string;
+  /** CUSTOM_HTTP 渠道的乐观锁版本；其它 Provider 返回 null */
+  configVersion?: number;
   isDefault?: number;
   healthStatus?: string;
   lastTestTime?: string;
@@ -302,7 +322,7 @@ export interface HttpResponseSpec {
   allowedUrlOrigins: string[];
 }
 
-/** 渠道级限额：只能收紧应用硬上限（单图 1 MiB） */
+/** 渠道级限额：只能收紧应用硬上限（单文件 5 MiB，HttpUploadProfile.HARD_MAX_BYTES） */
 export interface HttpLimitsSpec {
   maxBytes: number;
   allowedMimes: string[];
@@ -434,7 +454,7 @@ export const storageApi = {
     providerOptions?: S3ProviderOptions;
     maxFileSize?: number;
     remark?: string;
-  }) => request.post('/api/v1/admin/plugin/storage/configs', data),
+  }) => request.post<StorageConfig>('/api/v1/admin/plugin/storage/configs', data),
   updateConfig: (
     id: number,
     data: {
@@ -445,11 +465,12 @@ export const storageApi = {
       remark?: string;
       status?: string;
     },
-  ) => request.put(`/api/v1/admin/plugin/storage/configs/${id}`, data),
-  deleteConfig: (id: number) => request.delete(`/api/v1/admin/plugin/storage/configs/${id}`),
-  testConfig: (id: number) => request.post(`/api/v1/admin/plugin/storage/configs/${id}/test`),
+  ) => request.put<StorageConfig>(`/api/v1/admin/plugin/storage/configs/${id}`, data),
+  deleteConfig: (id: number) => request.delete<null>(`/api/v1/admin/plugin/storage/configs/${id}`),
+  testConfig: (id: number) =>
+    request.post<StorageConfigTestResult>(`/api/v1/admin/plugin/storage/configs/${id}/test`),
   setDefaultConfig: (id: number) =>
-    request.post(`/api/v1/admin/plugin/storage/configs/${id}/default`),
+    request.post<null>(`/api/v1/admin/plugin/storage/configs/${id}/default`),
 
   // 文件夹与授权
   listFolders: () => request.get<StorageFolder[]>('/api/v1/admin/plugin/storage/folders'),
@@ -473,43 +494,47 @@ export const storageApi = {
       configs?: StorageBindingReq[];
     },
   ) => request.put<StorageFolder>(`/api/v1/admin/plugin/storage/folders/${id}`, data),
-  deleteFolder: (id: number) => request.delete(`/api/v1/admin/plugin/storage/folders/${id}`),
+  deleteFolder: (id: number) => request.delete<null>(`/api/v1/admin/plugin/storage/folders/${id}`),
   getFolderPermissions: (id: number) =>
     request.get<FolderPermView[]>(`/api/v1/admin/plugin/storage/folders/${id}/permissions`),
   saveFolderPermissions: (id: number, rows: FolderPermRow[]) =>
-    request.put(`/api/v1/admin/plugin/storage/folders/${id}/permissions`, { rows }),
+    request.put<null>(`/api/v1/admin/plugin/storage/folders/${id}/permissions`, { rows }),
 
   // 文件
   pageFiles: (params: { current?: number; size?: number; folderId?: number; keyword?: string }) =>
-    request.get('/api/v1/admin/plugin/storage/files', { params }),
+    request.get<StoragePageResult<StorageFile>>('/api/v1/admin/plugin/storage/files', { params }),
   deleteFile: (publicId: string) =>
-    request.delete(`/api/v1/admin/plugin/storage/files/${publicId}`),
+    request.delete<null>(`/api/v1/admin/plugin/storage/files/${publicId}`),
 
   // 任务与审计
   pageTasks: (params: { current?: number; size?: number }) =>
-    request.get('/api/v1/admin/plugin/storage/tasks', { params }),
+    request.get<StoragePageResult<StorageTask>>('/api/v1/admin/plugin/storage/tasks', { params }),
   pageAudit: (params: { current?: number; size?: number }) =>
-    request.get('/api/v1/admin/plugin/storage/audit', { params }),
+    request.get<StoragePageResult<StorageAudit>>('/api/v1/admin/plugin/storage/audit', { params }),
 
   // 上传（用户端）
-  listMyFolders: () => request.get('/api/v1/all/storage/folders'),
+  listMyFolders: () => request.get<MyStorageFolder[]>('/api/v1/all/storage/folders'),
   myFolderFiles: (folderId: number, params: { current?: number; size?: number }) =>
-    request.get(`/api/v1/all/storage/folders/${folderId}/files`, { params }),
-  deleteMyFile: (publicId: string) => request.delete(`/api/v1/all/storage/files/${publicId}`),
+    request.get<StoragePageResult<StorageFile>>(`/api/v1/all/storage/folders/${folderId}/files`, {
+      params,
+    }),
+  deleteMyFile: (publicId: string) => request.delete<null>(`/api/v1/all/storage/files/${publicId}`),
   changeFileVisibility: (publicId: string, value: string) =>
-    request.put(`/api/v1/all/storage/files/${publicId}/visibility`, null, { params: { value } }),
+    request.put<StorageFile>(`/api/v1/all/storage/files/${publicId}/visibility`, null, {
+      params: { value },
+    }),
   uploadTicket: (data: {
     folderId: number;
     fileName: string;
     contentType: string;
     sizeBytes: number;
-  }) => request.post('/api/v1/all/storage/upload-ticket', data),
+  }) => request.post<TicketView>('/api/v1/all/storage/upload-ticket', data),
   downloadUrl: (publicId: string) =>
-    request.post(`/api/v1/all/storage/files/${publicId}/download-url`),
+    request.post<StorageDownloadUrl>(`/api/v1/all/storage/files/${publicId}/download-url`),
   permanentUrl: (publicId: string) =>
-    request.post(`/api/v1/all/storage/files/${publicId}/permanent-url`),
+    request.post<StoragePermanentUrl>(`/api/v1/all/storage/files/${publicId}/permanent-url`),
   registerUpload: (uploadId: string) =>
-    request.post('/api/v1/all/storage/files/register', { uploadId }),
+    request.post<StorageFile>('/api/v1/all/storage/files/register', { uploadId }),
 
   // 共用文件管理；后台写入沿用 admin:storage:edit，用户端按文件夹授权。
   managerFiles: (params: FileManagerQuery, admin = false) =>
@@ -532,7 +557,7 @@ export const storageApi = {
       data,
     ),
   managerUrl: (publicId: string, permanent = false, admin = false) =>
-    request.post<{ url: string; expiresAt?: number }>(
+    request.post<StorageDownloadUrl | StoragePermanentUrl>(
       `${admin ? '/api/v1/admin/plugin' : '/api/v1/all'}/storage/files/${publicId}/${permanent ? 'permanent-url' : 'download-url'}`,
     ),
   managerTicket: (
@@ -547,7 +572,7 @@ export const storageApi = {
     request.post<StorageFolder>('/api/v1/all/storage/folders', data),
   renameMyFolder: (id: number, folderName: string) =>
     request.put<StorageFolder>(`/api/v1/all/storage/folders/${id}`, { folderName }),
-  deleteMyFolder: (id: number) => request.delete(`/api/v1/all/storage/folders/${id}`),
+  deleteMyFolder: (id: number) => request.delete<null>(`/api/v1/all/storage/folders/${id}`),
 
   // 两步上传（设计 v1.1 §7）：POST/PUT 返回 200 只代表请求被受理，只有 state=COMMITTED 才算完成
   // 字段名对齐后端 UploadOperationDtos.UploadCreateReq（contentType，不是 mimeType）

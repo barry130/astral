@@ -198,13 +198,14 @@ export default function DashboardPage() {
   }>({ cpu: [], mem: [], disk: [], req: [] });
   useEffect(() => {
     if (!data) return;
-    const push = (arr: number[], v: number) => [...arr, v].slice(-24);
+    const push = (arr: number[], v: number | null | undefined) =>
+      v == null ? arr : [...arr, v].slice(-24);
     const sys = data.system;
     const biz = data.business;
     setSeries((prev) => ({
-      cpu: push(prev.cpu, sys?.cpuUsage ?? 0),
-      mem: push(prev.mem, sys?.memoryUsage ?? 0),
-      disk: push(prev.disk, sys?.diskUsage ?? 0),
+      cpu: push(prev.cpu, sys?.cpuUsage),
+      mem: push(prev.mem, sys?.memoryUsage),
+      disk: push(prev.disk, sys?.diskUsage),
       req: push(prev.req, biz?.activeRequests ?? 0),
     }));
   }, [data]);
@@ -240,13 +241,13 @@ export default function DashboardPage() {
   const database = data?.database;
   const redis = data?.redis;
 
-  const cpuUsage = system?.cpuUsage ?? 0;
-  const memoryUsage = system?.memoryUsage ?? 0;
-  const diskUsage = system?.diskUsage ?? 0;
+  const cpuUsage = system?.cpuUsage;
+  const memoryUsage = system?.memoryUsage;
+  const diskUsage = system?.diskUsage;
   const activeRequests = business?.activeRequests ?? 0;
-  const cpuTone = usageTone(cpuUsage, 60, 80);
-  const memoryTone = usageTone(memoryUsage, 70, 85);
-  const diskTone = usageTone(diskUsage, 75, 90);
+  const cpuTone = cpuUsage == null ? 'normal' : usageTone(cpuUsage, 60, 80);
+  const memoryTone = memoryUsage == null ? 'normal' : usageTone(memoryUsage, 70, 85);
+  const diskTone = diskUsage == null ? 'normal' : usageTone(diskUsage, 75, 90);
 
   const successRate = Number(apiSummary?.successRate ?? 0);
   const hasApiSamples = (apiSummary?.callCount ?? 0) > 0;
@@ -292,11 +293,17 @@ export default function DashboardPage() {
             description: '核心服务仍可用，部分指标已接近阈值，建议结合下方明细持续观察。',
             tone: 'warning' as const,
           }
-        : {
-            label: '核心服务运行平稳',
-            description: '主机资源、接口质量与已配置依赖均未触发当前告警阈值。',
-            tone: 'normal' as const,
-          };
+        : cpuUsage == null || memoryUsage == null || diskUsage == null
+          ? {
+              label: '部分资源指标不可用',
+              description: '当前环境未提供完整的主机资源采样，请结合可用指标和依赖状态判断。',
+              tone: 'muted' as const,
+            }
+          : {
+              label: '核心服务运行平稳',
+              description: '主机资源、接口质量与已配置依赖均未触发当前告警阈值。',
+              tone: 'normal' as const,
+            };
 
   const number = (value?: number | null) => (data ? formatNumber(value) : '—');
   const bytes = (value?: number | null) => (data ? formatBytes(value ?? 0) : '—');
@@ -363,22 +370,22 @@ export default function DashboardPage() {
             <ResourceMeter
               inverted
               label="CPU 使用率"
-              value={data ? `${cpuUsage.toFixed(1)}%` : '—'}
-              percent={data ? cpuUsage : undefined}
-              detail={data ? '告警阈值 60% / 80%' : '等待采样'}
+              value={cpuUsage == null ? '—' : `${cpuUsage.toFixed(1)}%`}
+              percent={cpuUsage ?? undefined}
+              detail={cpuUsage == null ? '主机 CPU 采样不可用' : '告警阈值 60% / 80%'}
               series={series.cpu}
               tone={cpuTone}
               className="sm:pr-6"
             />
             <ResourceMeter
               inverted
-              label="内存使用率"
-              value={data ? `${memoryUsage.toFixed(1)}%` : '—'}
-              percent={data ? memoryUsage : undefined}
+              label="主机内存使用率"
+              value={memoryUsage == null ? '—' : `${memoryUsage.toFixed(1)}%`}
+              percent={memoryUsage ?? undefined}
               detail={
-                data
-                  ? `${formatBytes(system?.usedMemory ?? 0)} / ${formatBytes(system?.totalMemory ?? 0)}`
-                  : '等待采样'
+                memoryUsage == null
+                  ? '主机内存采样不可用'
+                  : `${formatSize(system?.usedMemory)} / ${formatSize(system?.totalMemory)}`
               }
               series={series.mem}
               tone={memoryTone}
@@ -387,9 +394,9 @@ export default function DashboardPage() {
             <ResourceMeter
               inverted
               label="磁盘使用率"
-              value={data ? `${diskUsage.toFixed(1)}%` : '—'}
-              percent={data ? diskUsage : undefined}
-              detail={data ? '告警阈值 75% / 90%' : '等待采样'}
+              value={diskUsage == null ? '—' : `${diskUsage.toFixed(1)}%`}
+              percent={diskUsage ?? undefined}
+              detail={diskUsage == null ? '磁盘采样不可用' : '告警阈值 75% / 90%'}
               series={series.disk}
               tone={diskTone}
               className="border-t border-[color:var(--color-nav-border)] pt-6 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6"

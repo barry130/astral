@@ -39,6 +39,7 @@ import {
 } from '@/components/antd-compat/icons';
 
 import { useRouter } from 'next/navigation';
+import { usePerm } from '@/lib/perm';
 
 import AnswerBlocks from './AnswerBlocks';
 import RichText from './RichText';
@@ -257,6 +258,10 @@ export default function ChatPanel({
   deniedText,
 }: ChatPanelProps) {
   const chat = useAiChat({ agentCode, context });
+  const hasPerm = usePerm();
+  const feedback = chat.feedback;
+  const canApproveAdmin = hasPerm('admin:ai:tool:approve');
+  const waitingApproval = chat.tools.some((tool) => tool.status === 'WAITING_APPROVAL');
   const router = useRouter();
   const [draft, setDraft] = useState('');
   const [renamingId, setRenamingId] = useState<number | undefined>();
@@ -280,7 +285,7 @@ export default function ChatPanel({
 
   const submit = useCallback(async () => {
     const text = draft.trim();
-    if (!text || chat.run.running) return;
+    if (!text || chat.run.running || chat.loadingMessages || chat.loading) return;
     setDraft('');
     await chat.send(text);
   }, [chat, draft]);
@@ -299,7 +304,7 @@ export default function ChatPanel({
   const handleFeedback = useCallback(
     async (target: ChatMessage, type: string) => {
       try {
-        await chat.feedback(target.id, type);
+        await feedback(target.id, type);
         antdMessage.success('已记录反馈');
       } catch (error) {
         antdMessage.error(error instanceof Error ? error.message : '反馈提交失败');
@@ -307,7 +312,7 @@ export default function ChatPanel({
     },
     // 只依赖 chat.feedback（useAiChat 里是空依赖 useCallback，恒稳定）：
     // 依赖整个 chat 会随流式 flush 重建引用，击穿 MessageBubble 的 memo。
-    [chat.feedback],
+    [feedback],
   );
 
   const handleAction = useCallback(
@@ -515,7 +520,7 @@ export default function ChatPanel({
           <Space size={8}>
             <span style={{ fontWeight: 600 }}>{chat.card?.name ?? agentCode}</span>
             {chat.run.running && (
-              <Tag color="processing">{chat.run.transport === 'poll' ? '轮询中' : '生成中'}</Tag>
+              <Tag color="processing">{waitingApproval ? '等待确认' : '生成中'}</Tag>
             )}
           </Space>
         }
@@ -585,6 +590,80 @@ export default function ChatPanel({
               />
             ))
           )}
+          {chat.tools.map((tool) => {
+            const admin = tool.approvalPolicy === 'ADMIN_CONFIRM';
+            const waiting = tool.status === 'WAITING_APPROVAL';
+            const canConfirm = waiting && (!admin || canApproveAdmin);
+            return (
+              <section
+                key={tool.toolCallId}
+                aria-label={`操作确认：${tool.name ?? tool.toolCode}`}
+                className="mb-3 rounded-lg border p-4"
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <strong>{tool.name ?? tool.toolCode ?? '助手操作'}</strong>
+                  <span className="text-muted-foreground text-xs">
+                    {waiting
+                      ? admin
+                        ? '需要管理员确认'
+                        : '请确认后执行'
+                      : tool.status === 'RUNNING'
+                        ? '执行中'
+                        : tool.status === 'SUCCEEDED'
+                          ? '已完成'
+                          : tool.status === 'REJECTED'
+                            ? '已拒绝'
+                            : tool.status === 'UNKNOWN'
+                              ? '结果待核实'
+                              : tool.status === 'PLANNED'
+                                ? '已计划'
+                                : '未完成'}
+                  </span>
+                </div>
+                {tool.arguments && (
+                  <pre className="bg-muted mb-3 max-h-52 overflow-auto rounded p-3 text-xs break-all whitespace-pre-wrap">
+                    {JSON.stringify(tool.arguments, null, 2)}
+                  </pre>
+                )}
+                {tool.summary && <p className="mb-2 text-sm">{tool.summary}</p>}
+                {waiting && admin && !canApproveAdmin && (
+                  <p className="text-muted-foreground text-sm">
+                    请有审批权限的管理员在请求详情中确认。
+                  </p>
+                )}
+                {canConfirm && (
+                  <Space>
+                    <Button
+                      type="primary"
+                      loading={tool.submitting}
+                      disabled={tool.submitting || !chat.run.running}
+                      onClick={() =>
+                        void chat
+                          .approveTool(tool.toolCallId, true, admin)
+                          .catch((error) =>
+                            antdMessage.error(error instanceof Error ? error.message : '确认失败'),
+                          )
+                      }
+                    >
+                      确认执行
+                    </Button>
+                    <Button
+                      disabled={tool.submitting || !chat.run.running}
+                      onClick={() =>
+                        void chat
+                          .approveTool(tool.toolCallId, false, admin)
+                          .catch((error) =>
+                            antdMessage.error(error instanceof Error ? error.message : '拒绝失败'),
+                          )
+                      }
+                    >
+                      拒绝
+                    </Button>
+                  </Space>
+                )}
+              </section>
+            );
+          })}
         </div>
 
         {/* 输入区 */}
@@ -599,11 +678,15 @@ export default function ChatPanel({
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={
-              chat.run.running ? '正在生成回答…' : '输入问题，Enter 发送，Shift+Enter 换行'
+              waitingApproval
+                ? '请先确认或拒绝上方操作'
+                : chat.run.running
+                  ? '正在生成回答…'
+                  : '输入问题，Enter 发送，Shift+Enter 换行'
             }
             autoSize={{ minRows: 2, maxRows: 6 }}
             maxLength={20000}
-            disabled={chat.run.running}
+            disabled={chat.run.running || chat.loadingMessages || chat.loading}
           />
           <div
             style={{
@@ -629,7 +712,7 @@ export default function ChatPanel({
                 type="primary"
                 icon={<SendOutlined />}
                 onClick={() => void submit()}
-                disabled={!draft.trim() || chat.run.running}
+                disabled={!draft.trim() || chat.run.running || chat.loadingMessages || chat.loading}
                 loading={chat.loading}
               >
                 发送

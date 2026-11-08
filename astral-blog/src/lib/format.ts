@@ -32,4 +32,3 @@ export function estimateReadingMinutes(content: string | null | undefined): numb
   const words = (text.replace(/[\u4e00-\u9fff]/g, ' ').match(/[A-Za-z0-9]+/g) ?? []).length;
   return Math.max(1, Math.round(cjk / 350 + words / 200));
 }
-

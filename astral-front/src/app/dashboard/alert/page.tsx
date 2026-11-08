@@ -570,6 +570,12 @@ export default function AlertPage() {
                 value={channelForm.config}
                 onChange={(e) => setChannelForm({ ...channelForm, config: e.target.value })}
               />
+              {editingChannel && channelForm.type === 'WEBHOOK' ? (
+                <p className="text-muted-foreground text-xs">
+                  地址和密钥以 ******** 隐藏；保留该值表示不修改。填写新值可替换，secret
+                  填空字符串可清除密钥。
+                </p>
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <Label>备注</Label>

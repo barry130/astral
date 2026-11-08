@@ -30,8 +30,8 @@ import {
   DeleteOutlined,
   DownloadOutlined,
 } from '@/components/antd-compat/icons';
-import { request } from '@/api/client';
-import { fetchDictOptions } from '@/api/dict';
+import { request, ApiResult } from '@/api/client';
+import { loadAdminDictOptions as fetchDictOptions } from '@/components/admin/admin-dictionaries';
 // 代码高亮体积大且只在 Tab 展开/抽屉打开时才可见，改为客户端按需加载（ssr: false 仅在客户端组件可用）
 const SyntaxHighlighter = dynamic(() => import('react-syntax-highlighter').then((m) => m.Prism), {
   ssr: false,
@@ -132,33 +132,49 @@ interface CreateTableValues {
 /** 表结构管理API封装 */
 const tableSchemaApi = {
   /** 获取所有表结构 */
-  getAll: () => request.get('/api/v1/admin/system/table-schema'),
+  getAll: (): Promise<ApiResult<TableSchema[]>> =>
+    request.get<TableSchema[]>('/api/v1/admin/system/table-schema'),
   /** 按模块获取表结构 */
-  getByModule: (moduleName: string) =>
-    request.get(`/api/v1/admin/system/table-schema/module/${moduleName}`),
-  /** 生成完整代码（Entity/Mapper/Service/Controller） */
-  getFullCode: (tableName: string) =>
-    request.get(`/api/v1/admin/system/table-schema/${tableName}/full-code`),
+  getByModule: (moduleName: string): Promise<ApiResult<TableSchema[]>> =>
+    request.get<TableSchema[]>(`/api/v1/admin/system/table-schema/module/${moduleName}`),
+  /** 生成完整代码（Entity/Mapper/Service/Controller），后端回 Map<String,String> */
+  getFullCode: (tableName: string): Promise<ApiResult<Record<string, string>>> =>
+    request.get<Record<string, string>>(`/api/v1/admin/system/table-schema/${tableName}/full-code`),
   /** 生成建表SQL（dialect：mysql / postgresql） */
-  getSql: (tableName: string, dialect: string) =>
-    request.get(`/api/v1/admin/system/table-schema/${tableName}/sql`, { params: { dialect } }),
-  /** 更新表结构（dialect：mysql / postgresql） */
-  update: (tableName: string, data: TableSchema, dialect: string) =>
-    request.put(`/api/v1/admin/system/table-schema/${tableName}`, data, { params: { dialect } }),
+  getSql: (tableName: string, dialect: string): Promise<ApiResult<string>> =>
+    request.get<string>(`/api/v1/admin/system/table-schema/${tableName}/sql`, {
+      params: { dialect },
+    }),
+  /** 更新表结构（dialect：mysql / postgresql），后端回 {alterSql, entityCode} */
+  update: (
+    tableName: string,
+    data: TableSchema,
+    dialect: string,
+  ): Promise<ApiResult<Record<string, string>>> =>
+    request.put<Record<string, string>>(`/api/v1/admin/system/table-schema/${tableName}`, data, {
+      params: { dialect },
+    }),
   /** 生成ALTER SQL（dialect：mysql / postgresql） */
-  generateAlterSql: (tableName: string, data: TableSchema, dialect: string) =>
-    request.post(`/api/v1/admin/system/table-schema/${tableName}/alter-sql`, data, {
+  generateAlterSql: (
+    tableName: string,
+    data: TableSchema,
+    dialect: string,
+  ): Promise<ApiResult<string>> =>
+    request.post<string>(`/api/v1/admin/system/table-schema/${tableName}/alter-sql`, data, {
       params: { dialect },
     }),
   /** 导出单个表结构JSON */
-  exportSchema: (tableName: string) =>
-    request.get(`/api/v1/admin/system/table-schema/${tableName}/export`),
+  exportSchema: (tableName: string): Promise<ApiResult<TableSchema>> =>
+    request.get<TableSchema>(`/api/v1/admin/system/table-schema/${tableName}/export`),
   /** 导出所有表结构JSON */
-  exportAll: () => request.get('/api/v1/admin/system/table-schema/export-all'),
+  exportAll: (): Promise<ApiResult<TableSchema[]>> =>
+    request.get<TableSchema[]>('/api/v1/admin/system/table-schema/export-all'),
   /** 创建新表结构 */
-  create: (data: CreateTableValues) => request.post('/api/v1/admin/system/table-schema', data),
+  create: (data: CreateTableValues): Promise<ApiResult<void>> =>
+    request.post('/api/v1/admin/system/table-schema', data),
   /** 删除表结构 */
-  delete: (tableName: string) => request.delete(`/api/v1/admin/system/table-schema/${tableName}`),
+  delete: (tableName: string): Promise<ApiResult<void>> =>
+    request.delete(`/api/v1/admin/system/table-schema/${tableName}`),
 };
 
 /** 模块筛选选项 */
@@ -237,7 +253,7 @@ export default function TableSchemaPage() {
   /** 新建表结构弹窗显示状态 */
   const [createModalVisible, setCreateModalVisible] = useState(false);
   /** 新建表单实例 */
-  const [createForm] = Form.useForm();
+  const [createForm] = Form.useForm<CreateTableValues>();
   /** SQL方言（mysql / postgresql，默认与运行时数据库一致） */
   const [sqlDialect, setSqlDialect] = useState('postgresql');
   /** SQL方言下拉选项（字典 sql_dialect） */
@@ -267,7 +283,7 @@ export default function TableSchemaPage() {
   /** 加载字典字段（用于编辑时快速选择） */
   const loadDictFields = async () => {
     try {
-      const res = await request.get('/api/v1/admin/system/dict/type/all');
+      const res = await request.get<DictTypeItem[]>('/api/v1/admin/system/dict/type/all');
       if (res.code === 200) {
         setDictFields(res.data || []);
       }

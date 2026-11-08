@@ -208,7 +208,7 @@ export default function ToolPanel() {
     type: 'HTTP',
   });
   const [declSaving, setDeclSaving] = useState(false);
-  const [declForm] = Form.useForm();
+  const [declForm] = Form.useForm<DeclarativeFormValues>();
 
   // 试跑弹窗
   const [test, setTest] = useState<{ open: boolean; row?: AiTool }>({ open: false });
@@ -728,9 +728,13 @@ export default function ToolPanel() {
             message="执行面固定在执行器里，配置改不了安全边界"
             description={
               <span style={{ fontSize: 12.5 }}>
-                私网 / 环回 / 链路本地 / 云元数据地址始终禁止访问；HTTP 非 GET 方法、以及需要人工确认的
-                调用会被强制成 <code>HIGH</code> + <code>ADMIN_CONFIRM</code>；SQL 只允许单条{' '}
-                <code>SELECT</code> / <code>WITH … SELECT</code>，连接以只读事务执行。
+                私网 / 环回 / 链路本地 / 云元数据地址始终禁止访问；HTTP 非 GET
+                方法、以及需要人工确认的 调用会被强制成 <code>HIGH</code>
+                {' + '}
+                <code>ADMIN_CONFIRM</code>
+                {'\uFF1BSQL \u53EA\u5141\u8BB8\u5355\u6761'} <code>SELECT</code>
+                {' / '}
+                <code>WITH … SELECT</code>，连接以只读事务执行。
               </span>
             }
           />
@@ -786,7 +790,10 @@ export default function ToolPanel() {
                 extra="只允许单条 SELECT / WITH … SELECT；参数用 #{name} 占位，按名字绑定，不要拼字符串"
                 rules={[{ required: true, message: '请输入查询语句' }]}
               >
-                <Input.TextArea rows={5} placeholder="select id, name from astral.sys_user where id = #{userId}" />
+                <Input.TextArea
+                  rows={5}
+                  placeholder="select id, nickname as name from astral.sys_user where id = #{userId}"
+                />
               </Form.Item>
               <Space size={12} style={{ display: 'flex' }} align="start">
                 <Form.Item
@@ -846,11 +853,25 @@ export default function ToolPanel() {
                   <Input placeholder="data.items" />
                 </Form.Item>
               </Space>
-              <Form.Item name="headers" label="请求头（JSON）" extra={'值可写 ${secret:KEY} 引用服务端环境变量'}>
-                <Input.TextArea rows={2} placeholder={'{"Authorization": "Bearer ${secret:ERP_TOKEN}"}'} />
+              <Form.Item
+                name="headers"
+                label="请求头（JSON）"
+                extra={'值可写 ${secret:KEY} 引用服务端环境变量'}
+              >
+                <Input.TextArea
+                  rows={2}
+                  placeholder={'{"Authorization": "Bearer ${secret:ERP_TOKEN}"}'}
+                />
               </Form.Item>
-              <Form.Item name="query" label="查询参数（JSON）" extra="值里的 ${name} 会按工具参数替换并编码">
-                <Input.TextArea rows={2} placeholder={'{"page": "${page}", "keyword": "${keyword}"}'} />
+              <Form.Item
+                name="query"
+                label="查询参数（JSON）"
+                extra="值里的 ${name} 会按工具参数替换并编码"
+              >
+                <Input.TextArea
+                  rows={2}
+                  placeholder={'{"page": "${page}", "keyword": "${keyword}"}'}
+                />
               </Form.Item>
               <Form.Item name="body" label="请求正文（JSON 或模板文本）" extra="GET 不能带正文">
                 <Input.TextArea rows={3} placeholder={'{"userId": "${userId}"}'} />
@@ -877,11 +898,18 @@ export default function ToolPanel() {
           >
             <Input.TextArea
               rows={4}
-              placeholder={'{"type":"object","properties":{"orderId":{"type":"string"}},"required":["orderId"]}'}
+              placeholder={
+                '{"type":"object","properties":{"orderId":{"type":"string"}},"required":["orderId"]}'
+              }
             />
           </Form.Item>
           <Space size={12} style={{ display: 'flex' }}>
-            <Form.Item name="riskLevel" label="风险等级" style={{ flex: 1 }} extra="写方法会被强制成 HIGH">
+            <Form.Item
+              name="riskLevel"
+              label="风险等级"
+              style={{ flex: 1 }}
+              extra="写方法会被强制成 HIGH"
+            >
               <Select options={dict.options('ai_tool_risk_level')} />
             </Form.Item>
             <Form.Item
@@ -923,7 +951,11 @@ export default function ToolPanel() {
         />
         <Form layout="vertical">
           <Form.Item label="参数（JSON）" extra="按工具的 arguments_schema 填，留空按 {} 执行">
-            <Input.TextArea rows={5} value={testArgs} onChange={(event) => setTestArgs(event.target.value)} />
+            <Input.TextArea
+              rows={5}
+              value={testArgs}
+              onChange={(event) => setTestArgs(event.target.value)}
+            />
           </Form.Item>
         </Form>
         {testResult && (
