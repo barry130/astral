@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.exception.BusinessException;
+import com.astral.dao.entity.SysSmsProvider;
 import com.astral.dao.mapper.DictDataMapper;
 import com.astral.dao.mapper.DictTypeMapper;
 import com.astral.dao.mapper.PermissionMapper;
@@ -17,13 +18,16 @@ import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.SysConfigMapper;
 import com.astral.dao.mapper.SysMailAccountMapper;
 import com.astral.dao.mapper.SysMenuMapper;
+import com.astral.dao.mapper.SysSmsLogMapper;
 import com.astral.dao.mapper.SysSmsProviderMapper;
+import com.astral.dao.mapper.SysSmsTemplateMapper;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.system.mail.MailServiceImpl;
 import com.astral.system.mail.SysMailAccountServiceImpl;
 import com.astral.system.notify.SmsServiceImpl;
 import com.astral.system.notify.SysSmsProviderServiceImpl;
 import com.astral.system.notify.sms.MockSmsProvider;
+import com.astral.system.notify.sms.SmsProvider;
 import com.astral.system.service.impl.DictDataServiceImpl;
 import com.astral.system.service.impl.DictTypeServiceImpl;
 import com.astral.system.service.impl.PermissionServiceImpl;
@@ -41,7 +45,9 @@ import jakarta.servlet.ServletException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -79,6 +85,8 @@ class AdminWriteValidationTest {
     private SysConfigController configs;
     private MailAccountController mailAccounts;
     private SmsProviderController smsProviders;
+    private SmsServiceImpl sms;
+    private final List<Long> deliveredProviders = new ArrayList<>();
     private final JsonMapper json = JsonMapper.builder().build();
 
     @BeforeEach
@@ -106,10 +114,12 @@ class AdminWriteValidationTest {
         }
         String smsMigration = Files.readString(
                 Path.of("../astral-server/src/main/resources/db/migration/V20261002003__sms_channel.sql"));
-        var smsTable = Pattern.compile("CREATE TABLE IF NOT EXISTS sys_sms_provider \\(.*?\\);", Pattern.DOTALL)
-                .matcher(smsMigration);
-        if (!smsTable.find()) fail("Actual SMS provider DDL not found");
-        jdbc.execute(smsTable.group());
+        for (String name : List.of("sys_sms_provider", "sys_sms_template", "sys_sms_log")) {
+            var smsTable = Pattern.compile("CREATE TABLE IF NOT EXISTS " + name + " \\(.*?\\);", Pattern.DOTALL)
+                    .matcher(smsMigration);
+            if (!smsTable.find()) fail("Actual SMS DDL not found: " + name);
+            jdbc.execute(smsTable.group());
+        }
         jdbc.execute("ALTER TABLE sys_role ADD COLUMN is_super SMALLINT NOT NULL DEFAULT 0");
         jdbc.execute("ALTER TABLE sys_permission ADD COLUMN domain VARCHAR(32)");
         jdbc.execute("ALTER TABLE sys_user ADD COLUMN user_type VARCHAR(20) NOT NULL DEFAULT 'ADMIN'");
@@ -132,6 +142,8 @@ class AdminWriteValidationTest {
                 "INSERT INTO sys_mail_account(id,account_name,smtp_host,smtp_port,username,password,from_addr) VALUES(1,'Original','smtp.invalid',587,'fixture','fixture-secret','fixture@example.invalid')");
         jdbc.update(
                 "INSERT INTO sys_sms_provider(id,provider_name,provider_type,access_secret) VALUES(1,'Original','MOCK','fixture-secret')");
+        jdbc.update(
+                "INSERT INTO sys_sms_template(id,template_code,template_name,event_code,provider_template_code) VALUES(1,'fixture','Fixture','systemAlert','PROVIDER_V1')");
         var config = new MybatisConfiguration();
         config.setEnvironment(new Environment("fixture", new SpringManagedTransactionFactory(), source));
         config.setMapUnderscoreToCamelCase(true);
@@ -163,6 +175,8 @@ class AdminWriteValidationTest {
         config.addMapper(SysConfigMapper.class);
         config.addMapper(SysMailAccountMapper.class);
         config.addMapper(SysSmsProviderMapper.class);
+        config.addMapper(SysSmsTemplateMapper.class);
+        config.addMapper(SysSmsLogMapper.class);
         var session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(config));
         var roleService = new RoleServiceImpl(null, null);
         ReflectionTestUtils.setField(roleService, "baseMapper", session.getMapper(RoleMapper.class));
@@ -193,10 +207,25 @@ class AdminWriteValidationTest {
                 new MailAccountController(accountService, new MailServiceImpl(), new EntityPatchValidator(validator));
         var providerService = new SysSmsProviderServiceImpl();
         ReflectionTestUtils.setField(providerService, "baseMapper", session.getMapper(SysSmsProviderMapper.class));
-        smsProviders = new SmsProviderController(
-                providerService,
-                new SmsServiceImpl(List.of(), session.getMapper(SysSmsProviderMapper.class), null, null),
-                List.of(new MockSmsProvider()));
+        SmsProvider delivery = new SmsProvider() {
+            @Override
+            public String type() {
+                return "FIXTURE";
+            }
+
+            @Override
+            public void send(
+                    SysSmsProvider provider, String phone, String sign, String code, Map<String, String> variables) {
+                deliveredProviders.add(provider.getId());
+            }
+        };
+        List<SmsProvider> implementations = List.of(new MockSmsProvider(), delivery);
+        sms = new SmsServiceImpl(
+                implementations,
+                session.getMapper(SysSmsProviderMapper.class),
+                session.getMapper(SysSmsTemplateMapper.class),
+                session.getMapper(SysSmsLogMapper.class));
+        smsProviders = new SmsProviderController(providerService, sms, implementations);
         mvc = MockMvcBuilders.standaloneSetup(
                         roles,
                         permissions,
@@ -370,6 +399,33 @@ class AdminWriteValidationTest {
         assertEquals(1, smsProviders.getById(1L).getData().getEnabled());
         assertNull(smsProviders.getById(1L).getData().getAccessSecret());
         assertEquals(2, smsProviders.page(1, 10).getData().getRecords().size());
+    }
+
+    @Test
+    void acceptedSmsProviderTypesPersistCanonicallyAndResolveForDelivery() throws Exception {
+        accept(
+                post("/api/v1/admin/system/sms/provider"),
+                Map.of("providerName", "Padded type", "providerType", " fIxTuRe "));
+        assertEquals("FIXTURE", smsProviders.getById(1001L).getData().getProviderType());
+        sms.testSendTemplate(1L, 1001L, "fixture-phone", Map.of());
+        accept(put("/api/v1/admin/system/sms/provider/1"), Map.of("providerType", " fixture "));
+        assertEquals("FIXTURE", smsProviders.getById(1L).getData().getProviderType());
+        sms.testSendTemplate(1L, 1L, "fixture-phone", Map.of());
+        assertEquals(List.of(1001L, 1L), deliveredProviders);
+    }
+
+    @Test
+    void legacySmsProviderTypesResolveWithoutDependingOnTheDefaultLocale() {
+        jdbc.update(
+                "INSERT INTO sys_sms_provider(id,provider_name,provider_type) VALUES(2,'Legacy padded type',' fixture ')");
+        Locale previous = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+            sms.testSendTemplate(1L, 2L, "fixture-phone", Map.of());
+            assertEquals(List.of(2L), deliveredProviders);
+        } finally {
+            Locale.setDefault(previous);
+        }
     }
 
     @Test

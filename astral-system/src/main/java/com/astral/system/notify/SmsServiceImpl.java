@@ -14,6 +14,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -134,7 +135,7 @@ public class SmsServiceImpl implements SmsService {
         SmsProvider impl = providerImpls.get(
                 provider.getProviderType() == null
                         ? ""
-                        : provider.getProviderType().toUpperCase());
+                        : provider.getProviderType().trim().toUpperCase(Locale.ROOT));
         if (impl == null) {
             throw new BusinessException("SMS006", provider.getProviderType());
         }
