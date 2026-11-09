@@ -1,12 +1,16 @@
 package com.astral.ai.tool;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.astral.ai.common.AiJson;
 import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
+import com.astral.auth.registry.AppUserRoleService;
 import com.astral.auth.security.PermissionCache;
+import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.RolePermission;
 import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.PermissionMapper;
@@ -20,6 +24,7 @@ import com.astral.system.notify.SysNotifyRuleServiceImpl;
 import com.astral.system.notify.UserRoleChangeNotifier;
 import com.astral.system.service.impl.PermissionServiceImpl;
 import com.astral.system.service.impl.RolePermissionServiceImpl;
+import com.astral.system.service.impl.RoleServiceImpl;
 import com.astral.system.service.impl.UserRoleServiceImpl;
 import com.astral.system.service.impl.UserServiceImpl;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
@@ -41,6 +46,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -72,12 +78,19 @@ class AdminToolRoleConcurrencyTest {
     private AdminToolProvider provider;
     private UserRoleServiceImpl roles;
     private RolePermissionServiceImpl rolePermissions;
+    private RoleServiceImpl roleService;
+    private AppUserRoleService appRoles;
     private String firstSnapshot;
     private String secondSnapshot;
     private final CountDownLatch firstCount = new CountDownLatch(1);
     private final CountDownLatch releaseFirst = new CountDownLatch(1);
     private final AtomicBoolean pauseCount = new AtomicBoolean(false);
+    private final CountDownLatch defaultRoleLookup = new CountDownLatch(1);
+    private final CountDownLatch releaseDefaultRoleLookup = new CountDownLatch(1);
+    private final AtomicBoolean pauseDefaultRoleLookup = new AtomicBoolean(false);
     private final ThreadLocal<Boolean> secondCaller = ThreadLocal.withInitial(() -> false);
+    private final ThreadLocal<Boolean> appCaller = ThreadLocal.withInitial(() -> false);
+    private final ThreadLocal<Boolean> deleteCaller = ThreadLocal.withInitial(() -> false);
 
     @BeforeEach
     void setUp() throws Exception {
@@ -175,6 +188,27 @@ class AdminToolRoleConcurrencyTest {
                 new DataSourceTransactionManager(source), new AnnotationTransactionAttributeSource()));
         rolePermissions = (RolePermissionServiceImpl) relationProxy.getProxy();
         jdbc.update("INSERT INTO sys_permission(id,permission_code,status) VALUES(10,'admin:fixture:read',1)");
+        jdbc.update("INSERT INTO sys_permission(id,permission_code,status,type) VALUES(11,'user:fixture:read',1,4)");
+        jdbc.update("UPDATE sys_role SET role_code='APP_USER' WHERE id=3");
+        var roleServiceTarget = new RoleServiceImpl(session.getMapper(UserRoleMapper.class), rolePermissions);
+        ReflectionTestUtils.setField(roleServiceTarget, "baseMapper", roleMapper);
+        var roleServiceProxy = new ProxyFactory(roleServiceTarget);
+        roleServiceProxy.setProxyTargetClass(true);
+        roleServiceProxy.addAdvice(new TransactionInterceptor(
+                new DataSourceTransactionManager(source), new AnnotationTransactionAttributeSource()));
+        roleService = (RoleServiceImpl) roleServiceProxy.getProxy();
+        appRoles = new AppUserRoleService(
+                roleMapper,
+                session.getMapper(PermissionMapper.class),
+                session.getMapper(RolePermissionMapper.class),
+                session.getMapper(UserRoleMapper.class),
+                new PermissionCache(),
+                session.getMapper(UserMapper.class));
+        var appProxy = new ProxyFactory(appRoles);
+        appProxy.setProxyTargetClass(true);
+        appProxy.addAdvice(new TransactionInterceptor(
+                new DataSourceTransactionManager(source), new AnnotationTransactionAttributeSource()));
+        appRoles = (AppUserRoleService) appProxy.getProxy();
         provider = new AdminToolProvider(
                 users, null, roles, null, null, null, null, null, null, null, null, null, null, null, jdbc, null);
         firstSnapshot = roles.assignmentSnapshot(1L, List.of(2L));
@@ -185,6 +219,7 @@ class AdminToolRoleConcurrencyTest {
     @AfterEach
     void clean() {
         releaseFirst.countDown();
+        releaseDefaultRoleLookup.countDown();
         if (schema != null) admin.execute("DROP SCHEMA " + schema + " CASCADE");
     }
 
@@ -259,6 +294,50 @@ class AdminToolRoleConcurrencyTest {
                         .toList());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"assign", "sync"})
+    void appRoleWritersRejectRoleDeletedAfterLookup(String operation) throws Exception {
+        pauseCount.set(false);
+        pauseDefaultRoleLookup.set(true);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var app = executor.submit(() -> {
+                appCaller.set(true);
+                try {
+                    if ("assign".equals(operation)) {
+                        appRoles.assignToUser(1L);
+                    } else {
+                        appRoles.syncPermissions();
+                    }
+                } finally {
+                    appCaller.remove();
+                }
+            });
+            assertTrue(defaultRoleLookup.await(5, TimeUnit.SECONDS));
+            var deletion = executor.submit(() -> {
+                deleteCaller.set(true);
+                try {
+                    roleService.deleteRoleWithRelations(3L);
+                } finally {
+                    deleteCaller.remove();
+                }
+            });
+            try {
+                deletion.get(10, TimeUnit.SECONDS);
+                assertNull(roleService.getById(3L));
+            } finally {
+                releaseDefaultRoleLookup.countDown();
+            }
+            ExecutionException failure = assertThrows(ExecutionException.class, () -> app.get(10, TimeUnit.SECONDS));
+            assertEquals("SYS003", ((BusinessException) failure.getCause()).getErrorCode());
+        }
+        assertNull(roleService.getById(3L));
+        assertTrue(roles.list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getRoleId, 3L))
+                .isEmpty());
+        assertTrue(rolePermissions
+                .list(new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, 3L))
+                .isEmpty());
+    }
+
     private List<Long> assigned(Long userId) {
         return roles.list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId)).stream()
                 .map(UserRole::getRoleId)
@@ -300,6 +379,8 @@ class AdminToolRoleConcurrencyTest {
 
     private Connection schedule(Connection connection) throws SQLException {
         if (secondCaller.get()) connection.setClientInfo("ApplicationName", secondApplication);
+        if (deleteCaller.get()) connection.setClientInfo("ApplicationName", schema + "_delete");
+        if (appCaller.get()) connection.setClientInfo("ApplicationName", schema + "_app");
         return (Connection) Proxy.newProxyInstance(
                 getClass().getClassLoader(), new Class<?>[] {Connection.class}, (proxy, method, args) -> {
                     Object result;
@@ -330,6 +411,18 @@ class AdminToolRoleConcurrencyTest {
                                                 ? text
                                                 : "";
                                 String normalized = sql.toLowerCase(Locale.ROOT);
+                                if (appCaller.get()
+                                        && (statementMethod.getName().equals("execute")
+                                                || statementMethod.getName().equals("executeQuery"))
+                                        && normalized.startsWith("select")
+                                        && normalized.contains("from sys_role")
+                                        && normalized.contains("role_code")
+                                        && !normalized.contains("for update")
+                                        && pauseDefaultRoleLookup.compareAndSet(true, false)) {
+                                    defaultRoleLookup.countDown();
+                                    if (!releaseDefaultRoleLookup.await(10, TimeUnit.SECONDS))
+                                        throw new AssertionError("default role lookup was not released");
+                                }
                                 if ((statementMethod.getName().equals("executeUpdate")
                                                 || statementMethod.getName().equals("execute"))
                                         && normalized.startsWith("delete")

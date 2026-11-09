@@ -102,7 +102,7 @@ public class AppUserRoleService {
     @Transactional(rollbackFor = Exception.class)
     public int syncPermissions() {
         Long roleId = ensureRole();
-        roleMapper.selectList(new QueryWrapper<Role>().eq("id", roleId).last("FOR UPDATE"));
+        requireLockedRole(roleId);
         List<Permission> appPermissions = permissionMapper.selectList(new QueryWrapper<Permission>()
                 .likeRight("permission_code", APP_PERMISSION_PREFIX)
                 .eq("type", PermissionType.API));
@@ -158,7 +158,7 @@ public class AppUserRoleService {
             throw new BusinessException("SYS001");
         }
         Long roleId = ensureRole();
-        roleMapper.selectList(new QueryWrapper<Role>().eq("id", roleId).last("FOR UPDATE"));
+        requireLockedRole(roleId);
         Long exists = userRoleMapper.selectCount(
                 new QueryWrapper<UserRole>().eq("user_id", userId).eq("role_id", roleId));
         if (exists != null && exists > 0) {
@@ -177,5 +177,14 @@ public class AppUserRoleService {
         }
         permissionCache.bumpAfterCommit();
         log.info("[AppUserRole] 已为用户 {} 分配默认角色 {}", userId, ROLE_CODE);
+    }
+
+    /** 初次读取后角色可能被并发删除；锁定结果为空时必须在写关联之前拒绝。 */
+    private void requireLockedRole(Long roleId) {
+        if (roleMapper
+                .selectList(new QueryWrapper<Role>().eq("id", roleId).last("FOR UPDATE"))
+                .isEmpty()) {
+            throw new BusinessException("SYS003");
+        }
     }
 }
