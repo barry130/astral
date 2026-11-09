@@ -947,7 +947,7 @@ public class AiChatOrchestrator {
                         Map.of("toolCode", String.valueOf(call.name()), "status", AiToolResult.REJECTED));
                 continue;
             }
-            ObjectNode arguments = AiJson.readObject(call.arguments());
+            ObjectNode arguments = effective.handler().prepareArguments(AiJson.readObject(call.arguments()));
             AiToolCallEntity record = new AiToolCallEntity();
             record.setRequestId(request.getId());
             record.setProviderToolCallId(call.id());
@@ -955,7 +955,7 @@ public class AiChatOrchestrator {
             record.setToolCode(effective.tool().getToolCode());
             record.setToolName(effective.tool().getName());
             record.setRiskLevel(effective.risk());
-            record.setArgumentsJson(call.arguments());
+            record.setArgumentsJson(AiJson.write(arguments));
             record.setStartedAt(LocalDateTime.now());
 
             boolean approvalRequired = requiresApproval(effective);

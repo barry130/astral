@@ -14,11 +14,11 @@ import com.astral.ai.service.AiRequestService;
 import com.astral.ai.service.AiUsageService;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.auth.security.PermissionChecker;
-import com.astral.dao.mapper.SysNoticeMapper;
 import com.astral.log.service.LoginLogService;
 import com.astral.log.service.OperateLogService;
 import com.astral.plugin.api.PluginRegistry;
 import com.astral.system.mail.MailService;
+import com.astral.system.notice.NoticeService;
 import com.astral.system.notify.NotifyPublisher;
 import com.astral.system.service.RoleService;
 import com.astral.system.service.SysConfigService;
@@ -135,7 +135,7 @@ class AdminToolProviderPermissionCodeTest {
                 mock(AiRequestService.class),
                 mock(AiUsageService.class),
                 mock(AiOverviewService.class),
-                mock(SysNoticeMapper.class),
+                mock(NoticeService.class),
                 mock(MailService.class),
                 mock(NotifyPublisher.class),
                 mock(JdbcTemplate.class),

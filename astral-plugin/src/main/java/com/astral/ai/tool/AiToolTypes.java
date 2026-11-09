@@ -198,6 +198,11 @@ public final class AiToolTypes {
         /** 静态定义 */
         AiToolDef definition();
 
+        /** Server-owned plan enrichment, called once before persistence, never on approval replay. */
+        default ObjectNode prepareArguments(ObjectNode arguments) {
+            return arguments;
+        }
+
         /**
          * 执行。
          *

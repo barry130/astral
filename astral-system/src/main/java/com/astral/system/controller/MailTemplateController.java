@@ -6,15 +6,9 @@ import com.astral.common.result.Result;
 import com.astral.dao.entity.SysMailTemplate;
 import com.astral.system.mail.MailService;
 import com.astral.system.mail.SysMailTemplateService;
-import com.astral.system.notify.NotifyChannel;
-import com.astral.system.notify.NotifyEventDef;
-import com.astral.system.notify.NotifyEventRegistry;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -62,9 +56,7 @@ public class MailTemplateController {
     @RequiresPermission(PERM_EDIT)
     @PostMapping
     public Result<Void> create(@RequestBody SysMailTemplate entity) {
-        validateTemplate(entity, true, null);
-        templateService.save(entity);
-        mailService.evictTemplateCache();
+        templateService.createTemplate(entity);
         return Result.success();
     }
 
@@ -72,38 +64,7 @@ public class MailTemplateController {
     @RequiresPermission(PERM_EDIT)
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody SysMailTemplate entity) {
-        entity.setId(id);
-        validateTemplate(entity, false, id);
-        // 白名单更新：id 由路径决定，只写模板可编辑列。
-        // 不能用 updateById(客户端实体)——MP 会把实体上所有非 null 字段写进 SET
-        // （mass assignment），客户端可借未知列改写库内任意字段。
-        var update = templateService.lambdaUpdate().eq(SysMailTemplate::getId, id);
-        if (entity.getTemplateCode() != null) {
-            update.set(SysMailTemplate::getTemplateCode, entity.getTemplateCode());
-        }
-        if (entity.getTemplateName() != null) {
-            update.set(SysMailTemplate::getTemplateName, entity.getTemplateName());
-        }
-        if (entity.getSubject() != null) {
-            update.set(SysMailTemplate::getSubject, entity.getSubject());
-        }
-        if (entity.getContent() != null) {
-            update.set(SysMailTemplate::getContent, entity.getContent());
-        }
-        if (entity.getVariables() != null) {
-            update.set(SysMailTemplate::getVariables, entity.getVariables());
-        }
-        if (entity.getScene() != null) {
-            update.set(SysMailTemplate::getScene, entity.getScene());
-        }
-        if (entity.getChannel() != null) {
-            update.set(SysMailTemplate::getChannel, entity.getChannel());
-        }
-        if (entity.getRemark() != null) {
-            update.set(SysMailTemplate::getRemark, entity.getRemark());
-        }
-        update.update();
-        mailService.evictTemplateCache();
+        templateService.updateTemplate(id, entity);
         return Result.success();
     }
 
@@ -133,87 +94,6 @@ public class MailTemplateController {
     public Result<Void> sendTest(@PathVariable Long id, @RequestBody MailTestSendDto dto) {
         mailService.testSendTemplate(id, dto.getAccountId(), dto.getToEmail(), dto.getVariables());
         return Result.success();
-    }
-
-    /**
-     * 模板写路径校验：scene 必须是 {@link NotifyEventRegistry} 登记的事件、channel 必须在该事件
-     * 声明的渠道内、该 (事件 × 渠道) 未被其他模板绑定、variables 必须覆盖事件 payload 全部字段。
-     * 事件是代码注册的一等契约（发送侧按事件码解析模板），这里不卡住，后台建的模板就永远是
-     * 「没人调用的死数据」。
-     *
-     * <p>更新时字段级判 null（直调 API 的局部更新只校验传了的字段）；新增时编码/场景/渠道必填。</p>
-     */
-    private void validateTemplate(SysMailTemplate entity, boolean isCreate, Long id) {
-        boolean codePresent =
-                entity.getTemplateCode() != null && !entity.getTemplateCode().isBlank();
-        boolean scenePresent = entity.getScene() != null && !entity.getScene().isBlank();
-        boolean channelPresent =
-                entity.getChannel() != null && !entity.getChannel().isBlank();
-        if (isCreate) {
-            if (!codePresent) {
-                throw new BusinessException("MAIL015");
-            }
-            if (!scenePresent) {
-                throw new BusinessException("MAIL016");
-            }
-            if (!channelPresent) {
-                throw new BusinessException("MAIL020");
-            }
-        }
-        if (channelPresent
-                && NotifyChannel.mailTemplateChannels().stream().noneMatch(c -> c.equals(entity.getChannel()))) {
-            throw new BusinessException("MAIL019", entity.getChannel());
-        }
-        if (codePresent) {
-            // 唯一性按 (编码, 渠道) 判断：合并模板把同一编码拆成 EMAIL/INAPP 两行，
-            // 只按编码判重会把「另一渠道的兄弟行」误判成重复（id 非空时已按 id 排除自身）。
-            Long dup = templateService
-                    .lambdaQuery()
-                    .eq(SysMailTemplate::getTemplateCode, entity.getTemplateCode())
-                    .eq(channelPresent, SysMailTemplate::getChannel, entity.getChannel())
-                    .ne(id != null, SysMailTemplate::getId, id)
-                    .count();
-            if (dup != null && dup > 0) {
-                throw new BusinessException("MAIL008", entity.getTemplateCode());
-            }
-        }
-        if (scenePresent) {
-            NotifyEventDef event = NotifyEventRegistry.find(entity.getScene())
-                    .orElseThrow(() -> new BusinessException("MAIL009", entity.getScene()));
-            if (channelPresent && event.channels().stream().noneMatch(c -> c.equals(entity.getChannel()))) {
-                throw new BusinessException("MAIL021", entity.getScene(), entity.getChannel());
-            }
-            Long bound = templateService
-                    .lambdaQuery()
-                    .eq(SysMailTemplate::getScene, entity.getScene())
-                    .eq(channelPresent, SysMailTemplate::getChannel, entity.getChannel())
-                    .ne(id != null, SysMailTemplate::getId, id)
-                    .count();
-            if (bound != null && bound > 0) {
-                throw new BusinessException("MAIL013", entity.getScene());
-            }
-            // 变量校验：模板里用到的变量必须是事件 payload 字段的子集（不要求覆盖全部字段，
-            // 正文没用到 ${email} 的模板同样允许保存），校验后回写归一化结果。
-            entity.setVariables(
-                    normalizeVariables(entity.getVariables(), entity.getSubject(), entity.getContent(), event));
-        }
-    }
-
-    /**
-     * 校验并归一化模板变量：显式声明 ∪ 正文/主题中出现的变量，且必须是事件 payload 字段的子集。
-     *
-     * @return 归一化后的变量声明串（JSON 数组，无人使用时返回 null）
-     */
-    private String normalizeVariables(String declaredRaw, String subject, String content, NotifyEventDef event) {
-        LinkedHashSet<String> used = new LinkedHashSet<>(NotifyEventRegistry.parseList(declaredRaw));
-        used.addAll(NotifyEventRegistry.extractVariables(subject));
-        used.addAll(NotifyEventRegistry.extractVariables(content));
-        List<String> known = event.payloadFieldNames();
-        List<String> unknown = used.stream().filter(v -> !known.contains(v)).toList();
-        if (!unknown.isEmpty()) {
-            throw new BusinessException("MAIL022", String.join(", ", unknown), String.join(", ", known));
-        }
-        return used.isEmpty() ? null : NotifyEventRegistry.toJsonArray(new ArrayList<>(used));
     }
 
     private String render(String template, Map<String, String> vars) {

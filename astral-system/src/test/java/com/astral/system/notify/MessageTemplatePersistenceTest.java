@@ -106,7 +106,7 @@ class MessageTemplatePersistenceTest {
         config.addMapper(SysMailTemplateMapper.class);
         config.addMapper(SysSmsTemplateMapper.class);
         SqlSessionTemplate session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(config));
-        mailTemplates = new SysMailTemplateServiceImpl();
+        mailTemplates = new SysMailTemplateServiceImpl(mock(MailService.class));
         ReflectionTestUtils.setField(mailTemplates, "baseMapper", session.getMapper(SysMailTemplateMapper.class));
         SysSmsTemplateServiceImpl smsTemplates = new SysSmsTemplateServiceImpl();
         ReflectionTestUtils.setField(smsTemplates, "baseMapper", session.getMapper(SysSmsTemplateMapper.class));

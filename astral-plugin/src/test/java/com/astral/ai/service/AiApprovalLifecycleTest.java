@@ -111,6 +111,9 @@ class AiApprovalLifecycleTest {
     private AiRouteService routes;
     private boolean automaticTool;
     private AiProperties properties;
+    private AiToolService tools;
+    private com.astral.system.service.impl.UserRoleServiceImpl domainRoles;
+    private com.astral.ai.tool.AdminToolProvider adminTools;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -142,6 +145,12 @@ class AiApprovalLifecycleTest {
                             }
                         }));
         configuration.addMappers("com.astral.ai.mapper");
+        configuration.addMapper(com.astral.dao.mapper.UserMapper.class);
+        configuration.addMapper(com.astral.dao.mapper.RoleMapper.class);
+        configuration.addMapper(com.astral.dao.mapper.UserRoleMapper.class);
+        configuration.addMapper(com.astral.dao.mapper.PermissionMapper.class);
+        configuration.addMapper(com.astral.dao.mapper.RolePermissionMapper.class);
+        configuration.addMapper(com.astral.dao.mapper.SysNotifyRuleMapper.class);
         session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(configuration));
         try (var schemas = Files.list(Path.of("src/main/resources/schema"))) {
             for (Path schema : schemas.filter(
@@ -158,6 +167,43 @@ class AiApprovalLifecycleTest {
                         + ")");
             }
         }
+        for (String table : List.of(
+                "sys_user", "sys_role", "sys_user_role", "sys_permission", "sys_role_permission", "sys_notify_rule")) {
+            var definition = AiJson.read(
+                    Files.readString(Path.of("../astral-schema/src/main/resources/schema/" + table + ".json")));
+            List<String> fields = new ArrayList<>();
+            for (var field : definition.path("fields"))
+                fields.add(field.path("columnName").asString() + " "
+                        + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
+                        + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
+            jdbc.execute("CREATE TABLE " + table + " (" + String.join(",", fields) + ")");
+        }
+        jdbc.update(
+                "INSERT INTO sys_user(id,username,user_type,status,deleted) VALUES(41,'operator','ADMIN',1,0),(42,'target','ADMIN',1,0)");
+        jdbc.update(
+                "INSERT INTO sys_role(id,role_code,status,is_super) VALUES(1,'one',1,0),(2,'two',1,0),(3,'three',1,0)");
+        jdbc.update("INSERT INTO sys_user_role(id,user_id,role_id) VALUES(51,42,1)");
+        var rules = new com.astral.system.notify.SysNotifyRuleServiceImpl();
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                rules, "baseMapper", map(com.astral.dao.mapper.SysNotifyRuleMapper.class));
+        var publisher = new com.astral.system.notify.NotifyPublisher(
+                rules, null, null, null, null, null, null, null, null, null, null, null);
+        var roleRows = map(com.astral.dao.mapper.RoleMapper.class);
+        domainRoles = new com.astral.system.service.impl.UserRoleServiceImpl(
+                roleRows,
+                new com.astral.system.notify.UserRoleChangeNotifier(roleRows, publisher),
+                new com.astral.auth.security.PermissionCache(),
+                map(com.astral.dao.mapper.UserMapper.class),
+                map(com.astral.dao.mapper.RolePermissionMapper.class),
+                map(com.astral.dao.mapper.PermissionMapper.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                domainRoles, "baseMapper", map(com.astral.dao.mapper.UserRoleMapper.class));
+        domainRoles = proxy(domainRoles);
+        var users = new com.astral.system.service.impl.UserServiceImpl();
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                users, "baseMapper", map(com.astral.dao.mapper.UserMapper.class));
+        adminTools = new com.astral.ai.tool.AdminToolProvider(
+                users, null, domainRoles, null, null, null, null, null, null, null, null, null, null, null, jdbc, null);
         jdbc.execute("CREATE UNIQUE INDEX request_key ON ai_request(user_id, agent_id, idempotency_key)");
         jdbc.execute("CREATE UNIQUE INDEX event_sequence ON ai_request_event(request_id, sequence_no)");
         // Existing rows exercise real atomic quota SQL without replacing PostgreSQL advisory-lock semantics.
@@ -182,7 +228,7 @@ class AiApprovalLifecycleTest {
         StpInterface permissions = new StpInterface() {
             @Override
             public List<String> getPermissionList(Object loginId, String loginType) {
-                return List.of("admin:ai:tool:approve");
+                return List.of("*:*:*");
             }
 
             @Override
@@ -230,10 +276,10 @@ class AiApprovalLifecycleTest {
                 map(AiProviderRouteMapper.class),
                 registry,
                 new AiSecretCipher(properties));
-        var tools = new AiToolService(
+        tools = new AiToolService(
                 map(AiToolMapper.class),
                 map(AiAgentToolMapper.class),
-                List.of(() -> List.of(new FixtureTool())),
+                List.of(() -> List.of(new FixtureTool()), adminTools),
                 properties,
                 jdbc,
                 mock(AiMcpServerMapper.class),
@@ -881,6 +927,122 @@ class AiApprovalLifecycleTest {
         assertEquals(1, executions.get());
     }
 
+    @Test
+    void roleApprovalRejectsChangesMadeWhileWaitingAndKeepsTheNewAssignment() throws Exception {
+        useRoleTool();
+        var start = start("role-plan-stale");
+        await(() ->
+                "WAITING_APPROVAL".equals(requests.require(start.requestId()).getStatus()));
+        domainRoles.assignRoles(42L, List.of(1L, 2L));
+        approve(start.requestId(), 41L, true);
+        await(() -> "SUCCEEDED".equals(requests.require(start.requestId()).getStatus()));
+        assertEquals(
+                List.of(1L, 2L),
+                domainRoles.list().stream().map(row -> row.getRoleId()).sorted().toList());
+        assertTrue(conversations.byRequest(start.requestId()).stream()
+                .anyMatch(message ->
+                        "TOOL".equals(message.getRole()) && message.getContent().contains("重新")));
+    }
+
+    @Test
+    void unchangedRolePlanUsesServerSnapshotDespiteModelSuppliedValue() throws Exception {
+        useRoleTool();
+        var start = start("role-plan-unchanged");
+        await(() ->
+                "WAITING_APPROVAL".equals(requests.require(start.requestId()).getStatus()));
+        approve(start.requestId(), 41L, true);
+        await(() -> "SUCCEEDED".equals(requests.require(start.requestId()).getStatus()));
+        assertEquals(
+                List.of(3L),
+                domainRoles.list().stream().map(row -> row.getRoleId()).toList());
+    }
+
+    @Test
+    void changedRoleMeaningAndMissingLegacySnapshotAreRejectedWithoutRoleWrites() throws Exception {
+        useRoleTool();
+        var start = start("role-meaning-changed");
+        await(() ->
+                "WAITING_APPROVAL".equals(requests.require(start.requestId()).getStatus()));
+        jdbc.update("UPDATE sys_role SET is_super=1 WHERE id=3");
+        approve(start.requestId(), 41L, true);
+        await(() -> "SUCCEEDED".equals(requests.require(start.requestId()).getStatus()));
+        assertEquals(
+                List.of(1L),
+                domainRoles.list().stream().map(row -> row.getRoleId()).toList());
+        var handler = adminTools.handlers().stream()
+                .filter(h -> "change_role_permission".equals(h.definition().toolCode()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(
+                AiToolResult.REJECTED,
+                handler.execute(new AiToolContext(
+                                1L,
+                                2L,
+                                41L,
+                                1L,
+                                "fixture",
+                                "ADMIN",
+                                "ASTRAL_FRONT",
+                                AiJson.readObject("{\"userId\":42,\"roleIds\":[3]}"),
+                                null,
+                                true,
+                                41L))
+                        .status());
+    }
+
+    @Test
+    void humanTestRunPreparesServerSnapshotAndPreservesTheLastSuperAdministrator() {
+        useRoleTool();
+        jdbc.update("UPDATE sys_role SET is_super=1 WHERE id=1");
+        assertEquals(
+                AiToolResult.REJECTED,
+                tools.testRun(6L, "{\"userId\":42,\"roleIds\":[3]}", 41L).status());
+        assertEquals(
+                List.of(1L),
+                domainRoles.list().stream().map(row -> row.getRoleId()).toList());
+        jdbc.update("INSERT INTO sys_user_role(id,user_id,role_id) VALUES(52,41,1)");
+        assertEquals(
+                AiToolResult.SUCCEEDED,
+                tools.testRun(6L, "{\"userId\":42,\"roleIds\":[3]}", 41L).status());
+        assertEquals(
+                List.of(1L, 3L),
+                domainRoles.list().stream().map(row -> row.getRoleId()).sorted().toList());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void missingOrDeletedRoleTargetIsAnAuditedToolRejection(boolean deleted) throws Exception {
+        useRoleTool();
+        if (deleted) jdbc.update("UPDATE sys_user SET deleted=1 WHERE id=42");
+        else provider.toolArguments = "{\"userId\":999,\"roleIds\":[3]}";
+        var start = start("missing-role-target");
+        await(() -> List.of("WAITING_APPROVAL", "FAILED")
+                .contains(requests.require(start.requestId()).getStatus()));
+        assertEquals("WAITING_APPROVAL", requests.require(start.requestId()).getStatus());
+        approve(start.requestId(), 41L, true);
+        await(() -> "SUCCEEDED".equals(requests.require(start.requestId()).getStatus()));
+        assertEquals(
+                List.of(1L),
+                domainRoles.list().stream().map(row -> row.getRoleId()).toList());
+        assertTrue(conversations.byRequest(start.requestId()).stream()
+                .anyMatch(message ->
+                        "TOOL".equals(message.getRole()) && message.getContent().contains("不存在")));
+        assertEquals(
+                AiToolResult.REJECTED,
+                tools.testRun(6L, provider.toolArguments, 41L).status());
+        assertEquals(
+                1L,
+                jdbc.queryForObject(
+                        "SELECT count(*) FROM ai_tool_call WHERE source='test-run' AND status='REJECTED'", Long.class));
+    }
+
+    private void useRoleTool() {
+        jdbc.update(
+                "UPDATE ai_tool SET tool_code='change_role_permission', handler_key='admin.changeRolePermission', risk_level='HIGH', approval_policy='ADMIN_CONFIRM' WHERE id=6");
+        provider.toolName = "change_role_permission";
+        provider.toolArguments = "{\"userId\":42,\"roleIds\":[3],\"_authorizationSnapshot\":\"model-forged\"}";
+    }
+
     private AiChatOrchestrator.Start start(String key) {
         return orchestrator.start(
                 agent, version, conversation, 41L, "ASTRAL_FRONT", "Please run fixture", Map.of(), key);
@@ -949,6 +1111,8 @@ class AiApprovalLifecycleTest {
     private static final class ScriptedProvider implements AiProvider {
         private final List<ChatRequest> requests = new CopyOnWriteArrayList<>();
         private boolean batch;
+        private String toolName = "fixture_tool";
+        private String toolArguments = "{}";
         private boolean finalOnly;
         private boolean plainText;
         private boolean failFinal;
@@ -989,9 +1153,9 @@ class AiApprovalLifecycleTest {
                         10,
                         batch
                                 ? List.of(
-                                        new ToolCall("call_fixture", "fixture_tool", "{}"),
+                                        new ToolCall("call_fixture", toolName, toolArguments),
                                         new ToolCall("call_fixture_2", "fixture_tool", "{}"))
-                                : List.of(new ToolCall("call_fixture", "fixture_tool", "{}"))));
+                                : List.of(new ToolCall("call_fixture", toolName, toolArguments))));
             } else {
                 if (failFinal) {
                     listener.onError(new com.astral.ai.common.AiException("AI006", "fixture failed"));

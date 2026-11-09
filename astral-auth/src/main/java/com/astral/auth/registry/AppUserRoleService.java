@@ -2,13 +2,16 @@ package com.astral.auth.registry;
 
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.constant.PermissionType;
+import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.Permission;
 import com.astral.dao.entity.Role;
 import com.astral.dao.entity.RolePermission;
+import com.astral.dao.entity.User;
 import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.PermissionMapper;
 import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.RolePermissionMapper;
+import com.astral.dao.mapper.UserMapper;
 import com.astral.dao.mapper.UserRoleMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import java.util.List;
@@ -16,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * App 端默认角色（{@code APP_USER}）的归属维护。
@@ -59,6 +63,7 @@ public class AppUserRoleService {
     private final RolePermissionMapper rolePermissionMapper;
     private final UserRoleMapper userRoleMapper;
     private final PermissionCache permissionCache;
+    private final UserMapper userMapper;
 
     /**
      * 幂等：确保 APP_USER 角色存在，返回其 id。
@@ -79,7 +84,7 @@ public class AppUserRoleService {
         // id 由 SequenceMetaObjectHandler 按业务键 sys_role_id 取号（IdType.INPUT + fill 触发）
         roleMapper.insert(role);
         log.info("[AppUserRole] 已创建默认角色 {} (id={})", ROLE_CODE, role.getId());
-        permissionCache.bumpVersion();
+        permissionCache.bumpAfterCommit();
         return role.getId();
     }
 
@@ -94,8 +99,10 @@ public class AppUserRoleService {
      *
      * @return 本次新增的授权条数（0 表示已是最新；收回数另记日志）
      */
+    @Transactional(rollbackFor = Exception.class)
     public int syncPermissions() {
         Long roleId = ensureRole();
+        roleMapper.selectList(new QueryWrapper<Role>().eq("id", roleId).last("FOR UPDATE"));
         List<Permission> appPermissions = permissionMapper.selectList(new QueryWrapper<Permission>()
                 .likeRight("permission_code", APP_PERMISSION_PREFIX)
                 .eq("type", PermissionType.API));
@@ -126,7 +133,7 @@ public class AppUserRoleService {
             log.info("[AppUserRole] 已从 {} 收回范围(DATA)权限 {} 条（范围权限不随默认角色发放）", ROLE_CODE, revoked);
         }
         if (granted > 0 || revoked > 0) {
-            permissionCache.bumpVersion();
+            permissionCache.bumpAfterCommit();
         }
         return granted;
     }
@@ -137,11 +144,21 @@ public class AppUserRoleService {
      * <p>运行期唯一会「自动发角色」的入口：App 端注册成功后调用，保证新用户开箱即用；
      * 其余场景（管理端手工调整）不会被覆盖。</p>
      */
+    @Transactional(rollbackFor = Exception.class)
     public void assignToUser(Long userId) {
         if (userId == null) {
             return;
         }
+        if (userMapper
+                .selectList(new QueryWrapper<User>()
+                        .eq("id", userId)
+                        .eq("deleted", 0)
+                        .last("FOR UPDATE"))
+                .isEmpty()) {
+            throw new BusinessException("SYS001");
+        }
         Long roleId = ensureRole();
+        roleMapper.selectList(new QueryWrapper<Role>().eq("id", roleId).last("FOR UPDATE"));
         Long exists = userRoleMapper.selectCount(
                 new QueryWrapper<UserRole>().eq("user_id", userId).eq("role_id", roleId));
         if (exists != null && exists > 0) {
@@ -158,7 +175,7 @@ public class AppUserRoleService {
             log.info("[AppUserRole] 用户 {} 的 {} 关联已存在（唯一约束兜底），跳过", userId, ROLE_CODE);
             return;
         }
-        permissionCache.bumpVersion();
+        permissionCache.bumpAfterCommit();
         log.info("[AppUserRole] 已为用户 {} 分配默认角色 {}", userId, ROLE_CODE);
     }
 }

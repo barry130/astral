@@ -6,8 +6,10 @@ import static org.mockito.Mockito.*;
 
 import com.astral.auth.security.PermissionCache;
 import com.astral.dao.entity.Role;
+import com.astral.dao.entity.User;
 import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.RoleMapper;
+import com.astral.dao.mapper.UserMapper;
 import com.astral.dao.mapper.UserRoleMapper;
 import com.astral.system.controller.UserRoleController;
 import com.astral.system.notify.NotifyEventRegistry;
@@ -67,6 +69,13 @@ class UserRoleNotificationTest {
         publisher = mock(NotifyPublisher.class);
         UserRoleMapper mapper = mock(UserRoleMapper.class);
         when(mapper.insert(any(UserRole.class))).thenAnswer(call -> insert(call.getArgument(0)));
+        when(mapper.selectOne(any(Wrapper.class))).thenAnswer(call -> {
+            var wrapper =
+                    (com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserRole>) call.getArgument(0);
+            wrapper.getSqlSegment();
+            Object id = wrapper.getParamNameValuePairs().values().iterator().next();
+            return read(((Number) id).longValue());
+        });
         when(mapper.updateById(any(UserRole.class))).thenAnswer(call -> {
             UserRole row = call.getArgument(0);
             UserRole before = read(row.getId());
@@ -96,7 +105,13 @@ class UserRoleNotificationTest {
         });
         when(mapper.deleteById(any(java.io.Serializable.class)))
                 .thenAnswer(call -> jdbc.update("DELETE FROM user_roles WHERE id=?", (Object) call.getArgument(0)));
-        UserRoleServiceImpl target = spy(new UserRoleServiceImpl(roles, new UserRoleChangeNotifier(roles, publisher)));
+        UserMapper users = mock(UserMapper.class);
+        User user = new User();
+        user.setId(7L);
+        user.setUserType("APP");
+        when(users.selectList(any(Wrapper.class))).thenReturn(List.of(user));
+        UserRoleServiceImpl target = spy(new UserRoleServiceImpl(
+                roles, new UserRoleChangeNotifier(roles, publisher), new PermissionCache(), users, null, null));
         ReflectionTestUtils.setField(target, "baseMapper", mapper);
         doAnswer(call -> jdbc.query("SELECT * FROM user_roles WHERE user_id=7", (rs, n) -> {
                     UserRole row = new UserRole();
@@ -215,7 +230,7 @@ class UserRoleNotificationTest {
         jdbc.update("INSERT INTO user_roles VALUES (1,7,1)");
         UserRole row = new UserRole();
         row.setRoleId(2L);
-        UserRoleController controller = new UserRoleController(service, mock(PermissionCache.class));
+        UserRoleController controller = new UserRoleController(service);
 
         controller.update(1L, row);
 

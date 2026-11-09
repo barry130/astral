@@ -9,6 +9,8 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * 用户权限/角色列表缓存。
@@ -71,6 +73,20 @@ public class PermissionCache {
             log.debug("权限版本已更新，全部用户缓存将在下次读取时回源");
         } catch (Exception e) {
             log.warn("权限版本更新失败（缓存将依赖会话过期自愈）: {}", e.getMessage());
+        }
+    }
+
+    /** Publish committed authorization changes; a rolled-back transaction leaves caches valid. */
+    public void bumpAfterCommit() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    bumpVersion();
+                }
+            });
+        } else {
+            bumpVersion();
         }
     }
 

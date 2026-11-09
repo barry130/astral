@@ -14,19 +14,20 @@ import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolProvider;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
+import com.astral.common.constant.NoticeConstants;
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.LoginLog;
 import com.astral.dao.entity.OperateLog;
 import com.astral.dao.entity.SysConfig;
 import com.astral.dao.entity.SysNotice;
 import com.astral.dao.entity.User;
-import com.astral.dao.mapper.SysNoticeMapper;
 import com.astral.log.service.LoginLogService;
 import com.astral.log.service.OperateLogService;
 import com.astral.plugin.api.AstralPlugin;
 import com.astral.plugin.api.PluginRegistry;
 import com.astral.storage.service.StorageFileService;
 import com.astral.system.mail.MailService;
+import com.astral.system.notice.NoticeService;
 import com.astral.system.notify.NotifyPublisher;
 import com.astral.system.service.RoleService;
 import com.astral.system.service.SysConfigService;
@@ -91,7 +92,7 @@ public class AdminToolProvider implements AiToolProvider {
     private final AiRequestService requestService;
     private final AiUsageService usageService;
     private final AiOverviewService overviewService;
-    private final SysNoticeMapper noticeMapper;
+    private final NoticeService noticeService;
     private final MailService mailService;
     private final NotifyPublisher notifyPublisher;
     private final JdbcTemplate jdbcTemplate;
@@ -975,6 +976,28 @@ public class AdminToolProvider implements AiToolProvider {
         }
 
         @Override
+        public ObjectNode prepareArguments(ObjectNode arguments) {
+            ObjectNode prepared = arguments == null ? AiJson.mapper().createObjectNode() : arguments.deepCopy();
+            prepared.remove("_authorizationSnapshot");
+            if (prepared.hasNonNull("userId")) {
+                String snapshot = userRoleService.assignmentSnapshot(
+                        prepared.path("userId").asLong(), roleIds(prepared));
+                // An absent target has no snapshot. Apply will return a durable rejection;
+                // avoid throwing from a participating preparation transaction and marking it rollback-only.
+                if (snapshot != null) prepared.put("_authorizationSnapshot", snapshot);
+            }
+            return prepared;
+        }
+
+        private List<Long> roleIds(ObjectNode arguments) {
+            List<Long> ids = new ArrayList<>();
+            if (arguments != null && arguments.get("roleIds") instanceof tools.jackson.databind.node.ArrayNode array) {
+                for (var node : array) if (node.isNumber()) ids.add(node.asLong());
+            }
+            return ids;
+        }
+
+        @Override
         protected AiToolResult apply(AiToolContext context) {
             Long userId = context.arguments() == null || !context.arguments().has("userId")
                     ? null
@@ -982,23 +1005,24 @@ public class AdminToolProvider implements AiToolProvider {
             if (userId == null) {
                 return AiToolResult.rejected("缺少 userId");
             }
-            List<Long> roleIds = new ArrayList<>();
-            if (context.arguments() != null
-                    && context.arguments().get("roleIds") instanceof tools.jackson.databind.node.ArrayNode array) {
-                for (var node : array) {
-                    if (node.isNumber()) {
-                        roleIds.add(node.asLong());
-                    }
-                }
-            }
+            List<Long> roleIds = roleIds(context.arguments());
             if (roleIds.isEmpty()) {
                 return AiToolResult.rejected("roleIds 不能为空；如需禁用用户请改用 change_user_status");
             }
             User user = userService.getById(userId);
-            if (user == null) {
+            if (user == null || Integer.valueOf(1).equals(user.getDeleted())) {
                 return AiToolResult.rejected("用户不存在：" + userId);
             }
-            userRoleService.assignRoles(userId, roleIds);
+            try {
+                userRoleService.assignRolesIfUnchanged(userId, roleIds, context.arg("_authorizationSnapshot"));
+            } catch (BusinessException rejected) {
+                // These domain validations run before writes; other failures remain uncertain.
+                if (List.of("SYS001", "SYS012", "SYS016", "SYS017").stream()
+                        .anyMatch(code -> code.equals(rejected.getErrorCode()))) {
+                    return AiToolResult.rejected(rejected.getMessage());
+                }
+                throw rejected;
+            }
             return AiToolResult.ok(
                     "用户「" + user.getUsername() + "」的角色已更新为 " + roleIds + "。",
                     AiToolTypes.payload(Map.of("userId", userId, "roleIds", roleIds)));
@@ -1048,8 +1072,8 @@ public class AdminToolProvider implements AiToolProvider {
                     AiToolTypes.objectSchema("""
                             {"title":{"type":"string","description":"公告标题"},
                              "content":{"type":"string","description":"公告正文"},
-                             "noticeType":{"type":"string","description":"公告类型，如 SYSTEM"},
-                             "audience":{"type":"string","description":"受众，如 ALL"}}"""),
+                             "noticeType":{"type":"string","enum":["announce"],"description":"广播公告类型 announce"},
+                             "audience":{"type":"string","enum":["ALL","LOGGED_IN","NOT_LOGGED_IN"],"description":"全部、已登录或未登录用户"}}"""),
                     "立即对受众可见");
         }
 
@@ -1060,19 +1084,27 @@ public class AdminToolProvider implements AiToolProvider {
             if (title == null || title.isBlank() || content == null || content.isBlank()) {
                 return AiToolResult.rejected("标题与正文不能为空");
             }
+            String audience = safe(context.arg("audience"), "ALL");
+            if (!List.of("ALL", "LOGGED_IN", "NOT_LOGGED_IN").contains(audience)) {
+                return AiToolResult.rejected("audience 只允许 ALL、LOGGED_IN 或 NOT_LOGGED_IN");
+            }
+            String type = safe(context.arg("noticeType"), NoticeConstants.TYPE_ANNOUNCE);
+            if (!NoticeConstants.TYPE_ANNOUNCE.equals(type)) {
+                return AiToolResult.rejected("发布公告只允许 announce 类型");
+            }
             SysNotice notice = new SysNotice();
-            notice.setChannel("INAPP");
-            notice.setNoticeType(safe(context.arg("noticeType"), "SYSTEM"));
+            notice.setChannel(NoticeConstants.CHANNEL_ALL);
+            notice.setNoticeType(NoticeConstants.TYPE_ANNOUNCE);
             notice.setScene("ADMIN");
-            // 发送方归属：AI 发布公告直接落库、不经过 NotifyPublisher，显式写 sender 才能在消息统计里与其它来源区分
+            // 公告由宿主服务发布，保留助手发送方归属。
             notice.setSender("ai");
             notice.setTitle(AiJson.truncate(title, 200));
             notice.setContent(content);
-            notice.setAudience(safe(context.arg("audience"), "ALL"));
+            notice.setAudience(audience);
             notice.setIsShow(1L);
             notice.setIsTop(0L);
             notice.setDialogClosable(1L);
-            noticeMapper.insert(notice);
+            noticeService.create(notice);
             return AiToolResult.ok(
                     "公告已发布：" + title, AiToolTypes.payload(Map.of("noticeId", notice.getId(), "title", title)));
         }

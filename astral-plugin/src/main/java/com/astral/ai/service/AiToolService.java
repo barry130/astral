@@ -403,12 +403,13 @@ public class AiToolService {
         if (arguments == null) {
             arguments = AiJson.mapper().createObjectNode();
         }
+        arguments = handler.prepareArguments(arguments);
         LocalDateTime now = LocalDateTime.now();
         AiToolCallEntity record = new AiToolCallEntity();
         record.setToolCode(entity.getToolCode());
         record.setToolName(entity.getName());
         record.setRiskLevel(entity.getRiskLevel());
-        record.setArgumentsJson(argumentsJson);
+        record.setArgumentsJson(AiJson.write(arguments));
         record.setSource(AiConstants.ToolCallSource.TEST_RUN);
         record.setStatus(AiConstants.ToolCallStatus.RUNNING);
         record.setApprovalStatus(AiConstants.ApprovalPolicy.NONE);

@@ -1,6 +1,5 @@
 package com.astral.system.controller;
 
-import com.astral.auth.security.PermissionCache;
 import com.astral.common.annotation.RequiresSuper;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.UserRole;
@@ -35,8 +34,6 @@ public class UserRoleController {
 
     /** 用户角色关联服务 */
     private final UserRoleService userRoleService;
-    /** 权限缓存：用户角色关系变更后递增版本，立即失效所有用户的权限缓存 */
-    private final PermissionCache permissionCache;
 
     /**
      * 分页查询用户角色关联列表
@@ -75,8 +72,6 @@ public class UserRoleController {
     @PostMapping
     public Result<Void> create(@Valid @RequestBody UserRole entity) {
         userRoleService.save(entity);
-        // 用户→角色映射已变更，递增权限版本让所有用户的权限缓存下次读取即回源
-        permissionCache.bumpVersion();
         return Result.success();
     }
 
@@ -91,8 +86,6 @@ public class UserRoleController {
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody UserRole entity) {
         userRoleService.updateAssignment(id, entity.getUserId(), entity.getRoleId());
-        // 用户→角色映射已变更，递增权限版本
-        permissionCache.bumpVersion();
         return Result.success();
     }
 
@@ -106,8 +99,6 @@ public class UserRoleController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         userRoleService.removeById(id);
-        // 用户→角色映射已变更，递增权限版本
-        permissionCache.bumpVersion();
         return Result.success();
     }
 }

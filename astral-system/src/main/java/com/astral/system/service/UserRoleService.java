@@ -23,6 +23,12 @@ public interface UserRoleService extends IService<UserRole> {
      */
     void assignRoles(Long userId, List<Long> roleIds);
 
+    /** Capture the server-side authorization state for a pending role replacement; null means the target is absent. */
+    String assignmentSnapshot(Long userId, List<Long> roleIds);
+
+    /** Replace only if the approved server snapshot still matches, under the same transaction locks. */
+    void assignRolesIfUnchanged(Long userId, List<Long> roleIds, String snapshot);
+
     /** 只更新关联的用户/角色，并在事务提交后通知受影响用户。null 表示保留该字段。 */
     boolean updateAssignment(Long id, Long userId, Long roleId);
 }

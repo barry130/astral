@@ -2,12 +2,16 @@ package com.astral.system.service.impl;
 
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.Permission;
+import com.astral.dao.entity.Role;
 import com.astral.dao.entity.RolePermission;
+import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.RolePermissionMapper;
 import com.astral.system.service.PermissionService;
 import com.astral.system.service.RolePermissionService;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.spring.service.impl.ServiceImpl;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -27,10 +31,13 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
         implements RolePermissionService {
 
     private final PermissionService permissionService;
+    private final RoleMapper roleMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void assignPermissions(Long roleId, List<Long> permissionIds) {
+        lockRoles();
+        requireRole(roleId);
         List<Long> distinct = (permissionIds == null || permissionIds.isEmpty())
                 ? List.of()
                 : permissionIds.stream().filter(Objects::nonNull).distinct().toList();
@@ -55,5 +62,57 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
             }
             saveBatch(rows);
         }
+    }
+
+    private void lockRoles() {
+        roleMapper.selectList(
+                new LambdaQueryWrapper<Role>().orderByAsc(Role::getId).last("FOR UPDATE"));
+    }
+
+    private void requireRole(Long roleId) {
+        if (roleId == null || roleMapper.selectCount(new LambdaQueryWrapper<Role>().eq(Role::getId, roleId)) == 0) {
+            throw new BusinessException("SYS003");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean save(RolePermission row) {
+        lockRoles();
+        requireRole(row.getRoleId());
+        return super.save(row);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateById(RolePermission row) {
+        return updateAssignment(row.getId(), row.getRoleId(), row.getPermissionId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean removeById(Serializable id) {
+        lockRoles();
+        return super.removeById(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean remove(Wrapper<RolePermission> wrapper) {
+        lockRoles();
+        return super.remove(wrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateAssignment(Long id, Long roleId, Long permissionId) {
+        if (roleId == null && permissionId == null) return false;
+        lockRoles();
+        if (roleId != null) requireRole(roleId);
+        return lambdaUpdate()
+                .eq(RolePermission::getId, id)
+                .set(roleId != null, RolePermission::getRoleId, roleId)
+                .set(permissionId != null, RolePermission::getPermissionId, permissionId)
+                .update();
     }
 }

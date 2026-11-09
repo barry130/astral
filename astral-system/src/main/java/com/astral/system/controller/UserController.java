@@ -275,8 +275,6 @@ public class UserController {
         }
         // 先删后插 + 角色存在性校验，整体在一个事务里（见 UserRoleServiceImpl.assignRoles）
         userRoleService.assignRoles(id, body.get("roleIds"));
-        // 用户→角色映射已变更，递增权限版本让所有用户的权限缓存下次读取即回源
-        permissionCache.bumpVersion();
         return Result.success();
     }
 

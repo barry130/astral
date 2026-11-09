@@ -21,4 +21,7 @@ public interface RolePermissionService extends IService<RolePermission> {
      * @throws com.astral.common.exception.BusinessException 存在不存在的权限ID时
      */
     void assignPermissions(Long roleId, List<Long> permissionIds);
+
+    /** Whitelist update serialized with pending role approval checks. */
+    boolean updateAssignment(Long id, Long roleId, Long permissionId);
 }

@@ -90,17 +90,7 @@ public class RolePermissionController {
     @Operation(summary = "更新")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody RolePermission entity) {
-        // 白名单更新：只允许改 roleId/permissionId 两列（本表全部业务列）。
-        // 不能用 updateById(客户端实体)——MP 默认 NOT_NULL 策略下客户端传什么非空字段
-        // 都会进 SET（mass assignment），将来本表新增列会被一并写入。
-        var update = rolePermissionService.lambdaUpdate().eq(RolePermission::getId, id);
-        if (entity.getRoleId() != null) {
-            update.set(RolePermission::getRoleId, entity.getRoleId());
-        }
-        if (entity.getPermissionId() != null) {
-            update.set(RolePermission::getPermissionId, entity.getPermissionId());
-        }
-        update.update();
+        rolePermissionService.updateAssignment(id, entity.getRoleId(), entity.getPermissionId());
         // 角色→权限映射已变更，递增权限版本
         permissionCache.bumpVersion();
         return Result.success();

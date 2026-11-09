@@ -33,6 +33,8 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteRoleWithRelations(Long roleId) {
+        baseMapper.selectList(
+                new LambdaQueryWrapper<Role>().orderByAsc(Role::getId).last("FOR UPDATE"));
         Long refs = userRoleMapper.selectCount(new LambdaQueryWrapper<UserRole>().eq(UserRole::getRoleId, roleId));
         long userRefs = refs == null ? 0L : refs;
         if (userRefs > 0) {
