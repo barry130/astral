@@ -21,7 +21,7 @@ public class SysMailTemplate {
     private String templateCode;
 
     @TableField("template_name")
-    @Size(max = 128)
+    @Size(max = 64)
     private String templateName;
 
     @Size(max = 256)

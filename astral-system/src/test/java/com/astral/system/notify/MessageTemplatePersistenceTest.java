@@ -2,6 +2,7 @@ package com.astral.system.notify;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -44,6 +45,9 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
 import org.springframework.aop.framework.ProxyFactory;
@@ -54,6 +58,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 /** Real service calls and MyBatis persistence; no application datasource or network is used. */
 class MessageTemplatePersistenceTest {
@@ -63,27 +68,31 @@ class MessageTemplatePersistenceTest {
     private JdbcTemplate jdbc;
     private TransactionTemplate transaction;
     private SmsServiceImpl sms;
+    private LocalValidatorFactoryBean validator;
     private final List<String> sentCodes = new CopyOnWriteArrayList<>();
+    private final List<String> sentSigns = new CopyOnWriteArrayList<>();
     private final BeforeWrite writes = new BeforeWrite();
 
     @BeforeEach
     void setUp() throws SQLException {
+        validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
         JdbcDataSource source = new JdbcDataSource();
         source.setURL("jdbc:h2:mem:templates_" + UUID.randomUUID() + ";MODE=PostgreSQL");
         keepAlive = source.getConnection();
         jdbc = new JdbcTemplate(source);
         jdbc.execute("""
                 CREATE TABLE sys_mail_template (
-                  id BIGINT PRIMARY KEY, template_code VARCHAR(64), template_name VARCHAR(128),
+                  id BIGINT PRIMARY KEY, template_code VARCHAR(64) NOT NULL, template_name VARCHAR(64) NOT NULL,
                   subject VARCHAR(256), content TEXT, variables VARCHAR(512), scene VARCHAR(64),
                   channel VARCHAR(16), remark VARCHAR(256), create_time TIMESTAMP, update_time TIMESTAMP,
                   UNIQUE(template_code, channel), UNIQUE(scene, channel))
                 """);
         jdbc.execute("""
                 CREATE TABLE sys_sms_template (
-                  id BIGINT PRIMARY KEY, template_code VARCHAR(64) UNIQUE, template_name VARCHAR(64),
-                  event_code VARCHAR(64) UNIQUE, provider_template_code VARCHAR(64), sign_name VARCHAR(64),
-                  content_sample TEXT, audit_status INTEGER, audit_remark VARCHAR(256),
+                  id BIGINT PRIMARY KEY, template_code VARCHAR(64) NOT NULL UNIQUE, template_name VARCHAR(64) NOT NULL,
+                  event_code VARCHAR(64) NOT NULL UNIQUE, provider_template_code VARCHAR(64) NOT NULL, sign_name VARCHAR(64),
+                  content_sample TEXT, audit_status INTEGER NOT NULL DEFAULT 0, audit_remark VARCHAR(256),
                   remark VARCHAR(256), create_time TIMESTAMP, update_time TIMESTAMP)
                 """);
         MybatisConfiguration config = new MybatisConfiguration();
@@ -111,6 +120,7 @@ class MessageTemplatePersistenceTest {
         SysSmsProvider provider = new SysSmsProvider();
         provider.setId(1L);
         provider.setProviderType("FIXTURE");
+        provider.setSignName("Provider default");
         SysSmsProviderMapper providers = mock(SysSmsProviderMapper.class);
         when(providers.selectList(any())).thenReturn(List.of(provider));
         SmsProvider delivery = new SmsProvider() {
@@ -123,6 +133,7 @@ class MessageTemplatePersistenceTest {
             public void send(
                     SysSmsProvider selected, String phone, String sign, String code, Map<String, String> params) {
                 sentCodes.add(code);
+                sentSigns.add(sign);
             }
         };
         sms = new SmsServiceImpl(
@@ -134,8 +145,8 @@ class MessageTemplatePersistenceTest {
         ReflectionTestUtils.setField(smsTemplates, "baseMapper", session.getMapper(SysSmsTemplateMapper.class));
         DataSourceTransactionManager transactions = new DataSourceTransactionManager(source);
         transaction = new TransactionTemplate(transactions);
-        ProxyFactory proxy =
-                new ProxyFactory(new MessageTemplateService(mailTemplates, smsTemplates, mock(MailService.class), sms));
+        ProxyFactory proxy = new ProxyFactory(
+                new MessageTemplateService(mailTemplates, smsTemplates, mock(MailService.class), sms, validator));
         proxy.addAdvice(new TransactionInterceptor(transactions, new AnnotationTransactionAttributeSource()));
         service = (MessageTemplateService) proxy.getProxy();
     }
@@ -144,6 +155,9 @@ class MessageTemplatePersistenceTest {
     void tearDown() throws SQLException {
         if (keepAlive != null) {
             keepAlive.close();
+        }
+        if (validator != null) {
+            validator.close();
         }
     }
 
@@ -220,6 +234,178 @@ class MessageTemplatePersistenceTest {
         assertEquals(1, service.list().size());
         assertEquals(List.of("INAPP"), service.list().getFirst().getChannels());
         assertEquals("Fixture content", service.list().getFirst().getContent());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\t"})
+    void selectedSmsChannelRequiresAProviderTemplateWithoutReplacingExistingChannels(String providerCode) {
+        service.save(body("alert", NotifyEventRegistry.SYSTEM_ALERT));
+        MessageTemplateSaveDto changed = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        changed.setChannels(List.of("SMS"));
+        changed.setSmsProviderTemplateCode(providerCode);
+
+        assertEquals(
+                "SMS015",
+                assertThrows(BusinessException.class, () -> service.save(changed))
+                        .getErrorCode());
+
+        assertEquals(List.of("EMAIL", "INAPP"), service.list().getFirst().getChannels());
+        assertEquals("Fixture content", service.list().getFirst().getContent());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, 4})
+    void invalidSmsAuditStatusCannotReplaceASendableMapping(int auditStatus) {
+        MessageTemplateSaveDto existing = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        existing.setChannels(List.of("SMS"));
+        existing.setSmsProviderTemplateCode("OLD");
+        existing.setSmsAuditStatus(2);
+        service.save(existing);
+        MessageTemplateSaveDto changed = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        changed.setChannels(List.of("SMS"));
+        changed.setSmsProviderTemplateCode("NEW");
+        changed.setSmsAuditStatus(auditStatus);
+
+        assertEquals(
+                "SMS016",
+                assertThrows(BusinessException.class, () -> service.save(changed))
+                        .getErrorCode());
+
+        assertEquals(2, service.list().getFirst().getSmsAuditStatus());
+        sms.sendSystemAlert("fixture-phone", "Title", "Content");
+        assertEquals(List.of("OLD"), sentCodes);
+    }
+
+    @Test
+    void rebindingAfterClearingVariablesRemovesOldDeclarationsFromEveryRenderChannel() {
+        MessageTemplateSaveDto existing = body("password", NotifyEventRegistry.QT_PASSWORD_RESET_CODE);
+        existing.setSubject("Code ${code}");
+        existing.setContent("Your code is ${code}");
+        existing.setVariables("[\"code\"]");
+        existing.setRemark("Old remark");
+        service.save(existing);
+        MessageTemplateSaveDto changed = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        changed.setOriginalCode("password");
+        changed.setOriginalScene(NotifyEventRegistry.QT_PASSWORD_RESET_CODE);
+        changed.setVariables("[]");
+
+        service.save(changed);
+
+        assertNull(service.list().getFirst().getVariables());
+        for (SysMailTemplate row : mailTemplates.list()) {
+            assertEquals(NotifyEventRegistry.SYSTEM_ALERT, row.getScene());
+            assertNull(row.getVariables());
+            assertNull(row.getRemark());
+        }
+    }
+
+    @Test
+    void clearingSelectedSmsOptionalFieldsRestoresTheProviderSignAndRemovesOldNotes() {
+        MessageTemplateSaveDto existing = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        existing.setChannels(List.of("SMS"));
+        existing.setSmsProviderTemplateCode("OLD");
+        existing.setSmsSignName("Template override");
+        existing.setSmsContentSample("Old sample");
+        existing.setSmsAuditRemark("Old audit remark");
+        existing.setRemark("Old remark");
+        service.save(existing);
+        MessageTemplateSaveDto changed = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        changed.setChannels(List.of("SMS"));
+        changed.setSmsProviderTemplateCode("NEW");
+
+        service.save(changed);
+
+        var saved = service.list().getFirst();
+        assertNull(saved.getSmsSignName());
+        assertNull(saved.getSmsContentSample());
+        assertNull(saved.getSmsAuditRemark());
+        assertNull(saved.getRemark());
+        sms.sendSystemAlert("fixture-phone", "Title", "Content");
+        assertEquals(List.of("NEW"), sentCodes);
+        assertEquals(List.of("Provider default"), sentSigns);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"EMAIL", "INAPP", "SMS"})
+    void selectedChannelRejectsAnOversizedNameAsAParameterError(String channel) {
+        MessageTemplateSaveDto dto = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        dto.setChannels(List.of(channel));
+        dto.setTemplateName("N".repeat(65));
+        dto.setSmsProviderTemplateCode("PROVIDER");
+
+        assertEquals(
+                320,
+                assertThrows(BusinessException.class, () -> service.save(dto)).getCode());
+
+        assertEquals(List.of(), service.list());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"EMAIL", "INAPP", "SMS"})
+    void selectedChannelAcceptsItsExactColumnLimits(String channel) {
+        MessageTemplateSaveDto dto = body("C".repeat(64), NotifyEventRegistry.SYSTEM_ALERT);
+        dto.setChannels(List.of(channel));
+        dto.setTemplateName("N".repeat(64));
+        dto.setSubject("S".repeat(256));
+        dto.setRemark("R".repeat(256));
+        dto.setSmsProviderTemplateCode("P".repeat(64));
+        dto.setSmsSignName("G".repeat(64));
+        dto.setSmsAuditRemark("A".repeat(256));
+        dto.setSmsAuditStatus(3);
+
+        service.save(dto);
+
+        var saved = service.list().getFirst();
+        assertEquals("C".repeat(64), saved.getTemplateCode());
+        assertEquals("N".repeat(64), saved.getTemplateName());
+        assertEquals("R".repeat(256), saved.getRemark());
+        assertEquals(List.of(channel), saved.getChannels());
+        if (NotifyChannel.SMS.equals(channel)) {
+            assertEquals("A".repeat(256), saved.getSmsAuditRemark());
+            sms.sendSystemAlert("fixture-phone", "Title", "Content");
+            assertEquals(List.of("P".repeat(64)), sentCodes);
+            assertEquals(List.of("G".repeat(64)), sentSigns);
+        } else {
+            assertEquals("S".repeat(256), saved.getSubject());
+        }
+    }
+
+    @Test
+    void unselectedSmsFieldsDoNotPreventARenderOnlySave() {
+        MessageTemplateSaveDto dto = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        dto.setSmsProviderTemplateCode("");
+        dto.setSmsSignName("G".repeat(65));
+        dto.setSmsAuditStatus(-1);
+
+        service.save(dto);
+
+        assertEquals(List.of("EMAIL", "INAPP"), service.list().getFirst().getChannels());
+        assertEquals("Fixture content", service.list().getFirst().getContent());
+        assertNull(service.list().getFirst().getSmsProviderTemplateCode());
+    }
+
+    @Test
+    void invalidSmsFieldsRollBackAnEarlierRenderChannelChange() {
+        MessageTemplateSaveDto existing = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        existing.setChannels(List.of("EMAIL", "SMS"));
+        existing.setSmsProviderTemplateCode("OLD");
+        service.save(existing);
+        sms.sendSystemAlert("fixture-phone", "Title", "Content");
+        MessageTemplateSaveDto changed = body("alert", NotifyEventRegistry.SYSTEM_ALERT);
+        changed.setChannels(List.of("EMAIL", "SMS"));
+        changed.setContent("Updated content");
+        changed.setSmsProviderTemplateCode("P".repeat(65));
+
+        assertEquals(
+                320,
+                assertThrows(BusinessException.class, () -> service.save(changed))
+                        .getCode());
+
+        assertEquals("Fixture content", service.list().getFirst().getContent());
+        assertEquals("OLD", service.list().getFirst().getSmsProviderTemplateCode());
+        sms.sendSystemAlert("fixture-phone", "Title", "Content");
+        assertEquals(List.of("OLD", "OLD"), sentCodes);
     }
 
     @Test

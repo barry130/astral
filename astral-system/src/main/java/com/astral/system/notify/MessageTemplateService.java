@@ -7,6 +7,7 @@ import com.astral.system.dto.MessageTemplateSaveDto;
 import com.astral.system.dto.MessageTemplateVo;
 import com.astral.system.mail.MailService;
 import com.astral.system.mail.SysMailTemplateService;
+import jakarta.validation.Validator;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -29,8 +30,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * 仍按 (scene, channel) 取模板。</p>
  *
  * <p>保存语义是「对齐」而不是「整体替换」：传入的 channels 是期望状态，已有但不在
- * channels 里的渠道行被删除，不在 channels 里的内容（如只勾 EMAIL 时提交的短信字段）
- * 不会覆盖已存在的短信行。</p>
+ * channels 里的渠道行被删除。所选渠道按完整表单保存，可空字段缺省时清空；
+ * 其他渠道的输入字段（如只勾 EMAIL 时提交的短信字段）不参与校验或写入。</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -40,6 +41,7 @@ public class MessageTemplateService {
     private final SysSmsTemplateService smsTemplateService;
     private final MailService mailService;
     private final SmsService smsService;
+    private final Validator validator;
 
     /** 邮件/站内信渠道（落 sys_mail_template） */
     private static final List<String> RENDER_CHANNELS = List.of(NotifyChannel.EMAIL, NotifyChannel.INAPP);
@@ -123,6 +125,12 @@ public class MessageTemplateService {
                 NotifyEventRegistry.find(scene).orElseThrow(() -> new BusinessException("MAIL009", scene));
         String name = require(dto.getTemplateName(), "MAIL016");
         List<String> channels = normalizeChannels(dto.getChannels(), event);
+        if (channels.contains(NotifyChannel.SMS)) {
+            require(dto.getSmsProviderTemplateCode(), "SMS015");
+            if (dto.getSmsAuditStatus() != null && (dto.getSmsAuditStatus() < 0 || dto.getSmsAuditStatus() > 3)) {
+                throw new BusinessException("SMS016");
+            }
+        }
         boolean renderChannel = channels.stream().anyMatch(RENDER_CHANNELS::contains);
         String variables = null;
         if (renderChannel) {
@@ -177,8 +185,23 @@ public class MessageTemplateService {
                 row.setContent(dto.getContent());
                 row.setVariables(variables);
                 row.setRemark(dto.getRemark());
-                boolean saved =
-                        row.getId() == null ? mailTemplateService.save(row) : mailTemplateService.updateById(row);
+                validateFields(row);
+                // This endpoint saves a complete channel form: null optional fields must clear old values.
+                boolean saved = row.getId() == null
+                        ? mailTemplateService.save(row)
+                        : mailTemplateService
+                                .lambdaUpdate()
+                                .eq(SysMailTemplate::getId, row.getId())
+                                .set(SysMailTemplate::getTemplateCode, row.getTemplateCode())
+                                .set(SysMailTemplate::getTemplateName, row.getTemplateName())
+                                .set(SysMailTemplate::getScene, row.getScene())
+                                .set(SysMailTemplate::getChannel, row.getChannel())
+                                .set(SysMailTemplate::getSubject, row.getSubject())
+                                .set(SysMailTemplate::getContent, row.getContent())
+                                .set(SysMailTemplate::getVariables, row.getVariables())
+                                .set(SysMailTemplate::getRemark, row.getRemark())
+                                .set(SysMailTemplate::getUpdateTime, LocalDateTime.now())
+                                .update();
                 if (!saved) {
                     throw BusinessException.of("模板已被其他操作修改，请刷新后重试");
                 }
@@ -195,7 +218,23 @@ public class MessageTemplateService {
             row.setAuditStatus(dto.getSmsAuditStatus() == null ? 0 : dto.getSmsAuditStatus());
             row.setAuditRemark(dto.getSmsAuditRemark());
             row.setRemark(dto.getRemark());
-            boolean saved = row.getId() == null ? smsTemplateService.save(row) : smsTemplateService.updateById(row);
+            validateFields(row);
+            boolean saved = row.getId() == null
+                    ? smsTemplateService.save(row)
+                    : smsTemplateService
+                            .lambdaUpdate()
+                            .eq(SysSmsTemplate::getId, row.getId())
+                            .set(SysSmsTemplate::getTemplateCode, row.getTemplateCode())
+                            .set(SysSmsTemplate::getTemplateName, row.getTemplateName())
+                            .set(SysSmsTemplate::getEventCode, row.getEventCode())
+                            .set(SysSmsTemplate::getProviderTemplateCode, row.getProviderTemplateCode())
+                            .set(SysSmsTemplate::getSignName, row.getSignName())
+                            .set(SysSmsTemplate::getContentSample, row.getContentSample())
+                            .set(SysSmsTemplate::getAuditStatus, row.getAuditStatus())
+                            .set(SysSmsTemplate::getAuditRemark, row.getAuditRemark())
+                            .set(SysSmsTemplate::getRemark, row.getRemark())
+                            .set(SysSmsTemplate::getUpdateTime, LocalDateTime.now())
+                            .update();
             if (!saved) {
                 throw BusinessException.of("模板已被其他操作修改，请刷新后重试");
             }
@@ -252,6 +291,13 @@ public class MessageTemplateService {
     }
 
     // ==================== 校验 ====================
+
+    /** Use generated entity constraints so each selected channel follows its actual schema. */
+    private void validateFields(Object row) {
+        if (!validator.validate(row).isEmpty()) {
+            throw BusinessException.of(320, "模板字段不符合所选渠道的长度或必填要求");
+        }
+    }
 
     private List<String> normalizeChannels(List<String> raw, NotifyEventDef event) {
         List<String> channels = raw == null

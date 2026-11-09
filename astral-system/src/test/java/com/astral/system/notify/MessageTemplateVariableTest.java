@@ -1,8 +1,15 @@
 package com.astral.system.notify;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.astral.common.exception.BusinessException;
 import com.astral.dao.entity.SysMailTemplate;
@@ -12,9 +19,11 @@ import com.astral.system.dto.MessageTemplateSaveDto;
 import com.astral.system.mail.MailService;
 import com.astral.system.mail.SysMailTemplateService;
 import java.util.List;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 /**
  * 模板变量校验的回归测试。
@@ -25,13 +34,21 @@ import org.mockito.ArgumentCaptor;
  * 变量的子集」，未声明的变量（含大小写不符）才拒绝（MAIL022）。</p>
  */
 class MessageTemplateVariableTest {
+    private static LocalValidatorFactoryBean validator;
 
     @BeforeAll
     static void initTableInfo() {
+        validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
         com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(
                 new org.apache.ibatis.builder.MapperBuilderAssistant(
                         new com.baomidou.mybatisplus.core.MybatisConfiguration(), "mail-template-test"),
                 SysMailTemplate.class);
+    }
+
+    @AfterAll
+    static void closeValidator() {
+        validator.close();
     }
 
     /** 正文只用 ${code}、双渠道（EMAIL+INAPP）→ 必须能保存 */
@@ -94,7 +111,7 @@ class MessageTemplateVariableTest {
         private final MailService mailService = mock(MailService.class);
         private final SmsService smsService = mock(SmsService.class);
         private final MessageTemplateService service =
-                new MessageTemplateService(mailTemplates, smsTemplates, mailService, smsService);
+                new MessageTemplateService(mailTemplates, smsTemplates, mailService, smsService, validator);
 
         Fixture() {
             SysMailTemplateMapper mapper = mock(SysMailTemplateMapper.class);

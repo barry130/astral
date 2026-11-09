@@ -53,6 +53,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 import tools.jackson.databind.ObjectMapper;
 
 /** Public template management and actual SMS service with an in-memory provider; no network delivery. */
@@ -62,11 +63,14 @@ class SmsTemplatePatchPersistenceTest {
     private SmsServiceImpl sms;
     private MessageTemplateService mergedTemplates;
     private TransactionTemplate transaction;
+    private LocalValidatorFactoryBean validator;
     private long id;
     private final List<String> sentCodes = new CopyOnWriteArrayList<>();
 
     @BeforeEach
     void setUp() throws Exception {
+        validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
         var source = new DriverManagerDataSource(
                 "jdbc:h2:mem:sms_patch_" + UUID.randomUUID() + ";MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "sa", "");
         jdbc = new JdbcTemplate(source);
@@ -139,7 +143,8 @@ class SmsTemplatePatchPersistenceTest {
         var mail = new MailServiceImpl();
         var mailTemplates = new SysMailTemplateServiceImpl(mail);
         ReflectionTestUtils.setField(mailTemplates, "baseMapper", session.getMapper(SysMailTemplateMapper.class));
-        var mergedProxy = new ProxyFactory(new MessageTemplateService(mailTemplates, templateService, mail, sms));
+        var mergedProxy =
+                new ProxyFactory(new MessageTemplateService(mailTemplates, templateService, mail, sms, validator));
         mergedProxy.setProxyTargetClass(true);
         mergedProxy.addAdvice(new TransactionInterceptor(transactions, new AnnotationTransactionAttributeSource()));
         mergedTemplates = (MessageTemplateService) mergedProxy.getProxy();
@@ -151,6 +156,7 @@ class SmsTemplatePatchPersistenceTest {
     @AfterEach
     void close() {
         jdbc.execute("SHUTDOWN");
+        validator.close();
     }
 
     @ParameterizedTest

@@ -9,6 +9,7 @@ import com.astral.system.mail.SysMailTemplateService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -55,7 +56,7 @@ public class MailTemplateController {
     @Operation(summary = "新增")
     @RequiresPermission(PERM_EDIT)
     @PostMapping
-    public Result<Void> create(@RequestBody SysMailTemplate entity) {
+    public Result<Void> create(@Valid @RequestBody SysMailTemplate entity) {
         templateService.createTemplate(entity);
         return Result.success();
     }
@@ -63,7 +64,7 @@ public class MailTemplateController {
     @Operation(summary = "更新")
     @RequiresPermission(PERM_EDIT)
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody SysMailTemplate entity) {
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody SysMailTemplate entity) {
         templateService.updateTemplate(id, entity);
         return Result.success();
     }

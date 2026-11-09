@@ -8,7 +8,8 @@ import lombok.Data;
  *
  * <p>{@code channels} 是多选：勾了哪个渠道就落哪几行——EMAIL/INAPP 写
  * {@code sys_mail_template}（两行，同编码不同 channel），SMS 写
- * {@code sys_sms_template}。取消勾选的渠道在保存时被删除，未列出的渠道内容保持不变。</p>
+ * {@code sys_sms_template}。取消勾选的渠道行会被删除；所选渠道按完整表单保存，
+ * 可空字段缺省时清空，其他渠道的输入字段不参与校验或写入。</p>
  */
 @Data
 public class MessageTemplateSaveDto {
@@ -43,7 +44,7 @@ public class MessageTemplateSaveDto {
     /** 备注 */
     private String remark;
 
-    /** 短信供应商侧模板编码（SMS） */
+    /** 短信供应商侧模板编码（勾选 SMS 时必填） */
     private String smsProviderTemplateCode;
 
     /** 短信签名（SMS） */
@@ -52,7 +53,7 @@ public class MessageTemplateSaveDto {
     /** 短信模板内容示例（SMS） */
     private String smsContentSample;
 
-    /** 短信报备审核状态（SMS）：0 待报备 / 1 已报备 / 2 审核失败 */
+    /** 短信报备审核状态（SMS）：0 草稿 / 1 审核中 / 2 已通过 / 3 已拒绝 */
     private Integer smsAuditStatus;
 
     /** 短信审核备注（SMS） */

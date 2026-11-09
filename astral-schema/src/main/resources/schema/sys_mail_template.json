@@ -28,7 +28,7 @@
       "fieldType": "String",
       "jdbcType": "VARCHAR",
       "comment": "模板名称",
-      "length": 128
+      "length": 64
     },
     {
       "columnName": "subject",
