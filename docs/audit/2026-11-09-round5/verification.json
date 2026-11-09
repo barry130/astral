@@ -1,0 +1,2363 @@
+{
+  "createdAt": "2026-11-10T01:17:01.643912+08:00",
+  "originalBaseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+  "incrementalBaseline": "0114de8781bbbf60807d79af9952cbbcfec44812",
+  "reviewedProductHead": "bec670c7966b776609bec738b836edd93a00a085",
+  "workspace": "F:/qtMusic/astral/target/audit-round5-worktree",
+  "runtime": {
+    "java": "Temurin 25.0.4.1+1",
+    "maven": "3.9.6",
+    "node": "24.21.0"
+  },
+  "sourceSnapshot": {
+    "path": "target/round5-delivery-source-final.json",
+    "sha256": "3c0e0dd31638d814f523573ef2e4c4a8d21e52d902a90cfdc56c40b23d274a35",
+    "bytes": 5870,
+    "files": [
+      {
+        "path": "astral-dao/src/main/java/com/astral/dao/entity/DictType.java",
+        "sha256": "8b0573a29b546494c5f27be0fb47b33afd92d9263f328f48c45a0bf1cf1220a8"
+      },
+      {
+        "path": "astral-dao/src/main/java/com/astral/dao/entity/Permission.java",
+        "sha256": "aee34ba640f80215fc654c733f98caec8f23fe29c2fe2114d9a5b86068ba84b1"
+      },
+      {
+        "path": "astral-dao/src/main/java/com/astral/dao/entity/SysConfig.java",
+        "sha256": "58b59db438c940dc61b2fb58f8e396e9724d2ec5807038417c153001dce0d435"
+      },
+      {
+        "path": "astral-dao/src/main/java/com/astral/dao/entity/SysMailAccount.java",
+        "sha256": "cde148e04cb208bbbe7883446bef3371215e0aea6e61f433b6d5b230fedb3fff"
+      },
+      {
+        "path": "astral-dao/src/main/java/com/astral/dao/entity/User.java",
+        "sha256": "9cd15669ff923a52a8f1d991ad89f9cebc80afd2bdc18931afede575cb1bfdd5"
+      },
+      {
+        "path": "astral-front/src/api/message-template.ts",
+        "sha256": "76333212151b934280b0a84d365630ad8bf0f83fe902656b2c65ea64b51b77d7"
+      },
+      {
+        "path": "astral-front/src/app/dashboard/system/mail/message-template/page.tsx",
+        "sha256": "7753b31f6a07b405daa430e787e8a9455b31174d8141d25f917555938b04629d"
+      },
+      {
+        "path": "astral-front/src/components/antd-compat/Form.tsx",
+        "sha256": "f2188b71c4351464d4c0321d8397a7561fb829dc49c5694df03b629b17162d59"
+      },
+      {
+        "path": "astral-front/tests/form-lifecycle.test.cjs",
+        "sha256": "c83f5b6ebb48623905528c3c32c7385352da8f941c1445704de6d769b6686bb7"
+      },
+      {
+        "path": "astral-front/tests/message-admin-contracts.test.cjs",
+        "sha256": "78f07e2f5fc9af00ad52bab64bc618e9f6b30ec362bf4f4f83558da9a00a0eb2"
+      },
+      {
+        "path": "astral-plugin/src/test/java/com/astral/ai/tool/AdminToolUserStatusConcurrencyTest.java",
+        "sha256": "a46e4398f52cb224d0fce0f4f585333398f95427542959e08a21cef6a986d86d"
+      },
+      {
+        "path": "astral-schema/src/main/resources/schema/sys_config.json",
+        "sha256": "276496a5c47ae07c0906b6a832bb45cb103d60ae0b9c30148e338d1afe7957b3"
+      },
+      {
+        "path": "astral-schema/src/main/resources/schema/sys_dict_type.json",
+        "sha256": "4909d36530454fd637f98769a29366a71544329d5da614773a526b22d7e8720d"
+      },
+      {
+        "path": "astral-schema/src/main/resources/schema/sys_mail_account.json",
+        "sha256": "0371fdb6f8d9c144b51a0557d15c6ccc11b4e77d6ad5dc9d3493e9d9f8371ff9"
+      },
+      {
+        "path": "astral-schema/src/main/resources/schema/sys_permission.json",
+        "sha256": "2fb5f04e14cfcd7cb651d30d77b46f46aa5aaf27250e440397983e59921bd727"
+      },
+      {
+        "path": "astral-schema/src/main/resources/schema/sys_user.json",
+        "sha256": "d7b72117b2be7f2f20b638444689adab2d68d3b91c8d94d87d28fc9f2d304dc8"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/DictController.java",
+        "sha256": "87e13bb0a4fe0ef8253c64467b03e553be64f7aef8836a8568b620a149412e03"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/DictDataController.java",
+        "sha256": "7a2ff5c7d03b7b998f13d8bc21737b8fa6502aad3f53320b3026fe7099ffdfd4"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/DictTypeController.java",
+        "sha256": "d13ff0028930a21557e85ee44ddd13eb35a221b5d8e13e3cf55b9ba2411a4560"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/MailAccountController.java",
+        "sha256": "16f891d9089ff8c43f31799b22e46242b4b3f710f413d883d67743a745335b99"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/RoleController.java",
+        "sha256": "b891c04a691f91e9b0c37b7f51274d32e1b804c393f88cca46253ade871b9831"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/SmsProviderController.java",
+        "sha256": "96bb1ae392db8fd9419c05b8bcd692242a4235d87cbd94890b544e49a91cabeb"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/SysConfigController.java",
+        "sha256": "8714a88237c15da8bf109606e9abf3a3dedd47c32f8647ddd65aa10a6d34872a"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/SysMenuController.java",
+        "sha256": "318457a4288c40304632c61a60b557829c963443731bf96a51cd50558b2422f4"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/UserController.java",
+        "sha256": "028c3257574baa389789fc61a2c6a3d2df183f52e870689055f20c85a01f61a8"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/notify/SmsServiceImpl.java",
+        "sha256": "79265bab7bdac0a08838e4e61a452995f9ffb79c93760b6d924d7cd5b9c6ceb2"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/validation/EntityPatchValidator.java",
+        "sha256": "aac9d2264ea8b5400845610679dcd0659aac28a88640f72693bff4ec6b1d5f03"
+      },
+      {
+        "path": "astral-system/src/test/java/com/astral/system/controller/AccountCredentialPersistenceTest.java",
+        "sha256": "bf587a4160b6927d8c1b2c65b6c9987fd552d77c75b8320e774db965737c86cf"
+      },
+      {
+        "path": "astral-system/src/test/java/com/astral/system/controller/AdminWriteValidationTest.java",
+        "sha256": "cd25bb0a4ebb131747b1fa88e46c8fdc157e507eefc4d03b3149836eeb0bcbc0"
+      },
+      {
+        "path": "docs/CODING_GUIDE.md",
+        "sha256": "2872dfdca85d1adcecd4abf94db61cba56224bd8ed6307c5d5d2d40a5015b11a"
+      },
+      {
+        "path": "docs/UI_GUIDE.md",
+        "sha256": "2e86c2956df0439d638987cbb7efb1b4734050c656329cc293c93a81217a7352"
+      }
+    ]
+  },
+  "sourceSnapshotBeforeReactor": {
+    "path": "target/round5-delivery-source-before-reactor.json",
+    "sha256": "dc1e90ec886eb1d085f7b2de80a4e7d6fa5ea6819ca869d0be13dc0dbdf99c4b",
+    "bytes": 5803
+  },
+  "allFinalSourcesMatchFixedCommitAndDisk": true,
+  "allFinalSourcesMatchBeforeReactor": true,
+  "frontendSourceUnchangedSinceFinalGates": true,
+  "java": {
+    "status": "PASS",
+    "command": "mvn install -Daudit.postgres.port=9684 -Daudit.redis.port=8549",
+    "finishedAt": "2026-11-10T01:14:17+08:00",
+    "suites": 140,
+    "tests": 915,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "moduleTotals": {
+      "astral-auth": {
+        "tests": 29,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "astral-common": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "astral-log": {
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "astral-monitor": {
+        "tests": 26,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "astral-plugin": {
+        "tests": 631,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "astral-schema": {
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "astral-sequence": {
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "astral-server": {
+        "tests": 45,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "astral-system": {
+        "tests": 131,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "suiteReports": [
+      {
+        "suite": "com.astral.auth.controller.ProfileControllerRevokeTest",
+        "module": "astral-auth",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-auth/target/surefire-reports/TEST-com.astral.auth.controller.ProfileControllerRevokeTest.xml",
+        "sha256": "aaa48eeb3f384ca3fd7ef12c3399419aaa38e39af13bc9be6b8dabd0e1ba0d67",
+        "bytes": 36894
+      },
+      {
+        "suite": "com.astral.auth.security.LoginUserStateResolverTest",
+        "module": "astral-auth",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-auth/target/surefire-reports/TEST-com.astral.auth.security.LoginUserStateResolverTest.xml",
+        "sha256": "596243577b17477be74fde18820f651c31265efe025ca9a03b44fe8b2c7e67af",
+        "bytes": 36822
+      },
+      {
+        "suite": "com.astral.auth.security.PermissionAspectContractTest",
+        "module": "astral-auth",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-auth/target/surefire-reports/TEST-com.astral.auth.security.PermissionAspectContractTest.xml",
+        "sha256": "afc4144ac771aeaccdeb9338a3a09885ac4729d2756c36a019def5524530ceb6",
+        "bytes": 36988
+      },
+      {
+        "suite": "com.astral.auth.security.TokenFingerprintTest",
+        "module": "astral-auth",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-auth/target/surefire-reports/TEST-com.astral.auth.security.TokenFingerprintTest.xml",
+        "sha256": "c0772c4461f6f6ad5dbfa06fc368e880e8881f3589de503f066feddfd64cb71f",
+        "bytes": 36135
+      },
+      {
+        "suite": "com.astral.auth.service.impl.AuthServiceImplSessionInfoTest",
+        "module": "astral-auth",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-auth/target/surefire-reports/TEST-com.astral.auth.service.impl.AuthServiceImplSessionInfoTest.xml",
+        "sha256": "216fd4c005750b4e80631a64e598bf0ca1dc0bdeac1f5a484686b04b80bfb541",
+        "bytes": 36021
+      },
+      {
+        "suite": "com.astral.auth.service.impl.TokenServiceImplSessionInfoTest",
+        "module": "astral-auth",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-auth/target/surefire-reports/TEST-com.astral.auth.service.impl.TokenServiceImplSessionInfoTest.xml",
+        "sha256": "e4c2502acf5aa8eeb186b184f705cdbf0b0e1e75e63ffd1b3e00cfb02bd235d2",
+        "bytes": 35955
+      },
+      {
+        "suite": "com.astral.auth.service.impl.TokenServiceRevocationTest",
+        "module": "astral-auth",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-auth/target/surefire-reports/TEST-com.astral.auth.service.impl.TokenServiceRevocationTest.xml",
+        "sha256": "fb99087fbd4dddcb7aee32654feee03e0ba726030fd015341ff7ebe8e2eddbdd",
+        "bytes": 36775
+      },
+      {
+        "suite": "com.astral.common.http.BoundedHttpTransportTest",
+        "module": "astral-common",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-common/target/surefire-reports/TEST-com.astral.common.http.BoundedHttpTransportTest.xml",
+        "sha256": "0074b020261e6e8e94aa6fe405183168ec12c63a1ece2f8186d08483058506fb",
+        "bytes": 11301
+      },
+      {
+        "suite": "com.astral.common.http.NetworkAddressesTest",
+        "module": "astral-common",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-common/target/surefire-reports/TEST-com.astral.common.http.NetworkAddressesTest.xml",
+        "sha256": "d2d58a85916d92fee95b97e9d2abd15da00e68a95c7b1d9854d1536e4c205b95",
+        "bytes": 10584
+      },
+      {
+        "suite": "com.astral.common.util.CommonUtilsTest",
+        "module": "astral-common",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-common/target/surefire-reports/TEST-com.astral.common.util.CommonUtilsTest.xml",
+        "sha256": "4780989481b83c9983bf3f0544ef9e78e9052ffae7514af42d15861040ec230c",
+        "bytes": 11638
+      },
+      {
+        "suite": "com.astral.log.aspect.OperateLogWriterTest",
+        "module": "astral-log",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-log/target/surefire-reports/TEST-com.astral.log.aspect.OperateLogWriterTest.xml",
+        "sha256": "2493bb6c6b565e16587f146573dcce57ef4b602a0f147650ee89ec66c8a2da3b",
+        "bytes": 32361
+      },
+      {
+        "suite": "com.astral.monitor.alert.AlertChannelCredentialTest",
+        "module": "astral-monitor",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-monitor/target/surefire-reports/TEST-com.astral.monitor.alert.AlertChannelCredentialTest.xml",
+        "sha256": "4ac009e69e6ecec65dc935d527d9ea872a5baccebfc29328f926facc950fe1c5",
+        "bytes": 47017
+      },
+      {
+        "suite": "com.astral.monitor.alert.AlertEngineDeliveryTest",
+        "module": "astral-monitor",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-monitor/target/surefire-reports/TEST-com.astral.monitor.alert.AlertEngineDeliveryTest.xml",
+        "sha256": "865c8989c0c49881b67a4130c0e4aa512a196b71f4e48e5dd04223ad68fe01b6",
+        "bytes": 46788
+      },
+      {
+        "suite": "com.astral.monitor.alert.AlertRulePatchTest",
+        "module": "astral-monitor",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-monitor/target/surefire-reports/TEST-com.astral.monitor.alert.AlertRulePatchTest.xml",
+        "sha256": "6db39137786c1f37b061c5dcda65b35ab5fcd9c4acaab18c489d7c806244edc8",
+        "bytes": 45315
+      },
+      {
+        "suite": "com.astral.monitor.alert.MonitorOptionalContextTest",
+        "module": "astral-monitor",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-monitor/target/surefire-reports/TEST-com.astral.monitor.alert.MonitorOptionalContextTest.xml",
+        "sha256": "47e42e3d332060a65c60d58bdc164d173e86265c0c44970222130f4618833ce9",
+        "bytes": 45647
+      },
+      {
+        "suite": "com.astral.monitor.alert.WebhookUrlPolicyTest",
+        "module": "astral-monitor",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-monitor/target/surefire-reports/TEST-com.astral.monitor.alert.WebhookUrlPolicyTest.xml",
+        "sha256": "a0faabe23ddab19e81b94cd53e680a687cf65cee6c114d7fd63e98367ec6bf1b",
+        "bytes": 46897
+      },
+      {
+        "suite": "com.astral.monitor.service.ApiMetricCollectorTest",
+        "module": "astral-monitor",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-monitor/target/surefire-reports/TEST-com.astral.monitor.service.ApiMetricCollectorTest.xml",
+        "sha256": "d4f69a37dfeaba270c348db91d7fb235ac2d49b32221e6592fa18f3c0f445ada",
+        "bytes": 45479
+      },
+      {
+        "suite": "com.astral.monitor.service.RequestConcurrencyCounterTest",
+        "module": "astral-monitor",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-monitor/target/surefire-reports/TEST-com.astral.monitor.service.RequestConcurrencyCounterTest.xml",
+        "sha256": "7fa3cacadbf87c7de2a6ea79ecee6e94ec743188d929a0b8f29fcd114b3b066c",
+        "bytes": 45863
+      },
+      {
+        "suite": "com.astral.monitor.service.StatReportFilterTest",
+        "module": "astral-monitor",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-monitor/target/surefire-reports/TEST-com.astral.monitor.service.StatReportFilterTest.xml",
+        "sha256": "a3f035f6cbf63f4f90b1bf6f76565506236e1efe5be61544507379c65cf2050b",
+        "bytes": 45333
+      },
+      {
+        "suite": "com.astral.monitor.service.SystemMonitorServiceTest",
+        "module": "astral-monitor",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-monitor/target/surefire-reports/TEST-com.astral.monitor.service.SystemMonitorServiceTest.xml",
+        "sha256": "50df3ab128b9164a56fd42bf52c6d44614ae2fb2c9a88c99ce7d127261971581",
+        "bytes": 45457
+      },
+      {
+        "suite": "com.astral.ai.common.AiConstantsApprovalPolicyOrderTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.common.AiConstantsApprovalPolicyOrderTest.xml",
+        "sha256": "a002898c456f42bef27ec5d1331b47d8b292e475528fea8ef49a96c005302822",
+        "bytes": 42257
+      },
+      {
+        "suite": "com.astral.ai.common.AiJsonPermissionCsvTest",
+        "module": "astral-plugin",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.common.AiJsonPermissionCsvTest.xml",
+        "sha256": "1871256f4ea9ae633e229d5ef65638dc30baf2becfe504020cb12cd79fdee59e",
+        "bytes": 42474
+      },
+      {
+        "suite": "com.astral.ai.common.AiJsonTest",
+        "module": "astral-plugin",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.common.AiJsonTest.xml",
+        "sha256": "e989ec96fc6acfff6dc383c3d3279107d7e6937ae1b8125f491bf6a2eccd58ef",
+        "bytes": 43357
+      },
+      {
+        "suite": "com.astral.ai.controller.AiAdminMcpControllerPermissionTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.controller.AiAdminMcpControllerPermissionTest.xml",
+        "sha256": "9bfc0799e42f0d69da1388fdf85c1412da5b48daecf30bc501759a59bfffd8e5",
+        "bytes": 43511
+      },
+      {
+        "suite": "com.astral.ai.controller.AiAdminProviderControllerPermissionTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.controller.AiAdminProviderControllerPermissionTest.xml",
+        "sha256": "2aeb9bdd94a1aead7f476a8ff93ef43863e7f94709b45f4693718597fcf3daaa",
+        "bytes": 42732
+      },
+      {
+        "suite": "com.astral.ai.controller.AiAdminRequestControllerContentTest",
+        "module": "astral-plugin",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.controller.AiAdminRequestControllerContentTest.xml",
+        "sha256": "a3eeb7c3fcfb7a103114bc0ca9b32b7439e77e2a9046252be0fb13a2e3802383",
+        "bytes": 44155
+      },
+      {
+        "suite": "com.astral.ai.controller.AiAdminToolControllerPermissionTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.controller.AiAdminToolControllerPermissionTest.xml",
+        "sha256": "f81f62e7e29646c21f94a3286b38a74ccf078c2991a57febe1b1df6917caefe9",
+        "bytes": 44032
+      },
+      {
+        "suite": "com.astral.ai.controller.AiReconciliationPermissionTest",
+        "module": "astral-plugin",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.controller.AiReconciliationPermissionTest.xml",
+        "sha256": "8a16171afbc9cc63f39306c35127308a28564782c476a916aa5bdff0091ae7bc",
+        "bytes": 44249
+      },
+      {
+        "suite": "com.astral.ai.mapper.AiUserQuotaMapperSqlTest",
+        "module": "astral-plugin",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.mapper.AiUserQuotaMapperSqlTest.xml",
+        "sha256": "762f5bd3743f9a9a2c78d7d0bad4c9c966d6f906cf3ab8b0c92c084da2aff27c",
+        "bytes": 42402
+      },
+      {
+        "suite": "com.astral.ai.provider.OpenAiCompatibleProviderTransportTest",
+        "module": "astral-plugin",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.provider.OpenAiCompatibleProviderTransportTest.xml",
+        "sha256": "f0ab1a02df5dec67f4d2118cd7d3701c44674497cc3465b47e26f86fa70951e9",
+        "bytes": 42909
+      },
+      {
+        "suite": "com.astral.ai.security.AiMcpHeaderSecurityTest",
+        "module": "astral-plugin",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.security.AiMcpHeaderSecurityTest.xml",
+        "sha256": "30752de57ceacb5d0b341c1b5ee5e48f1be3e68f89d15e173dd0ac8b14ea8940",
+        "bytes": 44516
+      },
+      {
+        "suite": "com.astral.ai.security.AiSecretCipherTest",
+        "module": "astral-plugin",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.security.AiSecretCipherTest.xml",
+        "sha256": "38ba2002209927c163ca1695738e4ceb8e83c0cffb177dc3fc496f4ce6886e73",
+        "bytes": 44106
+      },
+      {
+        "suite": "com.astral.ai.security.AiToolPermissionGateContractTest",
+        "module": "astral-plugin",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.security.AiToolPermissionGateContractTest.xml",
+        "sha256": "9066860a394c205e8775376cfd0e607aff60ab93b7911b9f8c21f2cd9d8ec143",
+        "bytes": 42782
+      },
+      {
+        "suite": "com.astral.ai.security.AiUrlGuardTest",
+        "module": "astral-plugin",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.security.AiUrlGuardTest.xml",
+        "sha256": "3d4db5a905b253ccb2e378ef9a955e1cb14edafbb4c3d4e772f2155a992d0dc6",
+        "bytes": 43428
+      },
+      {
+        "suite": "com.astral.ai.service.AiAccessServiceResolveVersionTest",
+        "module": "astral-plugin",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiAccessServiceResolveVersionTest.xml",
+        "sha256": "ba853c75b7703bc20d09c8be4e867ce28e869390feb1b2ea0b323c5774ec59c2",
+        "bytes": 42757
+      },
+      {
+        "suite": "com.astral.ai.service.AiAgentConcurrencyTest",
+        "module": "astral-plugin",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiAgentConcurrencyTest.xml",
+        "sha256": "459226ffd574c0282a83e5a5e7b3f5e88483ca8d61b6b2c5bb942f5ee0d17d27",
+        "bytes": 44898
+      },
+      {
+        "suite": "com.astral.ai.service.AiAgentValidationServiceTest",
+        "module": "astral-plugin",
+        "tests": 34,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiAgentValidationServiceTest.xml",
+        "sha256": "a870bd59c260a73012e425562946fdbc1eca37348512b2d06d0e9e5c3129e1de",
+        "bytes": 46493
+      },
+      {
+        "suite": "com.astral.ai.service.AiApprovalLifecycleTest",
+        "module": "astral-plugin",
+        "tests": 36,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiApprovalLifecycleTest.xml",
+        "sha256": "8adecec56008134613cb3eda470c142f4132eb9b9b724b64b96d94ecd01efe5b",
+        "bytes": 61170
+      },
+      {
+        "suite": "com.astral.ai.service.AiChatOrchestratorFormatTest",
+        "module": "astral-plugin",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiChatOrchestratorFormatTest.xml",
+        "sha256": "cb0921032181bb5e04d7a9a1b58137b74f463a314bf24dbd7280694a8b278194",
+        "bytes": 43695
+      },
+      {
+        "suite": "com.astral.ai.service.AiChatOrchestratorHistoryTest",
+        "module": "astral-plugin",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiChatOrchestratorHistoryTest.xml",
+        "sha256": "892abea8bfbba52a6fb02492e39892f94d99680166e319b76f2cb0e92392705e",
+        "bytes": 42972
+      },
+      {
+        "suite": "com.astral.ai.service.AiChatOrchestratorPermissionTest",
+        "module": "astral-plugin",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiChatOrchestratorPermissionTest.xml",
+        "sha256": "757b7b3659b3ab3b1346ac7e0a4be8c6df20e2d349043679b0ba7281bf103407",
+        "bytes": 43043
+      },
+      {
+        "suite": "com.astral.ai.service.AiEventTerminalTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiEventTerminalTest.xml",
+        "sha256": "06d21338a9f3345f3e5499faa631bfee2de47bea562b06e2dcc2ae97f608ceeb",
+        "bytes": 42266
+      },
+      {
+        "suite": "com.astral.ai.service.AiKnowledgePersistenceTest",
+        "module": "astral-plugin",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiKnowledgePersistenceTest.xml",
+        "sha256": "e3c95039746eac578e6a3397fcd77588a4542f833147279d07ce1270f6baa29f",
+        "bytes": 58323
+      },
+      {
+        "suite": "com.astral.ai.service.AiMcpPlanSnapshotTest",
+        "module": "astral-plugin",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiMcpPlanSnapshotTest.xml",
+        "sha256": "e671fe09e6269c8cd863ae77653dab727a974fe04915be86788d6cf8ba8554da",
+        "bytes": 42485
+      },
+      {
+        "suite": "com.astral.ai.service.AiMcpServerPersistenceTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiMcpServerPersistenceTest.xml",
+        "sha256": "945a769f7d47f9581c407332e21c94b8791fd6e77974c840557bb65870f1e7c0",
+        "bytes": 42834
+      },
+      {
+        "suite": "com.astral.ai.service.AiMcpServerServiceHeadersTest",
+        "module": "astral-plugin",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiMcpServerServiceHeadersTest.xml",
+        "sha256": "dbb21309dd459c39085ccadfb0c6e9a70794f3e2d70eb7abae6c2dc02f6b8ff5",
+        "bytes": 43192
+      },
+      {
+        "suite": "com.astral.ai.service.AiProviderPersistenceTest",
+        "module": "astral-plugin",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiProviderPersistenceTest.xml",
+        "sha256": "d0c884804bda0d2045536cab16754d8601431de2bee12ab43d8f37c56d2a6b63",
+        "bytes": 44292
+      },
+      {
+        "suite": "com.astral.ai.service.AiQuotaServiceTest",
+        "module": "astral-plugin",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiQuotaServiceTest.xml",
+        "sha256": "2b25de95f3d09c8c197e7882e638a3cc41a23b1743b7d1e1e6e3cf4e335449b1",
+        "bytes": 43847
+      },
+      {
+        "suite": "com.astral.ai.service.AiToolServiceApprovalFloorTest",
+        "module": "astral-plugin",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiToolServiceApprovalFloorTest.xml",
+        "sha256": "57d278a23c409b8c07b6ab9da998b4c9bc8dceba097897133d45aaa4ce4ff897",
+        "bytes": 44120
+      },
+      {
+        "suite": "com.astral.ai.service.AiToolServicePlanHashTest",
+        "module": "astral-plugin",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiToolServicePlanHashTest.xml",
+        "sha256": "0d89297079d18096e2d1b136b54ab4e39ecfde7dc27bd3265814edba2f64d1ed",
+        "bytes": 42426
+      },
+      {
+        "suite": "com.astral.ai.service.AiToolServiceRiskFloorTest",
+        "module": "astral-plugin",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiToolServiceRiskFloorTest.xml",
+        "sha256": "bbcf1e2a373fd9603ac647f4430a44d3e1f4eab5e7cdfd1193ac2c60daeb760e",
+        "bytes": 44896
+      },
+      {
+        "suite": "com.astral.ai.service.AiToolServiceTestRunTest",
+        "module": "astral-plugin",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiToolServiceTestRunTest.xml",
+        "sha256": "17436d6dd54cdb14ee8cc80cb4bb05f4e038aa589380a6cbb748aa7348f26cd9",
+        "bytes": 43480
+      },
+      {
+        "suite": "com.astral.ai.service.AiUsagePersistenceTest",
+        "module": "astral-plugin",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.service.AiUsagePersistenceTest.xml",
+        "sha256": "9125d0d3ceadd2e307d5972603a71bbde11ffc7ab04f346a9e517ea28115c8d7",
+        "bytes": 42668
+      },
+      {
+        "suite": "com.astral.ai.tool.AdminToolEmailOutcomeTest",
+        "module": "astral-plugin",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.AdminToolEmailOutcomeTest.xml",
+        "sha256": "c6650abd3e0635d78d2912a55ac3e7f34d3cfbb9c7b14b69cca91fa67439d382",
+        "bytes": 44343
+      },
+      {
+        "suite": "com.astral.ai.tool.AdminToolNoticePersistenceTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.AdminToolNoticePersistenceTest.xml",
+        "sha256": "c0e1ae0a5083db9af5fcebde403b501236333663f97856dfaef78d4ceaeff1ba",
+        "bytes": 42354
+      },
+      {
+        "suite": "com.astral.ai.tool.AdminToolProviderPermissionCodeTest",
+        "module": "astral-plugin",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.AdminToolProviderPermissionCodeTest.xml",
+        "sha256": "c1c9d5daa75eb302394cbbf18a11d59a69eabf1c20c8276fe2072abd9d1198d1",
+        "bytes": 42598
+      },
+      {
+        "suite": "com.astral.ai.tool.AdminToolRoleConcurrencyTest",
+        "module": "astral-plugin",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.AdminToolRoleConcurrencyTest.xml",
+        "sha256": "26dff8732ccc1f188ea4364f4110d7c6512573f8da1aa5f555d5817b358a2fb4",
+        "bytes": 44295
+      },
+      {
+        "suite": "com.astral.ai.tool.AdminToolUserStatusConcurrencyTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.AdminToolUserStatusConcurrencyTest.xml",
+        "sha256": "fcd55c2a5e0a7aff83c38b179e649ac4469248686717d35eefa46d3daf880256",
+        "bytes": 42360
+      },
+      {
+        "suite": "com.astral.ai.tool.AdminToolWritePersistenceTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.AdminToolWritePersistenceTest.xml",
+        "sha256": "8ea5e8f84d555b2ccdd889ff9e31a7571d7d1a295bf9ab4e0871eb8b5753e85d",
+        "bytes": 42340
+      },
+      {
+        "suite": "com.astral.ai.tool.declarative.HttpToolExecutorTest",
+        "module": "astral-plugin",
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.declarative.HttpToolExecutorTest.xml",
+        "sha256": "ff566dcba3513ba5e466e7188caec46da9e6e57ee697e6fc5064c2a7a2a15afe",
+        "bytes": 44763
+      },
+      {
+        "suite": "com.astral.ai.tool.declarative.McpClientTest",
+        "module": "astral-plugin",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.declarative.McpClientTest.xml",
+        "sha256": "085ff1795acb858265551d25330794e14e5b906dc88e2884b60c09bd172072f8",
+        "bytes": 43890
+      },
+      {
+        "suite": "com.astral.ai.tool.declarative.SqlToolExecutorTest",
+        "module": "astral-plugin",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.declarative.SqlToolExecutorTest.xml",
+        "sha256": "27d58a9027f79bd673d8b28fe2c2e58cc47548062ef4d8cb74fc6e8396d08ac8",
+        "bytes": 44179
+      },
+      {
+        "suite": "com.astral.ai.tool.declarative.SqlToolReadPolicyTest",
+        "module": "astral-plugin",
+        "tests": 28,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.declarative.SqlToolReadPolicyTest.xml",
+        "sha256": "11783162080869a99d100755c5fd0831fd0640511795a28ecbfa84833fcba52b",
+        "bytes": 46902
+      },
+      {
+        "suite": "com.astral.ai.tool.declarative.ToolHttpTransportTest",
+        "module": "astral-plugin",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.declarative.ToolHttpTransportTest.xml",
+        "sha256": "45759adae9199f67d0802fc4fb975aefa2620598a3cdebdd52a811b552293d7e",
+        "bytes": 43004
+      },
+      {
+        "suite": "com.astral.ai.tool.MusicToolProviderTest",
+        "module": "astral-plugin",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.ai.tool.MusicToolProviderTest.xml",
+        "sha256": "753dc5bae99264273c9bc13412456a1550253fdf457547e1b7f944fa4907ce7a",
+        "bytes": 43819
+      },
+      {
+        "suite": "com.astral.cms.service.CmsCommentThrottleTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.cms.service.CmsCommentThrottleTest.xml",
+        "sha256": "233efb94ec1f50478f12a55d6dc2814fc364caeb2f81c2524605e68a3efce07d",
+        "bytes": 42323
+      },
+      {
+        "suite": "com.astral.cms.service.CmsPersistenceTest",
+        "module": "astral-plugin",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.cms.service.CmsPersistenceTest.xml",
+        "sha256": "60ee2c2c1ff01a01df7c99e475ea22a5243da36fecabb10357c918dc9d8780a2",
+        "bytes": 43533
+      },
+      {
+        "suite": "com.astral.common.util.LogSanitizerTest",
+        "module": "astral-plugin",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.common.util.LogSanitizerTest.xml",
+        "sha256": "4a73915e59e1fa536f3bfc57812801ddca5dbe1776e878e12b8eab1a91fbfd19",
+        "bytes": 42926
+      },
+      {
+        "suite": "com.astral.feedback.service.FeedbackServiceRedactionTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.feedback.service.FeedbackServiceRedactionTest.xml",
+        "sha256": "30342ab2e9466a0f0fda11c7f5ffeb5da7bdb2485f1c820f8a35e6dde621db03",
+        "bytes": 42316
+      },
+      {
+        "suite": "com.astral.plugin.core.PluginIsolationTest",
+        "module": "astral-plugin",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.plugin.core.PluginIsolationTest.xml",
+        "sha256": "55f4f21292aea72634a5da40b86e07c6a1bd9d6a2820f84f04d6f03c271ef6f4",
+        "bytes": 42852
+      },
+      {
+        "suite": "com.astral.plugin.core.PluginRegistryImplFailureTest",
+        "module": "astral-plugin",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.plugin.core.PluginRegistryImplFailureTest.xml",
+        "sha256": "f89879b6cf0effc48eb43ac65b45e339ee5acaebb432c377a83a6916ea1dd70a",
+        "bytes": 91095
+      },
+      {
+        "suite": "com.astral.qt.controller.QtAdminControllerSafetyTest",
+        "module": "astral-plugin",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.controller.QtAdminControllerSafetyTest.xml",
+        "sha256": "61fa572c45b2799cd98b7a738f9dcb3183c4a83bdd2f589b9365ac5e5f658506",
+        "bytes": 42566
+      },
+      {
+        "suite": "com.astral.qt.controller.QtAdminControllerUpdateTest",
+        "module": "astral-plugin",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.controller.QtAdminControllerUpdateTest.xml",
+        "sha256": "cddaeb2081107ed5b52becae78c416b4744efb2b2cf89e0ada1b333c9cf4e006",
+        "bytes": 44629
+      },
+      {
+        "suite": "com.astral.qt.controller.QtAppControllerVersionCheckTest",
+        "module": "astral-plugin",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.controller.QtAppControllerVersionCheckTest.xml",
+        "sha256": "4110e8426ee567002da7f367a31d91a347f2d2754b16a30a3f530140f678d564",
+        "bytes": 42596
+      },
+      {
+        "suite": "com.astral.qt.controller.RateLimitAnnotationTest",
+        "module": "astral-plugin",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.controller.RateLimitAnnotationTest.xml",
+        "sha256": "56c8dc0d37de24542add9a4f0c328d158fac7f8a4b8093b25bd3e85add423699",
+        "bytes": 42172
+      },
+      {
+        "suite": "com.astral.qt.service.QtAppServiceArtifactOverlayTest",
+        "module": "astral-plugin",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.service.QtAppServiceArtifactOverlayTest.xml",
+        "sha256": "f2dcaafaa1e7bbfbf5801c9efbf21040bece6ff7ec053e0c82e99f4ce3f5aba6",
+        "bytes": 42773
+      },
+      {
+        "suite": "com.astral.qt.service.QtDakaPersistenceTest",
+        "module": "astral-plugin",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.service.QtDakaPersistenceTest.xml",
+        "sha256": "0651698abb4cd9486b630d41d7916e81c9bbb6c39d8d3ac29005b7ca7127278c",
+        "bytes": 42960
+      },
+      {
+        "suite": "com.astral.qt.service.QtEmailCodeVerifyScriptTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.service.QtEmailCodeVerifyScriptTest.xml",
+        "sha256": "35e65960be8a1faf49f7f46265e3ff2d58d7981f05460cf73df7e4385ca4c623",
+        "bytes": 42289
+      },
+      {
+        "suite": "com.astral.qt.service.QtPackHeaderProbeHttpTest",
+        "module": "astral-plugin",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.service.QtPackHeaderProbeHttpTest.xml",
+        "sha256": "795096a31baca00867551acb4695d2626dd8ec2e8a6709c28bbd73ec3e2e2d4a",
+        "bytes": 42898
+      },
+      {
+        "suite": "com.astral.qt.service.QtPackHeaderProbeTest",
+        "module": "astral-plugin",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.service.QtPackHeaderProbeTest.xml",
+        "sha256": "a6874523a2a9a9e1720a58fc35797e77c0ab14b951cb6df596f8d0d0316c4204",
+        "bytes": 42861
+      },
+      {
+        "suite": "com.astral.qt.service.QtSourceServiceAdmissionTest",
+        "module": "astral-plugin",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.service.QtSourceServiceAdmissionTest.xml",
+        "sha256": "fb7249d1e2abc1468d66f394fb2e5cc38871de6e66c9e0b6153450e6d7068611",
+        "bytes": 42576
+      },
+      {
+        "suite": "com.astral.qt.service.QtSourceServiceReportTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.service.QtSourceServiceReportTest.xml",
+        "sha256": "9f10d8f26315646edda507f86d825000b87a023c35ce2d0414a43109f374612c",
+        "bytes": 42283
+      },
+      {
+        "suite": "com.astral.qt.service.QtUserConcurrentUpdateTest",
+        "module": "astral-plugin",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.qt.service.QtUserConcurrentUpdateTest.xml",
+        "sha256": "7b061a38df3ff4493d4b86b431b258bcafc0ea7d42eae4f9f4a4027ee8f7ad19",
+        "bytes": 42444
+      },
+      {
+        "suite": "com.astral.storage.controller.StorageUserControllerTest",
+        "module": "astral-plugin",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.controller.StorageUserControllerTest.xml",
+        "sha256": "5eba0aa1c63748dfd166007cd46f08e6c215b07ace4b0465adf4e67512fa3973",
+        "bytes": 42187
+      },
+      {
+        "suite": "com.astral.storage.http.HttpProfileValidatorTest",
+        "module": "astral-plugin",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.http.HttpProfileValidatorTest.xml",
+        "sha256": "d63f57ea938a8f0bf2a9f994e6831557b711af084b9eeee445620759e40ad804",
+        "bytes": 46529
+      },
+      {
+        "suite": "com.astral.storage.http.HttpResponseParserTest",
+        "module": "astral-plugin",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.http.HttpResponseParserTest.xml",
+        "sha256": "d19688b16e592ac3dfb529fc77684564e9e351b50718f87ab2456934560144f7",
+        "bytes": 43379
+      },
+      {
+        "suite": "com.astral.storage.http.HttpSecretEnvelopeTest",
+        "module": "astral-plugin",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.http.HttpSecretEnvelopeTest.xml",
+        "sha256": "6b5a0e219e505fa423ddfbe58d39bf43b1b728a0da7e57315c99cd46422f8f43",
+        "bytes": 43708
+      },
+      {
+        "suite": "com.astral.storage.http.HttpTemplateEngineTest",
+        "module": "astral-plugin",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.http.HttpTemplateEngineTest.xml",
+        "sha256": "ebd0930be5c9569660277675272821c937974bd79837c32db4006ad1df23039e",
+        "bytes": 43045
+      },
+      {
+        "suite": "com.astral.storage.http.PinnedDnsResolverTest",
+        "module": "astral-plugin",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.http.PinnedDnsResolverTest.xml",
+        "sha256": "2ab8a717af36b959b3e7df1afc17c7d0c3c0e4744342e443248a454ed6c28139",
+        "bytes": 42745
+      },
+      {
+        "suite": "com.astral.storage.security.StorageWorkerAuthInterceptorTest",
+        "module": "astral-plugin",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.security.StorageWorkerAuthInterceptorTest.xml",
+        "sha256": "b7da8b7aa3576b50080eccdbd36990bcfbb1bb7294e6f12412e89823e9d354ba",
+        "bytes": 42420
+      },
+      {
+        "suite": "com.astral.storage.service.FileManagerServiceTest",
+        "module": "astral-plugin",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.FileManagerServiceTest.xml",
+        "sha256": "066134620364c5799cabd35b985b330436f69ef99f3ffb59cfdff6b43117609f",
+        "bytes": 42880
+      },
+      {
+        "suite": "com.astral.storage.service.HttpUploadGatewayTest",
+        "module": "astral-plugin",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.HttpUploadGatewayTest.xml",
+        "sha256": "71dc8a2b9101bea5ef78e73182e919249043deb234d537efba9e9a6c62c4c510",
+        "bytes": 43116
+      },
+      {
+        "suite": "com.astral.storage.service.StorageBatchServiceTest",
+        "module": "astral-plugin",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.StorageBatchServiceTest.xml",
+        "sha256": "c800e53acd8aa229adbc620f07f46b116dd4c5fbb8d8159fa1b743468fc62edd",
+        "bytes": 42317
+      },
+      {
+        "suite": "com.astral.storage.service.StorageConfigServiceRedactionTest",
+        "module": "astral-plugin",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.StorageConfigServiceRedactionTest.xml",
+        "sha256": "74b3f0351ac275dbb4cb21b521e30e27e618301cbf78e7d39f5326a71b69f19d",
+        "bytes": 43653
+      },
+      {
+        "suite": "com.astral.storage.service.StorageFileServiceSvgTest",
+        "module": "astral-plugin",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.StorageFileServiceSvgTest.xml",
+        "sha256": "6f11ff6a0a4b421965e56a000ed5d5c8c7c2acdd380ca4af77d4ce4a60f733b4",
+        "bytes": 42777
+      },
+      {
+        "suite": "com.astral.storage.service.StorageFileServiceTest",
+        "module": "astral-plugin",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.StorageFileServiceTest.xml",
+        "sha256": "f1d49c22ac085fa0fa0fec702ace9e5467940959b31e4ae55f4f0b57a1b9ae0d",
+        "bytes": 44320
+      },
+      {
+        "suite": "com.astral.storage.service.StorageFolderServiceTest",
+        "module": "astral-plugin",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.StorageFolderServiceTest.xml",
+        "sha256": "ee64c0bf95aef073761dfe0a177f6e5074f0f907ff083c364a6354387b7c9cdc",
+        "bytes": 43928
+      },
+      {
+        "suite": "com.astral.storage.service.StoragePersistenceTest",
+        "module": "astral-plugin",
+        "tests": 26,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.StoragePersistenceTest.xml",
+        "sha256": "72c6ab150a7bfe55ef41274b32da2006be90e3f17341eb046528779d7f5623fb",
+        "bytes": 59658
+      },
+      {
+        "suite": "com.astral.storage.service.StorageTargetResolverSnapshotTest",
+        "module": "astral-plugin",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.StorageTargetResolverSnapshotTest.xml",
+        "sha256": "be10c9e890675c466b32ae9269680ab5c96481020ab5a0262445ae55fc6a94d0",
+        "bytes": 43005
+      },
+      {
+        "suite": "com.astral.storage.service.StorageTicketTargetServiceTest",
+        "module": "astral-plugin",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.StorageTicketTargetServiceTest.xml",
+        "sha256": "339916216ca186e316db31e584c3aacde71f8b1bf77910d22cc423aec2e0fc4b",
+        "bytes": 42188
+      },
+      {
+        "suite": "com.astral.storage.service.UploadAdmissionControlTest",
+        "module": "astral-plugin",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.UploadAdmissionControlTest.xml",
+        "sha256": "19f2abf061bc76a088114cf7e9b4318da3f1ca775fa232fed85c296d76a5956a",
+        "bytes": 42561
+      },
+      {
+        "suite": "com.astral.storage.service.UploadImageValidatorTest",
+        "module": "astral-plugin",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.UploadImageValidatorTest.xml",
+        "sha256": "753fc5b397536c1a5e1e63c451bfcc34dd1d0d48edf4b896c24716ba821dfa1f",
+        "bytes": 42537
+      },
+      {
+        "suite": "com.astral.storage.service.UploadOperationServiceTest",
+        "module": "astral-plugin",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.UploadOperationServiceTest.xml",
+        "sha256": "4838c59838d947647aaf7c6d870cc13297b7dacaa57bae5afaacc5ac7aae44b7",
+        "bytes": 43647
+      },
+      {
+        "suite": "com.astral.storage.service.UploadQuotaServiceTest",
+        "module": "astral-plugin",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-plugin/target/surefire-reports/TEST-com.astral.storage.service.UploadQuotaServiceTest.xml",
+        "sha256": "325b99458627499e3cc42d096529e53df93bd066b168148a793ea244daa86418",
+        "bytes": 42732
+      },
+      {
+        "suite": "com.astral.schema.codegen.CodeGenMojoTest",
+        "module": "astral-schema",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-schema/target/surefire-reports/TEST-com.astral.schema.codegen.CodeGenMojoTest.xml",
+        "sha256": "f67d165732b9b5370d9afb939ed62a9299d9e1b7f43e70c4a5d56f34bcea63ad",
+        "bytes": 14085
+      },
+      {
+        "suite": "com.astral.schema.SchemaCodeGeneratorTest",
+        "module": "astral-schema",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-schema/target/surefire-reports/TEST-com.astral.schema.SchemaCodeGeneratorTest.xml",
+        "sha256": "9572676770662cc732d6057d362a32765c1af16b0cf3e2c6481d87755dc1dafc",
+        "bytes": 13894
+      },
+      {
+        "suite": "com.astral.sequence.controller.SequenceConfigControllerTest",
+        "module": "astral-sequence",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-sequence/target/surefire-reports/TEST-com.astral.sequence.controller.SequenceConfigControllerTest.xml",
+        "sha256": "34d0439a27cfb42d8f33d72bc725268c51afe40bbca83a77b60af913f48fe8a8",
+        "bytes": 41731
+      },
+      {
+        "suite": "com.astral.sequence.controller.SequenceConfigPersistenceTest",
+        "module": "astral-sequence",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-sequence/target/surefire-reports/TEST-com.astral.sequence.controller.SequenceConfigPersistenceTest.xml",
+        "sha256": "eda6222e48202644e9fde15d046333a49a028205aad98a922df96a3300044db0",
+        "bytes": 40243
+      },
+      {
+        "suite": "com.astral.sequence.generator.DatabaseGeneratorBoundaryTest",
+        "module": "astral-sequence",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-sequence/target/surefire-reports/TEST-com.astral.sequence.generator.DatabaseGeneratorBoundaryTest.xml",
+        "sha256": "8f2b06ecdf738181b22f76006723ce7d3d3bbed77bbd687e930110923e9bad9d",
+        "bytes": 39972
+      },
+      {
+        "suite": "com.astral.sequence.generator.DatabaseGeneratorPostgresTest",
+        "module": "astral-sequence",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-sequence/target/surefire-reports/TEST-com.astral.sequence.generator.DatabaseGeneratorPostgresTest.xml",
+        "sha256": "274e3845d86dd173e27e6e2f908f616b16e6f66c7e9621645c7c89616d23ef34",
+        "bytes": 39993
+      },
+      {
+        "suite": "com.astral.sequence.service.GeneratorFactoryTest",
+        "module": "astral-sequence",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-sequence/target/surefire-reports/TEST-com.astral.sequence.service.GeneratorFactoryTest.xml",
+        "sha256": "2730da73d8393358e32b608ee810f28295b08349e4d70873351dfb982f58f254",
+        "bytes": 41868
+      },
+      {
+        "suite": "com.astral.server.interceptor.ApiRequestMetricInterceptorTest",
+        "module": "astral-server",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-server/target/surefire-reports/TEST-com.astral.server.interceptor.ApiRequestMetricInterceptorTest.xml",
+        "sha256": "f5f69c2007802284fdb1e6a2edb7fdae664c73e217c9fd6797cb9f4ababb6cb8",
+        "bytes": 51003
+      },
+      {
+        "suite": "com.astral.server.interceptor.AuthInterceptorPreHandleTest",
+        "module": "astral-server",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-server/target/surefire-reports/TEST-com.astral.server.interceptor.AuthInterceptorPreHandleTest.xml",
+        "sha256": "3ba4b06ebd2a27770a7874a03a8b3973dae873648c6997a036499c1da0dfd511",
+        "bytes": 54564
+      },
+      {
+        "suite": "com.astral.server.interceptor.AuthInterceptorZoneTest",
+        "module": "astral-server",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-server/target/surefire-reports/TEST-com.astral.server.interceptor.AuthInterceptorZoneTest.xml",
+        "sha256": "15a27bad9adaa82c924fe5f64700339dd14e1c7d2345f4e4b372ef7b12be34f7",
+        "bytes": 52002
+      },
+      {
+        "suite": "com.astral.server.interceptor.RequestPathSupportTest",
+        "module": "astral-server",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-server/target/surefire-reports/TEST-com.astral.server.interceptor.RequestPathSupportTest.xml",
+        "sha256": "75094ab1bb755abbed701a76516354c3a5e26dc46d6e0fbd73df429362748b37",
+        "bytes": 51712
+      },
+      {
+        "suite": "com.astral.server.migration.FreshDatabaseMigrationTest",
+        "module": "astral-server",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-server/target/surefire-reports/TEST-com.astral.server.migration.FreshDatabaseMigrationTest.xml",
+        "sha256": "675c76640d38ba3f88914727560eae8a35d2f2adf47eca806ca64bc645214e60",
+        "bytes": 252997
+      },
+      {
+        "suite": "com.astral.server.migration.NoticeMigrationCompatibilityTest",
+        "module": "astral-server",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-server/target/surefire-reports/TEST-com.astral.server.migration.NoticeMigrationCompatibilityTest.xml",
+        "sha256": "b814031fa091c0e18bc3cff6918178a279bb144ef88ec264de668f2660b9facf",
+        "bytes": 313583
+      },
+      {
+        "suite": "com.astral.server.migration.PluginAndLedgerPersistenceTest",
+        "module": "astral-server",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-server/target/surefire-reports/TEST-com.astral.server.migration.PluginAndLedgerPersistenceTest.xml",
+        "sha256": "106209ae687552d4da6cf42a74f802d52e9018b272f645e7cf2e15e93faf0ee7",
+        "bytes": 88209
+      },
+      {
+        "suite": "com.astral.server.migration.PluginStartupContextTest",
+        "module": "astral-server",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-server/target/surefire-reports/TEST-com.astral.server.migration.PluginStartupContextTest.xml",
+        "sha256": "fc5f7ab8ad5b3bc006bcbd6553f4cd53304d05458e4371b579db6e952d7b849b",
+        "bytes": 107422
+      },
+      {
+        "suite": "com.astral.server.StatIngestPrivacyTest",
+        "module": "astral-server",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-server/target/surefire-reports/TEST-com.astral.server.StatIngestPrivacyTest.xml",
+        "sha256": "7d7a199f5167cd7da1ba5b98d66ff9005dcb6053a2f5bc970b49d1ce69411025",
+        "bytes": 51386
+      },
+      {
+        "suite": "com.astral.system.controller.AccountCredentialPersistenceTest",
+        "module": "astral-system",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.controller.AccountCredentialPersistenceTest.xml",
+        "sha256": "c6f76ed5ab42de60f4daeb3612a3cf058a9b1db2b869452ac4a121af1ed3f3c4",
+        "bytes": 42562
+      },
+      {
+        "suite": "com.astral.system.controller.AdminWriteValidationTest",
+        "module": "astral-system",
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.controller.AdminWriteValidationTest.xml",
+        "sha256": "fe64e88733fc14145f2b109d9c62552f50a66564072589c35bfb509f04b151c2",
+        "bytes": 66883
+      },
+      {
+        "suite": "com.astral.system.controller.MailTemplatePatchPersistenceTest",
+        "module": "astral-system",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.controller.MailTemplatePatchPersistenceTest.xml",
+        "sha256": "9dd1a30f5e3d23eae2c0279e990d649df47e169110b87e6a380bdfa2f78a913d",
+        "bytes": 45844
+      },
+      {
+        "suite": "com.astral.system.controller.PermissionDomainTest",
+        "module": "astral-system",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.controller.PermissionDomainTest.xml",
+        "sha256": "66bfaaf4ba4fcde97934bde5bd5bc6102246f026897c6ab84e1a343693dbbfa1",
+        "bytes": 41365
+      },
+      {
+        "suite": "com.astral.system.controller.SmsTemplatePatchPersistenceTest",
+        "module": "astral-system",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.controller.SmsTemplatePatchPersistenceTest.xml",
+        "sha256": "1d9731c6a379d856887d724133cf9426573949f498d9cfc6317f722c953bc00b",
+        "bytes": 45188
+      },
+      {
+        "suite": "com.astral.system.controller.TableSchemaDefaultsTest",
+        "module": "astral-system",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.controller.TableSchemaDefaultsTest.xml",
+        "sha256": "587d473fb9969e52fbedb4edf6c9daf28eb7a8c1520de2ed9f43ec727f6038dd",
+        "bytes": 41370
+      },
+      {
+        "suite": "com.astral.system.notice.AppNoticeReadPersistenceTest",
+        "module": "astral-system",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notice.AppNoticeReadPersistenceTest.xml",
+        "sha256": "8821702a0acbc85943317c8629b72256637bf1197882a3a035cd05c9f08ad8ce",
+        "bytes": 41788
+      },
+      {
+        "suite": "com.astral.system.notice.NoticeDisclaimerFieldsTest",
+        "module": "astral-system",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notice.NoticeDisclaimerFieldsTest.xml",
+        "sha256": "6ffc4be22bde25b1b9f29c7fc9d7c65b9ad9373f5d39e27b7629096e72336cdb",
+        "bytes": 44400
+      },
+      {
+        "suite": "com.astral.system.notice.NoticePlatformTest",
+        "module": "astral-system",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notice.NoticePlatformTest.xml",
+        "sha256": "34e0aaa126c334d2525952452876b49929cd2de6fe9ce70c808048bc34c74c4a",
+        "bytes": 41756
+      },
+      {
+        "suite": "com.astral.system.notify.FeedbackReplyPlatformTest",
+        "module": "astral-system",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notify.FeedbackReplyPlatformTest.xml",
+        "sha256": "c679d61500e9f717d2be6d1fde862ce008863f389e428dd08833362e8e846acb",
+        "bytes": 42240
+      },
+      {
+        "suite": "com.astral.system.notify.MailDeliveryTest",
+        "module": "astral-system",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notify.MailDeliveryTest.xml",
+        "sha256": "9f28e1dc8b96e3e6d5918fd292bdffe9246c89f5e2ddbf8db983ea3ff83c9be6",
+        "bytes": 42245
+      },
+      {
+        "suite": "com.astral.system.notify.MessageTemplatePersistenceTest",
+        "module": "astral-system",
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notify.MessageTemplatePersistenceTest.xml",
+        "sha256": "8b2ca82b8a5a93c774633590f8d31728d1af10fc2000510a31c3b49a1fba49b7",
+        "bytes": 44836
+      },
+      {
+        "suite": "com.astral.system.notify.MessageTemplateVariableTest",
+        "module": "astral-system",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notify.MessageTemplateVariableTest.xml",
+        "sha256": "c8a40c3130029edcda6c3e023c2690929e32ff39287ce6413bb85d76a1e52ae8",
+        "bytes": 41732
+      },
+      {
+        "suite": "com.astral.system.notify.NotifyPublisherDeliveryTest",
+        "module": "astral-system",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notify.NotifyPublisherDeliveryTest.xml",
+        "sha256": "ddcefff0236b1adb1e433b61af4cea8816fbe23811788878728f52dd54bad830",
+        "bytes": 64306
+      },
+      {
+        "suite": "com.astral.system.notify.NotifyRuleConcurrencyTest",
+        "module": "astral-system",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notify.NotifyRuleConcurrencyTest.xml",
+        "sha256": "3e712ffdc5ee7aea7afceaf0b169009452dd91290d7a837bec2e7b62b9e98bea",
+        "bytes": 41522
+      },
+      {
+        "suite": "com.astral.system.notify.NotifyRulePersistenceTest",
+        "module": "astral-system",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notify.NotifyRulePersistenceTest.xml",
+        "sha256": "152dc42528c6f033dd10c7de5693666478548f717409ead65494cc502e706df0",
+        "bytes": 41370
+      },
+      {
+        "suite": "com.astral.system.notify.SmsDeliveryTest",
+        "module": "astral-system",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.notify.SmsDeliveryTest.xml",
+        "sha256": "66fd14b09130d2d10d2de328474ce48c03049a19bce2c885b4bc5c78760f7920",
+        "bytes": 41807
+      },
+      {
+        "suite": "com.astral.system.service.impl.RoleAuthorizationPersistenceTest",
+        "module": "astral-system",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.service.impl.RoleAuthorizationPersistenceTest.xml",
+        "sha256": "86ab95c774116c2f894776cbfb5fb31e697f9d6889e68d585cd7e1aee582122e",
+        "bytes": 43496
+      },
+      {
+        "suite": "com.astral.system.service.impl.SysMenuPatchTest",
+        "module": "astral-system",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.service.impl.SysMenuPatchTest.xml",
+        "sha256": "0f756c8c40ed484d26f58bde425090d227f3fa2d1695027b766c9153834c9567",
+        "bytes": 41341
+      },
+      {
+        "suite": "com.astral.system.service.impl.UserRoleNotificationTest",
+        "module": "astral-system",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "path": "astral-system/target/surefire-reports/TEST-com.astral.system.service.impl.UserRoleNotificationTest.xml",
+        "sha256": "1c6d89581a009f6e6df6c239d542b6a7dd403ee1cee377d421ca9aa00039c03d",
+        "bytes": 53894
+      }
+    ],
+    "staleReports": 0,
+    "path": "target/round5-delivery-reactor.log",
+    "sha256": "81e3e23b2747d0ea92970ff69b85b043f79350fcead62626b27bd321b16c04db",
+    "bytes": 796913,
+    "generator": {
+      "executed": true,
+      "generatedEntities": 34,
+      "skipped": false,
+      "installedArtifact": {
+        "path": "astral-schema/target/astral-schema-1.0.0.jar",
+        "sha256": "dc4f9a28eb52e3e934d5f8b22c938b21840610d7bc7470cd20fc545d0f538c5e",
+        "bytes": 74993
+      }
+    }
+  },
+  "frontend": {
+    "tests": 127,
+    "passed": 127,
+    "failed": 0,
+    "skipped": 0,
+    "gates": {
+      "tests": {
+        "name": "tests",
+        "startedAt": "2026-11-09T23:35:41.8901422+08:00",
+        "finishedAt": "2026-11-09T23:35:53.6153726+08:00",
+        "exitCode": 0,
+        "path": "target/round5-front-final-tests.log",
+        "sha256": "ddf7f7c92820a3cd79fd7ce2485b88ae8c10a5051ba8a0ea1b3b60f1193f3d89",
+        "bytes": 12843
+      },
+      "eslint": {
+        "name": "eslint",
+        "startedAt": "2026-11-09T23:35:53.6941186+08:00",
+        "finishedAt": "2026-11-09T23:36:04.3452247+08:00",
+        "exitCode": 0,
+        "path": "target/round5-front-final-eslint.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "prettier": {
+        "name": "prettier",
+        "startedAt": "2026-11-09T23:36:04.3504527+08:00",
+        "finishedAt": "2026-11-09T23:36:09.8258873+08:00",
+        "exitCode": 0,
+        "path": "target/round5-front-final-prettier.log",
+        "sha256": "f20510a9da4717c51c4cffee6d0dd88d6c9a723d0a83711d01216f5b48961283",
+        "bytes": 68
+      },
+      "typecheck": {
+        "name": "typecheck",
+        "startedAt": "2026-11-09T23:36:09.8288522+08:00",
+        "finishedAt": "2026-11-09T23:36:25.2721923+08:00",
+        "exitCode": 0,
+        "path": "target/round5-front-final-typecheck.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "build": {
+        "name": "build",
+        "startedAt": "2026-11-09T23:36:25.2757407+08:00",
+        "finishedAt": "2026-11-09T23:36:55.9153775+08:00",
+        "exitCode": 0,
+        "path": "target/round5-front-final-build.log",
+        "sha256": "19139c1eba59c388189e49d8304c6909add59bb7627402f81b508b68fd9c3f38",
+        "bytes": 2301
+      }
+    },
+    "dependencies": {
+      "method": "isolated copy of existing installed dependencies",
+      "packageLockSha256": "e7854fce51764af6b758e7e0b53af8a1da21e1831cfd3fec0788635a97625351",
+      "installedLockSha256": "c7ff24f2a3da12d0662eae1dd32f06110cb8f1bf213135e1e295a96e428f0d01",
+      "lockUnchanged": true
+    },
+    "browserAcceptance": false
+  },
+  "quality": {
+    "spotless": {
+      "status": "PASS",
+      "finishedAt": "2026-11-10T01:14:47+08:00",
+      "path": "target/round5-delivery-spotless.log",
+      "sha256": "620116f9ca778901298de9b5fabd0ca72382d72654a9a38cf7d4faa04151e40e",
+      "bytes": 9694
+    },
+    "checkstyle": {
+      "status": "PASS",
+      "finishedAt": "2026-11-10T01:15:02+08:00",
+      "path": "target/round5-delivery-checkstyle.log",
+      "sha256": "0059abf7a0f82764289a429a8ca8c873e3b31c8eae5b8202982213d82ae3ef32",
+      "bytes": 83664,
+      "assessment": {
+        "path": "docs/audit/2026-11-09-round5/checkstyle-delivery-assessment.json",
+        "sha256": "a13955b58f468e46300a3a81e203c486505aab3019d42f21ee9de5c6a68c4ca8",
+        "bytes": 223216
+      },
+      "findings": 379,
+      "warnings": 379,
+      "errors": 0
+    },
+    "spotbugs": {
+      "status": "PASS",
+      "finishedAt": "2026-11-10T01:16:41+08:00",
+      "path": "target/round5-delivery-spotbugs.log",
+      "sha256": "f084209a2677546598f6888a246a6a941ff2541c4fdc450de0c46b6eb8ff2222",
+      "bytes": 9706,
+      "assessment": {
+        "path": "docs/audit/2026-11-09-round5/spotbugs-delivery-assessment.json",
+        "sha256": "3db52af9fc89cbc4456e0aa676c7b67cc060c8ae1672bfa5e7a2b93fbfdb4d0a",
+        "bytes": 193824
+      },
+      "findings": 248,
+      "byPriority": {
+        "1": 0,
+        "2": 248,
+        "3": 0
+      }
+    }
+  },
+  "cleanup": {
+    "services": [
+      {
+        "executable": "F:\\qtMusic\\local\\redis\\redis-server.exe",
+        "pid": 31420,
+        "commandLine": "\"F:\\qtMusic\\local\\redis\\redis-server.exe\" F:/qtMusic/astral/target/audit-round5-worktree/target/round5-redis.conf",
+        "port": 8549,
+        "bind": "127.0.0.1"
+      },
+      {
+        "executable": "F:\\qtMusic\\astral\\target\\audit-pg-20261108\\runtime\\bin\\postgres.exe",
+        "pid": 28116,
+        "commandLine": "\"F:/qtMusic/astral/target/audit-pg-20261108/runtime/bin/postgres.exe\"  -D \"C:/Users/canace/AppData/Local/Temp/astral-audit-pg-c6a3db9b135140e3a8952e040591c826/data\" -p 9684 -h 127.0.0.1 ",
+        "port": 9684,
+        "bind": "127.0.0.1"
+      }
+    ],
+    "postgresStopExit": 0,
+    "retainedPostgresFixture": true,
+    "fixtureDeletionAttempted": false,
+    "remainingParents": 0,
+    "checkedAt": "2026-11-10T01:15:17.7670360+08:00",
+    "remainingListeners": 0,
+    "ownershipVerified": true,
+    "redisStopExit": 0,
+    "receipt": {
+      "path": "target/round5-delivery-service-cleanup.json",
+      "sha256": "44efed83d6905cc0d52ed6c1cf7ed1bd0216a62614c734c7841c056e6bcb7aee",
+      "bytes": 983
+    }
+  },
+  "redGreenLogs": [
+    {
+      "path": "target/round5-config-green.log",
+      "sha256": "2946b839ed86af647faa8bd4fb2f0d643ea887ce04f19911d584028ef2b816d6",
+      "bytes": 27949
+    },
+    {
+      "path": "target/round5-config-red.log",
+      "sha256": "6c8168e31654fc63d318e1db0d7eece2f9af0aa1b8325069aa4aaed19e019529",
+      "bytes": 27342
+    },
+    {
+      "path": "target/round5-dict-green.log",
+      "sha256": "330321177d0fcda74a6ecd686368fb4da8de9bb0650f00072456bf4623932edb",
+      "bytes": 23017
+    },
+    {
+      "path": "target/round5-dict-red.log",
+      "sha256": "57b6f4795578f7606d7768e1fb57cb33a8dc9f108f54c890c812185dfe754116",
+      "bytes": 19228
+    },
+    {
+      "path": "target/round5-dict-width-green.log",
+      "sha256": "99bbc62cb71cbf77c90a4cebaa3a808ed384fd82374ab4942b695485ef3929a6",
+      "bytes": 34739
+    },
+    {
+      "path": "target/round5-dict-width-red.log",
+      "sha256": "817cc42fffe9c8edcc8cb4fd411e1023be2feb79e87426edbfa444d81ffce46d",
+      "bytes": 38071
+    },
+    {
+      "path": "target/round5-form-final-green.log",
+      "sha256": "245927045bdb9c57e84433af9df9b780d5ccd8865306e96009fd510ec4ac2a25",
+      "bytes": 1568
+    },
+    {
+      "path": "target/round5-form-unmount-green.log",
+      "sha256": "ccb1c23fec44eb2eb50824388ca86e845b74459cccc326988d9e4ec6f3ae3756",
+      "bytes": 1365
+    },
+    {
+      "path": "target/round5-form-unmount-red.log",
+      "sha256": "ad0c56781e249c6f71a70c66532b6056360b09d3386b59bbb664882adcbc80ec",
+      "bytes": 1057
+    },
+    {
+      "path": "target/round5-mail-account-green.log",
+      "sha256": "2aa4371c92ed7ec3480434b397b11239cc223a75d5c46b5215ccb888da79639b",
+      "bytes": 30563
+    },
+    {
+      "path": "target/round5-mail-account-red.log",
+      "sha256": "4a809438e200b35e7618a0ae8248cdb8e0570d7ec3b4097ebfc6307836fefda5",
+      "bytes": 28579
+    },
+    {
+      "path": "target/round5-menu-green.log",
+      "sha256": "b7c4740a0ed5cbd13e30918d075d1715b1bcbe7f49e4741a5ca33e6c5db4dd26",
+      "bytes": 25200
+    },
+    {
+      "path": "target/round5-menu-red.log",
+      "sha256": "07f592a20a50097ca436e6195c955d131264a9816c2ba5da769eccf0a877ae3e",
+      "bytes": 25508
+    },
+    {
+      "path": "target/round5-permission-width-green.log",
+      "sha256": "88ccca3a7fbf3141f6531202af7dcc54e0d5108a9cc8d7069f64a3b0cb4bd4fd",
+      "bytes": 37258
+    },
+    {
+      "path": "target/round5-permission-width-red.log",
+      "sha256": "2067b325cecda9cbaeff1ff6670a73fd3f816c026cacce71cba0c1a9b63ef235",
+      "bytes": 18264
+    },
+    {
+      "path": "target/round5-phone-width-green.log",
+      "sha256": "6019dd3d3acb23156db4fc075cc105eae3f6c001287b558b9f922043026df924",
+      "bytes": 17401
+    },
+    {
+      "path": "target/round5-phone-width-red.log",
+      "sha256": "960b42787225ec184c8a02663d9d58a0cea3d82bdc4aac17c385e65fbc630262",
+      "bytes": 17869
+    },
+    {
+      "path": "target/round5-role-create-green.log",
+      "sha256": "52e020c084e1004ff89ea27f7c9151abcf3deddb5941675a717e23f7400085f5",
+      "bytes": 26807
+    },
+    {
+      "path": "target/round5-role-create-green2.log",
+      "sha256": "36bd786546abf51ea02b7a28d5ac633e8ef5fba44d038167e0d192d47e9bdcf0",
+      "bytes": 16704
+    },
+    {
+      "path": "target/round5-role-create-red.log",
+      "sha256": "9d30625e097535e0ed4caf08a81dc7b3a7b8919943d6b06b189c28f99e8f69e3",
+      "bytes": 20204
+    },
+    {
+      "path": "target/round5-role-create-red2.log",
+      "sha256": "77cf5d27ce314edb25076da9971968d0198580b2f53dfdf51bfd7cc775242704",
+      "bytes": 18179
+    },
+    {
+      "path": "target/round5-role-patch-green.log",
+      "sha256": "c1a704448b9d9bd087eace479ef8f6af2f0ec686d499d581899885d38f922781",
+      "bytes": 17059
+    },
+    {
+      "path": "target/round5-role-patch-red.log",
+      "sha256": "969daa7e573efb3dcc41fb8341ff6e8a90d6256152ff6550d0168f82d64ce07c",
+      "bytes": 18843
+    },
+    {
+      "path": "target/round5-sms-hidden-green.log",
+      "sha256": "6113589bbece3ecf81203a496cc0f36cc2148303d2a3ac2484f85c32790a7b60",
+      "bytes": 1100
+    },
+    {
+      "path": "target/round5-sms-hidden-red.log",
+      "sha256": "611f1277d96903c0f8c26fa9a778ad4a4f570a8923288c42582e8401bfa65806",
+      "bytes": 2266
+    },
+    {
+      "path": "target/round5-sms-provider-green.log",
+      "sha256": "2243c0a1dc0ad71ca164b6ba693bb70fe8c121a23446263b31e0ce71ebdbdd75",
+      "bytes": 31076
+    },
+    {
+      "path": "target/round5-sms-provider-red.log",
+      "sha256": "ef48e07f7a02d4e9d95f085a385967574bd40333394519db7fb248a48d4264ee",
+      "bytes": 31193
+    },
+    {
+      "path": "target/round5-user-green.log",
+      "sha256": "345c6b4ab26a69adf6f65c830f800fe2b4ed82a8435adfc8b1cac01447b44395",
+      "bytes": 23372
+    },
+    {
+      "path": "target/round5-user-red.log",
+      "sha256": "b2ccadc7e4d85cb77a8215db5e8310627596ae6fcee2dfdeed696297e2f3050c",
+      "bytes": 25189
+    },
+    {
+      "path": "target/round5-sms-toggle-red.log",
+      "sha256": "563090dfae984c51bc8eb258342db28d79181eb34597467bb1cc129d97e21f6e",
+      "bytes": 17855
+    },
+    {
+      "path": "target/round5-sms-toggle-green.log",
+      "sha256": "343c3babcc4852eb929948479c593d17319cf7ff7731f654bec79b8d9e5e5558",
+      "bytes": 34464
+    },
+    {
+      "path": "target/round5-sms-type-red.log",
+      "sha256": "adee02a4dc409d15bcbea7d9b4404b3a2286847492457cdf0914a8a66b1a4538",
+      "bytes": 15771
+    },
+    {
+      "path": "target/round5-sms-type-green.log",
+      "sha256": "d5c987ef97bb29c6c54140d995fad16ce0cd7d80a2cbd0318b65f07f0f213db7",
+      "bytes": 34819
+    },
+    {
+      "path": "target/round5-sms-legacy-type-red.log",
+      "sha256": "c895e72f9f58d0a6dc320cb4876b0bc8dc1ad3f8fb1dcd16b990c738db83ee5b",
+      "bytes": 15402
+    },
+    {
+      "path": "target/round5-sms-legacy-type-green.log",
+      "sha256": "182fae04b73fb14cc22c4c34cb9e72d360183e4e669b4113830b230ec9a0c658",
+      "bytes": 36678
+    },
+    {
+      "path": "target/round5-sms-unicode-save-red.log",
+      "sha256": "4bb5a5b7d1ee6ad5491c10efb96766906167a0167f88c09e4069ed71cf2c03e8",
+      "bytes": 16135
+    },
+    {
+      "path": "target/round5-sms-unicode-save-green.log",
+      "sha256": "896370bcc4025adcd1616dadbb93ce390f13137898a14801f8f70f2152043cff",
+      "bytes": 14607
+    },
+    {
+      "path": "target/round5-sms-unicode-legacy-red.log",
+      "sha256": "990702bf2c8eb33d553d2ae19abd83625ae9a61bebafb4818f373e477b90358e",
+      "bytes": 15770
+    },
+    {
+      "path": "target/round5-sms-unicode-legacy-green.log",
+      "sha256": "3c6c23e09955bee02b0822517dc0e5b2b9c00fe909ef287d8baed4bb35e299a1",
+      "bytes": 37388
+    }
+  ],
+  "initialGateReceipt": {
+    "path": "target/round5-final-gates.json",
+    "sha256": "74c47b7c8e9c32cce0d5d2b884700859eeb0b7e20de8b0bec2c1e14321a1b8a5",
+    "bytes": 81616
+  },
+  "initialJavaEvidenceStatus": "Initial 910-test and intermediate 911/913-test reactor/log receipts retained. Mutable XMLs were superseded by the final 915-test run; final XMLs must not be attributed to earlier runs.",
+  "inventory": {
+    "path": "docs/audit/2026-11-09-round5/inventory-delivery-reconciliation.json",
+    "sha256": "8df2870910f98da305c4cd068c25d3c4e59c6d5852f2c83d4856017787f3c789",
+    "bytes": 442030
+  },
+  "limitations": [
+    "Standalone MVC does not include application-wide auth/advice.",
+    "React/jsdom is not real browser IME/layout/wheel/download/cross-tab acceptance.",
+    "No production DB, SMTP/SMS, model or cloud delivery.",
+    "Historical whole-project coverage is inherited with an inventory reconciliation, not newly repeated all-file reading."
+  ],
+  "failuresKept": [
+    "Initial role GREEN missed CREATE_TIME fill; fixed test fixture and reran RED2/GREEN2.",
+    "First frontend build could not traverse external dependency junction.",
+    "npm ci mirror returned repeated HTTP 500; stopped only owned installer, retained partial directory, copied local dependencies matching both lockfile receipts; final gates rerun."
+  ],
+  "status": "complete: confirmed product fixes, final gates, two independent reviews and retained owned-service cleanup; local integration checked separately",
+  "authorization": "Original docs/audit/2026-11-07/SPEC.md and user continuation to entire project completion; autonomous local fixes and commits only.",
+  "reviewers": {
+    "standards": {
+      "initial": {
+        "path": "docs/audit/2026-11-09-round5/standards-review.md",
+        "sha256": "5765cc24a326c55fc7afdd0aec3f96ba5f2f9d1e069c269296265a04d08f1a41",
+        "bytes": 2775,
+        "fixedHead": "9011277c0bbe25a937b9f4c2ac9b3bbff32a88be",
+        "verdict": "PASS",
+        "confirmedFindings": 0
+      },
+      "final": {
+        "path": "docs/audit/2026-11-09-round5/standards-delivery-review.md",
+        "sha256": "17fdd481cad77f59700cb78d74b47225d2d84587a97130d61527791eeca5ceaa",
+        "bytes": 2902,
+        "fixedHead": "bec670c7966b776609bec738b836edd93a00a085",
+        "verdict": "PASS",
+        "unresolvedConfirmedFindings": 0
+      },
+      "intermediate": {
+        "path": "docs/audit/2026-11-09-round5/standards-final-review.md",
+        "sha256": "2c81df98faab02073fbca758af905cc8515666c9fcd3138c7b950626f40ef443",
+        "bytes": 2872,
+        "fixedHead": "3cfec3db5e3845823d37774a34cb00e5cd38083f",
+        "verdict": "PASS",
+        "openFindings": 0
+      },
+      "normalization": {
+        "path": "docs/audit/2026-11-09-round5/standards-release-review.md",
+        "sha256": "6c270922e429db7eeed7c5743df1628c35cc570be6f383d24c902e89c940df07",
+        "bytes": 2934,
+        "fixedHead": "5bb42ffd1ab1ee12cfd1b0ee286219d007d6240c",
+        "verdict": "PASS",
+        "openFindings": 0
+      }
+    },
+    "spec": {
+      "initial": {
+        "path": "docs/audit/2026-11-09-round5/spec-review.md",
+        "sha256": "4e6d0e212bac3cc2854918ec7e9e1b497130016723d49b6cea7338fc1422cbc6",
+        "bytes": 3649,
+        "fixedHead": "9011277c0bbe25a937b9f4c2ac9b3bbff32a88be",
+        "verdict": "FAIL",
+        "confirmedFindings": 1
+      },
+      "final": {
+        "path": "docs/audit/2026-11-09-round5/spec-final-review.md",
+        "sha256": "6999b22dc722496e3c59988b223e1473fa9d5defcec96064c4e51d1d528885df",
+        "bytes": 4845,
+        "fixedHead": "bec670c7966b776609bec738b836edd93a00a085",
+        "verdict": "PASS",
+        "unresolvedConfirmedFindings": 0
+      },
+      "intermediate": {
+        "path": "docs/audit/2026-11-09-round5/spec-intermediate-review.md",
+        "sha256": "1714847555791f9b7f24078b74a8c8546ea445ba0496525d45c63d0957f1331a",
+        "bytes": 4671,
+        "fixedHead": "3cfec3db5e3845823d37774a34cb00e5cd38083f",
+        "verdict": "FAIL",
+        "openFindings": 1
+      },
+      "normalization": {
+        "path": "docs/audit/2026-11-09-round5/spec-normalization-review.md",
+        "sha256": "4f923d26704a23312f34a3e8bbb2451e9ad844174ad59bd0309c0741ee53091f",
+        "bytes": 4344,
+        "fixedHead": "5bb42ffd1ab1ee12cfd1b0ee286219d007d6240c",
+        "verdict": "FAIL",
+        "openFindings": 1
+      }
+    }
+  },
+  "scope": {
+    "changedFiles": 31,
+    "initialProduct": "9011277c0bbe25a937b9f4c2ac9b3bbff32a88be",
+    "followupChangedFiles": 3,
+    "authoredPaths": 1430,
+    "addedPathsSincePriorInventory": 9,
+    "missingPaths": 0,
+    "inheritedCoverageReceipts": [
+      {
+        "path": "docs/audit/2026-11-08/verification.json",
+        "sha256": "c04df2b797a85f2750f29b35b4aaebfccea60835af27660fd9e1b2123fcb7c62",
+        "bytes": 10878
+      },
+      {
+        "path": "docs/audit/2026-11-09/verification.json",
+        "sha256": "55c80cb3ba5199febb711bbdead4d56cb0755e30505a22feb70d0d44214e7f20",
+        "bytes": 19223
+      },
+      {
+        "path": "docs/audit/2026-11-09-round3/verification.json",
+        "sha256": "78d9111351ead7cc8d52e58e34eda0327a972f431ad826f8eb7d745ebcf53bb8",
+        "bytes": 86218
+      },
+      {
+        "path": "docs/audit/2026-11-09-round4/verification.json",
+        "sha256": "28ff481e8b6d07fb8c90c11938a6e39169fc755c5cd0514b6dc1839679de67d2",
+        "bytes": 118724
+      }
+    ],
+    "semanticBoundary": "Inherited domain coverage and successive fixed incremental reviews; inventory is identity reconciliation, not a new all-file semantic review."
+  },
+  "qualityAssessments": {
+    "initial": [
+      {
+        "path": "docs/audit/2026-11-09-round5/checkstyle-assessment.json",
+        "sha256": "55b2af47ef3047702951f8c80f74d9f19a357fb3c64d3ac0bdb6bb92500876fd",
+        "bytes": 223216
+      },
+      {
+        "path": "docs/audit/2026-11-09-round5/spotbugs-assessment.json",
+        "sha256": "8746f1a9693a3e5c764da4e918376966038596de23992352d35b9260270ecfda",
+        "bytes": 193824
+      }
+    ],
+    "final": [
+      {
+        "path": "docs/audit/2026-11-09-round5/checkstyle-delivery-assessment.json",
+        "sha256": "a13955b58f468e46300a3a81e203c486505aab3019d42f21ee9de5c6a68c4ca8",
+        "bytes": 223216
+      },
+      {
+        "path": "docs/audit/2026-11-09-round5/spotbugs-delivery-assessment.json",
+        "sha256": "3db52af9fc89cbc4456e0aa676c7b67cc060c8ae1672bfa5e7a2b93fbfdb4d0a",
+        "bytes": 193824
+      }
+    ]
+  },
+  "intermediateGateReceipt": {
+    "path": "target/round5-close-final-gates.json",
+    "sha256": "506e48eb89bb8bb5df44cc9d320d852e5a01542f5ffc5ce564857d8d8e9ed21d",
+    "bytes": 82920
+  },
+  "normalizationGateReceipt": {
+    "path": "target/round5-release-final-gates.json",
+    "sha256": "d7d9c60cd4adef4d44a44bc97540e779d3db2fce20ea0a38c2cfe8f09844995c",
+    "bytes": 83859
+  },
+  "normalizationQualityAssessments": [
+    {
+      "path": "docs/audit/2026-11-09-round5/checkstyle-release-assessment.json",
+      "sha256": "6e7715e76b9208e5129084ffda7cbfc59d60c0eea945a8fe00fa39f7fff0414f",
+      "bytes": 223216
+    },
+    {
+      "path": "docs/audit/2026-11-09-round5/spotbugs-release-assessment.json",
+      "sha256": "8c71cfd35c5356528d3874f9def39b034848a259ba8d886a18f75426536e479e",
+      "bytes": 193824
+    }
+  ],
+  "intermediateQualityAssessments": [
+    {
+      "path": "docs/audit/2026-11-09-round5/checkstyle-final-assessment.json",
+      "sha256": "a13955b58f468e46300a3a81e203c486505aab3019d42f21ee9de5c6a68c4ca8",
+      "bytes": 223216
+    },
+    {
+      "path": "docs/audit/2026-11-09-round5/spotbugs-final-assessment.json",
+      "sha256": "7fd9723df5a3506438a42f14bcb49ec67a685d31ebea59a95eefb59f802b2803",
+      "bytes": 193824
+    }
+  ],
+  "evidenceRoot": "F:/qtMusic/astral/target/audit-round5-worktree",
+  "sourceFilesAreRepositoryRelative": true,
+  "runtimeLogsAndXmlResolveAgainstEvidenceRoot": true,
+  "rawGateReceipt": {
+    "path": "target/round5-delivery-final-gates.json",
+    "sha256": "686dc819d6dc4fa690edfd7e3c06fb621993ea69fc5c27ed7a7715396170a360",
+    "bytes": 84597
+  },
+  "concurrentChangesExcluded": {
+    "createdAt": "2026-11-09T23:50:50.245337+08:00",
+    "mainRepository": "F:\\qtMusic\\astral",
+    "mainHead": "0114de8781bbbf60807d79af9952cbbcfec44812",
+    "branch": "master",
+    "status": [
+      " M astral-plugin/src/main/java/com/astral/qt/service/QtPackHeaderProbe.java",
+      " M astral-plugin/src/test/java/com/astral/qt/service/QtPackHeaderProbeHttpTest.java"
+    ],
+    "indexEntries": [
+      "100644 a12eaf94c52725a71354a03c2e491aefbfb981ed 0\tastral-plugin/src/main/java/com/astral/qt/service/QtPackHeaderProbe.java",
+      "100644 0610df74150672b276830535fef93fa996695cd0 0\tastral-plugin/src/test/java/com/astral/qt/service/QtPackHeaderProbeHttpTest.java"
+    ],
+    "diffSha256": "9df0015accce9508324d51d859af7cfcf8476e6ab3ce3d035547f4b28a59485b",
+    "paths": [
+      {
+        "path": "astral-plugin/src/main/java/com/astral/qt/service/QtPackHeaderProbe.java",
+        "sha256": "bc63da18810836b0bd78dc9360f58827e9ca8ee8b9b0aa97b266dc57281f5f0e"
+      },
+      {
+        "path": "astral-plugin/src/test/java/com/astral/qt/service/QtPackHeaderProbeHttpTest.java",
+        "sha256": "a58bd65d439ecf6b101f6f0a83d61e243cc8b3b286c57ff5d3fd22769e984774"
+      }
+    ]
+  },
+  "localIntegration": {
+    "mode": "fast-forward only to final audit-doc commit",
+    "noRemotePush": true,
+    "receiptPath": "F:/qtMusic/astral/target/audit-round5-worktree/target/round5-local-integration.json",
+    "note": "Post-document-commit integration result is recorded outside tracked documents to avoid recursive commit hashes; verification here does not substitute for that result."
+  },
+  "closureCriteria": {
+    "allDomainsAttributed": true,
+    "confirmedDefectsClosed": true,
+    "javaGates": "PASS",
+    "frontendGates": "PASS",
+    "standards": "PASS",
+    "spec": "PASS",
+    "limitationsDisclosed": true
+  },
+  "documentationReceipts": [
+    {
+      "path": "docs/audit/2026-11-09-round5/CONTINUATION.md",
+      "sha256": "0cb5053c8661ede41b44cc0ba6d30aa22118e5d13aa19882bc3f472229713689",
+      "bytes": 8256
+    },
+    {
+      "path": "docs/audit/2026-11-09-round5/PROJECT-COMPLETION.md",
+      "sha256": "d34836a40d7c4a39e5042382ca6a5d76c82e395740fe5f670d571a8a391e6474",
+      "bytes": 3427
+    },
+    {
+      "path": "docs/audit/2026-11-09-round5/coverage.md",
+      "sha256": "22db797f2f1646832a28094fbfb53fa669400fb3c0d6e29eb3137eeda74a0c4e",
+      "bytes": 6130
+    },
+    {
+      "path": "docs/audit/2026-11-09-round5/quality-review.md",
+      "sha256": "e7e5ea4cb1ff4fe51c6cf0d283146d944f080e2d7c4569debefb58689edfd7dd",
+      "bytes": 4620
+    },
+    {
+      "path": "docs/audit/2026-11-09-round5/TEST-SEAMS.md",
+      "sha256": "8ddbf781fbfe9a7169c3cdd3d65ac968ba7c602b29f77d0e5342d85ccd412e40",
+      "bytes": 2971
+    }
+  ]
+}
