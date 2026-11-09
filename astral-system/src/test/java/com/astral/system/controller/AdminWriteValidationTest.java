@@ -3,6 +3,7 @@ package com.astral.system.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -346,6 +347,32 @@ class AdminWriteValidationTest {
     }
 
     @Test
+    void smsProviderPatchesToggleWithoutResendingIdentityAndStillRejectInvalidFields() throws Exception {
+        accept(put("/api/v1/admin/system/sms/provider/1"), Map.of("enabled", 0));
+        assertEquals(0, smsProviders.getById(1L).getData().getEnabled());
+        assertEquals("Original", smsProviders.getById(1L).getData().getProviderName());
+        assertEquals("MOCK", smsProviders.getById(1L).getData().getProviderType());
+        accept(put("/api/v1/admin/system/sms/provider/1"), Map.of("enabled", 1));
+        assertEquals(1, smsProviders.getById(1L).getData().getEnabled());
+        accept(put("/api/v1/admin/system/sms/provider/1"), Map.of("providerName", "Renamed"));
+        accept(put("/api/v1/admin/system/sms/provider/1"), Map.of("providerType", "MOCK"));
+        rejectBusiness(put("/api/v1/admin/system/sms/provider/1"), Map.of("providerName", " "), "SMS012");
+        rejectBusiness(put("/api/v1/admin/system/sms/provider/1"), Map.of("providerType", " "), "SMS011");
+        rejectBusiness(put("/api/v1/admin/system/sms/provider/1"), Map.of("providerType", "UNKNOWN"), "SMS006");
+        rejectBusiness(put("/api/v1/admin/system/sms/provider/1"), Map.of("accessSecret", " "), "MAIL007");
+        accept(post("/api/v1/admin/system/sms/provider"), Map.of("providerName", "Other", "providerType", "MOCK"));
+        rejectBusiness(put("/api/v1/admin/system/sms/provider/1"), Map.of("providerName", "Other"), "SMS010");
+        rejectBusiness(post("/api/v1/admin/system/sms/provider"), Map.of("enabled", 1), "SMS012");
+        rejectBusiness(post("/api/v1/admin/system/sms/provider"), Map.of("providerName", "Missing type"), "SMS011");
+        rejectBusiness(put("/api/v1/admin/system/sms/provider/999"), Map.of("enabled", 0), "SMS001");
+        assertEquals("Renamed", smsProviders.getById(1L).getData().getProviderName());
+        assertEquals("MOCK", smsProviders.getById(1L).getData().getProviderType());
+        assertEquals(1, smsProviders.getById(1L).getData().getEnabled());
+        assertNull(smsProviders.getById(1L).getData().getAccessSecret());
+        assertEquals(2, smsProviders.page(1, 10).getData().getRecords().size());
+    }
+
+    @Test
     void dictionaryDescriptionsAcceptTheFullDatabaseWidth() throws Exception {
         accept(
                 put("/api/v1/admin/system/dict/type/1"),
@@ -402,5 +429,15 @@ class AdminWriteValidationTest {
                 .andReturn();
         assertNull(result.getResolvedException());
         assertEquals(200, result.getResponse().getStatus());
+    }
+
+    private void rejectBusiness(MockHttpServletRequestBuilder request, Map<String, ?> body, String errorCode) {
+        var exception = assertThrows(
+                ServletException.class,
+                () -> mvc.perform(
+                        request.contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(body))));
+        assertEquals(
+                errorCode,
+                assertInstanceOf(BusinessException.class, exception.getCause()).getErrorCode());
     }
 }

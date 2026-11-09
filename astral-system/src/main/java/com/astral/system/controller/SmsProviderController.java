@@ -148,25 +148,29 @@ public class SmsProviderController {
         return Result.success();
     }
 
-    /** 写路径校验：名称/类型必填、类型必须有 SPI 实现、名称唯一。 */
+    /** 创建要求名称/类型；局部更新只校验提交字段，保留省略值。 */
     private void validate(SysSmsProvider entity, Long id) {
-        if (entity.getProviderName() == null || entity.getProviderName().isBlank()) {
-            throw new BusinessException("SMS012");
+        if (id == null || entity.getProviderName() != null) {
+            if (entity.getProviderName() == null || entity.getProviderName().isBlank()) {
+                throw new BusinessException("SMS012");
+            }
+            Long dup = providerService
+                    .lambdaQuery()
+                    .eq(SysSmsProvider::getProviderName, entity.getProviderName())
+                    .ne(id != null, SysSmsProvider::getId, id)
+                    .count();
+            if (dup != null && dup > 0) {
+                throw new BusinessException("SMS010", entity.getProviderName());
+            }
         }
-        if (entity.getProviderType() == null || entity.getProviderType().isBlank()) {
-            throw new BusinessException("SMS011");
-        }
-        String type = entity.getProviderType().trim().toUpperCase();
-        if (providerImpls.stream().noneMatch(p -> p.type().equalsIgnoreCase(type))) {
-            throw new BusinessException("SMS006", entity.getProviderType());
-        }
-        Long dup = providerService
-                .lambdaQuery()
-                .eq(SysSmsProvider::getProviderName, entity.getProviderName())
-                .ne(id != null, SysSmsProvider::getId, id)
-                .count();
-        if (dup != null && dup > 0) {
-            throw new BusinessException("SMS010", entity.getProviderName());
+        if (id == null || entity.getProviderType() != null) {
+            if (entity.getProviderType() == null || entity.getProviderType().isBlank()) {
+                throw new BusinessException("SMS011");
+            }
+            String type = entity.getProviderType().trim();
+            if (providerImpls.stream().noneMatch(p -> p.type().equalsIgnoreCase(type))) {
+                throw new BusinessException("SMS006", entity.getProviderType());
+            }
         }
     }
 }
