@@ -105,7 +105,7 @@ class AdminToolUserStatusConcurrencyTest {
         users = (UserServiceImpl) transaction.getProxy();
         provider = new AdminToolProvider(
                 users, null, null, null, null, null, null, null, null, null, null, null, null, null, jdbc, null);
-        controller = new UserController(users, null, null, null);
+        controller = new UserController(users, null, null, null, null);
     }
 
     @AfterEach

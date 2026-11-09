@@ -4,6 +4,8 @@ import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SysMenu;
 import com.astral.system.service.SysMenuService;
+import com.astral.system.validation.EntityPatchValidator;
+import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SysMenuController {
 
     private final SysMenuService sysMenuService;
+    private final EntityPatchValidator patchValidator;
 
     @RequiresPermission("admin:system:menu:view")
     @GetMapping("/tree")
@@ -59,13 +62,14 @@ public class SysMenuController {
             domain = "system",
             description = "管理端菜单树的新增/修改/删除")
     @PostMapping
-    public Result<SysMenu> create(@RequestBody SysMenu menu) {
+    public Result<SysMenu> create(@Valid @RequestBody SysMenu menu) {
         return Result.success(sysMenuService.create(menu));
     }
 
     @RequiresPermission("admin:system:menu:edit")
     @PutMapping("/{id}")
     public Result<SysMenu> update(@PathVariable Long id, @RequestBody SysMenu menu) {
+        patchValidator.validate(menu, "parentId", "name", "icon", "path", "permission", "sort", "visible", "type");
         return Result.success(sysMenuService.update(id, menu));
     }
 

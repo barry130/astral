@@ -6,9 +6,11 @@ import com.astral.common.result.Result;
 import com.astral.dao.entity.SysMailAccount;
 import com.astral.system.mail.MailService;
 import com.astral.system.mail.SysMailAccountService;
+import com.astral.system.validation.EntityPatchValidator;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,6 +36,7 @@ public class MailAccountController {
 
     private final SysMailAccountService accountService;
     private final MailService mailService;
+    private final EntityPatchValidator patchValidator;
 
     /**
      * 抹去凭据字段后再出参。
@@ -69,7 +72,7 @@ public class MailAccountController {
     @Operation(summary = "新增")
     @RequiresPermission(PERM_EDIT)
     @PostMapping
-    public Result<Void> create(@RequestBody SysMailAccount entity) {
+    public Result<Void> create(@Valid @RequestBody SysMailAccount entity) {
         accountService.save(entity);
         mailService.evictAccountCache();
         return Result.success();
@@ -79,6 +82,19 @@ public class MailAccountController {
     @RequiresPermission(PERM_EDIT)
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody SysMailAccount entity) {
+        patchValidator.validate(
+                entity,
+                "accountName",
+                "smtpHost",
+                "smtpPort",
+                "username",
+                "password",
+                "fromAddr",
+                "fromName",
+                "sslEnable",
+                "starttlsEnable",
+                "weight",
+                "remark");
         if (accountService.getById(id) == null) {
             throw new BusinessException("MAIL001");
         }

@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -88,7 +89,7 @@ public class DictTypeController {
     @CacheEvict(
             cacheNames = {"dictType", "dictData"},
             allEntries = true)
-    public Result<Void> create(@RequestBody DictType entity) {
+    public Result<Void> create(@Valid @RequestBody DictType entity) {
         dictTypeService.save(entity);
         return Result.success();
     }
@@ -106,7 +107,7 @@ public class DictTypeController {
     @CacheEvict(
             cacheNames = {"dictType", "dictData"},
             allEntries = true)
-    public Result<Void> update(@PathVariable Long id, @RequestBody DictType entity) {
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody DictType entity) {
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「把数据类型长度清空」保存后仍是旧值。白名单逐列显式 set，可空列原样写入（含 null）。
         dictTypeService.update(new LambdaUpdateWrapper<DictType>()

@@ -27,7 +27,6 @@ import {
   type MessageTemplateSave,
   messageTemplatePayload,
   parseTemplateVariables,
-  mergeTemplateVariables,
   previewMessageTemplate,
 } from '@/api/message-template';
 import {
@@ -217,13 +216,8 @@ export default function MessageTemplatePage() {
     return runMutation(
       async () => {
         const values = await form.validateFields();
-        const variables = mergeTemplateVariables(values.variables, [
-          values.subject,
-          values.content,
-        ]);
         const payload = messageTemplatePayload({
           ...values,
-          variables,
           channels: values.channels || [],
           originalCode:
             original && original.templateCode !== values.templateCode

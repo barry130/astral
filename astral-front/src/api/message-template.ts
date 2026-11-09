@@ -98,7 +98,16 @@ export function messageTemplatePayload(values: MessageTemplateSave): MessageTemp
     payload.channels.some((channel) => typeof channel !== 'string')
   )
     throw new Error('模板字段或渠道不完整');
-  if (payload.variables !== undefined) parseTemplateVariables(payload.variables);
+  if (payload.channels.some((channel) => channel === 'EMAIL' || channel === 'INAPP')) {
+    payload.variables = mergeTemplateVariables(payload.variables, [
+      payload.subject,
+      payload.content,
+    ]);
+  } else {
+    delete payload.subject;
+    delete payload.content;
+    delete payload.variables;
+  }
   return {
     ...payload,
     templateCode: payload.templateCode,

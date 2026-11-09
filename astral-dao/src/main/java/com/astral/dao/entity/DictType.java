@@ -38,7 +38,7 @@ public class DictType {
     @TableField("data_length")
     private Integer dataLength;
 
-    @Size(max = 256)
+    @Size(max = 1024)
     private String description;
 
     private Integer status;

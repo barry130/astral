@@ -37,10 +37,8 @@
       "columnName": "config_value",
       "fieldName": "configValue",
       "fieldType": "String",
-      "jdbcType": "VARCHAR",
-      "comment": "配置值",
-      "length": 512,
-      "isRequired": true
+      "jdbcType": "TEXT",
+      "comment": "配置值"
     },
     {
       "columnName": "config_type",

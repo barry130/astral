@@ -57,7 +57,7 @@
       "fieldType": "String",
       "jdbcType": "VARCHAR",
       "comment": "手机号",
-      "length": 20
+      "length": 32
     },
     {
       "columnName": "avatar",

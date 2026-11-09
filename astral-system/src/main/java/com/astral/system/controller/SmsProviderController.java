@@ -9,6 +9,7 @@ import com.astral.system.notify.sms.SmsProvider;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -79,7 +80,7 @@ public class SmsProviderController {
     @Operation(summary = "新增")
     @RequiresPermission(value = PERM_EDIT, name = "短信通知维护", description = "维护短信供应商与模板配置")
     @PostMapping
-    public Result<Void> create(@RequestBody SysSmsProvider entity) {
+    public Result<Void> create(@Valid @RequestBody SysSmsProvider entity) {
         validate(entity, null);
         providerService.save(entity);
         smsService.evictProviderCache();
@@ -89,7 +90,7 @@ public class SmsProviderController {
     @Operation(summary = "更新")
     @RequiresPermission(PERM_EDIT)
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody SysSmsProvider entity) {
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody SysSmsProvider entity) {
         if (providerService.getById(id) == null) {
             throw new BusinessException("SMS001");
         }

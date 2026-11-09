@@ -90,3 +90,18 @@ test('message template variable declarations reject malformed JSON rather than s
   assert.throws(() => parseTemplateVariables('[1]'), /JSON 字符串数组/);
   assert.deepEqual(JSON.parse(mergeTemplateVariables('["name"]', ['${name} ${item.title}', '${count}'])), ['name', 'item.title', 'count']);
 });
+
+test('SMS-only saves ignore stale hidden mail fields while selected render channels still validate them', async () => {
+  const load = createSourceLoader(), client = load('api/client.ts').default;
+  const { messageTemplateApi } = load('api/message-template.ts');
+  let captured;
+  client.defaults.adapter = async config => { captured = JSON.parse(config.data); return response(config, null); };
+  const values = { templateCode: 'sms', templateName: 'SMS', scene: 'testEvent', channels: ['SMS'],
+    smsProviderTemplateCode: 'SMS_123', variables: '{bad', subject: '${obsolete}', content: 'Hidden draft' };
+  await messageTemplateApi.save(values);
+  assert.equal(captured.variables, undefined);
+  assert.equal(captured.subject, undefined);
+  assert.equal(captured.content, undefined);
+  assert.equal(captured.smsProviderTemplateCode, 'SMS_123');
+  assert.throws(() => messageTemplateApi.save({ ...values, channels: ['SMS', 'EMAIL'] }), /JSON 字符串数组/);
+});

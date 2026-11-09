@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import lombok.Data;
@@ -18,23 +19,29 @@ public class SysMailAccount {
 
     @TableField("account_name")
     @Size(max = 64)
+    @NotNull
     private String accountName;
 
     @TableField("smtp_host")
     @Size(max = 128)
+    @NotNull
     private String smtpHost;
 
     @TableField("smtp_port")
+    @NotNull
     private Integer smtpPort;
 
     @Size(max = 128)
+    @NotNull
     private String username;
 
     @Size(max = 256)
+    @NotNull
     private String password;
 
     @TableField("from_addr")
     @Size(max = 128)
+    @NotNull
     private String fromAddr;
 
     @TableField("from_name")

@@ -12,10 +12,12 @@ import com.astral.system.service.PermissionService;
 import com.astral.system.service.RolePermissionService;
 import com.astral.system.service.RoleService;
 import com.astral.system.service.UserRoleService;
+import com.astral.system.validation.EntityPatchValidator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +54,8 @@ public class RoleController {
     private final UserRoleService userRoleService;
     /** 权限缓存：角色/角色权限关系变更后递增版本，立即失效所有用户的权限缓存 */
     private final PermissionCache permissionCache;
+
+    private final EntityPatchValidator patchValidator;
 
     /**
      * 分页查询角色列表
@@ -93,7 +97,7 @@ public class RoleController {
     // 属于提权入口，不能下放给 admin:system:role:edit
     @RequiresSuper
     @PostMapping
-    public Result<Void> create(@RequestBody Role entity) {
+    public Result<Void> create(@Valid @RequestBody Role entity) {
         // 双保险：新增角色一律非超管，超管身份只能在库里显式设置
         entity.setIsSuper(0);
         roleService.save(entity);
@@ -120,6 +124,7 @@ public class RoleController {
             description = "角色的新增/修改/删除（分配权限与 is_super 变更仍仅限超管）")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody Role entity) {
+        patchValidator.validate(entity, "roleName", "description", "status", "sort");
         if (roleService.getById(id) == null) {
             throw new BusinessException("SYS003");
         }

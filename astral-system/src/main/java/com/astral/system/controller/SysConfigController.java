@@ -4,9 +4,11 @@ import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SysConfig;
 import com.astral.system.service.SysConfigService;
+import com.astral.system.validation.EntityPatchValidator;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -33,6 +35,8 @@ public class SysConfigController {
 
     /** 系统配置服务 */
     private final SysConfigService sysConfigService;
+
+    private final EntityPatchValidator patchValidator;
 
     /**
      * 分页查询系统配置列表
@@ -71,7 +75,7 @@ public class SysConfigController {
     @RequiresPermission("admin:system:config:edit")
     @PostMapping
     @CacheEvict(value = "sysConfig", allEntries = true)
-    public Result<Void> create(@RequestBody SysConfig entity) {
+    public Result<Void> create(@Valid @RequestBody SysConfig entity) {
         sysConfigService.save(entity);
         sysConfigService.evictCache();
         return Result.success();
@@ -89,6 +93,7 @@ public class SysConfigController {
     @PutMapping("/{id}")
     @CacheEvict(value = "sysConfig", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody SysConfig entity) {
+        patchValidator.validate(entity, "configName", "configKey", "configValue", "configType", "description");
         // 白名单更新：id 由路径决定，只允许改「名称/键/值/类型/说明」这几个可编辑列。
         // 不能用 updateById(客户端实体)：MP 会把实体上所有非 null 字段一并写进 SET
         // （mass assignment），客户端可借此改写任意列——包括以后新增的敏感列。

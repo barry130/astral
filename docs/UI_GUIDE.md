@@ -146,6 +146,7 @@ shadcn 语义变量（`--background` / `--foreground` / `--primary` / `--muted` 
 - **布局**：`Card` `Space` `Row` `Col` `Divider` `Typography`
 - **反馈**：`message` `notification` `Spin` `Empty` `Alert` `Result` `Tooltip` `Popconfirm` `Pagination`
 - **表单**：`Form` `useForm` `useWatch` `createFormInstance`
+  - 条件分区卸载 `Form.Item` 后，该字段停止参与校验并清理错误；草稿值仍保留，重新挂载时恢复规则。旧异步校验结果不得覆盖重新挂载后的状态。
 - **输入**：`Input` `InputNumber` `Select` `Switch` `Checkbox` `Radio` `RadioButton` `RadioGroup` `AutoComplete` `DatePicker` `RangePicker` `TreeSelect` `Upload` `UploadDragger` `Image` `InputPassword` `InputTextArea` `InputSearch` `InputGroup`
 - **弹层**：`Modal` `Drawer` `Tabs`
 - **展示**：`Tag` `Statistic` `Timeline` `Badge` `Descriptions` `Table`

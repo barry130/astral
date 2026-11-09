@@ -80,7 +80,7 @@ class AccountCredentialPersistenceTest {
         profile = new ProfileController(mapper, rsa, null);
         var users = new UserServiceImpl();
         ReflectionTestUtils.setField(users, "baseMapper", mapper);
-        admin = new UserController(users, null, null, null);
+        admin = new UserController(users, null, null, null, null);
         login = mockStatic(StpUtil.class);
         login.when(StpUtil::getLoginIdAsLong).thenReturn(1L);
     }

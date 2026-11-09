@@ -20,7 +20,8 @@
       "fieldType": "String",
       "jdbcType": "VARCHAR",
       "comment": "账户名称",
-      "length": 64
+      "length": 64,
+      "isRequired": true
     },
     {
       "columnName": "smtp_host",
@@ -28,14 +29,16 @@
       "fieldType": "String",
       "jdbcType": "VARCHAR",
       "comment": "SMTP服务器地址",
-      "length": 128
+      "length": 128,
+      "isRequired": true
     },
     {
       "columnName": "smtp_port",
       "fieldName": "smtpPort",
       "fieldType": "Integer",
       "jdbcType": "INTEGER",
-      "comment": "SMTP端口"
+      "comment": "SMTP端口",
+      "isRequired": true
     },
     {
       "columnName": "username",
@@ -43,7 +46,8 @@
       "fieldType": "String",
       "jdbcType": "VARCHAR",
       "comment": "登录账号",
-      "length": 128
+      "length": 128,
+      "isRequired": true
     },
     {
       "columnName": "password",
@@ -51,7 +55,8 @@
       "fieldType": "String",
       "jdbcType": "VARCHAR",
       "comment": "登录密码/授权码",
-      "length": 256
+      "length": 256,
+      "isRequired": true
     },
     {
       "columnName": "from_addr",
@@ -59,7 +64,8 @@
       "fieldType": "String",
       "jdbcType": "VARCHAR",
       "comment": "发件人地址",
-      "length": 128
+      "length": 128,
+      "isRequired": true
     },
     {
       "columnName": "from_name",

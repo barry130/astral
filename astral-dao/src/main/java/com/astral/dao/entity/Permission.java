@@ -19,7 +19,7 @@ public class Permission {
     private Long id;
 
     @TableField("permission_code")
-    @Size(max = 64)
+    @Size(max = 128)
     @NotNull
     private String permissionCode;
 

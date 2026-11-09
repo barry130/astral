@@ -15,6 +15,7 @@ import com.astral.dao.entity.UserRole;
 import com.astral.system.service.RoleService;
 import com.astral.system.service.UserRoleService;
 import com.astral.system.service.UserService;
+import com.astral.system.validation.EntityPatchValidator;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,6 +56,8 @@ public class UserController {
     private final RoleService roleService;
     /** 权限缓存：用户角色关系变更后递增版本，立即失效所有用户的权限缓存 */
     private final PermissionCache permissionCache;
+
+    private final EntityPatchValidator patchValidator;
 
     /**
      * 分页查询用户列表
@@ -186,6 +189,7 @@ public class UserController {
     @RequiresPermission("admin:system:user:edit")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody User entity) {
+        patchValidator.validate(entity, "username", "nickname", "email", "phone", "avatar");
         // 白名单更新：id 由路径决定，只写「资料类」业务列。
         // 不能用 updateById(客户端实体)——MP 3.5.17 默认 updateStrategy=NOT_NULL，
         // 会把实体上所有非 null 字段一并写进 SET（mass assignment），客户端可直接改写

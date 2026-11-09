@@ -117,11 +117,12 @@ Spring 的 `@Async` 是**靠代理实现的**：只有「外部 Bean 调用代�
 
 - 实体 `String` 字段对应库表 `VARCHAR(N)`：**自动生成 `@Size(max = N)`**（`generateEntity` 对 `isVarchar && length>0` 的字段生成，max 严格等于 schema JSON 里的 `length` = DDL 宽度，绝不改小，否则合法长值被误判 400）。
 - 库表 `NOT NULL` 且无默认值、非自动填充的列：**自动生成 `@NotNull`**（`generateEntity` 对 `isRequired && !主键 && defaultValue==null && isAutoFill==null` 的字段生成；有默认值/自动填充的列不标，否则误杀「靠默认/填充补全」的合法请求）。
-- 控制器写接口（`@PostMapping`/`@PutMapping` + `@RequestBody`）的实体参数**必须加 `@Valid`**，否则字段上的 `@Size`/`@NotNull` 根本不触发：
+- 控制器完整创建/整表单更新接口（`@PostMapping`/`@PutMapping` + `@RequestBody`）的实体参数**必须加 `@Valid`**，否则字段上的 `@Size`/`@NotNull` 根本不触发：
   ```java
   public Result<Void> create(@Valid @RequestBody Permission entity) { ... }
   public Result<Void> update(@PathVariable Long id, @Valid @RequestBody Permission entity) { ... }
   ```
+- **局部更新须保留省略字段的语义**：只改昵称、角色元信息或菜单排序时，不应要求重传密码、不可变编码或名称。此类入口在写入前用 `EntityPatchValidator` 对白名单中非 null 字段调用实际 Bean Validator，复用生成实体的约束；校验白名单必须与更新白名单一致。不能简单取消校验，也不能把全实体 `@NotNull` 强加到省略字段上。
 - **不加的后果**：超长/缺失直接打到 DB，PostgreSQL 报 `value too long for type character varying(N)` 或 `null value in column "xxx" violates not-null constraint` → **未捕获 500**（隔离回归脚本记作 FAIL）。
   加上后变 `MethodArgumentNotValidException`/`BindException` → `GlobalExceptionHandler` 映射为 **HTTP 200 + body `code=320` `COMMON002`「参数校验失败」**
   （2026-10 响应体统一后：HTTP 状态码只表传输层，参数错误落在 body `code`；回归记作 WARN，不再是 FAIL）。

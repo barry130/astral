@@ -28,8 +28,6 @@ public class SysConfig {
     private String configKey;
 
     @TableField("config_value")
-    @Size(max = 512)
-    @NotNull
     private String configValue;
 
     @TableField("config_type")

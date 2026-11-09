@@ -24,6 +24,7 @@ import {
   isValidElement,
   useCallback,
   useContext,
+  useEffect,
   useId,
   useMemo,
   useReducer,
@@ -313,6 +314,7 @@ export interface FormInstance<Values extends object = FormValues> {
   _value: (path: (string | number)[]) => unknown;
   _values: () => FormValues;
   _registerField: (path: (string | number)[], initialValue: unknown, rules?: FormRule[]) => void;
+  _unregisterField: (path: (string | number)[]) => void;
   /** 表单标识，用于生成控件 id 与原生 submit 触发 */
   _formId?: string;
 }
@@ -354,6 +356,14 @@ export function createFormInstance<Values extends object = FormValues>(): FormIn
       }
       if (rules) inst._fieldRules.set(key, rules);
       else inst._fieldRules.delete(key);
+    },
+
+    _unregisterField(path: (string | number)[]) {
+      const key = pathKey(path);
+      inst._fieldRules.delete(key);
+      delete inst._errors[key];
+      validationVersions.delete(key);
+      // Preserve draft values and initials when a conditional field is temporarily unmounted.
     },
 
     _value(path: (string | number)[]) {
@@ -775,6 +785,15 @@ function FormItem<Values extends object = FormValues>({
     inst && key ? `${inst._formId ?? 'antd-form'}_${encodeURIComponent(key)}` : undefined;
 
   const isRenderProp = typeof children === 'function';
+  const registration = useRef<{ initialValue: unknown; rules?: FormRule[] }>({ initialValue });
+
+  useEffect(() => {
+    if (!inst || !key) return;
+    const fieldPath = keyToPath(key);
+    // Re-register on StrictMode's effect replay as well as ordinary remounts.
+    inst._registerField(fieldPath, registration.current.initialValue, registration.current.rules);
+    return () => inst._unregisterField(fieldPath);
+  }, [inst, key]);
 
   // 注册字段（initialValue + rules），在渲染期同步完成，保证首帧即取到初值
   if (inst && key) {
@@ -796,6 +815,7 @@ function FormItem<Values extends object = FormValues>({
           ? expanded
           : undefined;
     inst._registerField(path, initialValue, effRules);
+    registration.current = { initialValue, rules: effRules };
   }
 
   /* ---------- render-prop 模式（shouldUpdate / 函数 children） ---------- */

@@ -4,9 +4,11 @@ import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.DictData;
 import com.astral.system.service.DictDataService;
+import com.astral.system.validation.EntityPatchValidator;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -33,6 +35,8 @@ public class DictController {
 
     /** 字典数据服务 */
     private final DictDataService dictDataService;
+
+    private final EntityPatchValidator patchValidator;
 
     /**
      * 分页查询字典数据列表
@@ -71,7 +75,7 @@ public class DictController {
     @RequiresPermission("admin:system:dict:edit")
     @PostMapping
     @CacheEvict(value = "dictData", allEntries = true)
-    public Result<Void> create(@RequestBody DictData entity) {
+    public Result<Void> create(@Valid @RequestBody DictData entity) {
         dictDataService.save(entity);
         return Result.success();
     }
@@ -88,6 +92,17 @@ public class DictController {
     @PutMapping("/{id}")
     @CacheEvict(value = "dictData", allEntries = true)
     public Result<Void> update(@PathVariable Long id, @RequestBody DictData entity) {
+        patchValidator.validate(
+                entity,
+                "dictTypeId",
+                "dictLabel",
+                "dictValue",
+                "dictSort",
+                "cssClass",
+                "listClass",
+                "isDefault",
+                "status",
+                "description");
         // 白名单更新：id 由路径决定。不能用 updateById(客户端实体)——MP 会把实体上
         // 所有非 null 字段写进 SET（mass assignment），任意列都能被客户端改写。
         var update = dictDataService.lambdaUpdate().eq(DictData::getId, id);

@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -112,7 +113,7 @@ public class DictDataController {
     @RequiresPermission("admin:system:dict:edit")
     @PostMapping
     @CacheEvict(value = "dictData", allEntries = true)
-    public Result<Void> create(@RequestBody DictData entity) {
+    public Result<Void> create(@Valid @RequestBody DictData entity) {
         dictDataService.save(entity);
         return Result.success();
     }
@@ -128,7 +129,7 @@ public class DictDataController {
     @RequiresPermission("admin:system:dict:edit")
     @PutMapping("/{id}")
     @CacheEvict(value = "dictData", allEntries = true)
-    public Result<Void> update(@PathVariable Long id, @RequestBody DictData entity) {
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody DictData entity) {
         // 不用 updateById：MP 默认 updateStrategy=NOT_NULL 会跳过 null 字段，
         // 「清空样式类/描述」等保存后仍是旧值。白名单逐列显式 set，可空列原样写入（含 null）。
         dictDataService.update(new LambdaUpdateWrapper<DictData>()
