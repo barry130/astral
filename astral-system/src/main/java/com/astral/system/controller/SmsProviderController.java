@@ -12,7 +12,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -169,10 +168,12 @@ public class SmsProviderController {
                 throw new BusinessException("SMS011");
             }
             String type = entity.getProviderType().trim();
-            if (providerImpls.stream().noneMatch(p -> p.type().equalsIgnoreCase(type))) {
-                throw new BusinessException("SMS006", entity.getProviderType());
-            }
-            entity.setProviderType(type.toUpperCase(Locale.ROOT));
+            String registeredType = providerImpls.stream()
+                    .map(SmsProvider::type)
+                    .filter(value -> value.equalsIgnoreCase(type))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException("SMS006", entity.getProviderType()));
+            entity.setProviderType(registeredType);
         }
     }
 }

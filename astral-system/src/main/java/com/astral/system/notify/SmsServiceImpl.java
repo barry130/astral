@@ -14,7 +14,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -132,13 +131,14 @@ public class SmsServiceImpl implements SmsService {
 
     private void doSend(SysSmsProvider provider, String phone, SysSmsTemplate tpl, Map<String, String> variables)
             throws Exception {
-        SmsProvider impl = providerImpls.get(
-                provider.getProviderType() == null
-                        ? ""
-                        : provider.getProviderType().trim().toUpperCase(Locale.ROOT));
-        if (impl == null) {
-            throw new BusinessException("SMS006", provider.getProviderType());
-        }
+        String type = provider.getProviderType() == null
+                ? ""
+                : provider.getProviderType().trim();
+        SmsProvider impl = providerImpls.entrySet().stream()
+                .filter(entry -> entry.getKey().equalsIgnoreCase(type))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("SMS006", provider.getProviderType()));
         // 签名：模板级覆盖优先，回退供应商级
         String signName =
                 tpl.getSignName() != null && !tpl.getSignName().isBlank() ? tpl.getSignName() : provider.getSignName();

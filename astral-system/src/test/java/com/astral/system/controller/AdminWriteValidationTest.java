@@ -57,6 +57,8 @@ import org.apache.ibatis.reflection.MetaObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.mybatis.spring.transaction.SpringManagedTransactionFactory;
 import org.springframework.http.MediaType;
@@ -401,23 +403,23 @@ class AdminWriteValidationTest {
         assertEquals(2, smsProviders.page(1, 10).getData().getRecords().size());
     }
 
-    @Test
-    void acceptedSmsProviderTypesPersistCanonicallyAndResolveForDelivery() throws Exception {
-        accept(
-                post("/api/v1/admin/system/sms/provider"),
-                Map.of("providerName", "Padded type", "providerType", " fIxTuRe "));
+    @ParameterizedTest
+    @ValueSource(strings = {" fIxTuRe ", " F\u0130XTURE "})
+    void acceptedSmsProviderTypesPersistCanonicallyAndResolveForDelivery(String type) throws Exception {
+        accept(post("/api/v1/admin/system/sms/provider"), Map.of("providerName", "Padded type", "providerType", type));
         assertEquals("FIXTURE", smsProviders.getById(1001L).getData().getProviderType());
         sms.testSendTemplate(1L, 1001L, "fixture-phone", Map.of());
-        accept(put("/api/v1/admin/system/sms/provider/1"), Map.of("providerType", " fixture "));
+        accept(put("/api/v1/admin/system/sms/provider/1"), Map.of("providerType", type));
         assertEquals("FIXTURE", smsProviders.getById(1L).getData().getProviderType());
         sms.testSendTemplate(1L, 1L, "fixture-phone", Map.of());
         assertEquals(List.of(1001L, 1L), deliveredProviders);
     }
 
-    @Test
-    void legacySmsProviderTypesResolveWithoutDependingOnTheDefaultLocale() {
+    @ParameterizedTest
+    @ValueSource(strings = {" fixture ", " F\u0130XTURE "})
+    void legacySmsProviderTypesResolveWithoutDependingOnTheDefaultLocale(String type) {
         jdbc.update(
-                "INSERT INTO sys_sms_provider(id,provider_name,provider_type) VALUES(2,'Legacy padded type',' fixture ')");
+                "INSERT INTO sys_sms_provider(id,provider_name,provider_type) VALUES(2,'Legacy padded type',?)", type);
         Locale previous = Locale.getDefault();
         try {
             Locale.setDefault(Locale.forLanguageTag("tr-TR"));
