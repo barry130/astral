@@ -1,0 +1,462 @@
+{
+  "createdAt": "2026-11-09T15:50:54.042706+08:00",
+  "incrementalBaseline": "71ad84e416cdaab58cac18c81bfb690174ae0b72",
+  "originalBaseline": "a39a3f3039ce7deafc3f547a25cc0dc4635c111a",
+  "reviewedProductHead": "21a24750ea35c276293370bd2b1d7fa510957c06",
+  "status": "complete: product fixes, final gates and both fixed-commit reviews passed; local documentation closure",
+  "runtime": {
+    "java": "Temurin 25.0.4.1",
+    "maven": "3.9.6",
+    "node": "24.21.0",
+    "postgres": "16.4 isolated loopback9684",
+    "redis": "isolated loopback8549"
+  },
+  "java": {
+    "command": "mvn install -Daudit.postgres.port=9684 -Daudit.redis.port=8549",
+    "tests": 852,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 137,
+    "actualCodegen": true,
+    "generatedEntities": 34,
+    "skipCodeGen": false,
+    "finishedAt": "2026-11-09T15:20:52+08:00",
+    "log": "target/continue-final2-reactor.log",
+    "sourceHashesMatchTestedFiles": true
+  },
+  "quality": {
+    "command": "mvn spotless:check checkstyle:checkstyle-aggregate spotbugs:spotbugs",
+    "spotless": "passed",
+    "checkstyleWarnings": 379,
+    "checkstyleErrors": 0,
+    "spotbugsMediumFindings": 248,
+    "spotbugsHighFindings": 0,
+    "unassessedFindings": 0,
+    "assessment": "quality-review.md + per-finding JSON",
+    "finishedAt": "2026-11-09T15:24:20+08:00",
+    "log": "target/continue-final2-quality.log",
+    "spotbugsLowFindings": 0
+  },
+  "focused": {
+    "log": "target/continue-focused-final.log",
+    "tests": 70,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suites": 8,
+    "finishedAt": "2026-11-09T12:42:00+08:00",
+    "scope": "earlier 70-test checkpoint; final 852-test reactor supersedes it"
+  },
+  "behavioralRedLogs": [
+    "target/continue-role-cache-red.log",
+    "target/continue-last-super-red.log",
+    "target/continue-mail-patch-red.log",
+    "target/continue-notice-red.log",
+    "target/continue-role-plan-red.log",
+    "target/continue-direct-role-red.log",
+    "target/continue-app-cache-red.log",
+    "target/continue-role-link-red.log",
+    "target/continue-user-link-red.log",
+    "target/continue-app-role-red.log"
+  ],
+  "excludedFailureEvidence": {
+    "target/continue-role-boundaries-red.log": "test compilation error after constructor changed; not behavioral RED",
+    "target/continue-focused-green.log": "two test audit queries used TEST_RUN rather than contract test-run; not product RED",
+    "target/continue-app-role-redgreen.log": "test fixture compile failure from incorrect RoleServiceImpl mapper constructor argument; not behavioral RED",
+    "first final2 reactor invocation": "PowerShell split unquoted -D properties into an unknown lifecycle phase; no compilation/tests ran. Corrected quoted invocation replaces that log and supplies final evidence."
+  },
+  "databaseEvidence": {
+    "AiApprovalLifecycleTest": "H2 PostgreSQL mode with real Spring/MyBatis, scripted provider; not PostgreSQL or browser",
+    "AdminToolRoleConcurrencyTest": "5 real PostgreSQL independent-transaction tests, including pg_stat_activity lock wait for replacement/permission writes and two default-role lookup/public deletion interleavings through public service interfaces",
+    "RoleAuthorizationPersistenceTest": "8 H2 persistent public service and cached authorization tests",
+    "MailTemplatePatchPersistenceTest": "3 H2 controller-to-service persistent patch tests",
+    "AdminToolNoticePersistenceTest": "2 H2 public tool-to-notice-service persistent tests"
+  },
+  "frontend": {
+    "changed": false,
+    "eslint": "rerun passed",
+    "prettier": "rerun passed",
+    "previousTestAndBuildReceipt": "../2026-11-08/verification.json",
+    "typesBuildTests": "unchanged; previous results retained, not rerun this round"
+  },
+  "unchangedGateScope": {
+    "frontend": true,
+    "delivery": true
+  },
+  "contentCheck": {
+    "baseline": "71ad84e416cdaab58cac18c81bfb690174ae0b72",
+    "productFiles": 26,
+    "placeholderLosses": [],
+    "unchangedPaths": {
+      "frontend": true,
+      "delivery": true
+    },
+    "files": [
+      {
+        "path": "astral-auth/src/main/java/com/astral/auth/registry/AppUserRoleService.java",
+        "sha256": "0655bb0c9db46a1ac043d912c355d23ef9b18c7b108180662f3f46e27b9c5fe4"
+      },
+      {
+        "path": "astral-auth/src/main/java/com/astral/auth/security/PermissionCache.java",
+        "sha256": "4b72c2b7fd7ff95a00762fac50cf41cdfd66bf9bc03e4a2a0af9138c23acd8dd"
+      },
+      {
+        "path": "astral-common/src/main/resources/error-codes.properties",
+        "sha256": "46c2d627dfa03d96d86163dcba7917a992066960f3a23b4a5e92ef5fd22a792f"
+      },
+      {
+        "path": "astral-plugin/src/main/java/com/astral/ai/service/AiChatOrchestrator.java",
+        "sha256": "e36b337657f0056622b611d1800ac2308e48648558c5ed66f2d7e113c5bd57f1"
+      },
+      {
+        "path": "astral-plugin/src/main/java/com/astral/ai/service/AiToolService.java",
+        "sha256": "dcf1cba9d621f89e63aab12047d3d2c4c1d1fbfc1134ab155d3c2e2f9c457196"
+      },
+      {
+        "path": "astral-plugin/src/main/java/com/astral/ai/tool/AdminToolProvider.java",
+        "sha256": "82a4687e7be56284bef13cf9c70ed7bb83167117fbf5fb6841c27b72f4ae03c0"
+      },
+      {
+        "path": "astral-plugin/src/main/java/com/astral/ai/tool/AiToolTypes.java",
+        "sha256": "00c5ec7faa1080b86465e189d38dec27a94829a00db939507f736ddefa156f70"
+      },
+      {
+        "path": "astral-plugin/src/test/java/com/astral/ai/service/AiApprovalLifecycleTest.java",
+        "sha256": "919b45f133cbe16557c1142f502e5d73e979f3d448f72dd9c84203ccc3852c7b"
+      },
+      {
+        "path": "astral-plugin/src/test/java/com/astral/ai/tool/AdminToolNoticePersistenceTest.java",
+        "sha256": "6acec4d5782be6b829af113a194facdfd271950bbde28ebe83991a2f6a6bb021"
+      },
+      {
+        "path": "astral-plugin/src/test/java/com/astral/ai/tool/AdminToolProviderPermissionCodeTest.java",
+        "sha256": "16a8ddbdae1077ca1daa5f875b376faf4a0d66e3e2ad5124381e92ab08b95d73"
+      },
+      {
+        "path": "astral-plugin/src/test/java/com/astral/ai/tool/AdminToolRoleConcurrencyTest.java",
+        "sha256": "2d40d0c724624704a99defd345a2799ce3097d5dc47bd3ef9f815b5513e23478"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/MailTemplateController.java",
+        "sha256": "40714ddd3917c3a68d533d9a918cf9b40344a188bfbcae3ece6296776e552513"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/RolePermissionController.java",
+        "sha256": "557fbe00d9890cc84f743a2cf0d59f2eed7abe31a6770aa5ecdf4a264d6ec5fc"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/UserController.java",
+        "sha256": "61b3d9f04c8dd3eafa5c826e696503bbb3aa5426fa6b8884ec85db1a9437ea86"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/controller/UserRoleController.java",
+        "sha256": "10aa5eb2c0e9a60901097d05eb99c8863812d259aaf90a74e68ab40c6fb0d6cc"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/mail/SysMailTemplateService.java",
+        "sha256": "ca80bbf160336204e21f32dad7ee6b9d25f8b9022f5e64b1ad31b930bb4c1f58"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/mail/SysMailTemplateServiceImpl.java",
+        "sha256": "4875a83022ecad1eb7a6bb1df2923851c8125ce548ca2a94fcfa5c0491eec86f"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/service/RolePermissionService.java",
+        "sha256": "9a5bfe6f5208d6e7e9cb14642f1b17de6b38a8e325588b358211d83943d3d1d6"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/service/UserRoleService.java",
+        "sha256": "c426ec137aa2a99aa991b546d581bba76baf2b0e04bd0d36501d60af13146b2d"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/service/impl/RolePermissionServiceImpl.java",
+        "sha256": "9d1b128e11101d939404442de720c5e8a8353b1313f1662a07688eb0dea01e55"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/service/impl/RoleServiceImpl.java",
+        "sha256": "274b2b7f184b4df64cd1bdddd29a829c0bb3a34adb3b5eebd211b4fc59acddc7"
+      },
+      {
+        "path": "astral-system/src/main/java/com/astral/system/service/impl/UserRoleServiceImpl.java",
+        "sha256": "045ca2ebc89665c1e6dd9e7e2798af3bae01c85239979c84495d836f2f190e91"
+      },
+      {
+        "path": "astral-system/src/test/java/com/astral/system/controller/MailTemplatePatchPersistenceTest.java",
+        "sha256": "7087108ef638b0065995b057ae968072651d29bcf01fc97382f20586aa62b798"
+      },
+      {
+        "path": "astral-system/src/test/java/com/astral/system/notify/MessageTemplatePersistenceTest.java",
+        "sha256": "1745e53ffb9b3e968d2e46eee1be89644401907ba07194d3f4575441a2bf81c6"
+      },
+      {
+        "path": "astral-system/src/test/java/com/astral/system/service/impl/RoleAuthorizationPersistenceTest.java",
+        "sha256": "a3f6cbad1ea91098ae889b21bbaf3594081750f3a571c39314b84cad7a900b3d"
+      },
+      {
+        "path": "astral-system/src/test/java/com/astral/system/service/impl/UserRoleNotificationTest.java",
+        "sha256": "e76309e95e282290e8c64897adca74ac16c0472794c420a824f0fd3532e306ef"
+      }
+    ],
+    "testedLog": "target/continue-final2-reactor.log",
+    "capturedAfterGate": "2026-11-09T15:20:52+08:00",
+    "reviewedHead": "21a24750ea35c276293370bd2b1d7fa510957c06"
+  },
+  "browser": "not executed; extension unavailable and fallback automation forbidden by original SPEC",
+  "externalEffects": "no production DB/cloud/SMTP/model calls; no remote push/PR/release",
+  "ownedServiceCleanup": {
+    "completedAt": "2026-11-09T15:28:45.5243334+08:00",
+    "postgresPid": 29540,
+    "redisPid": 8636,
+    "ownershipVerified": true,
+    "postgresPort": 9684,
+    "redisPort": 8549,
+    "loopbackPortsClosed": true,
+    "processesStopped": true,
+    "fixtureDirectoryRemoved": false,
+    "retainedPostgresFixture": "C:\\Users\\canace\\AppData\\Local\\Temp\\astral-audit-pg-c6a3db9b135140e3a8952e040591c826",
+    "retentionReason": "Prior deletion approval rejection remains in force; no delete was retried. Retained test data only.",
+    "productionOrUnrelatedServicesTouched": false,
+    "method": "pg_ctl fast stop; redis-cli shutdown nosave",
+    "postStopRecheck": "First immediate process check caught shutdown completion delay; subsequent listener and process checks both empty.",
+    "ownershipEvidence": [
+      {
+        "listen": "127.0.0.1:9684",
+        "executable": "F:/qtMusic/astral/target/audit-pg-20261108/runtime/bin/postgres.exe",
+        "ProcessId": 29540,
+        "dataDirectory": "C:/Users/canace/AppData/Local/Temp/astral-audit-pg-c6a3db9b135140e3a8952e040591c826/data"
+      },
+      {
+        "executable": "F:/qtMusic/local/redis/redis-server.exe",
+        "ProcessId": 8636,
+        "arguments": "--port 8549 --bind 127.0.0.1 --save \"\" --appendonly no --logfile \"\""
+      }
+    ]
+  },
+  "reviews": {
+    "spec": {
+      "status": "PASS",
+      "openConfirmedDefects": 0,
+      "closedFindings": [
+        "J-N1",
+        "J-N2",
+        "J-N3"
+      ],
+      "report": "spec-review.md",
+      "scope": "J-N1–J-N3, preparation/association boundaries and S2-02 narrow delta; previous broader audit retained as history",
+      "reviewedHead": "21a24750ea35c276293370bd2b1d7fa510957c06"
+    },
+    "standards": {
+      "status": "PASS",
+      "openConfirmedDefects": 0,
+      "closedFindings": [
+        "S2-01",
+        "S2-02"
+      ],
+      "report": "standards-review.md",
+      "reviewedHead": "21a24750ea35c276293370bd2b1d7fa510957c06",
+      "scope": "template effective-state validation, related authorization locks/cache and final S2-02 residual; not a claim of zero defects across unreviewed paths"
+    }
+  },
+  "localCommits": [
+    {
+      "sha": "80601e13d87f5bbfeee35ef2040cf4ad22589925",
+      "subject": "fix: preserve authorization across role approval and notification updates"
+    },
+    {
+      "sha": "21a24750ea35c276293370bd2b1d7fa510957c06",
+      "subject": "fix: reject default role writes after concurrent deletion"
+    }
+  ],
+  "finalReportCommit": "documentation-only follow-up; own commit intentionally not self-referenced; parent is reviewedProductHead",
+  "receipts": [
+    {
+      "path": "docs/audit/2026-11-09/CONTINUATION.md",
+      "sha256": "1e32cac4f91f65dd6366ad6813ebc20cbb94e4fa4724deb01ed52305bccb7df7",
+      "bytes": 7440
+    },
+    {
+      "path": "docs/audit/2026-11-09/TEST-SEAMS.md",
+      "sha256": "6faf227ac4f784e652589a86a1eb3290e46d3609e027d1265a8febf408ef69ff",
+      "bytes": 2029
+    },
+    {
+      "path": "docs/audit/2026-11-09/checkstyle-assessment.json",
+      "sha256": "6a5a32776ff5ffb59ed80cc8d248c73f5cf6f29bac92c62372696dae8993b7e5",
+      "bytes": 163566
+    },
+    {
+      "path": "docs/audit/2026-11-09/quality-review.md",
+      "sha256": "d847bc7cbb34189b904fa73074c7101c5a769c029ab9cccd336cc34c2c991bba",
+      "bytes": 4018
+    },
+    {
+      "path": "docs/audit/2026-11-09/spec-review.md",
+      "sha256": "4311d84c574f022ae5e8319f9a6929c1ed709373cff7c4e6fe7f08345e612f5e",
+      "bytes": 32086
+    },
+    {
+      "path": "docs/audit/2026-11-09/spotbugs-assessment.json",
+      "sha256": "959f5f52eed8105b857223c08a2fc636480a7a9613ee8fb084ceefb62a51c0d9",
+      "bytes": 175979
+    },
+    {
+      "path": "docs/audit/2026-11-09/standards-review.md",
+      "sha256": "8e7de4fdd433fe572eeba715033d855fb9b00a2fdf5c8e69f0b73eb4c1e540b8",
+      "bytes": 21357
+    },
+    {
+      "path": "target/continue-app-cache-red.log",
+      "sha256": "b7d7f51da15aca995213b43d9bc871ad41255b2df35cbb2314aaeb6c263d9cc4",
+      "bytes": 29844
+    },
+    {
+      "path": "target/continue-app-role-red.log",
+      "sha256": "3104c7d4e4a49686b0818014e1f7bbb2dd9b6a867fff301c01ef30d79db00767",
+      "bytes": 21291
+    },
+    {
+      "path": "target/continue-app-role-red2.log",
+      "sha256": "129a95150c252d947064d89129601598d68db4ad3b58955436e977c619fceed8",
+      "bytes": 18422
+    },
+    {
+      "path": "target/continue-app-role-redgreen.log",
+      "sha256": "c0e3105c317adcb364a4916e3ab6162d033595e0e66703d5fd51ef4139a57b17",
+      "bytes": 19291
+    },
+    {
+      "path": "target/continue-content-check.json",
+      "sha256": "78887f33f146925378af5762aeb46d4225cf10dad65a223343123638081562b5",
+      "bytes": 5396
+    },
+    {
+      "path": "target/continue-direct-role-red.log",
+      "sha256": "31da8be5a311726ccf88c74616e86748765def0f8a14194b15f778b60e6ddc94",
+      "bytes": 18868
+    },
+    {
+      "path": "target/continue-final-quality.log",
+      "sha256": "fada48098bd37e2821cd2427b9452db42421e7f08ae234cfd61a632eacaa40d9",
+      "bytes": 85250
+    },
+    {
+      "path": "target/continue-final-reactor.log",
+      "sha256": "8c70f65169da59ac2be2cf65420ff6418b84e18203eaf1ff9e917e26ac9b9e83",
+      "bytes": 770880
+    },
+    {
+      "path": "target/continue-final2-content-check.json",
+      "sha256": "6965b268fcd9b66522979b0159c47e7c18d2b25e95a2a5916ecc9e16c1e23a7e",
+      "bytes": 5503
+    },
+    {
+      "path": "target/continue-final2-quality.log",
+      "sha256": "dc00ab59b930a35a80fbfb26b6a8e0479e15e36ed3e9983f35c02266275b6aaf",
+      "bytes": 85250
+    },
+    {
+      "path": "target/continue-final2-reactor.log",
+      "sha256": "4efd6151547713cd0d369fc520cd8f054cbb222dbd2f73e9ad49c5ae5c556276",
+      "bytes": 769635
+    },
+    {
+      "path": "target/continue-final2-service-cleanup.json",
+      "sha256": "e291ae3c1a99aebbc09c7c7093603fc8c849ba9202d1f9f40169a7677d40856f",
+      "bytes": 1293
+    },
+    {
+      "path": "target/continue-final2-service-stop.log",
+      "sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb",
+      "bytes": 58
+    },
+    {
+      "path": "target/continue-focused-final.log",
+      "sha256": "aeb10d3b61d540e742dd8d9f97dae5904c2ce0649a3c78dac9432ac8ab4ba0a8",
+      "bytes": 42656
+    },
+    {
+      "path": "target/continue-focused-green.log",
+      "sha256": "d4807560a387dfad8cf6b8fd948996a053bc0d9605265460314c892cc4478d73",
+      "bytes": 47375
+    },
+    {
+      "path": "target/continue-front-eslint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "target/continue-front-prettier.log",
+      "sha256": "f20510a9da4717c51c4cffee6d0dd88d6c9a723d0a83711d01216f5b48961283",
+      "bytes": 68
+    },
+    {
+      "path": "target/continue-last-super-red.log",
+      "sha256": "6149c136a55602da2da57dcc6296374a763a5d69735b024ed7050ee803dd4ed6",
+      "bytes": 6652
+    },
+    {
+      "path": "target/continue-mail-patch-red.log",
+      "sha256": "76a14b8ae38fa68e1fd0c574740efbfc449dd5b475882af9c2296e8013919f6c",
+      "bytes": 5452
+    },
+    {
+      "path": "target/continue-notice-red.log",
+      "sha256": "6160cf2a73304d91bd3ad9634b1b0ace12b1a2676174aa93bc6c40fe69566761",
+      "bytes": 5421
+    },
+    {
+      "path": "target/continue-role-boundaries-red.log",
+      "sha256": "fb5ad6259c20ca36bf2cd57e0e8448435632f8b0b9556aa9d97c515adc5a4c96",
+      "bytes": 17147
+    },
+    {
+      "path": "target/continue-role-cache-red.log",
+      "sha256": "86088831bda61ae80e5b8102ea0d0abe745140482734f1e938a33be979520b86",
+      "bytes": 6671
+    },
+    {
+      "path": "target/continue-role-link-red.log",
+      "sha256": "68ea7f6c449b666146fcb61883c9981c23e87715bcf0b3129f40627c1f827a31",
+      "bytes": 18534
+    },
+    {
+      "path": "target/continue-role-plan-red.log",
+      "sha256": "278686c7ab372ef79d37e51ffad2529672612f70c1e739aec548b55cfbccfbff",
+      "bytes": 18664
+    },
+    {
+      "path": "target/continue-service-cleanup.json",
+      "sha256": "0c8dbfb27719788980b6287cab8b927e7bafdc95389b705a5ad12a93a207d78d",
+      "bytes": 640
+    },
+    {
+      "path": "target/continue-service-stop.log",
+      "sha256": "3589d2bd01f8295cc7c9ec3f5e07625fcd347ccb6f33f2d80edafe5f5217c1fb",
+      "bytes": 58
+    },
+    {
+      "path": "target/continue-user-link-red.log",
+      "sha256": "803c9cd24f21468fe842757978786fa975315921cdbd8b6a7fa03a865042e3c0",
+      "bytes": 17078
+    }
+  ],
+  "latestFocused": {
+    "log": "target/continue-app-role-red2.log",
+    "status": "GREEN despite historical filename",
+    "tests": 2,
+    "suites": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "finishedAt": "2026-11-09T14:47:34+08:00",
+    "scope": "real PostgreSQL App default-role assign/sync deletion interleaving; final full reactor supersedes it"
+  },
+  "documentationValidation": {
+    "relativeMarkdownLinksChecked": 7,
+    "missingLinks": [],
+    "jsonDocumentsParsed": 3,
+    "whitespace": "checked before local documentation commit",
+    "productUnchangedSinceFinalGates": true
+  }
+}
