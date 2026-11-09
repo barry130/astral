@@ -40,17 +40,27 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
         requireRole(roleId);
         List<Long> distinct = (permissionIds == null || permissionIds.isEmpty())
                 ? List.of()
-                : permissionIds.stream().filter(Objects::nonNull).distinct().toList();
+                : permissionIds.stream()
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .sorted()
+                        .toList();
 
         if (!distinct.isEmpty()) {
-            long found = permissionService.count(new LambdaQueryWrapper<Permission>().in(Permission::getId, distinct));
+            long found = permissionService
+                    .list(new LambdaQueryWrapper<Permission>()
+                            .in(Permission::getId, distinct)
+                            .orderByAsc(Permission::getId)
+                            .last("FOR UPDATE"))
+                    .size();
             if (found != distinct.size()) {
                 log.warn("分配权限失败：存在不存在的权限ID, roleId={}, 期望={}, 实际={}", roleId, distinct.size(), found);
                 throw new BusinessException("SYS012", distinct.size() - found);
             }
         }
 
-        remove(new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, roleId));
+        // Roles are already locked. Never reacquire an expanded role set after locking permissions.
+        super.remove(new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, roleId));
 
         if (!distinct.isEmpty()) {
             List<RolePermission> rows = new ArrayList<>(distinct.size());
@@ -75,11 +85,23 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
         }
     }
 
+    private void requirePermission(Long permissionId) {
+        if (permissionId == null
+                || permissionService
+                        .list(new LambdaQueryWrapper<Permission>()
+                                .eq(Permission::getId, permissionId)
+                                .last("FOR UPDATE"))
+                        .isEmpty()) {
+            throw new BusinessException("SYS005");
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean save(RolePermission row) {
         lockRoles();
         requireRole(row.getRoleId());
+        requirePermission(row.getPermissionId());
         return super.save(row);
     }
 
@@ -108,7 +130,10 @@ public class RolePermissionServiceImpl extends ServiceImpl<RolePermissionMapper,
     public boolean updateAssignment(Long id, Long roleId, Long permissionId) {
         if (roleId == null && permissionId == null) return false;
         lockRoles();
-        if (roleId != null) requireRole(roleId);
+        RolePermission existing = getById(id);
+        if (existing == null) return false;
+        requireRole(roleId == null ? existing.getRoleId() : roleId);
+        requirePermission(permissionId == null ? existing.getPermissionId() : permissionId);
         return lambdaUpdate()
                 .eq(RolePermission::getId, id)
                 .set(roleId != null, RolePermission::getRoleId, roleId)

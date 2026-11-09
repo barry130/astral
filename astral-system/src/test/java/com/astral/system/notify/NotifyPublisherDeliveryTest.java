@@ -213,7 +213,7 @@ class NotifyPublisherDeliveryTest {
             rule.setRuleName("Fixture rule");
             rule.setEventCode(NotifyEventRegistry.SYSTEM_ALERT);
             when(rules.selectList(any())).thenReturn(List.of(rule));
-            SysNotifyRuleServiceImpl ruleService = new SysNotifyRuleServiceImpl();
+            SysNotifyRuleServiceImpl ruleService = new SysNotifyRuleServiceImpl(null, null, null, null);
             ReflectionTestUtils.setField(ruleService, "baseMapper", rules);
             channel.setId(2L);
             channel.setChannel(NotifyChannel.INAPP);

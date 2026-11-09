@@ -1,17 +1,14 @@
 package com.astral.system.controller;
 
 import com.astral.common.annotation.RequiresPermission;
-import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.astral.dao.entity.SysSmsTemplate;
-import com.astral.system.notify.NotifyChannel;
-import com.astral.system.notify.NotifyEventDef;
-import com.astral.system.notify.NotifyEventRegistry;
 import com.astral.system.notify.SmsService;
 import com.astral.system.notify.SysSmsTemplateService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import java.util.Map;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -70,52 +67,16 @@ public class SmsTemplateController {
     @Operation(summary = "新增")
     @RequiresPermission(PERM_EDIT)
     @PostMapping
-    public Result<Void> create(@RequestBody SysSmsTemplate entity) {
-        validateTemplate(entity, true, null);
-        templateService.save(entity);
-        smsService.evictTemplateCache();
+    public Result<Void> create(@Valid @RequestBody SysSmsTemplate entity) {
+        templateService.createTemplate(entity);
         return Result.success();
     }
 
     @Operation(summary = "更新")
     @RequiresPermission(PERM_EDIT)
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody SysSmsTemplate entity) {
-        entity.setId(id);
-        validateTemplate(entity, false, id);
-        // 白名单更新：id 由路径决定，只写短信模板可编辑列。
-        // 不能用 updateById(客户端实体)——MP 只跳过 null 字段，非 null 列全进 SET
-        // （mass assignment），客户端可借未知列改写库内任意字段。
-        var update = templateService.lambdaUpdate().eq(SysSmsTemplate::getId, id);
-        if (entity.getTemplateCode() != null) {
-            update.set(SysSmsTemplate::getTemplateCode, entity.getTemplateCode());
-        }
-        if (entity.getTemplateName() != null) {
-            update.set(SysSmsTemplate::getTemplateName, entity.getTemplateName());
-        }
-        if (entity.getEventCode() != null) {
-            update.set(SysSmsTemplate::getEventCode, entity.getEventCode());
-        }
-        if (entity.getProviderTemplateCode() != null) {
-            update.set(SysSmsTemplate::getProviderTemplateCode, entity.getProviderTemplateCode());
-        }
-        if (entity.getSignName() != null) {
-            update.set(SysSmsTemplate::getSignName, entity.getSignName());
-        }
-        if (entity.getContentSample() != null) {
-            update.set(SysSmsTemplate::getContentSample, entity.getContentSample());
-        }
-        if (entity.getAuditStatus() != null) {
-            update.set(SysSmsTemplate::getAuditStatus, entity.getAuditStatus());
-        }
-        if (entity.getAuditRemark() != null) {
-            update.set(SysSmsTemplate::getAuditRemark, entity.getAuditRemark());
-        }
-        if (entity.getRemark() != null) {
-            update.set(SysSmsTemplate::getRemark, entity.getRemark());
-        }
-        update.update();
-        smsService.evictTemplateCache();
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody SysSmsTemplate entity) {
+        templateService.updateTemplate(id, entity);
         return Result.success();
     }
 
@@ -123,8 +84,7 @@ public class SmsTemplateController {
     @RequiresPermission(PERM_EDIT)
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        templateService.removeById(id);
-        smsService.evictTemplateCache();
+        templateService.deleteTemplate(id);
         return Result.success();
     }
 
@@ -134,58 +94,5 @@ public class SmsTemplateController {
     public Result<Void> sendTest(@PathVariable Long id, @RequestBody SmsTestSendDto dto) {
         smsService.testSendTemplate(id, dto.getProviderId(), dto.getPhone(), dto.getVariables());
         return Result.success();
-    }
-
-    /**
-     * 写路径校验（事件契约与邮件模板同一套语义）：
-     * eventCode 必须在 {@link NotifyEventRegistry} 登记、事件必须声明 SMS 渠道、
-     * 同事件只允许绑定一个短信模板、编码唯一、审核状态 ∈ 0..3。
-     * 供应商模板编码必填——本地没有正文，没有它发送无从谈起。
-     */
-    private void validateTemplate(SysSmsTemplate entity, boolean isCreate, Long id) {
-        boolean codePresent =
-                entity.getTemplateCode() != null && !entity.getTemplateCode().isBlank();
-        boolean eventPresent =
-                entity.getEventCode() != null && !entity.getEventCode().isBlank();
-        if (isCreate) {
-            if (!codePresent) {
-                throw new BusinessException("SMS013");
-            }
-            if (entity.getTemplateName() == null || entity.getTemplateName().isBlank() || !eventPresent) {
-                throw new BusinessException("SMS014");
-            }
-            if (entity.getProviderTemplateCode() == null
-                    || entity.getProviderTemplateCode().isBlank()) {
-                throw new BusinessException("SMS015");
-            }
-        }
-        if (entity.getAuditStatus() != null && (entity.getAuditStatus() < 0 || entity.getAuditStatus() > 3)) {
-            throw new BusinessException("SMS016");
-        }
-        if (codePresent) {
-            Long dup = templateService
-                    .lambdaQuery()
-                    .eq(SysSmsTemplate::getTemplateCode, entity.getTemplateCode())
-                    .ne(id != null, SysSmsTemplate::getId, id)
-                    .count();
-            if (dup != null && dup > 0) {
-                throw new BusinessException("SMS007", entity.getTemplateCode());
-            }
-        }
-        if (eventPresent) {
-            NotifyEventDef event = NotifyEventRegistry.find(entity.getEventCode())
-                    .orElseThrow(() -> new BusinessException("MAIL009", entity.getEventCode()));
-            if (event.channels().stream().noneMatch(NotifyChannel.SMS::equals)) {
-                throw new BusinessException("MAIL021", entity.getEventCode(), NotifyChannel.SMS);
-            }
-            Long bound = templateService
-                    .lambdaQuery()
-                    .eq(SysSmsTemplate::getEventCode, entity.getEventCode())
-                    .ne(id != null, SysSmsTemplate::getId, id)
-                    .count();
-            if (bound != null && bound > 0) {
-                throw new BusinessException("SMS008", entity.getEventCode());
-            }
-        }
     }
 }

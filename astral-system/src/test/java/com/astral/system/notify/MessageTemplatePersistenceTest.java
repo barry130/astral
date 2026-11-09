@@ -108,8 +108,6 @@ class MessageTemplatePersistenceTest {
         SqlSessionTemplate session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(config));
         mailTemplates = new SysMailTemplateServiceImpl(mock(MailService.class));
         ReflectionTestUtils.setField(mailTemplates, "baseMapper", session.getMapper(SysMailTemplateMapper.class));
-        SysSmsTemplateServiceImpl smsTemplates = new SysSmsTemplateServiceImpl();
-        ReflectionTestUtils.setField(smsTemplates, "baseMapper", session.getMapper(SysSmsTemplateMapper.class));
         SysSmsProvider provider = new SysSmsProvider();
         provider.setId(1L);
         provider.setProviderType("FIXTURE");
@@ -132,6 +130,8 @@ class MessageTemplatePersistenceTest {
                 providers,
                 session.getMapper(SysSmsTemplateMapper.class),
                 mock(SysSmsLogMapper.class));
+        SysSmsTemplateServiceImpl smsTemplates = new SysSmsTemplateServiceImpl(sms);
+        ReflectionTestUtils.setField(smsTemplates, "baseMapper", session.getMapper(SysSmsTemplateMapper.class));
         DataSourceTransactionManager transactions = new DataSourceTransactionManager(source);
         transaction = new TransactionTemplate(transactions);
         ProxyFactory proxy =

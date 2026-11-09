@@ -30,20 +30,16 @@ class FeedbackReplyPlatformTest {
     @ParameterizedTest
     @ValueSource(strings = {"feedbackAdminReplied", "feedbackUserReplied"})
     void ruleWriteForcesAllPlatformsForReplyEvents(String event) {
-        SysNotifyRuleService rules = mock(SysNotifyRuleService.class);
         com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(
                 new org.apache.ibatis.builder.MapperBuilderAssistant(
                         new com.baomidou.mybatisplus.core.MybatisConfiguration(), "notify-rule-test"),
                 SysNotifyRule.class);
         com.astral.dao.mapper.SysNotifyRuleMapper ruleMapper = mock(com.astral.dao.mapper.SysNotifyRuleMapper.class);
         when(ruleMapper.selectCount(any())).thenReturn(0L);
-        when(rules.lambdaQuery())
-                .thenAnswer(call ->
-                        new com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper<>(ruleMapper));
-        when(rules.save(any(SysNotifyRule.class))).thenAnswer(inv -> {
+        when(ruleMapper.insert(any(SysNotifyRule.class))).thenAnswer(inv -> {
             SysNotifyRule saved = inv.getArgument(0);
             saved.setId(1L);
-            return true;
+            return 1;
         });
         SysMailTemplateMapper templates = mock(SysMailTemplateMapper.class);
         SysMailTemplate template = new SysMailTemplate();
@@ -56,6 +52,11 @@ class FeedbackReplyPlatformTest {
         when(channelMapper.insert(any(SysNotifyRuleChannel.class))).thenReturn(1);
         when(recipientMapper.insert(any(com.astral.dao.entity.SysNotifyRuleRecipient.class)))
                 .thenReturn(1);
+        var rules = new SysNotifyRuleServiceImpl(
+                channelMapper, recipientMapper, templates, mock(SysSmsTemplateMapper.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(rules, "baseMapper", ruleMapper);
+        org.springframework.test.util.ReflectionTestUtils.setField(
+                rules, "mapperClass", com.astral.dao.mapper.SysNotifyRuleMapper.class);
         NotifyRuleController controller = new NotifyRuleController(
                 rules,
                 channelMapper,

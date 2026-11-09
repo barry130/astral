@@ -14,12 +14,14 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.astral.auth.config.StpInterfaceImpl;
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.exception.BusinessException;
+import com.astral.dao.entity.RolePermission;
 import com.astral.dao.mapper.PermissionMapper;
 import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.RolePermissionMapper;
 import com.astral.dao.mapper.SysNotifyRuleMapper;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.dao.mapper.UserRoleMapper;
+import com.astral.system.controller.RolePermissionController;
 import com.astral.system.notify.NotifyPublisher;
 import com.astral.system.notify.SysNotifyRuleServiceImpl;
 import com.astral.system.notify.UserRoleChangeNotifier;
@@ -60,6 +62,8 @@ class RoleAuthorizationPersistenceTest {
     private TransactionTemplate transaction;
     private StpLogic previousLogic;
     private com.astral.auth.registry.AppUserRoleService appRoles;
+    private RolePermissionServiceImpl rolePermissions;
+    private RolePermissionController rolePermissionController;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -112,7 +116,7 @@ class RoleAuthorizationPersistenceTest {
         var session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(configuration));
         var notifyRows = mock(SysNotifyRuleMapper.class);
         when(notifyRows.selectList(any())).thenReturn(List.of());
-        var ruleService = new SysNotifyRuleServiceImpl();
+        var ruleService = new SysNotifyRuleServiceImpl(null, null, null, null);
         ReflectionTestUtils.setField(ruleService, "baseMapper", notifyRows);
         var publisher =
                 new NotifyPublisher(ruleService, null, null, null, null, null, null, null, null, null, null, null);
@@ -128,6 +132,15 @@ class RoleAuthorizationPersistenceTest {
         ReflectionTestUtils.setField(target, "baseMapper", session.getMapper(UserRoleMapper.class));
         var manager = new DataSourceTransactionManager(source);
         transaction = new TransactionTemplate(manager);
+        var permissionTarget = new PermissionServiceImpl(session.getMapper(RolePermissionMapper.class));
+        ReflectionTestUtils.setField(permissionTarget, "baseMapper", session.getMapper(PermissionMapper.class));
+        var relationTarget = new RolePermissionServiceImpl(permissionTarget, roleMapper);
+        ReflectionTestUtils.setField(relationTarget, "baseMapper", session.getMapper(RolePermissionMapper.class));
+        var relationProxy = new ProxyFactory(relationTarget);
+        relationProxy.setProxyTargetClass(true);
+        relationProxy.addAdvice(new TransactionInterceptor(manager, new AnnotationTransactionAttributeSource()));
+        rolePermissions = (RolePermissionServiceImpl) relationProxy.getProxy();
+        rolePermissionController = new RolePermissionController(rolePermissions, cache);
         var proxy = new ProxyFactory(target);
         proxy.setProxyTargetClass(true);
         proxy.addAdvice(new TransactionInterceptor(manager, new AnnotationTransactionAttributeSource()));
@@ -279,5 +292,24 @@ class RoleAuthorizationPersistenceTest {
                 assertThrows(BusinessException.class, () -> roles.save(invalid)).getErrorCode());
         assertEquals(7L, roles.getById(8L).getUserId());
         assertEquals(1L, roles.getById(8L).getRoleId());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"create", "update"})
+    void directPermissionLinkRejectsMissingPermissionWithoutChangingAssignments(String operation) {
+        var invalid = new RolePermission();
+        invalid.setRoleId(1L);
+        invalid.setPermissionId(999L);
+        assertThrows(BusinessException.class, () -> {
+            if ("create".equals(operation)) rolePermissionController.create(invalid);
+            else rolePermissionController.update(5L, invalid);
+        });
+        assertEquals(
+                List.of(3L, 4L),
+                rolePermissions.list().stream()
+                        .map(RolePermission::getPermissionId)
+                        .sorted()
+                        .toList());
+        assertEquals(List.of("admin:fixture:read"), permissions.getPermissionList(7L, "login"));
     }
 }

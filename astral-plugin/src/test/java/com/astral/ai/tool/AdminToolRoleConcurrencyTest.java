@@ -19,6 +19,8 @@ import com.astral.dao.mapper.RolePermissionMapper;
 import com.astral.dao.mapper.SysNotifyRuleMapper;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.dao.mapper.UserRoleMapper;
+import com.astral.system.controller.PermissionController;
+import com.astral.system.controller.RolePermissionController;
 import com.astral.system.notify.NotifyPublisher;
 import com.astral.system.notify.SysNotifyRuleServiceImpl;
 import com.astral.system.notify.UserRoleChangeNotifier;
@@ -80,6 +82,10 @@ class AdminToolRoleConcurrencyTest {
     private RolePermissionServiceImpl rolePermissions;
     private RoleServiceImpl roleService;
     private AppUserRoleService appRoles;
+    private PermissionController permissions;
+    private RolePermissionController permissionLinks;
+    private final AtomicBoolean pausePermissionLookup = new AtomicBoolean(false);
+    private final ThreadLocal<Boolean> permissionWriter = ThreadLocal.withInitial(() -> false);
     private String firstSnapshot;
     private String secondSnapshot;
     private final CountDownLatch firstCount = new CountDownLatch(1);
@@ -160,7 +166,7 @@ class AdminToolRoleConcurrencyTest {
         transaction.addAdvice(new TransactionInterceptor(
                 new DataSourceTransactionManager(source), new AnnotationTransactionAttributeSource()));
         users = (UserServiceImpl) transaction.getProxy();
-        var ruleService = new SysNotifyRuleServiceImpl();
+        var ruleService = new SysNotifyRuleServiceImpl(null, null, null, null);
         ReflectionTestUtils.setField(ruleService, "baseMapper", session.getMapper(SysNotifyRuleMapper.class));
         var publisher =
                 new NotifyPublisher(ruleService, null, null, null, null, null, null, null, null, null, null, null);
@@ -178,15 +184,22 @@ class AdminToolRoleConcurrencyTest {
         roleProxy.addAdvice(new TransactionInterceptor(
                 new DataSourceTransactionManager(source), new AnnotationTransactionAttributeSource()));
         roles = (UserRoleServiceImpl) roleProxy.getProxy();
-        var permissionTarget = new PermissionServiceImpl();
+        var permissionTarget = new PermissionServiceImpl(session.getMapper(RolePermissionMapper.class));
         ReflectionTestUtils.setField(permissionTarget, "baseMapper", session.getMapper(PermissionMapper.class));
-        var relationTarget = new RolePermissionServiceImpl(permissionTarget, roleMapper);
+        var permissionProxy = new ProxyFactory(permissionTarget);
+        permissionProxy.setProxyTargetClass(true);
+        permissionProxy.addAdvice(new TransactionInterceptor(
+                new DataSourceTransactionManager(source), new AnnotationTransactionAttributeSource()));
+        var permissionService = (PermissionServiceImpl) permissionProxy.getProxy();
+        permissions = new PermissionController(permissionService, new PermissionCache());
+        var relationTarget = new RolePermissionServiceImpl(permissionService, roleMapper);
         ReflectionTestUtils.setField(relationTarget, "baseMapper", session.getMapper(RolePermissionMapper.class));
         var relationProxy = new ProxyFactory(relationTarget);
         relationProxy.setProxyTargetClass(true);
         relationProxy.addAdvice(new TransactionInterceptor(
                 new DataSourceTransactionManager(source), new AnnotationTransactionAttributeSource()));
         rolePermissions = (RolePermissionServiceImpl) relationProxy.getProxy();
+        permissionLinks = new RolePermissionController(rolePermissions, new PermissionCache());
         jdbc.update("INSERT INTO sys_permission(id,permission_code,status) VALUES(10,'admin:fixture:read',1)");
         jdbc.update("INSERT INTO sys_permission(id,permission_code,status,type) VALUES(11,'user:fixture:read',1,4)");
         jdbc.update("UPDATE sys_role SET role_code='APP_USER' WHERE id=3");
@@ -338,6 +351,58 @@ class AdminToolRoleConcurrencyTest {
                 .isEmpty());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"batch", "sync", "create", "update"})
+    void permissionDeletionCannotInvalidateAConcurrentGrant(String operation) throws Exception {
+        pauseCount.set(false);
+        var link = new RolePermission();
+        link.setRoleId(3L);
+        link.setPermissionId(10L);
+        if ("update".equals(operation)) permissionLinks.create(link);
+        pausePermissionLookup.set(true);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var grant = executor.submit(() -> {
+                permissionWriter.set(true);
+                try {
+                    if ("batch".equals(operation)) rolePermissions.assignPermissions(3L, List.of(11L));
+                    else if ("sync".equals(operation)) appRoles.syncPermissions();
+                    else {
+                        var request = new RolePermission();
+                        request.setRoleId(3L);
+                        request.setPermissionId(11L);
+                        if ("create".equals(operation)) permissionLinks.create(request);
+                        else permissionLinks.update(link.getId(), request);
+                    }
+                } finally {
+                    permissionWriter.remove();
+                }
+            });
+            try {
+                assertTrue(firstCount.await(5, TimeUnit.SECONDS));
+                var deletion = executor.submit(() -> {
+                    secondCaller.set(true);
+                    try {
+                        return permissions.delete(11L);
+                    } finally {
+                        secondCaller.remove();
+                    }
+                });
+                releaseWhenBlockedOrCompleted(deletion);
+                grant.get(10, TimeUnit.SECONDS);
+                var failure = assertThrows(ExecutionException.class, () -> deletion.get(10, TimeUnit.SECONDS));
+                assertEquals("SYS006", ((BusinessException) failure.getCause()).getErrorCode());
+            } finally {
+                releaseFirst.countDown();
+            }
+        }
+        assertEquals(11L, permissions.getById(11L).getData().getId());
+        assertEquals(
+                List.of(11L),
+                rolePermissions.list().stream()
+                        .map(RolePermission::getPermissionId)
+                        .toList());
+    }
+
     private List<Long> assigned(Long userId) {
         return roles.list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId)).stream()
                 .map(UserRole::getRoleId)
@@ -411,6 +476,16 @@ class AdminToolRoleConcurrencyTest {
                                                 ? text
                                                 : "";
                                 String normalized = sql.toLowerCase(Locale.ROOT);
+                                if (permissionWriter.get()
+                                        && (statementMethod.getName().equals("execute")
+                                                || statementMethod.getName().equals("executeQuery"))
+                                        && normalized.startsWith("select")
+                                        && normalized.contains("from sys_permission")
+                                        && pausePermissionLookup.compareAndSet(true, false)) {
+                                    firstCount.countDown();
+                                    if (!releaseFirst.await(10, TimeUnit.SECONDS))
+                                        throw new AssertionError("permission lookup was not released");
+                                }
                                 if (appCaller.get()
                                         && (statementMethod.getName().equals("execute")
                                                 || statementMethod.getName().equals("executeQuery"))

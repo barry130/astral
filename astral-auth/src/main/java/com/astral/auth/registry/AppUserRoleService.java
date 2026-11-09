@@ -105,7 +105,9 @@ public class AppUserRoleService {
         requireLockedRole(roleId);
         List<Permission> appPermissions = permissionMapper.selectList(new QueryWrapper<Permission>()
                 .likeRight("permission_code", APP_PERMISSION_PREFIX)
-                .eq("type", PermissionType.API));
+                .eq("type", PermissionType.API)
+                .orderByAsc("id")
+                .last("FOR UPDATE"));
         int granted = 0;
         for (Permission p : appPermissions) {
             Long exists = rolePermissionMapper.selectCount(

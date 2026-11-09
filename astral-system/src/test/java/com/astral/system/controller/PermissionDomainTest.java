@@ -24,10 +24,9 @@ class PermissionDomainTest {
                         row("app:qt:source:view"),
                         row("user:storage:file:view"),
                         row("system:user:view")));
-        PermissionServiceImpl service = new PermissionServiceImpl();
+        PermissionServiceImpl service = new PermissionServiceImpl(mock(RolePermissionMapper.class));
         ReflectionTestUtils.setField(service, "baseMapper", mapper);
-        PermissionController controller =
-                new PermissionController(service, mock(RolePermissionMapper.class), mock(PermissionCache.class));
+        PermissionController controller = new PermissionController(service, mock(PermissionCache.class));
 
         var groups = controller.getTree("domain").getData();
 

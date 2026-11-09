@@ -183,7 +183,7 @@ class AiApprovalLifecycleTest {
         jdbc.update(
                 "INSERT INTO sys_role(id,role_code,status,is_super) VALUES(1,'one',1,0),(2,'two',1,0),(3,'three',1,0)");
         jdbc.update("INSERT INTO sys_user_role(id,user_id,role_id) VALUES(51,42,1)");
-        var rules = new com.astral.system.notify.SysNotifyRuleServiceImpl();
+        var rules = new com.astral.system.notify.SysNotifyRuleServiceImpl(null, null, null, null);
         org.springframework.test.util.ReflectionTestUtils.setField(
                 rules, "baseMapper", map(com.astral.dao.mapper.SysNotifyRuleMapper.class));
         var publisher = new com.astral.system.notify.NotifyPublisher(

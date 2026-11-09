@@ -159,7 +159,7 @@ class AdminToolEmailOutcomeTest {
             rule.setRuleName("Fixture rule");
             rule.setEventCode("systemAlert");
             when(rules.selectList(any())).thenReturn(List.of(rule));
-            var ruleService = new SysNotifyRuleServiceImpl();
+            var ruleService = new SysNotifyRuleServiceImpl(null, null, null, null);
             ReflectionTestUtils.setField(ruleService, "baseMapper", rules);
             var channel = new SysNotifyRuleChannel();
             channel.setId(2L);

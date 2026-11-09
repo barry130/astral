@@ -3,14 +3,10 @@ package com.astral.system.controller;
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.annotation.RequiresPermission;
 import com.astral.common.annotation.RequiresSuper;
-import com.astral.common.exception.BusinessException;
 import com.astral.common.result.Result;
 import com.astral.common.util.PatchValues;
 import com.astral.dao.entity.Permission;
-import com.astral.dao.entity.RolePermission;
-import com.astral.dao.mapper.RolePermissionMapper;
 import com.astral.system.service.PermissionService;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
@@ -46,7 +42,6 @@ public class PermissionController {
     private static final String PERM_VIEW = "admin:system:permission:view";
 
     private final PermissionService permissionService;
-    private final RolePermissionMapper rolePermissionMapper;
     /** 权限缓存：权限定义变更后递增版本，立即失效所有用户的权限缓存 */
     private final PermissionCache permissionCache;
 
@@ -109,13 +104,7 @@ public class PermissionController {
     @RequiresSuper
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        QueryWrapper<RolePermission> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("permission_id", id);
-        long count = rolePermissionMapper.selectCount(queryWrapper);
-        if (count > 0) {
-            throw new BusinessException("SYS006", count);
-        }
-        permissionService.removeById(id);
+        permissionService.deleteIfUnassigned(id);
         // 权限定义变化会影响所有人的可见权限，递增权限版本
         permissionCache.bumpVersion();
         return Result.success();

@@ -7,4 +7,7 @@ import com.baomidou.mybatisplus.spring.service.IService;
  * 权限服务接口
  * <p>继承MyBatis-Plus的IService，提供权限实体的标准CRUD操作</p>
  */
-public interface PermissionService extends IService<Permission> {}
+public interface PermissionService extends IService<Permission> {
+    /** Serialize the reference check and deletion with concurrent permission grants. */
+    void deleteIfUnassigned(Long id);
+}

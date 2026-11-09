@@ -93,11 +93,16 @@ class NotifyRulePersistenceTest {
                     SysMailTemplateMapper.class,
                     SysNoticeMapper.class)) config.addMapper(mapper);
             var session = new SqlSessionTemplate(new MybatisSqlSessionFactoryBuilder().build(config));
-            var rules = new SysNotifyRuleServiceImpl();
-            ReflectionTestUtils.setField(rules, "baseMapper", session.getMapper(SysNotifyRuleMapper.class));
             var channels = session.getMapper(SysNotifyRuleChannelMapper.class);
             var recipients = session.getMapper(SysNotifyRuleRecipientMapper.class);
             var templates = session.getMapper(SysMailTemplateMapper.class);
+            var rules = new SysNotifyRuleServiceImpl(channels, recipients, templates, mock(SysSmsTemplateMapper.class));
+            ReflectionTestUtils.setField(rules, "baseMapper", session.getMapper(SysNotifyRuleMapper.class));
+            var ruleProxy = new ProxyFactory(rules);
+            ruleProxy.setProxyTargetClass(true);
+            ruleProxy.addAdvice(new TransactionInterceptor(
+                    new DataSourceTransactionManager(source), new AnnotationTransactionAttributeSource()));
+            rules = (SysNotifyRuleServiceImpl) ruleProxy.getProxy();
             var publisher = new NotifyPublisher(
                     rules,
                     channels,
