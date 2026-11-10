@@ -38,9 +38,13 @@
     - docker
   env:
     IMAGE_PREFIX: docker.cnb.cool/canace/astral
+    # 公共站点 URL（构建期烧进博客镜像的 NEXT_PUBLIC_* 变量；域名变更须改此处并重建博客）。
+    # 与 deploy/.env.example 注释、DEPLOY_GUIDE.md 的生产域名一致；公共 origin 非秘密，直接入库。
+    BLOG_SITE_URL: https://www.canace.cn
+    BLOG_ADMIN_URL: https://web.canace.cn
 
 # All services share the immutable release tag consumed by docker-compose.registry.yml.
-# Configure BLOG_SITE_URL and BLOG_ADMIN_URL in CNB project environment variables.
+# BLOG_SITE_URL / BLOG_ADMIN_URL 已写入上方 env（原设计要求配 CNB 项目变量，但一直没配导致构建必挂）。
 .release-pipeline: &release-pipeline
   <<: *docker-pipeline
   name: 完整版本镜像
