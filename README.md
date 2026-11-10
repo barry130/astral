@@ -90,7 +90,7 @@ Astral 是一套基于 Spring Boot 4.1（Java 25）+ Next.js 16 的全栈后台�
 - Maven 3.9+（无 wrapper，使用系统 mvn）
 - Node.js 24 LTS（与前端镜像 `node:24-alpine` 一致；Next.js 16 最低要求 20.9+）
 - PostgreSQL（当前运行库）
-- Redis（邮件验证码、Sa-Token 会话等依赖；未配置时相应功能不可用）
+- Redis 6.0+（邮件验证码、Sa-Token 会话等依赖；会话更新使用 `SET KEEPTTL`，Redis 5 会导致登录失败；部署时选择仍受维护的版本）
 
 数据库与 Redis 连接统一由环境变量注入（`SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` / `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_DB`），仓库内默认值指向 `localhost` 且不含任何真实凭据。
 

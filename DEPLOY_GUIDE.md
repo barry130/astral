@@ -5,7 +5,7 @@
 - 后端：Spring Boot 4.1.2 / Java 25 / 端口 `27000`
 - 前端：Next.js 16.4（standalone）/ 端口 `3000`
 - 数据库：PostgreSQL（复用服务器已有实例）
-- 缓存：Redis（复用服务器已有实例）
+- 缓存：Redis 6.0+（复用服务器已有实例，建议选择仍受维护的版本）
 
 ## 部署架构
 
@@ -53,7 +53,7 @@ nginx 终结 TLS 并做网络层限流，三个容器端口只绑 `127.0.0.1`（
 
 - Docker Engine 20.10+（含 `docker compose` 插件，v2）
 - 已有可访问的 PostgreSQL 实例
-- 已有可访问的 Redis 实例
+- 已有可访问的 Redis 6.0+ 实例；Sa-Token 会话更新使用 `SET KEEPTTL`，Redis 5 不支持该指令选项，会导致登录失败
 - 已放行安全组/防火墙端口：
   - 走 nginx（推荐）：只需 `80`、`443`
   - 不走 nginx：需 `3000`、`3001`、`27000`

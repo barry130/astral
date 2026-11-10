@@ -8,6 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +40,7 @@ public class WebhookUrlPolicy {
     private final boolean allowPrivateNetwork;
     private final AddressResolver resolver;
 
+    @Autowired
     public WebhookUrlPolicy(
             @Value("${astral.monitor.alert.webhook.allowed-origins:}") String allowedOrigins,
             @Value("${astral.monitor.alert.webhook.allow-private-network:false}") boolean allowPrivateNetwork) {
