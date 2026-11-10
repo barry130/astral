@@ -146,7 +146,7 @@ npm run dev
 |--------|----------|------|
 | admin | 与用户名相同（仅首次登录使用，登录后请立即修改） | 管理员 |
 
-> 初始密码以 BCrypt 形式由迁移基线 `V20260914001__init.sql` 的种子数据写入；登录失败 5 次将锁定 15 分钟（内存态，重启后端可解除）。
+> 初始密码以 BCrypt 形式由迁移基线 `V20260914001__init.sql` 的种子数据写入；登录失败 5 次将锁定 15 分钟。失败计数以 Redis 为主、内存兜底，正常使用 Redis 时重启后端不会解除锁定。
 
 ## 🏛️ 项目结构
 
@@ -317,7 +317,7 @@ astral:
 ## 🧪 运行测试
 
 ```bash
-# 所有测试
+# 未配置隔离 PG/Redis 时，部分集成测试会跳过
 mvn test
 
 # 单个模块
@@ -326,6 +326,8 @@ mvn test -pl astral-sequence
 # 单个测试类
 mvn -pl astral-sequence -Dtest=GeneratorFactoryTest test
 ```
+
+完整后端验收必须准备专用 PostgreSQL/Redis，显式传入 `audit.postgres.port`、`audit.redis.port`，运行实际 schema 生成与完整 reactor，并确认 `AdminHttpAcceptanceTest` 未跳过。编译和局部测试通过不能替代真实应用启动、加密登录与会话验证。按改动必跑项、命令和本地交付清单见 [验证与交付规范](docs/VERIFICATION_GUIDE.md)。
 
 ## 🧹 代码质量
 
@@ -346,7 +348,7 @@ npm run format         # Prettier 格式化
 npm run format:check   # Prettier 校验
 ```
 
-规范要点：禁用 `any`（用具体类型或 `unknown`）、禁裸 `alert/confirm`、动态大依赖用 `await import`、Java 禁 star import 与 `printStackTrace`。详见 `AGENTS.md`「代码质量工具链」。
+规范要点：禁用 `any`（用具体类型或 `unknown`）、禁裸 `alert/confirm`、动态大依赖用 `await import`、Java 禁 star import 与 `printStackTrace`。长期开发规则见 [编码规范](docs/CODING_GUIDE.md)，检查矩阵见 [验证与交付规范](docs/VERIFICATION_GUIDE.md)；本地 `AGENTS.md` 作为代理入口，不是唯一规范来源。
 
 ## 🚀 部署
 
@@ -371,7 +373,9 @@ docker compose up -d --build
 | [接口文档](API.md) | 全量 Controller 接口清单 |
 | [存储需求说明书](STORAGE_REQUIREMENTS.md) | 对象存储插件的需求与设计（多渠道直传、签名 URL） |
 | [CMS 插件说明](docs/CMS_PLUGIN.md) | 博客 / Wiki 的数据模型、公开接口与前台对接 |
-| [编码规范](docs/CODING_GUIDE.md) | 命名、分层、异常与日志约定 |
+| [编码规范](docs/CODING_GUIDE.md) | 写入语义、并发/缓存、渠道/表单、完整启动等强制规则 |
+| [验证与交付规范](docs/VERIFICATION_GUIDE.md) | 按改动必跑检查、HTTP 夹具、启动/关闭与证据清单 |
+| [2026-11 全项目修复复盘](docs/audit/2026-11-10-http/RETROSPECTIVE.md) | 问题根因、修复结果、防复发要求与最终验证边界 |
 | [备份指南](docs/BACKUP_GUIDE.md) | 数据库与对象存储的备份/恢复流程 |
 | [通知拆分方案](docs/NOTICE_FEEDBACK_SPLIT_PLAN.md) | 通知 HTTP 面从插件迁回宿主的落地记录 |
 | [代码质量评审](docs/CODE_QUALITY_REVIEW_2026-10-29.md) | 静态检查、Lint 与整改清单 |

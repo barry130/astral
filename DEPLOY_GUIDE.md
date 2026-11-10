@@ -7,6 +7,8 @@
 - 数据库：PostgreSQL（复用服务器已有实例）
 - 缓存：Redis 6.0+（复用服务器已有实例，建议选择仍受维护的版本）
 
+发布前按 [验证与交付规范](docs/VERIFICATION_GUIDE.md) 核对代码、产物和完整应用 HTTP 证据；[本轮修复复盘](docs/audit/2026-11-10-http/RETROSPECTIVE.md) 登记了“局部测试通过但完整启动失败”及 Redis 指令不兼容的根因。本文的部署命令本身不代表已经通过验收。
+
 ## 部署架构
 
 **推荐形态（有 nginx 反代，见 `deploy/nginx/`）：**
@@ -184,6 +186,8 @@ docker compose logs -f backend   # 后端日志
 ```
 
 成功标志：后端日志出现 `Started AstralApplication`，且 `docker compose ps` 中 backend 为 `healthy`。
+
+以上只确认后端启动健康。交付可用性还须检查真实加密登录、会话读取、CSRF、相关权限及登出，再分别访问管理台、博客和同源 API。Redis 能连接不代表会话更新兼容；前端容器已启动也不代表页面编译或代理成功。浏览器 Cookie/CORS 等行为另行记录，未执行时保持待验。
 
 ### 第三步：初始化/迁移数据库（Flyway 自动）
 
