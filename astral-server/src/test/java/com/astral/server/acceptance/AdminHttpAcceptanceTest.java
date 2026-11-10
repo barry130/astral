@@ -555,7 +555,10 @@ class AdminHttpAcceptanceTest {
     private Reply requestJson(String method, String path, String body, Map<String, String> headers) throws Exception {
         var request = HttpRequest.newBuilder(URI.create(origin + path)).timeout(Duration.ofSeconds(15));
         headers.forEach(request::header);
-        request.header("X-App-Ut", "ASTRAL_FRONT");
+        request.header("X-App-Ut", "web");
+        request.header("X-App-Version", "1.0.0-http-acceptance");
+        request.header("X-Device", "HttpClient fixture");
+        request.header("X-OS", "Fixture OS");
         if (body == null) {
             request.method(method, HttpRequest.BodyPublishers.noBody());
         } else {
