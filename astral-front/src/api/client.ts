@@ -64,8 +64,12 @@ function isApiResult(value: unknown): value is ApiResult<unknown> {
     Number.isInteger(value.code) &&
     'msg' in value &&
     typeof value.msg === 'string' &&
+    // 后端 Result 的 Jackson 序列化对成功响应输出 "errorCode": null（字段存在且为 null，
+    // 而不是省略字段）。显式 null 必须与「字段不存在」同等视为无细分错误码，
+    // 否则所有 Result.success 响应都会被判为格式异常（登录即触发）。
     (!('errorCode' in value) ||
       value.errorCode === undefined ||
+      value.errorCode === null ||
       typeof value.errorCode === 'string')
   );
 }

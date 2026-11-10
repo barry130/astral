@@ -358,6 +358,21 @@ test('malformed successful transport responses reject with a useful contract err
   }
 });
 
+test('backend success envelopes serialize errorCode as explicit null and must be accepted', async () => {
+  // 后端 Result 的 Jackson 序列化在成功响应里输出 "errorCode": null（2026-11-10 登录
+  // 「服务器响应格式异常」事故的根因）：字段存在且为 null 必须视同无细分错误码。
+  const api = loadClient();
+  for (const data of [
+    { code: 200, errorCode: null, msg: 'success', data: { id: 1 }, timestamp: 1 },
+    { code: 200, msg: 'success', data: { id: 1 }, timestamp: 1 },
+  ]) {
+    api.default.defaults.adapter = async (config) => respond(config, data);
+    const result = await api.request.get('/api/v1/all/auth/login');
+    assert.equal(result.code, 200);
+    assert.deepEqual(result.data, { id: 1 });
+  }
+});
+
 test('a malformed CSRF cookie cannot block requests and falls back to the response cache', () => {
   const api = loadClient();
   api.setCsrfToken('test-only-cache');
