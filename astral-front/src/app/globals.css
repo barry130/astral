@@ -133,7 +133,10 @@
 html,
 body {
   max-width: 100vw;
-  overflow-x: hidden;
+  /* overflow-x 必须用 clip 而非 hidden：hidden 会把 body 变成滚动容器（另一轴被强制 auto），
+     .dashboard-header / .tabs-wrapper 的 position: sticky 从此相对 body 吸顶而 body 永不滚动，
+     吸顶整体失效（2026-11-10 后台页头吸顶事故根因）。clip 不创建滚动容器，sticky 正常。 */
+  overflow-x: clip;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', sans-serif;
