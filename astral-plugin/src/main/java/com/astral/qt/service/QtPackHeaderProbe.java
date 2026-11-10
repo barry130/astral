@@ -43,8 +43,15 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <p><b>解析口径：</b>与三个宿主/工具完全同款——找 {@code /*__QT_PACK__} 标记，取其后到最近
  * {@code &#42;/} 之间的 JSON（qt-pc source_install.rs、qt-uniappx source-update.uts、
- * qt-sources build-sources.mjs）。探测 GET 带 {@code Range: bytes=0-8191}，包头永远在
- * 第一行，整包动辄 MB 级不能全量拉；跟随 302/301 跳转（cnb.cool 短链 → OSS）。</p>
+ * qt-sources build-sources.mjs）。探测只发带 {@code Range} 的前缀 GET，整包动辄 MB 级不能全量拉；
+ * 跟随 302/301 跳转（cnb.cool 短链 → OSS）。</p>
+ *
+ * <p><b>自适应窗口：</b>首档 {@code bytes=0-8191}；只有当响应 2xx/206 且文本里已出现包头标记、
+ * 却拿不到结尾 {@code &#42;/}（包头被窗口切断）时才按 8K→64K→256K→512K 升档重试，上限
+ * {@link #PROBE_RANGE_MAX_BYTES}。官方 meta 包首行含完整 changelog，实测 30,755 字节，
+ * play 包 10,526 字节——固定 8K 窗口永远取不到结尾，探测必然 null，manifest 直发字段因此恒空。
+ * 升档重试共享同一次调用的时间预算（不因重试放宽）；HTML 跳转页（无标记）与 JSON 损坏
+ * （有结尾但解析失败）都不重试，立即返回 null。</p>
  */
 @Slf4j
 @Component
@@ -53,8 +60,21 @@ public class QtPackHeaderProbe {
     /** 包头自述标记（与宿主/构建脚本同款）：产物首行 /*__QT_PACK__{json}*&#47; */
     public static final String PACK_HEADER_MARK = "/*__QT_PACK__";
 
-    /** Range 只取首 8KB：包头永远在第一行 */
-    private static final int PROBE_RANGE_BYTES = 8192;
+    /** 探测窗口上限：官方 meta 包头首行实测 30,755 字节（完整 changelog 都在首行），512KiB 留足余量 */
+    public static final int PROBE_RANGE_MAX_BYTES = 512 * 1024;
+
+    /**
+     * 自适应探测窗口阶梯：8K → 64K → 256K → 512K。
+     * <p>首档覆盖绝大多数包（包头首行很短）；只有「文本含包头标记、却被窗口切断拿不到结尾
+     * {@code &#42;/}」才升档，不给所有包多付请求。</p>
+     */
+    private static final int[] PROBE_RANGE_WINDOWS = {8192, 64 * 1024, 256 * 1024, PROBE_RANGE_MAX_BYTES};
+
+    /** 跳转跟随上限（沿用历史行为：最多跟 5 跳） */
+    private static final int PROBE_MAX_REDIRECTS = 5;
+
+    /** 需要跟随的跳转状态码（cnb.cool 短链 302 → OSS） */
+    private static final Set<Integer> REDIRECT_STATUSES = Set.of(301, 302, 303, 307, 308);
 
     /** 建单/编辑后异步补齐的单请求超时 */
     private static final Duration ASYNC_PROBE_TIMEOUT = Duration.ofSeconds(4);
@@ -141,8 +161,25 @@ public class QtPackHeaderProbe {
     }
 
     /**
-     * 探测一个产物 URL 的包头。任何失败（非法 URL / 超时 / 非 2xx / 无包头 / 包头损坏）
-     * 一律返回 null——探测是旁路，不能阻塞发布主链路。
+     * 窗口截断判定（决定是否升档重试）：文本里已出现包头标记，但标记之后拿不到结尾
+     * {@code &#42;/}——说明包头 JSON 被 Range 窗口切断了。
+     * <p>口径有意只认「标记之后的结尾」：避免正文里的 {@code &#42;/} 把真截断误判成完整。
+     * 无标记（HTML 跳转页）与「有结尾但 JSON 损坏」都不算截断，一律不重试。</p>
+     */
+    private static boolean isHeaderTruncated(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+        int mark = text.indexOf(PACK_HEADER_MARK);
+        return mark >= 0 && text.indexOf("*/", mark + PACK_HEADER_MARK.length()) < 0;
+    }
+
+    /**
+     * 探测一个产物 URL 的包头。任何失败（非法 URL / 超时 / 非 2xx / 无包头 / 包头损坏 /
+     * 到窗口上限仍被截断）一律返回 null——探测是旁路，不能阻塞发布主链路。
+     * <p>自适应窗口：首档 8KiB；只有当响应 2xx/206 且「文本含包头标记、却被窗口切断拿不到结尾
+     * {@code &#42;/}」时才按 8K→64K→256K→512K 升档重试，上限 {@link #PROBE_RANGE_MAX_BYTES}。
+     * 每次请求都从同一个绝对 deadline 扣预算，重试不放宽总超时；跳转后的新目标从首档重新探测。</p>
      */
     public PackHeader probe(String url, Duration timeout) {
         if (url == null || url.isBlank() || !(url.startsWith("https://") || url.startsWith("http://"))) {
@@ -152,27 +189,53 @@ public class QtPackHeaderProbe {
             if (timeout == null || timeout.isZero() || timeout.isNegative()) return null;
             long deadline = System.nanoTime() + timeout.toNanos();
             URI target = URI.create(url);
-            for (int redirects = 0; redirects <= 5; redirects++) {
+            int redirects = 0;
+            int window = 0;
+            while (true) {
                 long remaining = deadline - System.nanoTime();
                 if (remaining <= 0) return null;
+                int rangeBytes = PROBE_RANGE_WINDOWS[window];
                 var response = BoundedHttpTransport.prefix(
                         target,
-                        Map.of("Range", "bytes=0-" + (PROBE_RANGE_BYTES - 1), "User-Agent", "astral-pack-probe/1.0"),
+                        Map.of("Range", "bytes=0-" + (rangeBytes - 1), "User-Agent", "astral-pack-probe/1.0"),
                         Duration.ofNanos(remaining),
-                        PROBE_RANGE_BYTES,
+                        rangeBytes,
                         targetPolicy);
                 if (response.status() == 200 || response.status() == 206) {
-                    return parsePackHeader(response.text(), objectMapper);
+                    String text = response.text();
+                    PackHeader header = parsePackHeader(text, objectMapper);
+                    if (header != null) {
+                        if (window > 0) {
+                            log.info("[QtPackProbe] 放大探测窗口到 {} 字节后取到完整包头", rangeBytes);
+                        }
+                        return header;
+                    }
+                    if (!isHeaderTruncated(text)) {
+                        // 无标记（HTML 跳转页）或「有结尾但 JSON 损坏」：换多大窗口都救不回，立即放弃
+                        return null;
+                    }
+                    if (window == PROBE_RANGE_WINDOWS.length - 1) {
+                        log.warn("[QtPackProbe] 包头在 {} 字节窗口内仍未闭合，放弃探测（客户端将回退自行探测）", rangeBytes);
+                        return null;
+                    }
+                    log.info(
+                            "[QtPackProbe] 包头被 {} 字节窗口截断（首行含完整 changelog 的包会这样），" + "扩大 Range 到 {} 重试",
+                            rangeBytes,
+                            PROBE_RANGE_WINDOWS[window + 1]);
+                    window++;
+                    continue;
                 }
-                if (!Set.of(301, 302, 303, 307, 308).contains(response.status()) || redirects == 5) return null;
+                if (!REDIRECT_STATUSES.contains(response.status()) || redirects == PROBE_MAX_REDIRECTS) return null;
                 String location = response.header("location");
                 if (location.isBlank()) return null;
                 URI next = target.resolve(location);
                 if ("https".equalsIgnoreCase(target.getScheme()) && !"https".equalsIgnoreCase(next.getScheme()))
                     return null;
                 target = next;
+                redirects++;
+                // 跳转目标从首档重新探测：OSS 直发地址通常返回完整首行，不必继承大窗口
+                window = 0;
             }
-            return null;
         } catch (Exception e) {
             log.warn("[QtPackProbe] 产物探测失败（地址不可用、响应无效或超出时间预算）");
             return null;
