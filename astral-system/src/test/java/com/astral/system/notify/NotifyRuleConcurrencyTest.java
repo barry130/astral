@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.astral.common.exception.BusinessException;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.mapper.SysMailTemplateMapper;
 import com.astral.dao.mapper.SysNotifyRuleChannelMapper;
 import com.astral.dao.mapper.SysNotifyRuleMapper;
@@ -75,7 +76,7 @@ class NotifyRuleConcurrencyTest {
         admin = new JdbcTemplate(new DriverManagerDataSource(url, "astral_audit", ""));
         schema = "notify_rule_" + UUID.randomUUID().toString().replace("-", "");
         secondApplication = schema + "_second";
-        admin.execute("CREATE SCHEMA " + schema);
+        admin.execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
         var database = new DriverManagerDataSource(url + "?currentSchema=" + schema, "astral_audit", "");
         var source = new AbstractDataSource() {
             @Override
@@ -104,7 +105,8 @@ class NotifyRuleConcurrencyTest {
                         + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                         + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
             }
-            jdbc.execute("CREATE TABLE " + table + " (" + String.join(",", columns) + ")");
+            jdbc.execute(String.format(
+                    "CREATE TABLE %s (%s)", SqlIdentifiers.requireSafe(table), String.join(",", columns)));
         }
         var config = new MybatisConfiguration();
         config.setEnvironment(new Environment("fixture", new SpringManagedTransactionFactory(), source));
@@ -158,7 +160,7 @@ class NotifyRuleConcurrencyTest {
     @AfterEach
     void clean() {
         releaseFirst.countDown();
-        if (schema != null) admin.execute("DROP SCHEMA " + schema + " CASCADE");
+        if (schema != null) admin.execute(String.format("DROP SCHEMA %s CASCADE", SqlIdentifiers.requireSafe(schema)));
     }
 
     @Test

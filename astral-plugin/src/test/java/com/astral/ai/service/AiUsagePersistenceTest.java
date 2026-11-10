@@ -15,6 +15,7 @@ import com.astral.ai.mapper.AiQuotaPolicyMapper;
 import com.astral.ai.mapper.AiRequestMapper;
 import com.astral.ai.mapper.AiUsageMapper;
 import com.astral.ai.mapper.AiUserQuotaMapper;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.system.service.UserRoleService;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.MybatisSqlSessionFactoryBuilder;
@@ -67,7 +68,7 @@ class AiUsagePersistenceTest {
         String url = "jdbc:postgresql://127.0.0.1:" + System.getProperty("audit.postgres.port") + "/postgres";
         admin = new JdbcTemplate(new DriverManagerDataSource(url, "astral_audit", ""));
         schema = "usage_audit_" + UUID.randomUUID().toString().replace("-", "");
-        admin.execute("CREATE SCHEMA " + schema);
+        admin.execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
         var source = new DriverManagerDataSource(url + "?currentSchema=" + schema, "astral_audit", "");
         jdbc = new JdbcTemplate(source);
         String ddl = Files.readString(Path.of("src/main/resources/sql/ai-schema.sql"));
@@ -124,7 +125,7 @@ class AiUsagePersistenceTest {
 
     @AfterEach
     void clean() {
-        if (schema != null) admin.execute("DROP SCHEMA " + schema + " CASCADE");
+        if (schema != null) admin.execute(String.format("DROP SCHEMA %s CASCADE", SqlIdentifiers.requireSafe(schema)));
     }
 
     @Test

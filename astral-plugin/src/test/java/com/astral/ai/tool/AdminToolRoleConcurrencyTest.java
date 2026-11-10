@@ -11,6 +11,7 @@ import com.astral.ai.tool.AiToolTypes.AiToolResult;
 import com.astral.auth.registry.AppUserRoleService;
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.exception.BusinessException;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.entity.RolePermission;
 import com.astral.dao.entity.UserRole;
 import com.astral.dao.mapper.PermissionMapper;
@@ -104,7 +105,7 @@ class AdminToolRoleConcurrencyTest {
         admin = new JdbcTemplate(new DriverManagerDataSource(url, "astral_audit", ""));
         schema = "role_assignment_" + UUID.randomUUID().toString().replace("-", "");
         secondApplication = schema + "_second";
-        admin.execute("CREATE SCHEMA " + schema);
+        admin.execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
         var database = new DriverManagerDataSource(url + "?currentSchema=" + schema, "astral_audit", "");
         var source = new AbstractDataSource() {
             @Override
@@ -127,7 +128,8 @@ class AdminToolRoleConcurrencyTest {
                 columns.add(field.path("columnName").asString() + " "
                         + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                         + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
-            jdbc.execute("CREATE TABLE " + table + " (" + String.join(",", columns) + ")");
+            jdbc.execute(String.format(
+                    "CREATE TABLE %s (%s)", SqlIdentifiers.requireSafe(table), String.join(",", columns)));
         }
         jdbc.update(
                 "INSERT INTO sys_user(id,username,status,user_type,deleted) VALUES(1,'first',1,'ADMIN',0),(2,'second',1,'ADMIN',0)");
@@ -233,7 +235,7 @@ class AdminToolRoleConcurrencyTest {
     void clean() {
         releaseFirst.countDown();
         releaseDefaultRoleLookup.countDown();
-        if (schema != null) admin.execute("DROP SCHEMA " + schema + " CASCADE");
+        if (schema != null) admin.execute(String.format("DROP SCHEMA %s CASCADE", SqlIdentifiers.requireSafe(schema)));
     }
 
     @Test

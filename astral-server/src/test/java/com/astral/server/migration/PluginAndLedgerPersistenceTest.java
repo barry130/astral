@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.mapper.SequenceConfigMapper;
 import com.astral.dao.mapper.SequenceSegmentMapper;
 import com.astral.dao.mapper.SysPluginMapper;
@@ -133,7 +134,7 @@ class PluginAndLedgerPersistenceTest {
             assertEquals(false, states.loadStates().get("fixture-one"));
         } finally {
             if (generator != null) generator.shutdownPreloadExecutor();
-            admin.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+            admin.execute(String.format("DROP SCHEMA IF EXISTS %s CASCADE", SqlIdentifiers.requireSafe(schema)));
         }
     }
 

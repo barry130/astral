@@ -53,6 +53,7 @@ import com.astral.ai.tool.AiToolTypes.AiToolDef;
 import com.astral.ai.tool.AiToolTypes.AiToolHandler;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
 import com.astral.auth.security.PermissionChecker;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.system.service.UserRoleService;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.MybatisSqlSessionFactoryBuilder;
@@ -163,8 +164,9 @@ class AiApprovalLifecycleTest {
                             + field.path("jdbcType").asString()
                             + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
                 }
-                jdbc.execute("CREATE TABLE " + definition.path("tableName").asString() + " (" + String.join(",", fields)
-                        + ")");
+                jdbc.execute(String.format(
+                        "CREATE TABLE %s (%s)",
+                        SqlIdentifiers.requireSafe(definition.path("tableName").asString()), String.join(",", fields)));
             }
         }
         for (String table : List.of(
@@ -176,7 +178,8 @@ class AiApprovalLifecycleTest {
                 fields.add(field.path("columnName").asString() + " "
                         + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                         + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
-            jdbc.execute("CREATE TABLE " + table + " (" + String.join(",", fields) + ")");
+            jdbc.execute(
+                    String.format("CREATE TABLE %s (%s)", SqlIdentifiers.requireSafe(table), String.join(",", fields)));
         }
         jdbc.update(
                 "INSERT INTO sys_user(id,username,user_type,status,deleted) VALUES(41,'operator','ADMIN',1,0),(42,'target','ADMIN',1,0)");

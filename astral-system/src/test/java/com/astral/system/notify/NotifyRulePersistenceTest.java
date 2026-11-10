@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.mapper.RoleMapper;
 import com.astral.dao.mapper.SysMailTemplateMapper;
 import com.astral.dao.mapper.SysNoticeMapper;
@@ -67,7 +68,8 @@ class NotifyRulePersistenceTest {
                             + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                             + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
                 }
-                jdbc.execute("CREATE TABLE " + name + " (" + String.join(",", columns) + ")");
+                jdbc.execute(String.format(
+                        "CREATE TABLE %s (%s)", SqlIdentifiers.requireSafe(name), String.join(",", columns)));
             }
             var config = new MybatisConfiguration();
             config.setEnvironment(new Environment("fixture", new SpringManagedTransactionFactory(), source));

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.astral.common.exception.BusinessException;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.entity.SysSmsProvider;
 import com.astral.dao.entity.SysSmsTemplate;
 import com.astral.dao.mapper.SysMailTemplateMapper;
@@ -84,7 +85,8 @@ class SmsTemplatePatchPersistenceTest {
                         + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                         + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
             }
-            jdbc.execute("CREATE TABLE " + table + " (" + String.join(",", columns) + ")");
+            jdbc.execute(String.format(
+                    "CREATE TABLE %s (%s)", SqlIdentifiers.requireSafe(table), String.join(",", columns)));
         }
         jdbc.execute("CREATE UNIQUE INDEX sms_code ON sys_sms_template(template_code)");
         jdbc.execute("CREATE UNIQUE INDEX sms_event ON sys_sms_template(event_code)");

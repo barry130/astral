@@ -14,6 +14,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.astral.auth.config.StpInterfaceImpl;
 import com.astral.auth.security.PermissionCache;
 import com.astral.common.exception.BusinessException;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.entity.RolePermission;
 import com.astral.dao.mapper.PermissionMapper;
 import com.astral.dao.mapper.RoleMapper;
@@ -81,7 +82,8 @@ class RoleAuthorizationPersistenceTest {
                         + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                         + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
             }
-            jdbc.execute("CREATE TABLE " + table + " (" + String.join(",", columns) + ")");
+            jdbc.execute(String.format(
+                    "CREATE TABLE %s (%s)", SqlIdentifiers.requireSafe(table), String.join(",", columns)));
         }
         jdbc.update("INSERT INTO sys_user(id,username,status,user_type,deleted) VALUES(7,'fixture',1,'ADMIN',0)");
         jdbc.update(

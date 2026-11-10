@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.astral.common.util.SqlIdentifiers;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -86,7 +87,7 @@ class AdminHttpAcceptanceTest {
         schema = "http_acceptance_" + UUID.randomUUID().toString().replace("-", "");
         String databaseUrl = "jdbc:postgresql://127.0.0.1:" + System.getProperty("audit.postgres.port") + "/postgres";
         database = new JdbcTemplate(new DriverManagerDataSource(databaseUrl, "astral_audit", ""));
-        database.execute("CREATE SCHEMA " + schema);
+        database.execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
         Files.createDirectories(Path.of("target"));
         runtime = Files.createTempDirectory(Path.of("target").toAbsolutePath(), "http-acceptance-");
         int port;
@@ -172,7 +173,8 @@ class AdminHttpAcceptanceTest {
             http.close();
             try {
                 if (database != null && schema != null) {
-                    database.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+                    database.execute(
+                            String.format("DROP SCHEMA IF EXISTS %s CASCADE", SqlIdentifiers.requireSafe(schema)));
                 }
             } finally {
                 if (redis != null) {

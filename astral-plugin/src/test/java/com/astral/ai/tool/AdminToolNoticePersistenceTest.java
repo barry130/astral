@@ -7,6 +7,7 @@ import com.astral.ai.common.AiJson;
 import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
 import com.astral.common.constant.NoticeConstants;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.mapper.SysConfigMapper;
 import com.astral.dao.mapper.SysNoticeMapper;
 import com.astral.system.notice.NoticeServiceImpl;
@@ -53,7 +54,8 @@ class AdminToolNoticePersistenceTest {
                 columns.add(field.path("columnName").asString() + " "
                         + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                         + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
-            jdbc.execute("CREATE TABLE " + table + " (" + String.join(",", columns) + ")");
+            jdbc.execute(String.format(
+                    "CREATE TABLE %s (%s)", SqlIdentifiers.requireSafe(table), String.join(",", columns)));
         }
         jdbc.update(
                 "INSERT INTO sys_config(id,config_key,config_value) VALUES(1,'notice.feedback.retention_days','7')");

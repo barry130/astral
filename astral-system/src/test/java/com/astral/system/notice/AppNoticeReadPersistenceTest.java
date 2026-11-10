@@ -42,7 +42,7 @@ class AppNoticeReadPersistenceTest {
                 columns.add(field.path("columnName").asString() + " "
                         + field.path("jdbcType").asString()
                         + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
-            jdbc.execute("CREATE TABLE sys_notice (" + String.join(",", columns) + ")");
+            jdbc.execute(String.format("CREATE TABLE sys_notice (%s)", String.join(",", columns)));
             jdbc.update(
                     "INSERT INTO sys_notice(id,title,channel,notice_type,user_id,is_show,display,create_time) VALUES(1,'mine','all','notice',41,1,4,CURRENT_TIMESTAMP),(2,'other','all','notice',42,1,4,CURRENT_TIMESTAMP),(3,'broadcast','all','announce',NULL,1,4,CURRENT_TIMESTAMP)");
             var config = new MybatisConfiguration();

@@ -13,6 +13,7 @@ import com.astral.ai.mapper.AiKnowledgeDocumentMapper;
 import com.astral.ai.mapper.AiKnowledgeIndexJobMapper;
 import com.astral.ai.mapper.AiKnowledgeSourceMapper;
 import com.astral.common.exception.BusinessException;
+import com.astral.common.util.SqlIdentifiers;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.MybatisSqlSessionFactoryBuilder;
@@ -70,7 +71,7 @@ class AiKnowledgePersistenceTest {
         String url = "jdbc:postgresql://127.0.0.1:" + System.getProperty("audit.postgres.port") + "/postgres";
         admin = new JdbcTemplate(new DriverManagerDataSource(url, "astral_audit", ""));
         schema = "knowledge_audit_" + UUID.randomUUID().toString().replace("-", "");
-        admin.execute("CREATE SCHEMA " + schema);
+        admin.execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
         dataSource = new DriverManagerDataSource(url + "?currentSchema=" + schema, "astral_audit", "");
         jdbc = new JdbcTemplate(dataSource);
         String ddl = Files.readString(Path.of("src/main/resources/sql/ai-schema.sql"));
@@ -124,7 +125,7 @@ class AiKnowledgePersistenceTest {
 
     @AfterEach
     void clean() {
-        if (schema != null) admin.execute("DROP SCHEMA " + schema + " CASCADE");
+        if (schema != null) admin.execute(String.format("DROP SCHEMA %s CASCADE", SqlIdentifiers.requireSafe(schema)));
     }
 
     @Test

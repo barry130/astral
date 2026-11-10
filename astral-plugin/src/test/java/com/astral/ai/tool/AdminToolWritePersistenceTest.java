@@ -9,6 +9,7 @@ import cn.hutool.crypto.digest.BCrypt;
 import com.astral.ai.common.AiJson;
 import com.astral.ai.tool.AiToolTypes.AiToolContext;
 import com.astral.ai.tool.AiToolTypes.AiToolResult;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.mapper.SysConfigMapper;
 import com.astral.dao.mapper.UserMapper;
 import com.astral.system.service.impl.SysConfigServiceImpl;
@@ -53,7 +54,8 @@ class AdminToolWritePersistenceTest {
                         + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                         + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
             }
-            jdbc.execute("CREATE TABLE " + table + " (" + String.join(",", columns) + ")");
+            jdbc.execute(String.format(
+                    "CREATE TABLE %s (%s)", SqlIdentifiers.requireSafe(table), String.join(",", columns)));
         }
         jdbc.update(
                 "INSERT INTO sys_user(id,username,password,status,user_type,deleted) VALUES(1,'fixture',?,1,'ADMIN',0),(2,'other',?,1,'ADMIN',0)",

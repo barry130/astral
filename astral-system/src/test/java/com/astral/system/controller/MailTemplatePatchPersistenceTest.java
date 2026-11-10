@@ -67,7 +67,7 @@ class MailTemplatePatchPersistenceTest {
             columns.add(field.path("columnName").asString() + " "
                     + field.path("jdbcType").asString()
                     + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
-        jdbc.execute("CREATE TABLE sys_mail_template (" + String.join(",", columns) + ")");
+        jdbc.execute(String.format("CREATE TABLE sys_mail_template (%s)", String.join(",", columns)));
         jdbc.execute("CREATE UNIQUE INDEX template_code_channel ON sys_mail_template(template_code,channel)");
         jdbc.execute("CREATE UNIQUE INDEX template_scene_channel ON sys_mail_template(scene,channel)");
         jdbc.update(

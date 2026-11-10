@@ -25,6 +25,7 @@ import com.astral.cms.mapper.CmsPostMapper;
 import com.astral.cms.mapper.CmsSettingMapper;
 import com.astral.cms.mapper.CmsShareMapper;
 import com.astral.cms.mapper.CmsTreeMapper;
+import com.astral.common.util.SqlIdentifiers;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.MybatisSqlSessionFactoryBuilder;
@@ -88,7 +89,7 @@ class CmsPersistenceTest {
         String url = "jdbc:postgresql://127.0.0.1:" + System.getProperty("audit.postgres.port") + "/postgres";
         admin = new JdbcTemplate(new DriverManagerDataSource(url, "astral_audit", ""));
         schema = "cms_audit_" + UUID.randomUUID().toString().replace("-", "");
-        admin.execute("CREATE SCHEMA " + schema);
+        admin.execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
         var source = new DriverManagerDataSource(url + "?currentSchema=" + schema, "astral_audit", "");
         jdbc = new JdbcTemplate(source);
         transactions = new DataSourceTransactionManager(source);
@@ -149,7 +150,7 @@ class CmsPersistenceTest {
 
     @AfterEach
     void clean() {
-        if (schema != null) admin.execute("DROP SCHEMA " + schema + " CASCADE");
+        if (schema != null) admin.execute(String.format("DROP SCHEMA %s CASCADE", SqlIdentifiers.requireSafe(schema)));
     }
 
     @ParameterizedTest

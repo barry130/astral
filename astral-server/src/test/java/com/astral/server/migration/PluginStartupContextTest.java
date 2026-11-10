@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.astral.ai.config.AiProperties;
 import com.astral.ai.config.AiSchemaInitializer;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.mapper.SysPluginMapper;
 import com.astral.plugin.core.PluginAutoConfiguration;
 import com.astral.plugin.core.PluginRegistryImpl;
@@ -57,7 +58,7 @@ class PluginStartupContextTest {
         try {
             catalog.clear();
             ReflectionTestUtils.invokeMethod(SchemaRegistry.class, "loadClasspathSchemas");
-            admin.execute("CREATE SCHEMA " + schema);
+            admin.execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
             var runner = new ApplicationContextRunner()
                     .withConfiguration(
                             AutoConfigurations.of(FlywayAutoConfiguration.class, MybatisPlusAutoConfiguration.class))
@@ -112,7 +113,7 @@ class PluginStartupContextTest {
         } finally {
             catalog.clear();
             catalog.putAll(previous);
-            admin.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+            admin.execute(String.format("DROP SCHEMA IF EXISTS %s CASCADE", SqlIdentifiers.requireSafe(schema)));
         }
     }
 

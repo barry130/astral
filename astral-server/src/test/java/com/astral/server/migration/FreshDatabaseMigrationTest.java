@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.astral.common.util.SqlIdentifiers;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -42,7 +43,9 @@ class FreshDatabaseMigrationTest {
                 assertNotNull(flyway.info().current());
                 assertEquals(0, flyway.migrate().migrationsExecuted);
             } finally {
-                connection.createStatement().execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+                connection
+                        .createStatement()
+                        .execute(String.format("DROP SCHEMA IF EXISTS %s CASCADE", SqlIdentifiers.requireSafe(schema)));
             }
         }
     }
@@ -85,7 +88,9 @@ class FreshDatabaseMigrationTest {
                         """));
                 assertEquals(0, upgrade.migrate().migrationsExecuted);
             } finally {
-                connection.createStatement().execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+                connection
+                        .createStatement()
+                        .execute(String.format("DROP SCHEMA IF EXISTS %s CASCADE", SqlIdentifiers.requireSafe(schema)));
             }
         }
     }
@@ -122,7 +127,9 @@ class FreshDatabaseMigrationTest {
                         ('user:qt:update:channel:beta','user:qt:source:channel:beta')
                         """));
             } finally {
-                connection.createStatement().execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+                connection
+                        .createStatement()
+                        .execute(String.format("DROP SCHEMA IF EXISTS %s CASCADE", SqlIdentifiers.requireSafe(schema)));
             }
         }
     }
@@ -221,7 +228,9 @@ class FreshDatabaseMigrationTest {
                         """);
                 assertion.run(url, schema, connection);
             } finally {
-                connection.createStatement().execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+                connection
+                        .createStatement()
+                        .execute(String.format("DROP SCHEMA IF EXISTS %s CASCADE", SqlIdentifiers.requireSafe(schema)));
             }
         }
     }

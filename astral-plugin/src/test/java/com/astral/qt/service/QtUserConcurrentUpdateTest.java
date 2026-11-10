@@ -52,7 +52,7 @@ class QtUserConcurrentUpdateTest {
                     + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                     + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
         }
-        jdbc.execute("CREATE TABLE sys_user (" + String.join(",", columns) + ")");
+        jdbc.execute(String.format("CREATE TABLE sys_user (%s)", String.join(",", columns)));
         jdbc.update(
                 "INSERT INTO sys_user(id,username,email,password,status,user_type,deleted) VALUES(1,'fixture','fixture@example.test','old-password',1,'APP',0)");
         var config = new MybatisConfiguration();

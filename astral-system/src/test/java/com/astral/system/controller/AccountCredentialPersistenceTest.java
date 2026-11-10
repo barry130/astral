@@ -64,7 +64,7 @@ class AccountCredentialPersistenceTest {
         for (var field : schema.path("fields"))
             columns.add(field.path("columnName").asString() + " "
                     + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT"));
-        jdbc.execute("CREATE TABLE sys_user (" + String.join(",", columns) + ")");
+        jdbc.execute(String.format("CREATE TABLE sys_user (%s)", String.join(",", columns)));
         jdbc.update(
                 "INSERT INTO sys_user(id,username,password,status,user_type,deleted,totp_enabled) VALUES(1,'fixture',?,1,'ADMIN',0,0)",
                 BCrypt.hashpw(oldPassword));

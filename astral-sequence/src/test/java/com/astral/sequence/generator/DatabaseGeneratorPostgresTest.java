@@ -2,6 +2,7 @@ package com.astral.sequence.generator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.dao.mapper.SequenceStatisticsMapper;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.MybatisSqlSessionFactoryBuilder;
@@ -25,7 +26,7 @@ class DatabaseGeneratorPostgresTest {
         source.setDatabaseName("postgres");
         String schema = "sequence_audit_" + UUID.randomUUID().toString().replace("-", "");
         try (Connection admin = source.getConnection()) {
-            admin.createStatement().execute("CREATE SCHEMA " + schema);
+            admin.createStatement().execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
             source.setCurrentSchema(schema);
             try (Connection setup = source.getConnection()) {
                 setup.createStatement().execute("""
@@ -48,7 +49,8 @@ class DatabaseGeneratorPostgresTest {
                     assertEquals(1L, generator.next("new_orders"));
                 }
             } finally {
-                admin.createStatement().execute("DROP SCHEMA " + schema + " CASCADE");
+                admin.createStatement()
+                        .execute(String.format("DROP SCHEMA %s CASCADE", SqlIdentifiers.requireSafe(schema)));
             }
         }
     }

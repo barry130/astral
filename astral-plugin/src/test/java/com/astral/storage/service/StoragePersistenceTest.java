@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.astral.common.exception.BusinessException;
+import com.astral.common.util.SqlIdentifiers;
 import com.astral.storage.config.StorageProperties;
 import com.astral.storage.dto.StorageDtos;
 import com.astral.storage.dto.UploadOperationDtos;
@@ -95,7 +96,7 @@ class StoragePersistenceTest {
         String url = "jdbc:postgresql://127.0.0.1:" + System.getProperty("audit.postgres.port") + "/postgres";
         admin = new JdbcTemplate(new DriverManagerDataSource(url, "astral_audit", ""));
         schema = "storage_audit_" + UUID.randomUUID().toString().replace("-", "");
-        admin.execute("CREATE SCHEMA " + schema);
+        admin.execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
         var source = new DriverManagerDataSource(url + "?currentSchema=" + schema, "astral_audit", "");
         jdbc = new JdbcTemplate(source);
         transactions = new DataSourceTransactionManager(source);
@@ -112,8 +113,9 @@ class StoragePersistenceTest {
                                     : "")
                             + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
                 }
-                jdbc.execute(
-                        "CREATE TABLE " + table.path("tableName").asString() + " (" + String.join(",", columns) + ")");
+                jdbc.execute(String.format(
+                        "CREATE TABLE %s (%s)",
+                        SqlIdentifiers.requireSafe(table.path("tableName").asString()), String.join(",", columns)));
             }
         }
         jdbc.execute("CREATE UNIQUE INDEX upload_key ON sys_storage_file(upload_id)");
@@ -238,7 +240,7 @@ class StoragePersistenceTest {
 
     @AfterEach
     void clean() {
-        if (schema != null) admin.execute("DROP SCHEMA " + schema + " CASCADE");
+        if (schema != null) admin.execute(String.format("DROP SCHEMA %s CASCADE", SqlIdentifiers.requireSafe(schema)));
     }
 
     @Test
@@ -844,7 +846,8 @@ class StoragePersistenceTest {
                 columns.add(field.path("columnName").asString() + " "
                         + field.path("jdbcType").asString().replace("TINYINT", "SMALLINT")
                         + (field.path("isPrimaryKey").asBoolean(false) ? " PRIMARY KEY" : ""));
-            jdbc.execute("CREATE TABLE " + name + " (" + String.join(",", columns) + ")");
+            jdbc.execute(
+                    String.format("CREATE TABLE %s (%s)", SqlIdentifiers.requireSafe(name), String.join(",", columns)));
         }
         var configuration = session.getSqlSessionFactory().getConfiguration();
         configuration.addMapper(com.astral.dao.mapper.UserMapper.class);

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.astral.common.util.SqlIdentifiers;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -369,11 +370,15 @@ class NoticeMigrationCompatibilityTest {
         String schema = "notice_audit_" + UUID.randomUUID().toString().replace("-", "");
         try (Connection connection = DriverManager.getConnection(url, "astral_audit", "")) {
             try {
-                connection.createStatement().execute("CREATE SCHEMA " + schema);
+                connection
+                        .createStatement()
+                        .execute(String.format("CREATE SCHEMA %s", SqlIdentifiers.requireSafe(schema)));
                 connection.setSchema(schema);
                 assertion.run(url, schema, connection);
             } finally {
-                connection.createStatement().execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+                connection
+                        .createStatement()
+                        .execute(String.format("DROP SCHEMA IF EXISTS %s CASCADE", SqlIdentifiers.requireSafe(schema)));
             }
         }
     }
