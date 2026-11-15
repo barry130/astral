@@ -74,12 +74,12 @@ class StorageFolderServiceTest {
         when(folders.selectCount(any(Wrapper.class))).thenReturn(0L);
         StorageFolderEntity created =
                 service.create(new StorageDtos.FolderCreateReq(null, "docs", null, null, null, null, null), "u1");
-        assertTrue(created.isUploadAclRequired());
+        assertTrue(created.requiresUploadAcl());
         assertTrue(service.toView(created).uploadAclRequired());
         when(folders.selectById(1L)).thenReturn(created);
         StorageFolderEntity changed =
                 service.update(1L, new StorageDtos.FolderUpdateReq(null, null, null, null, null, null, false), "u1");
-        assertFalse(changed.isUploadAclRequired());
+        assertFalse(changed.requiresUploadAcl());
         assertEquals(2L, changed.getTargetVersion());
         verify(folders).updateById(created);
         service.update(1L, new StorageDtos.FolderUpdateReq(null, null, null, null, null, null, null), "u1");

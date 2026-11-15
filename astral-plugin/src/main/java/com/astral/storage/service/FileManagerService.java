@@ -185,7 +185,7 @@ public class FileManagerService {
                         policy,
                         strategy,
                         configs,
-                        parent == null || parent.isUploadAclRequired()),
+                        parent == null || parent.requiresUploadAcl()),
                 userId);
     }
 

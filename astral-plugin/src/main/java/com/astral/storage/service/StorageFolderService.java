@@ -104,7 +104,7 @@ public class StorageFolderService {
                 folder.getOwnerId(),
                 folder.getStorageStrategy(),
                 folder.getTargetVersion(),
-                folder.isUploadAclRequired(),
+                folder.requiresUploadAcl(),
                 folder.getUploadPolicy(),
                 configs,
                 resolved.configId(),
@@ -217,7 +217,7 @@ public class StorageFolderService {
                 view.visibility(),
                 view.status(),
                 myPermissions,
-                !folder.isUploadAclRequired(),
+                !folder.requiresUploadAcl(),
                 view.parentId(),
                 bindingConfigIds,
                 view.resolvedConfigId(),
@@ -760,7 +760,7 @@ public class StorageFolderService {
                 bindingSignature,
                 String.valueOf(folder.getStatus()),
                 String.valueOf(folder.getVisibility()),
-                String.valueOf(folder.isUploadAclRequired()),
+                String.valueOf(folder.requiresUploadAcl()),
                 String.valueOf(folder.getUploadPolicy()));
     }
 

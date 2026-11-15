@@ -63,8 +63,17 @@ public class StorageFolderEntity {
     /** 是否需要 UPLOAD 授权行；关闭不等于公开 READ/UPDATE/DELETE，策略与配额仍生效 */
     private Boolean uploadAclRequired;
 
-    /** 目录授权状态。null 兼容尚未迁移的旧读取对象，默认仍要求授权。 */
-    public boolean isUploadAclRequired() {
+    /**
+     * 目录授权状态。null 兼容尚未迁移的旧读取对象，默认仍要求授权。
+     *
+     * <p><b>方法名刻意不用 {@code is}/{@code get} 前缀</b>：字段是包装类型 {@code Boolean}，
+     * Lombok 已生成 {@code Boolean getUploadAclRequired()}；若再手写 {@code boolean isUploadAclRequired()}，
+     * MyBatis 的 {@code Reflector} 会把属性 {@code uploadAclRequired} 判成「返回类型不一致的重载 getter」，
+     * 包装成 {@code AmbiguousMethodInvoker}——读库时走 resultMap 不受影响，
+     * 但 {@code updateById} 绑定参数读该属性时才抛
+     * {@code Illegal overloaded getter method with ambiguous type}，表现为保存目录 500。</p>
+     */
+    public boolean requiresUploadAcl() {
         return uploadAclRequired == null || uploadAclRequired;
     }
 
