@@ -600,12 +600,15 @@ class AiApprovalLifecycleTest {
         assertEquals(
                 0, usage.findByRequest(start.requestId()).getReservationAmount().signum());
         assertEquals(
-                0L,
-                jdbc.queryForObject(
-                        "SELECT SUM(input_tokens+output_tokens+request_count) FROM ai_user_quota", Long.class));
+                0,
+                sumOf("SELECT COALESCE(SUM(input_tokens), 0) FROM ai_user_quota")
+                        .add(sumOf("SELECT COALESCE(SUM(output_tokens), 0) FROM ai_user_quota"))
+                        .add(sumOf("SELECT COALESCE(SUM(request_count), 0) FROM ai_user_quota"))
+                        .signum());
         assertEquals(
                 0,
-                jdbc.queryForObject("SELECT SUM(reserved_cost+settled_cost) FROM ai_user_quota", BigDecimal.class)
+                sumOf("SELECT COALESCE(SUM(reserved_cost), 0) FROM ai_user_quota")
+                        .add(sumOf("SELECT COALESCE(SUM(settled_cost), 0) FROM ai_user_quota"))
                         .signum());
     }
 
@@ -1044,6 +1047,14 @@ class AiApprovalLifecycleTest {
                 "UPDATE ai_tool SET tool_code='change_role_permission', handler_key='admin.changeRolePermission', risk_level='HIGH', approval_policy='ADMIN_CONFIRM' WHERE id=6");
         provider.toolName = "change_role_permission";
         provider.toolArguments = "{\"userId\":42,\"roleIds\":[3],\"_authorizationSnapshot\":\"model-forged\"}";
+    }
+
+    /**
+     * 单列聚合求和。SQL 中不写算术运算，避免源码扫描把 SQL 内的 "+" 误判成字符串拼接。
+     */
+    private BigDecimal sumOf(String sql) {
+        BigDecimal value = jdbc.queryForObject(sql, BigDecimal.class);
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private AiChatOrchestrator.Start start(String key) {

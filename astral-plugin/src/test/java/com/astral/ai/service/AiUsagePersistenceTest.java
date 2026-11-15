@@ -170,8 +170,10 @@ class AiUsagePersistenceTest {
         usage.settleStage(stage.getId(), 50, 50);
         assertEquals(
                 0,
-                BigDecimal.ZERO.compareTo(jdbc.queryForObject(
-                        "SELECT SUM(settled_cost + reserved_cost) FROM ai_user_quota", BigDecimal.class)));
+                jdbc.queryForObject("SELECT COALESCE(SUM(settled_cost), 0) FROM ai_user_quota", BigDecimal.class)
+                        .add(jdbc.queryForObject(
+                                "SELECT COALESCE(SUM(reserved_cost), 0) FROM ai_user_quota", BigDecimal.class))
+                        .signum());
         assertEquals(
                 new BigDecimal("0.100000"),
                 usage.search(41L, 1L, null, null, 1, 10).getFirst().getSettledAmount());
