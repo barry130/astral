@@ -106,6 +106,7 @@ type FolderFormValues = {
   folderName?: string;
   visibility?: string;
   status?: string;
+  uploadAclRequired?: boolean;
   policyEnabled?: boolean;
   policyRequireLogin?: boolean;
   policyMinSizeBytes?: number;
@@ -1757,6 +1758,15 @@ export default function StoragePage() {
               options={dict['storage_target_strategy'] || []}
               onChange={(v) => setFolderModal((m) => ({ ...m, strategy: v }))}
             />
+          </Form.Item>
+          <Form.Item
+            name="uploadAclRequired"
+            label="上传需要授权"
+            valuePropName="checked"
+            initialValue={true}
+            help="关闭后用户无需目录授权即可上传；不授予读取、修改或删除，目录绑定/策略和配额继续生效，已有授权保留供重新开启。"
+          >
+            <Switch checkedChildren="开启" unCheckedChildren="关闭" />
           </Form.Item>
           <Form.Item
             name="policyEnabled"

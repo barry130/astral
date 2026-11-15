@@ -142,12 +142,12 @@ public class StorageTargetResolver {
      */
     public Resolution resolveForUpload(StorageFolderEntity folder, String userId) {
         Resolution folderResolution = resolveForFolder(folder);
-        if (userId == null || isOwner(folder, userId)) {
+        if (userId == null || isOwner(folder, userId) || !folder.isUploadAclRequired()) {
             return rotateForIntent(folderResolution);
         }
         List<StorageFolderPermissionEntity> grants = activeUploadGrants(folder.getId(), userId);
         if (grants.isEmpty()) {
-            return rotateForIntent(folderResolution);
+            throw new BusinessException("STORAGE013", "该目录要求上传授权");
         }
         List<StoragePermissionConfigEntity> grantBindings = new ArrayList<>();
         for (StorageFolderPermissionEntity grant : grants) {
@@ -301,7 +301,7 @@ public class StorageTargetResolver {
         if (expectedConfigVersion != null && !expectedConfigVersion.equals(current.configVersion())) {
             throw new BusinessException("STORAGE047", "候选渠道配置版本已变更");
         }
-        if (!folderAclExempt && userId != null && !isOwner(folder, userId)) {
+        if (!folderAclExempt && folder.isUploadAclRequired() && userId != null && !isOwner(folder, userId)) {
             List<StorageFolderPermissionEntity> grants = activeUploadGrants(folder.getId(), userId);
             if (grants.isEmpty()) {
                 throw new BusinessException("STORAGE013", "目录上传授权已撤销");

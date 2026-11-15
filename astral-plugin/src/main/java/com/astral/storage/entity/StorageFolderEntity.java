@@ -60,6 +60,14 @@ public class StorageFolderEntity {
     /** ENABLED | DISABLED */
     private String status;
 
+    /** 是否需要 UPLOAD 授权行；关闭不等于公开 READ/UPDATE/DELETE，策略与配额仍生效 */
+    private Boolean uploadAclRequired;
+
+    /** 目录授权状态。null 兼容尚未迁移的旧读取对象，默认仍要求授权。 */
+    public boolean isUploadAclRequired() {
+        return uploadAclRequired == null || uploadAclRequired;
+    }
+
     /** 上传策略 JSON（requireLogin/maxSizeBytes/allowedMimes/dailyUploadLimit 等）；空 = 沿用插件全局默认 */
     private String uploadPolicy;
 

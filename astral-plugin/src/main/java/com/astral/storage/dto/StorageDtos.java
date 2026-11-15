@@ -48,7 +48,20 @@ public final class StorageDtos {
             String visibility,
             Map<String, Object> policy,
             String storageStrategy,
-            List<BindingReq> configs) {}
+            List<BindingReq> configs,
+            Boolean uploadAclRequired) {
+
+        /** 兼容旧管理端调用：未传开关时默认要求上传授权。 */
+        public FolderCreateReq(
+                Long parentId,
+                String folderName,
+                String visibility,
+                Map<String, Object> policy,
+                String storageStrategy,
+                List<BindingReq> configs) {
+            this(parentId, folderName, visibility, policy, storageStrategy, configs, null);
+        }
+    }
 
     /** 目录更新：strategy/configs 任一显式携带即视为重设（null = 保持不变） */
     public record FolderUpdateReq(
@@ -57,11 +70,22 @@ public final class StorageDtos {
             String status,
             Map<String, Object> policy,
             String storageStrategy,
-            List<BindingReq> configs) {
+            List<BindingReq> configs,
+            Boolean uploadAclRequired) {
 
-        /** 兼容旧调用点（仅改名字/可见性等局部更新，不动目标） */
+        /** 旧六/七段更新均不修改新开关。 */
+        public FolderUpdateReq(
+                String folderName,
+                String visibility,
+                String status,
+                Map<String, Object> policy,
+                String storageStrategy,
+                List<BindingReq> configs) {
+            this(folderName, visibility, status, policy, storageStrategy, configs, null);
+        }
+
         public FolderUpdateReq(String folderName, String visibility, String status) {
-            this(folderName, visibility, status, null, null, null);
+            this(folderName, visibility, status, null, null, null, null);
         }
     }
 
@@ -85,6 +109,7 @@ public final class StorageDtos {
             String ownerId,
             String storageStrategy,
             Long targetVersion,
+            Boolean uploadAclRequired,
             String uploadPolicy,
             List<BindingView> configs,
             Long resolvedConfigId,
@@ -123,11 +148,41 @@ public final class StorageDtos {
             String visibility,
             String status,
             String myPermissions,
+            boolean uploadOnly,
             Long parentId,
             List<Long> bindingConfigIds,
             Long resolvedConfigId,
             String resolvedProviderType,
-            String resolvedTargetName) {}
+            String resolvedTargetName) {
+
+        /** 旧构造器对应 UPLOAD 必须来自显式授权（所有者原样保留 ALL）。 */
+        public FolderMineView(
+                Long id,
+                String folderName,
+                String folderPath,
+                String visibility,
+                String status,
+                String myPermissions,
+                Long parentId,
+                List<Long> bindingConfigIds,
+                Long resolvedConfigId,
+                String resolvedProviderType,
+                String resolvedTargetName) {
+            this(
+                    id,
+                    folderName,
+                    folderPath,
+                    visibility,
+                    status,
+                    myPermissions,
+                    false,
+                    parentId,
+                    bindingConfigIds,
+                    resolvedConfigId,
+                    resolvedProviderType,
+                    resolvedTargetName);
+        }
+    }
 
     // ==================== 上传与下载 ====================
 

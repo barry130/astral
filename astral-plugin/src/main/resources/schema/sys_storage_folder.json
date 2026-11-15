@@ -98,6 +98,15 @@
       "length": 16
     },
     {
+      "columnName": "upload_acl_required",
+      "fieldName": "uploadAclRequired",
+      "fieldType": "Boolean",
+      "jdbcType": "BOOLEAN",
+      "comment": "上传是否需要USER授权行(false仅跳过上传授权校验,不影响目录启停/目标/上传策略/配额及READ等权限)",
+      "isRequired": true,
+      "defaultValue": "true"
+    },
+    {
       "columnName": "upload_policy",
       "fieldName": "uploadPolicy",
       "fieldType": "String",

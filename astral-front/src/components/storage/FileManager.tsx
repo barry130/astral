@@ -53,6 +53,8 @@ import { uploadStorageFile } from '@/lib/storage-upload';
 import { cn } from '@/lib/utils';
 
 export function hasFolderPermission(folder: MyStorageFolder | undefined, permission: string) {
+  // 免授权目录只授予上传能力；视图侧不上合成 UPLOAD 到 myPermissions，也不授予 READ/UPDATE/DELETE。
+  if (folder?.uploadOnly && permission === 'UPLOAD') return true;
   const permissions = folder?.myPermissions;
   return permissions === 'ALL' || !!permissions?.split(',').includes(permission);
 }
@@ -184,9 +186,11 @@ export default function FileManager({
   );
   const moveIds = editor?.ids || [];
   const moveFiles = files.filter((f) => f.publicId && moveIds.includes(f.publicId));
+  // 免授权仅用于上传，不会变成可读取的私有文件目录或已有文件的移动目标。
   const targetFolders = folders.filter(
     (f) =>
       f.status === 'ENABLED' &&
+      !f.uploadOnly &&
       permission(f, 'UPLOAD') &&
       // 移动目标必须绑定文件所在存储配置（与后端 move 校验一致）；文件无渠道信息时不在此过滤
       moveFiles.every(

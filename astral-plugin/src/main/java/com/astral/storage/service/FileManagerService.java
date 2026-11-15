@@ -184,7 +184,8 @@ public class FileManagerService {
                         parent == null ? "PRIVATE" : parent.getVisibility(),
                         policy,
                         strategy,
-                        configs),
+                        configs,
+                        parent == null || parent.isUploadAclRequired()),
                 userId);
     }
 

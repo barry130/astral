@@ -33,6 +33,7 @@ class StorageFolderServiceTest {
     private StorageFolderConfigMapper folderConfigs;
     private StoragePermissionConfigMapper grantConfigs;
     private StorageConfigMapper configs;
+    private StorageFolderPermissionMapper permissions;
     private StorageFolderService service;
 
     @BeforeEach
@@ -53,10 +54,11 @@ class StorageFolderServiceTest {
         folderConfigs = mock(StorageFolderConfigMapper.class);
         grantConfigs = mock(StoragePermissionConfigMapper.class);
         configs = mock(StorageConfigMapper.class);
+        permissions = mock(com.astral.storage.mapper.StorageFolderPermissionMapper.class);
         service = new StorageFolderService(
                 folders,
                 folderConfigs,
-                mock(StorageFolderPermissionMapper.class),
+                permissions,
                 grantConfigs,
                 configs,
                 files,
@@ -65,6 +67,23 @@ class StorageFolderServiceTest {
                 mock(StorageTargetResolver.class),
                 mock(com.astral.storage.mapper.StorageUploadOperationMapper.class),
                 mock(LegacyUploadReceiptService.class));
+    }
+
+    @Test
+    void uploadAclDefaultsOnAndChangingItInvalidatesTheResolvedTarget() {
+        when(folders.selectCount(any(Wrapper.class))).thenReturn(0L);
+        StorageFolderEntity created =
+                service.create(new StorageDtos.FolderCreateReq(null, "docs", null, null, null, null, null), "u1");
+        assertTrue(created.isUploadAclRequired());
+        assertTrue(service.toView(created).uploadAclRequired());
+        when(folders.selectById(1L)).thenReturn(created);
+        StorageFolderEntity changed =
+                service.update(1L, new StorageDtos.FolderUpdateReq(null, null, null, null, null, null, false), "u1");
+        assertFalse(changed.isUploadAclRequired());
+        assertEquals(2L, changed.getTargetVersion());
+        verify(folders).updateById(created);
+        service.update(1L, new StorageDtos.FolderUpdateReq(null, null, null, null, null, null, null), "u1");
+        assertEquals(2L, changed.getTargetVersion());
     }
 
     @Test
@@ -294,6 +313,31 @@ class StorageFolderServiceTest {
                         "admin"));
         assertEquals("STORAGE058", ex.getErrorCode());
         verify(grantConfigs, never()).insert(any(StoragePermissionConfigEntity.class));
+    }
+
+    @Test
+    void uploadOnlyDiscoveryDoesNotSynthesizeReadOrAnyPermissionStrings() {
+        StorageFolderEntity open = targetFolder(1L, null, "drop", "/drop", 1L);
+        open.setUploadAclRequired(false);
+        StorageFolderEntity protectedFolder = targetFolder(2L, null, " docs ", "/docs", 1L);
+        StorageFolderEntity grantFolder = targetFolder(3L, null, "partial", "/partial", 1L);
+        grantFolder.setUploadAclRequired(false);
+        when(folderConfigs.selectList(any(Wrapper.class))).thenReturn(List.of());
+        when(configs.selectByIds(any())).thenReturn(List.of());
+        StorageFolderPermissionEntity grant = new StorageFolderPermissionEntity();
+        grant.setFolderId(3L);
+        grant.setPermissions("READ");
+        when(permissions.selectList(any(Wrapper.class))).thenReturn(List.of(grant));
+        when(folders.selectList(any()))
+                .thenReturn(List.of(), List.of(open), List.of(open, protectedFolder, grantFolder));
+
+        List<StorageDtos.FolderMineView> actual = service.listForUser("user");
+
+        assertEquals(2, actual.size());
+        assertEquals("READ", actual.get(0).myPermissions());
+        assertEquals("", actual.get(1).myPermissions());
+        assertTrue(actual.get(1).uploadOnly());
+        assertTrue(actual.stream().noneMatch(view -> view.id().equals(2L)));
     }
 
     private StorageConfigEntity enabledConfig(Long id) {

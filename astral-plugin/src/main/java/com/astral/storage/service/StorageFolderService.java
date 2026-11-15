@@ -104,6 +104,7 @@ public class StorageFolderService {
                 folder.getOwnerId(),
                 folder.getStorageStrategy(),
                 folder.getTargetVersion(),
+                folder.isUploadAclRequired(),
                 folder.getUploadPolicy(),
                 configs,
                 resolved.configId(),
@@ -182,6 +183,12 @@ public class StorageFolderService {
                 permsByFolderId.put(row.getFolderId(), mergePermissions(current, merged));
             }
         }
+        // 免授权只授予上传能力；不把 upload 写入 myPermissions，读取/修改/删除仍按原授权判断。
+        folderMapper
+                .selectList(new LambdaQueryWrapper<StorageFolderEntity>()
+                        .eq(StorageFolderEntity::getUploadAclRequired, false)
+                        .eq(StorageFolderEntity::getStatus, StorageFolderEntity.STATUS_ENABLED))
+                .forEach(f -> permsByFolderId.putIfAbsent(f.getId(), ""));
         if (permsByFolderId.isEmpty()) {
             return List.of();
         }
@@ -210,6 +217,7 @@ public class StorageFolderService {
                 view.visibility(),
                 view.status(),
                 myPermissions,
+                !folder.isUploadAclRequired(),
                 view.parentId(),
                 bindingConfigIds,
                 view.resolvedConfigId(),
@@ -293,6 +301,7 @@ public class StorageFolderService {
         folder.setOwnerId(operator);
         folder.setVisibility(visibility);
         folder.setStatus(StorageFolderEntity.STATUS_ENABLED);
+        folder.setUploadAclRequired(req.uploadAclRequired() == null || req.uploadAclRequired());
         // 上传策略（UPDATE_DESIGN.md §3.3）：结构化对象归一化后落 JSON；null/空 = 不配置
         folder.setUploadPolicy(policyService.normalize(req.policy()));
         folder.setCreateBy(operator);
@@ -354,6 +363,10 @@ public class StorageFolderService {
                 throw new BusinessException("COMMON002", "非法的状态值");
             }
             folder.setStatus(req.status());
+        }
+        // null=局部更新保持原值；null 值的旧目录对象仍按需要授权处理。
+        if (req.uploadAclRequired() != null) {
+            folder.setUploadAclRequired(req.uploadAclRequired());
         }
         // 绑定/策略：显式携带即重设（null = 保持不变）
         if (req.storageStrategy() != null && !req.storageStrategy().isBlank()) {
@@ -747,6 +760,7 @@ public class StorageFolderService {
                 bindingSignature,
                 String.valueOf(folder.getStatus()),
                 String.valueOf(folder.getVisibility()),
+                String.valueOf(folder.isUploadAclRequired()),
                 String.valueOf(folder.getUploadPolicy()));
     }
 

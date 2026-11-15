@@ -65,6 +65,8 @@ export interface StorageFolder {
   ownerId?: string;
   visibility?: string;
   status?: string;
+  /** 仅控制 UPLOAD 授权行校验；不影响 READ/UPDATE/DELETE、策略或配额。 */
+  uploadAclRequired?: boolean;
   /** 文件夹级上传策略 JSON（null = 未配置，走默认行为） */
   uploadPolicy?: string | null;
   /** 调度策略：FAILOVER 按优先级故障转移 / ROUND_ROBIN 同层轮询 */
@@ -193,6 +195,8 @@ export interface MyStorageFolder {
   visibility: string;
   status: string;
   myPermissions: string;
+  /** 无 READ 授权也可作为上传目标；不授予文件读取、修改或删除能力。 */
+  uploadOnly?: boolean;
   parentId?: number | null;
   /** 绑定的存储配置 id 列表（priority 升序；空 = 未绑定，禁止上传） */
   bindingConfigIds?: number[];
@@ -480,6 +484,7 @@ export const storageApi = {
     folderName: string;
     visibility?: string;
     policy?: FolderUploadPolicy;
+    uploadAclRequired?: boolean;
     storageStrategy?: string;
     configs?: StorageBindingReq[];
   }) => request.post<StorageFolder>('/api/v1/admin/plugin/storage/folders', data),
@@ -490,6 +495,7 @@ export const storageApi = {
       visibility?: string;
       status?: string;
       policy?: FolderUploadPolicy;
+      uploadAclRequired?: boolean;
       storageStrategy?: string;
       configs?: StorageBindingReq[];
     },
